@@ -1,0 +1,3 @@
+axonius==1.0.0
+flask
+boto3==1.4.7

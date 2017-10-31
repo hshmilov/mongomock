@@ -1,0 +1,6 @@
+axonius==1.0.0
+Flask
+scp
+paramiko
+requests
+

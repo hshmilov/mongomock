@@ -1,0 +1,129 @@
+@import 'config';
+
+/*******************
+General
+*******************/
+
+html {
+  position: relative;
+  min-height: 100%;
+  background: $background-color;
+}
+
+body {
+  font: 100% $font-stack;
+  margin: 0;
+  overflow: hidden;
+  color: $color-text;
+  font-weight: 300;
+  width: 100%;
+  height: 100%;
+}
+
+a, a:hover, a:focus {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.link {
+  color: $color-title;
+  &:hover,
+  &:focus {
+    color: $color-theme;
+  }
+}
+
+.img-responsive {
+  width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+html body .mdi:before,
+html body .mdi-set {
+  line-height: initial;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: $color-title;
+  font-family: $font-stack;
+  font-weight: 400;
+}
+
+h1 {
+  line-height: 40px;
+  font-size: 36px
+}
+
+h2 {
+  line-height: 36px;
+  font-size: 24px
+}
+
+h3 {
+  line-height: 30px;
+  font-size: 21px
+}
+
+h4 {
+  line-height: 22px;
+  font-size: 18px
+}
+
+h5 {
+  line-height: 18px;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+h6 {
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/*******************
+Formatting
+*******************/
+
+.svg-icon {
+  vertical-align: middle;
+}
+
+.img-sm {
+  height: 20px;
+}
+
+.img-md {
+  height: 24px;
+}
+
+.title-sm {
+  color: $color-title;
+  font-size: 80%;
+  margin-bottom: 4px;
+}
+
+.disabled-text {
+  color: $color-disabled;
+}
+
+.error-text {
+  color: $color-error;
+}
+
+
+/*******************
+Scrollbar
+*******************/
+.scrollbar-container {
+  height: 100%;
+  .vue-scrollbar__scrollbar-vertical {
+    width: 4px;
+    left: 0;
+    .scrollbar {
+      width: 4px;
+      background-color: $border-color;
+    }
+  }
+}

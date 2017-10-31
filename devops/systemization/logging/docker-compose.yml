@@ -1,0 +1,17 @@
+version: '3'
+services:
+  elkx:
+        image: sebp/elkx:latest
+        container_name: "elkx"
+        volumes:
+          - ./conf.d:/etc/logstash/conf.d/
+          - ./elasticsearch.yml:/etc/elasticsearch/elasticsearch.yml
+        ports:
+            - 5601:5601
+            - 9200:9200
+            - 5043:5043
+
+networks:
+  default:
+    external:
+      name: axonius

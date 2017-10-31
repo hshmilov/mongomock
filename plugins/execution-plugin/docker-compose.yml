@@ -1,0 +1,16 @@
+version: '3'
+services:
+  execution-plugin:
+        build: .
+        image: axonius/execution-plugin
+        container_name: "execution-plugin"
+        ports:
+            - 888:888
+        volumes:
+          - ./src:/home/axonius/app
+          - ./logs:/log
+
+networks:
+  default:
+    external:
+      name: axonius
