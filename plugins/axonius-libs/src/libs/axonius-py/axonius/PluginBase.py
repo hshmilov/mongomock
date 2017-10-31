@@ -1,7 +1,6 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
 __author__ = "Ofir Yefet"
-#blah
 
 import json
 import logging
