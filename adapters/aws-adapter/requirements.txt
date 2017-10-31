@@ -1,0 +1,4 @@
+--extra-index-url https://pypi.fury.io/L78-tqY_AzaGVi8f89wK/axonius/
+axonius==1.0.0
+flask
+boto3==1.4.7
