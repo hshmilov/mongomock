@@ -1,4 +1,3 @@
---extra-index-url https://pypi.fury.io/L78-tqY_AzaGVi8f89wK/axonius/
 axonius==1.0.0
 namedlist
 pyVmomi==6.5.0.2017.5.post1
