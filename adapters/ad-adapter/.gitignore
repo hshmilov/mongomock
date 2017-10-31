@@ -1,0 +1,4 @@
+*.db
+*.pyc
+externals/
+docs/
