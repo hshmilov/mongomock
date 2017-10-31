@@ -1,7 +1,7 @@
 # Use openresty.
 FROM openresty/openresty:xenial
 
-WORKDIR /home/axonius/app
+WORKDIR /home/axonius
 
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
@@ -23,16 +23,17 @@ LABEL "com.axonius.image-type"="axonius-libs"
 # At this point we have openresty, python3, and axonius-libs installed.
 # Lets set up configuration files to have our final https server running.
 
-ADD src/app .
+COPY src/app/uwsgi.ini .
+COPY src/app/main.py ./app/main.py
 COPY src/config/supervisord.conf /etc/supervisor/supervisord.conf
 COPY src/config/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY src/keys/nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
 COPY src/keys/nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
 COPY src/keys/dhparam.pem /etc/ssl/certs/dhparam.pem
-ADD src/config/nginx-ssl /etc/nginx/snippets/
+COPY src/config/nginx-ssl /etc/nginx/snippets/
 
 # Install axonius-libs.
-ADD src/libs /home/axonius/libs
+COPY src/libs /home/axonius/libs
 RUN pip3 install -e /home/axonius/libs/axonius-py
 
 # Make port 443 available to the world outside this container

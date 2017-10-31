@@ -1,0 +1,15 @@
+version: '3'
+services:
+  aggregator:
+        build: .
+        image: axonius/aggregator
+        container_name: "aggregator"
+        ports:
+            - 5000
+        volumes:
+          - ./src:/home/axonius/app
+
+networks:
+  default:
+    external:
+      name: axonius
