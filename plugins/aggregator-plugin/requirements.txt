@@ -1,0 +1,6 @@
+--extra-index-url https://pypi.fury.io/L78-tqY_AzaGVi8f89wK/axonius/
+flask
+pymongo
+requests
+apscheduler
+axonius==1.0.0

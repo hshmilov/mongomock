@@ -1,0 +1,17 @@
+version: '3'
+services:
+  core:
+        build: .
+        image: axonius/core
+        container_name: "core"
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+          - ./src:/home/axonius/app
+          - ./logs:/log
+
+networks:
+  default:
+    external:
+      name: axonius

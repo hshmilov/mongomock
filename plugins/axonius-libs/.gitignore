@@ -1,0 +1,6 @@
+build/
+docs/
+__pycache__/
+Axonius.egg-info/
+*.egg
+.idea/*
