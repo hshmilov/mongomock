@@ -1,0 +1,1 @@
+mongorestore -u ax_user -p ax_pass --port 27017 /tmp/dump

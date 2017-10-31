@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css?family=Poppins:200,300,400,500,600,700');
+
+$font-stack: 'Poppins', sans-serif;
+$font-size: 100%;
+$font-size-title: 112.5%;
+
+$color-theme: #4796e4;
+$color-light: #ffffff;
+$color-title: #607e8d;
+$color-text: #504e4e;
+$color-error: #f9e7eb;
+$color-disabled: #999999;
+
+$color-yellow: #ffb22b;
+$color-aqua: #26dad2;
+
+$border-color: #dcd8d8;
+
+$background-color: #f3f4f5;
+$background-color-light: #ffffff;
+$background-color-mark: #f2f6f8;
+$background-color-highlight: #fcfcfc;
+$background-color-hover: rgba(235, 233, 250, 0.6);
+
+$media-break-sm: "(min-width : 576px)";
+$media-break-md: "(min-width : 768px)";
+$media-break-lg: "(min-width : 992px)";
+$media-break-xl: "(min-width : 1200px)";
+
+@mixin color-theme-transparent($alpha) {
+
+}
