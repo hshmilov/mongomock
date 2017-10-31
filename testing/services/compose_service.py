@@ -2,10 +2,10 @@ import subprocess
 from abc import abstractmethod
 import os
 
-import testing.services.axon_service
+import services.axon_service
 
 
-class ComposeService(testing.services.axon_service.AxonService):
+class ComposeService(services.axon_service.AxonService):
 
     def __init__(self, config_file_path):
         super().__init__()

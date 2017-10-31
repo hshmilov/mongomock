@@ -1,6 +1,6 @@
 import pytest
 
-import testing.services.compose_service as compose_service
+import services.compose_service as compose_service
 
 from pymongo import MongoClient
 
