@@ -178,7 +178,7 @@ class PluginBase(object):
             self.debug_port = int(config['DEBUG']['port'])
         except KeyError:
             self.debug_host = "0.0.0.0"
-            self.debug_port = "80"
+            self.debug_port = 80
 
         # This is a debug value for setting a different core address.
         try:

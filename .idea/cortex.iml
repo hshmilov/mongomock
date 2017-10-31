@@ -7,7 +7,6 @@
       <sourceFolder url="file://$MODULE_DIR$/plugins/aggregator-plugin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/ad-adapter/src" isTestSource="false" />
     </content>
-    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TemplatesService">
