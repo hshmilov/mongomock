@@ -23,11 +23,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
+from pathlib import Path
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
 
-LOG_PATH = 'logs' if os.name == 'nt' else '/home/axonius/logs'
+LOG_PATH = str(Path.home().joinpath('logs'))  # this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
 
 # Can wait up to 5 minutes if core didnt answer yet
 TIME_WAIT_FOR_REGISTER = 60*5
@@ -174,17 +175,18 @@ class PluginBase(object):
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:
-            self.debug_host = config['DEBUG']['host']
-            self.debug_port = int(config['DEBUG']['port'])
+            self.host = config['DEBUG']['host']
+            self.port = int(config['DEBUG']['port'])
         except KeyError:
-            self.debug_host = "0.0.0.0"
-            self.debug_port = 80
+            # This is the default value, which is what nginx sets for us.
+            self.host = "0.0.0.0"
+            self.port = 443  # We listen on https.
 
         # This is a debug value for setting a different core address.
         try:
             self.core_address = config['DEBUG']['core_address']
         except KeyError:
-            self.core = "https://core"  # This should be dns resolved.
+            self.core_address = "https://core"  # This should be dns resolved.
 
         try:
             self.unique_plugin_name = config['registration']['unique_plugin_name']
@@ -230,7 +232,7 @@ class PluginBase(object):
                                       methods=wanted_methods)
 
         # Adding "keepalive" thread
-        if self.unique_plugin_name != "core": 
+        if self.unique_plugin_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(5)}
             self.scheduler = BackgroundScheduler(executors=executors)
@@ -290,6 +292,7 @@ class PluginBase(object):
         """
         register_doc = {"plugin_name": self.plugin_name,
                         "plugin_type": self.plugin_type,
+                        "plugin_port": self.port
                         }
         if unique_plugin_name:
             register_doc['unique_plugin_name'] = unique_plugin_name
@@ -475,7 +478,7 @@ class PluginBase(object):
         This function is blocking as long as the Http server is up.
         .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
-        AXONIUS_REST.run(host=self.debug_host, port=self.debug_port, debug=True)
+        AXONIUS_REST.run(host=self.host, port=self.port, debug=False, use_reloader=False)
 
     def get_method(self):
         """Getting the method type of the request.
