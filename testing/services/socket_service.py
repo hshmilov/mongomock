@@ -8,9 +8,9 @@ class SocketService(compose_service.ComposeService):
         self.endpoint = endpoint
 
     @staticmethod
-    def is_socket_alive(endpoit):
+    def is_socket_alive(endpoint):
         try:
-            socket.create_connection(endpoit)
+            socket.create_connection(endpoint)
             return True
         except:
             return False

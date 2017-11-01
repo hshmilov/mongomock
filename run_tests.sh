@@ -6,4 +6,4 @@ source ./venv/bin/activate
 
 cd ./testing
 
-pytest ./tests
+python run_tests.py
