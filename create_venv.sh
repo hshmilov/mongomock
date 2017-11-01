@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")"
 
-virtualenv venv
+python3.6 -m virtualenv venv
 
 source venv/bin/activate
 

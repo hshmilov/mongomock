@@ -2,8 +2,8 @@
 
 ./create_venv.sh
 
-source venv/bin/activate
+source ./venv/bin/activate
 
-cd testing
+cd ./testing
 
-python run_tests.py
+python ./run_tests.py
