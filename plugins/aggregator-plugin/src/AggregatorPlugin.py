@@ -16,7 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
-from Axonius.PluginBase import PluginBase, add_rule
+from axonius.PluginBase import PluginBase, add_rule
 from flask import jsonify
 
 # The needed keys in the mapped data
@@ -37,7 +37,7 @@ class AggregatorPlugin(PluginBase):
         # Lock object for the global device list
         self.device_list_lock = threading.Lock()
         # Open connection to the adapters db
-        self.devices_db_connection = self._get_db_connection(True)[self.unique_plugin_name]
+        self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
         # Managing thread
         self._managing_thread = None
 
@@ -127,7 +127,7 @@ class AggregatorPlugin(PluginBase):
         """
         if self._managing_thread is None or not self._managing_thread.isAlive():
             self._managing_thread = threading.Thread(target=self._adapters_thread_manager,
-                                                     name=self.unique_plugin_name)
+                                                     name=self.plugin_unique_name)
             self._managing_thread.start()
         else:
             raise RuntimeError("Already running")

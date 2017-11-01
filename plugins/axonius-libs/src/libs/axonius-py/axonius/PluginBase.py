@@ -23,11 +23,12 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
+from pathlib import Path
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
 
-LOG_PATH = 'logs' if os.name == 'nt' else '/home/axonius/logs'
+LOG_PATH = str(Path.home().joinpath('logs'))  # this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
 
 # Can wait up to 5 minutes if core didnt answer yet
 TIME_WAIT_FOR_REGISTER = 60*5
@@ -169,39 +170,40 @@ class PluginBase(object):
         config.read('plugin_config.ini')
         self.version = config['DEFAULT']['version']
         self.plugin_name = config['DEFAULT']['name']
-        self.unique_plugin_name = None
+        self.plugin_unique_name = None
         self.api_key = None
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:
-            self.debug_host = config['DEBUG']['host']
-            self.debug_port = int(config['DEBUG']['port'])
+            self.host = config['DEBUG']['host']
+            self.port = int(config['DEBUG']['port'])
         except KeyError:
-            self.debug_host = "0.0.0.0"
-            self.debug_port = 80
+            # This is the default value, which is what nginx sets for us.
+            self.host = "0.0.0.0"
+            self.port = 443  # We listen on https.
 
         # This is a debug value for setting a different core address.
         try:
             self.core_address = config['DEBUG']['core_address']
         except KeyError:
-            self.core = "https://core"  # This should be dns resolved.
+            self.core_address = "http://core"  # This should be dns resolved.
 
         try:
-            self.unique_plugin_name = config['registration']['unique_plugin_name']
+            self.plugin_unique_name = config['registration']['plugin_unique_name']
             self.api_key = config['registration']['api_key']
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
 
         if not core_data:
-            core_data = self._register(self.core_address + "/register", self.unique_plugin_name, self.api_key)
+            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
         if not core_data or core_data['status']=='error':
             raise RuntimeError("Register process faild, Existing. Reason: {0}".format(core_data['message']))
 
-        if core_data['unique_plugin_name'] != self.unique_plugin_name or core_data['api_key'] != self.api_key:
-            self.unique_plugin_name = core_data['unique_plugin_name']
+        if core_data['plugin_unique_name'] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
+            self.plugin_unique_name = core_data['plugin_unique_name']
             self.api_key = core_data['api_key']
-            config['registration']['unique_plugin_name'] = self.unique_plugin_name
+            config['registration']['plugin_unique_name'] = self.plugin_unique_name
             config['registration']['api_key'] = self.api_key
 
             # Writing back the configuration with the new plugin name
@@ -215,7 +217,7 @@ class PluginBase(object):
         self.db_password = core_data['db_password']
         self.logstash_host = core_data['log_addr']
 
-        self.log_path = LOG_PATH + '/' + self.unique_plugin_name + '.log'
+        self.log_path = LOG_PATH + '/' + self.plugin_unique_name + '.log'
         self.log_level = logging.INFO
 
         # Creating logger
@@ -230,7 +232,7 @@ class PluginBase(object):
                                       methods=wanted_methods)
 
         # Adding "keepalive" thread
-        if self.unique_plugin_name != "core": 
+        if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(5)}
             self.scheduler = BackgroundScheduler(executors=executors)
@@ -246,7 +248,7 @@ class PluginBase(object):
         self.wsgi_app = AXONIUS_REST
 
         # Finished, Writing some log
-        self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.unique_plugin_name,
+        self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                               self.version,
                                                                                               self.lib_version))
 
@@ -266,7 +268,7 @@ class PluginBase(object):
         I case we arent, this function will stop this application (and let the docker manager to run it again)
         """
         try:
-            response = self.request_remote_plugin("register?unique_name={0}".format(self.unique_plugin_name))
+            response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name))
             if response.status_code == 404:
                 self.logger.error("Not registered to core, Exiting")
                 os._exit(1)  # TODO: Think about a better way for exiting this process
@@ -280,19 +282,20 @@ class PluginBase(object):
     @retry(wait_fixed=10*1000, 
            stop_max_delay=60*5*1000, 
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
-    def _register(self, core_address, unique_plugin_name=None, api_key=None):
+    def _register(self, core_address, plugin_unique_name=None, api_key=None):
         """Create registration of the adapter to core.
 
         :param str core_address: The address of the core plugin
-        :param str unique_plugin_name: Wanted name of the plugin(Optional)
-        :param str api_key: Api key to use in case we want a certain unique_plugin_name
+        :param str plugin_unique_name: Wanted name of the plugin(Optional)
+        :param str api_key: Api key to use in case we want a certain plugin_unique_name
         :return requests.response: The register response from the core
         """
         register_doc = {"plugin_name": self.plugin_name,
                         "plugin_type": self.plugin_type,
+                        "plugin_port": self.port
                         }
-        if unique_plugin_name:
-            register_doc['unique_plugin_name'] = unique_plugin_name
+        if plugin_unique_name:
+            register_doc['plugin_unique_name'] = plugin_unique_name
             if api_key:
                 register_doc['api_key'] = api_key
         
@@ -309,7 +312,7 @@ class PluginBase(object):
         :param str logstash_host: The address of logstash HTTP interface.
         :param str log_path: The path for the log file.
         """
-        unique_plugin_name = self.unique_plugin_name
+        plugin_unique_name = self.plugin_unique_name
 
         # Custumized logger formatter in order to enter some extra fields to the log message
         class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
@@ -317,7 +320,7 @@ class PluginBase(object):
                 try:
                     extra['level'] = record.levelname
                     extra['message'] = message
-                    extra['unique_plugin_name'] = unique_plugin_name
+                    extra['plugin_unique_name'] = plugin_unique_name
                     current_time = datetime.utcfromtimestamp(record.created)
                     extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
@@ -351,7 +354,7 @@ class PluginBase(object):
                     extra = dict()
                     extra['level'] = "CRITICAL"
                     extra['message'] = "Error in json formatter, not writing log"
-                    extra['unique_plugin_name'] = unique_plugin_name
+                    extra['plugin_unique_name'] = plugin_unique_name
                 return extra
 
         fatal_log_path = log_path.split('.log')[0] + '_FATAL.log'
@@ -475,7 +478,7 @@ class PluginBase(object):
         This function is blocking as long as the Http server is up.
         .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
-        AXONIUS_REST.run(host=self.debug_host, port=self.debug_port, debug=True)
+        AXONIUS_REST.run(host=self.host, port=self.port, debug=False, use_reloader=False)
 
     def get_method(self):
         """Getting the method type of the request.
@@ -553,7 +556,7 @@ class PluginBase(object):
         """
         with self._get_db_connection(True) as db:
             return db['core']['notifications'].insert_one(dict(
-                who=self.unique_plugin_name,
+                who=self.plugin_unique_name,
                 plugin_name=self.plugin_name,
                 type=notification_type,
                 title=title,
@@ -613,7 +616,7 @@ class PluginBase(object):
             connection_line = "mongodb://{user}:{password}@{addr}/{db}".format(user=self.db_user,
                                                                                password=self.db_password,
                                                                                addr=pure_addr,
-                                                                               db=self.unique_plugin_name)
+                                                                               db=self.plugin_unique_name)
             return MongoClient(connection_line)
         else:
             return MongoClient(self.db_host, username=self.db_user, password=self.db_password)
@@ -628,7 +631,7 @@ class PluginBase(object):
         :return: list(dict)
         """
         if not db_name:
-            db_name = self.unique_plugin_name
+            db_name = self.plugin_unique_name
         return self._get_db_connection(limited_user)[db_name][collection_name]
 
     @add_rule('schema/<schema_type>', methods=['GET'])

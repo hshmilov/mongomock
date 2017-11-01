@@ -197,7 +197,7 @@ class GUIPlugin(PluginBase):
         if aggregator is None:
             self._devices_db_name = None
         else:
-            self._devices_db_name = aggregator['unique_plugin_name']
+            self._devices_db_name = aggregator['plugin_unique_name']
         self._elk_addr = config['gui_specific']['elk_addr']
         self._elk_auth = config['gui_specific']['elk_auth']
 
@@ -300,15 +300,15 @@ class GUIPlugin(PluginBase):
                                   )
         return ""
 
-    def _get_plugin_schemas(self, db_connection, unique_plugin_name):
+    def _get_plugin_schemas(self, db_connection, plugin_unique_name):
         """
         Get all schemas for a given plugin
         :param db: a db connection
-        :param unique_plugin_name: the unique name of the plugin
+        :param plugin_unique_name: the unique name of the plugin
         :return: dict
         """
 
-        clients_value = db_connection[unique_plugin_name]['adapter_schema'].find_one(sort=
+        clients_value = db_connection[plugin_unique_name]['adapter_schema'].find_one(sort=
                                                                                      [('adapter_version',
                                                                                        pymongo.DESCENDING)])
         if clients_value is None:
@@ -327,13 +327,13 @@ class GUIPlugin(PluginBase):
         plugins_available = self.request_remote_plugin('register').json()
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
-                [('unique_plugin_name', pymongo.ASCENDING)]).skip(skip).limit(limit)
+                [('plugin_unique_name', pymongo.ASCENDING)]).skip(skip).limit(limit)
             return jsonify({'name': adapter['plugin_name'],
-                            'unique_name': adapter['unique_plugin_name'],
+                            'unique_name': adapter['plugin_unique_name'],
                             'creators': 'Dean Sysman',
                             'image': '<img src="deansysman.gif"/>',  # not all fields are yet functional
-                            'online': adapter['unique_plugin_name'] in plugins_available,
-                            'schemas': self._get_plugin_schemas(db_connection, adapter['unique_plugin_name'])
+                            'online': adapter['plugin_unique_name'] in plugins_available,
+                            'schemas': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
                             }
                            for adapter in
                            adapters_from_db)
