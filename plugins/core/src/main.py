@@ -25,7 +25,7 @@ class Core(PluginBase):
         # Get local configuration
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
-        unique_plugin_name = config['core_specific']['unique_plugin_name']
+        plugin_unique_name = config['core_specific']['plugin_unique_name']
         api_key = config['core_specific']['api_key']
         db_addr = config['core_specific']['db_addr']
         db_user = config['core_specific']['db_user']
@@ -36,7 +36,7 @@ class Core(PluginBase):
         self.did_adapter_registered = False
 
         # Building doc data so we won't register on PluginBase (Core doesnt need to register)
-        core_data = {"unique_plugin_name": unique_plugin_name,
+        core_data = {"plugin_unique_name": plugin_unique_name,
                      "db_addr": db_addr, 
                      "db_user": db_user,
                      "db_password": db_password,
@@ -76,23 +76,23 @@ class Core(PluginBase):
                     temp_list = self.online_plugins.copy()
 
                 delete_list = []
-                for unique_plugin_name in temp_list:
+                for plugin_unique_name in temp_list:
                     with self.adapters_lock:
-                        if not self._check_plugin_online(unique_plugin_name):
+                        if not self._check_plugin_online(plugin_unique_name):
                             if self.did_adapter_registered:
                                 # We need to wait a bit and then try to check if plugin exists again
                                 self.did_adapter_registered = False
                                 break
                             else:
                                 # The plugin didnt answer, removing the plugin subscription
-                                delete_list.append((unique_plugin_name, temp_list[unique_plugin_name]))
+                                delete_list.append((plugin_unique_name, temp_list[plugin_unique_name]))
 
                 with self.adapters_lock:
                     for delete_key, delete_value in delete_list:
                         delete_candidate = self.online_plugins.get(delete_key)
                         if delete_candidate is delete_value:
                             self.logger.info("Plugin {0} didnt answer, deleting "
-                                             "from online plugins list".format(unique_plugin_name))
+                                             "from online plugins list".format(plugin_unique_name))
                             del self.online_plugins[delete_key]
 
                 time.sleep(20)
@@ -105,22 +105,22 @@ class Core(PluginBase):
         # TODO: Implement this
         pass
 
-    def _get_config(self, unique_plugin_name):
+    def _get_config(self, plugin_unique_name):
         collection = self._get_collection('configs', limited_user=False)
-        return collection.find_one({"unique_plugin_name": unique_plugin_name})
+        return collection.find_one({"plugin_unique_name": plugin_unique_name})
 
-    def _check_plugin_online(self, unique_plugin_name):
+    def _check_plugin_online(self, plugin_unique_name):
         """ Function for checking if a plugin is online.
 
         May block for a maximum of 60 seconds.
 
-        :param str unique_plugin_name: The name of the plugin
+        :param str plugin_unique_name: The name of the plugin
 
         :returns: True if the plugin is online, False otherwise
         """
         try:
             # Trying a simple GET request for the version
-            final_url, _ = self._translate_url(unique_plugin_name+'/version')
+            final_url, _ = self._translate_url(plugin_unique_name+'/version')
 
             check_response = requests.get(final_url, timeout=60)
 
@@ -133,21 +133,21 @@ class Core(PluginBase):
             # The plugin is currently offline
             return False
 
-    def _create_db_for_plugin(self, unique_plugin_name):
+    def _create_db_for_plugin(self, plugin_unique_name):
         """ Creates a db for new plugin.
         This function will create a new database for the new plugin.
 
-        :param str unique_plugin_name: The unique name of the new plugin
+        :param str plugin_unique_name: The unique name of the new plugin
 
         :return db_user: The user name for this db
         :return db_password: The password for this db
         """
-        db_user = unique_plugin_name
+        db_user = plugin_unique_name
         db_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
-        db_connection[unique_plugin_name].add_user(db_user, 
+        db_connection[plugin_unique_name].add_user(db_user,
                                                    password=db_password, 
-                                                   roles=[{'role': 'dbOwner', 'db': unique_plugin_name}, 
+                                                   roles=[{'role': 'dbOwner', 'db': plugin_unique_name},
                                                           {'role': 'insert_notification', 'db': 'core'}])
 
         return db_user, db_password
@@ -158,10 +158,10 @@ class Core(PluginBase):
 
         Accepts:
             GET - If the request is without the api-key in its headers than this function will return a list
-                  Of the registered plugins. If the api-key is in the headers, and the unique_plugin_name is a parameter
+                  Of the registered plugins. If the api-key is in the headers, and the plugin_unique_name is a parameter
                   Of the request. Then the function will return if this plugin is currently registered.
             POST - For registering. Should send the following data on the page:
-                   {"plugin_name": <plugin_name>, "unique_plugin_name"(Optional):<unique_plugin_name>}
+                   {"plugin_name": <plugin_name>, "plugin_unique_name"(Optional):<plugin_unique_name>}
         """
         with self.adapters_lock:  # Locking the adapters list, in case "register" will get called from 2 plugins
             if self.get_method() == 'GET':
@@ -173,7 +173,7 @@ class Core(PluginBase):
                     for plugin_name, plugin in self.online_plugins.items():
                         to_return_device[plugin_name] = {'plugin_type': plugin['plugin_type'],
                                                          'device_sample_rate': plugin['device_sample_rate'],
-                                                         'unique_plugin_name': plugin['unique_plugin_name'],
+                                                         'plugin_unique_name': plugin['plugin_unique_name'],
                                                          'plugin_name': plugin['plugin_name']}
                     return jsonify(to_return_device)
                 else:
@@ -197,13 +197,13 @@ class Core(PluginBase):
 
             relevant_doc = None
 
-            if 'unique_plugin_name' in data:
+            if 'plugin_unique_name' in data:
                 # Plugin is trying to register with his own name
-                unique_plugin_name = data['unique_plugin_name']
-                self.logger.info("Plugin request to register with his own name: {0}".format(unique_plugin_name))
+                plugin_unique_name = data['plugin_unique_name']
+                self.logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
 
                 # Trying to get the configuration of the current plugin
-                relevant_doc = self._get_config(unique_plugin_name)
+                relevant_doc = self._get_config(plugin_unique_name)
 
                 if 'api_key' in data and relevant_doc is not None:
                     api_key = data['api_key']
@@ -214,18 +214,18 @@ class Core(PluginBase):
                 else:
                     # TODO: prompt message to gui that an unrecognized plugin is trying to connect
                     self.logger.warning("Plugin {0} request to register with "
-                                        "unique name but with no api key".format(unique_plugin_name))
+                                        "unique name but with no api key".format(plugin_unique_name))
                 
                 # Checking if this plugin already online for some reason
-                if unique_plugin_name in self.online_plugins:
-                    if self._check_plugin_online(unique_plugin_name):
+                if plugin_unique_name in self.online_plugins:
+                    if self._check_plugin_online(plugin_unique_name):
                         # There is already a running plugin with the same name
                         self.logger.error("Plugin {0} trying to register but already online")
                         return return_error("Error - {0} is trying to register but already "
-                                            "online".format(unique_plugin_name), 400)
+                                            "online".format(plugin_unique_name), 400)
                     else:
                         # The old plugin should be deleted
-                        del self.online_plugins[unique_plugin_name]
+                        del self.online_plugins[plugin_unique_name]
 
             else:
                 # New plugin
@@ -233,15 +233,15 @@ class Core(PluginBase):
                     # Trying to generate a random name
                     # TODO: Check that this name is also not in the DB
                     random_bits = random.getrandbits(16)
-                    unique_plugin_name = plugin_name + "_" + str(random_bits)
-                    if not self._get_config(unique_plugin_name) and unique_plugin_name not in self.online_plugins:
+                    plugin_unique_name = plugin_name + "_" + str(random_bits)
+                    if not self._get_config(plugin_unique_name) and plugin_unique_name not in self.online_plugins:
                         break
             if not relevant_doc:    
                 # Create a new plugin line
                 # TODO: Ask the gui for permission to register this new plugin
-                plugin_user, plugin_password = self._create_db_for_plugin(unique_plugin_name)
+                plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name)
                 doc = {
-                    'unique_plugin_name': unique_plugin_name,
+                    'plugin_unique_name': plugin_unique_name,
                     'plugin_name': plugin_name,
                     'plugin_ip': request.remote_addr,
                     'plugin_port': plugin_port,
@@ -257,17 +257,17 @@ class Core(PluginBase):
 
                 # Setting a new doc with the wanted configuration
                 collection = self._get_collection('configs', limited_user=False)
-                collection.replace_one(filter={'unique_plugin_name': doc['unique_plugin_name']},
+                collection.replace_one(filter={'plugin_unique_name': doc['plugin_unique_name']},
                                        replacement=doc,
                                        upsert=True)
 
                 # This time it must work since we enterned the needed document
-                relevant_doc = self._get_config(unique_plugin_name)
+                relevant_doc = self._get_config(plugin_unique_name)
             
-            self.online_plugins[unique_plugin_name] = relevant_doc
+            self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
-            self.logger.info("Plugin {0} registered successfuly!".format(relevant_doc['unique_plugin_name']))
+            self.logger.info("Plugin {0} registered successfuly!".format(relevant_doc['plugin_unique_name']))
             return jsonify(relevant_doc)
 
     @add_rule("<path:full_url>", methods=['POST', 'GET'], should_authenticate=False)
@@ -312,23 +312,23 @@ class Core(PluginBase):
         
         return final_url, api_key  
     
-    def _get_plugin_addr(self, unique_plugin_name):
+    def _get_plugin_addr(self, plugin_unique_name):
         """ Get the plugin address from its name.
 
         Looks in the online plugins list.
 
-        :param str unique_plugin_name: The name of the plugin
+        :param str plugin_unique_name: The name of the plugin
 
         :return: (final_addr, api_key)
         """
-        if unique_plugin_name not in self.online_plugins:
+        if plugin_unique_name not in self.online_plugins:
             # Plugin is not in the online list
             return None, None
 
-        relevant_doc = self._get_config(unique_plugin_name)
+        relevant_doc = self._get_config(plugin_unique_name)
         
         if not relevant_doc:
-            self.logger.warning("No online plugin found for {0}".format(unique_plugin_name))
+            self.logger.warning("No online plugin found for {0}".format(plugin_unique_name))
             return None, None
 
         return relevant_doc["plugin_ip"]+":"+str(relevant_doc["plugin_port"]), relevant_doc["api_key"]

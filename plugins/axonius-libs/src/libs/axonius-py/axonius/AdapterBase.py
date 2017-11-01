@@ -136,9 +136,9 @@ class AdapterBase(PluginBase, ABC):
         pass
 
     def _get_clients_config(self):
-        """Returning the data inside 'clients' Collection on <unique_plugin_name> db.
+        """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
-        return self._get_db_connection(True)[self.unique_plugin_name]['clients'].find()
+        return self._get_db_connection(True)[self.plugin_unique_name]['clients'].find()
 
     def _update_clients_schema_in_db(self, schema):
         """
@@ -147,11 +147,11 @@ class AdapterBase(PluginBase, ABC):
         :return:
         """
         with self._get_db_connection(True) as db_connection:
-            collection = db_connection[self.unique_plugin_name]['adapter_schema']
-            collection.replace_one(filter={'adapter_name': self.unique_plugin_name,
+            collection = db_connection[self.plugin_unique_name]['adapter_schema']
+            collection.replace_one(filter={'adapter_name': self.plugin_unique_name,
                                            'adapter_version': self.version},
                                    replacement={
-                                       'adapter_name': self.unique_plugin_name,
+                                       'adapter_name': self.plugin_unique_name,
                                        'adapter_version': self.version,
                                        'schema': schema
                                    }, upsert=True)
