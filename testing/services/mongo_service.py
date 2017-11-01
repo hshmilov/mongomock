@@ -10,6 +10,6 @@ class MongoService(socket_service.SocketService):
 
 @pytest.fixture
 def mongo_fixture(request):
-    service = MongoService(('localhost', 27017), '../devops/systemization/database/docker-compose.yml')
+    service = MongoService(('localhost', 27018), '../devops/systemization/database/docker-compose.yml')
     initalize_fixture(request, service)
     return service

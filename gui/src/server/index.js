@@ -5,7 +5,7 @@ var MongoClient = require('mongodb').MongoClient
 const aggregatorDB = 'aggregator_plugin_52576'
 
 app.get('/api/devices', function (req, res) {
-  MongoClient.connect('mongodb://ax_user:ax_pass@localhost:27017', function (err, client) {
+  MongoClient.connect('mongodb://ax_user:ax_pass@localhost:27018', function (err, client) {
     if (err) throw err
 
     group_by = {'_id': '$data.id'}
@@ -40,7 +40,7 @@ app.get('/api/devices', function (req, res) {
 })
 
 app.post('/api/filters', function (req, res) {
-  MongoClient.connect('mongodb://ax_user:ax_pass@localhost:27017', function (err, client) {
+  MongoClient.connect('mongodb://ax_user:ax_pass@localhost:27018', function (err, client) {
     if (err) throw err
 
     res.header('Access-Control-Allow-Origin', '*')
