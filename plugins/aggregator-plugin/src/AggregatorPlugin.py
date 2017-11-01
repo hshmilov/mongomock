@@ -16,7 +16,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
-from Axonius.PluginBase import PluginBase, add_rule
+from axonius.PluginBase import PluginBase, add_rule
 from flask import jsonify
 
 # The needed keys in the mapped data
