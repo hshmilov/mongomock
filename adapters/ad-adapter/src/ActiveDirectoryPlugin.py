@@ -3,8 +3,8 @@
 
 __author__ = "Ofir Yefet"
 
-from Axonius.AdapterBase import AdapterBase
-from Axonius.ParsingUtils import figure_out_os
+from axonius.AdapterBase import AdapterBase
+from axonius.ParsingUtils import figure_out_os
 from LdapConnection import LdapConnection
 
 import exceptions
@@ -30,7 +30,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         """
 
         # Initialize the base plugin (will initialize http server)
-        super().__init__(AD_VERSION, **kargs)
+        super().__init__(**kargs)
 
     def _parse_clients_data(self, clients_config):
         # Each client inside _clients will hold an open LDAP connection object
