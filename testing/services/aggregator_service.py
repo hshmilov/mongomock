@@ -3,13 +3,13 @@ import services.socket_service as socket_service
 from services.simple_fixture import initalize_fixture
 
 
-class MongoService(socket_service.SocketService):
+class AggregatorService(socket_service.SocketService):
     def __init__(self, endpoint, config_file_path):
         super().__init__(endpoint, config_file_path)
 
 
 @pytest.fixture
-def mongo_fixture(request):
-    service = MongoService(('localhost', 27017), '../devops/systemization/database/docker-compose.yml')
+def aggregator_fixture(request):
+    service = AggregatorService(('localhost', 5000), '../plugins/aggregator-plugin/docker-compose.yml')
     initalize_fixture(request, service)
     return service

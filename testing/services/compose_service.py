@@ -1,6 +1,5 @@
 import subprocess
 from abc import abstractmethod
-import os
 
 import services.axon_service
 
