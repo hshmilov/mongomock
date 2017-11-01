@@ -6,4 +6,4 @@ source ./venv/bin/activate
 
 cd ./testing
 
-python ./run_tests.py
+timeout 600 python ./run_tests.py
