@@ -186,7 +186,7 @@ class PluginBase(object):
         try:
             self.core_address = config['DEBUG']['core_address']
         except KeyError:
-            self.core_address = "https://core"  # This should be dns resolved.
+            self.core_address = "http://core"  # This should be dns resolved.
 
         try:
             self.plugin_unique_name = config['registration']['plugin_unique_name']
