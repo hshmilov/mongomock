@@ -2,6 +2,7 @@
 FROM openresty/openresty:xenial
 
 WORKDIR /home/axonius
+ENV HOME /home/axonius
 
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
