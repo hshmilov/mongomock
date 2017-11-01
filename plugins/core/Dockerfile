@@ -1,7 +1,7 @@
 # Use an official Axonius Image parent image.
 # Notice! The compilation script will fail if this is not develop-latest or master-latest if you are
 # PR'ing this code into develop or master.
-FROM 405773942477.dkr.ecr.us-east-2.amazonaws.com/axonius/axonius-libs
+FROM axonius-libs
 
 # Set the working directory to /app
 WORKDIR /home/axonius/app
