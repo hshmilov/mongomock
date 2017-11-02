@@ -1,6 +1,4 @@
-import pytest
 from abc import ABC, abstractmethod
-from retrying import retry
 
 
 class AxonService(ABC):
@@ -19,9 +17,18 @@ class AxonService(ABC):
     def is_up(self):
         pass
 
-    def wait_for_service(self, interval=1000, num_intervals=300):
-        @retry(wait_fixed=interval, stop_max_attempt_number=num_intervals)
-        def check_if_up():
-            assert self.is_up()
+    def wait_for_service(self, interval=0.25, num_intervals=4 * 60 * 2):
 
-        check_if_up()
+        success = False
+        for x in range(1, num_intervals):
+            try:
+                assert self.is_up()
+                success = True
+                break
+            except:
+                import time
+                time.sleep(interval)
+
+        if not success:
+            raise Exception("Service failed to start")
+

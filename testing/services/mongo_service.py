@@ -13,8 +13,9 @@ class MongoService(services.compose_service.ComposeService):
     @staticmethod
     def is_mongo_alive(endpoint):
         try:
-            client = pymongo.MongoClient(endpoint[0], endpoint[1], serverSelectionTimeoutMS=0)
+            client = pymongo.MongoClient(endpoint[0], endpoint[1])
             client.server_info()
+            print("Mongo connection worked")
             return True
         except Exception as err:
             print(err)
