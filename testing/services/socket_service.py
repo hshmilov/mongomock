@@ -1,5 +1,5 @@
 import services.compose_service as compose_service
-import socket
+import requests
 
 
 class SocketService(compose_service.ComposeService):
@@ -8,12 +8,12 @@ class SocketService(compose_service.ComposeService):
         self.endpoint = endpoint
 
     @staticmethod
-    def is_socket_alive(endpoint):
+    def is_endpoint_alive(endpoint):
         try:
-            socket.create_connection(endpoint)
-            return True
+            r = requests.get("http://%s:%s/version" % (endpoint[0], endpoint[1]))
+            return r.status_code == 200
         except:
             return False
 
     def is_up(self):
-        return self.is_socket_alive(self.endpoint)
+        return self.is_endpoint_alive(self.endpoint)

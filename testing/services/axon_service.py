@@ -19,7 +19,7 @@ class AxonService(ABC):
     def is_up(self):
         pass
 
-    def wait_for_service(self, interval=500, num_intervals=120):
+    def wait_for_service(self, interval=1000, num_intervals=300):
         @retry(wait_fixed=interval, stop_max_attempt_number=num_intervals)
         def check_if_up():
             assert self.is_up()
