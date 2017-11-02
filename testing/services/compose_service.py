@@ -17,7 +17,7 @@ class ComposeService(services.axon_service.AxonService):
 
     def stop(self):
         subprocess.call(['docker-compose', 'stop'], cwd=os.path.dirname(self._config_file_path))
-        subprocess.call(['docker-compose', 'rm'], cwd=os.path.dirname(self._config_file_path))
+        subprocess.call(['docker-compose', 'rm', "-f"], cwd=os.path.dirname(self._config_file_path))
 
 
     @abstractmethod

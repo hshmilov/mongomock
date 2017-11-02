@@ -5,7 +5,7 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/plugins/core/docker-compose.yml]:core/python3.6" />
+    <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/plugins/aggregator-plugin/docker-compose.yml]:aggregator/python3.6" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/plugins/aggregator-plugin/src" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
@@ -15,7 +15,7 @@
     <PathMappingSettings>
       <option name="pathMappings">
         <list>
-          <mapping local-root="$PROJECT_DIR$/plugins/core/src" remote-root="/home/axonius/app" />
+          <mapping local-root="$PROJECT_DIR$/plugins/aggregator-plugin/src" remote-root="/home/axonius/app" />
           <mapping local-root="$PROJECT_DIR$/plugins/axonius-libs/src/libs" remote-root="/home/axonius/libs" />
         </list>
       </option>
