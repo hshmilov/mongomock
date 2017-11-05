@@ -1,21 +1,16 @@
-# Use an official Python runtime as a parent image
-FROM python:3.6-alpine
+FROM axonius-libs
 
 # Set the working directory to /app
-WORKDIR /home/ad_adapter
+WORKDIR /home/axonius/app
 
 # Copy the current directory contents into the container at /app
-ADD src /home/ad_adapter
-ADD externals /home/ad_adapter/externals
-ADD requirements.txt /home/ad_adapter/
+COPY src/ ./
+COPY requirements.txt ./
 
 # Install any needed packages specified in requirements.txt
-RUN pip install -r requirements.txt
-RUN pip install -e ./externals/axonius-libs
+RUN pip3 install -r requirements.txt
+RUN pip3 uninstall requests -y
+RUN pip3 install requests
 
-# Make port 80 available to the world outside this container
-EXPOSE 5000
 
-# Run app.py when the container launches
-CMD ["python", "src/main.py"]
-
+EXPOSE 5001
