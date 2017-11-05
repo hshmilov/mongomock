@@ -8,6 +8,7 @@ services:
             - 5001:80
         volumes:
           - ./src:/home/axonius/app
+          - ../../plugins/axonius-libs/src/libs/axonius-py/axonius:/home/axonius/libs/axonius-py/axonius
 
 networks:
   default:

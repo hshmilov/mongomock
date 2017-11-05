@@ -5,9 +5,10 @@ services:
         image: axonius/aggregator
         container_name: "aggregator"
         ports:
-            - 5000:80
+          - 5000:80
         volumes:
           - ./src:/home/axonius/app
+          - ../axonius-libs/src/libs/axonius-py/axonius:/home/axonius/libs/axonius-py/axonius
 
 networks:
   default:

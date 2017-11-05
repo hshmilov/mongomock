@@ -1,9 +1,10 @@
 import pytest
+import sys
 
 
 def main():
-    pytest.main(['./tests'])
+    return pytest.main(['./tests'])
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
