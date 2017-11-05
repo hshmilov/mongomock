@@ -14,9 +14,12 @@ RUN apt-get update && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \
     ln -s /usr/bin/python3.6 /usr/local/bin/python3
 
+COPY requirements.txt .
+
+RUN pip3 install -r requirements.txt
+
 # The following changes a lot, we want less build-time so its a different RUN command.
-RUN pip3 install uwsgi flask apscheduler retrying && \
-    mkdir /home/axonius/logs
+RUN mkdir /home/axonius/logs
 
 # Set a label for this image.
 LABEL "com.axonius.image-type"="axonius-libs"

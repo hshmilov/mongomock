@@ -9,8 +9,6 @@ COPY requirements.txt ./
 
 # Install any needed packages specified in requirements.txt
 RUN pip3 install -r requirements.txt
-RUN pip3 uninstall requests -y
-RUN pip3 install requests
 
 
 EXPOSE 5001
