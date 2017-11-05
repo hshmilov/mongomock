@@ -1,9 +1,7 @@
-import pytest
 from abc import ABC, abstractmethod
 
 
 class AxonService(ABC):
-
     def __init__(self):
         pass
 
@@ -18,3 +16,19 @@ class AxonService(ABC):
     @abstractmethod
     def is_up(self):
         pass
+
+    def wait_for_service(self, interval=0.25, num_intervals=4 * 60 * 2):
+
+        success = False
+        for x in range(1, num_intervals):
+            try:
+                assert self.is_up()
+                success = True
+                break
+            except:
+                import time
+                time.sleep(interval)
+
+        if not success:
+            raise Exception("Service failed to start")
+

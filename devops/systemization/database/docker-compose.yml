@@ -10,7 +10,7 @@ services:
         volumes:
           - ./create_core_role.js:/docker-entrypoint-initdb.d/create_core_role.js
         ports:
-            - 27017:27017
+            - 27018:27017
 
 
 networks:

@@ -11,4 +11,4 @@ services:
           - ./scripts:/docker-entrypoint-initdb.d/
           - ./dump:/tmp/dump
         ports:
-            - 27017:27017
+            - 27018:27018

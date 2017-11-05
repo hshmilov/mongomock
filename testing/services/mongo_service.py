@@ -1,36 +1,32 @@
 import pytest
+import pymongo
 
-import services.compose_service as compose_service
+import services.compose_service
+from services.simple_fixture import initalize_fixture
 
-from pymongo import MongoClient
 
-
-class MongoService(compose_service.ComposeService):
-    def __init__(self, config_file_path):
+class MongoService(services.compose_service.ComposeService):
+    def __init__(self, endpoint, config_file_path):
         super().__init__(config_file_path)
+        self.endpoint = endpoint
+
+    @staticmethod
+    def is_mongo_alive(endpoint):
+        try:
+            client = pymongo.MongoClient(endpoint[0], endpoint[1])
+            client.server_info()
+            print("Mongo connection worked")
+            return True
+        except Exception as err:
+            print(err)
+            return False
 
     def is_up(self):
-
-        # TODO: parse yaml file for user and password.
-        try:
-            import socket
-            socket.create_connection(('localhost', 27017))
-            # client = MongoClient('mongodb://localhost:27017', username='ax_user', password='ax_pass')
-            return True
-        except:
-            print('Mongo seems to be down.')
-            return False
+        return self.is_mongo_alive(self.endpoint)
 
 
 @pytest.fixture
 def mongo_fixture(request):
-    mongo = MongoService('../../devops/systemization/database/docker-compose.yml')
-
-    mongo.start()
-
-    def fin():
-        mongo.stop()
-        print('Stopped Mongo')
-
-    request.addfinalizer(fin)
-    return mongo
+    service = MongoService(('localhost', 27018), '../devops/systemization/database/docker-compose.yml')
+    initalize_fixture(request, service)
+    return service
