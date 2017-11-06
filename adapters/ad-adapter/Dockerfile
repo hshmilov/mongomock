@@ -1,4 +1,4 @@
-FROM axonius-libs
+FROM axonius/axonius-libs
 
 # Set the working directory to /app
 WORKDIR /home/axonius/app

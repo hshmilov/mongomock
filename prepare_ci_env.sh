@@ -2,9 +2,9 @@
 
 echo "Build axoinius libs"
 (
-docker rmi axonius-libs
+docker rmi axonius/axonius-libs
 cd plugins/axonius-libs
-docker build -t axonius-libs .
+docker build -t axonius/axonius-libs .
 )
 
 echo "Create venv"
