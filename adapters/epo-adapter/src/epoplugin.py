@@ -62,7 +62,7 @@ class EpoPlugin(AdapterBase):
                     "type": "string"
                 },
                 EPO_PORT: {
-                    "type": "string"
+                    "type": "integer"
                 },
                 QUERY_USER: {
                     "type": "string"
@@ -103,4 +103,7 @@ class EpoPlugin(AdapterBase):
         return mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
 
     def _parse_clients_data(self, clients_config):
-        return clients_config  # no need to parse anything...
+        clients = {}
+        for client in clients_config:
+            clients[client[EPO_HOST]] = client
+        return clients
