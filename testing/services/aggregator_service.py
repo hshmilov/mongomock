@@ -4,12 +4,12 @@ from services.simple_fixture import initalize_fixture
 
 
 class AggregatorService(socket_service.SocketService):
-    def __init__(self, endpoint, config_file_path):
+    def __init__(self, endpoint=('localhost', 5000), config_file_path='../plugins/aggregator-plugin/docker-compose.yml'):
         super().__init__(endpoint, config_file_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def aggregator_fixture(request):
-    service = AggregatorService(('localhost', 5000), '../plugins/aggregator-plugin/docker-compose.yml')
+    service = AggregatorService()
     initalize_fixture(request, service)
     return service

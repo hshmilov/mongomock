@@ -35,6 +35,20 @@ def parse_os_details(device_raw_data):
 
 
 class EpoPlugin(AdapterBase):
+    """
+    Connects axonius to mcafee epo
+    """
+
+    def __init__(self, **kargs):
+        """Class initialization.
+
+        Check AdapterBase documentation for additional params and exception details.
+
+        """
+
+        # Initialize the base plugin (will initialize http server)
+        super().__init__(**kargs)
+
     def _clients_schema(self):
         return {
             "properties": {

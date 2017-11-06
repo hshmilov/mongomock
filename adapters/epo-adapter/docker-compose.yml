@@ -1,0 +1,16 @@
+version: '3'
+services:
+  epo-adapter:
+        build: .
+        image: axonius/epo-adapter
+        container_name: "epo-adapter"
+        ports:
+            - 5003:80
+        volumes:
+          - ./src:/home/axonius/app
+          - ../../plugins/axonius-libs/src/libs/axonius-py/axonius:/home/axonius/libs/axonius-py/axonius
+
+networks:
+  default:
+    external:
+      name: axonius

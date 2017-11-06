@@ -6,7 +6,8 @@ from services.simple_fixture import initalize_fixture
 
 
 class MongoService(services.compose_service.ComposeService):
-    def __init__(self, endpoint, config_file_path):
+    def __init__(self, endpoint=('localhost', 27018),
+                 config_file_path='../devops/systemization/database/docker-compose.yml'):
         super().__init__(config_file_path)
         self.endpoint = endpoint
 
@@ -25,8 +26,8 @@ class MongoService(services.compose_service.ComposeService):
         return self.is_mongo_alive(self.endpoint)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mongo_fixture(request):
-    service = MongoService(('localhost', 27018), '../devops/systemization/database/docker-compose.yml')
+    service = MongoService()
     initalize_fixture(request, service)
     return service

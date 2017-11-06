@@ -8,7 +8,7 @@ class AdService(socket_service.SocketService):
         super().__init__(endpoint, config_file_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ad_fixture(request):
     service = AdService(('localhost', 5001), '../adapters/ad-adapter/docker-compose.yml')
     initalize_fixture(request, service)
