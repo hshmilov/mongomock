@@ -26,7 +26,7 @@ class MongoService(services.compose_service.ComposeService):
         return self.is_mongo_alive(self.endpoint)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mongo_fixture(request):
     service = MongoService()
     initalize_fixture(request, service)

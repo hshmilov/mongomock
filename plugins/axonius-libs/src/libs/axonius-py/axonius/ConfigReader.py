@@ -29,3 +29,7 @@ class PluginConfig(object):
     @property
     def core_address(self):
         return self._config['DEBUG']['core_address']
+
+    @property
+    def api_key(self):
+        return self._config['registration']['api_key']

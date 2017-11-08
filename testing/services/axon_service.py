@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 
 
@@ -26,9 +27,7 @@ class AxonService(ABC):
                 success = True
                 break
             except:
-                import time
                 time.sleep(interval)
 
         if not success:
             raise Exception("Service failed to start")
-
