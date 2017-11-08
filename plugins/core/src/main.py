@@ -8,14 +8,16 @@ import requests
 import threading
 import time
 import configparser
-import os
-import binascii
+import exceptions
+import uritools
+import uuid
 
 
 from flask import jsonify, request, Response
 from axonius.PluginBase import PluginBase, add_rule, return_error
 
 CHUNK_SIZE = 1024
+
 
 class Core(PluginBase):
 
@@ -120,7 +122,9 @@ class Core(PluginBase):
         """
         try:
             # Trying a simple GET request for the version
-            final_url, _ = self._translate_url(plugin_unique_name+'/version')
+            data = self._translate_url(plugin_unique_name + '/version')
+            final_url = uritools.uricompose(scheme='http', host=data['plugin_ip'], port=data['plugin_port'], 
+                                            path=data['path'])
 
             check_response = requests.get(final_url, timeout=60)
 
@@ -145,9 +149,9 @@ class Core(PluginBase):
         db_user = plugin_unique_name
         db_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
-        db_connection[plugin_unique_name].add_user(db_user,
+        db_connection[plugin_unique_name].add_user(db_user, 
                                                    password=db_password, 
-                                                   roles=[{'role': 'dbOwner', 'db': plugin_unique_name},
+                                                   roles=[{'role': 'dbOwner', 'db': plugin_unique_name}, 
                                                           {'role': 'insert_notification', 'db': 'core'}])
 
         return db_user, db_password
@@ -246,7 +250,7 @@ class Core(PluginBase):
                     'plugin_ip': request.remote_addr,
                     'plugin_port': plugin_port,
                     'plugin_type': plugin_type,
-                    'api_key': binascii.hexlify(os.urandom(24)).decode(),
+                    'api_key': uuid.uuid4().hex,
                     'db_addr': self.db_host,
                     'db_user': plugin_user,
                     'db_password': plugin_password,
@@ -255,14 +259,21 @@ class Core(PluginBase):
                     'status': 'ok'
                 }
 
-                # Setting a new doc with the wanted configuration
-                collection = self._get_collection('configs', limited_user=False)
-                collection.replace_one(filter={'plugin_unique_name': doc['plugin_unique_name']},
-                                       replacement=doc,
-                                       upsert=True)
+            else:
+                # This is an existing plugin, we should update its data on the db (data that the plugin can change)
+                doc = relevant_doc.copy()
+                doc['plugin_name'] = plugin_name
+                doc['plugin_ip'] = request.remote_addr
+                doc['plugin_port'] = plugin_port
 
-                # This time it must work since we enterned the needed document
-                relevant_doc = self._get_config(plugin_unique_name)
+            # Setting a new doc with the wanted configuration
+            collection = self._get_collection('configs', limited_user=False)
+            collection.replace_one(filter={'plugin_unique_name': doc['plugin_unique_name']},
+                                   replacement=doc,
+                                   upsert=True)
+                                   
+            # This time it must work since we enterned the needed document
+            relevant_doc = self._get_config(plugin_unique_name)
             
             self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field
@@ -282,16 +293,27 @@ class Core(PluginBase):
         api_key = self.get_request_header('x-api-key')
         
         # Checking api key
-        if not any(self.online_plugins[d]['api_key'] == api_key for d in self.online_plugins):
+        calling_plugin = next((plugin for plugin in self.online_plugins.values() if plugin['api_key'] == api_key), None)
+        if calling_plugin is None:
             self.logger.warning("Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
             return return_error("Api key not valid", 401)
 
-        final_url, api_key = self._translate_url(full_url)
+        try:
+            url_data = self._translate_url(full_url)
+        except exceptions.PluginNotFoundError:
+            return self.return_error("No such plugin!", 400)
 
-        data = self.get_request_data_as_object()
+        data = self.get_request_data()
+
+        final_url = uritools.uricompose(scheme='http', host=url_data['plugin_ip'], port=url_data['plugin_port'], 
+                                        path=url_data['path'], query=request.args)
 
         # Requesting the wanted plugin
-        headers = {'x-api-key': api_key}
+        headers = {
+            'x-api-key': url_data['api_key'],
+            'x-unique-plugin-name': calling_plugin['plugin_unique_name'],
+            'x-plugin-name': calling_plugin['plugin_name']
+        }
         r = requests.request(self.get_method(), final_url, headers=headers, data=data)
 
         headers = dict(r.headers)
@@ -303,14 +325,12 @@ class Core(PluginBase):
 
     def _translate_url(self, full_url):
         (plugin, *url) = full_url.split('/')
-        plugin_address, api_key = self._get_plugin_addr(plugin.lower())
 
-        if plugin_address is None:
-            return Response(response="No such plugin!", status=400)
+        address_dict = self._get_plugin_addr(plugin.lower())
 
-        final_url = "http://%s/%s" % (plugin_address, "/".join(url))
+        address_dict['path'] = '/'+'/'.join(url)
         
-        return final_url, api_key  
+        return address_dict 
     
     def _get_plugin_addr(self, plugin_unique_name):
         """ Get the plugin address from its name.
@@ -319,11 +339,11 @@ class Core(PluginBase):
 
         :param str plugin_unique_name: The name of the plugin
 
-        :return: (final_addr, api_key)
+        :return dict: Dictionary containing plugin ip, plugin port and api key to use.
         """
         if plugin_unique_name not in self.online_plugins:
             # Plugin is not in the online list
-            return None, None
+            raise exceptions.PluginNotFoundError()
 
         relevant_doc = self._get_config(plugin_unique_name)
         
@@ -331,7 +351,9 @@ class Core(PluginBase):
             self.logger.warning("No online plugin found for {0}".format(plugin_unique_name))
             return None, None
 
-        return relevant_doc["plugin_ip"]+":"+str(relevant_doc["plugin_port"]), relevant_doc["api_key"]
+        return {"plugin_ip": relevant_doc["plugin_ip"], 
+                "plugin_port": str(relevant_doc["plugin_port"]),
+                "api_key": relevant_doc["api_key"]}
 
 
 def initialize():

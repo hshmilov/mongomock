@@ -8,3 +8,4 @@ requests==2.18.4
 JSON-log-formatter==0.2.0
 elasticsearch==5.4.0
 elasticsearch_dsl==5.3.0
+codenamize

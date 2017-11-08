@@ -4,6 +4,8 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 
 __author__ = "Mark Segal"
 
+import codenamize
+
 
 def figure_out_os(s):
     """
@@ -62,3 +64,13 @@ def figure_out_os(s):
     return {"type": os_type,
             "distribution": distribution,
             "bitness": bitness}
+
+
+def beautiful_adapter_device_name(adapter_plugin_name: str, adapter_device_id: str):
+    """
+    Produces a human memorizable name for a device
+    :param adapter_plugin_name: The plugin name for the adapter that found this device
+    :param adapter_device_id: The device ID as provided by the adapter
+    :return: str
+    """
+    return codenamize.codenamize(f"{adapter_plugin_name}->{adapter_device_id}", adjectives=3, max_item_chars=10)

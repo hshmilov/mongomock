@@ -125,9 +125,11 @@ class IteratorJSONEncoder(JSONEncoder):
             return list(iterable)
         return JSONEncoder.default(self, o)
 
+
 def retry_if_connection_error(exception):
     """Return True if we should retry (in this case when it's an connection), False otherwise"""
     return isinstance(exception, requests.exceptions.ConnectionError)
+
 
 def return_error(error_message, http_status=500):
     """ Helper function for returning errors in our format.
@@ -186,7 +188,7 @@ class PluginBase(object):
         try:
             self.core_address = config['DEBUG']['core_address']
         except KeyError:
-            self.core_address = "http://core"  # This should be dns resolved.
+            self.core_address = "https://core"  # This should be dns resolved.
 
         try:
             self.plugin_unique_name = config['registration']['plugin_unique_name']
@@ -197,7 +199,7 @@ class PluginBase(object):
 
         if not core_data:
             core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
-        if not core_data or core_data['status']=='error':
+        if not core_data or core_data['status'] == 'error':
             raise RuntimeError("Register process faild, Existing. Reason: {0}".format(core_data['message']))
 
         if core_data['plugin_unique_name'] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
@@ -232,16 +234,20 @@ class PluginBase(object):
                                       methods=wanted_methods)
 
         # Adding "keepalive" thread
-        if self.plugin_unique_name != "core":
+        if self.plugin_unique_name != "core": 
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(5)}
             self.scheduler = BackgroundScheduler(executors=executors)
             self.scheduler.start()
             self.scheduler.add_job(func=self._check_registered_thread,
-                                trigger=IntervalTrigger(seconds=10),
-                                next_run_time=datetime.now(),
-                                id='check_registered',
-                                max_instances=1)
+                                   trigger=IntervalTrigger(seconds=1000),
+                                   next_run_time=datetime.now(),
+                                   id='check_registered',
+                                   max_instances=1)
+
+        # Creating open actions dict. This dict will hold all of the open actions issued by this plugin.
+        # We will use this dict in order to determine what is the right callback for the action update retrieved.
+        self._open_actions = dict()
 
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
@@ -276,7 +282,8 @@ class PluginBase(object):
             self.comm_failure_counter += 1
             if self.comm_failure_counter > 12:  # Two minutes
                 self.comm_failure_counter = 0
-                self.logger.error("Error communicating with Core for more than 2 minutes, exiting. Reason: {0}".format(e))
+                self.logger.error(("Error communicating with Core for more than 2 minutes, "
+                                   "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
     @retry(wait_fixed=10*1000, 
@@ -327,13 +334,13 @@ class PluginBase(object):
                     # Adding the frame details of the log message. 
                     # This is in a different try because failing in this process does 
                     # not mean failing in the format process, so we need a 
-                    # Different handling type for error in this part
+                    # different handling type for error in this part
                     try:
                         frame_stack = inspect.stack()
                         # Currently we have a list with all frames. The first 2 frames are this logger frame, 
                         # The next lines are the pythonic library. We want to skip all of these frames to reach 
-                        # The first frame that is not logging function. This is the function that created
-                        # This log message.
+                        # the first frame that is not logging function. This is the function that created
+                        # this log message.
                         for current_frame in frame_stack[3:]:  # Skipping the first two lines (belogs to the formatter)
                             if (("lib" in current_frame.filename and "logging" in current_frame.filename) or
                                         current_frame.function == 'emit'):
@@ -402,14 +409,14 @@ class PluginBase(object):
 
                     # Checking if we need to dump logs to the server
                     if ((len(self.currentLogs) > self.bulk_size or
-                                     current_time - self.last_sent > self.max_time) and
-                                    current_time - self.last_error_time > self.max_time):
+                       current_time - self.last_sent > self.max_time) and
+                       current_time - self.last_error_time > self.max_time):
                         self.last_sent = current_time
                         with requests.Session() as s:  # Sending all logs on one session
                             new_list = []
                             # The warning count will count how much time we couldnt save a log due to an error.
                             # In case of too much errors (defined by 'warning_before_cooldown') we will enter
-                            # Some cooldown period (defined by 'error_cooldown')
+                            # some cooldown period (defined by 'error_cooldown')
                             warning_count = 0
                             for log_line in self.currentLogs:
                                 try:
@@ -433,7 +440,6 @@ class PluginBase(object):
                                     fatal_logger.error(exception_log)
                                     warning_count = warning_count + 1
                                     continue
-                                    # TODO Ofir: save some log id
                                     # In any other cases, we should just try the other log lines 
                                     # (This line will not be sent anymore)
                             if warning_count != 0:
@@ -444,7 +450,7 @@ class PluginBase(object):
                                 if warning_count > self.warning_before_cooldown:
                                     self.last_error_time = time.time()
                             self.currentLogs = new_list
-                        return 'OK'
+                        return ''
                 except Exception as e:  # We must catch every exception from the logger
                     # Nothing we can do here
                     exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__, str(e))
@@ -520,6 +526,13 @@ class PluginBase(object):
             return data
         else:
             return None
+
+    def get_caller_plugin_name(self):
+        """
+        Figures out who called us from
+        :return: tuple(plugin_unique_name, plugin_name)
+        """
+        return request.headers.get('x-unique-plugin-name'), request.headers.get('x-plugin-name')
 
     def request_remote_plugin(self, resource, plugin_unique_name=None, method='get', **kwargs):
         """
@@ -597,12 +610,72 @@ class PluginBase(object):
             if wanted_level in logging_types.keys():
                 self.log_level = logging_types[wanted_level]
                 self.logger.setLevel(self.log_level)
-                return 'OK'
+                return ''
             else:
                 error_string = "Unsupprted log level \"{wanted_level}\", available log levels are {levels}"
                 return return_error(error_string.format(wanted_level=wanted_level, levels=logging_types.keys()), 400)
         else:
             return logging.getLevelName(self.log_level)
+
+    @add_rule('action_update/<action_id>', methods=['POST'])
+    def action_callback(self, action_id):
+        """ A function for receiving updates from the executor (Adapter or EC).
+
+        This function will listen on updates, and if the update is on a relevant action_id it will call the 
+        Callback registered for this action.
+
+        Accepts:
+            POST - For posting a status update (or sending results) on a specific action
+        """
+        if action_id not in self._open_actions:
+            if self.plugin_name == "execution_controller":
+                # This is a special case for the execution_controller plugin. In that case, The EC plugin knows how to 
+                # handle other actions such as reset_update. In case of ec plugin, we know for sure what is the 
+                # callback, we use this fact to just call the callback and not search for it on the _open_actions 
+                # list (because the current action id will not be there)
+                self.ec_callback(action_id)
+                return ''
+            else:
+                self.logger.error('Got unrecognized action_id update. Action ID: {0}'.format(action_id))
+                return self.return_error('Unrecognized action_id {0}'.format(action_id), 404)
+        else:
+            # We recognize this action id, should call its callback
+            callback_function = self._open_actions[action_id]
+            # Calling the needed function
+            callback_function(action_id)
+            return ''
+
+    def request_action(self, action_type, axon_id, callback_function, data_for_action=None):
+        """ A function for requesting action.
+
+        This function called be used by any plugin. It will initiate an action request from the EC
+
+        :param str action_type: The type of the action. For example 'put_file'
+        :param str axon_id: The axon id of the device we want to run action on
+        :param func callback_function: A pointer to the callback function. This function will be called on each update
+                                       On this action id.
+        :param dict data_for_action: Extra data for executing the wanted action.
+
+        :return result: the result of the request (as returned from the REST request)
+        """
+        if data_for_action:
+            data = data_for_action.copy()
+
+        # Building the uri for the request
+        uri = 'action/{action_type}?axon_id={axon_id}&issuer_name={issuer}'.format(action_type=action_type,
+                                                                                   axon_id=axon_id,
+                                                                                   issuer=self.plugin_unique_name)
+            
+        result = self.request_remote_plugin(uri,
+                                            plugin_unique_name='execution_controller',
+                                            method='POST', 
+                                            data=json.dumps(data))
+
+        action_id = result.json()['action_id']
+
+        self._open_actions[action_id] = callback_function
+
+        return result
 
     def _get_db_connection(self, limited_user):
         """

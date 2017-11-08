@@ -107,3 +107,5 @@ class EpoPlugin(AdapterBase):
         for client in clients_config:
             clients[client[EPO_HOST]] = client
         return clients
+
+    # Exported API functions - None for now

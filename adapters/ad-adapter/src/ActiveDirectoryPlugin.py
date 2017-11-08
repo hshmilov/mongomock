@@ -111,4 +111,18 @@ class ActiveDirectoryPlugin(AdapterBase):
                 'id': device_raw['distinguishedName'],
                 'raw': device_raw}
 
+    def delete_file(self, **kwargs):
+        pass
+
+    def put_file(self, **kwargs):
+        pass
+
+    def get_file(self, **kwargs):
+        pass
+
+    def execute_shell(self, **kwargs):
+        pass
+
+    def execute_binary(self, **kwargs):
+        pass
     # Exported API functions - None for now

@@ -5,9 +5,13 @@ It implements API calls that are expected to be present in all adapters.
 
 __author__ = "Mark Segal"
 
+import concurrent.futures
+
 from axonius.PluginBase import PluginBase, add_rule
 from abc import ABC, abstractmethod
 from flask import jsonify
+import json
+from base64 import standard_b64decode
 
 
 class AdapterBase(PluginBase, ABC):
@@ -20,10 +24,23 @@ class AdapterBase(PluginBase, ABC):
     """
 
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
-        self._update_clients_schema_in_db(self._clients_schema()) # TODO: implement this
+
+        self._send_reset_to_ec()
+
+        self._update_clients_schema_in_db(self._clients_schema())
 
         self._clients = self._get_parsed_clients_config()
+
+        self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+
+    def _send_reset_to_ec(self):
+        """ Function for notifying the EC that this Adapted has been reset.
+        """
+        self.request_remote_plugin('action_update/adapter_action_reset?unique_name={0}'.format(self.plugin_unique_name),
+                                   plugin_unique_name='execution_controller',
+                                   method='POST')
 
     def _get_parsed_clients_config(self):
         clients_config = self._get_clients_config()
@@ -54,6 +71,82 @@ class AdapterBase(PluginBase, ABC):
             self._clients = self._get_parsed_clients_config()
 
         return jsonify(self._clients.keys())
+
+    def _update_action_data(self, action_id, status, output={}):
+        """ A function for updating the EC on new action status.
+
+        This function will initiate an POST request to the EC notifying on the new action status.
+
+        :param str action_id: The action id of the related update
+        :param str status: The new status of the action
+        :param dict output: The output of the action (in case finished or error)
+        """
+        self.request_remote_plugin('action_update/{0}'.format(action_id),
+                                   plugin_unique_name='execution_controller',
+                                   method='POST',
+                                   data=json.dumps({"status": status, "output": output}))  
+        # TODO: Think of a better way to implement status
+
+    def _run_action_thread(self, func, device_data, action_id, **kwargs):
+        """ Function for running new action.
+
+        This function should run as a new thread an handle the running of the wanted action.
+        It will call the correct abstract action function implemented by the adapter and wait for it
+        To finish. This function assumes that the adapter action function is blocking until the action
+        Is finished.
+
+        :param func func: A pointer to the action function (according to the action type requested)
+        :param json device_data: The raw device data for running the action
+        :param str action_id: The id of the current action
+        :param **kwargs: Another parameters needed for this specific action (retrieved from the request body)
+        """
+        # Sending update that this action has started
+        self._update_action_data(action_id, status="started")
+        
+        try:
+            # Running the function, it should block until action is finished
+            result = func(device_data, **kwargs)
+        except Exception as e:
+            self._update_action_data(action_id, status="failed", output=str(e))
+        
+        # Sending the result to the issuer
+        self._update_action_data(action_id, status="finished", output=result)
+    
+    def _create_action_thread(self, device, func, action_id, **kargs):
+        """ Function for creating action thread.
+        """
+        # Getting action id
+        self._thread_pool.submit(self._run_action_thread, func, device, action_id, **kargs)
+
+    @add_rule('action/<action_type>', methods=['POST'])
+    def rest_new_action(self, action_type):
+        # Getting action id from the URL
+        action_id = self.get_url_param('action_id')
+        request_data = self.get_request_data_as_object()
+        device_data = request_data.pop('device_data')
+        
+        if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'delete_file']:
+            return self.return_error("Invalid action type", 400)
+        
+        needed_action_function = getattr(self, action_type)
+
+        self._create_action_thread(device_data, needed_action_function, action_id, **request_data)
+        return ''
+
+    def put_file(self, device_data, file_buffer, dst_path):
+        self.return_error("Not implemented yet", 400)
+
+    def get_file(self, device_data, file_path):
+        self.return_error("Not implemented yet", 400)
+
+    def execute_binary(self, device_data, binary_buffer):
+        self.return_error("Not implemented yet", 400)
+
+    def execute_shell(self, device_data, shell_command):
+        self.return_error("Not implemented yet", 400)
+
+    def delete_file(self, device_data, file_path):
+        self.return_error("Not implemented yet", 400)
 
     @abstractmethod
     def _parse_clients_data(self, clients_config):
@@ -87,8 +180,8 @@ class AdapterBase(PluginBase, ABC):
         """
         # Running query on each device
         for client_name, client in self._clients.items():
-            raw_devices = self._query_devices_by_client(client_name, client)
-            parsed_devices = self._parse_raw_data(raw_devices)
+            raw_devices = list(self._query_devices_by_client(client_name, client))
+            parsed_devices = list(self._parse_raw_data(raw_devices))
             devices_list = {'raw': raw_devices,
                             'parsed': parsed_devices}
 

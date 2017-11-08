@@ -5,26 +5,43 @@ AggregatorPlugin.py: A Plugin for the devices aggregation process
 __author__ = "Ofir Yefet"
 
 import requests
-import random
 import threading
-import time
 import pymongo
 from builtins import RuntimeError
 from datetime import datetime
+import uuid
+from itertools import chain
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
-from axonius.PluginBase import PluginBase, add_rule
-from flask import jsonify
+from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius.ParsingUtils import beautiful_adapter_device_name
+from flask import jsonify, request
+from exceptions import AdapterOffline
 
-# The needed keys in the mapped data
-NEEDED_KEYS = ['name', 'os']
+
+def parsed_devices_match(first, second):
+    """
+    Whether or not two adapter devices (i.e. a single device as viewed by an adapter) match
+    :param first: first adapter device to check
+    :param second: second adapter device to check
+    :return: bool
+    """
+    return first['plugin_unique_name'] == second['plugin_unique_name'] and \
+           first['data']['id'] == second['data']['id']
 
 
-class AdapterOffline(Exception):
-    pass
+def parsed_device_match_plugin(plugin_data, parsed_device):
+    """
+    Whether or not a plugin is referring a specific adapter device
+    :param plugin_data: the plugin data
+    :param parsed_device: a adapter device
+    :return: bool
+    """
+    return plugin_data['associated_adapter_devices']. \
+               get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
 
 
 class AggregatorPlugin(PluginBase):
@@ -33,13 +50,15 @@ class AggregatorPlugin(PluginBase):
         Check AdapterBase documentation for additional params and exception details.
         """
         super().__init__(*args, **kwargs)
-        self.devices_db = dict()
         # Lock object for the global device list
-        self.device_list_lock = threading.Lock()
+        # this is a reentrant lock
+        self.device_db_lock = threading.RLock()
         # Open connection to the adapters db
         self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
-        # Managing thread
-        self._managing_thread = None
+        # Scheduler for querying core for online adapters and querying the adapters themselves
+        self._scheduler = None
+        # Load devices DB, or create an empty one
+        self._load_devices_from_persistent_db()
 
     def start_serve(self):
         """Overriding PluginBase function in order to start our managing thread first.
@@ -63,7 +82,7 @@ class AggregatorPlugin(PluginBase):
         :param str adapter: The address of the adapter (url)
         """
         devices = self.request_remote_plugin('devices', adapter)
-        if devices.status_code == 400:
+        if devices.status_code != 200:
             raise AdapterOffline()
         return devices.json()
 
@@ -76,6 +95,15 @@ class AggregatorPlugin(PluginBase):
         """
         return jsonify(self.devices_db)
 
+    @add_rule("online_device/<device_id>")
+    def get_online_device(self, device_id):
+        """ Exported function for returning all current known devices.
+
+        Accepts:
+            GET - for getting all devices
+        """
+        return jsonify(self.devices_db[device_id])
+
     def _adapters_thread_manager(self):
         """ Function for monitoring other threads activity.
 
@@ -84,164 +112,408 @@ class AggregatorPlugin(PluginBase):
         Currently the sampling rate is hard coded for 60 seconds.
         """
         try:
-            executors = {'default': ThreadPoolExecutor(10)}
-            scheduler = BackgroundScheduler(executors=executors)
-            scheduler.start()
-            while True:
-                current_adapters = requests.get(self.core_address + '/register').json()
+            current_adapters = requests.get(self.core_address + '/register').json()
 
-                # let's add jobs for all adapters
-                for adapter_name, adapter in current_adapters.items():
-                    adapter_type = adapter['plugin_type']
+            # let's add jobs for all adapters
+            for adapter_name, adapter in current_adapters.items():
+                if adapter['plugin_type'] != "Adapter":
+                    # This is not an adapter, not running
+                    continue
 
-                    if adapter['plugin_type'] != "Adapter":
-                        # This is not an adapter, not running
-                        continue
+                if self._scheduler.get_job(adapter_name):
+                    # We already have a running thread for this adapter
+                    continue
 
-                    if scheduler.get_job(adapter_name):
-                        # We already have a running thread for this adapter
-                        continue
+                sample_rate = adapter['device_sample_rate']
+                self._scheduler.add_job(func=self._save_devices_from_adapter,
+                                        trigger=IntervalTrigger(seconds=sample_rate),
+                                        next_run_time=datetime.now(),
+                                        kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
+                                                'plugin_name': adapter['plugin_name']},
+                                        name="Fetching job for adapter={}".format(adapter_name),
+                                        id=adapter_name,
+                                        max_instances=1)
 
-                    sample_rate = adapter['device_sample_rate']
-                    scheduler.add_job(func=self._save_devices_from_adapter,
-                                      trigger=IntervalTrigger(seconds=sample_rate),
-                                      next_run_time=datetime.now(),
-                                      kwargs={'adapter_name': adapter_name,
-                                              'adapter_type': adapter_type},
-                                      name="Fetching job for adapter={}".format(adapter_name),
-                                      id=adapter_name,
-                                      max_instances=1)
-
-                for job in scheduler.get_jobs():
+                for job in self._scheduler.get_jobs():
                     if job.id not in current_adapters:
                         # this means that the adapter has disconnected, so we stop fetching it
                         job.remove()
 
-                time.sleep(60)
         except Exception as e:
             self.logger.critical('Managing thread got exception, '
                                  'must restart aggregator manually. Exception: {0}'.format(str(e)))
 
     def _start_managing_thread(self):
-        """Getting data from all adapters.
         """
-        if self._managing_thread is None or not self._managing_thread.isAlive():
-            self._managing_thread = threading.Thread(target=self._adapters_thread_manager,
-                                                     name=self.plugin_unique_name)
-            self._managing_thread.start()
+        Getting data from all adapters.
+        """
+
+        if self._scheduler is None:
+            executors = {'default': ThreadPoolExecutor(10)}
+            self._scheduler = BackgroundScheduler(executors=executors)
+            self._scheduler.add_job(func=self._adapters_thread_manager,
+                                    trigger=IntervalTrigger(seconds=60),
+                                    next_run_time=datetime.now(),
+                                    name='adapters_thread_manager',
+                                    id='adapters_thread_manager',
+                                    max_instances=1)
+            self._scheduler.start()
+
         else:
             raise RuntimeError("Already running")
 
-    def _save_devices_from_adapter(self, adapter_name, adapter_type):
+    @add_rule("plugin_push", methods=["POST"])
+    def save_data_from_plugin(self):
+        """
+        Digests 'Link', 'Unlink' and 'Tag' requests from plugin
+        Link - links two or more adapter devices
+        Unlink - unlinks exactly two adapter devices
+        Tag - adds a tag to an adapter devices
+        Refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/86310913/Devices+DB+Correlation+Process for more
+        :return:
+        """
+        sent_plugin = request.get_json(silent=True)
+        if sent_plugin is None:
+            return return_error("Invalid data sent", 400)
+
+        association_type = sent_plugin.get('association_type')
+        associated_adapter_devices = sent_plugin.get('associated_adapter_devices')
+
+        if association_type not in ['Tag', 'Link', 'Unlink']:
+            return return_error("Acceptable values for association_type are: 'Tag', 'Link', 'Unlink'", 400)
+        if not isinstance(associated_adapter_devices, dict):
+            return return_error("associated_adapter_devices must be a dict", 400)
+
+        if association_type == 'Tag':
+            if len(associated_adapter_devices) != 1:
+                return return_error("Tag must only be associated with a single adapter_device")
+            tagname = sent_plugin.get('tagname')
+            if not isinstance(tagname, str):
+                return return_error("tagname must be provided as a string")
+
+        sent_plugin['accurate_for_datetime'] = datetime.now()  # user doesn't send this
+
+        # now let's update our db
+        with self.device_db_lock:
+            # figure out all axonius devices that at least one of its adapter_device are in the
+            # given plugin's association
+            axonius_device_candidates_dict = {axonius_id: axonius_device for axonius_id, axonius_device in
+                                              self.devices_db.items() if
+                                              # this is equivalent to:
+                                              # is `sent_plugin` matching with any of axonius_device['adapters']?
+                                              any(parsed_device_match_plugin(sent_plugin, axon_adapter_device)
+                                                  for axon_adapter_device in
+                                                  axonius_device['adapters'].values()
+                                                  if axon_adapter_device['plugin_type'] == 'Adapter')}
+            if association_type == 'Tag':
+                if len(axonius_device_candidates_dict) != 1:
+                    # it has been checked that at most 1 device was provided (if len(associated_adapter_devices) != 1)
+                    # then if it's not 1, its definitely 0
+                    return return_error(
+                        "A tag must be associated with just one adapter device, the device provided is unavailable")
+                # take (assumed single) key from dictionary
+                axonius_device_id, = axonius_device_candidates_dict
+                self._update_device_with_tag(sent_plugin, axonius_device_id)
+            elif association_type == 'Link':
+                # in this case, we need to link (i.e. "merge") all axonius_device_candidates_dict
+                # if there's only one, then the link is either associated only to
+                # one device (which is as irrelevant as it gets)
+                # or all the devices are already linked. In any case, if a real merge isn't done
+                # it means someone made a mistake.
+                if len(axonius_device_candidates_dict) < 2:
+                    return return_error(f"Got a 'Link' with only {len(axonius_device_candidates_dict)} candidates",
+                                        400)
+
+                collected_adapter_devices_dicts = [axonius_device['adapters'] for axonius_device in
+                                                   axonius_device_candidates_dict.values()]
+                all_plugin_unique_names = list(chain.from_iterable(d.keys() for d in collected_adapter_devices_dicts))
+                if len(set(all_plugin_unique_names)) != len(all_plugin_unique_names):
+                    # this means we have a duplicate plugin_unique_name
+                    # we strongly enforce the rule that there can't be two plugin_unique_name on the same
+                    # AxoniusDevice
+                    self.logger.critical(f"Contradiction detected, sent_plugin: \n{sent_plugin}")
+                    return return_error("Contradiction detected. Please resync and check yourself.", 500)
+
+                # now we can assume now that all all_plugin_unique_names are in fact unique
+                # we merge all dictionaries!
+                all_unique_adpater_devices_data = {k: v for d in collected_adapter_devices_dicts for k, v in d.items()}
+
+                internal_axon_id = uuid.uuid4().hex
+                self.devices_db[internal_axon_id] = {
+                    "internal_axon_id": internal_axon_id,
+                    "accurate_for_datetime": datetime.now(),
+                    "adapters": all_unique_adpater_devices_data,
+                    "tags": list(chain(*(axonius_device['tags'] for axonius_device in
+                                         axonius_device_candidates_dict.values())))
+                }
+
+                # now, let us delete all other AxoniusDevices
+                for axonius_device_id in axonius_device_candidates_dict:
+                    del self.devices_db[axonius_device_id]
+            elif association_type == 'Unlink':
+                if len(axonius_device_candidates_dict) != 1:
+                    return return_error(
+                        "All associated_adapter_devices in an unlink operation must be from the same Axonius "
+                        "device, in your case, they're from "
+                        f"{len(axonius_device_candidates_dict)} devices.")
+                axonius_device_to_split = list(axonius_device_candidates_dict.values())[0]
+
+                if len(axonius_device_to_split['adapters']) == len(associated_adapter_devices):
+                    return return_error("You can't remove all devices from an AxoniusDevice, that'll be unfair.")
+
+                # we already tested that all adapter_devices in data_sent are indeed from the single
+                # AxoniusDevice we found, so the ids will match, so we don't have to check that.
+                # We're building a new AxoniusDevice that has all the associated_adapter_devices given from
+                # the old axonius device, and at the same time deleting from the old device.
+                internal_axon_id = uuid.uuid4().hex
+                new_axonius_device = {
+                    "internal_axon_id": internal_axon_id,
+                    "accurate_for_datetime": datetime.now(),
+                    "adapters": {
+                        associated_adapter_devices: axonius_device_to_split['adapters'].pop(associated_adapter_devices)
+                        for associated_adapter_devices in associated_adapter_devices
+                    },
+                    "tags": []
+                }
+                for adapter_device in new_axonius_device['adapters'].values():
+                    # "split" the tags on an adapter basis
+                    new_axonius_device['tags'] += [tag for tag in axonius_device_to_split['tags']
+                                                   if parsed_device_match_plugin(tag, adapter_device)]
+                    axonius_device_to_split['tags'] = [tag for tag in axonius_device_to_split['tags']
+                                                       if not parsed_device_match_plugin(tag, adapter_device)]
+
+                self.devices_db[internal_axon_id] = new_axonius_device
+
+            self._save_devices_db_to_persistent_db()
+
+        self._save_parsed_in_db(sent_plugin, db_type='raw')  # raw == parsed for plugin_data
+        self._save_parsed_in_db(sent_plugin)  # save in parsed too
+
+        return ""
+
+    def _save_devices_from_adapter(self, plugin_name, plugin_unique_name):
         """ Function for getting all devices from specific adapter periodically.
 
         This function should be called in a different thread. It will run forever and periodically get all devices
         From a wanted adapter and save it to the local general db, and the historical db.abs
 
-        :param str adapter_name: The name of the adapter (unique name)
-        :param str adapter_type: The type of the adapter (for example, "ad_adapter")
+        :param str plugin_name: The name of the adapter
+        :param str plugin_unique_name: The name of the adapter (unique name)
         """
         try:
-            # Creating a connection to the DB
-            devices = self._get_devices_data(adapter_name)
-            for client_name, devices_per_client in devices:
-                # Here we have all the devices a single client sees
-                for device in devices_per_client['parsed']:
-                    device['client_used'] = client_name
-                    device['adapter_type'] = adapter_type
-                    device_in_db, device_key = self._general_find_device(device)
+            devices = self._get_devices_data(plugin_unique_name)
+            # This is locked although this is a (relatively) lengthy process we can't allow linking or unlinking during
+            # this process, because the behavior will be complicated and could introduce weird bugs in the future.
+            # Perhaps a less restrictive lock could be used, say, an 'adapter based' lock,
+            # but that will be quite difficult, and might have big overhead thus having
+            # a negative performance effect overall.
+            # In any case, this is a per adapter lock, so at most it will be locked for all the inserts per a specific
+            # adapter, which is not that bad. The only slow thing here is the DB insertion, which
+            # shouldn't be so slow anyway.
+            with self.device_db_lock:
+                # if this is true after going through all devices, the persistent devices db will be updated
+                added_new_device = False
+                for client_name, devices_per_client in devices:
+                    # Here we have all the devices a single client sees
+                    for device in devices_per_client['parsed']:
+                        device['pretty_id'] = beautiful_adapter_device_name(plugin_name, device['id'])
+                        parsed_to_insert = {
+                            'client_used': client_name,
+                            'plugin_type': 'Adapter',
+                            'plugin_name': plugin_name,
+                            'plugin_unique_name': plugin_unique_name,
+                            'accurate_for_datetime': datetime.now(),
+                            'data': device
+                        }
 
-                    device_for_db = {k: device[k] for k in NEEDED_KEYS if k in device}
-                    device_for_db[adapter_type + '_id'] = device['id']
-                    device_for_db[adapter_name + '_raw'] = device['raw']
+                        device_key = self._find_device_by_adapter(parsed_to_insert)
 
-                    if device_in_db:
-                        # We need to update the device data
-                        self._general_update_device(device_for_db, device_key)
-                    else:
-                        self._general_create_device(device_for_db)
-                    self._save_parsed_in_db(device)
+                        if device_key:
+                            # We need to update the device data
+                            self._update_device_with_adapter(parsed_to_insert, device_key,
+                                                             parsed_to_insert['accurate_for_datetime'])
+                        else:
+                            self._create_device(parsed_to_insert)
+                            added_new_device = True
+                        self._save_parsed_in_db(parsed_to_insert)
 
-                # Saving the raw data on the historic db
-                self._save_device_in_history(devices_per_client['raw'],
-                                             adapter_name,
-                                             adapter_type)
+                    # Saving the raw data on the historic db
+                    self._save_data_in_history(devices_per_client['raw'],
+                                               plugin_name,
+                                               plugin_unique_name,
+                                               "Adapter")
+
+                self._save_devices_db_as_is_to_persistent_db()
+                if added_new_device:
+                    self._save_devices_db_to_historical_persistent_db()
+
         except AdapterOffline:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
-            self.logger.warn("adapter {} might be offline".format(adapter_name))
+            self.logger.warn("adapter {} might be offline".format(plugin_unique_name))
         except Exception as e:
             self.logger.error("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-    def _save_parsed_in_db(self, device):
-        self.devices_db_connection['parsed'].insert_one(device)
+    def _save_parsed_in_db(self, device, db_type='parsed'):
+        """
+        Save axonius device in DB
+        :param device: AxoniusDevice or device list
+        :param db_type: 'parsed' or 'raw
+        :return: None
+        """
+        self.devices_db_connection[db_type].insert_one(device)
 
-    def _save_device_in_history(self, device, adapter_name, adapter_type):
-        """ Function for saving raw data of a device in history.
+    def _save_data_in_history(self, device, plugin_name, plugin_unique_name, plugin_type):
+        """ Function for saving raw data in history.
 
         This function will save the data on mongodb. the db name is 'devices' and the collection is 'raw' always!
 
         :param device: The raw data of the current device
-        :param str adapter_name: The name of the adapter
-        :param str adapter_type: The type of the adapter
+        :param str plugin_name: The name of the plugin
+        :param str plugin_unique_name: The unique name of the plugin
+        :param str plugin_type: The type of the plugin
         """
         try:
             self.devices_db_connection['raw'].insert_one({'raw': device,
-                                                          'adapter_name': adapter_name,
-                                                          'adapter_type': adapter_type})
+                                                          'plugin_name': plugin_name,
+                                                          'plugin_unique_name': plugin_unique_name,
+                                                          'plugin_type': plugin_type})
         except pymongo.errors.PyMongoError as e:
             self.logger.error("Error in pymongo. details: {}".format(e))
 
-    def _general_create_device(self, device_parsed):
-        """ Creates a new device in the devices_db.
+    def _create_device(self, device_parsed):
+        """ Creates a new device in the devices_db
 
-        Generates a unique id for the device.abs
+        Generates a unique id for the device.
 
-        :param dict device_parsed: A dict with all the parsed data of the device
+        :param dict device_parsed: dict
         """
-        with self.device_list_lock:
-            while True:
-                unique_key = random.getrandbits(32)
-                if unique_key not in self.devices_db:
-                    break
+        with self.device_db_lock:
+            internal_axon_id = uuid.uuid4().hex
+            self.devices_db[internal_axon_id] = {
+                "internal_axon_id": internal_axon_id,
+                "accurate_for_datetime": datetime.now(),
+                "adapters": {
+                    device_parsed['plugin_unique_name']: device_parsed
+                },
+                "tags": []
+            }
 
-            self.devices_db[unique_key] = device_parsed
-
-    def _general_update_device(self, device_parsed, unique_id):
-        """ Updates a device in the devices_db.
-
-        :param dict device_parsed: A dict with all the parsed data of the device
-        :param int unique_id: The uniqe id of the device
+    def _update_device_with_tag(self, tag, axonius_device_id):
         """
-        # Finding the device according to the unique field
-        # TODO: Check that the device_parsed is at the wanted format
-        with self.device_list_lock:
-            self.devices_db[unique_id] = device_parsed
+        Updates the devices db to either add or update the given tag
+        :param tag: tag from user
+        :param axonius_device_id: axonius id
+        :param accurate_for_datetime: date of tag
+        :return: None
+        """
+        with self.device_db_lock:
+            axonius_device_to_change = self.devices_db[axonius_device_id]
+            associated_tag = next((candidate_tag for candidate_tag in axonius_device_to_change['tags']
+                                   if candidate_tag['plugin_unique_name'] == tag['plugin_unique_name'] and
+                                   candidate_tag['tagname'] == tag['tagname'] and
+                                   candidate_tag['associated_adapter_devices'] == tag['associated_adapter_devices']),
+                                  None)
+            if associated_tag is None:
+                axonius_device_to_change['tags'].append(tag)
+            else:
+                associated_tag['tagvalue'] = tag['tagvalue']
+            axonius_device_to_change['accurate_for_datetime'] = tag.get('accurate_for_datetime')
 
-    def _general_find_device(self, device):
-        """ Find a matching device in the device db.
+    def _update_device_with_adapter(self, adapter_parsed, axonius_device_id, accurate_for_datetime=None):
+        """ Updates a device in the devices_db using adapter.
 
-        This should hold the main logic of the aggregator. This function is trying to find, or match
-        A device that supposed to be the same identity of the given device.
+        :param dict adapter_parsed: dict
+        :param str axonius_device_id: The unique id of the device
+        """
+        added_device_plugin_unique_name = adapter_parsed['plugin_unique_name']
+        with self.device_db_lock:
+            axonius_device_to_change = self.devices_db[axonius_device_id]
+            # add or update the adapter_device within the axonius device
+            axonius_device_to_change['adapters'][added_device_plugin_unique_name] = adapter_parsed
+            # update the timestamp
+            axonius_device_to_change['accurate_for_datetime'] = accurate_for_datetime if accurate_for_datetime \
+                else datetime.now()
 
-        :param dict device: A parsed device data we try to find in the devices db
+    def _find_device_by_adapter(self, adapter_device):
+        """ Find a device in the db. This will allow for us to update our data using the newly acquired
+        parsed_device. If it's already in the DB (it has been returned previously by an adapter) we'll find it
 
-        :returns device: The device data (None if not found)
+        :param dict adapter_device: A parsed device data we try to find in the devices db
+
         :returns unique_id: The id of the found device (None if not found)
         """
         # Try to find according to same adapter id
-        with self.device_list_lock:
-            adapter_id_field = device['adapter_type'] + '_id'
-            for unique_id, current_device in self.devices_db.items():
-                if current_device.get(adapter_id_field) == device['id']:
-                    # Found with same ID
-                    return current_device, unique_id
+        with self.device_db_lock:
+            # figure out which axonius_devices have a matching adapter_device in their ['data']
+            potential_candidate = [axonius_id for axonius_id, axonius_device in self.devices_db.items() if
 
-            # Try finding according to hostname
-            for unique_id, current_device in self.devices_db.items():
-                if current_device.get('name') == device.get('name', None):
-                    # Found a device with same name
-                    return current_device, unique_id
+                                   # this is equivalent to:
+                                   # is `adapter_device` matching with any of axonius_device['adapters'] ?
+                                   any(parsed_devices_match(adapter_device, axon_adapter_device)
+                                       for axon_adapter_device in
+                                       axonius_device['adapters'].values())]
 
-        return None, None
+            if len(potential_candidate) > 1:
+                raise RuntimeError(
+                    f"Data inconsistency: {len(potential_candidate)} axonius devices have the same device")
+            if len(potential_candidate) == 1:
+                return potential_candidate[0]
+
+            return None
+
+    def _save_devices_db_to_persistent_db(self):
+        """
+        Makes everything persistent as its supposed to be
+        :return:
+        """
+        with self.device_db_lock:
+            self._save_devices_db_as_is_to_persistent_db()
+            self._save_devices_db_to_historical_persistent_db()
+
+    def _save_devices_db_as_is_to_persistent_db(self):
+        """
+        Saves `self.devices_db` as-is into `devices_db` in the persistent db, overriding everything that is there.
+        :return:
+        """
+        devices_to_save = self.devices_db.values()
+        if len(devices_to_save) != 0:
+            self.devices_db_connection['devices_db'].delete_many({})
+            self.devices_db_connection['devices_db'].insert_many(devices_to_save)
+
+    def _save_devices_db_to_historical_persistent_db(self):
+        """
+        Saves the current devices db (`self.devices_db`) to the historical persistent (mongo) db 'db_historical'
+        This doesn't save everything, rather it saves just the devices ids and tags associations.
+        :return:
+        """
+        with self.device_db_lock:
+            device_db_snapshot = {}
+            for axon_device_id, axon_device in self.devices_db.items():
+                axon_device_snapshot = {
+                    'accurate_for_datetime': axon_device['accurate_for_datetime'],
+                    'adapters': {},
+                    'tags': axon_device['tags']
+                }
+                for plugin_unique_name, adapter_device in axon_device['adapters'].items():
+                    # taking all fields, for both plugins and adapters, except the data field that'll be cleaned
+                    # in case of adapters, to not overflow the db too soon
+                    axon_adapter_device_snapshot = {k: v for k, v in adapter_device.items() if k in
+                                                    ('_id',
+                                                     'accurate_for_datetime', 'client_used', 'plugin_name',
+                                                     'plugin_type', 'plugin_unique_name')}
+                    axon_adapter_device_snapshot['data'] = {'id': adapter_device['data']['id']}
+                    axon_device_snapshot['adapters'][plugin_unique_name] = axon_adapter_device_snapshot
+
+                device_db_snapshot[axon_device_id] = axon_device_snapshot
+
+            self.devices_db_connection['db_historical'].insert_one({"devices_db": device_db_snapshot})
+
+    def _load_devices_from_persistent_db(self):
+        """
+        Will rewrite self.devices_db with whatever's in the database
+        :return:
+        """
+        with self.device_db_lock:
+            self.devices_db = {k['internal_axon_id']: k for k in self.devices_db_connection['devices_db'].find()}
