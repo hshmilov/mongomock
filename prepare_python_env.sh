@@ -5,4 +5,5 @@ export PYTHONPATH="$PYTHONPATH:$CORTEX_ROOT:$CORTEX_ROOT/plugins/core/src:\
 $CORTEX_ROOT/plugins/axonius-libs/src/libs/axonius-py:\
 $CORTEX_ROOT/plugins/aggregator-plugin/src:\
 $CORTEX_ROOT/adapters/ad-adapter/src:\
-$CORTEX_ROOT/testing:$CORTEX_ROOT/adapters/epo-adapter/src"
+$CORTEX_ROOT/testing:\
+$CORTEX_ROOT/adapters/epo-adapter/src"

@@ -4,8 +4,8 @@ from services.simple_fixture import initalize_fixture
 
 
 class CoreService(socket_service.SocketService):
-    def __init__(self, endpoint=('localhost', 80), config_file_path='../plugins/core/docker-compose.yml'):
-        super().__init__(endpoint, config_file_path)
+    def __init__(self, compose_file_path='../plugins/core/docker-compose.yml'):
+        super().__init__(compose_file_path)
 
 
 @pytest.fixture(scope="module")

@@ -4,8 +4,8 @@ from services.simple_fixture import initalize_fixture
 
 
 class EpoService(socket_service.SocketService):
-    def __init__(self, endpoint=('localhost', 5003), config_file_path='../adapters/epo-adapter/docker-compose.yml'):
-        super().__init__(endpoint, config_file_path)
+    def __init__(self, compose_file_path='../adapters/epo-adapter/docker-compose.yml'):
+        super().__init__(compose_file_path)
 
 
 @pytest.fixture(scope="module")

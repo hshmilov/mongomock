@@ -7,8 +7,8 @@ from services.simple_fixture import initalize_fixture
 
 class MongoService(services.compose_service.ComposeService):
     def __init__(self, endpoint=('localhost', 27018),
-                 config_file_path='../devops/systemization/database/docker-compose.yml'):
-        super().__init__(config_file_path)
+                 compose_file_path='../devops/systemization/database/docker-compose.yml'):
+        super().__init__(compose_file_path)
         self.endpoint = endpoint
 
     @staticmethod
