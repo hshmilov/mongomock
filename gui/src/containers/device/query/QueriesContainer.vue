@@ -1,8 +1,8 @@
 <template>
     <scrollable-page title="queries history" class="query">
-        <card :title="`queries (${query.queryList.data.length})`">
-            <paginated-table slot="cardContent" :fetching="query.queryList.fetching"
-                             :data="query.queryList.data" :error="query.queryList.error"
+        <card :title="`queries (${query.savedQueries.data.length})`">
+            <paginated-table slot="cardContent" :fetching="query.savedQueries.fetching"
+                             :data="query.savedQueries.data" :error="query.savedQueries.error"
                              :fields="query.fields" :fetchData="fetchQueries"></paginated-table>
         </card>
     </scrollable-page>

@@ -107,7 +107,7 @@
         },
         data() {
             return {
-                linkedPageCount: 5,
+                linkedPageCount: 1,
 				linkedPageStart: 0,
 				currentPage: 0,
 				fetchedPages: 0,
@@ -129,6 +129,8 @@
 				this.maxPages = 0
 				this.fetchedPages = 0
                 this.currentPage = 0
+				this.linkedPageCount = 1
+                this.linkedPageStart = 0
                 this.addData()
             },
             fetching: function(newFetching) {
@@ -143,7 +145,7 @@
 					this.linkedPageCount = Math.min(this.maxPages, 5)
 					/* Continue getting pages until linked amount is fulfilled, so user does not wait for it */
 					this.addData()
-				} else if (!this.fetching && (diff === 0)) {
+				} else if (!this.fetching && (this.maxPages > 0) && (diff === 0)) {
             		this.maxPages--
 				}
             }
@@ -172,7 +174,7 @@
                     skip: this.fetchedPages * this.pageSize * 1000,
                     limit: this.pageSize * 1000,
                     fields: this.filterFields,
-                    query: this.query
+                    query: JSON.stringify(this.query)
                 })
             },
             prevPage() {
@@ -201,7 +203,9 @@
         },
         mounted() {
             /* Get initial data for first page of the table */
-            this.addData()
+            if (!this.data || !this.data.length) {
+				this.addData()
+			}
         }
     }
 </script>

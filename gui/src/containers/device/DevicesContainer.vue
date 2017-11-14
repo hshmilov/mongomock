@@ -3,11 +3,11 @@
         <card title="query">
             <span slot="cardActions">
                 <action-bar :actions="[
-                  { name: '', perform: executeSaveQuery }
+                  { name: 'Save Query', perform: executeSaveQuery }
                 ]"></action-bar>
             </span>
-            <generic-form slot="cardContent" :schema="queryFields" :values="query.data" :submitHandler="executeQuery"
-                          submitLabel="Go!" :horizontal="true"></generic-form>
+            <generic-form slot="cardContent" :schema="queryFields" :values="query.currentQuery"
+                          submitLabel="Go!" :submitHandler="updateQuery" :horizontal="true"></generic-form>
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">
@@ -19,7 +19,7 @@
                                           :onDone="props.onDone"></searchable-checklist>
                 </dropdown-menu>
                 <dropdown-menu :positionRight="true" animateClass="scale-up right" menuClass="w-md">
-                    <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png"></img>
+                    <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
                     <searchable-checklist slot="dropdownContent" title="Show fields:" :items="device.fields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
@@ -27,7 +27,7 @@
             <div slot="cardContent" v-on-clickaway="closeQuickView">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fields="fields" :fetchData="fetchDevices"
-                                 v-model="selectedDevices" :query="query.param"
+                                 v-model="selectedDevices" :query="query.currentQuery"
                                  :actions="[{ execute: executeQuickView, icon: 'icon-eye'}]"></paginated-table>
                 <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
                     <div class="d-flex flex-row justify-content-between p-3">
@@ -65,9 +65,9 @@
     import ImageList from '../../components/ImageList.vue'
     import { mixin as clickaway } from 'vue-clickaway'
 
-    import { mapState, mapGetters, mapActions } from 'vuex'
+    import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { FETCH_FIELDS,  FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
-    import { SAVE_QUERY } from '../../store/modules/query'
+    import { UPDATE_QUERY, SAVE_QUERY } from '../../store/modules/query'
 
     export default {
         name: 'devices-container',
@@ -79,7 +79,7 @@
             PaginatedTable, InfoDialog },
         mixins: [ clickaway ],
         computed: {
-            ...mapState(['device']),
+            ...mapState(['device', 'query']),
             ...mapGetters(['deviceNames']),
             fields() {
                 let _this = this
@@ -100,10 +100,6 @@
         },
         data () {
             return {
-                query: {
-                	data: {},
-                    param: ''
-                },
                 selectedTags: [],
                 selectedFields: [],
                 selectedDevices: [],
@@ -139,6 +135,9 @@
             })
         },
         methods: {
+            ...mapMutations({
+                updateQuery: UPDATE_QUERY
+            }),
             ...mapActions({
                 fetchFields: FETCH_FIELDS,
                 fetchDevices: FETCH_DEVICES,
@@ -148,17 +147,7 @@
 				saveDeviceTags: SAVE_DEVICE_TAGS
             }),
             executeSaveQuery() {
-                this.saveQuery()
-            },
-            executeQuery(event) {
-                let queryData = {}
-                let _this = this
-                Object.keys(this.query.data).forEach(function(queryKey) {
-                	if (_this.query.data[queryKey]) {
-                		queryData[queryKey] = _this.query.data[queryKey]
-                    }
-                })
-                this.query.param = JSON.stringify(queryData)
+                this.saveQuery({ query: this.query.currentQuery, name: 'shira'})
             },
             saveTags() {
                 this.saveDeviceTags({ devices: this.selectedDevices, tags: this.selectedTags })
