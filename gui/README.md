@@ -1,16 +1,18 @@
-# Axonius Gui
+# client
 
-The GUI for the entire system, version %version%.
+> A Vue.js project
 
-It currently consists of an nginx-wsgi-flask combination as backend and bootstrap-vuejs as frontend.
+## Build Setup
 
-### How to build
+``` bash
+# install dependencies
+npm install
 
-```bash
-docker build -t axonius/gui .
+# serve with hot reload at localhost:8080
+npm run dev
+
+# build for production with minification
+npm run build
 ```
 
-### How to use
-```
-docker run -p 80:80 axonius/gui
-```
+For detailed explanation on how things work, consult the [docs for vue-loader](http://vuejs.github.io/vue-loader).
