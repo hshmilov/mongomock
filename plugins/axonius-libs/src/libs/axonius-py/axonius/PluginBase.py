@@ -576,6 +576,26 @@ class PluginBase(object):
                 content=content,
                 seen=False)).inserted_id
 
+    def get_plugin_by_name(self, plugin_name, verify_single=True):
+        """
+        Finds plugin_name in the online plugin list
+        :param plugin_name: str
+        :param verify_single: If True, will raise if many instances are found.
+        :return: if verify_single: single plugin data or None; if not verify_single: all plugin datas
+        """
+        # using requests directly so the api key won't be sent, so the core will give a list of the plugins
+        plugins_available = requests.get(self.core_address + '/register').json()
+        found_plugins = [x for x in plugins_available.values() if x['plugin_name'] == plugin_name]
+
+        if verify_single:
+            if len(found_plugins) == 0:
+                return None
+            if len(found_plugins) != 1:
+                raise RuntimeError(f"There are {len(found_plugins)} plugins or {plugin_name}, there should only be one")
+            return found_plugins[0]
+        else:
+            return found_plugins
+
     @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):
         """ /version - Get the version of the app.
