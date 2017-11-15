@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css?family=Poppins:200,300,400,500,600,700');
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Regular.ttf') format('truetype'),
+  url('/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype'),
+  url('/src/assets/plugins/fonts/poppins/Poppins-Medium.ttf') format('truetype'),
+  url('/src/assets/plugins/fonts/poppins/Poppins-Bold.ttf') format('truetype'),
+  url('/src/assets/plugins/fonts/poppins/Poppins-SemiBold.ttf') format('truetype');
+}
 
 $font-stack: 'Poppins', sans-serif;
 $font-size: 100%;

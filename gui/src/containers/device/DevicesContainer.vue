@@ -27,8 +27,8 @@
             <div slot="cardContent" v-on-clickaway="closeQuickView">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fields="fields" :fetchData="fetchDevices"
-                                 v-model="selectedDevices" :query="query.currentQuery"
-                                 :actions="[{ execute: executeQuickView, icon: 'icon-eye'}]"></paginated-table>
+                                 v-model="selectedDevices" :filter="query.currentQuery"
+                                 :actions="[{ handler: executeQuickView, trigger: 'icon-eye'}]"></paginated-table>
                 <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
                     <div class="d-flex flex-row justify-content-between p-3">
                         <div>{{ device.deviceDetails.name }}</div>

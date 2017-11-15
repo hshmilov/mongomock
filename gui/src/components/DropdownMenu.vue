@@ -4,7 +4,7 @@
             @click="done = false; openDropdown = !openDropdown">
             <slot name="dropdownTrigger"></slot>
         </div>
-        <div :class="`dropdown-menu ${animateClass} ${menuClass}`">
+        <div :class="`dropdown-menu ${animateClass || ''} ${menuClass || ''}`">
             <slot v-if="!done" name="dropdownContent" :onDone="handleDone"></slot>
             <div v-if="done" class="dropdown-success animated fadeIn">
                 <div>{{successMessage}}</div>

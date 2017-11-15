@@ -32,7 +32,7 @@
                                 <span v-if="record[field.path].length > 2"
                                       class="tag-list-item">{{ record[field.path][2] }}</span>
                                 <span v-if="record[field.path].length > 3"
-                                      class="tag-list-total"> (out of {{ record[field.path].length }})</span>
+                                      class="tag-list-total"> ({{ record[field.path].length }} more)</span>
                             </div>
                         </template>
                         <template v-else-if="field.type === 'image-list'">
@@ -40,8 +40,8 @@
                         </template>
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                        <a v-for="action in actions" @click="action.execute($event, record['id'])">
-                            <i :class="action.icon"></i>
+                        <a v-for="action in actions" @click="action.handler($event, record['id'])">
+                            <i :class="action.trigger"></i>
                         </a>
                     </td>
                 </tr>
@@ -49,7 +49,7 @@
                     v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
                     <td class="table-row-data">&nbsp</td>
                     <td v-for="field in fields" class="table-row-data">&nbsp</td>
-                    <td class="table-row-data">&nbsp</td>
+                    <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
                 </tr>
                 </tbody>
             </table>
@@ -77,7 +77,7 @@
 		name: 'paginated-table',
 		components: {Checkbox, ImageList},
 		props: [
-			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'query', 'value'
+			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
 
 		],
 		computed: {
@@ -97,7 +97,7 @@
 				return this.currentPage === 0
 			},
 			lastPage () {
-				return this.maxPages > 0 && this.currentPage === this.maxPages
+				return this.currentPage === this.maxPages
 			},
 			filterFields () {
 				return this.fields.filter(function (field) {
@@ -127,7 +127,7 @@
 			filterFields: function (newFields, oldFields) {
 				if (newFields.length <= oldFields.length) { return }
 			},
-			query: function (newQuery) {
+			filter: function (newFilter) {
 				this.maxPages = 0
 				this.fetchedPages = 0
 				this.currentPage = 0
@@ -180,7 +180,7 @@
 					skip: this.fetchedPages * this.pageSize * 1000,
 					limit: this.pageSize * 1000,
 					fields: this.filterFields,
-					query: JSON.stringify(this.query)
+					filter: this.filter
 				})
 			},
 			prevPage () {

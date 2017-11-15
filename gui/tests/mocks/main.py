@@ -136,16 +136,15 @@ def devices():
 
     skip = int(request.args.get('skip', 0))
     limit = int(request.args.get('limit', 100))
-    query = request.args.get('query', None)
+    filter = request.args.get('filter', None)
 
     client_collection = mongo_client['aggregator_plugin']['devices_db_2']
     device_list = list(client_collection.find().sort([('_id', pymongo.ASCENDING)]))
-    if query:
-        query_obj = json.loads(query)
-        device_list = query_item(device_list, query_obj)
+    if filter is not None:
+        device_list = query_item(device_list, json.loads(filter))
         if skip == 0:
             mongo_client['api']['queries'].insert_one(
-                {'query': query, 'query_type': 'history', 'timestamp': datetime.now(),
+                {'query': filter, 'query_type': 'history', 'timestamp': datetime.now(),
                 'device_count': len(device_list)})
 
     return make_response(jsonify(beautify_db_entry(device) for device in device_list[skip:(skip+limit)]))
@@ -321,12 +320,24 @@ def queries():
     if request.method == 'GET':
         skip = int(request.args.get('skip', 0))
         limit = int(request.args.get('limit', 100))
-        return jsonify(mongo_client['api']['queries'].find().skip(skip).limit(limit))
+        filter_str = request.args.get('filter')
+        filter = json.loads(filter_str) if filter_str else {}
+        return jsonify(mongo_client['api']['queries'].find(filter).sort([('_id', pymongo.DESCENDING)]).skip(skip).limit(limit))
     elif request.method == 'POST':
         data = json.loads(request.data.decode('utf-8'))
         mongo_client['api']['queries'].insert_one(
             {'query': data['query'], 'query_type': 'saved', 'timestamp': datetime.now(), 'query_name': data['name']})
         return '', 200
+
+
+@app.route('/api/queries/<query_id>', methods=['DELETE'])
+@auto_options()
+def archive_query(query_id):
+
+    mongo_client['api']['queries'].update_one(
+        {'_id': query_id},
+        {'$set': {'archived': True}})
+    return '', 200
 
 
 @app.route('/api/fields')
@@ -348,12 +359,19 @@ def get_all_fields():
 
 
 @app.route('/src/<path:filename>')
-def custom_static(filename):
+def custom_static_src(filename):
     return send_from_directory("src", filename)
 
+
 @app.route('/dist/<path:filename>')
-def custom_static2(filename):
+def custom_static_dist(filename):
     return send_from_directory("dist", filename)
+
+
+@app.route('/node_modules/<path:filename>')
+def custom_static_modules(filename):
+    return send_from_directory("node_modules", filename)
+
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
