@@ -217,7 +217,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .dataTables_wrapper {
         padding-top: 10px;

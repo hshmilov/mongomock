@@ -112,6 +112,39 @@ Formatting
   color: $color-error;
 }
 
+/*******************
+Components
+*******************/
+
+.btn {
+  text-transform: uppercase;
+}
+.btn.btn-confirm {
+  vertical-align: bottom;
+  color: $color-light;
+  cursor: pointer;
+  padding: 4px 12px;
+  background: $color-theme;
+  border: 1px solid $color-theme;
+  -webkit-box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba(66, 165, 245, 0.12);
+  box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba($color-theme, 0.12);
+  -webkit-transition: 0.2s ease-in;
+  -o-transition: 0.2s ease-in;
+  transition: 0.2s ease-in;
+  &:hover {
+    -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
+    box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
+  }
+  &.btn-inverse {
+    color: $color-theme;
+    border-color: $color-theme;
+    background-color: $background-color-light;
+  }
+}
+
+a.btn.btn-confirm:not([href]):not([tabindex]) {
+  color: $color-light;
+}
 
 /*******************
 Scrollbar

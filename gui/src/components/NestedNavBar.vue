@@ -18,7 +18,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .nav-nest {
         margin: 0px;

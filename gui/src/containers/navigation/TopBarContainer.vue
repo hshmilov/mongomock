@@ -50,7 +50,7 @@
 </script>
 
 <style lang="scss">
-    @import '../../assets/scss/config';
+    @import '../../scss/config';
 
     .topbar {
         background: $color-theme;

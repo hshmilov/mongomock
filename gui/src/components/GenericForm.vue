@@ -30,7 +30,7 @@
         <div class="form-group" v-bind:class="{ 'col-1': horizontal }">
             <a class="form-label form-view" @click="advancedView = false" v-if="advancedView">Basic</a>
             <a class="form-label form-view" @click="advancedView = true" v-else>Advanced</a>
-            <a v-if="values !== undefined" class="btn btn-info"
+            <a v-if="values !== undefined" class="btn btn-confirm"
                v-on:click="submitHandler(queryValues)">{{ submitLabel || 'Send' }}</a>
         </div>
     </form>
@@ -96,7 +96,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .form {
         .form-group {
@@ -106,10 +106,6 @@
             &.col-1 {
                 text-align: left;
                 overflow: visible;
-                .btn.btn-info {
-                    vertical-align: bottom;
-                    color: $color-light;
-                }
             }
             .image-list {
                 line-height: 30px;
@@ -129,21 +125,6 @@
                 &:hover {
                     color: $color-theme;
                 }
-            }
-        }
-        .btn.btn-info {
-            cursor: pointer;
-            padding: 4px 12px;
-            background: $color-theme;
-            border: 1px solid $color-theme;
-            -webkit-box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba(66, 165, 245, 0.12);
-            box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba($color-theme, 0.12);
-            -webkit-transition: 0.2s ease-in;
-            -o-transition: 0.2s ease-in;
-            transition: 0.2s ease-in;
-            &:hover {
-                -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
-                box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
             }
         }
         &.row {

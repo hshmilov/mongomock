@@ -26,7 +26,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .image-list {
         display: inline-block;

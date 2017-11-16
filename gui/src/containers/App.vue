@@ -27,5 +27,5 @@
     @import '../assets/plugins/css/bootstrap.min.css';
     @import '../assets/plugins/css/animate.css';
     @import '/node_modules/vue2-scrollbar/dist/style/vue2-scrollbar.css';
-    @import '../assets/scss/app';
+    @import '../scss/app';
 </style>

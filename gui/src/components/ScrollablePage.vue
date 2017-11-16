@@ -25,7 +25,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .page-wrapper {
         background: $background-color;
