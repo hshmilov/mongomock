@@ -237,6 +237,7 @@ cmake-build-debug/
 ## Plugin-specific files:
 
 # Ad adapter cpp project
+/adapters/ad-adapter/src/temp_files/*
 /adapters/ad-adapter/src/ExecuteSvc/.vs/*
 /adapters/ad-adapter/src/ExecuteSvc/Release/*
 /adapters/ad-adapter/src/ExecuteSvc/Debug/*

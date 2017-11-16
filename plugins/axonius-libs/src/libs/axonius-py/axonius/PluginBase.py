@@ -24,6 +24,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
 from pathlib import Path
+from promise import Promise
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -484,7 +485,7 @@ class PluginBase(object):
         This function is blocking as long as the Http server is up.
         .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
-        AXONIUS_REST.run(host=self.host, port=self.port, debug=False, use_reloader=False)
+        AXONIUS_REST.run(host=self.host, port=self.port, debug=True, use_reloader=False)
 
     def get_method(self):
         """Getting the method type of the request.
@@ -632,7 +633,7 @@ class PluginBase(object):
                 self.logger.setLevel(self.log_level)
                 return ''
             else:
-                error_string = "Unsupprted log level \"{wanted_level}\", available log levels are {levels}"
+                error_string = "Unsupported log level \"{wanted_level}\", available log levels are {levels}"
                 return return_error(error_string.format(wanted_level=wanted_level, levels=logging_types.keys()), 400)
         else:
             return logging.getLevelName(self.log_level)
@@ -644,58 +645,66 @@ class PluginBase(object):
         This function will listen on updates, and if the update is on a relevant action_id it will call the 
         Callback registered for this action.
 
+        :param str action_id: The id of the wanted action
+
         Accepts:
             POST - For posting a status update (or sending results) on a specific action
         """
-        if action_id not in self._open_actions:
-            if self.plugin_name == "execution_controller":
-                # This is a special case for the execution_controller plugin. In that case, The EC plugin knows how to 
-                # handle other actions such as reset_update. In case of ec plugin, we know for sure what is the 
-                # callback, we use this fact to just call the callback and not search for it on the _open_actions 
-                # list (because the current action id will not be there)
-                self.ec_callback(action_id)
-                return ''
-            else:
-                self.logger.error('Got unrecognized action_id update. Action ID: {0}'.format(action_id))
-                return self.return_error('Unrecognized action_id {0}'.format(action_id), 404)
-        else:
-            # We recognize this action id, should call its callback
-            callback_function = self._open_actions[action_id]
-            # Calling the needed function
-            callback_function(action_id)
+        if self.plugin_name == "execution":
+            # This is a special case for the execution_controller plugin. In that case, The EC plugin knows how to
+            # handle other actions such as reset_update. In case of ec plugin, we know for sure what is the
+            # callback, we use this fact to just call the callback and not search for it on the _open_actions
+            # list (because the current action id will not be there)
+            self.ec_callback(action_id)
             return ''
 
-    def request_action(self, action_type, axon_id, callback_function, data_for_action=None):
+        if action_id in self._open_actions:
+            # We recognize this action id, should call its callback
+            action_promise = self._open_actions[action_id]
+            # Calling the needed function
+            request_content = self.get_request_data_as_object()
+
+            request_content['responder'] = self.get_caller_plugin_name()
+
+            if request_content['status'] == 'failed':
+                action_promise.do_reject(Exception(request_content))
+            elif request_content['status'] == 'finished':
+                action_promise.do_resolve(request_content)
+            return ''
+        else:
+            self.logger.error('Got unrecognized action_id update. Action ID: {0}'.format(action_id))
+            return return_error('Unrecognized action_id {0}'.format(action_id), 404)
+
+    def request_action(self, action_type, axon_id, data_for_action=None):
         """ A function for requesting action.
 
         This function called be used by any plugin. It will initiate an action request from the EC
 
         :param str action_type: The type of the action. For example 'put_file'
         :param str axon_id: The axon id of the device we want to run action on
-        :param func callback_function: A pointer to the callback function. This function will be called on each update
-                                       On this action id.
         :param dict data_for_action: Extra data for executing the wanted action.
 
-        :return result: the result of the request (as returned from the REST request)
+        :return Promise result: A promise of the action
         """
+        data = {}
         if data_for_action:
             data = data_for_action.copy()
 
         # Building the uri for the request
-        uri = 'action/{action_type}?axon_id={axon_id}&issuer_name={issuer}'.format(action_type=action_type,
-                                                                                   axon_id=axon_id,
-                                                                                   issuer=self.plugin_unique_name)
+        uri = f"action/{action_type}?axon_id={axon_id}"
             
         result = self.request_remote_plugin(uri,
-                                            plugin_unique_name='execution_controller',
+                                            plugin_unique_name='execution_plugin',
                                             method='POST', 
                                             data=json.dumps(data))
 
         action_id = result.json()['action_id']
 
-        self._open_actions[action_id] = callback_function
+        promise_for_action = Promise()
 
-        return result
+        self._open_actions[action_id] = promise_for_action
+
+        return promise_for_action
 
     def _get_db_connection(self, limited_user):
         """

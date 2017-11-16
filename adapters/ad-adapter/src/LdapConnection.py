@@ -36,10 +36,10 @@ class LdapConnection:
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            ldap_server = ldap3.Server(self.server_addr)
+            ldap_server = ldap3.Server(self.server_addr, connect_timeout=10)
             self.ldap_connection = ldap3.Connection(
                 ldap_server, user=self.user_name, password=self.user_password,
-                raise_exceptions=True)
+                raise_exceptions=True, receive_timeout=10)
             self.ldap_connection.bind()
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise exceptions.LdapException(str(ldap_error))
