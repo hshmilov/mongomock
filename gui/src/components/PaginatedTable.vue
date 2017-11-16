@@ -40,7 +40,7 @@
                         </template>
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                        <a v-for="action in actions" @click="action.handler($event, record['id'])">
+                        <a v-for="action in actions" class="table-row-action" @click="action.handler($event, record['id'])">
                             <i :class="action.trigger"></i>
                         </a>
                     </td>
@@ -306,9 +306,10 @@
                 }
             }
             .table-row-actions {
-                text-align: center;
-                a {
+                text-align: right;
+                .table-row-action {
                     visibility: hidden;
+                    padding-right: 8px;
                     &:hover {
                         color: $color-theme;
                     }

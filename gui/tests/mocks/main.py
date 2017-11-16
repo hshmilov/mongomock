@@ -145,9 +145,9 @@ def devices():
         if skip == 0:
             mongo_client['api']['queries'].insert_one(
                 {'query': filter, 'query_type': 'history', 'timestamp': datetime.now(),
-                'device_count': len(device_list)})
+                 'device_count': len(device_list)})
 
-    return make_response(jsonify(beautify_db_entry(device) for device in device_list[skip:(skip+limit)]))
+    return make_response(jsonify(beautify_db_entry(device) for device in device_list[skip:(skip + limit)]))
 
 
 @auto_options()
@@ -158,6 +158,7 @@ def device_by_id(device_id):
     :param device_id: device id
     :return:
     """
+
     def _get_device_by_id_from_db(device_id):
         return mongo_client['aggregator_plugin']['devices_db_2'].find_one({'internal_axon_id': device_id})
 
@@ -206,14 +207,14 @@ def plugins_configuration(plugin_id):
             plugin_start("QCoreCheckPointBlocker")
         else:
             plugin_stop("QCoreCheckPointBlocker")
-        
+
         return "ok"
     if plugin_id == 'QCoreCheckPointBlocker':
         to_return = {}
-        
+
         to_return['parameters'] = {'sample_rate': (sample_rate, 'int'),  # In seconds
                                    'time_to_die': (time_to_die, 'int'),
-                                   'plugin_state': (plugin_state, 'bool')} 
+                                   'plugin_state': (plugin_state, 'bool')}
 
         client_collection = mongo_client['aggregator_plugin']['devices_db_2']
         all_devices = client_collection.find({'$or': [{'adapters.qcore_adapter.plugin_name': 'qcore_adapter'},
@@ -232,7 +233,7 @@ def plugins_configuration(plugin_id):
                                                        {'adapters.checkpoint_adapter.data.raw.status': 'Unblocked'}]})
         unblocked_devices = all_devices.count()
 
-        to_return['data'] = {'qcore_devices': qcore_devices-blocked_devices,
+        to_return['data'] = {'qcore_devices': qcore_devices - blocked_devices,
                              'blocked_devices': blocked_devices,
                              'reappearing_devices': unblocked_devices}
         return jsonify(to_return)
@@ -308,7 +309,6 @@ def plugin_start(plugin_id):
 @app.route('/api/plugins/<plugin_id>/stop')
 @auto_options()
 def plugin_stop(plugin_id):
-    
     global plugin_state
     plugin_state = False
     return ''
@@ -322,20 +322,29 @@ def queries():
         limit = int(request.args.get('limit', 100))
         filter_str = request.args.get('filter')
         filter = json.loads(filter_str) if filter_str else {}
-        return jsonify(mongo_client['api']['queries'].find(filter).sort([('_id', pymongo.DESCENDING)]).skip(skip).limit(limit))
+        filter['archived'] = { '$exists': False }
+        result = mongo_client['api']['queries'].find(filter).sort([('_id', pymongo.DESCENDING)]).skip(skip).limit(limit)
+        queryList = []
+        for doc in result:
+            if doc.get('query'):
+                queryList.append({ 'id': str(doc['_id']),
+                                   'query_name': doc['query_name'] if doc.get('query_name') else '',
+                                   'timestamp': doc['timestamp'],'query': doc['query'],
+                                   'device_count': doc['device_count'] if doc.get('device_count') else 0})
+        return jsonify(queryList)
     elif request.method == 'POST':
         data = json.loads(request.data.decode('utf-8'))
-        mongo_client['api']['queries'].insert_one(
-            {'query': data['query'], 'query_type': 'saved', 'timestamp': datetime.now(), 'query_name': data['name']})
-        return '', 200
+        result = mongo_client['api']['queries'].insert_one(
+            {'query': json.dumps(data['query']), 'query_type': 'saved', 'timestamp': datetime.now(),
+             'query_name': data['name']})
+        return str(result.inserted_id), 200
 
 
 @app.route('/api/queries/<query_id>', methods=['DELETE'])
 @auto_options()
 def archive_query(query_id):
-
     mongo_client['api']['queries'].update_one(
-        {'_id': query_id},
+        {'_id': ObjectId(query_id)},
         {'$set': {'archived': True}})
     return '', 200
 

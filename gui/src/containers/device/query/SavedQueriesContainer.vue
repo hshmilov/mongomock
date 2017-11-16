@@ -20,6 +20,7 @@
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import { FETCH_SAVED_QUERIES, USE_SAVED_QUERY, ARCHIVE_SAVED_QUERY } from '../../../store/modules/query'
+    import { RESTART_DEVICES } from '../../../store/modules/device'
 
 	export default {
 		name: 'saved-queries-container',
@@ -41,7 +42,8 @@
 		},
 		methods: {
             ...mapMutations({
-				useQuery: USE_SAVED_QUERY
+				useQuery: USE_SAVED_QUERY,
+                restartDevice: RESTART_DEVICES
             }),
 			...mapActions({
 				fetchQueries: FETCH_SAVED_QUERIES,
@@ -49,6 +51,7 @@
 			}),
             runQuery(event, queryId) {
             	this.useQuery(queryId)
+                this.restartDevice()
                 this.$router.push({name: 'Devices'})
             },
 			removeQuery (event, queryId) {
