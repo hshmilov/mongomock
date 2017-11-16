@@ -1,6 +1,6 @@
 <template>
     <dropdown-menu animateClass="scale-up right" class="multiple-select">
-        <image-list slot="dropdownTrigger" :data="selectedItems" :limit="2"></image-list>
+        <object-list slot="dropdownTrigger" :type="type" :data="selectedItems" :limit="2"></object-list>
         <searchable-checklist slot="dropdownContent" :title="title" :items="items" v-model="selectedItems"
                               @input="updateSelected()"></searchable-checklist>
     </dropdown-menu>
@@ -9,13 +9,13 @@
 <script>
     import DropdownMenu from './DropdownMenu.vue'
     import SearchableChecklist from './SearchableChecklist.vue'
-    import ImageList from './ImageList.vue'
+    import ObjectList from './ObjectList.vue'
     import './icons/fields'
 
     export default {
         name: 'multiple-select',
-        components: { DropdownMenu, SearchableChecklist, ImageList },
-        props: [ 'title', 'iconPath', 'items', 'value' ],
+        components: { DropdownMenu, SearchableChecklist, ObjectList },
+        props: [ 'title', 'type', 'iconPath', 'items', 'value' ],
         data() {
             return {
                 selectedItems: []
@@ -46,6 +46,9 @@
             .svg-fill {
                 fill: $color-title
             }
+        }
+        .object-list {
+            line-height: 30px;
         }
     }
 </style>

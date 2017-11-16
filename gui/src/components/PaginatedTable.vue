@@ -23,20 +23,9 @@
                         <template v-if="field.type === undefined || !field.type || field.type=='text'">
                             <span>{{ record[field.path] || '&nbsp' }}</span>
                         </template>
-                        <template v-else-if="field.type === 'tag-list'">
-                            <div v-if="record[field.path]">
-                                    <span v-if="record[field.path].length > 0"
-                                          class="tag-list-item">{{ record[field.path][0] }}</span>
-                                <span v-if="record[field.path].length > 1"
-                                      class="tag-list-item">{{ record[field.path][1] }}</span>
-                                <span v-if="record[field.path].length > 2"
-                                      class="tag-list-item">{{ record[field.path][2] }}</span>
-                                <span v-if="record[field.path].length > 3"
-                                      class="tag-list-total"> ({{ record[field.path].length }} more)</span>
-                            </div>
-                        </template>
-                        <template v-else-if="field.type === 'image-list'">
-                            <image-list :data="record[field.path]" :limit="3"></image-list>
+                        <template v-else-if="field.type.indexOf('list') > -1">
+                            <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
+                                         :data="record[field.path]" :limit="3"></object-list>
                         </template>
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
@@ -71,11 +60,11 @@
 
 <script>
 	import Checkbox from './Checkbox.vue'
-	import ImageList from './ImageList.vue'
+	import ObjectList from './ObjectList.vue'
 
 	export default {
 		name: 'paginated-table',
-		components: {Checkbox, ImageList},
+		components: {Checkbox, ObjectList},
 		props: [
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
 
@@ -337,32 +326,5 @@
         .table-row:first-of-type:not(:hover):not(.active) .table-row-data {
             border-top: 1px solid $border-color;
         }
-    }
-
-    .tag-list-item {
-        border-radius: 4px;
-        border: 1px solid $border-color;
-        border-right: 0;
-        padding: 2px;
-        margin-right: 20px;
-        position: relative;
-        margin-top: 8px;
-        &::after {
-            content: '';
-            position: absolute;
-            border-radius: 4px;
-            transform: rotate(45deg);
-            border-right: 1px solid #dcd8d8;
-            border-top: 1px solid #dcd8d8;
-            height: 20px;
-            width: 20px;
-            top: 4px;
-            right: -9px;
-        }
-    }
-
-    .tag-list-total {
-        font-size: 70%;
-        text-transform: uppercase;
     }
 </style>

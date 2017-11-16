@@ -9,9 +9,8 @@
                         </slot>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-confirm btn-inverse" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
-                        <button v-if="approveHandler !== undefined" class="btn btn-confirm"
-                        @click="approveHandler">{{approveText || 'OK'}}</button>
+                        <button class="btn btn-inverse" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
+                        <button class="btn" @click="$emit('confirm')">{{approveText || 'OK'}}</button>
                     </div>
                 </div>
             </div>
@@ -22,7 +21,7 @@
 <script>
 	export default {
 		name: 'modal',
-        props: [ 'approveText', 'approveHandler', 'dismissText']
+        props: [ 'approveText', 'dismissText']
 	}
 </script>
 

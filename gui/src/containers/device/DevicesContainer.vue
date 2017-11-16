@@ -6,8 +6,8 @@
                   { name: 'Save Query', perform: openSaveQuery }
                 ]"></action-bar>
             </span>
-            <generic-form slot="cardContent" :schema="queryFields" :values="query.currentQuery"
-                          submitLabel="Go!" :submitHandler="updateQuery" :horizontal="true"></generic-form>
+            <generic-form slot="cardContent" :schema="queryFields" v-model="selectedQuery" :horizontal="true"
+                          :submittable="true" submitLabel="Go!" v-on:submit="updateQuery(selectedQuery)"></generic-form>
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">
@@ -38,21 +38,19 @@
                          class="d-flex flex-column justify-content-between p-3">
                         <div>Adapters</div>
                         <hr class="title-separator">
-                        <image-list :data="device.deviceDetails.data.adapters" :vertical="true"
-                                    :names="device.adapterNames"></image-list>
+                        <object-list :data="device.deviceDetails.data.adapters" :vertical="true"
+                                    :names="device.adapterNames"></object-list>
                     </div>
                     <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length"
                          class="d-flex flex-column justify-content-between align-items-start p-3">
                         <div>Tags</div>
                         <hr class="title-separator">
-                        <div>
-                            <div v-for="tag in device.deviceDetails.data.tags" class="tag-list-item">{{ tag }}</div>
-                        </div>
+                        <object-list :data="device.deviceDetails.data.tags" :vertical="true"></object-list>
                     </div>
                 </info-dialog>
             </div>
         </card>
-        <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save" :approveHandler="approveSaveQuery">
+        <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save" @confirm="approveSaveQuery()">
             <div slot="body" class="form-group">
                 <label class="form-label" for="saveQueryName">Save Query as:</label>
                 <input class="form-control" v-model="saveQueryModal.name" id="saveQueryName">
@@ -72,7 +70,7 @@
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
 	import PaginatedTable from '../../components/PaginatedTable.vue'
 	import InfoDialog from '../../components/InfoDialog.vue'
-	import ImageList from '../../components/ImageList.vue'
+	import ObjectList from '../../components/ObjectList.vue'
 	import { mixin as clickaway } from 'vue-clickaway'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
@@ -82,7 +80,7 @@
 	export default {
 		name: 'devices-container',
 		components: {
-			ScrollablePage, Modal, Card, ActionBar, GenericForm, ImageList,
+			ScrollablePage, Modal, Card, ActionBar, GenericForm, ObjectList,
 			DropdownMenu, SearchableChecklist, PaginatedTable, InfoDialog
 		},
 		mixins: [clickaway],
@@ -90,9 +88,8 @@
 			...mapState(['device', 'query']),
 			...mapGetters(['deviceNames']),
 			fields () {
-				let _this = this
-				return this.device.fields.filter(function (field) {
-					return _this.selectedFields.indexOf(field.path) > -1
+				return this.device.fields.filter((field) => {
+					return this.selectedFields.indexOf(field.path) > -1
 				})
 			},
 			queryFields () {
@@ -100,7 +97,7 @@
 					return field.querySchema !== undefined && (this.selectedFields.indexOf(field.path) > -1)
 				}).map(function (field) {
 					return {
-						path: field.path, name: field.name,
+						path: field.path, name: field.name, type: field.type,
 						...field.querySchema
 					}
 				})
@@ -111,6 +108,7 @@
 				selectedTags: [],
 				selectedFields: [],
 				selectedDevices: [],
+                selectedQuery: { },
 				infoDialogOpen: false,
                 saveQueryModal: {
 					open: false,
@@ -135,7 +133,10 @@
 						}
 					})
 				}
-			}
+			},
+            query: function(newQuery) {
+				this.selectedQuery = { ...newQuery.currentQuery }
+            }
 		},
 		created () {
 			this.fetchFields()
@@ -163,7 +164,7 @@
 			},
 			approveSaveQuery () {
 				this.saveQuery({
-                    query: this.query.currentQuery,
+                    query: this.selectedQuery,
                     name: this.saveQueryModal.name,
                     callback: () => this.saveQueryModal.open = false
                 })
