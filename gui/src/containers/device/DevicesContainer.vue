@@ -34,13 +34,15 @@
                         <div>{{ device.deviceDetails.name }}</div>
                         <div>{{ device.deviceDetails.IP }}</div>
                     </div>
-                    <div v-if="device.deviceDetails.data.adapters" class="d-flex flex-column justify-content-between p-3">
+                    <div v-if="device.deviceDetails.data.adapters && device.deviceDetails.data.adapters.length"
+                         class="d-flex flex-column justify-content-between p-3">
                         <div>Adapters</div>
                         <hr class="title-separator">
                         <image-list :data="device.deviceDetails.data.adapters" :vertical="true"
                                     :names="device.adapterNames"></image-list>
                     </div>
-                    <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length" class="d-flex flex-column justify-content-between align-items-start p-3">
+                    <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length"
+                         class="d-flex flex-column justify-content-between align-items-start p-3">
                         <div>Tags</div>
                         <hr class="title-separator">
                         <div><div v-for="tag in device.deviceDetails.data.tags" class="tag-list-item">{{ tag }}</div>

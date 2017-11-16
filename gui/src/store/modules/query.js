@@ -105,7 +105,13 @@ export const query = {
 		executedQueries: {fetching: false, data: [], error: ''},
 		savedQueries: {fetching: false, data: [], error: ''},
 
-		fields: [
+		savedFields: [
+			{path: 'query_name', name: 'Name', default: true},
+			{path: 'query', name: 'query', default: true},
+			{path: 'timestamp.date', name: 'Date', default: true},
+			{path: 'timestamp.time', name: 'Time', default: true}
+		],
+		executedFields: [
 			{path: 'query', name: 'query', default: true},
 			{path: 'device_count', name: 'Devices', default: true},
 			{path: 'timestamp.date', name: 'Date', default: true},

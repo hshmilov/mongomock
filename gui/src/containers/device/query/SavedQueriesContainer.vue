@@ -3,7 +3,7 @@
         <card :title="`queries (${query.savedQueries.data.length})`">
             <paginated-table slot="cardContent" :fetching="query.savedQueries.fetching"
                              :data="query.savedQueries.data" :error="query.savedQueries.error"
-                             :fields="query.fields" :fetchData="fetchQueries"
+                             :fields="query.savedFields" :fetchData="fetchQueries"
                              :actions="queryActions"></paginated-table>
         </card>
     </scrollable-page>
