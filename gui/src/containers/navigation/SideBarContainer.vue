@@ -23,6 +23,7 @@
                         <nested-nav-bar>
                             <nested-nav-item routeName="Devices" iconName="device">
                                 <nested-nav-bar nestLevel="1" class="collapse">
+                                    <nested-nav-item routeName="Saved Queries"></nested-nav-item>
                                     <nested-nav-item routeName="Queries History"></nested-nav-item>
                                 </nested-nav-bar>
                             </nested-nav-item>

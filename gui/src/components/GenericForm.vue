@@ -81,7 +81,7 @@
             parseAdvancedQuery() {
                 let advancedQueryParts = this.advancedQuery.split(' AND ')
                 advancedQueryParts.forEach((part) => {
-                    let match = part.match(/(.*)(=| in )(.*)/);
+                    let match = part.match(/(.*)(=| in )(.*)/)
                     if (match !== undefined && match.length > 3) {
                     	if (this.pathByName[match[1]] !== undefined) {
                             this.queryValues[_this.pathByName[match[1]]] = match[3]

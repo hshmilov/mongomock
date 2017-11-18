@@ -27,20 +27,22 @@
             <div slot="cardContent" v-on-clickaway="closeQuickView">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fields="fields" :fetchData="fetchDevices"
-                                 v-model="selectedDevices" :query="query.currentQuery"
-                                 :actions="[{ execute: executeQuickView, icon: 'icon-eye'}]"></paginated-table>
+                                 v-model="selectedDevices" :filter="query.currentQuery"
+                                 :actions="[{ handler: executeQuickView, trigger: 'icon-eye'}]"></paginated-table>
                 <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
                     <div class="d-flex flex-row justify-content-between p-3">
                         <div>{{ device.deviceDetails.name }}</div>
                         <div>{{ device.deviceDetails.IP }}</div>
                     </div>
-                    <div v-if="device.deviceDetails.data.adapters" class="d-flex flex-column justify-content-between p-3">
+                    <div v-if="device.deviceDetails.data.adapters && device.deviceDetails.data.adapters.length"
+                         class="d-flex flex-column justify-content-between p-3">
                         <div>Adapters</div>
                         <hr class="title-separator">
                         <image-list :data="device.deviceDetails.data.adapters" :vertical="true"
                                     :names="device.adapterNames"></image-list>
                     </div>
-                    <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length" class="d-flex flex-column justify-content-between align-items-start p-3">
+                    <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length"
+                         class="d-flex flex-column justify-content-between align-items-start p-3">
                         <div>Tags</div>
                         <hr class="title-separator">
                         <div><div v-for="tag in device.deviceDetails.data.tags" class="tag-list-item">{{ tag }}</div>

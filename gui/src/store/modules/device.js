@@ -177,8 +177,8 @@ export const device = {
 			/* Getting first page - empty table */
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
-			if (payload.query) {
-				param += `&query=${payload.query}`
+			if (payload.filter && Object.keys(payload.filter).length) {
+				param += `&filter=${JSON.stringify(payload.filter)}`
 			}
 			dispatch(REQUEST_API, {
 				rule: `api/devices${param}`,
