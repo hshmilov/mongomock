@@ -1,25 +1,33 @@
 <template>
     <scrollable-page title="devices">
-        <card title="query">
+        <card title="query" class="devices-query">
             <span slot="cardActions">
                 <action-bar :actions="[
                   { name: 'Save Query', perform: openSaveQuery }
                 ]"></action-bar>
             </span>
-            <generic-form slot="cardContent" :schema="queryFields" v-model="selectedQuery" :horizontal="true"
-                          :submittable="true" submitLabel="Go!" v-on:submit="updateQuery(selectedQuery)"></generic-form>
+            <template slot="cardContent">
+                <dropdown-menu animateClass="scale-up right">
+                    <div slot="dropdownTrigger">
+                        <input class="form-control" v-model="advancedQueryDropdown.value" @change="convertQuery()">
+                    </div>
+                    <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery" :horizontal="true"
+                    :submittable="true" submitLabel="Go!" @submit="updateQuery(selectedQuery)"></generic-form>
+                </dropdown-menu>
+                <a class="btn" @click="updateQuery(selectedQuery)">go</a>
+            </template>
 
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">
-                <dropdown-menu :positionRight="true" animateClass="scale-up right">
+                <dropdown-menu animateClass="scale-up right">
                     <i slot="dropdownTrigger" class="icon-tag"></i>
                     <searchable-checklist slot="dropdownContent" slot-scope="props" title="Tag as:"
                                           :items="device.tagList.data" :hasSearch="true" :producesNew="true"
                                           v-model="selectedTags" v-on:save="saveTags()" :explicitSave="true"
                                           :onDone="props.onDone"></searchable-checklist>
                 </dropdown-menu>
-                <dropdown-menu :positionRight="true" animateClass="scale-up right" menuClass="w-md">
+                <dropdown-menu animateClass="scale-up right" menuClass="w-md">
                     <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="device.fields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
@@ -76,7 +84,7 @@
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import { FETCH_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
-	import { UPDATE_QUERY, SAVE_QUERY } from '../../store/modules/query'
+	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
 
 	export default {
 		name: 'devices-container',
@@ -111,6 +119,10 @@
 				selectedDevices: [],
                 selectedQuery: { },
 				infoDialogOpen: false,
+                advancedQueryDropdown: {
+					open: false,
+                    value: '',
+                },
                 saveQueryModal: {
 					open: false,
                     name: ''
@@ -134,21 +146,20 @@
 						}
 					})
 				}
-			},
-            query: function(newQuery) {
-				this.selectedQuery = { ...newQuery.currentQuery }
-            }
-		},
-		created () {
-			this.fetchFields()
-			this.fetchTags()
-			this.selectedFields = this.device.fields.filter(function (field) {
+			}
+	},
+	created () {
+		this.selectedQuery = { ...this.query.currentQuery }
+		this.advancedQueryDropdown.value = queryToStr(this.selectedQuery)
+		this.fetchFields()
+		this.fetchTags()
+		this.selectedFields = this.device.fields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
 				return field.path
 			})
-		},
-		methods: {
+	},
+	methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY
 			}),
@@ -160,6 +171,9 @@
 				fetchTags: FETCH_TAGS,
 				saveDeviceTags: SAVE_DEVICE_TAGS
 			}),
+            convertQuery() {
+				this.selectedQuery = strToQuery(this.advancedQueryDropdown.value)
+            },
 			openSaveQuery () {
                 this.saveQueryModal.open = true
 			},
@@ -193,5 +207,32 @@
 
 
 <style lang="scss">
-
+    .devices-query {
+        .card-body {
+            display: flex;
+            > .dropdown {
+                flex: 1 0 auto;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+                > .dropdown-toggle {
+                    padding-right: 0;
+                    padding-left: 0;
+                    &:after {
+                        margin-top: 16px;
+                    }
+                    .form-control {
+                        border-top-right-radius: 0;
+                        border-bottom-right-radius: 0;
+                        margin: -1px;
+                        border-right: 0;
+                    }
+                }
+            }
+            > .btn {
+                line-height: 28px;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+            }
+        }
+    }
 </style>

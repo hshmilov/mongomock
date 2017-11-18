@@ -215,6 +215,10 @@
 
     .dataTables_wrapper {
         padding-top: 10px;
+        .spinner-container {
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
         .dataTables_info {
             display: inline-block;
             font-size: 80%;

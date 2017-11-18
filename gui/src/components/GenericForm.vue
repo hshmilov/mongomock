@@ -1,38 +1,29 @@
 <template>
-    <form class="form" v-bind:class="{ 'row': horizontal }" @keyup.enter.stop="$emit('submit')">
-        <template v-if="advancedView === undefined || !advancedView">
-            <div v-for="input in schema" class="form-group" v-bind:class="{ 'col': horizontal }">
+    <form class="form" @keyup.enter.stop="$emit('submit')">
+        <div v-bind:class="{ 'row': horizontal }">
+            <div v-for="input in schema" class="form-group" v-bind:class="{ 'col-3': horizontal }">
                 <label v-if="input.name" class="form-label">{{ input.name }}</label>
                 <template v-if="input.control === 'select'">
-                    <select class="form-control" v-model="queryValues[input.path]" @input="$emit('input', queryValues)">
+                    <select class="form-control" v-model="model[input.path]" @input="$emit('input', model)">
                         <option v-for="option in input.options">{{ option.text }}</option>
                     </select>
                 </template>
                 <template v-else-if="input.control === 'multiple-select'">
                     <multiple-select :title="`Select ${input.name}:`" :items="input.options" :type="input.type"
-                                     v-model="queryValues[input.path]" @input="$emit('input', queryValues)">
+                                     v-model="model[input.path]" @input="$emit('input', model)">
                     </multiple-select>
                 </template>
                 <template v-else-if="input.control === 'checkbox'">
-                    <checkbox :label="input.name" v-model="queryValues[input.path]"></checkbox>
+                    <checkbox :label="input.name" v-model="model[input.path]"></checkbox>
                 </template>
                 <template v-else>
                     <input class="form-control" :type="input.control" :placeholder="input.placeholder"
-                           v-model="queryValues[input.path]" @input="$emit('input', queryValues)">
+                           v-model="model[input.path]" @input="$emit('input', model)">
                 </template>
             </div>
-        </template>
-        <template v-else>
-            <div class="form-group" v-bind:class="{ 'col': horizontal }">
-                <label class="form-label">Search:</label>
-                <input class="form-control" type="text" v-model="advancedQuery" @change="parseAdvancedQuery">
-            </div>
-        </template>
-        <div class="form-group" v-bind:class="{ 'col-1': horizontal }">
-            <a class="form-label form-view" @click="advancedView = false" v-if="advancedView">Basic</a>
-            <a class="form-label form-view" @click="advancedView = true" v-else>Advanced</a>
-            <a v-if="submittable" class="btn"
-               v-on:click="$emit('submit')">{{ submitLabel || 'Send' }}</a>
+        </div>
+        <div class="form-group">
+            <a v-if="submittable" class="btn" @click="$emit('submit')">{{ submitLabel || 'Send' }}</a>
         </div>
     </form>
 </template>
@@ -54,45 +45,10 @@
             }
         },
         data() {
-            return {
-                advancedView: false,
-                advancedQuery: '',
-                queryValues: { ...this.value }
-            }
-        },
-        watch: {
-            advancedView(newAdvancedView) {
-                if (!newAdvancedView) { return }
-                this.advancedQuery = this.buildAdvancedQuery()
-            }
-        },
-        methods: {
-            buildAdvancedQuery() {
-                let advancedQueryParts = []
-                this.schema.forEach((input) => {
-                    if (this.queryValues[input.path] === undefined || !this.queryValues[input.path]) { return }
-                    if ((input.control === 'text') || (input.control === 'select')) {
-                        advancedQueryParts.push(`${input.name}=${this.queryValues[input.path]}`)
-                    } else if (input.control === 'multiple-select') {
-                        advancedQueryParts.push(`${input.name} in (${this.queryValues[input.path]})`)
-                    }
-                })
-                return advancedQueryParts.join(' AND ')
-            },
-            parseAdvancedQuery() {
-                let advancedQueryParts = this.advancedQuery.split(' AND ')
-                advancedQueryParts.forEach((part) => {
-                    let match = part.match(/(.*)(=| in )(.*)/)
-                    if (match !== undefined && match.length > 3) {
-                    	if (this.pathByName[match[1]] !== undefined) {
-                            this.queryValues[_this.pathByName[match[1]]] = match[3]
-                        } else {
-							this.queryValues[match[1]] = match[3]
-                        }
-                    }
-                })
-            }
-        }
+			return {
+				model: {...this.value}
+			}
+		}
     }
 </script>
 
