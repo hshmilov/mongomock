@@ -20,7 +20,7 @@
                 </dropdown-menu>
                 <dropdown-menu :positionRight="true" animateClass="scale-up right" menuClass="w-md">
                     <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
-                    <searchable-checklist slot="dropdownContent" title="Show fields:" :items="device.fields"
+                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="device.fields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
             </div>
@@ -163,6 +163,9 @@
                 this.saveQueryModal.open = true
 			},
 			approveSaveQuery () {
+				if (!this.saveQueryModal.name) {
+					return
+                }
 				this.saveQuery({
                     query: this.selectedQuery,
                     name: this.saveQueryModal.name,

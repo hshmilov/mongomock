@@ -1,8 +1,8 @@
 <template>
     <transition name="modal">
-        <div class="modal-mask">
+        <div class="modal-mask" @click.stop="$emit('close')">
             <div class="modal-wrapper">
-                <div class="modal-container">
+                <div class="modal-container" @click.stop="$emit('open')">
                     <div class="modal-body">
                         <slot name="body">
                             Are you sure?
@@ -21,7 +21,10 @@
 <script>
 	export default {
 		name: 'modal',
-        props: [ 'approveText', 'dismissText']
+        props: [ 'approveText', 'dismissText'],
+        mounted() {
+			this.$el.querySelector("input").focus()
+        }
 	}
 </script>
 

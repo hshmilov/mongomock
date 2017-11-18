@@ -1,5 +1,5 @@
 <template>
-    <form class="form" v-bind:class="{ 'row': horizontal }" @keyup.enter.stop="submitHandler(queryValues)">
+    <form class="form" v-bind:class="{ 'row': horizontal }" @keyup.enter.stop="$emit('submit')">
         <template v-if="advancedView === undefined || !advancedView">
             <div v-for="input in schema" class="form-group" v-bind:class="{ 'col': horizontal }">
                 <label v-if="input.name" class="form-label">{{ input.name }}</label>
