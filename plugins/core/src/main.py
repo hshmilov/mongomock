@@ -213,7 +213,7 @@ class Core(PluginBase):
                     api_key = data['api_key']
                     # Checking that this plugin has the correct api key
                     if api_key != relevant_doc['api_key']:
-                        # This is not the currect api key, decline registration
+                        # This is not the correct api key, decline registration
                         return return_error('Wrong API key', 400)
                 else:
                     # TODO: prompt message to gui that an unrecognized plugin is trying to connect
@@ -301,7 +301,7 @@ class Core(PluginBase):
         try:
             url_data = self._translate_url(full_url)
         except exceptions.PluginNotFoundError:
-            return self.return_error("No such plugin!", 400)
+            return return_error("No such plugin!", 400)
 
         data = self.get_request_data()
 

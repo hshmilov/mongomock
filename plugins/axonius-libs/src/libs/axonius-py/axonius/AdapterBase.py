@@ -39,7 +39,7 @@ class AdapterBase(PluginBase, ABC):
         """ Function for notifying the EC that this Adapted has been reset.
         """
         self.request_remote_plugin('action_update/adapter_action_reset?unique_name={0}'.format(self.plugin_unique_name),
-                                   plugin_unique_name='execution_controller',
+                                   plugin_unique_name='execution_plugin',
                                    method='POST')
 
     def _get_parsed_clients_config(self):
@@ -82,7 +82,7 @@ class AdapterBase(PluginBase, ABC):
         :param dict output: The output of the action (in case finished or error)
         """
         self.request_remote_plugin('action_update/{0}'.format(action_id),
-                                   plugin_unique_name='execution_controller',
+                                   plugin_unique_name='execution_plugin',
                                    method='POST',
                                    data=json.dumps({"status": status, "output": output}))  
         # TODO: Think of a better way to implement status
@@ -107,7 +107,7 @@ class AdapterBase(PluginBase, ABC):
             # Running the function, it should block until action is finished
             result = func(device_data, **kwargs)
         except Exception as e:
-            self._update_action_data(action_id, status="failed", output=str(e))
+            self._update_action_data(action_id, status="failed", output={"result": "Failure", "product": str(e)})
         
         # Sending the result to the issuer
         self._update_action_data(action_id, status="finished", output=result)
@@ -126,7 +126,7 @@ class AdapterBase(PluginBase, ABC):
         device_data = request_data.pop('device_data')
         
         if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'delete_file']:
-            return self.return_error("Invalid action type", 400)
+            return return_error("Invalid action type", 400)
         
         needed_action_function = getattr(self, action_type)
 
@@ -134,23 +134,23 @@ class AdapterBase(PluginBase, ABC):
         return ''
 
     def put_file(self, device_data, file_buffer, dst_path):
-        self.return_error("Not implemented yet", 400)
+        return_error("Not implemented yet", 400)
 
     def get_file(self, device_data, file_path):
-        self.return_error("Not implemented yet", 400)
+        return_error("Not implemented yet", 400)
 
     def execute_binary(self, device_data, binary_buffer):
-        self.return_error("Not implemented yet", 400)
+        return_error("Not implemented yet", 400)
 
     def execute_shell(self, device_data, shell_command):
-        self.return_error("Not implemented yet", 400)
+        return_error("Not implemented yet", 400)
 
     def delete_file(self, device_data, file_path):
-        self.return_error("Not implemented yet", 400)
+        return_error("Not implemented yet", 400)
 
     @abstractmethod
     def _parse_clients_data(self, clients_config):
-        """Abstract method for retreiving clients data as dictionary from the raw clients data (fetched from config)
+        """Abstract method for retrieving clients data as dictionary from the raw clients data (fetched from config)
 
         :param dict clients_config: The clients config as received from the configuration db
 

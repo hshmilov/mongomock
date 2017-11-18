@@ -10,11 +10,11 @@ class AdException(Exception):
         super().__init__(message)
 
 
-class SqliteException(AdException):
+class LdapException(AdException):
     def __init__(self, message=""):
         super().__init__(message)
 
 
-class LdapException(AdException):
-    def __init__(self, message=""):
+class NoClientError(AdException):
+    def __init__(self, message="Couldnt find client for execution"):
         super().__init__(message)

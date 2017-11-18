@@ -77,10 +77,15 @@ class ExecutionPlugin(PluginBase):
         .. note:: We should still need to implement this function
         """
         result = self.request_remote_plugin('online_device/{0}'.format(device_id), 'aggregator_plugin').json()
-        for adapter_name, adapter_data in result['adapters'].items():
-            # Currently adding all of the adapters
-            # TODO: Create a smart logic here (next version)
-            yield (adapter_name, adapter_data)
+
+        try:
+            for adapter_name, adapter_data in result['adapters'].items():
+                # Currently adding all of the adapters
+                # TODO: Create a smart logic here (next version)
+                yield (adapter_name, adapter_data)
+        except KeyError as e:
+            return
+
 
     def request_remote_plugin_thread(self, action_id, plugin_unique_name, method, data):
         """ Function for request action from other adapter
@@ -136,6 +141,14 @@ class ExecutionPlugin(PluginBase):
 
         request_content = self.get_request_data_as_object()
 
+        # Updating the db on the new status and other parameters changed
+        action_data = {'status': request_content['status']}
+        if 'output' in request_content:
+            action_data['product'] = request_content['output'].get('product', '')
+            action_data['result'] = request_content['output'].get('result', '')
+
+        self._save_action_data(action_data, action_id)
+
         if request_content['status'] == 'failed':
             # Should try another adapter, we will use the list of tuples containing all of the 
             # available adapters for this device
@@ -152,6 +165,7 @@ class ExecutionPlugin(PluginBase):
             if not adapters_tuple:
                 self.logger.error('Couldnt run code on action {0}, no more adapters to try'.format(action_id))
             else:
+                # Trying to run on a different adapter, don't need to inform the issuer
                 self._actions_thread_pool.submit(self._create_request_thread,
                                                  action_type,
                                                  device_id,
@@ -159,22 +173,14 @@ class ExecutionPlugin(PluginBase):
                                                  data_for_action,
                                                  adapters_tuple,
                                                  action_id)
-        else:
-            # Updating the db on the new status and other parameters changed
-            action_data = {'status': request_content['status']}
-            if 'output' in request_content:
-                action_data['product'] = request_content['output'].get('product', '')
-                action_data['result'] = request_content['output'].get('result', '')
-        
-            self._save_action_data(action_data, action_id)
+                return
 
-            to_request_params = {'action_id': action_id, 
-                                 'plugin_unique_name': self._actions_db[action_id]['issuer_unique_name'],
-                                 'method': 'POST', 
-                                 'data': json.dumps(request_content)}
-
-            # Updating the issuer plugin also
-            threading.Thread(target=self.request_remote_plugin_thread, kwargs=to_request_params).start()
+        # Updating the issuer plugin also
+        to_request_params = {'action_id': action_id,
+                             'plugin_unique_name': self._actions_db[action_id]['issuer_unique_name'],
+                             'method': 'POST',
+                             'data': json.dumps(request_content)}
+        threading.Thread(target=self.request_remote_plugin_thread, kwargs=to_request_params).start()
 
         return 
 
@@ -192,7 +198,8 @@ class ExecutionPlugin(PluginBase):
         :return action_id: The action id of the action updated (or inserted if new)
         """
         available_data_keys = ['action_type', 'adapter_unique_name', 'issuer_unique_name', 'status', '_id'
-                               'output', 'product', 'result', 'adapters_tuple', 'data_for_action', 'device_id']
+                               'output', 'product', 'result', 'adapters_tuple', 'data_for_action', 'device_id',
+                               'device_axon_id']
 
         # Adding the data to DB
         collection = self._get_collection('actions')
@@ -238,7 +245,7 @@ class ExecutionPlugin(PluginBase):
             adapters_tuple = self._find_adapters_for_action(device_id)
 
         adapters_count = 1
-        for adapter_unique_name, device_raw_data in adapters_tuple:        
+        for adapter_unique_name, device_raw_data in adapters_tuple:
             # Requesting the adapter for the action
             result = self.request_action(action_type,
                                          self.ec_callback,
@@ -248,7 +255,7 @@ class ExecutionPlugin(PluginBase):
                                          device_raw_data)
 
             if result.status_code == 200:
-                # Action submitted succesfully, Adding it to db
+                # Action submitted successfully, Adding it to db
                 self._save_action_data({'action_type': action_type,
                                         'data_for_action': data,
                                         'adapter_unique_name': adapter_unique_name,
@@ -270,6 +277,9 @@ class ExecutionPlugin(PluginBase):
                                    plugin_unique_name=issuer,
                                    method='POST',
                                    data=json.dumps({'status': 'failed', 'output': ''}))
+        self._save_action_data({'status': 'failed',
+                                'product': 'No executing adapters'},
+                               action_id)
 
     def request_action(self, action_type, callback_function, data_for_action, 
                        plugin_unique_name, action_id, device_raw):
@@ -331,7 +341,8 @@ class ExecutionPlugin(PluginBase):
 
         action_id = self._save_action_data({'action_type': action_type, 
                                             'issuer_unique_name': issuer_unique_name, 
-                                            'status': 'pending'})
+                                            'status': 'pending',
+                                            'device_axon_id': device_id})
 
         self._actions_thread_pool.submit(self._create_request_thread,
                                          action_type,

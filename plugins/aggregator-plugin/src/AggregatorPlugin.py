@@ -59,12 +59,8 @@ class AggregatorPlugin(PluginBase):
         self._scheduler = None
         # Load devices DB, or create an empty one
         self._load_devices_from_persistent_db()
-
-    def start_serve(self):
-        """Overriding PluginBase function in order to start our managing thread first.
-        """
+        # Starting the managing thread
         self._start_managing_thread()
-        super().start_serve()
 
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.

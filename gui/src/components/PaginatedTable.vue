@@ -73,7 +73,6 @@
 			Checkbox, ObjectList, Spinner},
 		props: [
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
-
 		],
 		computed: {
 			pageSize () {
@@ -333,4 +332,5 @@
             border-top: 1px solid $border-color;
         }
     }
+
 </style>

@@ -1,5 +1,0 @@
-flask
-pymongo
-requests
-apscheduler
-axonius==1.0.0

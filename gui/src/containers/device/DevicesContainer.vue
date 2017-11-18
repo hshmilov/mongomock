@@ -8,6 +8,7 @@
             </span>
             <generic-form slot="cardContent" :schema="queryFields" v-model="selectedQuery" :horizontal="true"
                           :submittable="true" submitLabel="Go!" v-on:submit="updateQuery(selectedQuery)"></generic-form>
+
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">
