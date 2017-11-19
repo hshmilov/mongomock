@@ -5,8 +5,9 @@ from services.simple_fixture import initalize_fixture
 
 class AggregatorService(plugin_service.PluginService):
     def __init__(self, compose_file_path='../plugins/aggregator-plugin/docker-compose.yml',
-                 config_file_path='../plugins/aggregator-plugin/src/plugin_config.ini'):
-        super().__init__(compose_file_path, config_file_path=config_file_path)
+                 config_file_path='../plugins/aggregator-plugin/src/plugin_config.ini',
+                 vol_config_file_path='../plugins/aggregator-plugin/src/plugin_volatile_config.ini'):
+        super().__init__(compose_file_path, config_file_path, vol_config_file_path)
 
 
 @pytest.fixture(scope="session")

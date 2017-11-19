@@ -31,7 +31,7 @@ AXONIUS_REST = Flask(__name__)
 
 LOG_PATH = str(Path.home().joinpath('logs'))  # this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
 
-# Can wait up to 5 minutes if core didnt answer yet
+# Can wait up to 5 minutes if core didn't answer yet
 TIME_WAIT_FOR_REGISTER = 60*5
 
 
@@ -46,7 +46,7 @@ def after_request(response):
     
     :param str docker_base_url: The response of the client (Will change is headers)
 
-    :return: Fixed response that allow ither domain to send all methods
+    :return: Fixed response that allow other domain to send all methods
     """
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
@@ -164,11 +164,13 @@ class PluginBase(object):
         :raise KeyError: In case of environment variables missing
         """
 
-        # Basic configurations conserning axonius-libs. This will be changed by the CI.
+        # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
         self.lib_version = "%version%"
 
         # Getting values from configuration file
+        temp_config = configparser.ConfigParser()
+        temp_config.read('plugin_volatile_config.ini')
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
         self.version = config['DEFAULT']['version']
@@ -178,22 +180,24 @@ class PluginBase(object):
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:
-            self.host = config['DEBUG']['host']
-            self.port = int(config['DEBUG']['port'])
+            self.host = temp_config['DEBUG']['host']
+            self.port = int(temp_config['DEBUG']['port'])
+            self.core_address = temp_config['DEBUG']['core_address']
         except KeyError:
-            # This is the default value, which is what nginx sets for us.
-            self.host = "0.0.0.0"
-            self.port = 443  # We listen on https.
+            try:
+                # We can enter debug value on all of the config files
+                self.host = config['DEBUG']['host']
+                self.port = int(config['DEBUG']['port'])
+                self.core_address = config['DEBUG']['core_address']
+            except KeyError:
+                # This is the default value, which is what nginx sets for us.
+                self.host = "0.0.0.0"
+                self.port = 443  # We listen on https.
+                self.core_address = "https://core"  # This should be dns resolved.
 
-        # This is a debug value for setting a different core address.
         try:
-            self.core_address = config['DEBUG']['core_address']
-        except KeyError:
-            self.core_address = "https://core"  # This should be dns resolved.
-
-        try:
-            self.plugin_unique_name = config['registration']['plugin_unique_name']
-            self.api_key = config['registration']['api_key']
+            self.plugin_unique_name = temp_config['registration']['plugin_unique_name']
+            self.api_key = temp_config['registration']['api_key']
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
@@ -201,17 +205,20 @@ class PluginBase(object):
         if not core_data:
             core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
         if not core_data or core_data['status'] == 'error':
-            raise RuntimeError("Register process faild, Existing. Reason: {0}".format(core_data['message']))
+            raise RuntimeError("Register process failed, Existing. Reason: {0}".format(core_data['message']))
 
         if core_data['plugin_unique_name'] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
             self.plugin_unique_name = core_data['plugin_unique_name']
             self.api_key = core_data['api_key']
-            config['registration']['plugin_unique_name'] = self.plugin_unique_name
-            config['registration']['api_key'] = self.api_key
+            temp_config['registration'] = {}
+            temp_config['registration']['plugin_unique_name'] = self.plugin_unique_name
+            temp_config['registration']['api_key'] = self.api_key
 
             # Writing back the configuration with the new plugin name
             with open('plugin_config.ini', 'w') as configfile:
                 config.write(configfile)
+            with open('plugin_volatile_config.ini', 'w') as temp_config_file:
+                temp_config.write(temp_config_file)
 
         # Use the data we have from the core.
 
@@ -241,7 +248,7 @@ class PluginBase(object):
             self.scheduler = BackgroundScheduler(executors=executors)
             self.scheduler.start()
             self.scheduler.add_job(func=self._check_registered_thread,
-                                   trigger=IntervalTrigger(seconds=1000),
+                                   trigger=IntervalTrigger(seconds=30),
                                    next_run_time=datetime.now(),
                                    id='check_registered',
                                    max_instances=1)

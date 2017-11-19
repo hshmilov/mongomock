@@ -7,13 +7,14 @@ API_KEY_HEADER = "x-api-key"
 
 
 class PluginService(services.compose_service.ComposeService):
-    def __init__(self, compose_file_path, config_file_path):
+    def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
         super().__init__(compose_file_path)
         self.parsed_compose_file = services.compose_parser.ServiceYmlParser(compose_file_path)
         port = self.parsed_compose_file.exposed_port
         self.endpoint = ('localhost', port)
         self.req_url = "http://%s:%s" % (self.endpoint[0], self.endpoint[1])
         self.config_file_path = config_file_path
+        self.volatile_config_file_path = vol_config_file_path
 
     def version(self):
         return requests.get(self.req_url + "/version")
@@ -45,13 +46,22 @@ class PluginService(services.compose_service.ComposeService):
         return axonius.ConfigReader.PluginConfig(self.config_file_path)
 
     @property
+    def vol_conf(self):
+        return axonius.ConfigReader.PluginVolatileConfig(self.volatile_config_file_path)
+
+    @property
     def api_key(self):
-        return self.conf.api_key
+        return self.vol_conf.api_key
+
+    @property
+    def unique_name(self):
+        return self.vol_conf.unique_name
 
 
 class AdapterService(PluginService):
-    def __init__(self, compose_file_path, config_file_path):
-        super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path)
+    def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
+        super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
+                         vol_config_file_path=vol_config_file_path)
 
     def devices(self):
         raise NotImplemented("TBD!")

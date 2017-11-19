@@ -275,3 +275,4 @@ fabric.properties
 .idea/misc.xml
 .idea/cortex.iml
 *.filters
+*plugin_volatile_config.ini
