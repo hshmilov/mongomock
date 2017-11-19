@@ -16,7 +16,9 @@ def test_system_is_up(axonius_fixture):
 
 
 def test_aggregator_in_configs(axonius_fixture):
-    aggregator_config = axonius_fixture['db'].get_unique_plugin_config('aggregator_plugin_1')
+    aggregator = axonius_fixture['aggregator']
+    plugin_unique_name = aggregator.unique_name
+    aggregator_config = axonius_fixture['db'].get_unique_plugin_config(plugin_unique_name)
     assert aggregator_config['plugin_name'] == 'aggregator'
 
 
@@ -31,7 +33,8 @@ def test_ad_adapter_responds_to_schema(axonius_fixture, ad_fixture):
 
 
 def test_ad_adapter_in_configs(axonius_fixture, ad_fixture):
-    adapter = axonius_fixture['db'].get_unique_plugin_config('ad_adapter_1')
+    plugin_unique_name = ad_fixture.unique_name
+    adapter = axonius_fixture['db'].get_unique_plugin_config(plugin_unique_name)
     assert adapter['plugin_name'] == 'ad_adapter'
 
 
@@ -46,5 +49,6 @@ def test_epo_adapter_responds_to_schema(axonius_fixture, epo_fixture):
 
 
 def test_epo_adapter_in_configs(axonius_fixture, epo_fixture):
-    adapter = axonius_fixture['db'].get_unique_plugin_config('epo_adapter_1')
+    plugin_unique_name = epo_fixture.unique_name
+    adapter = axonius_fixture['db'].get_unique_plugin_config(plugin_unique_name)
     assert adapter['plugin_name'] == 'epo_adapter'

@@ -28,11 +28,22 @@ class Core(PluginBase):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
         plugin_unique_name = config['core_specific']['plugin_unique_name']
-        api_key = config['core_specific']['api_key']
         db_addr = config['core_specific']['db_addr']
         db_user = config['core_specific']['db_user']
         db_password = config['core_specific']['db_password']
         log_addr = config['core_specific']['log_addr']
+
+        temp_config = configparser.ConfigParser()
+        temp_config.read('plugin_volatile_config.ini')
+        try:
+            api_key = config['core_specific']['api_key']
+        except KeyError:
+            # We should generate a new api_key and save it
+            api_key = uuid.uuid4().hex
+            temp_config['registration'] = {}
+            temp_config['registration']['api_key'] = api_key
+        with open('plugin_volatile_config.ini', 'w') as temp_config_file:
+            temp_config.write(temp_config_file)
 
         # In order to avoid, deletion before initialization of adapter, we add this flag
         self.did_adapter_registered = False
