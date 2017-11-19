@@ -76,7 +76,7 @@ class ExecutionPlugin(PluginBase):
 
         .. note:: We should still need to implement this function
         """
-        result = self.request_remote_plugin('online_device/{0}'.format(device_id), 'aggregator_plugin').json()
+        result = self.request_remote_plugin('online_device/{0}'.format(device_id), 'aggregator').json()
 
         try:
             for adapter_name, adapter_data in result['adapters'].items():

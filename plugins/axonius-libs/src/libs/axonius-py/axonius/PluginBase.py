@@ -542,6 +542,8 @@ class PluginBase(object):
         :param resource: The resource (e.g. 'devices' or 'version') of the plugin
         :type plugin_unique_name: str
         :param plugin_unique_name: The unique name of the plugin in question. None will make a request to the core.
+                                   You can also enter a plugin name instead of unique name for single instances like
+                                   Aggregator or Execution.
         :param method: HTTP method - see `request.request`
         :param kwargs: passed to `requests.request`
         :return: :class:`Response <Response>` object
@@ -694,7 +696,7 @@ class PluginBase(object):
         uri = f"action/{action_type}?axon_id={axon_id}"
             
         result = self.request_remote_plugin(uri,
-                                            plugin_unique_name='execution_plugin',
+                                            plugin_unique_name='execution',
                                             method='POST', 
                                             data=json.dumps(data))
 
