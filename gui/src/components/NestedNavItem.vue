@@ -21,7 +21,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .nav-item {
         text-transform: uppercase;

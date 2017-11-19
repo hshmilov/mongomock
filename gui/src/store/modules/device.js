@@ -25,8 +25,7 @@ export const device = {
 		fields: [
 			{
 				path: 'adapters', name: 'Adapters', default: true, selected: true, type: 'image-list', querySchema: {
-				type: 'multiple-select',
-				options: [
+				control: 'multiple-select', options: [
 					{name: 'Active Dirsectory', path: 'ad_adapter'},
 					{name: 'ESX', path: 'esx_adapter'},
 					{name: 'CheckPoint', path: 'checkpoint_adapter'},
@@ -36,25 +35,18 @@ export const device = {
 			}
 			},
 			{
-				path: 'pretty_id', name: 'Axonius Name', selected: true, querySchema: {
-				type: 'text'
-			}
+				path: 'pretty_id', name: 'Axonius Name', selected: true, querySchema: {control: 'text'}
 			},
 			{
-				path: 'name', name: 'Host Name', selected: true, querySchema: {
-				type: 'text'
-			}
+				path: 'name', name: 'Host Name', selected: true, querySchema: {control: 'text'}
 			},
 			{path: 'IP', name: 'IP Address', selected: true},
 			{
-				path: 'OS.type', name: 'Operating System', selected: true, querySchema: {
-				type: 'text'
-			}
+				path: 'OS.type', name: 'Operating System', selected: true, querySchema: {control: 'text'}
 			},
 			{
 				path: 'tags', name: 'Tags', default: true, selected: true, type: 'tag-list', querySchema: {
-				type: 'multiple-select',
-				options: []
+				control: 'multiple-select', options: []
 			}
 			}
 		],
@@ -84,7 +76,7 @@ export const device = {
 			if (payload.data) {
 				let processedData = []
 				payload.data.forEach(function (device) {
-					let processedDevice = { 'id': device['internal_axon_id'] }
+					let processedDevice = {'id': device['internal_axon_id']}
 					processedDevice['adapters'] = Object.keys(device.adapters)
 					state.fields.forEach(function (field) {
 						if (!field.default) {
@@ -92,8 +84,8 @@ export const device = {
 							if (field.path.indexOf('data') === -1) {
 								data = data[processedDevice.adapters[0]].data
 							}
-							let pathParts = field.path.split(".")
-							pathParts.forEach(function(part) {
+							let pathParts = field.path.split('.')
+							pathParts.forEach(function (part) {
 								if (data === undefined) { return }
 								data = data[part]
 							})
@@ -111,7 +103,7 @@ export const device = {
 		},
 		[ UPDATE_FIELDS ] (state, payload) {
 			if (payload.data) {
-				payload.data.forEach(function(field) {
+				payload.data.forEach(function (field) {
 					let fieldParts = field.split('.')
 					state.fields.push({
 						path: field,
@@ -126,10 +118,10 @@ export const device = {
 		[ UPDATE_TAGS ] (state, payload) {
 			state.tagList.fetching = payload.fetching
 			if (payload.data) {
-				state.tagList.data = payload.data.map(function(tag) {
+				state.tagList.data = payload.data.map(function (tag) {
 					return {name: tag, path: tag}
 				})
-				state.fields.forEach(function(field) {
+				state.fields.forEach(function (field) {
 					if (field.path === 'tags') {
 						field.querySchema.options = state.tagList.data
 					}
@@ -145,7 +137,7 @@ export const device = {
 					device['tags'] = payload.tags
 				}
 			})
-			let tags = state.tagList.data.map(function(tag) {
+			let tags = state.tagList.data.map(function (tag) {
 				return tag.path
 			})
 			payload.tags.forEach(function (tag) {
@@ -207,11 +199,11 @@ export const device = {
 		},
 		[ SAVE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
 			commit(UPDATE_DEVICE_TAGS, payload)
-			payload.devices.forEach(function(device) {
+			payload.devices.forEach(function (device) {
 				dispatch(REQUEST_API, {
 					rule: `api/devices/${device}`,
 					method: 'POST',
-					data: { tags: payload.tags }
+					data: {tags: payload.tags}
 				})
 			})
 		}

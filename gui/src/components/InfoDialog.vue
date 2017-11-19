@@ -21,7 +21,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .info-dialog {
         overflow: hidden;

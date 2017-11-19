@@ -25,7 +25,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .page-wrapper {
         background: $background-color;
@@ -34,7 +34,7 @@
         padding-left: 240px;
         display: flex;
         flex-flow: column;
-        position: fixed;
+        position: relative;
         width: 100%;
         &.collapse {
             display: block;

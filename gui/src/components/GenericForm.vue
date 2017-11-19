@@ -1,23 +1,24 @@
 <template>
-    <form class="form" v-bind:class="{ 'row': horizontal }" @keyup.enter.stop="submitHandler(queryValues)">
+    <form class="form" v-bind:class="{ 'row': horizontal }" @keyup.enter.stop="$emit('submit')">
         <template v-if="advancedView === undefined || !advancedView">
             <div v-for="input in schema" class="form-group" v-bind:class="{ 'col': horizontal }">
                 <label v-if="input.name" class="form-label">{{ input.name }}</label>
-                <template v-if="input.type === 'select'">
-                    <select class="form-control" size v-model="queryValues[input.path]">
+                <template v-if="input.control === 'select'">
+                    <select class="form-control" v-model="queryValues[input.path]" @input="$emit('input', queryValues)">
                         <option v-for="option in input.options">{{ option.text }}</option>
                     </select>
                 </template>
-                <template v-else-if="input.type === 'multiple-select'">
-                    <multiple-select :title="`Select ${input.name}:`" :items="input.options"
-                                     v-model="queryValues[input.path]"></multiple-select>
+                <template v-else-if="input.control === 'multiple-select'">
+                    <multiple-select :title="`Select ${input.name}:`" :items="input.options" :type="input.type"
+                                     v-model="queryValues[input.path]" @input="$emit('input', queryValues)">
+                    </multiple-select>
                 </template>
-                <template v-else-if="input.type === 'checkbox'">
+                <template v-else-if="input.control === 'checkbox'">
                     <checkbox :label="input.name" v-model="queryValues[input.path]"></checkbox>
                 </template>
                 <template v-else>
-                    <input class="form-control" :type="input.type"
-                           v-model="queryValues[input.path]" :placeholder="input.placeholder">
+                    <input class="form-control" :type="input.control" :placeholder="input.placeholder"
+                           v-model="queryValues[input.path]" @input="$emit('input', queryValues)">
                 </template>
             </div>
         </template>
@@ -30,8 +31,8 @@
         <div class="form-group" v-bind:class="{ 'col-1': horizontal }">
             <a class="form-label form-view" @click="advancedView = false" v-if="advancedView">Basic</a>
             <a class="form-label form-view" @click="advancedView = true" v-else>Advanced</a>
-            <a v-if="values !== undefined" class="btn btn-info"
-               v-on:click="submitHandler(queryValues)">{{ submitLabel || 'Send' }}</a>
+            <a v-if="submittable" class="btn"
+               v-on:click="$emit('submit')">{{ submitLabel || 'Send' }}</a>
         </div>
     </form>
 </template>
@@ -43,7 +44,7 @@
     export default {
         name: 'generic-form',
         components: { MultipleSelect, Checkbox },
-        props: [ 'schema', 'submitLabel', 'horizontal', 'values', 'submitHandler' ],
+        props: [ 'schema', 'submittable', 'submitLabel', 'horizontal', 'value' ],
         computed: {
             pathByName() {
                 return this.schema.reduce(function(map, input) {
@@ -56,7 +57,7 @@
             return {
                 advancedView: false,
                 advancedQuery: '',
-                queryValues: { ...this.values }
+                queryValues: { ...this.value }
             }
         },
         watch: {
@@ -70,9 +71,9 @@
                 let advancedQueryParts = []
                 this.schema.forEach((input) => {
                     if (this.queryValues[input.path] === undefined || !this.queryValues[input.path]) { return }
-                    if ((input.type === 'text') || (input.type === 'select')) {
+                    if ((input.control === 'text') || (input.control === 'select')) {
                         advancedQueryParts.push(`${input.name}=${this.queryValues[input.path]}`)
-                    } else if (input.type === 'multiple-select') {
+                    } else if (input.control === 'multiple-select') {
                         advancedQueryParts.push(`${input.name} in (${this.queryValues[input.path]})`)
                     }
                 })
@@ -96,7 +97,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .form {
         .form-group {
@@ -106,10 +107,6 @@
             &.col-1 {
                 text-align: left;
                 overflow: visible;
-                .btn.btn-info {
-                    vertical-align: bottom;
-                    color: $color-light;
-                }
             }
             .image-list {
                 line-height: 30px;
@@ -129,21 +126,6 @@
                 &:hover {
                     color: $color-theme;
                 }
-            }
-        }
-        .btn.btn-info {
-            cursor: pointer;
-            padding: 4px 12px;
-            background: $color-theme;
-            border: 1px solid $color-theme;
-            -webkit-box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba(66, 165, 245, 0.12);
-            box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba($color-theme, 0.12);
-            -webkit-transition: 0.2s ease-in;
-            -o-transition: 0.2s ease-in;
-            transition: 0.2s ease-in;
-            &:hover {
-                -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
-                box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
             }
         }
         &.row {

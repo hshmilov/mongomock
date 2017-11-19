@@ -184,6 +184,9 @@ export const query = {
 				if (response === '') {
 					return
 				}
+				if (payload.callback !== undefined) {
+					payload.callback()
+				}
 				payload.id = response
 				commit(ADD_SAVED_QUERY, payload)
 			}).catch(() => {

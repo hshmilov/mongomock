@@ -14,7 +14,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .action-bar {
         margin-bottom: 0;
