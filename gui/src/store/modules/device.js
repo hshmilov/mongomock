@@ -4,8 +4,8 @@ import { REQUEST_API } from '../actions'
 export const RESTART_DEVICES = 'RESTART_DEVICES'
 export const FETCH_DEVICES = 'FETCH_DEVICES'
 export const UPDATE_DEVICES = 'UPDATE_DEVICES'
-export const FETCH_FIELDS = 'FETCH_FIELDS'
-export const UPDATE_FIELDS = 'UPDATE_FIELDS'
+export const FETCH_UNIQUE_FIELDS = 'FETCH_UNIQUE_FIELDS'
+export const UPDATE_UNIQUE_FIELDS = 'UPDATE_UNIQUE_FIELDS'
 export const FETCH_TAGS = 'FETCH_TAGS'
 export const UPDATE_TAGS = 'UPDATE_TAGS'
 export const UPDATE_DEVICE_TAGS = 'UPDATE_DEVICE_TAGS'
@@ -22,26 +22,26 @@ export const device = {
 		deviceDetails: {fetching: false, data: {}, error: ''},
 
 		/* Configurations specific for devices */
-		fields: [
-			{
-				path: 'adapters', name: 'Adapters', default: true, selected: true, type: 'image-list',
-				control: 'multiple-select', options: [
-				{name: 'Active Dirsectory', path: 'ad_adapter'},
-				{name: 'ESX', path: 'esx_adapter'},
-				{name: 'CheckPoint', path: 'checkpoint_adapter'},
-				{name: 'QCore', path: 'qcore_adapter'},
-				{name: 'Splunk', path: 'splunk_adapter'}
-			]
-			},
-			{path: 'pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
-			{path: 'name', name: 'Host Name', selected: true, control: 'text'},
-			{path: 'IP', name: 'IP Address', selected: true},
-			{path: 'OS.type', name: 'Operating System', selected: true, control: 'text'},
-			{
-				path: 'tags', name: 'Tags', default: true, selected: true, type: 'tag-list',
-				control: 'multiple-select', options: []
-			}
-		],
+		fields: {
+			common: [
+				{
+					path: 'adapters', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
+					options: [
+						{name: 'Active Dirsectory', path: 'ad_adapter'},
+						{name: 'ESX', path: 'esx_adapter'},
+						{name: 'CheckPoint', path: 'checkpoint_adapter'},
+						{name: 'QCore', path: 'qcore_adapter'},
+						{name: 'Splunk', path: 'splunk_adapter'}
+					]
+				},
+				{path: 'pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
+				{path: 'name', name: 'Host Name', selected: true, control: 'text'},
+				{path: 'IP', name: 'IP Address', selected: true},
+				{path: 'OS.type', name: 'Operating System', selected: true, control: 'text'},
+				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
+			],
+			unique: []
+		},
 		tagList: {fetching: false, data: [], error: ''},
 		adapterNames: {
 			'ad_adapter': 'Active Directory',
@@ -69,22 +69,33 @@ export const device = {
 				let processedData = []
 				payload.data.forEach(function (device) {
 					let processedDevice = {'id': device['internal_axon_id']}
-					processedDevice['adapters'] = Object.keys(device.adapters)
-					state.fields.forEach(function (field) {
-						if (!field.default) {
-							let data = device.adapters
-							if (field.path.indexOf('data') === -1) {
-								data = data[processedDevice.adapters[0]].data
-							}
-							let pathParts = field.path.split('.')
-							pathParts.forEach(function (part) {
-								if (data === undefined) { return }
+					processedDevice.adapters = Object.keys(device.adapters)
+					processedDevice.tags = device.tags
+					state.fields.common.forEach(function (field) {
+						if (field.path === 'adapters' ||  field.path === 'tags') {
+							return
+						}
+						processedDevice[field.path] = ''
+						let ind = 0
+
+						while (processedDevice[field.path] === '' && ind < processedDevice.adapters.length) {
+							let data = device.adapters[processedDevice.adapters[ind]].data
+							field.path.split('.').forEach(function (part) {
+								if (data[part] === undefined) { return }
 								data = data[part]
 							})
 							processedDevice[field.path] = data
+							ind++
 						}
 					})
-					processedDevice['tags'] = device.tags
+					state.fields.unique.forEach(function (field) {
+						let data = device.adapters
+						field.path.split('.').forEach(function (part) {
+							if (data[part] === undefined) { return }
+							data = data[part]
+						})
+						processedDevice[field.path] = data
+					})
 					processedData.push(processedDevice)
 				})
 				state.deviceList.data = [...state.deviceList.data, ...processedData]
@@ -93,11 +104,11 @@ export const device = {
 				state.deviceList.error = payload.error
 			}
 		},
-		[ UPDATE_FIELDS ] (state, payload) {
+		[ UPDATE_UNIQUE_FIELDS ] (state, payload) {
 			if (payload.data) {
 				payload.data.forEach(function (field) {
 					let fieldParts = field.split('.')
-					state.fields.push({
+					state.fields.unique.push({
 						path: field, name: state.adapterNames[fieldParts[0]] + ': ' + fieldParts[3], control: 'text'
 					})
 				})
@@ -109,7 +120,7 @@ export const device = {
 				state.tagList.data = payload.data.map(function (tag) {
 					return {name: tag, path: tag}
 				})
-				state.fields.forEach(function (field) {
+				state.fields.common.forEach(function (field) {
 					if (field.path === 'tags') {
 						field.options = state.tagList.data
 					}
@@ -173,10 +184,10 @@ export const device = {
 				type: UPDATE_DEVICE
 			})
 		},
-		[ FETCH_FIELDS ] ({dispatch}) {
+		[ FETCH_UNIQUE_FIELDS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
 				rule: `api/fields`,
-				type: UPDATE_FIELDS
+				type: UPDATE_UNIQUE_FIELDS
 			})
 		},
 		[ FETCH_TAGS ] ({dispatch}) {

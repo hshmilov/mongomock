@@ -48,9 +48,9 @@
             }
             &:checked+label:before {
                 top: -4px;
-                left: -5px;
-                width: 12px;
-                height: 22px;
+                left: -2px;
+                width: 10px;
+                height: 18px;
                 border-top: 2px solid transparent;
                 border-left: 2px solid transparent;
                 border-right: 2px solid $color-theme;

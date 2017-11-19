@@ -30,13 +30,13 @@
                 </dropdown-menu>
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
                     <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
-                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="device.fields"
+                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="fields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
             </div>
             <div slot="cardContent" v-on-clickaway="closeQuickView">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
-                                 :error="device.deviceList.error" :fields="fields" :fetchData="fetchDevices"
+                                 :error="device.deviceList.error" :fields="deviceFields" :fetchData="fetchDevices"
                                  v-model="selectedDevices" :filter="query.currentQuery"
                                  :actions="[{ handler: executeQuickView, trigger: 'icon-eye'}]"></paginated-table>
                 <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
@@ -86,7 +86,7 @@
 	import { mixin as clickaway } from 'vue-clickaway'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-	import { FETCH_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
+	import { FETCH_UNIQUE_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
 
 	export default {
@@ -100,13 +100,16 @@
 			...mapState(['device', 'query']),
 			...mapGetters(['deviceNames']),
 			fields () {
-				return this.device.fields.filter((field) => {
+				return [ ...this.device.fields.common, ...this.device.fields.unique ]
+			},
+            deviceFields() {
+				return this.fields.filter((field) => {
 					return this.selectedFields.indexOf(field.path) > -1
 				})
 			},
 			queryFields () {
-				return this.fields.filter((field) => {
-					return field.control !== undefined && (this.selectedFields.indexOf(field.path) > -1)
+				return this.deviceFields.filter((field) => {
+					return field.control !== undefined
 				})
 			}
 		},
@@ -147,11 +150,13 @@
 			}
 		},
 		created () {
+            if (!this.device.fields.unique || !this.device.fields.unique.length) {
+				this.fetchFields()
+			}
+			this.fetchTags()
 			this.selectedQuery = {...this.query.currentQuery}
 			this.queryDropdown.value = queryToStr(this.selectedQuery)
-			this.fetchFields()
-			this.fetchTags()
-			this.selectedFields = this.device.fields.filter(function (field) {
+			this.selectedFields = this.fields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
 				return field.path
@@ -162,7 +167,7 @@
 				updateQuery: UPDATE_QUERY
 			}),
 			...mapActions({
-				fetchFields: FETCH_FIELDS,
+				fetchFields: FETCH_UNIQUE_FIELDS,
 				fetchDevices: FETCH_DEVICES,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
