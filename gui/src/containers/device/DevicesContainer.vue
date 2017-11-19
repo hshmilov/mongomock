@@ -9,13 +9,13 @@
             <template slot="cardContent">
                 <dropdown-menu animateClass="scale-up right">
                     <div slot="dropdownTrigger">
-                        <input class="form-control" v-model="queryDropdown.value" @change="extractQuery()">
+                        <input class="form-control" v-model="queryDropdown.value" @change="extractQuery()"
+                               @keyup.enter.stop="executeQuery()" @click.stop="">
                     </div>
                     <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery"
-                                  :horizontal="true" @input="extractValue()"
-                                  @submit="updateQuery(selectedQuery); $parent.$el.click()"></generic-form>
+                                  :horizontal="true" @input="extractValue()" @submit="executeQuery()"></generic-form>
                 </dropdown-menu>
-                <a class="btn" @click="updateQuery(selectedQuery)">go</a>
+                <a class="btn" @click="executeQuery()">go</a>
             </template>
 
         </card>
@@ -49,7 +49,7 @@
                         <div>Adapters</div>
                         <hr class="title-separator">
                         <object-list :data="device.deviceDetails.data.adapters" :vertical="true"
-                                    :names="device.adapterNames"></object-list>
+                                     :names="device.adapterNames"></object-list>
                     </div>
                     <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length"
                          class="d-flex flex-column justify-content-between align-items-start p-3">
@@ -60,7 +60,8 @@
                 </info-dialog>
             </div>
         </card>
-        <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save" @confirm="approveSaveQuery()">
+        <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save"
+               @confirm="approveSaveQuery()">
             <div slot="body" class="form-group">
                 <label class="form-label" for="saveQueryName">Save Query as:</label>
                 <input class="form-control" v-model="saveQueryModal.name" id="saveQueryName">
@@ -118,16 +119,16 @@
 				selectedTags: [],
 				selectedFields: [],
 				selectedDevices: [],
-                selectedQuery: { },
+				selectedQuery: {},
 				infoDialogOpen: false,
-                queryDropdown: {
+				queryDropdown: {
 					open: false,
-                    value: '',
-                },
-                saveQueryModal: {
+					value: '',
+				},
+				saveQueryModal: {
 					open: false,
-                    name: ''
-                }
+					name: ''
+				}
 			}
 		},
 		watch: {
@@ -148,19 +149,19 @@
 					})
 				}
 			}
-	},
-	created () {
-		this.selectedQuery = { ...this.query.currentQuery }
-		this.queryDropdown.value = queryToStr(this.selectedQuery)
-		this.fetchFields()
-		this.fetchTags()
-		this.selectedFields = this.device.fields.filter(function (field) {
+		},
+		created () {
+			this.selectedQuery = {...this.query.currentQuery}
+			this.queryDropdown.value = queryToStr(this.selectedQuery)
+			this.fetchFields()
+			this.fetchTags()
+			this.selectedFields = this.device.fields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
 				return field.path
 			})
-	},
-	methods: {
+		},
+		methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY
 			}),
@@ -172,29 +173,33 @@
 				fetchTags: FETCH_TAGS,
 				saveDeviceTags: SAVE_DEVICE_TAGS
 			}),
-            extractQuery() {
+			extractQuery () {
 				this.selectedQuery = strToQuery(this.queryDropdown.value)
-            },
-            extractValue() {
-                this.queryDropdown.value = queryToStr(this.selectedQuery)
+			},
+			extractValue () {
+				this.queryDropdown.value = queryToStr(this.selectedQuery)
+			},
+            executeQuery() {
+				this.updateQuery(this.selectedQuery)
+                this.$parent.$el.click()
             },
 			openSaveQuery () {
-                this.saveQueryModal.open = true
+				this.saveQueryModal.open = true
 			},
 			approveSaveQuery () {
 				if (!this.saveQueryModal.name) {
 					return
-                }
+				}
 				this.saveQuery({
-                    query: this.selectedQuery,
-                    name: this.saveQueryModal.name,
-                    callback: () => this.saveQueryModal.open = false
-                })
+					query: this.selectedQuery,
+					name: this.saveQueryModal.name,
+					callback: () => this.saveQueryModal.open = false
+				})
 			},
 			saveTags () {
 				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags || !this.selectedTags.length) {
-					return;
-                }
+					return
+				}
 				this.saveDeviceTags({devices: this.selectedDevices, tags: this.selectedTags})
 			},
 			executeQuickView (event, deviceId) {

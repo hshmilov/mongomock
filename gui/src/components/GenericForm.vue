@@ -35,7 +35,7 @@
     export default {
         name: 'generic-form',
         components: { MultipleSelect, Checkbox },
-        props: [ 'schema', 'submittable', 'submitLabel', 'horizontal', 'value', 'onDone' ],
+        props: [ 'schema', 'submittable', 'submitLabel', 'horizontal', 'value' ],
         computed: {
             pathByName() {
                 return this.schema.reduce(function(map, input) {
@@ -49,12 +49,14 @@
 				model: {...this.value}
 			}
 		},
+        watch: {
+        	value: function(newValue) {
+        		this.model = { ...newValue }
+            }
+        },
         methods: {
         	handleSubmit() {
 				this.$emit('submit')
-				if (this.onDone !== undefined) {
-					this.onDone(true, '')
-				}
             }
 
         }
