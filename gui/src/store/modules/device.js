@@ -24,30 +24,22 @@ export const device = {
 		/* Configurations specific for devices */
 		fields: [
 			{
-				path: 'adapters', name: 'Adapters', default: true, selected: true, type: 'image-list', querySchema: {
+				path: 'adapters', name: 'Adapters', default: true, selected: true, type: 'image-list',
 				control: 'multiple-select', options: [
-					{name: 'Active Dirsectory', path: 'ad_adapter'},
-					{name: 'ESX', path: 'esx_adapter'},
-					{name: 'CheckPoint', path: 'checkpoint_adapter'},
-					{name: 'QCore', path: 'qcore_adapter'},
-					{name: 'Splunk', path: 'splunk_adapter'}
-				]
-			}
+				{name: 'Active Dirsectory', path: 'ad_adapter'},
+				{name: 'ESX', path: 'esx_adapter'},
+				{name: 'CheckPoint', path: 'checkpoint_adapter'},
+				{name: 'QCore', path: 'qcore_adapter'},
+				{name: 'Splunk', path: 'splunk_adapter'}
+			]
 			},
-			{
-				path: 'pretty_id', name: 'Axonius Name', selected: true, querySchema: {control: 'text'}
-			},
-			{
-				path: 'name', name: 'Host Name', selected: true, querySchema: {control: 'text'}
-			},
+			{path: 'pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
+			{path: 'name', name: 'Host Name', selected: true, control: 'text'},
 			{path: 'IP', name: 'IP Address', selected: true},
+			{path: 'OS.type', name: 'Operating System', selected: true, control: 'text'},
 			{
-				path: 'OS.type', name: 'Operating System', selected: true, querySchema: {control: 'text'}
-			},
-			{
-				path: 'tags', name: 'Tags', default: true, selected: true, type: 'tag-list', querySchema: {
+				path: 'tags', name: 'Tags', default: true, selected: true, type: 'tag-list',
 				control: 'multiple-select', options: []
-			}
 			}
 		],
 		tagList: {fetching: false, data: [], error: ''},
@@ -106,11 +98,7 @@ export const device = {
 				payload.data.forEach(function (field) {
 					let fieldParts = field.split('.')
 					state.fields.push({
-						path: field,
-						name: state.adapterNames[fieldParts[0]] + ': ' + fieldParts[3],
-						querySchema: {
-							type: 'text'
-						}
+						path: field, name: state.adapterNames[fieldParts[0]] + ': ' + fieldParts[3], control: 'text'
 					})
 				})
 			}
@@ -123,7 +111,7 @@ export const device = {
 				})
 				state.fields.forEach(function (field) {
 					if (field.path === 'tags') {
-						field.querySchema.options = state.tagList.data
+						field.options = state.tagList.data
 					}
 				})
 			}

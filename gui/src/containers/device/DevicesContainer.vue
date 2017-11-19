@@ -106,12 +106,7 @@
 			},
 			queryFields () {
 				return this.fields.filter((field) => {
-					return field.querySchema !== undefined && (this.selectedFields.indexOf(field.path) > -1)
-				}).map(function (field) {
-					return {
-						path: field.path, name: field.name, type: field.type,
-						...field.querySchema
-					}
+					return field.control !== undefined && (this.selectedFields.indexOf(field.path) > -1)
 				})
 			}
 		},
