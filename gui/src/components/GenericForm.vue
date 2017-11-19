@@ -1,5 +1,5 @@
 <template>
-    <form class="form" @keyup.enter.stop="$emit('submit')">
+    <form class="form" @keyup.enter.stop="handleSubmit()">
         <div v-bind:class="{ 'row': horizontal }">
             <div v-for="input in schema" class="form-group" v-bind:class="{ 'col-3': horizontal }">
                 <label v-if="input.name" class="form-label">{{ input.name }}</label>
@@ -23,7 +23,7 @@
             </div>
         </div>
         <div class="form-group">
-            <a v-if="submittable" class="btn" @click="$emit('submit')">{{ submitLabel || 'Send' }}</a>
+            <a v-if="submittable" class="btn" @click="handleSubmit()">{{ submitLabel || 'Send' }}</a>
         </div>
     </form>
 </template>
@@ -35,7 +35,7 @@
     export default {
         name: 'generic-form',
         components: { MultipleSelect, Checkbox },
-        props: [ 'schema', 'submittable', 'submitLabel', 'horizontal', 'value' ],
+        props: [ 'schema', 'submittable', 'submitLabel', 'horizontal', 'value', 'onDone' ],
         computed: {
             pathByName() {
                 return this.schema.reduce(function(map, input) {
@@ -48,7 +48,16 @@
 			return {
 				model: {...this.value}
 			}
-		}
+		},
+        methods: {
+        	handleSubmit() {
+				this.$emit('submit')
+				if (this.onDone !== undefined) {
+					this.onDone(true, '')
+				}
+            }
+
+        }
     }
 </script>
 

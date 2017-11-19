@@ -63,7 +63,7 @@
             handleSave() {
 				this.$emit('save')
                 if (this.onDone !== undefined) {
-					this.onDone(true, 'Tags Saved')
+					this.onDone(true, 'Tags Saved', 1000)
                 }
             }
         }

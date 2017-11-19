@@ -9,10 +9,11 @@
             <template slot="cardContent">
                 <dropdown-menu animateClass="scale-up right">
                     <div slot="dropdownTrigger">
-                        <input class="form-control" v-model="advancedQueryDropdown.value" @change="convertQuery()">
+                        <input class="form-control" v-model="queryDropdown.value" @change="extractQuery()">
                     </div>
-                    <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery" :horizontal="true"
-                    :submittable="true" submitLabel="Go!" @submit="updateQuery(selectedQuery)"></generic-form>
+                    <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery"
+                                  :horizontal="true" @input="extractValue()"
+                                  @submit="updateQuery(selectedQuery); $parent.$el.click()"></generic-form>
                 </dropdown-menu>
                 <a class="btn" @click="updateQuery(selectedQuery)">go</a>
             </template>
@@ -119,7 +120,7 @@
 				selectedDevices: [],
                 selectedQuery: { },
 				infoDialogOpen: false,
-                advancedQueryDropdown: {
+                queryDropdown: {
 					open: false,
                     value: '',
                 },
@@ -150,7 +151,7 @@
 	},
 	created () {
 		this.selectedQuery = { ...this.query.currentQuery }
-		this.advancedQueryDropdown.value = queryToStr(this.selectedQuery)
+		this.queryDropdown.value = queryToStr(this.selectedQuery)
 		this.fetchFields()
 		this.fetchTags()
 		this.selectedFields = this.device.fields.filter(function (field) {
@@ -171,8 +172,11 @@
 				fetchTags: FETCH_TAGS,
 				saveDeviceTags: SAVE_DEVICE_TAGS
 			}),
-            convertQuery() {
-				this.selectedQuery = strToQuery(this.advancedQueryDropdown.value)
+            extractQuery() {
+				this.selectedQuery = strToQuery(this.queryDropdown.value)
+            },
+            extractValue() {
+                this.queryDropdown.value = queryToStr(this.selectedQuery)
             },
 			openSaveQuery () {
                 this.saveQueryModal.open = true
@@ -188,6 +192,9 @@
                 })
 			},
 			saveTags () {
+				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags || !this.selectedTags.length) {
+					return;
+                }
 				this.saveDeviceTags({devices: this.selectedDevices, tags: this.selectedTags})
 			},
 			executeQuickView (event, deviceId) {
