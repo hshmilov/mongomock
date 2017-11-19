@@ -333,19 +333,29 @@ class Core(PluginBase):
         return address_dict 
     
     def _get_plugin_addr(self, plugin_unique_name):
-        """ Get the plugin address from its name.
+        """ Get the plugin address from its unique_name/name.
 
         Looks in the online plugins list.
+        At first, it will try to find the plugin by his unique name. If one cant find a matching unique name,
+        It will try to search for a plugin with the same name (For example, Execution)
 
-        :param str plugin_unique_name: The name of the plugin
+        :param str plugin_unique_name: The unique_name/name of the plugin
 
         :return dict: Dictionary containing plugin ip, plugin port and api key to use.
         """
         if plugin_unique_name not in self.online_plugins:
-            # Plugin is not in the online list
-            raise exceptions.PluginNotFoundError()
+            # Try to find plugin by name and not by unique name
+            candidate_plugin = next((plugin for plugin in self.online_plugins.values()
+                                     if plugin['plugin_name'] == plugin_unique_name), None)
+            if not candidate_plugin:
+                # Plugin is not in the online list
+                raise exceptions.PluginNotFoundError()
+        else:
+            candidate_plugin = self.online_plugins[plugin_unique_name]
 
-        relevant_doc = self._get_config(plugin_unique_name)
+        unique_plugin = candidate_plugin['plugin_unique_name']
+
+        relevant_doc = self._get_config(unique_plugin)
         
         if not relevant_doc:
             self.logger.warning("No online plugin found for {0}".format(plugin_unique_name))

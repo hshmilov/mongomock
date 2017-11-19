@@ -39,7 +39,7 @@ class AdapterBase(PluginBase, ABC):
         """ Function for notifying the EC that this Adapted has been reset.
         """
         self.request_remote_plugin('action_update/adapter_action_reset?unique_name={0}'.format(self.plugin_unique_name),
-                                   plugin_unique_name='execution_plugin',
+                                   plugin_unique_name='execution',
                                    method='POST')
 
     def _get_parsed_clients_config(self):
@@ -82,7 +82,7 @@ class AdapterBase(PluginBase, ABC):
         :param dict output: The output of the action (in case finished or error)
         """
         self.request_remote_plugin('action_update/{0}'.format(action_id),
-                                   plugin_unique_name='execution_plugin',
+                                   plugin_unique_name='execution',
                                    method='POST',
                                    data=json.dumps({"status": status, "output": output}))  
         # TODO: Think of a better way to implement status
