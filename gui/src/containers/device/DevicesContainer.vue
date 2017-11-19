@@ -64,7 +64,8 @@
                @confirm="approveSaveQuery()">
             <div slot="body" class="form-group">
                 <label class="form-label" for="saveQueryName">Save Query as:</label>
-                <input class="form-control" v-model="saveQueryModal.name" id="saveQueryName">
+                <input class="form-control" v-model="saveQueryModal.name" id="saveQueryName"
+                       @keyup.enter="approveSaveQuery()">
             </div>
         </modal>
     </scrollable-page>

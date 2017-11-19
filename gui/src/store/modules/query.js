@@ -41,6 +41,7 @@ export const strToQuery = (str) => {
 }
 
 const addExecutedQuery = (state, query) => {
+	if (!state.executedQueries.data || !state.executedQueries.data.length) { return }
 	if (Object.keys(query).length) {
 		state.executedQueries.data = [ query, ...state.executedQueries.data ]
 	}
@@ -137,9 +138,10 @@ export const query = {
 	getters: {},
 	mutations: {
 		[ADD_SAVED_QUERY] (state, payload) {
+			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
 			let d = getTimeDate()
 			state.savedQueries.data = [ { ...payload,
-				query: queryToStr(JSON.parse(payload.query)),
+				query: queryToStr(payload.query),
 				'timestamp.date': d.date, 'timestamp.time': d.time
 			}, ...state.savedQueries.data ]
 		},
