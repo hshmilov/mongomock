@@ -2,24 +2,33 @@
     <scrollable-page title="devices">
         <card title="query" class="devices-query">
             <span slot="cardActions">
+                <!-- Actions for the header of the query card and apply to currently filled query -->
                 <action-bar :actions="[
                   { name: 'Save Query', perform: openSaveQuery }
                 ]"></action-bar>
             </span>
             <template slot="cardContent">
+                <!-- Dropdown component for selecting a query --->
                 <dropdown-menu animateClass="scale-up right">
+                    <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
                     <div slot="dropdownTrigger">
                         <input class="form-control" v-model="queryDropdown.value" @change="extractQuery()"
                                @keyup.enter.stop="executeQuery()" @click.stop="">
                     </div>
+                    <!--
+                    Content is a form containing appropriate inputs for the fields that are currently selected
+                    (in next section). Form content and trigger input's value sync on every change.
+                    -->
                     <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery"
                                   :horizontal="true" @input="extractValue()" @submit="executeQuery()"></generic-form>
                 </dropdown-menu>
+                <!-- Button controlling the execution of currently filled query -->
                 <a class="btn" @click="executeQuery()">go</a>
             </template>
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">
+                <!-- Dropdown for selecting \ creating tags for a currently selected devices --->
                 <dropdown-menu animateClass="scale-up right">
                     <i slot="dropdownTrigger" class="icon-tag"></i>
                     <searchable-checklist slot="dropdownContent" slot-scope="props" title="Tag as:"
@@ -27,6 +36,7 @@
                                           v-model="selectedTags" v-on:save="saveTags()" :explicitSave="true"
                                           :onDone="props.onDone"></searchable-checklist>
                 </dropdown-menu>
+                <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
                     <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="fields"
@@ -202,9 +212,9 @@
 				}
 				this.saveDeviceTags({devices: this.selectedDevices, tags: this.selectedTags})
 			},
-			executeQuickView (event, deviceId) {
+			executeQuickView (deviceId) {
 				this.fetchDevice(deviceId)
-				event.target.parentElement.parentElement.parentElement.classList.add('active')
+                this.$el.querySelector(`.table-row.${deviceId}`).add('active')
 				this.infoDialogOpen = true
 			},
 			closeQuickView () {

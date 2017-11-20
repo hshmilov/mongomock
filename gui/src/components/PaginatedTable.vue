@@ -15,7 +15,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr class="table-row" v-bind:class="{ active: recordSelection[record['id']] }"
+                <tr :class="`table-row ${record['id']}`" v-bind:class="{ active: recordSelection[record['id']] }"
                     v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
                     <td class="table-row-data">
                         <checkbox v-if="value !== undefined" v-model="recordSelection[record['id']]"
@@ -24,6 +24,9 @@
                     <td class="table-row-data" v-for="field in fields">
                         <template v-if="field.type === undefined || !field.type || field.type=='text'">
                             <span>{{ record[field.path] || '&nbsp' }}</span>
+                        </template>
+                        <template v-else-if="field.type === 'timestamp'">
+                            <span>{{parseDate(record[field.path])}} {{parseTime(record[field.path])}}</span>
                         </template>
                         <template v-else-if="field.type.indexOf('list') > -1">
                             <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
@@ -151,6 +154,18 @@
 			}
 		},
 		methods: {
+			pad2(number) {
+				if ((number + '').length === 2) { return number }
+				return `0${number}`
+            },
+            parseDate(timestamp) {
+				let d = new Date(timestamp)
+				return `${this.pad2(d.getDate())}/${this.pad2(d.getMonth()+1)}/${this.pad2(d.getFullYear())}`
+            },
+            parseTime(timestamp) {
+				let d = new Date(timestamp)
+				return `${this.pad2(d.getHours())}:${this.pad2(d.getMinutes())}`
+            },
 			updateSelected () {
 				let _this = this
 				let selectedRecords = Object.keys(this.recordSelection).filter(function (id) {

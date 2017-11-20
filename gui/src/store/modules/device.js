@@ -13,6 +13,15 @@ export const SAVE_DEVICE_TAGS = 'SAVE_DEVICE_TAGS'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 
+export const decomposeFieldPath = (data, fieldPath) => {
+	let decomposed = data
+	fieldPath.split('.').forEach(function (part) {
+		if (decomposed[part] === undefined) { return }
+		decomposed = decomposed[part]
+	})
+	return decomposed
+}
+
 export const device = {
 	state: {
 		/* Devices according to some query performed by user, updating by request */
@@ -77,24 +86,14 @@ export const device = {
 						}
 						processedDevice[field.path] = ''
 						let ind = 0
-
 						while (processedDevice[field.path] === '' && ind < processedDevice.adapters.length) {
-							let data = device.adapters[processedDevice.adapters[ind]].data
-							field.path.split('.').forEach(function (part) {
-								if (data[part] === undefined) { return }
-								data = data[part]
-							})
-							processedDevice[field.path] = data
+							processedDevice[field.path] = decomposeFieldPath(
+								device.adapters[processedDevice.adapters[ind]].data, field.path)
 							ind++
 						}
 					})
 					state.fields.unique.forEach(function (field) {
-						let data = device.adapters
-						field.path.split('.').forEach(function (part) {
-							if (data[part] === undefined) { return }
-							data = data[part]
-						})
-						processedDevice[field.path] = data
+						processedDevice[field.path] = decomposeFieldPath(device.adapters, field.path)
 					})
 					processedData.push(processedDevice)
 				})

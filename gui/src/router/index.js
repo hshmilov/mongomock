@@ -60,6 +60,10 @@ export default new Router({
             name: 'Alerts',
             component: AlertsContainer
         },
+		{
+			path: '/alert/:id',
+			component: AlertConfigContainer
+		},
         {
             path: '/settings',
             name: 'Settings',

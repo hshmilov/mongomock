@@ -72,27 +72,14 @@ const pad2 = (number) => {
 	return `0${number}`
 }
 
-const getTimeDate = (fromDate) => {
-	let d = new Date()
-	if (fromDate) {
-		d = new Date(fromDate)
-	}
-	return {
-		date: `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${pad2(d.getFullYear())}`,
-		time: `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-	}
-}
-
 const updateQueries = (currentQueries, payload) => {
 	/* Freshly fetched devices are added to currently stored devices */
 	currentQueries.fetching = payload.fetching
 	if (payload.data) {
 		let processedData = []
 		payload.data.forEach(function (currentQuery) {
-			let d = getTimeDate(currentQuery.timestamp)
 			processedData.push({ ...currentQuery,
-				query: queryToStr(JSON.parse(currentQuery.query)),
-				'timestamp.date': d.date, 'timestamp.time': d.time
+				query: queryToStr(JSON.parse(currentQuery.query))
 			})
 		})
 		currentQueries.data = [...currentQueries.data, ...processedData]
@@ -124,14 +111,12 @@ export const query = {
 		savedFields: [
 			{path: 'query_name', name: 'Name', default: true},
 			{path: 'query', name: 'query', default: true},
-			{path: 'timestamp.date', name: 'Date', default: true},
-			{path: 'timestamp.time', name: 'Time', default: true}
+			{path: 'timestamp', name: 'Date Time', type: 'timestamp', default: true},
 		],
 		executedFields: [
 			{path: 'query', name: 'query', default: true},
 			{path: 'device_count', name: 'Devices', default: true},
-			{path: 'timestamp.date', name: 'Date', default: true},
-			{path: 'timestamp.time', name: 'Time', default: true}
+			{path: 'timestamp', name: 'Date Time', type: 'timestamp', default: true},
 		]
 
 	},
@@ -139,10 +124,9 @@ export const query = {
 	mutations: {
 		[ADD_SAVED_QUERY] (state, payload) {
 			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
-			let d = getTimeDate()
 			state.savedQueries.data = [ { ...payload,
 				query: queryToStr(payload.query),
-				'timestamp.date': d.date, 'timestamp.time': d.time
+				'timestamp': new Date().getTime()
 			}, ...state.savedQueries.data ]
 		},
 		[REMOVE_SAVED_QUERY] (state, payload) {
@@ -157,11 +141,9 @@ export const query = {
 					state.currentQuery[queryKey] = payload[queryKey]
 				}
 			})
-			let d = getTimeDate()
 			addExecutedQuery(state, {
 				query: queryToStr(state.currentQuery),
-				'timestamp.date': d.date,
-				'timestamp.time': d.time
+				'timestamp': new Date().getTime(),
 			})
 		},
 		[ RESTART_QUERIES ] (state) {
@@ -178,11 +160,9 @@ export const query = {
 				return savedQuery.id === payload
 			})
 			state.currentQuery = strToQuery(requestedQuery[0].query)
-			let d = getTimeDate()
 			addExecutedQuery(state, {
 				query: requestedQuery[0].query,
-				'timestamp.date': d.date,
-				'timestamp.time': d.time
+				'timestamp': new Date().getTime(),
 			})
 		}
 	},

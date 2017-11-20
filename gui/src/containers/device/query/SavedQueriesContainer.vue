@@ -29,15 +29,17 @@
 			ScrollablePage, Card, ActionBar, GenericForm, PaginatedTable
 		},
 		computed: {
-			...mapState(['query'])
+			...mapState(['query']),
+            queryActions() {
+                return [
+                    {trigger: 'icon-play', handler: this.runQuery},
+                    {trigger: 'icon-trash-o', handler: this.removeQuery}
+                ]
+            }
 		},
 		data () {
 			return {
-				querySearchValue: '',
-				queryActions: [
-					{trigger: 'icon-play', handler: this.runQuery},
-					{trigger: 'icon-trash-o', handler: this.removeQuery}
-				]
+				querySearchValue: ''
 			}
 		},
 		methods: {
@@ -49,12 +51,12 @@
 				fetchQueries: FETCH_SAVED_QUERIES,
 				archiveQuery: ARCHIVE_SAVED_QUERY
 			}),
-            runQuery(event, queryId) {
+            runQuery(queryId) {
             	this.useQuery(queryId)
                 this.restartDevice()
                 this.$router.push({name: 'Devices'})
             },
-			removeQuery (event, queryId) {
+			removeQuery (queryId) {
                 this.archiveQuery(queryId)
 			}
 		}
