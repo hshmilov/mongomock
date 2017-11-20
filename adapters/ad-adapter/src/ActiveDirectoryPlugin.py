@@ -32,7 +32,7 @@ class ActiveDirectoryPlugin(AdapterBase):
     # Functions
     def __init__(self, **kargs):
         """Class initialization.
-        
+
         Check AdapterBase documentation for additional params and exception details.
 
         """
@@ -48,7 +48,7 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         # Try to create temp files dir
         try:
-            os.mkdir("temp_files") 
+            os.mkdir("temp_files")
         except FileExistsError:
             pass  # Folder exists
 
@@ -59,13 +59,15 @@ class ActiveDirectoryPlugin(AdapterBase):
             try:
                 clients_dict[dc_details["dc_name"]] = LdapConnection(dc_details['dc_name'],
                                                                      dc_details['domain_name'],
-                                                                     dc_details['query_user'], 
+                                                                     dc_details['query_user'],
                                                                      dc_details['query_password'])
             except exceptions.LdapException as e:
-                self.logger.error("Error in ldap process for dc {0}. reason: {1}".format(dc_details["dc_name"], str(e)))
+                self.logger.error("Error in ldap process for dc {0}. reason: {1}".format(
+                    dc_details["dc_name"], str(e)))
             except KeyError as e:
                 if "dc_name" in dc_details:
-                    self.logger.error("Key error for dc {0}. details: {1}".format(dc_details["dc_name"], str(e)))
+                    self.logger.error("Key error for dc {0}. details: {1}".format(
+                        dc_details["dc_name"], str(e)))
                 else:
                     self.logger.error("Missing dc name for configuration line")
         return clients_dict
@@ -120,7 +122,8 @@ class ActiveDirectoryPlugin(AdapterBase):
         try:
             return client_data.get_device_list()
         except exceptions.LdapException as e:
-            self.logger.error("Error while trying to get devices. Details: {0}", str(e))
+            self.logger.error(
+                "Error while trying to get devices. Details: {0}", str(e))
             return str(e), 500
 
     def _parse_raw_data(self, devices_raw_data):
@@ -139,7 +142,8 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         :return string: The name of the file created
         """
-        (file_handle_os, os_path) = tempfile.mkstemp(suffix='.tmp', dir='temp_files')
+        (file_handle_os, os_path) = tempfile.mkstemp(
+            suffix='.tmp', dir='temp_files')
 
         with os.fdopen(file_handle_os, attrib) as file_obj:
             # Using `os.fdopen` converts the handle to an object that acts like a
@@ -154,7 +158,8 @@ class ActiveDirectoryPlugin(AdapterBase):
         my_res = dns.resolver.Resolver()
         my_res.nameservers = [dns_server_address]
         device_name = device_data['data']['name']
-        device_domain = client_config['domain_name'].replace('DC=', '').replace(',','.')
+        device_domain = client_config['domain_name'].replace(
+            'DC=', '').replace(',', '.')
         full_device_name = device_name + '.' + device_domain
         answer = my_res.query(full_device_name)
         ip = str(answer.response.answer[0].items[0])
@@ -171,9 +176,11 @@ class ActiveDirectoryPlugin(AdapterBase):
         for client_config in clients_config:
             if client_config["dc_name"] == wanted_client:
                 # We have found the correct client. Getting credentials
-                domain_name, user_name = client_config['admin_user'].split('\\')
+                domain_name, user_name = client_config['admin_user'].split(
+                    '\\')
                 password = client_config['admin_password']
-                device_ip = self._resolve_device_name(device_data, client_config)
+                device_ip = self._resolve_device_name(
+                    device_data, client_config)
 
                 # Putting the file using usePsexec.py
                 command = ('{py} {psexec} --addr {addr} --username "{user}" '
@@ -210,7 +217,7 @@ class ActiveDirectoryPlugin(AdapterBase):
             # If we got here that means the the command executed successfuly
             result = 'Success'
             product = str(command_result.stdout)
-                    
+
         except subprocess.CalledProcessError as e:
             result = 'Failure'
             product = str(e)
@@ -243,8 +250,9 @@ class ActiveDirectoryPlugin(AdapterBase):
 
             # If we got here that means the the command executed successfuly
             result = 'Success'
-            product = str(file_path)  # TODO: Think about other way to send the file
-                    
+            # TODO: Think about other way to send the file
+            product = str(file_path)
+
         except subprocess.CalledProcessError as e:
             result = 'Failure'
             product = str(e)
@@ -272,7 +280,7 @@ class ActiveDirectoryPlugin(AdapterBase):
 
             # Checking if return code is zero, if not, it will raise an exception
             command_result.check_returncode()
-            
+
             result = 'Success'
             product = 'nothing?'
 
@@ -303,7 +311,8 @@ class ActiveDirectoryPlugin(AdapterBase):
                                                              result_path=result_path)
 
             # Running the command
-            command_result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+            command_result = subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
             # Checking if return code is zero, if not, it will raise an exception
             command_result.check_returncode()

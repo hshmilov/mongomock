@@ -10,7 +10,8 @@ API_KEY_HEADER = "x-api-key"
 class PluginService(services.compose_service.ComposeService):
     def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
         super().__init__(compose_file_path)
-        self.parsed_compose_file = services.compose_parser.ServiceYmlParser(compose_file_path)
+        self.parsed_compose_file = services.compose_parser.ServiceYmlParser(
+            compose_file_path)
         port = self.parsed_compose_file.exposed_port
         self.endpoint = ('localhost', port)
         self.req_url = "http://%s:%s" % (self.endpoint[0], self.endpoint[1])

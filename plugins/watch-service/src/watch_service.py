@@ -19,12 +19,14 @@ class WatchService(PluginBase):
         Initializes the watcher threads, gets the DB credentials and sets the default sampling rate.
         """
         self._device_collection_location = 'aggregator_plugin_1'
-        super().__init__(special_db_credentials=[self._device_collection_location], *args, **kwargs)
+        super().__init__(special_db_credentials=[
+            self._device_collection_location], *args, **kwargs)
 
         self._scheduler = None
 
         # Loading watch resources from db (If any exist).
-        self._watched_queries = {str(watch['query']): watch for watch in self._get_collection('watches').find()}
+        self._watched_queries = {
+            str(watch['query']): watch for watch in self._get_collection('watches').find()}
 
         # Set's a sample rate to check the saved queries.
         self._default_query_sample_rate = 10
@@ -80,7 +82,8 @@ class WatchService(PluginBase):
                                   'triggered': False}
 
                 # Adds the query to the local watch dict
-                self._watched_queries[json.dumps(watch_data['query'])] = watch_resource
+                self._watched_queries[json.dumps(
+                    watch_data['query'])] = watch_resource
 
                 # Pushes the resource to the db.
                 self._get_collection('watches').insert_one(watch_resource)
@@ -109,7 +112,8 @@ class WatchService(PluginBase):
             return return_error('', 404)
         else:
             del self._watched_queries[json.dumps(watch_data['query'])]
-            self._get_collection('watches').delete_one({'query': json.dumps(watch_data['query'])})
+            self._get_collection('watches').delete_one(
+                {'query': json.dumps(watch_data['query'])})
             self.logger.info('Removed query from watch.')
             return '', 200
 
@@ -156,13 +160,15 @@ class WatchService(PluginBase):
 
                 sample_rate = current_query['query_sample_rate']
                 self._scheduler.add_job(func=self._check_current_query_result,
-                                        trigger=IntervalTrigger(seconds=sample_rate),
+                                        trigger=IntervalTrigger(
+                                            seconds=sample_rate),
                                         next_run_time=datetime.datetime.now(),
                                         kwargs={'query': current_query['query'],
                                                 'criteria': current_query.get('criteria', 0),
                                                 'retrigger': current_query.get('retrigger', False),
                                                 'alert_types': current_query.get('alert_types')},
-                                        name="Fetching job for query={}".format(query_string),
+                                        name="Fetching job for query={}".format(
+                                            query_string),
                                         id=query_string,
                                         max_instances=1)
 
@@ -194,8 +200,10 @@ class WatchService(PluginBase):
                 self._watched_queries[query]['triggered'] = True
                 for alert in alert_types:
                     if alert['type'] == 'notification':
-                        self.create_notification(alert['title'], alert['message'], 'alert')
-                        self.logger.info('Watch triggered on query: {0}'.format(str(query)))
+                        self.create_notification(
+                            alert['title'], alert['message'], 'alert')
+                        self.logger.info(
+                            'Watch triggered on query: {0}'.format(str(query)))
 
         try:
             current_result = self.get_guery_results(json.loads(query))
@@ -204,7 +212,7 @@ class WatchService(PluginBase):
                 if criteria == 0:
                     _trigger_watch()
                 if (criteria > 0 and len(saved_result) - len(current_result) > 0) or (
-                                criteria < 0 and len(saved_result) - len(current_result) < 0):
+                        criteria < 0 and len(saved_result) - len(current_result) < 0):
                     _trigger_watch()
 
                 if retrigger:

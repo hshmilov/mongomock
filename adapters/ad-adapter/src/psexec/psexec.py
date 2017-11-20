@@ -22,9 +22,9 @@ class PSEXEC(object):
     KNOWN_PROTOCOLS = {
         '139/SMB': (r'ncacn_np:%s[\pipe\svcctl]', 139),
         '445/SMB': (r'ncacn_np:%s[\pipe\svcctl]', 445),
-        }
+    }
 
-    def __init__(self, protocols=None, username='', password='', 
+    def __init__(self, protocols=None, username='', password='',
                  domain='', hashes=None, aesKey=None, doKerberos=False, kdcHost=None):
         self.__username = username
         self.__password = password
@@ -84,11 +84,12 @@ class PSEXEC(object):
             # This putFile is done inside the smbconnection.py file
             connection.putFile('ADMIN$', pathname, fh.read)
         except:
-            logging.critical("Error uploading file %s, aborting....." % dst_name)
+            logging.critical(
+                "Error uploading file %s, aborting....." % dst_name)
             raise
         dce.disconnect()
         fh.close()
-        
+
     def get_file(self, remote_path, local_path):
         fh = open(local_path, 'wb')
 
@@ -105,7 +106,8 @@ class PSEXEC(object):
         try:
             connection.getFile('ADMIN$', pathname, fh.write)
         except:
-            logging.critical("Error downloading file %s, aborting....." % remote_path)
+            logging.critical(
+                "Error downloading file %s, aborting....." % remote_path)
             raise
         dce.disconnect()
         fh.close()
@@ -131,7 +133,8 @@ class PSEXEC(object):
                 # Something else happened, raising the error
                 raise
         except:
-            logging.critical("Error deleting file %s, aborting....." % remote_path)
+            logging.critical(
+                "Error deleting file %s, aborting....." % remote_path)
             raise
         dce.disconnect()
 
@@ -141,7 +144,7 @@ class PSEXEC(object):
         except Exception as e:
             logging.critical(str(e))
             raise
-        
+
         dce = self.rpctransport.get_dce_rpc()
         try:
             dce.connect()
@@ -149,6 +152,7 @@ class PSEXEC(object):
             logging.critical(str(e))
             sys.exit(1)
 
-        installService = serviceinstall.ServiceInstall(self.rpctransport.get_smb_connection(), f)
+        installService = serviceinstall.ServiceInstall(
+            self.rpctransport.get_smb_connection(), f)
         installService.install()
         f.close()

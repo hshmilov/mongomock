@@ -42,7 +42,8 @@ def figure_out_os(s):
 
     os_type = None
     distribution = None
-    linux_names = ["linux", 'ubuntu', 'canonical', 'red hat', 'debian', 'fedora', 'centos', 'oracle', 'opensuse']
+    linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
+                   'debian', 'fedora', 'centos', 'oracle', 'opensuse']
 
     if 'windows' in s:
         os_type = 'Windows'

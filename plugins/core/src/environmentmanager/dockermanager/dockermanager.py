@@ -78,16 +78,16 @@ class DockerManager(object):
         except docker.errors.NotFound:
             raise exceptions.NetworkNotFound
 
-    def createService(self, 
-                      image_name, 
-                      name=None, 
-                      hostname=None, 
-                      env=None, 
-                      ports=None, 
-                      mounts=None, 
-                      should_always_restart=False, 
-                      restart_max_attempts=0, 
-                      is_service_global=True, 
+    def createService(self,
+                      image_name,
+                      name=None,
+                      hostname=None,
+                      env=None,
+                      ports=None,
+                      mounts=None,
+                      should_always_restart=False,
+                      restart_max_attempts=0,
+                      is_service_global=True,
                       num_of_replicas=1,
                       networks=None):
         """
@@ -146,19 +146,22 @@ class DockerManager(object):
             kwargs["mounts"] = mounts
 
         if should_always_restart is True:
-            rp = docker.types.RestartPolicy(condition="any", max_attempts=restart_max_attempts)
+            rp = docker.types.RestartPolicy(
+                condition="any", max_attempts=restart_max_attempts)
             kwargs["restart_policy"] = rp
 
         if is_service_global is True:
             sm = docker.types.ServiceMode("global")
         else:
-            sm = docker.types.ServiceMode("replicated", replicas=num_of_replicas)
+            sm = docker.types.ServiceMode(
+                "replicated", replicas=num_of_replicas)
         kwargs["mode"] = sm
 
         if networks is not None:
             kwargs["networks"] = networks
 
-        kwargs["stop_grace_period"] = 60    # docker stop sends s SIGTERM, and only afterwards it sends a SIGKILL.
+        # docker stop sends s SIGTERM, and only afterwards it sends a SIGKILL.
+        kwargs["stop_grace_period"] = 60
 
         return self.client.services.create(image=image_name, **kwargs)
 
@@ -172,7 +175,8 @@ class DockerManager(object):
         try:
             service = self.client.services.get(service_name)
         except docker.errors.NotFound:
-            raise exceptions.ServiceNotFound("Service %s not found. " % (service_name, ))
+            raise exceptions.ServiceNotFound(
+                "Service %s not found. " % (service_name, ))
 
         return service.remove()
 
@@ -187,7 +191,8 @@ class DockerManager(object):
         try:
             return self.client.services.get(service_name)
         except docker.errors.NotFound:
-            raise exceptions.ServiceNotFound("Service %s not found. " % (service_name, ))
+            raise exceptions.ServiceNotFound(
+                "Service %s not found. " % (service_name, ))
 
     def getImage(self, image_name):
         """

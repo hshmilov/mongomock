@@ -11,7 +11,8 @@ def test_ad_adapter_responds_to_schema(axonius_fixture, ad_fixture):
 
 def test_ad_adapter_in_configs(axonius_fixture, ad_fixture):
     plugin_unique_name = ad_fixture.unique_name
-    adapter = axonius_fixture['db'].get_unique_plugin_config(plugin_unique_name)
+    adapter = axonius_fixture['db'].get_unique_plugin_config(
+        plugin_unique_name)
     assert adapter['plugin_name'] == 'ad_adapter'
 
 

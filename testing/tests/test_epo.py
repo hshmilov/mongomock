@@ -11,7 +11,8 @@ def test_epo_adapter_responds_to_schema(axonius_fixture, epo_fixture):
 
 def test_epo_adapter_in_configs(axonius_fixture, epo_fixture):
     plugin_unique_name = epo_fixture.unique_name
-    adapter = axonius_fixture['db'].get_unique_plugin_config(plugin_unique_name)
+    adapter = axonius_fixture['db'].get_unique_plugin_config(
+        plugin_unique_name)
     assert adapter['plugin_name'] == 'epo_adapter'
 
 

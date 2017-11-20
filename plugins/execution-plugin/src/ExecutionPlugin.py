@@ -23,7 +23,7 @@ class ExecutionPlugin(PluginBase):
     # Functions
     def __init__(self, **kargs):
         """Class initialization.
-        
+
         Will restore old actions from db
 
         """
@@ -37,7 +37,8 @@ class ExecutionPlugin(PluginBase):
         self._restore_actions_from_db()
 
         # Threadpool for creating new actions
-        self._actions_thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+        self._actions_thread_pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=50)
 
     def _restore_actions_from_db(self):
         """ Restores actions from db.
@@ -47,8 +48,9 @@ class ExecutionPlugin(PluginBase):
         """
         actions_collection = self._get_collection('actions')
         # Getting all the actions from db
-        all_actions = actions_collection.find({"$and": [{"status": {"$ne": "finished"}}, 
-                                                        {"status": {"$ne": "failed"}}, 
+        all_actions = actions_collection.find({"$and": [{"status": {"$ne": "finished"}},
+                                                        {"status": {
+                                                            "$ne": "failed"}},
                                                         {"status": {"$ne": "limbo"}}]})
         for action in all_actions:
             action_id = str(action['_id'])
@@ -57,7 +59,7 @@ class ExecutionPlugin(PluginBase):
                 # Action didnt start yet, then we may think of it as failed action
                 action['status'] = 'failed'
             else:
-                # We cant know the status of the action. If the adapter is still up, 
+                # We cant know the status of the action. If the adapter is still up,
                 # It will update the state itself.
                 action['status'] = 'limbo'
             # Saving the new action state
@@ -76,7 +78,8 @@ class ExecutionPlugin(PluginBase):
 
         .. note:: We should still need to implement this function
         """
-        result = self.request_remote_plugin('online_device/{0}'.format(device_id), 'aggregator').json()
+        result = self.request_remote_plugin(
+            'online_device/{0}'.format(device_id), 'aggregator').json()
 
         try:
             for adapter_name, adapter_data in result['adapters'].items():
@@ -85,7 +88,6 @@ class ExecutionPlugin(PluginBase):
                 yield (adapter_name, adapter_data)
         except KeyError as e:
             return
-
 
     def request_remote_plugin_thread(self, action_id, plugin_unique_name, method, data):
         """ Function for request action from other adapter
@@ -115,7 +117,7 @@ class ExecutionPlugin(PluginBase):
         """
         # Finding all the actions related to this adapter
         collection = self._get_collection('actions')
-        adapters_action = collection.find({'$and': [{'adapter_unique_name': unique_adapter_name}, 
+        adapters_action = collection.find({'$and': [{'adapter_unique_name': unique_adapter_name},
                                                     {"status": {"$ne": "finished"}},
                                                     {"status": {"$ne": "failed"}},
                                                     {"status": {"$ne": "limbo"}}]})
@@ -144,13 +146,14 @@ class ExecutionPlugin(PluginBase):
         # Updating the db on the new status and other parameters changed
         action_data = {'status': request_content['status']}
         if 'output' in request_content:
-            action_data['product'] = request_content['output'].get('product', '')
+            action_data['product'] = request_content['output'].get(
+                'product', '')
             action_data['result'] = request_content['output'].get('result', '')
 
         self._save_action_data(action_data, action_id)
 
         if request_content['status'] == 'failed':
-            # Should try another adapter, we will use the list of tuples containing all of the 
+            # Should try another adapter, we will use the list of tuples containing all of the
             # available adapters for this device
 
             # Getting needed data to call the _create_request_thread again. It will handle the code execution
@@ -161,9 +164,11 @@ class ExecutionPlugin(PluginBase):
             issuer_unique_name = self._actions_db[action_id]['issuer_unique_name']
             data_for_action = self._actions_db[action_id]['data_for_action']
             current_adapter = self._actions_db[action_id]['adapter_unique_name']
-            self.logger.warning('Adapter {0} failed to run action {1}'.format(current_adapter, action_id))
+            self.logger.warning('Adapter {0} failed to run action {1}'.format(
+                current_adapter, action_id))
             if not adapters_tuple:
-                self.logger.error('Couldnt run code on action {0}, no more adapters to try'.format(action_id))
+                self.logger.error(
+                    'Couldnt run code on action {0}, no more adapters to try'.format(action_id))
             else:
                 # Trying to run on a different adapter, don't need to inform the issuer
                 self._actions_thread_pool.submit(self._create_request_thread,
@@ -180,9 +185,10 @@ class ExecutionPlugin(PluginBase):
                              'plugin_unique_name': self._actions_db[action_id]['issuer_unique_name'],
                              'method': 'POST',
                              'data': json.dumps(request_content)}
-        threading.Thread(target=self.request_remote_plugin_thread, kwargs=to_request_params).start()
+        threading.Thread(target=self.request_remote_plugin_thread,
+                         kwargs=to_request_params).start()
 
-        return 
+        return
 
     def _save_action_data(self, data_dict, action_id=None):
         """ Function for saving new action data.
@@ -194,7 +200,7 @@ class ExecutionPlugin(PluginBase):
                                Variable, but the db will update all of the keys shown on this dict.
         :param str action_id: The action_id of the action we want to update. If not present, the function will create
                               A new action.
-        
+
         :return action_id: The action id of the action updated (or inserted if new)
         """
         available_data_keys = ['action_type', 'adapter_unique_name', 'issuer_unique_name', 'status', '_id'
@@ -205,7 +211,8 @@ class ExecutionPlugin(PluginBase):
         collection = self._get_collection('actions')
         if action_id:
             # Updating existing action (or creating new if this action id is not found)
-            collection.update_one({'_id': ObjectId(action_id)}, update={'$set': data_dict}, upsert=True)
+            collection.update_one({'_id': ObjectId(action_id)}, update={
+                                  '$set': data_dict}, upsert=True)
         else:
             # action_id is none, Creating a new doc
             insert_result = collection.insert_one(data_dict)
@@ -221,12 +228,13 @@ class ExecutionPlugin(PluginBase):
         if data_dict.keys() - available_data_keys:
             self.logger.warning('Trying to add invalid key to action_data. '
                                 'Keys: {0}'.format(data_dict.keys() - available_data_keys))
-        current_action_data.update({k: v for k, v in data_dict.items() if k in available_data_keys})
-        
+        current_action_data.update(
+            {k: v for k, v in data_dict.items() if k in available_data_keys})
+
         self._actions_db[action_id] = current_action_data
 
         return action_id
-    
+
     def _create_request_thread(self, action_type, device_id, issuer, data, adapters_tuple, action_id):
         """ A function for creating an action request
 
@@ -270,7 +278,7 @@ class ExecutionPlugin(PluginBase):
                                            method='POST',
                                            data=json.dumps({'status': 'pending', 'output': ''}))
                 return json.dumps({'action_id': action_id})
-            self.logger.warning("Adapter failed running code on {id}. Reason: {mess}".format(id=device_id, 
+            self.logger.warning("Adapter failed running code on {id}. Reason: {mess}".format(id=device_id,
                                                                                              mess=result.content))
             adapters_count += 1
         self.request_remote_plugin('action_update/{0}'.format(action_id),
@@ -281,7 +289,7 @@ class ExecutionPlugin(PluginBase):
                                 'product': 'No executing adapters'},
                                action_id)
 
-    def request_action(self, action_type, callback_function, data_for_action, 
+    def request_action(self, action_type, callback_function, data_for_action,
                        plugin_unique_name, action_id, device_raw):
         """ A function for requesting action.
 
@@ -303,11 +311,11 @@ class ExecutionPlugin(PluginBase):
         """
         if data_for_action:
             data = data_for_action.copy()
-            
+
         data['device_data'] = device_raw
         result = self.request_remote_plugin('action/' + action_type + '?action_id=' + action_id,
                                             plugin_unique_name=plugin_unique_name,
-                                            method='POST', 
+                                            method='POST',
                                             data=json.dumps(data))
 
         if not action_id:
@@ -316,7 +324,7 @@ class ExecutionPlugin(PluginBase):
         self._open_actions[action_id] = callback_function
 
         return result
-    
+
     @add_rule("action/<action_type>", methods=['POST'])
     def _make_action(self, action_type):
         """ Exported function for initiate new actions
@@ -330,7 +338,7 @@ class ExecutionPlugin(PluginBase):
 
         :param str action_type: The type of the action we want to run. For example: "put_file"
         """
-        # Getting the wanted device axon_id 
+        # Getting the wanted device axon_id
         device_id = self.get_url_param('axon_id')
 
         # Getting the issuer plugin unique name
@@ -339,8 +347,8 @@ class ExecutionPlugin(PluginBase):
         # Getting the action parameters
         data_for_action = self.get_request_data_as_object()
 
-        action_id = self._save_action_data({'action_type': action_type, 
-                                            'issuer_unique_name': issuer_unique_name, 
+        action_id = self._save_action_data({'action_type': action_type,
+                                            'issuer_unique_name': issuer_unique_name,
                                             'status': 'pending',
                                             'device_axon_id': device_id})
 

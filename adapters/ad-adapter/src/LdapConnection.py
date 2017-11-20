@@ -8,7 +8,7 @@ import exceptions
 
 class LdapConnection:
     """Class responsible for creating an ldap connection.
-    
+
     This class will use a single LDAP connection in order to retrieve
     Data from the wanted ActiveDirectory.
     """
@@ -32,7 +32,7 @@ class LdapConnection:
 
     def _connect_to_server(self):
         """This function will connect to the LDAP server.
-        
+
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
@@ -53,9 +53,9 @@ class LdapConnection:
 
         :param wanted_attr: A list containing all the wanted attributes from the Device object. 
                             If not given, all available attributes will be returned.
-        
+
         :type wanted_attr: list of str
-        
+
         :returns: A list with all the devices registered to this DC
 
         :raises exceptions.LdapException: In case of error in the LDAP protocol
@@ -64,12 +64,14 @@ class LdapConnection:
             if wanted_attr:
                 self.ldap_connection.search(
                     search_base='CN=Computers,' + self.domain_name,
-                    search_filter='(&(isCriticalSystemObject=FALSE))',  # We chose some unique parameter
+                    # We chose some unique parameter
+                    search_filter='(&(isCriticalSystemObject=FALSE))',
                     attributes=wanted_attr)
             else:
                 self.ldap_connection.search(
                     search_base='CN=Computers,' + self.domain_name,
-                    search_filter='(&(isCriticalSystemObject=FALSE))',  # We chose some unique parameter
+                    # We chose some unique parameter
+                    search_filter='(&(isCriticalSystemObject=FALSE))',
                     attributes='*')
             device_list_ldap = self.ldap_connection.response
         except ldap3.core.exceptions.LDAPException as ldap_error:
@@ -80,7 +82,7 @@ class LdapConnection:
 
         # Getting the wanted attributes
         wanted_attr = list(device_list_ldap[0]['attributes'].keys())
-        
+
         def is_wanted_attr(attr_name):
             return wanted_attr == '*' or attr_name in wanted_attr
 

@@ -47,7 +47,8 @@ def run_exe(psObj, args):
         pass  # No file to delete
 
     # Uploading the new exe file with our magic name
-    send_file(psObj, Namespace(remote_path=DEFAULT_REMOTE_EXE_PATH, local_path=args.exe_path))
+    send_file(psObj, Namespace(
+        remote_path=DEFAULT_REMOTE_EXE_PATH, local_path=args.exe_path))
     run_service(psObj, {})
     return 0
 
@@ -60,7 +61,7 @@ def _alter_config_file_for_shell(config_path):
 
     # Writing to the same file in order to create a conf file
     config_file = open(config_path, 'w')
-    config_file.write('cmd;'+command)
+    config_file.write('cmd;' + command)
     config_file.close()
 
 
@@ -80,17 +81,20 @@ def run_shell(psObj, args):
 
     _alter_config_file_for_shell(args.config_path)
     # Uploading the config file containing our shell command
-    send_file(psObj, Namespace(remote_path=DEFAULT_REMOTE_CONFIG_PATH, local_path=args.config_path))
-    
+    send_file(psObj, Namespace(
+        remote_path=DEFAULT_REMOTE_CONFIG_PATH, local_path=args.config_path))
+
     # Running the service (It will look for the config file in the remote sytem)
     run_service(psObj, {})
 
     get_result = 1
     execution_time = time.time()
     time.sleep(5)  # Sleeping a bit to let the command start
-    while (get_result != 0) or time.time()-execution_time > 30:  # Waiting 30 seconds for the file to appear
+    # Waiting 30 seconds for the file to appear
+    while (get_result != 0) or time.time() - execution_time > 30:
         try:
-            get_result = get_file(psObj, Namespace(remote_path=DEFAULT_REMOTE_RESULT_PATH, local_path=args.result_path))
+            get_result = get_file(psObj, Namespace(
+                remote_path=DEFAULT_REMOTE_RESULT_PATH, local_path=args.result_path))
         except Exception as e:
             pass
         time.sleep(5)
@@ -121,50 +125,54 @@ def main():
 
     subparser = parser.add_subparsers()
 
-    sp_start = subparser.add_parser('getfile', 
+    sp_start = subparser.add_parser('getfile',
                                     help='Getting file from remote computer. type -h for help')
-    sp_start.add_argument('--remote', 
-                          required=True, 
-                          help='The remote path of the file we want to get (Inside the Windows folder)', 
+    sp_start.add_argument('--remote',
+                          required=True,
+                          help='The remote path of the file we want to get (Inside the Windows folder)',
                           dest="remote_path")
-    sp_start.add_argument('--local', 
-                          required=True, 
-                          help='The local path for the file to be saved', 
+    sp_start.add_argument('--local',
+                          required=True,
+                          help='The local path for the file to be saved',
                           dest="local_path")
     sp_start.set_defaults(which=get_file)
 
-    sp_start = subparser.add_parser('sendfile', help='Sending file to remote computer. type -h for help')
-    sp_start.add_argument('--remote', 
-                          required=True, 
-                          help='The remote path for the file to be saved', 
+    sp_start = subparser.add_parser(
+        'sendfile', help='Sending file to remote computer. type -h for help')
+    sp_start.add_argument('--remote',
+                          required=True,
+                          help='The remote path for the file to be saved',
                           dest="remote_path")
-    sp_start.add_argument('--local', 
-                          required=True, 
-                          help='The local path of the wanted file', 
+    sp_start.add_argument('--local',
+                          required=True,
+                          help='The local path of the wanted file',
                           dest="local_path")
     sp_start.set_defaults(which=send_file)
 
-    sp_start = subparser.add_parser('runservice', help='Getting file from remote computer. type -h for help')
-    sp_start.add_argument('--servicepath', 
-                          help='The remote path for the file to be saved', 
+    sp_start = subparser.add_parser(
+        'runservice', help='Getting file from remote computer. type -h for help')
+    sp_start.add_argument('--servicepath',
+                          help='The remote path for the file to be saved',
                           dest="service_path")
     sp_start.set_defaults(which=run_service)
 
-    sp_start = subparser.add_parser('runexe', help='Running Exe file on the remote computer')
-    sp_start.add_argument('--exepath', 
-                          required=True, 
-                          help='The remote path for the file to execute', 
+    sp_start = subparser.add_parser(
+        'runexe', help='Running Exe file on the remote computer')
+    sp_start.add_argument('--exepath',
+                          required=True,
+                          help='The remote path for the file to execute',
                           dest="exe_path")
     sp_start.set_defaults(which=run_exe)
 
-    sp_start = subparser.add_parser('runshell', help='Running shell command on the remote computer')
-    sp_start.add_argument('--command_path', 
-                          required=True, 
-                          help='a file containing the command', 
+    sp_start = subparser.add_parser(
+        'runshell', help='Running shell command on the remote computer')
+    sp_start.add_argument('--command_path',
+                          required=True,
+                          help='a file containing the command',
                           dest="config_path")
-    sp_start.add_argument('--result_path', 
-                          required=True, 
-                          help='The local path for the result file to be saved', 
+    sp_start.add_argument('--result_path',
+                          required=True,
+                          help='The local path for the result file to be saved',
                           dest="result_path")
     sp_start.set_defaults(which=run_shell)
 
@@ -178,15 +186,16 @@ def main():
         sys.exit("Couldnt find which attribute")
 
     try:
-        psObj = psexec.PSEXEC(username=args.username, password=args.password, domain=args.domain)
+        psObj = psexec.PSEXEC(username=args.username,
+                              password=args.password, domain=args.domain)
         psObj._init_connection(args.addr)
 
         return_value = args.which(psObj, args)
         sys.exit(return_value)  # Success
     except Exception as e:
-        sys.exit("Error while trying to perform {0}. Reason: {1}".format(str(args.which), str(e)))
+        sys.exit("Error while trying to perform {0}. Reason: {1}".format(
+            str(args.which), str(e)))
 
 
 if __name__ == '__main__':
     sys.exit(main())
-

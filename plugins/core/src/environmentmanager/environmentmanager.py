@@ -18,7 +18,7 @@ class EnvironmentManager(object):
     def __init__(self):
         """Initialize the Environment manager."""
         self.dm = dockermanager.DockerManager()
-        
+
         # initialize our state.
         self.initializeEnvironment()
         self.updateStateFromEnv()
@@ -28,13 +28,14 @@ class EnvironmentManager(object):
 
         services_to_print = self.services
 
-        string_to_return = "There are %d services running: \n" % (len(services_to_print))
+        string_to_return = "There are %d services running: \n" % (
+            len(services_to_print))
 
         for s in services_to_print:
             string_to_return += "\n"
             string_to_return += "Image: %s, Name: %s(%s)\n" % \
                 (s.attrs["Spec"]["TaskTemplate"]["ContainerSpec"]["Image"],
-                 s.name, 
+                 s.name,
                  s.short_id)
             for t in s.tasks():
                 # Sometimes, some containers fail to load.
@@ -58,15 +59,15 @@ class EnvironmentManager(object):
                     pass
 
                 string_to_return += "\tContainer: %s, State: %s, Message: %s\n" % \
-                    (container_id, 
-                     state, 
+                    (container_id,
+                     state,
                      message)
 
                 for network in t["NetworksAttachments"]:
                     string_to_return += "\t\tIP: "
                     for ip in network["Addresses"]:
                         string_to_return += "%s " % (ip, )
-                    
+
                 string_to_return += "\n"
 
         return string_to_return
@@ -101,7 +102,7 @@ class EnvironmentManager(object):
         .. todo:: Once we have a db, the state should be set by the DB state.
         """
 
-        services_list_to_return = self.dm.getServicesList()        
+        services_list_to_return = self.dm.getServicesList()
 
         for s in services_list_to_return:
             if s.name.startswith(config.SERVICE_PREFIX) is False:
@@ -136,7 +137,8 @@ class EnvironmentManager(object):
                 "Service name should always follow the convention of repository_name, e.g. axonius_core")
 
         if self.dm.isServiceExists(service_name):
-            raise exceptions.ServiceAlreadyRunning("Service %s already running." % (service_name, ))
+            raise exceptions.ServiceAlreadyRunning(
+                "Service %s already running." % (service_name, ))
 
         # Check if we have such image in the system.
         try:
@@ -148,26 +150,32 @@ class EnvironmentManager(object):
         kwargs = {}
         kwargs["env"] = []
         kwargs["should_always_restart"] = True
-        kwargs["networks"] = [config.NETWORK_NAME]  # currently, all services are in the same network.
+        # currently, all services are in the same network.
+        kwargs["networks"] = [config.NETWORK_NAME]
         # Map containers "/storage" path to "./storage/service_name/data"
-        kwargs["mounts"] = ["%s:/storage:rw" % (os.path.join(os.path.abspath("storage"), service_name, 'data'), )]
+        kwargs["mounts"] = ["%s:/storage:rw" %
+                            (os.path.join(os.path.abspath("storage"), service_name, 'data'), )]
         # Map containers "/logs" path to "./storage/service_name/logs"
-        kwargs["mounts"].append("%s:/logs:rw" % (os.path.join(os.path.abspath("storage"), service_name, 'logs'), ))
+        kwargs["mounts"].append(
+            "%s:/logs:rw" % (os.path.join(os.path.abspath("storage"), service_name, 'logs'), ))
         # Add extra mounts
         kwargs["mounts"].extend(extra_mounts)
 
         if service_name == config.CORE_SERVICE_NAME:
-            # We have special parameters for the core. 
-            kwargs["ports"] = {config.CORE_EXTERNAL_EXPOSED_PORT: 
+            # We have special parameters for the core.
+            kwargs["ports"] = {config.CORE_EXTERNAL_EXPOSED_PORT:
                                (config.CORE_INTERNAL_EXPOSED_PORT, "tcp")}
             kwargs["mounts"].extend([
-                '/var/run/docker.sock:/var/run/hostdocker.sock:rw',     # This is the host docker socket, so that the 
-                                                                        # core container could manage the host
+                # This is the host docker socket, so that the
+                '/var/run/docker.sock:/var/run/hostdocker.sock:rw',
+                # core container could manage the host
                 "%s:/allstorage:rw" % (os.path.abspath("storage"))])    # The storage of all services
 
         # Prepare the storage
-        os.makedirs(os.path.join("storage", service_name, 'data'), exist_ok=True)
-        os.makedirs(os.path.join("storage", service_name, 'logs'), exist_ok=True)
+        os.makedirs(os.path.join(
+            "storage", service_name, 'data'), exist_ok=True)
+        os.makedirs(os.path.join(
+            "storage", service_name, 'logs'), exist_ok=True)
 
         service = self.dm.createService(image_name, service_name, **kwargs)
         self.services.append(service)
@@ -180,7 +188,7 @@ class EnvironmentManager(object):
 
         :param str service_name: The service name to stop.
         :raise exceptions.ServiceNotFound: In case the service is not found.
-        
+
         """
         try:
             self.dm.removeService(service_name)

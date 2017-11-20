@@ -45,7 +45,7 @@ CERTIFICATES_SUFFIX = ".pem"
 CERTIFICATES_CLEAN_COMMAN = "sudo -S /opt/puppetlabs/bin/puppet cert clean "
 
 """ Puppet command to create new certificates in the server """
-CERTIFICATES_CREATE_COMMAND = "sudo -S /opt/puppetlabs/bin/puppet cert generate " 
+CERTIFICATES_CREATE_COMMAND = "sudo -S /opt/puppetlabs/bin/puppet cert generate "
 
 """ Private keys location in the puppet server """
 PRIVATE_KEYS_LOCATION_IN_PUPPET_SERVER = "/etc/puppetlabs/puppet/ssl/private_keys/"
