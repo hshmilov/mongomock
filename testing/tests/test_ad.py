@@ -13,3 +13,7 @@ def test_ad_adapter_in_configs(axonius_fixture, ad_fixture):
     plugin_unique_name = ad_fixture.unique_name
     adapter = axonius_fixture['db'].get_unique_plugin_config(plugin_unique_name)
     assert adapter['plugin_name'] == 'ad_adapter'
+
+
+def test_registered(axonius_fixture, ad_fixture):
+    assert ad_fixture.is_plugin_registered(axonius_fixture['core'])

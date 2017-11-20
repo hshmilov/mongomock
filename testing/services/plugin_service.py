@@ -2,6 +2,7 @@ import services.compose_parser
 import services.compose_service
 import requests
 import axonius.ConfigReader
+import json
 
 API_KEY_HEADER = "x-api-key"
 
@@ -30,6 +31,12 @@ class PluginService(services.compose_service.ComposeService):
             api_key = self.api_key
 
         return requests.get(self.req_url + "/schema/" + schema_type, headers={API_KEY_HEADER: api_key})
+
+    def is_plugin_registered(self, core_service):
+        unique_name = self.unique_name
+        all_plugins = json.loads(core_service.register().content)
+
+        return unique_name in all_plugins
 
     def is_up(self):
         return self._is_service_alive()

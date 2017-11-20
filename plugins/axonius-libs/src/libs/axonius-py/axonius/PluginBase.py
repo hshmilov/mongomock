@@ -215,9 +215,6 @@ class PluginBase(object):
             temp_config['registration']['plugin_unique_name'] = self.plugin_unique_name
             temp_config['registration']['api_key'] = self.api_key
 
-            # Writing back the configuration with the new plugin name
-            with open('plugin_config.ini', 'w') as configfile:
-                config.write(configfile)
             with open('plugin_volatile_config.ini', 'w') as temp_config_file:
                 temp_config.write(temp_config_file)
 
