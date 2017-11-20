@@ -1,8 +1,7 @@
 <template>
     <div class="checkbox" v-bind:class="{ 'checked': checked }" @click="$refs.checkboxInput.click()">
         <input type="checkbox" ref="checkboxInput" :checked="checked" @change="updateChecked()">
-        <div class="checkbox-skin"></div><div class="checkbox-check"></div>
-        <label v-if="label" class="checkbox-label">{{ label }}</label>
+        <label class="checkbox-label">{{ label }}</label>
     </div>
 </template>
 
@@ -31,6 +30,47 @@
         line-height: 24px;
         input[type=checkbox] {
             visibility: hidden;
+            &+label:before {
+                content: '';
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                width: 18px;
+                height: 18px;
+                z-index: 0;
+                border: 1px solid #b1b8bb;
+                border-radius: 1px;
+                margin-top: 2px;
+                -webkit-transition: .2s;
+                -o-transition: .2s;
+                transition: .2s;
+            }
+            &:checked+label:before {
+                top: -4px;
+                left: -2px;
+                width: 10px;
+                height: 18px;
+                border-top: 2px solid transparent;
+                border-left: 2px solid transparent;
+                border-right: 2px solid $color-theme;
+                border-bottom: 2px solid $color-theme;
+                -webkit-transform: rotate(40deg);
+                -ms-transform: rotate(40deg);
+                transform: rotate(40deg);
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+                -webkit-transform-origin: 100% 100%;
+                -ms-transform-origin: 100% 100%;
+                transform-origin: 100% 100%;
+            }
+        }
+        .checkbox-label {
+            margin-left: 8px;
+            margin-bottom: 0;
+            &:empty {
+                margin-left: 0;
+            }
         }
         .checkbox-skin {
             border-radius: 4px;
@@ -67,10 +107,6 @@
             border-bottom: 2px solid $color-theme;
             border-right: 2px solid transparent;
             border-top: 2px solid transparent;
-        }
-        .checkbox-label {
-            margin-left: 8px;
-            margin-bottom: 0;
         }
     }
 </style>

@@ -1,33 +1,41 @@
 <template>
     <scrollable-page title="devices">
-        <card title="query">
+        <card title="query" class="devices-query">
             <span slot="cardActions">
                 <action-bar :actions="[
                   { name: 'Save Query', perform: openSaveQuery }
                 ]"></action-bar>
             </span>
-            <generic-form slot="cardContent" :schema="queryFields" v-model="selectedQuery" :horizontal="true"
-                          :submittable="true" submitLabel="Go!" v-on:submit="updateQuery(selectedQuery)"></generic-form>
-
+            <template slot="cardContent">
+                <dropdown-menu animateClass="scale-up right">
+                    <div slot="dropdownTrigger">
+                        <input class="form-control" v-model="queryDropdown.value" @change="extractQuery()"
+                               @keyup.enter.stop="executeQuery()" @click.stop="">
+                    </div>
+                    <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery"
+                                  :horizontal="true" @input="extractValue()" @submit="executeQuery()"></generic-form>
+                </dropdown-menu>
+                <a class="btn" @click="executeQuery()">go</a>
+            </template>
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">
-                <dropdown-menu :positionRight="true" animateClass="scale-up right">
+                <dropdown-menu animateClass="scale-up right">
                     <i slot="dropdownTrigger" class="icon-tag"></i>
                     <searchable-checklist slot="dropdownContent" slot-scope="props" title="Tag as:"
                                           :items="device.tagList.data" :hasSearch="true" :producesNew="true"
                                           v-model="selectedTags" v-on:save="saveTags()" :explicitSave="true"
                                           :onDone="props.onDone"></searchable-checklist>
                 </dropdown-menu>
-                <dropdown-menu :positionRight="true" animateClass="scale-up right" menuClass="w-md">
+                <dropdown-menu animateClass="scale-up right" menuClass="w-md">
                     <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
-                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="device.fields"
+                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="fields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
             </div>
             <div slot="cardContent" v-on-clickaway="closeQuickView">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
-                                 :error="device.deviceList.error" :fields="fields" :fetchData="fetchDevices"
+                                 :error="device.deviceList.error" :fields="deviceFields" :fetchData="fetchDevices"
                                  v-model="selectedDevices" :filter="query.currentQuery"
                                  :actions="[{ handler: executeQuickView, trigger: 'icon-eye'}]"></paginated-table>
                 <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
@@ -40,7 +48,7 @@
                         <div>Adapters</div>
                         <hr class="title-separator">
                         <object-list :data="device.deviceDetails.data.adapters" :vertical="true"
-                                    :names="device.adapterNames"></object-list>
+                                     :names="device.adapterNames"></object-list>
                     </div>
                     <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length"
                          class="d-flex flex-column justify-content-between align-items-start p-3">
@@ -51,10 +59,12 @@
                 </info-dialog>
             </div>
         </card>
-        <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save" @confirm="approveSaveQuery()">
+        <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save"
+               @confirm="approveSaveQuery()">
             <div slot="body" class="form-group">
                 <label class="form-label" for="saveQueryName">Save Query as:</label>
-                <input class="form-control" v-model="saveQueryModal.name" id="saveQueryName">
+                <input class="form-control" v-model="saveQueryModal.name" id="saveQueryName"
+                       @keyup.enter="approveSaveQuery()">
             </div>
         </modal>
     </scrollable-page>
@@ -75,8 +85,8 @@
 	import { mixin as clickaway } from 'vue-clickaway'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-	import { FETCH_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
-	import { UPDATE_QUERY, SAVE_QUERY } from '../../store/modules/query'
+	import { FETCH_UNIQUE_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
+	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
 
 	export default {
 		name: 'devices-container',
@@ -89,18 +99,16 @@
 			...mapState(['device', 'query']),
 			...mapGetters(['deviceNames']),
 			fields () {
-				return this.device.fields.filter((field) => {
+				return [ ...this.device.fields.common, ...this.device.fields.unique ]
+			},
+            deviceFields() {
+				return this.fields.filter((field) => {
 					return this.selectedFields.indexOf(field.path) > -1
 				})
 			},
 			queryFields () {
-				return this.fields.filter((field) => {
-					return field.querySchema !== undefined && (this.selectedFields.indexOf(field.path) > -1)
-				}).map(function (field) {
-					return {
-						path: field.path, name: field.name, type: field.type,
-						...field.querySchema
-					}
+				return this.deviceFields.filter((field) => {
+					return field.control !== undefined
 				})
 			}
 		},
@@ -109,12 +117,16 @@
 				selectedTags: [],
 				selectedFields: [],
 				selectedDevices: [],
-                selectedQuery: { },
+				selectedQuery: {},
 				infoDialogOpen: false,
-                saveQueryModal: {
+				queryDropdown: {
 					open: false,
-                    name: ''
-                }
+					value: '',
+				},
+				saveQueryModal: {
+					open: false,
+					name: ''
+				}
 			}
 		},
 		watch: {
@@ -134,15 +146,16 @@
 						}
 					})
 				}
-			},
-            query: function(newQuery) {
-				this.selectedQuery = { ...newQuery.currentQuery }
-            }
+			}
 		},
 		created () {
-			this.fetchFields()
+            if (!this.device.fields.unique || !this.device.fields.unique.length) {
+				this.fetchFields()
+			}
 			this.fetchTags()
-			this.selectedFields = this.device.fields.filter(function (field) {
+			this.selectedQuery = {...this.query.currentQuery}
+			this.queryDropdown.value = queryToStr(this.selectedQuery)
+			this.selectedFields = this.fields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
 				return field.path
@@ -153,27 +166,40 @@
 				updateQuery: UPDATE_QUERY
 			}),
 			...mapActions({
-				fetchFields: FETCH_FIELDS,
+				fetchFields: FETCH_UNIQUE_FIELDS,
 				fetchDevices: FETCH_DEVICES,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
 				saveDeviceTags: SAVE_DEVICE_TAGS
 			}),
+			extractQuery () {
+				this.selectedQuery = strToQuery(this.queryDropdown.value)
+			},
+			extractValue () {
+				this.queryDropdown.value = queryToStr(this.selectedQuery)
+			},
+            executeQuery() {
+				this.updateQuery(this.selectedQuery)
+                this.$parent.$el.click()
+            },
 			openSaveQuery () {
-                this.saveQueryModal.open = true
+				this.saveQueryModal.open = true
 			},
 			approveSaveQuery () {
 				if (!this.saveQueryModal.name) {
 					return
-                }
+				}
 				this.saveQuery({
-                    query: this.selectedQuery,
-                    name: this.saveQueryModal.name,
-                    callback: () => this.saveQueryModal.open = false
-                })
+					query: this.selectedQuery,
+					name: this.saveQueryModal.name,
+					callback: () => this.saveQueryModal.open = false
+				})
 			},
 			saveTags () {
+				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags || !this.selectedTags.length) {
+					return
+				}
 				this.saveDeviceTags({devices: this.selectedDevices, tags: this.selectedTags})
 			},
 			executeQuickView (event, deviceId) {
@@ -193,5 +219,32 @@
 
 
 <style lang="scss">
-
+    .devices-query {
+        .card-body {
+            display: flex;
+            > .dropdown {
+                flex: 1 0 auto;
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+                > .dropdown-toggle {
+                    padding-right: 0;
+                    padding-left: 0;
+                    &:after {
+                        margin-top: 16px;
+                    }
+                    .form-control {
+                        border-top-right-radius: 0;
+                        border-bottom-right-radius: 0;
+                        margin: -1px;
+                        border-right: 0;
+                    }
+                }
+            }
+            > .btn {
+                line-height: 28px;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+            }
+        }
+    }
 </style>

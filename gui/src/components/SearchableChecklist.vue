@@ -1,5 +1,5 @@
 <template>
-    <div class="checklist">
+    <div class="checklist" @keyup.enter="$emit('submit')">
         <div v-if="title" class="title-sm">{{ title }}</div>
         <search-input v-if="hasSearch" v-model="searchValue"></search-input>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
@@ -63,7 +63,7 @@
             handleSave() {
 				this.$emit('save')
                 if (this.onDone !== undefined) {
-					this.onDone(true, 'Tags Saved')
+					this.onDone(true, 'Tags Saved', 1000)
                 }
             }
         }

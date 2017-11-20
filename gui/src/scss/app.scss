@@ -57,7 +57,7 @@ h1 {
 
 h2 {
   line-height: 36px;
-  font-size: 24px
+  font-size: 20px
 }
 
 h3 {
@@ -172,11 +172,10 @@ a.btn:not([href]):not([tabindex]) {
   width: 100%;
   top: 0;
   left: 0;
-  background-color: rgba(0, 0, 0, .2);
   transition: opacity .3s ease;
   .vue-simple-spinner {
     position: absolute;
-    top: 50%;
+    top: 40%;
     left: 50%;
   }
 }

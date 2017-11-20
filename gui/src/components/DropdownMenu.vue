@@ -20,7 +20,7 @@
     export default {
         name: 'dropdown-menu',
         mixins: [ clickaway ],
-        props: [ 'positionRight', 'animateClass', 'menuClass' ],
+        props: [ 'animateClass', 'menuClass' ],
         data() {
             return {
                 openDropdown: false,
@@ -67,9 +67,12 @@
             &:after {
                 position: absolute;
                 margin-right: 8px;
-                margin-top: 14px;
+                margin-top: 12px;
                 top: 0;
                 right: 0;
+                border-top: .5em solid;
+                border-right: .5em solid transparent;
+                border-left: .5em solid transparent;
             }
         }
         .dropdown-menu {
@@ -110,7 +113,7 @@
                 transform-origin: right 0px;
             }
         }
-        &.show .scale-up {
+        &.show>.scale-up {
             transform: scale(1);
         }
     }
