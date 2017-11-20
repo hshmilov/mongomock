@@ -17,7 +17,6 @@
                 </dropdown-menu>
                 <a class="btn" @click="executeQuery()">go</a>
             </template>
-
         </card>
         <card :title="`devices (${device.deviceList.data.length})`">
             <div slot="cardActions" class="card-actions">

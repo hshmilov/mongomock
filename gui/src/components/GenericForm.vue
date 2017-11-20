@@ -55,11 +55,9 @@
             }
         },
         methods: {
-
         	handleSubmit() {
 				this.$emit('submit')
             }
-
         }
     }
 </script>
