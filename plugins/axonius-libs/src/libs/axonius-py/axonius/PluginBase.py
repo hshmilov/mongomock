@@ -31,8 +31,8 @@ AXONIUS_REST = Flask(__name__)
 
 LOG_PATH = str(Path.home().joinpath('logs'))  # this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
 
-# Can wait up to 5 minutes if core didn't answer yet
-TIME_WAIT_FOR_REGISTER = 60*5
+# Can wait up to 5 minutes if core didnt answer yet
+TIME_WAIT_FOR_REGISTER = 60 * 5
 
 
 @AXONIUS_REST.after_request
@@ -153,7 +153,7 @@ class PluginBase(object):
 
     """
 
-    def __init__(self, core_data=None):
+    def __init__(self, core_data=None, special_db_credentials=None):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -203,9 +203,10 @@ class PluginBase(object):
             pass
 
         if not core_data:
-            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
+            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key,
+                                       special_db_credentials)
         if not core_data or core_data['status'] == 'error':
-            raise RuntimeError("Register process failed, Existing. Reason: {0}".format(core_data['message']))
+            raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data['message']))
 
         if core_data['plugin_unique_name'] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
             self.plugin_unique_name = core_data['plugin_unique_name']
@@ -222,7 +223,7 @@ class PluginBase(object):
 
         # Use the data we have from the core.
 
-        self.db_host = core_data['db_addr'] 
+        self.db_host = core_data['db_addr']
         self.db_user = core_data['db_user']
         self.db_password = core_data['db_password']
         self.logstash_host = core_data['log_addr']
@@ -242,7 +243,7 @@ class PluginBase(object):
                                       methods=wanted_methods)
 
         # Adding "keepalive" thread
-        if self.plugin_unique_name != "core": 
+        if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(5)}
             self.scheduler = BackgroundScheduler(executors=executors)
@@ -294,10 +295,10 @@ class PluginBase(object):
                                    "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
-    @retry(wait_fixed=10*1000, 
-           stop_max_delay=60*5*1000, 
+    @retry(wait_fixed=10 * 1000,
+           stop_max_delay=60 * 5 * 1000,
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
-    def _register(self, core_address, plugin_unique_name=None, api_key=None):
+    def _register(self, core_address, plugin_unique_name=None, api_key=None, special_db_credentials=None):
         """Create registration of the adapter to core.
 
         :param str core_address: The address of the core plugin
@@ -309,11 +310,14 @@ class PluginBase(object):
                         "plugin_type": self.plugin_type,
                         "plugin_port": self.port
                         }
-        if plugin_unique_name:
+        if plugin_unique_name is not None:
             register_doc['plugin_unique_name'] = plugin_unique_name
-            if api_key:
+            if api_key is not None:
                 register_doc['api_key'] = api_key
-        
+
+        if special_db_credentials is not None:
+            register_doc['special_db_credentials'] = special_db_credentials
+
         response = requests.post(core_address, data=json.dumps(register_doc))
         return response.json()
 
@@ -417,8 +421,8 @@ class PluginBase(object):
 
                     # Checking if we need to dump logs to the server
                     if ((len(self.currentLogs) > self.bulk_size or
-                       current_time - self.last_sent > self.max_time) and
-                       current_time - self.last_error_time > self.max_time):
+                                     current_time - self.last_sent > self.max_time) and
+                                    current_time - self.last_error_time > self.max_time):
                         self.last_sent = current_time
                         with requests.Session() as s:  # Sending all logs on one session
                             new_list = []
@@ -444,16 +448,16 @@ class PluginBase(object):
                                 except Exception as e:
                                     exception_log = "Error while sending log. *Log is lost*. Error details: " \
                                                     "type={0}, message={1}".format(type(e).__name__, str(e))
-                                    print("[fatal error]: %s" % (exception_log, ))
+                                    print("[fatal error]: %s" % (exception_log,))
                                     fatal_logger.error(exception_log)
                                     warning_count = warning_count + 1
                                     continue
                                     # In any other cases, we should just try the other log lines 
                                     # (This line will not be sent anymore)
                             if warning_count != 0:
-                                warning_message = "connection error occured {0} times while sending log."\
+                                warning_message = "connection error occured {0} times while sending log." \
                                     .format(warning_count)
-                                print("[fatal error]: %s." % (warning_message, ))
+                                print("[fatal error]: %s." % (warning_message,))
                                 fatal_logger.warning(warning_message)
                                 if warning_count > self.warning_before_cooldown:
                                     self.last_error_time = time.time()
@@ -461,8 +465,9 @@ class PluginBase(object):
                         return ''
                 except Exception as e:  # We must catch every exception from the logger
                     # Nothing we can do here
-                    exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__, str(e))
-                    print("[fatal error]: %s" % (exception_message, ))
+                    exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__,
+                                                                                                      str(e))
+                    print("[fatal error]: %s" % (exception_message,))
                     fatal_logger.error(exception_message)
                     return 'Bad'
 
@@ -701,10 +706,10 @@ class PluginBase(object):
 
         # Building the uri for the request
         uri = f"action/{action_type}?axon_id={axon_id}"
-            
+
         result = self.request_remote_plugin(uri,
                                             plugin_unique_name='execution',
-                                            method='POST', 
+                                            method='POST',
                                             data=json.dumps(data))
 
         action_id = result.json()['action_id']

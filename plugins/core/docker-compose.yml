@@ -10,7 +10,7 @@ services:
         volumes:
           - ./src:/home/axonius/app
           - ./logs:/log
-          - ../axonius-libs/src/libs/axonius-py/axonius:/home/axonius/libs/axonius-py/axonius
+          - ../axonius-libs/src/libs:/home/axonius/libs
 
 networks:
   default:

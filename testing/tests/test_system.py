@@ -1,6 +1,7 @@
 from services.axonius_fixture import axonius_fixture
 from services.ad_service import ad_fixture
 from services.epo_service import epo_fixture
+from services.watch_service import watch_fixture
 
 
 # todo: generalize the adapter/plugin specific tests

@@ -74,9 +74,9 @@ raw_device_data = {'EPOBranchNode.NodeName': 'My Group',
 
 
 def test_get_all_linked_tables():
-    linked_ables = epoplugin.get_all_linked_tables(list_tables)
-    assert len(linked_ables) > 0
-    assert 'EPOComputerProperties' in linked_ables
+    linked_tables = epoplugin.get_all_linked_tables(list_tables)
+    assert len(linked_tables) > 0
+    assert 'EPOComputerProperties' in linked_tables
 
 
 def test_os():

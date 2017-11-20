@@ -1,11 +1,11 @@
 version: '3'
 services:
-  aggregator:
+  watch-service:
         build: .
-        image: axonius/aggregator
-        container_name: "aggregator"
+        image: axonius/watch-service
+        container_name: "watch-service"
         ports:
-          - 5000:80
+            - 5002:80
         volumes:
           - ./src:/home/axonius/app
           - ../axonius-libs/src/libs:/home/axonius/libs
