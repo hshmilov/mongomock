@@ -12,11 +12,14 @@ class ComposeService(services.axon_service.AxonService):
 
     def start(self):
         self.stop()
-        subprocess.check_call(['docker-compose', 'up', '-d'], cwd=os.path.dirname(self._compose_file_path))
+        subprocess.check_call(['docker-compose', 'up', '-d'],
+                              cwd=os.path.dirname(self._compose_file_path))
 
     def stop(self):
-        subprocess.call(['docker-compose', 'stop'], cwd=os.path.dirname(self._compose_file_path))
-        subprocess.call(['docker-compose', 'rm', "-f"], cwd=os.path.dirname(self._compose_file_path))
+        subprocess.call(['docker-compose', 'stop'],
+                        cwd=os.path.dirname(self._compose_file_path))
+        subprocess.call(['docker-compose', 'rm', "-f"],
+                        cwd=os.path.dirname(self._compose_file_path))
 
     @abstractmethod
     def is_up(self):

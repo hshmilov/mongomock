@@ -20,7 +20,7 @@ class ServiceAlreadyRunning(EnvironmentManagerException):
 
 class ServiceNotFound(EnvironmentManagerException):
     """Raised when we try to get a service that doesn't exist."""
-    
+
     def __init__(self, message=""):
         """The init method."""
         super().__init__(message)

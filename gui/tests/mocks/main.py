@@ -13,7 +13,8 @@ sample_rate = 10
 time_to_die = 24
 plugin_state = False
 
-now_date = datetime.strptime('2017-11-12 20:21:44.539418', '%Y-%m-%d %H:%M:%S.%f')
+now_date = datetime.strptime(
+    '2017-11-12 20:21:44.539418', '%Y-%m-%d %H:%M:%S.%f')
 
 
 class IteratorJSONEncoder(json.JSONEncoder):
@@ -32,7 +33,8 @@ class IteratorJSONEncoder(json.JSONEncoder):
 app = Flask(__name__)
 app.json_encoder = IteratorJSONEncoder
 
-mongo_client = pymongo.MongoClient(host='localhost', port=27017, username='ax_user', password='IAmDeanSysMan')
+mongo_client = pymongo.MongoClient(
+    host='localhost', port=27017, username='ax_user', password='IAmDeanSysMan')
 
 
 @app.after_request
@@ -139,7 +141,8 @@ def devices():
     filter = request.args.get('filter', None)
 
     client_collection = mongo_client['aggregator_plugin']['devices_db_2']
-    device_list = list(client_collection.find().sort([('_id', pymongo.ASCENDING)]))
+    device_list = list(client_collection.find().sort(
+        [('_id', pymongo.ASCENDING)]))
     if filter is not None:
         device_list = query_item(device_list, json.loads(filter))
         if skip == 0:
@@ -251,12 +254,14 @@ def start_qcore_plugin():
                     last_time = device['adapters']['qcore_adapter']['accurate_for_datetime']
                     current_ip = device['adapters']['qcore_adapter']['data']['IP']
                     current_id = device['adapters']['qcore_adapter']['data']['pretty_id']
-                    last_connected = datetime.strptime(last_time, '%Y-%m-%d %H:%M:%S.%f')
+                    last_connected = datetime.strptime(
+                        last_time, '%Y-%m-%d %H:%M:%S.%f')
                 elif 'splunk_adapter' in device['adapters']:
                     last_time = device['adapters']['splunk_adapter']['accurate_for_datetime']
                     current_ip = device['adapters']['splunk_adapter']['data']['IP']
                     current_id = device['adapters']['splunk_adapter']['data']['pretty_id']
-                    last_connected = datetime.strptime(last_time, '%Y-%m-%d %H:%M:%S.%f')
+                    last_connected = datetime.strptime(
+                        last_time, '%Y-%m-%d %H:%M:%S.%f')
                 else:
                     last_connected = now_date
 
@@ -280,14 +285,16 @@ def start_qcore_plugin():
 
                         device['adapters']['checkpoint_adapter'] = checkpoint_data
 
-                        client_collection.replace_one({'_id': device['_id']}, device)
+                        client_collection.replace_one(
+                            {'_id': device['_id']}, device)
                 else:
                     # Check if we should unblock device
                     if 'checkpoint_adapter' in device['adapters']:
                         if device['adapters']['checkpoint_adapter']['data']['raw']['status'] == 'Blocked':
                             # Changing the status to unblocked
                             device['adapters']['checkpoint_adapter']['data']['raw']['status'] = 'Unblocked'
-                            client_collection.replace_one({'_id': device['_id']}, device)
+                            client_collection.replace_one(
+                                {'_id': device['_id']}, device)
 
         except Exception as e:
             print('Exception ' + str(e))
@@ -329,10 +336,10 @@ def queries():
         queryList = []
         for doc in result:
             if doc.get('query'):
-                queryList.append({ 'id': str(doc['_id']),
-                                   'query_name': doc['query_name'] if doc.get('query_name') else '',
-                                   'timestamp': doc['timestamp'],'query': doc['query'],
-                                   'device_count': doc['device_count'] if doc.get('device_count') else 0})
+                queryList.append({'id': str(doc['_id']),
+                                  'query_name': doc['query_name'] if doc.get('query_name') else '',
+                                  'timestamp': doc['timestamp'], 'query': doc['query'],
+                                  'device_count': doc['device_count'] if doc.get('device_count') else 0})
         return jsonify(queryList)
     elif request.method == 'POST':
         data = json.loads(request.data.decode('utf-8'))
@@ -359,7 +366,8 @@ def get_all_fields():
     for current_document in cursor:
         for current_adapter in current_document['adapters'].keys():
             for current_raw_field in current_document['adapters'][current_adapter]['data']['raw'].keys():
-                all_fields.add('.'.join([current_adapter, 'data', 'raw', current_raw_field]))
+                all_fields.add(
+                    '.'.join([current_adapter, 'data', 'raw', current_raw_field]))
 
     for current_document in cursor:
         for current_adapter in current_document['adapters'].keys():

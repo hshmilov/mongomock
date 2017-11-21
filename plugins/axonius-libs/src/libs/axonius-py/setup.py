@@ -23,7 +23,7 @@ setup(
         "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
-        ],
+    ],
     long_description="""Will install all Axonius libs. For example, the PluginBase class""",
     install_requires=['json_log_formatter==0.2.0', 'Flask==0.12.2', 'elasticsearch==5.4.0', 'elasticsearch_dsl==5.3.0',
                       'requests==2.18.4', 'pymongo==3.5.1']

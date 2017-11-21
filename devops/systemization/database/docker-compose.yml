@@ -8,7 +8,7 @@ services:
           - MONGO_INITDB_ROOT_PASSWORD=ax_pass
           - MONGO_INITDB_DATABASE=core
         volumes:
-          - ./create_core_role.js:/docker-entrypoint-initdb.d/create_core_role.js
+          - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
         ports:
             - 27018:27017
 

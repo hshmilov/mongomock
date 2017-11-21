@@ -8,6 +8,6 @@ from puppetadapter import PuppetAdapter
 if __name__ == '__main__':
     # Initialize
     PUPPET_WRAPPER = PuppetAdapter()
-    
+
     # Run (Blocking)
     PUPPET_WRAPPER.start_serve()

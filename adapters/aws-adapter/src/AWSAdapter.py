@@ -44,7 +44,8 @@ class AWSAdapter(AdapterBase):
                 del aws_auth['_id']
                 clients_dict[aws_id] = boto3.client('ec2', **aws_auth)
             except BotoCoreError as e:
-                self.logger.error("Error creating EC2 client for account {0}, reason: {1}", aws_auth.meta.id, str(e))
+                self.logger.error(
+                    "Error creating EC2 client for account {0}, reason: {1}", aws_auth.meta.id, str(e))
         return clients_dict
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -70,19 +71,23 @@ class AWSAdapter(AdapterBase):
                 boto3.client('ec2', region_name=client_data._client_config.region_name), amis)
 
             # in case some images are private, we want to use them
-            described_image_local = _describe_images_from_client_by_id(client_data, amis)
+            described_image_local = _describe_images_from_client_by_id(
+                client_data, amis)
 
             # union dictionary
-            described_images = dict(described_images_global, **described_image_local)
+            described_images = dict(
+                described_images_global, **described_image_local)
 
             # add image information to each instance
             for reservation in instances['Reservations']:
                 for instance in reservation['Instances']:
-                    instance['DescribedImage'] = described_images.get(instance['ImageId'])
+                    instance['DescribedImage'] = described_images.get(
+                        instance['ImageId'])
 
             return instances
         except BotoCoreError as e:
-            self.logger.error("Error fetching EC2 instances for account {0}, reason: {1}", client_name, str(e))
+            self.logger.error(
+                "Error fetching EC2 instances for account {0}, reason: {1}", client_name, str(e))
             return "Server Error", 500
 
     def _clients_schema(self):
@@ -114,7 +119,8 @@ class AWSAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         for reservation in raw_data['Reservations']:
             for instance in reservation['Instances']:
-                tags_dict = {i['Key']: i['Value'] for i in instance.get('Tags', {})}
+                tags_dict = {i['Key']: i['Value']
+                             for i in instance.get('Tags', {})}
                 yield {
                     "name": tags_dict.get('Name', instance['KeyName']),
                     'OS': figure_out_os(instance['DescribedImage']['Description']

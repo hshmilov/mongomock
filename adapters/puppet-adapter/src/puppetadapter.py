@@ -19,7 +19,7 @@ class PuppetAdapter(AdapterBase):
     # Functions
     def __init__(self, **kargs):
         """Class initialization.
-        
+
         Check AdapterBase documentation for additional params and exception details.
         """
 
@@ -32,21 +32,22 @@ class PuppetAdapter(AdapterBase):
         for puppet_details in clients_config:
             try:
                 clients_dict[puppet_details["puppet_server_name"]] = PuppetServerConnection(
-                                                                      self.logger,
-                                                                      puppet_details['puppet_server_name'],
-                                                                      puppet_details['user_name'],
-                                                                      puppet_details['password'])
+                    self.logger,
+                    puppet_details['puppet_server_name'],
+                    puppet_details['user_name'],
+                    puppet_details['password'])
             except exceptions.PuppetException as e:
                 self.logger.error("Error getting information from puppet server {0}. reason: {1}".format(
-                                                                                 puppet_details["puppet_server_name"],
-                                                                                 str(e)))
+                    puppet_details["puppet_server_name"],
+                    str(e)))
             except KeyError as e:
                 if "puppet_server_name" in puppet_details:
                     self.logger.error("Key error for Puppet {0}. details: {1}".format(
-                                                                              puppet_details["puppet_server_name"],
-                                                                              str(e)))
+                        puppet_details["puppet_server_name"],
+                        str(e)))
                 else:
-                    self.logger.error("Missing Puppet name for configuration line")
+                    self.logger.error(
+                        "Missing Puppet name for configuration line")
 
         return clients_dict
 
@@ -89,7 +90,8 @@ class PuppetAdapter(AdapterBase):
         try:
             return client_data.get_device_list()
         except exceptions.PuppetException as e:
-            self.logger.error("Error while trying to get devices. Details: {0}", str(e))
+            self.logger.error(
+                "Error while trying to get devices. Details: {0}", str(e))
             return str(e), 500
 
     def _parse_raw_data(self, devices_raw_data):
@@ -97,7 +99,7 @@ class PuppetAdapter(AdapterBase):
             device_parsed = dict()
             device_parsed['name'] = device_raw['hostname']
             device_parsed['os'] = figure_out_os(device_raw["operatingsystem"] +
-                                                ' ' + device_raw["architecture"] + 
+                                                ' ' + device_raw["architecture"] +
                                                 ' ' + device_raw["kernel"])
             device_parsed['os']['major'] = device_raw["os"]['release']['major']
             if 'minor' in device_raw['os']['release']:
@@ -105,5 +107,5 @@ class PuppetAdapter(AdapterBase):
             device_parsed['id'] = device_raw[u'certname']
             device_parsed['raw'] = device_raw
             yield device_parsed
-    
+
     # Exported API functions - None for now

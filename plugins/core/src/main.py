@@ -12,7 +12,6 @@ import exceptions
 import uritools
 import uuid
 
-
 from flask import jsonify, request, Response
 from axonius.PluginBase import PluginBase, add_rule, return_error
 
@@ -20,7 +19,6 @@ CHUNK_SIZE = 1024
 
 
 class Core(PluginBase):
-
     def __init__(self, **kargs):
         """ Initialize all needed configurations
         """
@@ -50,10 +48,10 @@ class Core(PluginBase):
 
         # Building doc data so we won't register on PluginBase (Core doesnt need to register)
         core_data = {"plugin_unique_name": plugin_unique_name,
-                     "db_addr": db_addr, 
+                     "db_addr": db_addr,
                      "db_user": db_user,
                      "db_password": db_password,
-                     "log_addr": log_addr, 
+                     "log_addr": log_addr,
                      "api_key": api_key,
                      "status": "ok"}
 
@@ -66,13 +64,14 @@ class Core(PluginBase):
 
         self.online_plugins = {}
 
-        self._setup_images()  # TODO: Check if we should move it to another function 
+        self._setup_images()  # TODO: Check if we should move it to another function
         # (so we wont get register request before initializing the server here)
 
         self.adapters_lock = threading.Lock()
 
         # Create plugin cleaner thread
-        self.cleaner_thread = threading.Thread(target=self.clean_offline_plugins, name='plugins_cleaner')
+        self.cleaner_thread = threading.Thread(
+            target=self.clean_offline_plugins, name='plugins_cleaner')
         self.cleaner_thread.start()
 
     def clean_offline_plugins(self):
@@ -98,7 +97,8 @@ class Core(PluginBase):
                                 break
                             else:
                                 # The plugin didnt answer, removing the plugin subscription
-                                delete_list.append((plugin_unique_name, temp_list[plugin_unique_name]))
+                                delete_list.append(
+                                    (plugin_unique_name, temp_list[plugin_unique_name]))
 
                 with self.adapters_lock:
                     for delete_key, delete_value in delete_list:
@@ -110,7 +110,8 @@ class Core(PluginBase):
 
                 time.sleep(20)
             except Exception as e:
-                self.logger.critical("Cleaning plugins had an error. message: {0}", str(e))
+                self.logger.critical(
+                    "Cleaning plugins had an error. message: {0}", str(e))
 
     def _setup_images(self):
         """ Setting up needed images
@@ -134,7 +135,7 @@ class Core(PluginBase):
         try:
             # Trying a simple GET request for the version
             data = self._translate_url(plugin_unique_name + '/version')
-            final_url = uritools.uricompose(scheme='http', host=data['plugin_ip'], port=data['plugin_port'], 
+            final_url = uritools.uricompose(scheme='http', host=data['plugin_ip'], port=data['plugin_port'],
                                             path=data['path'])
 
             check_response = requests.get(final_url, timeout=60)
@@ -143,27 +144,35 @@ class Core(PluginBase):
                 return True
             else:
                 return False
-        
+
         except requests.exceptions.ConnectionError as e:
             # The plugin is currently offline
             return False
 
-    def _create_db_for_plugin(self, plugin_unique_name):
+    def _create_db_for_plugin(self, plugin_unique_name, plugin_special_db_credentials=None):
         """ Creates a db for new plugin.
-        This function will create a new database for the new plugin.
+        This function will create a new database for the new plugin and give it the correct credentials.
 
         :param str plugin_unique_name: The unique name of the new plugin
+        :param list plugin_special_db_credentials: A list of db's to get read-only role for them.
 
         :return db_user: The user name for this db
         :return db_password: The password for this db
         """
         db_user = plugin_unique_name
-        db_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+        db_password = ''.join(random.choices(
+            string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
-        db_connection[plugin_unique_name].add_user(db_user, 
-                                                   password=db_password, 
-                                                   roles=[{'role': 'dbOwner', 'db': plugin_unique_name}, 
-                                                          {'role': 'insert_notification', 'db': 'core'}])
+        roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
+                 {'role': 'insert_notification', 'db': 'core'}]
+
+        # TODO: Consider a way of requesting roles other than read-only.
+        if plugin_special_db_credentials is not None:
+            for current_requested_db_cred in plugin_special_db_credentials:
+                roles.append({'role': 'read', 'db': current_requested_db_cred})
+        db_connection[plugin_unique_name].add_user(db_user,
+                                                   password=db_password,
+                                                   roles=roles)
 
         return db_user, db_password
 
@@ -182,7 +191,7 @@ class Core(PluginBase):
             if self.get_method() == 'GET':
                 api_key = self.get_request_header('x-api-key')
                 if not api_key:
-                    # No api_key, Returning the current online plugins. This will be used by the aggregator 
+                    # No api_key, Returning the current online plugins. This will be used by the aggregator
                     # To find out which adapters are available
                     to_return_device = dict()
                     for plugin_name, plugin in self.online_plugins.items():
@@ -192,7 +201,7 @@ class Core(PluginBase):
                                                          'plugin_name': plugin['plugin_name']}
                     return jsonify(to_return_device)
                 else:
-                    # This is a registered check, we should get the plugin name (a parameter) and tell if its 
+                    # This is a registered check, we should get the plugin name (a parameter) and tell if its
                     # In our online list
                     unique_name = request.args.get('unique_name')
                     if unique_name in self.online_plugins:
@@ -200,22 +209,26 @@ class Core(PluginBase):
                             return 'OK'
                     # If we reached here than plugin is not registered, returning error
                     return return_error('Plugin not registered', 404)
-            
+
             # method == POST
             data = self.get_request_data_as_object()
 
             plugin_name = data['plugin_name']
             plugin_type = data['plugin_type']
             plugin_port = data['plugin_port']
+            plugin_special_db_credentials = data.get(
+                'special_db_credentials', None)
 
-            self.logger.info("Got registration request from {0}".format(plugin_name))
+            self.logger.info(
+                "Got registration request from {0}".format(plugin_name))
 
             relevant_doc = None
 
             if 'plugin_unique_name' in data:
                 # Plugin is trying to register with his own name
                 plugin_unique_name = data['plugin_unique_name']
-                self.logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
+                self.logger.info(
+                    "Plugin request to register with his own name: {0}".format(plugin_unique_name))
 
                 # Trying to get the configuration of the current plugin
                 relevant_doc = self._get_config(plugin_unique_name)
@@ -230,12 +243,13 @@ class Core(PluginBase):
                     # TODO: prompt message to gui that an unrecognized plugin is trying to connect
                     self.logger.warning("Plugin {0} request to register with "
                                         "unique name but with no api key".format(plugin_unique_name))
-                
+
                 # Checking if this plugin already online for some reason
                 if plugin_unique_name in self.online_plugins:
                     if self._check_plugin_online(plugin_unique_name):
                         # There is already a running plugin with the same name
-                        self.logger.error("Plugin {0} trying to register but already online")
+                        self.logger.error(
+                            "Plugin {0} trying to register but already online")
                         return return_error("Error - {0} is trying to register but already "
                                             "online".format(plugin_unique_name), 400)
                     else:
@@ -251,10 +265,11 @@ class Core(PluginBase):
                     plugin_unique_name = plugin_name + "_" + str(random_bits)
                     if not self._get_config(plugin_unique_name) and plugin_unique_name not in self.online_plugins:
                         break
-            if not relevant_doc:    
+            if not relevant_doc:
                 # Create a new plugin line
                 # TODO: Ask the gui for permission to register this new plugin
-                plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name)
+                plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name,
+                                                                          plugin_special_db_credentials)
                 doc = {
                     'plugin_unique_name': plugin_unique_name,
                     'plugin_name': plugin_name,
@@ -266,7 +281,7 @@ class Core(PluginBase):
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'log_addr': self.logstash_host,
-                    'device_sample_rate': 60,    # Default sample rate is 60 seconds
+                    'device_sample_rate': 60,  # Default sample rate is 60 seconds
                     'status': 'ok'
                 }
 
@@ -282,14 +297,15 @@ class Core(PluginBase):
             collection.replace_one(filter={'plugin_unique_name': doc['plugin_unique_name']},
                                    replacement=doc,
                                    upsert=True)
-                                   
+
             # This time it must work since we enterned the needed document
             relevant_doc = self._get_config(plugin_unique_name)
-            
+
             self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
-            self.logger.info("Plugin {0} registered successfuly!".format(relevant_doc['plugin_unique_name']))
+            self.logger.info("Plugin {0} registered successfuly!".format(
+                relevant_doc['plugin_unique_name']))
             return jsonify(relevant_doc)
 
     @add_rule("<path:full_url>", methods=['POST', 'GET'], should_authenticate=False)
@@ -302,11 +318,13 @@ class Core(PluginBase):
         :param str full_url: Full URL of the request
         """
         api_key = self.get_request_header('x-api-key')
-        
+
         # Checking api key
-        calling_plugin = next((plugin for plugin in self.online_plugins.values() if plugin['api_key'] == api_key), None)
+        calling_plugin = next((plugin for plugin in self.online_plugins.values(
+        ) if plugin['api_key'] == api_key), None)
         if calling_plugin is None:
-            self.logger.warning("Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
+            self.logger.warning(
+                "Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
             return return_error("Api key not valid", 401)
 
         try:
@@ -316,7 +334,7 @@ class Core(PluginBase):
 
         data = self.get_request_data()
 
-        final_url = uritools.uricompose(scheme='http', host=url_data['plugin_ip'], port=url_data['plugin_port'], 
+        final_url = uritools.uricompose(scheme='http', host=url_data['plugin_ip'], port=url_data['plugin_port'],
                                         path=url_data['path'], query=request.args)
 
         # Requesting the wanted plugin
@@ -325,13 +343,15 @@ class Core(PluginBase):
             'x-unique-plugin-name': calling_plugin['plugin_unique_name'],
             'x-plugin-name': calling_plugin['plugin_name']
         }
-        r = requests.request(self.get_method(), final_url, headers=headers, data=data)
+        r = requests.request(self.get_method(), final_url,
+                             headers=headers, data=data)
 
         headers = dict(r.headers)
 
         def generate():
             for chunk in r.iter_content(CHUNK_SIZE):
                 yield chunk
+
         return Response(generate(), headers=headers), r.status_code
 
     def _translate_url(self, full_url):
@@ -339,10 +359,10 @@ class Core(PluginBase):
 
         address_dict = self._get_plugin_addr(plugin.lower())
 
-        address_dict['path'] = '/'+'/'.join(url)
-        
-        return address_dict 
-    
+        address_dict['path'] = '/' + '/'.join(url)
+
+        return address_dict
+
     def _get_plugin_addr(self, plugin_unique_name):
         """ Get the plugin address from its unique_name/name.
 
@@ -367,12 +387,13 @@ class Core(PluginBase):
         unique_plugin = candidate_plugin['plugin_unique_name']
 
         relevant_doc = self._get_config(unique_plugin)
-        
+
         if not relevant_doc:
-            self.logger.warning("No online plugin found for {0}".format(plugin_unique_name))
+            self.logger.warning(
+                "No online plugin found for {0}".format(plugin_unique_name))
             return None, None
 
-        return {"plugin_ip": relevant_doc["plugin_ip"], 
+        return {"plugin_ip": relevant_doc["plugin_ip"],
                 "plugin_port": str(relevant_doc["plugin_port"]),
                 "api_key": relevant_doc["api_key"]}
 

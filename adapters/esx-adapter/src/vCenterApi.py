@@ -11,7 +11,8 @@ from datetime import datetime
 from namedlist import namedlist
 from pyVmomi import vim
 
-vCenterNode = namedlist('vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None)])
+vCenterNode = namedlist(
+    'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None)])
 
 
 def _is_vmomi_primitive(v):
@@ -50,6 +51,7 @@ def rawify_vcenter_data(folder):
 def _should_retry_fetching(exception):
     return isinstance(exception, vim.fault.NoPermission)
 
+
 class vCenterApi():
     def __init__(self, host, user, password, verify_ssl=False):
         """
@@ -68,9 +70,11 @@ class vCenterApi():
 
     def _connect(self):
         if self._verify_ssl:
-            session = connect.Connect(self._host, 443, self._user, self._password)
+            session = connect.Connect(
+                self._host, 443, self._user, self._password)
         else:
-            session = connect.ConnectNoSSL(self._host, 443, self._user, self._password)
+            session = connect.ConnectNoSSL(
+                self._host, 443, self._user, self._password)
         self._session = session
 
     def _parse_networking(self, vm):
@@ -111,7 +115,8 @@ class vCenterApi():
         summary = vm.summary
         attributes_from_summary = ['config', 'quickStats', 'guest', 'config', 'storage', 'runtime', 'overallStatus',
                                    'customValue']
-        details = {k: _take_just_primitives(summary.__getattribute__(k).__dict__) for k in attributes_from_summary}
+        details = {k: _take_just_primitives(summary.__getattribute__(
+            k).__dict__) for k in attributes_from_summary}
         details['networking'] = list(self._parse_networking(vm))
 
         return vCenterNode(Name=summary.config.name, Type="Machine", Details=details)

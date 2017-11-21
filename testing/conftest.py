@@ -6,7 +6,7 @@ from services.aggregator_service import AggregatorService
 from services.simple_fixture import initalize_fixture
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def axonius_fixture(request):
     mongo = MongoService()
     initalize_fixture(request, mongo)

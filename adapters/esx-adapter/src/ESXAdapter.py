@@ -27,11 +27,14 @@ class ESXAdapter(AdapterBase):
                                                 password=esx_auth['password'],
                                                 verify_ssl=esx_auth['verify_ssl'])
             except vim.fault.InvalidLogin as e:
-                self.logger.error("Credentials invalid for ESX client for account {0}".format(name))
+                self.logger.error(
+                    "Credentials invalid for ESX client for account {0}".format(name))
             except vim.fault.HostConnectFault as e:
-                self.logger.error("Unable to access vCenter, text={}, host = {}".format(e.msg, esx_auth['host']))
+                self.logger.error("Unable to access vCenter, text={}, host = {}".format(
+                    e.msg, esx_auth['host']))
             except Exception as e:
-                self.logger.error("Unknown error on account {}, text={}".format(name, str(e)))
+                self.logger.error(
+                    "Unknown error on account {}, text={}".format(name, str(e)))
 
         return clients_dict
 
@@ -52,7 +55,7 @@ class ESXAdapter(AdapterBase):
                 "password": {
                     "type": "string"
                 },
-                "verify_ssl": { # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
+                "verify_ssl": {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     "type": "bool"
                 }
             },
@@ -92,7 +95,8 @@ class ESXAdapter(AdapterBase):
             for child in node['Children']:
                 yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
         else:
-            raise RuntimeError("Found weird type of node: {}".format(node['Type']))
+            raise RuntimeError(
+                "Found weird type of node: {}".format(node['Type']))
 
     def _parse_network_device(self, raw_network):
         """

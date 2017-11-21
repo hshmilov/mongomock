@@ -17,7 +17,8 @@ SUBNET_ID = "subnet-4154273a"   # Our builds subnet.
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
 S3_ACCELERATED_ENDPOINT = "http://s3-accelerate.amazonaws.com"
-S3_EXPORT_URL_TIMEOUT = 3600    # 1 hour to use it before we generate a new one.
+# 1 hour to use it before we generate a new one.
+S3_EXPORT_URL_TIMEOUT = 3600
 
 DB_HOSTNAME = "builds.axonius.local"
 
@@ -40,10 +41,12 @@ class BuildsManager(object):
 
     def __init__(self):
         """Initialize the object."""
-        self.db = MongoClient(DB_HOSTNAME).builds  # This just connects to localhost
-        self.ec2 = boto3.resource("ec2")  # This assumes we have the credentials already set-up.
+        self.db = MongoClient(
+            DB_HOSTNAME).builds  # This just connects to localhost
+        # This assumes we have the credentials already set-up.
+        self.ec2 = boto3.resource("ec2")
 
-        self.ec2_client = boto3.client("ec2");
+        self.ec2_client = boto3.client("ec2")
         self.s3_client = boto3.client("s3")
         self.ecr_client = boto3.client("ecr")
 
@@ -55,7 +58,8 @@ class BuildsManager(object):
         :return: self.getImages.
         """
 
-        self.db.images.update_one({"repositoryName": repositoryName, "imageDigest": imageDigest}, {"$set": forms}, upsert=True)
+        self.db.images.update_one({"repositoryName": repositoryName, "imageDigest": imageDigest}, {
+                                  "$set": forms}, upsert=True)
 
     def getImages(self, repository_name=None):
         """
@@ -67,9 +71,11 @@ class BuildsManager(object):
         db_list = list(self.db.images.find({}))
 
         images_list = []
-        all_repositories = self.ecr_client.describe_repositories()['repositories']
+        all_repositories = self.ecr_client.describe_repositories()[
+            'repositories']
         for repository in all_repositories:
-            all_images = self.ecr_client.describe_images(repositoryName=repository['repositoryName'])['imageDetails']
+            all_images = self.ecr_client.describe_images(
+                repositoryName=repository['repositoryName'])['imageDetails']
 
             for image in all_images:
                 ecr = {
@@ -78,7 +84,7 @@ class BuildsManager(object):
                     "imagePushedAt": image['imagePushedAt'],
                     "size": sizeof_fmt(image['imageSizeInBytes']),
                     "imageTags": image['imageTags']
-                    }
+                }
 
                 db = {}
                 for d in db_list:
@@ -100,7 +106,8 @@ class BuildsManager(object):
 
     def deleteImage(self, repository_name=None, image_digest=None):
         # If we have an id, get the repo name and the digest by yourself.
-        self.ecr_client.batch_delete_image(repositoryName=repository_name, imageIds=[{'imageDigest': image_digest}])
+        self.ecr_client.batch_delete_image(repositoryName=repository_name, imageIds=[
+                                           {'imageDigest': image_digest}])
 
         return self.getImages()
 
@@ -112,7 +119,8 @@ class BuildsManager(object):
         and returns a presigned url we can transfer to anyone in order to download this resource.
         """
 
-        s3_accelerated_client = boto3.client("s3", endpoint_url=S3_ACCELERATED_ENDPOINT)
+        s3_accelerated_client = boto3.client(
+            "s3", endpoint_url=S3_ACCELERATED_ENDPOINT)
         url = s3_accelerated_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": S3_BUCKET_NAME_FOR_VM_EXPORTS, "Key": key_name},
@@ -122,7 +130,8 @@ class BuildsManager(object):
 
     def deleteExport(self, key):
         """Deletes an export. """
-        self.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_VM_EXPORTS, Key=key)
+        self.s3_client.delete_object(
+            Bucket=S3_BUCKET_NAME_FOR_VM_EXPORTS, Key=key)
 
         return self.getExports()
 
@@ -139,10 +148,10 @@ class BuildsManager(object):
             i["_id"] = str(i["_id"])
             exports_in_db_list.append(i)
 
-
         exports_list = []
         for o in object_list:
-            s3 = {"ETag": o["ETag"], "Key": o["Key"], "LastModified": o["LastModified"], "Size": sizeof_fmt(o["Size"])}
+            s3 = {"ETag": o["ETag"], "Key": o["Key"],
+                  "LastModified": o["LastModified"], "Size": sizeof_fmt(o["Size"])}
             db = {}
 
             for d in exports_in_db_list:
@@ -178,13 +187,13 @@ class BuildsManager(object):
         else:
             db_instances = self.db.instances.find({"ec2_id": ec2_id})
 
-
         # Get a list of all subnets and vpc's so we can query much faster
         subnets = list(self.ec2.subnets.all())
         vpcs = list(self.ec2.vpcs.all())
 
         # Get instance status. The only way to do this is with describe_instance_status
-        instance_statuses = self.ec2_client.describe_instance_status()['InstanceStatuses']
+        instance_statuses = self.ec2_client.describe_instance_status()[
+            'InstanceStatuses']
 
         instances_array = []
         for i in db_instances:
@@ -192,7 +201,8 @@ class BuildsManager(object):
             instances_array.append(i)
 
         # Lets get information about our instances.
-        ec2_instances = list(self.ec2.instances.filter(Filters=[{"Name": "tag:VM-Type", "Values": ["Builds-VM"]}]))
+        ec2_instances = list(self.ec2.instances.filter(
+            Filters=[{"Name": "tag:VM-Type", "Values": ["Builds-VM"]}]))
 
         # After we have this information, we need to build our joined array of information
         all_instances = []
@@ -219,16 +229,19 @@ class BuildsManager(object):
                     break
 
             if i.vpc is not None:
-                c_vpc = vpcs[vpcs.index(i.vpc)]   # a local copy we already have
+                # a local copy we already have
+                c_vpc = vpcs[vpcs.index(i.vpc)]
                 for tag in c_vpc.tags:
                     if tag["Key"] == "Name":
                         ec2_i["vpc_name"] = tag["Value"]
 
             if i.subnet is not None:
-                c_subnet = subnets[subnets.index(i.subnet)]   # a local copy we already have
+                # a local copy we already have
+                c_subnet = subnets[subnets.index(i.subnet)]
                 for tag in c_subnet.tags:
                     if tag["Key"] == "Name":
-                        ec2_i['subnet'] = "%s (%s)" % (tag["Value"], c_subnet.cidr_block)
+                        ec2_i['subnet'] = "%s (%s)" % (
+                            tag["Value"], c_subnet.cidr_block)
 
             db_i = {}
             for j in instances_array:
@@ -239,9 +252,9 @@ class BuildsManager(object):
 
             all_instances.append({"ec2": ec2_i, "db": db_i})
 
-
         # Sort by time of creation
-        all_instances.sort(key=lambda x: datetime.datetime.now() if (x['db'] == {}) else x['db']['date'], reverse=True)
+        all_instances.sort(key=lambda x: datetime.datetime.now() if (
+            x['db'] == {}) else x['db']['date'], reverse=True)
 
         # Convert all dates to strings
         for i in all_instances:
@@ -251,7 +264,7 @@ class BuildsManager(object):
         return all_instances
 
     def addInstance(self, name, owner, comments, configuration_name, configuration_code,
-                    image_id=IMAGE_ID, instance_type=INSTANCE_TYPE, 
+                    image_id=IMAGE_ID, instance_type=INSTANCE_TYPE,
                     key_name=KEY_NAME, subnet_id=SUBNET_ID):
         """As the name suggests, make a new instance."""
 
@@ -260,7 +273,7 @@ class BuildsManager(object):
         name_tag = [
             {"Key": "Name", "Value": "Builds-%s" % (name, )},
             {"Key": "VM-Type", "Value": "Builds-VM"}
-            ]
+        ]
 
         ts1 = {}
         ts1["ResourceType"] = "instance"
@@ -272,7 +285,7 @@ class BuildsManager(object):
         tags_specifications = [ts1, ts2]
 
         ec2_instances = self.ec2.create_instances(ImageId=image_id, InstanceType=instance_type, KeyName=key_name,
-                                                  MinCount=1, MaxCount=1, SubnetId=subnet_id, 
+                                                  MinCount=1, MaxCount=1, SubnetId=subnet_id,
                                                   TagSpecifications=tags_specifications,
                                                   UserData=configuration_code,
                                                   BlockDeviceMappings=[
@@ -302,7 +315,8 @@ class BuildsManager(object):
         self.ec2.instances.filter(InstanceIds=[ec2_id]).terminate()
 
         # Do not delete instances from the db. just update that they are terminated.
-        self.db.instances.update_one({"ec2_id": ec2_id}, {"$set": {"terminated": True}})
+        self.db.instances.update_one(
+            {"ec2_id": ec2_id}, {"$set": {"terminated": True}})
         # deleted = self.db.instances.delete_one({"ec2_id": ec2_id})
         return self.getInstances()
 
@@ -321,7 +335,8 @@ class BuildsManager(object):
         instance_db = self.getInstances(ec2_id=ec2_id)[0]
 
         result = self.ec2_client.create_instance_export_task(
-            Description="Export task of instance %s (%s)." % (ec2_id, instance_db['db']['name']),
+            Description="Export task of instance %s (%s)." % (
+                ec2_id, instance_db['db']['name']),
             InstanceId=ec2_id,
             TargetEnvironment='vmware',
             ExportToS3Task={
@@ -345,12 +360,12 @@ class BuildsManager(object):
         db_json['configuration_code'] = instance_db['db']['configuration_code']
         db_json['manifest'] = self.getManifest(ec2_id)
 
-
         self.db.exports.insert_one(db_json)
         return self.getExportsInProgress()
 
     def deleteConfiguration(self, object_id):
-        self.db.configurations.update_one({"_id": ObjectId(object_id)}, {"$set": {"deleted": True}})
+        self.db.configurations.update_one({"_id": ObjectId(object_id)}, {
+                                          "$set": {"deleted": True}})
         return self.getConfigurations()
 
     def getConfigurations(self):
@@ -359,7 +374,7 @@ class BuildsManager(object):
         # Get all configurations that have deleted: false or do not have deleted at all.
 
         all_configurations = list(self.db.configurations.find(
-            {"$or": [{"deleted": { "$exists": False}}, {"deleted": False}]}
+            {"$or": [{"deleted": {"$exists": False}}, {"deleted": False}]}
         ))
 
         # _id is not json serializable...
@@ -383,7 +398,8 @@ class BuildsManager(object):
                              "date": datetime.datetime.utcnow()}
 
         if object_id is not None:
-            self.db.configurations.update_one({"_id": ObjectId(object_id)}, {"$set": new_configuration})
+            self.db.configurations.update_one({"_id": ObjectId(object_id)}, {
+                                              "$set": new_configuration})
         else:
             self.db.configurations.insert_one(new_configuration)
 
@@ -449,7 +465,7 @@ class BuildsManager(object):
 
 def sizeof_fmt(num, suffix='B'):
     """Some internet function to get number of bytes and return a human readable version of it."""
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
         num /= 1024.0

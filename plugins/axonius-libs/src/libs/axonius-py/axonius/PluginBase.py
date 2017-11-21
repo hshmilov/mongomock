@@ -18,7 +18,8 @@ from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
 import json_log_formatter
 from pymongo import MongoClient
-from bson import ObjectId  # bson is requirement of mongo and its not recommended to install it manually
+# bson is requirement of mongo and its not recommended to install it manually
+from bson import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -29,10 +30,11 @@ from promise import Promise
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
 
-LOG_PATH = str(Path.home().joinpath('logs'))  # this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
+# this would be /home/axonius/logs, or c:\users\axonius\logs, etc.
+LOG_PATH = str(Path.home().joinpath('logs'))
 
-# Can wait up to 5 minutes if core didn't answer yet
-TIME_WAIT_FOR_REGISTER = 60*5
+# Can wait up to 5 minutes if core didnt answer yet
+TIME_WAIT_FOR_REGISTER = 60 * 5
 
 
 @AXONIUS_REST.after_request
@@ -43,14 +45,16 @@ def after_request(response):
     Modern browsers do not permit sending requests (especially post, put, etc) to differnet domains 
     without the explicit permission of the webserver on this domain. 
     This is why we have to add headers that say that we allow these methods from all domains.
-    
+
     :param str docker_base_url: The response of the client (Will change is headers)
 
     :return: Fixed response that allow other domain to send all methods
     """
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods',
+                         'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
 
@@ -68,7 +72,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
             This function will be accessed when browsing '/device'
     :param methods: Methods that this function will handle
     :param bool should_authenticate: Wheather to check api key or not. True by default
-    
+
     :type methods: list of str
     """
 
@@ -77,7 +81,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
 
         def actual_wrapper(self, *args, **kwargs):
             """This wrapper will catch every exception.
-            
+
             This wrapper will always cath exceptions from the decorated func. In that case, we return 
             the exception name with the Exception string.
             In case of exception, a detailed traceback will be sent to log
@@ -103,7 +107,8 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                         extra_log['err_traceback'] = tb
                         extra_log['err_type'] = err_type
                         extra_log['err_message'] = err_message
-                        logger.error("Unhandled exception thrown from plugin", extra=extra_log)
+                        logger.error(
+                            "Unhandled exception thrown from plugin", extra=extra_log)
                     return json.dumps({"status": "error", "type": err_type, "message": err_message}), 400
                 except Exception as second_err:
                     return json.dumps({"status": "error", "type": type(second_err).__name__,
@@ -153,7 +158,7 @@ class PluginBase(object):
 
     """
 
-    def __init__(self, core_data=None):
+    def __init__(self, core_data=None, special_db_credentials=None):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -193,7 +198,8 @@ class PluginBase(object):
                 # This is the default value, which is what nginx sets for us.
                 self.host = "0.0.0.0"
                 self.port = 443  # We listen on https.
-                self.core_address = "https://core"  # This should be dns resolved.
+                # This should be dns resolved.
+                self.core_address = "https://core"
 
         try:
             self.plugin_unique_name = temp_config['registration']['plugin_unique_name']
@@ -203,9 +209,11 @@ class PluginBase(object):
             pass
 
         if not core_data:
-            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
+            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key,
+                                       special_db_credentials)
         if not core_data or core_data['status'] == 'error':
-            raise RuntimeError("Register process failed, Existing. Reason: {0}".format(core_data['message']))
+            raise RuntimeError(
+                "Register process failed, Exiting. Reason: {0}".format(core_data['message']))
 
         if core_data['plugin_unique_name'] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
             self.plugin_unique_name = core_data['plugin_unique_name']
@@ -214,15 +222,12 @@ class PluginBase(object):
             temp_config['registration']['plugin_unique_name'] = self.plugin_unique_name
             temp_config['registration']['api_key'] = self.api_key
 
-            # Writing back the configuration with the new plugin name
-            with open('plugin_config.ini', 'w') as configfile:
-                config.write(configfile)
             with open('plugin_volatile_config.ini', 'w') as temp_config_file:
                 temp_config.write(temp_config_file)
 
         # Use the data we have from the core.
 
-        self.db_host = core_data['db_addr'] 
+        self.db_host = core_data['db_addr']
         self.db_user = core_data['db_user']
         self.db_password = core_data['db_password']
         self.logstash_host = core_data['log_addr']
@@ -242,7 +247,7 @@ class PluginBase(object):
                                       methods=wanted_methods)
 
         # Adding "keepalive" thread
-        if self.plugin_unique_name != "core": 
+        if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(5)}
             self.scheduler = BackgroundScheduler(executors=executors)
@@ -282,10 +287,12 @@ class PluginBase(object):
         I case we arent, this function will stop this application (and let the docker manager to run it again)
         """
         try:
-            response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name))
+            response = self.request_remote_plugin(
+                "register?unique_name={0}".format(self.plugin_unique_name))
             if response.status_code == 404:
                 self.logger.error("Not registered to core, Exiting")
-                os._exit(1)  # TODO: Think about a better way for exiting this process
+                # TODO: Think about a better way for exiting this process
+                os._exit(1)
         except Exception as e:
             self.comm_failure_counter += 1
             if self.comm_failure_counter > 12:  # Two minutes
@@ -294,10 +301,10 @@ class PluginBase(object):
                                    "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
-    @retry(wait_fixed=10*1000, 
-           stop_max_delay=60*5*1000, 
+    @retry(wait_fixed=10 * 1000,
+           stop_max_delay=60 * 5 * 1000,
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
-    def _register(self, core_address, plugin_unique_name=None, api_key=None):
+    def _register(self, core_address, plugin_unique_name=None, api_key=None, special_db_credentials=None):
         """Create registration of the adapter to core.
 
         :param str core_address: The address of the core plugin
@@ -309,11 +316,14 @@ class PluginBase(object):
                         "plugin_type": self.plugin_type,
                         "plugin_port": self.port
                         }
-        if plugin_unique_name:
+        if plugin_unique_name is not None:
             register_doc['plugin_unique_name'] = plugin_unique_name
-            if api_key:
+            if api_key is not None:
                 register_doc['api_key'] = api_key
-        
+
+        if special_db_credentials is not None:
+            register_doc['special_db_credentials'] = special_db_credentials
+
         response = requests.post(core_address, data=json.dumps(register_doc))
         return response.json()
 
@@ -337,21 +347,23 @@ class PluginBase(object):
                     extra['message'] = message
                     extra['plugin_unique_name'] = plugin_unique_name
                     current_time = datetime.utcfromtimestamp(record.created)
-                    extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+                    extra['@timestamp'] = current_time.strftime(
+                        '%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
-                    # Adding the frame details of the log message. 
-                    # This is in a different try because failing in this process does 
-                    # not mean failing in the format process, so we need a 
+                    # Adding the frame details of the log message.
+                    # This is in a different try because failing in this process does
+                    # not mean failing in the format process, so we need a
                     # different handling type for error in this part
                     try:
                         frame_stack = inspect.stack()
-                        # Currently we have a list with all frames. The first 2 frames are this logger frame, 
-                        # The next lines are the pythonic library. We want to skip all of these frames to reach 
+                        # Currently we have a list with all frames. The first 2 frames are this logger frame,
+                        # The next lines are the pythonic library. We want to skip all of these frames to reach
                         # the first frame that is not logging function. This is the function that created
                         # this log message.
-                        for current_frame in frame_stack[3:]:  # Skipping the first two lines (belogs to the formatter)
+                        # Skipping the first two lines (belogs to the formatter)
+                        for current_frame in frame_stack[3:]:
                             if (("lib" in current_frame.filename and "logging" in current_frame.filename) or
-                                        current_frame.function == 'emit'):
+                                    current_frame.function == 'emit'):
                                 # We are skipping this frame because it belongs to the pythonic logging lib. or
                                 # It belongs to the emit function (the function that sends the logs to logstash)
                                 continue
@@ -400,7 +412,7 @@ class PluginBase(object):
 
             def emit(self, record):
                 """ The callback that is called in each log message.
-                
+
                 This function will actually send the log to logstash. I order to be more efficient, log messages are
                 Not sent directly but instead this function saves a bulk of log messages and then send them together.
                 This will avoid the TCP/SSL connection overhead.
@@ -417,8 +429,8 @@ class PluginBase(object):
 
                     # Checking if we need to dump logs to the server
                     if ((len(self.currentLogs) > self.bulk_size or
-                       current_time - self.last_sent > self.max_time) and
-                       current_time - self.last_error_time > self.max_time):
+                         current_time - self.last_sent > self.max_time) and
+                            current_time - self.last_error_time > self.max_time):
                         self.last_sent = current_time
                         with requests.Session() as s:  # Sending all logs on one session
                             new_list = []
@@ -433,7 +445,8 @@ class PluginBase(object):
                                         # All the messages that we couldnt send
                                         new_list.append(log_line)
                                     else:
-                                        s.post(logstash_host, data=log_line, timeout=2)
+                                        s.post(logstash_host,
+                                               data=log_line, timeout=2)
 
                                 except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout,
                                         requests.exceptions.InvalidSchema):
@@ -443,17 +456,20 @@ class PluginBase(object):
                                     warning_count = warning_count + 1
                                 except Exception as e:
                                     exception_log = "Error while sending log. *Log is lost*. Error details: " \
-                                                    "type={0}, message={1}".format(type(e).__name__, str(e))
-                                    print("[fatal error]: %s" % (exception_log, ))
+                                                    "type={0}, message={1}".format(
+                                                        type(e).__name__, str(e))
+                                    print("[fatal error]: %s" %
+                                          (exception_log,))
                                     fatal_logger.error(exception_log)
                                     warning_count = warning_count + 1
                                     continue
-                                    # In any other cases, we should just try the other log lines 
+                                    # In any other cases, we should just try the other log lines
                                     # (This line will not be sent anymore)
                             if warning_count != 0:
-                                warning_message = "connection error occured {0} times while sending log."\
+                                warning_message = "connection error occured {0} times while sending log." \
                                     .format(warning_count)
-                                print("[fatal error]: %s." % (warning_message, ))
+                                print("[fatal error]: %s." %
+                                      (warning_message,))
                                 fatal_logger.warning(warning_message)
                                 if warning_count > self.warning_before_cooldown:
                                     self.last_error_time = time.time()
@@ -461,8 +477,9 @@ class PluginBase(object):
                         return ''
                 except Exception as e:  # We must catch every exception from the logger
                     # Nothing we can do here
-                    exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__, str(e))
-                    print("[fatal error]: %s" % (exception_message, ))
+                    exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__,
+                                                                                                      str(e))
+                    print("[fatal error]: %s" % (exception_message,))
                     fatal_logger.error(exception_message)
                     return 'Bad'
 
@@ -488,11 +505,12 @@ class PluginBase(object):
 
     def start_serve(self):
         """Start Http server.
-        
+
         This function is blocking as long as the Http server is up.
         .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
-        AXONIUS_REST.run(host=self.host, port=self.port, debug=True, use_reloader=False)
+        AXONIUS_REST.run(host=self.host, port=self.port,
+                         debug=True, use_reloader=False)
 
     def get_method(self):
         """Getting the method type of the request.
@@ -529,7 +547,8 @@ class PluginBase(object):
         """
         post_data = self.get_request_data()
         if post_data:
-            decodedData = post_data.decode('utf-8')  # To make it string instead of bytes
+            # To make it string instead of bytes
+            decodedData = post_data.decode('utf-8')
             data = json.loads(decodedData)
             return data
         else:
@@ -559,12 +578,14 @@ class PluginBase(object):
         headers = {'x-api-key': self.api_key}
         if 'headers' in kwargs:
             headers.update(kwargs['headers'])
-            del kwargs['headers']  # this does not change the original dict given to this method
+            # this does not change the original dict given to this method
+            del kwargs['headers']
 
         if plugin_unique_name is None:
             url = '{}/{}'.format(self.core_address, resource)
         else:
-            url = '{}/{}/{}'.format(self.core_address, plugin_unique_name, resource)
+            url = '{}/{}/{}'.format(self.core_address,
+                                    plugin_unique_name, resource)
 
         return requests.request(method, url,
                                 headers=headers, **kwargs)
@@ -594,14 +615,17 @@ class PluginBase(object):
         :return: if verify_single: single plugin data or None; if not verify_single: all plugin datas
         """
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
-        plugins_available = requests.get(self.core_address + '/register').json()
-        found_plugins = [x for x in plugins_available.values() if x['plugin_name'] == plugin_name]
+        plugins_available = requests.get(
+            self.core_address + '/register').json()
+        found_plugins = [x for x in plugins_available.values(
+        ) if x['plugin_name'] == plugin_name]
 
         if verify_single:
             if len(found_plugins) == 0:
                 return None
             if len(found_plugins) != 1:
-                raise RuntimeError(f"There are {len(found_plugins)} plugins or {plugin_name}, there should only be one")
+                raise RuntimeError(
+                    "There are {0} plugins or {1}, there should only be one".format(len(found_plugins), plugin_name))
             return found_plugins[0]
         else:
             return found_plugins
@@ -609,12 +633,13 @@ class PluginBase(object):
     @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):
         """ /version - Get the version of the app.
-        
+
         Accepts:
             GET - In order to retrieve the plugin version
         """
 
-        version_object = {"plugin": self.version, "axonius-libs": self.lib_version}
+        version_object = {"plugin": self.version,
+                          "axonius-libs": self.lib_version}
 
         return jsonify(version_object)
 
@@ -681,7 +706,8 @@ class PluginBase(object):
                 action_promise.do_resolve(request_content)
             return ''
         else:
-            self.logger.error('Got unrecognized action_id update. Action ID: {0}'.format(action_id))
+            self.logger.error(
+                'Got unrecognized action_id update. Action ID: {0}'.format(action_id))
             return return_error('Unrecognized action_id {0}'.format(action_id), 404)
 
     def request_action(self, action_type, axon_id, data_for_action=None):
@@ -701,10 +727,10 @@ class PluginBase(object):
 
         # Building the uri for the request
         uri = f"action/{action_type}?axon_id={axon_id}"
-            
+
         result = self.request_remote_plugin(uri,
                                             plugin_unique_name='execution',
-                                            method='POST', 
+                                            method='POST',
                                             data=json.dumps(data))
 
         action_id = result.json()['action_id']
@@ -762,7 +788,8 @@ class PluginBase(object):
             schema_func = getattr(self, schema_type)
             return jsonify(schema_func())
         else:
-            self.logger.warning("Someone tried to get wrong schema '{0}'".format(schema_type))
+            self.logger.warning(
+                "Someone tried to get wrong schema '{0}'".format(schema_type))
             return return_error("No such schema. should implement {0}".format(schema_type), 400)
 
     def _general_schema(self):

@@ -48,8 +48,8 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                            response.status_code >= 300 or
-                            'Content-Encoding' in response.headers):
+                    response.status_code >= 300 or
+                        'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
                 compressed = io.BytesIO()
@@ -205,12 +205,15 @@ class GUIPlugin(PluginBase):
 
     def _get_aggregator(self):
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
-        plugins_available = requests.get(self.core_address + '/register').json()
-        aggregator_plugin = [x for x in plugins_available.values() if x['plugin_name'] == 'aggregator_plugin']
+        plugins_available = requests.get(
+            self.core_address + '/register').json()
+        aggregator_plugin = [x for x in plugins_available.values(
+        ) if x['plugin_name'] == 'aggregator_plugin']
         if len(aggregator_plugin) == 0:
             return None
         if len(aggregator_plugin) != 1:
-            raise RuntimeError(f"There are {len(aggregator_plugin)} aggregators, there should only be one")
+            raise RuntimeError(
+                f"There are {len(aggregator_plugin)} aggregators, there should only be one")
         return aggregator_plugin[0]
 
     def _query_aggregator(self, resource, *args, **kwargs):
@@ -233,7 +236,8 @@ class GUIPlugin(PluginBase):
         """
         with self._get_db_connection(False) as db_connection:
             parsed_db = db_connection[self._aggregator_unique_plugin_name]['parsed']
-            device = parsed_db.find_one({'id': device_id}, sort=[('_id', pymongo.DESCENDING)])
+            device = parsed_db.find_one({'id': device_id}, sort=[
+                                        ('_id', pymongo.DESCENDING)])
             if device is None:
                 return return_error("Device not found", 404)
             return jsonify(beautify_db_entry(device))
@@ -255,7 +259,8 @@ class GUIPlugin(PluginBase):
                             {"$first": "$$ROOT"}
                         }
         else:
-            group_by = {field_name: {'$first': '$' + db_path} for field_name, db_path in fields}
+            group_by = {field_name: {'$first': '$' + db_path}
+                        for field_name, db_path in fields}
             group_by['_id'] = "$data.id"
             group_by['date_fetcher'] = {"$first": "$_id"}
 
@@ -308,9 +313,11 @@ class GUIPlugin(PluginBase):
             filter_to_add = request.get_json(silent=True)
             if filter_to_add is None:
                 return return_error("Invalid filter", 400)
-            filter_data, filter_name = filter_to_add.get('filter'), filter_to_add.get('name')
+            filter_data, filter_name = filter_to_add.get(
+                'filter'), filter_to_add.get('name')
             filters_collection.update({'name': filter_name},
-                                      {'filter': filter_data, 'name': filter_name, 'deleted': False},
+                                      {'filter': filter_data,
+                                          'name': filter_name, 'deleted': False},
                                       upsert=True)
             return ""
 
@@ -333,9 +340,8 @@ class GUIPlugin(PluginBase):
         :return: dict
         """
 
-        clients_value = db_connection[unique_plugin_name]['adapter_schema'].find_one(sort=
-                                                                                     [('adapter_version',
-                                                                                       pymongo.DESCENDING)])
+        clients_value = db_connection[unique_plugin_name]['adapter_schema'].find_one(sort=[('adapter_version',
+                                                                                            pymongo.DESCENDING)])
         if clients_value is None:
             return {}
         return {'clients': clients_value.get('schema')}
@@ -396,7 +402,8 @@ class GUIPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            db_connection[adapter_unique_name]['clients'].delete_one({'_id': ObjectId(client_id)})
+            db_connection[adapter_unique_name]['clients'].delete_one(
+                {'_id': ObjectId(client_id)})
             return ""
 
     @add_rule_unauthenticated("api/config/<config_name>", methods=['POST', 'GET'])
