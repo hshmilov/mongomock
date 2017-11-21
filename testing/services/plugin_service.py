@@ -71,11 +71,15 @@ class AdapterService(PluginService):
         super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
                          vol_config_file_path=vol_config_file_path)
 
+    def add_client(self, db, clients_details):
+        db.add_client(self.unique_name, clients_details)
+        return self.clients()  # post to clients forces a refresh!
+
     def devices(self):
-        raise NotImplemented("TBD!")
+        return requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
 
     def clients(self):
-        raise NotImplemented("TBD!")
+        return requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
 
     def action(self, action_type):
         raise NotImplemented("TBD!")

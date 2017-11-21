@@ -184,8 +184,7 @@ class AdapterBase(PluginBase, ABC):
         """
         # Running query on each device
         for client_name, client in self._clients.items():
-            raw_devices = list(
-                self._query_devices_by_client(client_name, client))
+            raw_devices = self._query_devices_by_client(client_name, client)
             parsed_devices = list(self._parse_raw_data(raw_devices))
             devices_list = {'raw': raw_devices,
                             'parsed': parsed_devices}
