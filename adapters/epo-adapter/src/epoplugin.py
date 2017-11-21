@@ -1,5 +1,6 @@
 from axonius.AdapterBase import AdapterBase
 from axonius.ParsingUtils import figure_out_os
+import json
 
 import mcafee
 
@@ -83,12 +84,13 @@ class EpoPlugin(AdapterBase):
         }
 
     def _parse_raw_data(self, raw_data):
+        raw_data = json.loads(raw_data)
         for device_raw_data in raw_data:
             yield {
                 'name': device_raw_data['EPOComputerProperties.ComputerName'],
-                'os': figure_out_os(parse_os_details(device_raw_data)),
+                'os': parse_os_details(device_raw_data),
                 'id': device_raw_data['EPOLeafNode.AgentGUID'],
-                'raw': device_raw_data}
+                'raw': json.dumps(device_raw_data)}
 
     def _query_devices_by_client(self, client_name, client_data):
         host = client_data[EPO_HOST]
@@ -100,7 +102,9 @@ class EpoPlugin(AdapterBase):
         table = mc.run("core.listTables", table=LEAF_NODE_TABLE)
 
         all_linked_tables = get_all_linked_tables(table)
-        return mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
+        raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
+                     joinTables=all_linked_tables)
+        return json.dumps(raw)
 
     def _parse_clients_data(self, clients_config):
         clients = {}
