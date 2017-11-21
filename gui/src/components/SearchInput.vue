@@ -1,6 +1,7 @@
 <template>
     <div class="input-group search-input">
-        <input type="text" v-model="searchValue" class="search-value form-control" @input="updateSearchValue()">
+        <input type="text" v-model="searchValue" class="search-value form-control" @input="updateSearchValue()"
+               :placeholder="placeholder">
         <span class="input-group-addon"><i class="icon-search"></i></span>
     </div>
 </template>
@@ -8,7 +9,7 @@
 <script>
     export default {
         name: 'search-input',
-        props: [ 'value' ],
+        props: [ 'value', 'placeholder' ],
         data() {
             return {
                 searchValue: this.value

@@ -25,13 +25,9 @@ const newAlert = {
 
 export const alert = {
 	state: {
-		/*
-			All alerts
-		 */
+		/* All alerts */
 		alertList: {fetching: false, data: [], error: ''},
-		/*
-			Statically defined fields that should be presented for each alert, in this order
-		 */
+		/* Statically defined fields that should be presented for each alert, in this order */
 		fields: [
 			{ path: 'severity', name: 'Severity', default: true, type: 'status' },
 			{ path: 'name', name: 'Name', default: true, control: 'text'},
@@ -39,9 +35,7 @@ export const alert = {
 			{ path: 'type', name: 'Source', default: true, type: 'type' },
 			{ path: 'message', name: 'Alert Info', default: true }
 		],
-		/*
-			Data of alert currently being configured
-		 */
+		/* Data of alert currently being configured */
 		currentAlert: { fetching: false, data: { ...newAlert }, error: '' }
 	},
 	getters: {
