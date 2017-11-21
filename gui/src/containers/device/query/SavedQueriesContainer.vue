@@ -45,7 +45,7 @@
 		methods: {
             ...mapMutations({
 				useQuery: USE_SAVED_QUERY,
-                restartDevice: RESTART_DEVICES
+                restartDevices: RESTART_DEVICES
             }),
 			...mapActions({
 				fetchQueries: FETCH_SAVED_QUERIES,
@@ -53,7 +53,7 @@
 			}),
             runQuery(queryId) {
             	this.useQuery(queryId)
-                this.restartDevice()
+                this.restartDevices()
                 this.$router.push({name: 'Devices'})
             },
 			removeQuery (queryId) {

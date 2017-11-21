@@ -26,7 +26,6 @@
 
     .checkbox {
         position: relative;
-        width: 24px;
         line-height: 24px;
         input[type=checkbox] {
             visibility: hidden;

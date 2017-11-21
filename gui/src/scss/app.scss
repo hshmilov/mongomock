@@ -180,6 +180,15 @@ a.btn:not([href]):not([tabindex]) {
   }
 }
 
+.row {
+  margin-left: -12px;
+  margin-right: -12px;
+}
+.row.row-divider {
+  border-top: 1px solid $border-color;
+  padding-top: 12px;
+}
+
 /*******************
 Scrollbar
 *******************/

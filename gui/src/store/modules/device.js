@@ -60,13 +60,7 @@ export const device = {
 			'splunk_adapter': 'Splunk'
 		}
 	},
-	getters: {
-		deviceNames (state) {
-			return state.deviceList.data.map(function (device) {
-				return device['name']
-			})
-		}
-	},
+	getters: {},
 	mutations: {
 		[ RESTART_DEVICES ] (state) {
 			state.deviceList.data = []

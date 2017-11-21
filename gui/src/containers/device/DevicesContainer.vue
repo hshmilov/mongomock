@@ -4,7 +4,8 @@
             <span slot="cardActions">
                 <!-- Actions for the header of the query card and apply to currently filled query -->
                 <action-bar :actions="[
-                  { name: 'Save Query', perform: openSaveQuery }
+                    { title: 'Save Query', handler: openSaveQuery },
+                    { title: 'Create Alert', handler: createAlert }
                 ]"></action-bar>
             </span>
             <template slot="cardContent">
@@ -20,7 +21,7 @@
                     (in next section). Form content and trigger input's value sync on every change.
                     -->
                     <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery"
-                                  :horizontal="true" @input="extractValue()" @submit="executeQuery()"></generic-form>
+                                  @input="extractValue()" @submit="executeQuery()"></generic-form>
                 </dropdown-menu>
                 <!-- Button controlling the execution of currently filled query -->
                 <a class="btn" @click="executeQuery()">go</a>
@@ -39,7 +40,7 @@
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
                     <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
-                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="fields"
+                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="totalFields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
             </div>
@@ -107,12 +108,11 @@
 		mixins: [clickaway],
 		computed: {
 			...mapState(['device', 'query']),
-			...mapGetters(['deviceNames']),
-			fields () {
+            totalFields() {
 				return [ ...this.device.fields.common, ...this.device.fields.unique ]
-			},
+            },
             deviceFields() {
-				return this.fields.filter((field) => {
+				return this.totalFields.filter((field) => {
 					return this.selectedFields.indexOf(field.path) > -1
 				})
 			},
@@ -165,7 +165,7 @@
 			this.fetchTags()
 			this.selectedQuery = {...this.query.currentQuery}
 			this.queryDropdown.value = queryToStr(this.selectedQuery)
-			this.selectedFields = this.fields.filter(function (field) {
+			this.selectedFields = this.totalFields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
 				return field.path
@@ -206,15 +206,19 @@
 					callback: () => this.saveQueryModal.open = false
 				})
 			},
+            createAlert() {
+
+            },
 			saveTags () {
-				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags || !this.selectedTags.length) {
+				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags
+                    || !this.selectedTags.length) {
 					return
 				}
 				this.saveDeviceTags({devices: this.selectedDevices, tags: this.selectedTags})
 			},
-			executeQuickView (deviceId) {
+			executeQuickView (event, deviceId) {
 				this.fetchDevice(deviceId)
-                this.$el.querySelector(`.table-row.${deviceId}`).add('active')
+                this.$el.querySelector(`.table-row[data-id='${deviceId}']`).classList.add('active')
 				this.infoDialogOpen = true
 			},
 			closeQuickView () {

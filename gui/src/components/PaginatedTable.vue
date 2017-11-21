@@ -15,10 +15,10 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr :class="`table-row ${record['id']}`" v-bind:class="{ active: recordSelection[record['id']] }"
+                <tr class="table-row" v-bind:class="{ active: recordSelection[record.id] }" :data-id="record.id"
                     v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
                     <td class="table-row-data">
-                        <checkbox v-if="value !== undefined" v-model="recordSelection[record['id']]"
+                        <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
                                   @change="updateSelected()"></checkbox>
                     </td>
                     <td class="table-row-data" v-for="field in fields">

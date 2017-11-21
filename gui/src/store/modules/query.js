@@ -3,6 +3,7 @@ import { REQUEST_API } from '../actions'
 export const SAVE_QUERY = 'SAVE_QUERY'
 export const UPDATE_QUERY = 'UPDATE_QUERY'
 export const ADD_SAVED_QUERY = 'ADD_SAVED_QUERY'
+export const ARCHIVE_SAVED_QUERY = 'ARCHIVE_SAVED_QUERY'
 export const REMOVE_SAVED_QUERY = 'REMOVE_SAVED_QUERY'
 export const ADD_EXECUTED_QUERY = 'ADD_EXECUTED_QUERY'
 export const RESTART_QUERIES = 'RESTART_QUERIES'
@@ -11,14 +12,11 @@ export const FETCH_SAVED_QUERIES = 'FETCH_SAVED_QUERIES'
 export const UPDATE_EXECUTED_QUERIES = 'UPDATE_EXECUTED_QUERIES'
 export const FETCH_EXECUTED_QUERIES = 'FETCH_EXECUTED_QUERIES'
 export const USE_SAVED_QUERY = 'USE_SAVED_QUERY'
-export const ARCHIVE_SAVED_QUERY = 'ARCHIVE_SAVED_QUERY'
 
 
 export const strToQuery = (str) => {
 	let query = {}
-	if (!str) {
-		return query
-	}
+	if (!str) { return query }
 	let andParts = str.split(' AND ')
 	andParts.forEach(function (andPart) {
 		let matchObject = andPart.match(/\(.*\)/)
@@ -67,11 +65,6 @@ export const queryToStr = (query) => {
 	return andParts.join(' AND ')
 }
 
-const pad2 = (number) => {
-	if ((number + '').length === 2) { return number }
-	return `0${number}`
-}
-
 const updateQueries = (currentQueries, payload) => {
 	/* Freshly fetched devices are added to currently stored devices */
 	currentQueries.fetching = payload.fetching
@@ -92,6 +85,7 @@ const updateQueries = (currentQueries, payload) => {
 const fetchQueries = (dispatch, payload) => {
 	/* Fetch list of queries for requested page and filtering */
 	if (!payload.skip) { payload.skip = 0 }
+	if (!payload.limit) { payload.limit = -1 }
 	let param = `?limit=${payload.limit}&skip=${payload.skip}`
 	if (payload.filter) {
 		param += `&filter=${JSON.stringify(payload.filter)}`
@@ -120,7 +114,16 @@ export const query = {
 		]
 
 	},
-	getters: {},
+	getters: {
+		savedQueryOptions(state) {
+			return state.savedQueries.data.map(function(query_obj) {
+				return {
+					value: JSON.stringify(strToQuery(query_obj.query)),
+					name: query_obj.query_name
+				}
+			})
+		}
+	},
 	mutations: {
 		[ADD_SAVED_QUERY] (state, payload) {
 			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
@@ -199,16 +202,16 @@ export const query = {
 
 			})
 		},
-		[ ARCHIVE_SAVED_QUERY ] ({dispatch, commit}, payload) {
-			if (!payload) { return }
+		[ ARCHIVE_SAVED_QUERY ] ({dispatch, commit}, queryId) {
+			if (!queryId) { return }
 			dispatch(REQUEST_API, {
-				rule: `api/queries/${payload}`,
+				rule: `api/queries/${queryId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response !== '') {
 					return
 				}
-				commit(REMOVE_SAVED_QUERY, payload)
+				commit(REMOVE_SAVED_QUERY, queryId)
 			})
 		}
 	}
