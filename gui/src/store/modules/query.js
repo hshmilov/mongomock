@@ -16,7 +16,7 @@ export const USE_SAVED_QUERY = 'USE_SAVED_QUERY'
 
 export const strToQuery = (str) => {
 	let query = {}
-	if (!str) { return query }
+	if (!str || str === '*') { return query }
 	let andParts = str.split(' AND ')
 	andParts.forEach(function (andPart) {
 		let matchObject = andPart.match(/\(.*\)/)
@@ -72,6 +72,7 @@ const updateQueries = (currentQueries, payload) => {
 		let processedData = []
 		payload.data.forEach(function (currentQuery) {
 			processedData.push({ ...currentQuery,
+				raw_query: currentQuery.query,
 				query: queryToStr(JSON.parse(currentQuery.query))
 			})
 		})
@@ -105,12 +106,12 @@ export const query = {
 		savedFields: [
 			{path: 'query_name', name: 'Name', default: true},
 			{path: 'query', name: 'query', default: true},
-			{path: 'timestamp', name: 'Date Time', type: 'timestamp', default: true},
+			{path: 'timestamp', name: 'Save Time', type: 'timestamp', default: true},
 		],
 		executedFields: [
 			{path: 'query', name: 'query', default: true},
 			{path: 'device_count', name: 'Devices', default: true},
-			{path: 'timestamp', name: 'Date Time', type: 'timestamp', default: true},
+			{path: 'timestamp', name: 'Execution Time', type: 'timestamp', default: true},
 		]
 
 	},
@@ -118,7 +119,7 @@ export const query = {
 		savedQueryOptions(state) {
 			return state.savedQueries.data.map(function(query_obj) {
 				return {
-					value: JSON.stringify(strToQuery(query_obj.query)),
+					value: query_obj.raw_query,
 					name: query_obj.query_name
 				}
 			})
@@ -128,6 +129,7 @@ export const query = {
 		[ADD_SAVED_QUERY] (state, payload) {
 			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
 			state.savedQueries.data = [ { ...payload,
+				query_name: payload.name,
 				query: queryToStr(payload.query),
 				'timestamp': new Date().getTime()
 			}, ...state.savedQueries.data ]

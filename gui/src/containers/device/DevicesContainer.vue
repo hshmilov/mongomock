@@ -4,8 +4,7 @@
             <span slot="cardActions">
                 <!-- Actions for the header of the query card and apply to currently filled query -->
                 <action-bar :actions="[
-                    { title: 'Save Query', handler: openSaveQuery },
-                    { title: 'Create Alert', handler: createAlert }
+                    { title: 'Save Query', handler: openSaveQuery }
                 ]"></action-bar>
             </span>
             <template slot="cardContent">
@@ -48,7 +47,7 @@
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fields="deviceFields" :fetchData="fetchDevices"
                                  v-model="selectedDevices" :filter="query.currentQuery"
-                                 :actions="[{ handler: executeQuickView, trigger: 'icon-eye'}]"></paginated-table>
+                                 :actions="[{ handler: executeQuickView, triggerFont: 'icon-eye'}]"></paginated-table>
                 <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
                     <div class="d-flex flex-row justify-content-between p-3">
                         <div>{{ device.deviceDetails.name }}</div>
@@ -206,9 +205,6 @@
 					callback: () => this.saveQueryModal.open = false
 				})
 			},
-            createAlert() {
-
-            },
 			saveTags () {
 				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags
                     || !this.selectedTags.length) {

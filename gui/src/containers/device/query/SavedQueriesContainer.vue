@@ -21,6 +21,7 @@
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import { FETCH_SAVED_QUERIES, USE_SAVED_QUERY, ARCHIVE_SAVED_QUERY } from '../../../store/modules/query'
     import { RESTART_DEVICES } from '../../../store/modules/device'
+    import { UPDATE_ALERT_QUERY } from '../../../store/modules/alert'
 
 	export default {
 		name: 'saved-queries-container',
@@ -32,8 +33,9 @@
 			...mapState(['query']),
             queryActions() {
                 return [
-                    {trigger: 'icon-play', handler: this.runQuery},
-                    {trigger: 'icon-trash-o', handler: this.removeQuery}
+                    {triggerIcon: 'alert', handler: this.createAlert},
+                    {triggerFont: 'icon-play', handler: this.runQuery},
+                    {triggerFont: 'icon-trash-o', handler: this.removeQuery}
                 ]
             }
 		},
@@ -45,12 +47,21 @@
 		methods: {
             ...mapMutations({
 				useQuery: USE_SAVED_QUERY,
-                restartDevices: RESTART_DEVICES
+                restartDevices: RESTART_DEVICES,
+                updateAlertQuery: UPDATE_ALERT_QUERY
             }),
 			...mapActions({
 				fetchQueries: FETCH_SAVED_QUERIES,
 				archiveQuery: ARCHIVE_SAVED_QUERY
 			}),
+            createAlert(queryId) {
+            	this.query.savedQueries.data.forEach((query) => {
+            		 if (query.id === queryId) {
+            		 	this.updateAlertQuery(query.raw_query)
+                     }
+                })
+                this.$router.push({ path: '/alert/new'})
+            },
             runQuery(queryId) {
             	this.useQuery(queryId)
                 this.restartDevices()

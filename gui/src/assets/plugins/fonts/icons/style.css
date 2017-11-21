@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'axonius';
-  src:  url('axonius.eot?6w26w8');
-  src:  url('axonius.eot?6w26w8#iefix') format('embedded-opentype'),
-    url('axonius.ttf?6w26w8') format('truetype'),
-    url('axonius.woff?6w26w8') format('woff'),
-    url('axonius.svg?6w26w8#axonius') format('svg');
+  src:  url('axonius.eot?q2f1r3');
+  src:  url('axonius.eot?q2f1r3#iefix') format('embedded-opentype'),
+    url('axonius.ttf?q2f1r3') format('truetype'),
+    url('axonius.woff?q2f1r3') format('woff'),
+    url('axonius.svg?q2f1r3#axonius') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -24,6 +24,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.icon-dashboard:before {
+  content: "\e909";
+}
 .icon-save:before {
   content: "\e902";
 }
@@ -54,6 +57,9 @@
 .icon-calendar:before {
   content: "\e904";
 }
+.icon-pencil2:before {
+  content: "\e90b";
+}
 .icon-user2:before {
   content: "\e005";
 }
@@ -74,6 +80,9 @@
 }
 .icon-settings:before {
   content: "\e09a";
+}
+.icon-dashboard2:before {
+  content: "\e90a";
 }
 .icon-format_list_bulleted:before {
   content: "\e908";
@@ -107,10 +116,4 @@
 }
 .icon-bell-o:before {
   content: "\f0a2";
-}
-.icon-play-circle:before {
-  content: "\f144";
-}
-.icon-pause-circle:before {
-  content: "\f28b";
 }

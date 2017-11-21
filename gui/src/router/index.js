@@ -28,12 +28,12 @@ export default new Router({
             component: DevicesContainer,
         },
 		{
-			path: '/device/query/bookmark',
+			path: '/device/query/saved',
 			name: 'Saved Queries',
 			component: SavedQueriesContainer
 		},
 		{
-			path: '/device/query/history',
+			path: '/device/query/executed',
 			name: 'Queries History',
 			component: ExecutedQueriesContainer
 		},
