@@ -216,7 +216,7 @@
 				}
 				this.saveDeviceTags({devices: this.selectedDevices, tags: this.selectedTags})
 			},
-			executeQuickView (event, deviceId) {
+			executeQuickView (deviceId) {
 				this.fetchDevice(deviceId)
                 this.$el.querySelector(`.table-row[data-id='${deviceId}']`).classList.add('active')
 				this.infoDialogOpen = true

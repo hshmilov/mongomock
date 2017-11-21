@@ -34,7 +34,7 @@
                         </template>
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                        <a v-for="action in actions" class="table-row-action" @click="action.handler($event, record['id'])">
+                        <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
                             <i :class="action.trigger"></i>
                         </a>
                     </td>
