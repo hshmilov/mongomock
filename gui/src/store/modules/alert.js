@@ -66,6 +66,7 @@ export const alert = {
 				payload.data.forEach(function(alert) {
 					let message = 'No change detected'
 					if (alert.triggered) {
+						/* Condition was met - updating to informative message, according to criteria */
 						switch (alert.criteria) {
 							case 0:
 								message = 'Change'
@@ -127,6 +128,10 @@ export const alert = {
 			state.currentAlert.data = { ...newAlert }
 		},
 		[ UPDATE_ALERT_QUERY ] (state, query) {
+			/*
+				Create new alert with given query to current alert, for creating the next alert with it.
+				Clicking on new alert, or edit of existing will override it.
+			 */
 			state.currentAlert.data = { ...newAlert,
 				query: query
 			}
