@@ -5,7 +5,7 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/plugins/aggregator-plugin/docker-compose.yml]:aggregator/python3" />
+    <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/plugins/aggregator-plugin/docker-compose.yml]:aggregator/python3.6" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/plugins/aggregator-plugin/src" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
