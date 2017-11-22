@@ -38,7 +38,7 @@
                 </dropdown-menu>
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
-                    <svg-icon slot="dropdownTrigger" name="actions/add_field" height="20" width="20" :original="true"></svg-icon>
+                    <svg-icon slot="dropdownTrigger" name="actions/add_field" height="24" :original="true"></svg-icon>
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="totalFields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
@@ -265,6 +265,7 @@
             .svg-icon {
                 margin-right: 24px;
                 margin-top: 4px;
+                padding: 2px;
                 .svg-stroke {
                     stroke: $color-text;
                     stroke-width: 20px;
