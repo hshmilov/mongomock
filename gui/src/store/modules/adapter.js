@@ -6,13 +6,16 @@ export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const adapter = {
 	state: {
 		/* All adapters */
-		adapterList: {fetching: false, data: [], error: ''},
+		adapterList: {fetching: false, data: [
+			{status: 'success', state: 'Connected', plugin_name: 'ad_adapter', name: 'Active Directory',
+				description: 'Manages Windows devices', connected_servers: 20 }
+		], error: ''},
 		/* Statically defined fields that should be presented for each adapter, in this order  */
 		fields: [
 			{path: 'name', name: 'Name', type: 'status-icon-logo-text'},
 			{path: 'description', name: 'Description'},
 			{path: 'connected_servers', name: 'Connected Servers'},
-			{path: 'status', name: 'Status'}
+			{path: 'state', name: 'State'}
 		]
 	},
 	getters: {},

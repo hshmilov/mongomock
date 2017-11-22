@@ -21,10 +21,7 @@
                                   @change="updateSelected()"></checkbox>
                     </td>
                     <td class="table-row-data" v-for="field in fields">
-                        <template v-if="field.type === undefined || !field.type || field.type=='text'">
-                            <span>{{ record[field.path] || '&nbsp' }}</span>
-                        </template>
-                        <template v-else-if="field.type === 'timestamp'">
+                        <template v-if="field.type === 'timestamp'">
                             <span>{{parseDate(record[field.path])}} {{parseTime(record[field.path])}}</span>
                         </template>
                         <template v-else-if="field.type === 'status'">
@@ -33,9 +30,12 @@
                         <template v-else-if="field.type === 'type'">
                             <type-icon :value="record[field.path]"></type-icon>
                         </template>
-                        <template v-else-if="field.type.indexOf('list') > -1">
+                        <template v-else-if="field.type && field.type.indexOf('list') > -1">
                             <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
                                          :data="record[field.path]" :limit="3"></object-list>
+                        </template>
+                        <template v-else>
+                            <span>{{ record[field.path]}}</span>
                         </template>
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
