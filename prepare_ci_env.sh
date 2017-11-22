@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+docker rmi $(docker images -q --filter=reference='axonius/*')
+
 echo "Build axoinius libs"
 (
 docker stop axonius/core axonius/aggregator
