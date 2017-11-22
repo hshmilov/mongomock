@@ -7,7 +7,7 @@ __author__ = "Mark Segal"
 
 import concurrent.futures
 
-from axonius.PluginBase import PluginBase, add_rule
+from axonius.PluginBase import PluginBase, add_rule, return_error
 from abc import ABC, abstractmethod
 from flask import jsonify
 import json

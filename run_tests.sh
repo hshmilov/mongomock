@@ -20,6 +20,11 @@ echo "Finished unitests"
 echo "Start integration tests"
 cd ./testing
 timeout 500 python run_tests.py
+if [ $? -ne 0 ]
+then
+  echo "Integration tests failed"
+  exit 1
+fi
 echo "Finished integration tests"
 
 cd ..
