@@ -70,7 +70,7 @@
                 .btn {
                     overflow: visible;
                     position: absolute;
-                    bottom: 0;
+                    bottom: 12px;
                 }
             }
             .image-list {
@@ -95,49 +95,6 @@
         }
         &.row {
             margin: 12px -12px;
-        }
-    }
-    .form-material {
-        .form-group {
-            overflow: hidden;
-            .form-control {
-                background-color: rgba(0, 0, 0, 0);
-                background-position: center bottom, center calc(100% - 1px);
-                background-repeat: no-repeat;
-                background-size: 0 2px, 100% 1px;
-                padding: 0;
-                transition: background 0s ease-out 0s;
-                height: 30px;
-            }
-            &.col, &.col-1 {
-                margin-bottom: 0;
-            }
-            &.col-1 {
-                text-align: center;
-                vertical-align: middle;
-                line-height: 50px;
-                overflow: visible;
-            }
-        }
-        &.row {
-            margin: 20px -15px;
-        }
-
-        .form-control,
-        .form-control.focus,
-        .form-control:focus {
-            background-image: linear-gradient($color-theme, $color-theme), linear-gradient($border-color, $border-color);
-            border: 0 none;
-            border-radius: 0;
-            box-shadow: none;
-            float: none;
-        }
-
-        .form-control.focus,
-        .form-control:focus {
-            background-size: 100% 2px, 100% 1px;
-            outline: 0 none;
-            transition-duration: 0.3s;
         }
     }
 
