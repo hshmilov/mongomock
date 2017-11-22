@@ -151,7 +151,7 @@
 		},
 		methods: {
 			pad2(number) {
-				if ((number + '').length === 2) { return number }
+				if ((number + '').length >= 2) { return number }
 				return `0${number}`
             },
             parseDate(timestamp) {
