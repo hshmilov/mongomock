@@ -30,6 +30,7 @@
 	import SearchInput from '../../components/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
+    import { FETCH_ADAPTER } from '../../store/modules/adapter'
 
     export default {
         name: 'adapters-container',
@@ -43,7 +44,13 @@
             }
         },
         methods: {
+            ...mapActions({ fetchAdapter: FETCH_ADAPTER }),
         	configAdapter(adapterId) {
+            	/*
+            	    Fetch adapter requested to be configured asynchronously, before navigating to the
+            	    configuration page, so it will return meanwhile
+            	 */
+            	this.fetchAdapter(adapterId)
                 this.$router.push({path: `adapter/${adapterId}`})
             },
             quickViewAdapter(adapterId) {
@@ -56,8 +63,7 @@
 
 <style lang="scss">
     .adapters {
-        :not(.row) > .row {
-            margin-top: 12px;
+        .row {
             .form-group {
                 margin-bottom: 0;
                 &.filter-status {

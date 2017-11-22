@@ -1,6 +1,6 @@
 <template>
     <scrollable-page :title="`alerts > ${alertData.name? alertData.name : 'new'} alert`">
-        <card title="alert configuration" class="alert-config">
+        <card title="configure" class="alert-config">
             <template slot="cardContent">
                 <form @keyup.enter="saveAlert">
                     <div class="row">
@@ -86,7 +86,7 @@
 
     import { mapState, mapGetters, mapActions } from 'vuex'
     import { FETCH_SAVED_QUERIES } from '../../store/modules/query'
-    import { FETCH_ALERT, INSERT_ALERT } from '../../store/modules/alert'
+    import { FETCH_ALERT, UPDATE_ALERT } from '../../store/modules/alert'
 
 	export default {
 		name: 'alert-config-container',
@@ -113,7 +113,7 @@
             }
         },
         methods: {
-            ...mapActions({ fetchAlert: FETCH_ALERT, fetchQueries: FETCH_SAVED_QUERIES, insertAlert: INSERT_ALERT }),
+            ...mapActions({ fetchAlert: FETCH_ALERT, fetchQueries: FETCH_SAVED_QUERIES, updateAlert: UPDATE_ALERT }),
             updateCriteria() {
             	/* Update the matching criteria value, according to the conditions' values */
 				if (this.alertCondition.increase && this.alertCondition.decrease) {
@@ -147,7 +147,7 @@
 					return
                 }
                 /* Save and return to alerts page */
-                this.insertAlert(this.alertData)
+                this.updateAlert(this.alertData)
 				this.returnToAlerts()
             },
             returnToAlerts() {

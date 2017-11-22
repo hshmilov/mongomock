@@ -33,5 +33,4 @@
             margin-left: 12px;
         }
     }
-
 </style>

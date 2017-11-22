@@ -221,11 +221,15 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
     padding: 12px 24px;
     .form-group-header {
       color: $color-theme;
+      .svg-stroke { stroke: $color-theme }
+      .svg-fill { fill: $color-theme }
       font-size: 20px;
       .form-group-title {
         margin-left: 8px;
       }
     }
+  }
+  &.row-divider {
     .checkbox, .custom-select {
       margin: 12px 24px;
     }

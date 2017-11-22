@@ -11,7 +11,8 @@
             <tr v-for="record in data" class="table-row">
                 <td v-for="field, index in fields" class="table-row-data">
                     <template v-if="field.type === 'status-icon-logo-text'">
-                        <status-icon-logo-text :textValue="record[field.path]" :logoValue="record['id']"
+                        <status-icon-logo-text :textValue="`${record[field.path]} (${record['id']})`"
+                                               :logoValue="record['type']"
                                                :statusIconValue="record['status']"></status-icon-logo-text>
                     </template>
                     <template v-else>

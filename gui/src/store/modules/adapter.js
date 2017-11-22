@@ -2,13 +2,15 @@ import { REQUEST_API } from '../actions'
 
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
-export const SAVE_ADAPTER = 'SAVE_ADAPTER'
+export const FETCH_ADAPTER = 'FETCH_ADAPTER'
+export const SET_ADAPTER = 'SET_ADAPTER'
+export const UPDATE_ADAPTER = 'UPDATE_ADAPTER'
 
 export const adapter = {
 	state: {
 		/* All adapters */
 		adapterList: {fetching: false, data: [
-			{status: 'success', state: 'Connected', id: 'ad_adapter', name: 'Active Directory',
+			{status: 'success', state: 'Connected', id: 'ad_adapter_123', type: 'ad_adapter', name: 'Active Directory',
 				description: 'Manages Windows devices', connected_servers: 20 }
 		], error: ''},
 		/* Statically defined fields that should be presented for each adapter, in this order  */
@@ -20,7 +22,18 @@ export const adapter = {
 		],
 		currentAdapter: { fetching: false, data: {
 			id: 'ad_adapter',
-			name: 'Active Directory'
+			name: 'Active Directory',
+			fields: [
+				{ path: 'status', name: '', type: 'status-icon'},
+				{ path: 'name', name: 'Name'},
+				{ path: 'ip', name: 'IP Address'},
+				{ path: 'last_updated', name: 'Last Updated', type: 'timestamp'}
+			],
+			servers: [
+				{ status: 'success', name: 'DC-Main', ip: '192.168.4.1', last_updated: new Date().getTime()},
+				{ status: 'error', name: 'DC-Secondary', ip: '192.168.4.2', last_updated: new Date().getTime()},
+				{ status: 'warning', name: 'DC-Secondary', ip: '192.168.4.3', last_updated: new Date().getTime()}
+			]
 		}, error: ''}
 	},
 	getters: {},
@@ -32,6 +45,13 @@ export const adapter = {
 			}
 			if (payload.error) {
 				state.adapterList.error = payload.error
+			}
+		},
+		[ SET_ADAPTER ] (state, payload) {
+			state.currentAdapter.fetching = payload.fetching
+			state.currentAdapter.error = payload.error
+			if (payload.data) {
+				state.currentAdapter.data = { ...payload.data }
 			}
 		}
 	},
@@ -54,7 +74,17 @@ export const adapter = {
 				type: UPDATE_ADAPTERS
 			})
 		},
-		[ SAVE_ADAPTER ] ({dispatch}, payload) {
+		[ FETCH_ADAPTER ] ({dispatch}, adapterId) {
+			/*
+				Fetch a single adapter with all its clients and schema and stuff, according to given id
+			 */
+			if (!adapterId) { return }
+			dispatch(REQUEST_API, {
+				rule: `api/adapters/${adapterId}`,
+				type: SET_ADAPTER
+			})
+		},
+		[ UPDATE_ADAPTER ] ({dispatch}, payload) {
 			dispatch(REQUEST_API, {
 				rule: `api/adapters/${payload.id}`,
 				method: 'POST',
