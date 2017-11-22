@@ -2,41 +2,78 @@
     <scrollable-page :title="`alerts > ${alertData.name? alertData.name : 'new'} alert`">
         <card title="alert configuration" class="alert-config">
             <template slot="cardContent">
-                <div class="row">
-                    <!-- Section for alert name and query to run by -->
-                    <div class="form-group col-6">
-                        <label class="form-label" for="alertName">Alert Name:</label>
-                        <input class="form-control" id="alertName" v-model="alertData.name">
-                    </div>
-                    <div class="form-group col-6">
-                        <label class="form-label" for="alertQuery">Select Query:</label>
-                        <select class="form-control" id="alertQuery" v-model="alertData.query">
-                            <option v-for="query in savedQueryOptions" :value="query.value">{{query.name}}</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row row-divider">
-                    <!-- Section for defining the condition which match of will trigger the alert -->
-                    <div class="form-group col-6">
-                        <div class="form-section-header">
-                            <i class="icon-equalizer2"></i><span class="form-section-title">Test Condition</span>
+                <form @keyup.enter="saveAlert">
+                    <div class="row">
+                        <!-- Section for alert name and query to run by -->
+                        <div class="form-group col-6">
+                            <label class="form-label" for="alertName">Alert Name:</label>
+                            <input class="form-control" id="alertName" v-model="alertData.name">
                         </div>
-                        <checkbox label="Devices result increases" v-model="alertCondition.increase"
-                                  @change="updateCriteria()"></checkbox>
-                        <checkbox label="Devices result decreases" v-model="alertCondition.decrease"
-                                  @change="updateCriteria()"></checkbox>
-                    </div>
-                </div>
-                <div class="row row-divider">
-                    <!-- Section for defining what action will occur upon trigger -->
-                    <div class="form-group col-6">
-                        <div class="form-section-header">
-                            <i class="icon-bell-o"></i><span class="form-section-title">Trigger Action</span>
+                        <div class="form-group col-6">
+                            <label class="form-label" for="alertQuery">Select Saved Query:</label>
+                            <select class="form-control" id="alertQuery" v-model="alertData.query">
+                                <option v-for="query in savedQueryOptions" :value="query.value"
+                                        :selected="query.value === alertData.query">{{query.name}}</option>
+                            </select>
                         </div>
-                        <checkbox label="Add a notification" v-model="alertData.action.notification"></checkbox>
                     </div>
-                    <a class="btn" @click="saveAlert">save</a>
-                </div>
+                    <div class="row row-divider">
+                        <!-- Section for defining the condition which match of will trigger the alert -->
+                        <div class="form-group col-6">
+                            <div class="form-section-header">
+                                <i class="icon-equalizer2"></i><span class="form-section-title">Alert Condition</span>
+                            </div>
+                            <checkbox label="Increase in devices number" v-model="alertCondition.increase"
+                                      @change="updateCriteria()"></checkbox>
+                            <checkbox label="Decrease in devices number" v-model="alertCondition.decrease"
+                                      @change="updateCriteria()"></checkbox>
+                        </div>
+                    </div>
+                    <div class="row row-divider">
+                        <!-- Section for defining how often conditions will be tested and how to present results -->
+                        <div class="form-group col-6">
+                            <div class="form-section-header">
+                                <i class="icon-calendar"></i><span class="form-section-title">Schedule</span>
+                            </div>
+                            <select class="form-select col-4" :disabled="true">
+                                <option :disabled="true" :selected="true">Always</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-6">
+                            <div class="form-section-header">
+                                <i class="icon-graph"></i><span class="form-section-title">Presentation</span>
+                            </div>
+                            <select class="form-select col-4" :disabled="true">
+                                <option :disabled="true" :selected="true">Select report type...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row row-divider">
+                        <!-- Section for defining what action will occur upon trigger -->
+                        <div class="form-group col-6">
+                            <div class="form-section-header">
+                                <i class="icon-bell-o"></i><span class="form-section-title">Share and Notify</span>
+                            </div>
+                            <checkbox label="Add a system notification" v-model="alertData.notification"></checkbox>
+                            <checkbox label="Send an email" :disabled="true"></checkbox>
+                            <checkbox label="Add to Dashboard" :disabled="true"></checkbox>
+                        </div>
+                        <div class="form-group col-6">
+                            <div class="form-section-header">
+                                <i class="icon-dashboard"></i><span class="form-section-title">Trigger Action</span>
+                            </div>
+                            <select class="form-select col-4" :disabled="true">
+                                <option :disabled="true" :selected="true">Select Plugin...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group action-group">
+                            <a class="btn btn-inverse" @click="returnToAlerts">cancel</a>
+                            <a class="btn" @click="saveAlert">save</a>
+                        </div>
+                    </div>
+                </form>
             </template>
         </card>
     </scrollable-page>
@@ -56,21 +93,13 @@
 		name: 'alert-config-container',
         computed: {
             ...mapState([ 'alert', 'query' ]),
-            ...mapGetters([ 'savedQueryOptions' ])
+            ...mapGetters([ 'savedQueryOptions' ]),
+            alertData() {
+            	return this.alert.currentAlert.data
+            }
         },
         data() {
 			return {
-				/* Init data for a new alert, to be replaced for editing page */
-				alertData: {
-                    id: this.$route.params.id,
-                    name: '',
-                    criteria: undefined,
-                    query: '',
-                    action: {
-                    	notification: false
-                    },
-                    retrigger: false
-                },
                 /* Control of the criteria parameter with the use of two conditions */
                 alertCondition: {
 					increase: false,
@@ -78,6 +107,11 @@
                 }
             }
 		},
+        watch: {
+			alertData: function(newAlertData) {
+				this.updateCondition()
+            }
+        },
         methods: {
             ...mapActions({ fetchAlert: FETCH_ALERT, fetchQueries: FETCH_SAVED_QUERIES, insertAlert: INSERT_ALERT }),
             updateCriteria() {
@@ -109,8 +143,14 @@
                 if (!this.alertData.name) {
 					return
                 }
+                if (!this.alertData.query) {
+					return
+                }
                 /* Save and return to alerts page */
                 this.insertAlert(this.alertData)
+				this.returnToAlerts()
+            },
+            returnToAlerts() {
 				this.$router.push({name: 'Alerts'})
             }
         },
@@ -119,24 +159,13 @@
 			    If no alert from data source, try and fetch it.
 			    Otherwise, if alert from data source has correct id, update local alert data with its values
 			 */
-            if (!this.alert.currentAlert.data || !this.alert.currentAlert.data.id
-                ||  (this.alert.currentAlert.data.id !== this.alertData.id)) {
-                this.fetchAlert(this.alertData.id)
-            } else if (this.alert.currentAlert.data.id === this.alertData.id) {
-                this.alertData = { ...this.alertData, ...this.alert.currentAlert.data }
-                this.updateCondition()
+            if (!this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
+                this.fetchAlert(this.$route.params.id)
             }
 			/* Fetch all saved queries for offering user to base alert upon */
 			if (!this.savedQueryOptions || !this.savedQueryOptions.length) {
 				this.fetchQueries({})
             }
-        },
-        updated() {
-			/* If data was fetched on created stage, it should be synced to local data upon updated stage */
-			if (!this.alertData.name && this.alert.currentAlert.data.id === this.alertData.id) {
-				this.alertData = { ...this.alertData, ...this.alert.currentAlert.data }
-				this.updateCondition()
-			}
         }
 	}
 </script>
@@ -156,14 +185,13 @@
                         margin-left: 8px;
                     }
                 }
-                .checkbox {
+                .form-select, .checkbox {
                     margin: 12px 24px;
                 }
-            }
-            .btn {
-                position: absolute;
-                bottom: 0;
-                right: 24px;
+                &.action-group {
+                    width: 100%;
+                    text-align: right;
+                }
             }
         }
     }

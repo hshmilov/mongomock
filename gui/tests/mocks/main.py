@@ -393,16 +393,15 @@ def alerts():
             result = result.limit(limit)
         alertList = []
         for doc in result:
-            alertList.append({'id': str(doc['_id']),
-                              'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
-                              'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'],
-                              'notification': doc['action']['notification'] if doc.get('action') else False})
+            alertList.append({'id': str(doc['_id']), 'name': doc['name'] if doc.get('name') else '',
+                              'timestamp': doc['timestamp'], 'criteria': doc['criteria'], 'query': doc['query'],
+                              'retrigger': doc['retrigger'], 'notification': doc['notification']})
         return jsonify(alertList)
     elif request.method == 'POST':
         data = json.loads(request.data.decode('utf-8'))
         result = mongo_client['api']['alerts'].insert_one({
-            'query': json.dumps(data['query']), 'type': 'Manual', 'timestamp': datetime.now(),
-            'name': data['name'], 'criteria': data['criteria'], 'notification': data['action']['notification'],
+            'query': data['query'], 'type': 'Manual', 'timestamp': datetime.now(),
+            'name': data['name'], 'criteria': data['criteria'], 'notification': data['notification'],
             'retrigger': data['retrigger']
         })
         return str(result.inserted_id), 200
@@ -415,10 +414,8 @@ def edit_alert(alert_id):
         doc = mongo_client['api']['alerts'].find(
             {'_id': ObjectId(alert_id)})[0]
         return jsonify({
-            'id': str(doc['_id']),
-            'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
-            'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'],
-            'notification': doc['action']['notification'] if doc.get('action') else False
+            'id': str(doc['_id']), 'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
+            'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'], 'notification': doc['notification']
         })
     elif request.method == 'DELETE':
         mongo_client['api']['alerts'].update_one(
@@ -428,15 +425,14 @@ def edit_alert(alert_id):
         return '', 200
     elif request.method == 'POST':
         data = json.loads(request.data.decode('utf-8'))
-        result = mongo_client['api']['alerts'].update_one(
+        mongo_client['api']['alerts'].update_one(
             {'_id': ObjectId(alert_id)},
-            {
-                'query': json.dumps(data['query']), 'type': 'Manual', 'timestamp': datetime.now(),
-                'name': data['name'], 'criteria': data['criteria'], 'notification': data['action']['notification'],
+            {'$set': {
+                'query': data['query'], 'criteria': data['criteria'], 'notification': data['notification'],
                 'retrigger': data['retrigger']
-            }
+            }}
         )
-        return str(result.inserted_id), 200
+        return '', 200
 
 
 @app.route('/src/<path:filename>')

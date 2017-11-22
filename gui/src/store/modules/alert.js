@@ -7,9 +7,21 @@ export const UPDATE_ALERT = 'UPDATE_ALERT'
 export const ARCHIVE_ALERT = 'ARCHIVE_ALERT'
 export const REMOVE_ALERT = 'REMOVE_ALERT'
 export const RESTART_ALERTS = 'RESTART_ALERTS'
+export const RESTART_ALERT = 'RESTART_ALERT'
 export const INSERT_ALERT = 'INSERT_ALERT'
 export const ADD_ALERT = 'ADD_ALERT'
+export const UPDATE_ALERT_QUERY = 'UPDATE_ALERT_QUERY'
 
+const newAlert = {
+	id: 'new',
+	name: '',
+	criteria: undefined,
+	query: '',
+	notification: false,
+	retrigger: true,
+	severity: 'error',
+	triggered: false
+}
 
 export const alert = {
 	state: {
@@ -21,16 +33,24 @@ export const alert = {
 			Statically defined fields that should be presented for each alert, in this order
 		 */
 		fields: [
-			{ path: 'name', name: 'Name', selected: true, default: true, control: 'text'},
-			{ path: 'timestamp', name: 'Date Time', type: 'timestamp', selected: true, default: true },
-			{ path: 'type', name: 'Triggered', selected: true, default: true }
+			{ path: 'severity', name: 'Severity', default: true, type: 'status' },
+			{ path: 'name', name: 'Name', default: true, control: 'text'},
+			{ path: 'timestamp', name: 'Creation Time', type: 'timestamp', default: true, control: 'text' },
+			{ path: 'type', name: 'Source', default: true, type: 'type' },
+			{ path: 'message', name: 'Alert Info', default: true }
 		],
 		/*
 			Data of alert currently being configured
 		 */
-		currentAlert: { fetching: false, data: {}, error: '' }
+		currentAlert: { fetching: false, data: { ...newAlert }, error: '' }
 	},
-	getters: {},
+	getters: {
+		filterFields(state) {
+			return state.fields.filter((field) => {
+				return field.control !== undefined
+			})
+		}
+	},
 	mutations: {
 		[ UPDATE_ALERTS ] (state, payload) {
 			/*
@@ -44,7 +64,27 @@ export const alert = {
 			if (payload.data) {
 				let processedData = []
 				payload.data.forEach(function(alert) {
-					processedData.push({ ...alert, type: 'Manual'})
+					let message = 'No change detected'
+					if (alert.triggered) {
+						/* Condition was met - updating to informative message, according to criteria */
+						switch (alert.criteria) {
+							case 0:
+								message = 'Change'
+								break
+							case 1:
+								message = 'Increase'
+								break
+							case -1:
+								message = 'Decrease'
+								break
+						}
+						message += ' detected in query result'
+					}
+					processedData.push({ ...alert,
+						severity: 'error',
+						type: 'User defined by: Administrator',
+						message: message
+					})
 				})
 				state.alertList.data = [ ...state.alertList.data, ...processedData ]
 			}
@@ -59,7 +99,9 @@ export const alert = {
 			 */
 			state.currentAlert.fetching = payload.fetching
 			if (payload.data) {
-				state.currentAlert.data = { ...payload.data }
+				state.currentAlert.data = { ...payload.data,
+					query: payload.data.query.replace(/\\/g, '')
+				}
 			}
 			if (payload.error) {
 				state.currentAlert.error = payload.error
@@ -78,8 +120,21 @@ export const alert = {
 				Add given payload as an object in the beginning of the current alert list
 			 */
 			state.alertList.data = [{
-				...payload, 'timestamp': new Date().getTime()
+				...payload, 'timestamp': new Date().getTime(),
+				type: 'User defined by: Administrator'
 			}, ...state.alertList.data ]
+		},
+		[ RESTART_ALERT ] (state) {
+			state.currentAlert.data = { ...newAlert }
+		},
+		[ UPDATE_ALERT_QUERY ] (state, query) {
+			/*
+				Create new alert with given query to current alert, for creating the next alert with it.
+				Clicking on new alert, or edit of existing will override it.
+			 */
+			state.currentAlert.data = { ...newAlert,
+				query: query
+			}
 		}
 	},
 	actions: {

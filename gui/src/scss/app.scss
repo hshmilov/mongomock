@@ -112,6 +112,18 @@ Formatting
   color: $color-error;
 }
 
+.error-fill {
+  background-color: $background-color-error;
+}
+
+.warning-fill {
+  background-color: $color-yellow;
+}
+
+.success-fill {
+  background-color: $color-success;
+}
+
 /*******************
 Components
 *******************/
@@ -129,6 +141,7 @@ Components
   -webkit-transition: 0.2s ease-in;
   -o-transition: 0.2s ease-in;
   transition: 0.2s ease-in;
+  display: inline;
   &:hover {
     -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
     box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
@@ -142,6 +155,10 @@ Components
 
 a.btn:not([href]):not([tabindex]) {
   color: $color-light;
+}
+
+a.btn.btn-inverse:not([href]):not([tabindex]) {
+  color: $color-theme;
 }
 
 .tag-item {

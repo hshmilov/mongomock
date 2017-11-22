@@ -27,6 +27,12 @@
                         <template v-else-if="field.type === 'timestamp'">
                             <span>{{parseDate(record[field.path])}} {{parseTime(record[field.path])}}</span>
                         </template>
+                        <template v-else-if="field.type === 'status'">
+                            <status-icon :value="record[field.path]"></status-icon>
+                        </template>
+                        <template v-else-if="field.type === 'type'">
+                            <type-icon :value="record[field.path]"></type-icon>
+                        </template>
                         <template v-else-if="field.type.indexOf('list') > -1">
                             <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
                                          :data="record[field.path]" :limit="3"></object-list>
@@ -34,7 +40,9 @@
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                         <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
-                            <i :class="action.trigger"></i>
+                            <i v-if="action.triggerFont" :class="action.triggerFont"></i>
+                            <svg-icon :name="`navigation/${action.triggerIcon}`" height="24" width="24" :original="true"
+                                      v-else></svg-icon>
                         </a>
                     </td>
                 </tr>
@@ -65,11 +73,14 @@
 <script>
 	import Checkbox from './Checkbox.vue'
 	import ObjectList from './ObjectList.vue'
-	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+  import StatusIcon from './StatusIcon.vue'
+  import TypeIcon from './TypeIcon.vue'
+  import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+	import './icons/navigation'
 
 	export default {
 		name: 'paginated-table',
-		components: {Checkbox, ObjectList, PulseLoader},
+		components: { VueSimpleSpinner, Checkbox, ObjectList, StatusIcon, TypeIcon, PulseLoader },
 		props: [
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
 		],
@@ -151,7 +162,7 @@
 		},
 		methods: {
 			pad2(number) {
-				if ((number + '').length >= 2) { return number }
+				if ((number + '').length === 2) { return number }
 				return `0${number}`
             },
             parseDate(timestamp) {
@@ -302,6 +313,8 @@
                 }
                 .table-row-actions a {
                     visibility: visible;
+                    .svg-stroke {  stroke: $color-text;  }
+                    .svg-fill {  fill: $color-text;  }
                 }
             }
             .table-row-data {
@@ -321,6 +334,8 @@
                     padding-right: 8px;
                     &:hover {
                         color: $color-theme;
+                        .svg-stroke {  stroke: $color-theme;  }
+                        .svg-fill {  fill: $color-theme;  }
                     }
                     i {
                         vertical-align: middle;

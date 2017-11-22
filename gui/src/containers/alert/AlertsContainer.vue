@@ -2,7 +2,7 @@
     <scrollable-page title="alerts">
         <card title="filter">
             <!-- Form containing the fields that alert table can be filtered by -->
-            <generic-form slot="cardContent" :schema="alert.fields" submitLabel="go" @submit="executeFilter"></generic-form>
+            <generic-form slot="cardContent" :schema="filterFields" submitLabel="go" @submit="executeFilter"></generic-form>
         </card>
         <card :title="`alerts (${alert.alertList.data.length})`">
             <span slot="cardActions">
@@ -24,21 +24,22 @@
 	import ActionBar from '../../components/ActionBar.vue'
     import PaginatedTable from '../../components/PaginatedTable.vue'
 
-	import { mapState, mapMutations, mapActions } from 'vuex'
-    import { FETCH_ALERTS, FETCH_ALERT, ARCHIVE_ALERT } from '../../store/modules/alert'
+	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+    import { FETCH_ALERTS, FETCH_ALERT, ARCHIVE_ALERT, RESTART_ALERT } from '../../store/modules/alert'
 
     export default {
         name: 'alert-container',
         components: { ScrollablePage, Card, GenericForm, ActionBar, PaginatedTable },
 		computed: {
             ...mapState(['alert']),
+            ...mapGetters(['filterFields']),
             alertActions() {
             	/*
             	    Optional actions for a specific alert in table - can be removed to configured
             	 */
             	return [
-                    { handler: this.configAlert, trigger: 'icon-cog'},
-					{ handler: this.removeAlert, trigger: 'icon-trash-o'}
+                    { handler: this.configAlert, triggerFont: 'icon-pencil2'},
+					{ handler: this.removeAlert, triggerFont: 'icon-trash-o'}
                 ]
             }
 		},
@@ -48,6 +49,7 @@
             }
         },
         methods: {
+            ...mapMutations({ restartAlert: RESTART_ALERT }),
 			...mapActions({ fetchAlerts: FETCH_ALERTS, fetchAlert: FETCH_ALERT, archiveAlert: ARCHIVE_ALERT }),
             executeFilter(filterData) {
 				/*
@@ -65,6 +67,7 @@
 				this.$router.push({path: `alert/${alertId}`});
             },
             createAlert() {
+				this.restartAlert()
 				this.$router.push({path: 'alert/new'});
             },
             removeAlert(alertId) {

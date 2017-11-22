@@ -1,6 +1,7 @@
 <template>
     <div class="checkbox" v-bind:class="{ 'checked': checked }" @click="$refs.checkboxInput.click()">
-        <input type="checkbox" ref="checkboxInput" :checked="checked" @change="updateChecked()">
+        <input type="checkbox" ref="checkboxInput" :checked="checked" @change="updateChecked()"
+               :disabled="disabled">
         <label class="checkbox-label">{{ label }}</label>
     </div>
 </template>
@@ -12,7 +13,7 @@
             prop: 'checked',
             event: 'change'
         },
-        props: [ 'label', 'checked' ],
+        props: [ 'label', 'checked', 'disabled' ],
         methods: {
             updateChecked() {
                 this.$emit('change', this.$refs.checkboxInput.checked)
