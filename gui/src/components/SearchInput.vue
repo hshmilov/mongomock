@@ -23,7 +23,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .search-input.input-group {
         display: inline-block;

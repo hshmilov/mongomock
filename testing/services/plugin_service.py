@@ -2,18 +2,21 @@ import services.compose_parser
 import services.compose_service
 import requests
 import axonius.ConfigReader
+import json
 
 API_KEY_HEADER = "x-api-key"
 
 
 class PluginService(services.compose_service.ComposeService):
-    def __init__(self, compose_file_path, config_file_path):
+    def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
         super().__init__(compose_file_path)
-        self.parsed_compose_file = services.compose_parser.ServiceYmlParser(compose_file_path)
+        self.parsed_compose_file = services.compose_parser.ServiceYmlParser(
+            compose_file_path)
         port = self.parsed_compose_file.exposed_port
         self.endpoint = ('localhost', port)
         self.req_url = "http://%s:%s" % (self.endpoint[0], self.endpoint[1])
         self.config_file_path = config_file_path
+        self.volatile_config_file_path = vol_config_file_path
 
     def version(self):
         return requests.get(self.req_url + "/version")
@@ -30,6 +33,12 @@ class PluginService(services.compose_service.ComposeService):
 
         return requests.get(self.req_url + "/schema/" + schema_type, headers={API_KEY_HEADER: api_key})
 
+    def is_plugin_registered(self, core_service):
+        unique_name = self.unique_name
+        all_plugins = json.loads(core_service.register().content)
+
+        return unique_name in all_plugins
+
     def is_up(self):
         return self._is_service_alive()
 
@@ -45,19 +54,32 @@ class PluginService(services.compose_service.ComposeService):
         return axonius.ConfigReader.PluginConfig(self.config_file_path)
 
     @property
+    def vol_conf(self):
+        return axonius.ConfigReader.PluginVolatileConfig(self.volatile_config_file_path)
+
+    @property
     def api_key(self):
-        return self.conf.api_key
+        return self.vol_conf.api_key
+
+    @property
+    def unique_name(self):
+        return self.vol_conf.unique_name
 
 
 class AdapterService(PluginService):
-    def __init__(self, compose_file_path, config_file_path):
-        super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path)
+    def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
+        super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
+                         vol_config_file_path=vol_config_file_path)
+
+    def add_client(self, db, clients_details):
+        db.add_client(self.unique_name, clients_details)
+        return self.clients()  # post to clients forces a refresh!
 
     def devices(self):
-        raise NotImplemented("TBD!")
+        return requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
 
     def clients(self):
-        raise NotImplemented("TBD!")
+        return requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
 
     def action(self, action_type):
         raise NotImplemented("TBD!")

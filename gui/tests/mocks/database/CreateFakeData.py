@@ -24,7 +24,7 @@ DB_PASSWORD = 'Password1'
 
 
 general_schema = {'internal_axon_id': "{axon_id}",
-                  'accurate_for_datetime': "{date_general}", 
+                  'accurate_for_datetime': "{date_general}",
                   'adapters': {},
                   'tags': []}
 
@@ -70,13 +70,16 @@ def generate_adapter_basic(adapter_name, adapter_before=None, os_list=[]):
     else:
         adapter_before_data = adapter_before['data']
 
-    g['OS'] = adapter_before_data.get('OS', {'type': os_list[random.randint(0, len(os_list)-1)]})
+    g['OS'] = adapter_before_data.get(
+        'OS', {'type': os_list[random.randint(0, len(os_list) - 1)]})
 
-    g['name'] = adapter_before_data.get('name', names.get_first_name()+"-PC")
+    g['name'] = adapter_before_data.get('name', names.get_first_name() + "-PC")
 
-    g['IP'] = adapter_before_data.get('IP', "10.0." + str(random.randint(0, 255)) + "." + str(random.randint(0, 255)))
+    g['IP'] = adapter_before_data.get(
+        'IP', "10.0." + str(random.randint(0, 255)) + "." + str(random.randint(0, 255)))
 
-    g['pretty_id'] = codenamize.codenamize(f"{adapter_name}->{uuid.uuid4().hex}", adjectives=1, max_item_chars=6)
+    g['pretty_id'] = codenamize.codenamize(
+        f"{adapter_name}->{uuid.uuid4().hex}", adjectives=1, max_item_chars=6)
     g['pretty_id'] = 'Axon-' + g['pretty_id']
 
     return g
@@ -86,13 +89,13 @@ def generate_adapter(adapter_name, date, client_used, adapter_before=None, os_li
     g = {"client_used": client_used, "plugin_type": "Adapter"}
 
     g['plugin_name'] = adapter_name
-    g['unique_plugin_name'] = adapter_name+'_1'
+    g['unique_plugin_name'] = adapter_name + '_1'
     g['accurate_for_datetime'] = date
 
     g['_id'] = uuid.uuid4().hex
 
     g['data'] = generate_adapter_basic(adapter_name, adapter_before, os_list)
-    g['data']['raw'] = globals()["generate_"+adapter_name](**kwargs)
+    g['data']['raw'] = globals()["generate_" + adapter_name](**kwargs)
 
     return g
 
@@ -110,30 +113,30 @@ def generate_checkpoint_adapter(**kwargs):
 
 
 def generate_qcore_adapter():
-    return {'CQdpmPumpInfo': 'STABLE', 
-            'CInfuserInfo':  'STABLE', 
-            'CResourceInfo': 'OK', 
-            'CDeviceVersion': '1.'+str(random.randint(0, 3)), 
-            'CQdpmClinicalStatus2': str(random.randint(0, 10)), 
-            'EQdmClinicalEven': str(random.randint(0, 10)), 
-            'EQdmPowerStat': str(random.randint(0, 10)), 
-            'EQdmPowerSourc': str(random.randint(0, 10)), 
-            'EQdmBatteryStatu': str(random.randint(0, 10)), 
+    return {'CQdpmPumpInfo': 'STABLE',
+            'CInfuserInfo':  'STABLE',
+            'CResourceInfo': 'OK',
+            'CDeviceVersion': '1.' + str(random.randint(0, 3)),
+            'CQdpmClinicalStatus2': str(random.randint(0, 10)),
+            'EQdmClinicalEven': str(random.randint(0, 10)),
+            'EQdmPowerStat': str(random.randint(0, 10)),
+            'EQdmPowerSourc': str(random.randint(0, 10)),
+            'EQdmBatteryStatu': str(random.randint(0, 10)),
             'EAlarmStateTyp': str(random.randint(0, 10))}
 
 
-def generate_splunk_adapter(**kwargs): 
+def generate_splunk_adapter(**kwargs):
     if kwargs['reporter'] == 'q-core device':
         return {'report_issuer': kwargs['reporter'],
-                'CQdpmPumpInfo': 'WARNING', 
-                'CInfuserInfo':  'STABLE', 
-                'CResourceInfo': 'OK', 
-                'CDeviceVersion': '1.'+str(random.randint(0, 3)), 
-                'CQdpmClinicalStatus2': str(random.randint(0, 10)), 
-                'EQdmClinicalEven': str(random.randint(0, 10)), 
-                'EQdmPowerStat': str(random.randint(0, 10)), 
-                'EQdmPowerSourc': str(random.randint(0, 10)), 
-                'EQdmBatteryStatu': str(random.randint(0, 10)), 
+                'CQdpmPumpInfo': 'WARNING',
+                'CInfuserInfo':  'STABLE',
+                'CResourceInfo': 'OK',
+                'CDeviceVersion': '1.' + str(random.randint(0, 3)),
+                'CQdpmClinicalStatus2': str(random.randint(0, 10)),
+                'EQdmClinicalEven': str(random.randint(0, 10)),
+                'EQdmPowerStat': str(random.randint(0, 10)),
+                'EQdmPowerSourc': str(random.randint(0, 10)),
+                'EQdmBatteryStatu': str(random.randint(0, 10)),
                 'EAlarmStateTyp': str(random.randint(0, 10))}
     else:
         return {'report_issuer': kwargs['reporter']}
@@ -150,11 +153,11 @@ for i in range(1, blocked_qcore_num):
     print(loop_count)
     loop_count += 1
     g_general = generate_general()
-    g_general['adapters']['qcore_adapter'] = generate_adapter('qcore_adapter', 
+    g_general['adapters']['qcore_adapter'] = generate_adapter('qcore_adapter',
                                                               g_general['accurate_for_datetime'],
                                                               'qcore_admin',
                                                               os_list=os_list)
-    g_general['adapters']['checkpoint_adapter'] = generate_adapter('checkpoint_adapter', 
+    g_general['adapters']['checkpoint_adapter'] = generate_adapter('checkpoint_adapter',
                                                                    g_general['accurate_for_datetime'],
                                                                    'checkpoint_controller',
                                                                    adapter_before=g_general['adapters']['qcore_adapter'],
@@ -164,7 +167,7 @@ for i in range(1, blocked_qcore_num):
     del g_general['adapters']['qcore_adapter']['data']['name']
     del g_general['adapters']['checkpoint_adapter']['data']['name']
     del g_general['adapters']['checkpoint_adapter']['data']['OS']
-    
+
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)
 
 # Create qcore devices
@@ -173,57 +176,57 @@ for i in range(1, regular_qcore_num):
     print(loop_count)
     loop_count += 1
     g_general = generate_general()
-    g_general['adapters']['qcore_adapter'] = generate_adapter('qcore_adapter', 
+    g_general['adapters']['qcore_adapter'] = generate_adapter('qcore_adapter',
                                                               g_general['accurate_for_datetime'],
                                                               'qcore_admin',
                                                               os_list=os_list)
 
     del g_general['adapters']['qcore_adapter']['data']['name']
-    
+
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)
 
 
 # Create AD + ESX + splunk devices
-os_list = ['Microsoft Windows 10 Pro', 'Microsoft Windows 7 Home', 'Microsoft Windows 8.1 Pro', 
+os_list = ['Microsoft Windows 10 Pro', 'Microsoft Windows 7 Home', 'Microsoft Windows 8.1 Pro',
            'Microsoft Windows 8.1 Home', 'Microsoft Windows 10 Home']
 for i in range(1, ad_esx_splunk_num):
     print(loop_count)
     loop_count += 1
     g_general = generate_general()
-    g_general['adapters']['ad_adapter'] = generate_adapter('ad_adapter', 
+    g_general['adapters']['ad_adapter'] = generate_adapter('ad_adapter',
                                                            g_general['accurate_for_datetime'],
-                                                           "WIN-0HI4F5QHV2T", 
+                                                           "WIN-0HI4F5QHV2T",
                                                            os_list=os_list)
-    
-    g_general['adapters']['esx_adapter'] = generate_adapter('esx_adapter',  
+
+    g_general['adapters']['esx_adapter'] = generate_adapter('esx_adapter',
                                                             g_general['accurate_for_datetime'],
                                                             "esx_main_manage",
-                                                            os_list=os_list, 
+                                                            os_list=os_list,
                                                             adapter_before=g_general['adapters']['ad_adapter'])
 
-    g_general['adapters']['splunk_adapter'] = generate_adapter('splunk_adapter',  
+    g_general['adapters']['splunk_adapter'] = generate_adapter('splunk_adapter',
                                                                g_general['accurate_for_datetime'],
                                                                "splunk_admin",
-                                                               os_list=os_list, 
+                                                               os_list=os_list,
                                                                adapter_before=g_general['adapters']['ad_adapter'],
                                                                reporter='active_directory')
-    
+
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)
 
 # Create only ESX devices
-os_list = ['Microsoft Windows 10 Pro', 'Microsoft Windows 7 Home', 'Microsoft Windows 8.1 Pro', 
+os_list = ['Microsoft Windows 10 Pro', 'Microsoft Windows 7 Home', 'Microsoft Windows 8.1 Pro',
            'Microsoft Windows 8.1 Home', 'Microsoft Windows 10 Home', 'Ubuntu 17.10', 'UBUNTU_5', 'Ubuntu 16.04.1 LTS',
            'Ubuntu 14.04.4 LTS', 'macOS 10.13', 'macOs 10.11']
 for i in range(1, esx_num):
     print(loop_count)
     loop_count += 1
     g_general = generate_general()
-    
-    g_general['adapters']['esx_adapter'] = generate_adapter('esx_adapter', 
+
+    g_general['adapters']['esx_adapter'] = generate_adapter('esx_adapter',
                                                             g_general['accurate_for_datetime'],
-                                                            "esx_main_manage", 
+                                                            "esx_main_manage",
                                                             os_list=os_list)
-    
+
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)
 
 # Create only SPLUNK(qcore) devices
@@ -232,17 +235,13 @@ for i in range(1, splunk_qcore_num):
     print(loop_count)
     loop_count += 1
     g_general = generate_general()
-    
-    g_general['adapters']['splunk_adapter'] = generate_adapter('splunk_adapter', 
+
+    g_general['adapters']['splunk_adapter'] = generate_adapter('splunk_adapter',
                                                                g_general['accurate_for_datetime'],
-                                                               "splunk_admin", 
+                                                               "splunk_admin",
                                                                os_list=os_list,
                                                                reporter='q-core device')
 
     del g_general['adapters']['splunk_adapter']['data']['name']
-    
+
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)
-
-
-
-

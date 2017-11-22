@@ -4,7 +4,7 @@
             @click="done = false; openDropdown = !openDropdown">
             <slot name="dropdownTrigger"></slot>
         </div>
-        <div :class="`dropdown-menu ${animateClass} ${menuClass}`">
+        <div :class="`dropdown-menu ${animateClass || ''} ${menuClass || ''}`">
             <slot v-if="!done" name="dropdownContent" :onDone="handleDone"></slot>
             <div v-if="done" class="dropdown-success animated fadeIn">
                 <div>{{successMessage}}</div>
@@ -20,7 +20,7 @@
     export default {
         name: 'dropdown-menu',
         mixins: [ clickaway ],
-        props: [ 'positionRight', 'animateClass', 'menuClass' ],
+        props: [ 'animateClass', 'menuClass' ],
         data() {
             return {
                 openDropdown: false,
@@ -46,7 +46,7 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .dropdown {
         border: 1px solid $border-color;
@@ -67,9 +67,12 @@
             &:after {
                 position: absolute;
                 margin-right: 8px;
-                margin-top: 14px;
+                margin-top: 12px;
                 top: 0;
                 right: 0;
+                border-top: .5em solid;
+                border-right: .5em solid transparent;
+                border-left: .5em solid transparent;
             }
         }
         .dropdown-menu {
@@ -110,7 +113,7 @@
                 transform-origin: right 0px;
             }
         }
-        &.show .scale-up {
+        &.show>.scale-up {
             transform: scale(1);
         }
     }

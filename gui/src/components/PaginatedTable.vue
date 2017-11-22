@@ -1,54 +1,46 @@
 <template>
     <div class="table-responsive paginated-table">
         <div class="dataTables_wrapper">
+            <pulse-loader :loading="fetching" color="#26dad2"></pulse-loader>
             <table class="table table-striped">
                 <thead>
-                    <tr>
-                        <th class="table-head checkbox-container">
-                            <checkbox v-if="value !== undefined" v-model="selectAllRecords" @change="updateSelectedAll()"></checkbox>
-                        </th>
-                        <th class="table-head" v-for="field in fields">{{ field.name }}</th>
-                        <th class="table-head" v-if="actions !== undefined"></th>
-                    </tr>
+                <tr>
+                    <th class="table-head checkbox-container">
+                        <checkbox v-if="value !== undefined" v-model="selectAllRecords"
+                                  @change="updateSelectedAll()"></checkbox>
+                    </th>
+                    <th class="table-head" v-for="field in fields">{{ field.name }}</th>
+                    <th class="table-head" v-if="actions !== undefined"></th>
+                </tr>
                 </thead>
                 <tbody>
-                    <tr class="table-row" v-bind:class="{ active: recordSelection[record['id']] }"
-                        v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
-                        <td class="table-row-data">
-                            <checkbox v-if="value !== undefined" v-model="recordSelection[record['id']]" @change="updateSelected()"></checkbox>
-                        </td>
-                        <td class="table-row-data" v-for="field in fields">
-                            <template v-if="field.type === undefined || !field.type || field.type=='text'">
-                                <span>{{ record[field.path] || '&nbsp' }}</span>
-                            </template>
-                            <template v-else-if="field.type === 'tag-list'">
-                                <div v-if="record[field.path]">
-                                    <span v-if="record[field.path].length > 0"
-                                          class="tag-list-item">{{ record[field.path][0] }}</span>
-                                    <span v-if="record[field.path].length > 1"
-                                          class="tag-list-item">{{ record[field.path][1] }}</span>
-                                    <span v-if="record[field.path].length > 2"
-                                          class="tag-list-item">{{ record[field.path][2] }}</span>
-                                    <span v-if="record[field.path].length > 3"
-                                          class="tag-list-total"> (out of {{ record[field.path].length }})</span>
-                                </div>
-                            </template>
-                            <template v-else-if="field.type === 'image-list'">
-                                <image-list :data="record[field.path]" :limit="3"></image-list>
-                            </template>
-                        </td>
-                        <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                            <a v-for="action in actions" @click="action.execute($event, record['id'])">
-                                <i :class="action.icon"></i>
-                            </a>
-                        </td>
-                    </tr>
-                    <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
-                        v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
-                        <td class="table-row-data">&nbsp</td>
-                        <td v-for="field in fields" class="table-row-data">&nbsp</td>
-                        <td class="table-row-data">&nbsp</td>
-                    </tr>
+                <tr class="table-row" v-bind:class="{ active: recordSelection[record['id']] }"
+                    v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
+                    <td class="table-row-data">
+                        <checkbox v-if="value !== undefined" v-model="recordSelection[record['id']]"
+                                  @change="updateSelected()"></checkbox>
+                    </td>
+                    <td class="table-row-data" v-for="field in fields">
+                        <template v-if="field.type === undefined || !field.type || field.type=='text'">
+                            <span>{{ record[field.path] || '&nbsp' }}</span>
+                        </template>
+                        <template v-else-if="field.type.indexOf('list') > -1">
+                            <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
+                                         :data="record[field.path]" :limit="3"></object-list>
+                        </template>
+                    </td>
+                    <td class="table-row-data table-row-actions" v-if="actions !== undefined">
+                        <a v-for="action in actions" class="table-row-action" @click="action.handler($event, record['id'])">
+                            <i :class="action.trigger"></i>
+                        </a>
+                    </td>
+                </tr>
+                <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
+                    v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
+                    <td class="table-row-data">&nbsp</td>
+                    <td v-for="field in fields" class="table-row-data">&nbsp</td>
+                    <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
+                </tr>
                 </tbody>
             </table>
             <div v-if="error" class="dataTables_info alert-error">Problem occured while fetching data: {{ error }}</div>
@@ -68,18 +60,18 @@
 </template>
 
 <script>
-    import Checkbox from './Checkbox.vue'
-    import ImageList from './ImageList.vue'
+	import Checkbox from './Checkbox.vue'
+	import ObjectList from './ObjectList.vue'
+	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
-    export default {
-        name: 'paginated-table',
-        components: { Checkbox, ImageList },
-        props: [
-          'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'query', 'value'
-
-        ],
-        computed: {
-        	pageSize() {
+	export default {
+		name: 'paginated-table',
+		components: {Checkbox, ObjectList, PulseLoader},
+		props: [
+			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
+		],
+		computed: {
+			pageSize () {
 				if (this.$resize && this.$mq.above('height', 900)) { return 11 }
 				if (this.$resize && this.$mq.above('height', 850)) { return 10 }
 				if (this.$resize && this.$mq.above('height', 800)) { return 9 }
@@ -90,127 +82,139 @@
 				if (this.$resize && this.$mq.above('height', 550)) { return 4 }
 				if (this.$resize && this.$mq.above('height', 500)) { return 3 }
 				return 1
-            },
-            firstPage() {
-                return this.currentPage === 0
-            },
-            lastPage() {
-                return this.maxPages > 0 && this.currentPage === this.maxPages
-            },
-            filterFields() {
-                return this.fields.filter(function(field) {
-                    return !field.default
-                }).map(function(field) {
-                    return field.path
-                })
-            }
-        },
-        data() {
-            return {
-                linkedPageCount: 5,
+			},
+			firstPage () {
+				return this.currentPage === 0
+			},
+			lastPage () {
+				return this.currentPage === this.maxPages
+			},
+			filterFields () {
+				return this.fields.filter(function (field) {
+					return !field.default
+				}).map(function (field) {
+					return field.path
+				})
+			}
+		},
+		data () {
+			return {
+				linkedPageCount: 1,
 				linkedPageStart: 0,
 				currentPage: 0,
 				fetchedPages: 0,
 				maxPages: 0,
-                selectAllRecords: false,
-                recordSelection: {}
-            }
-        },
-        watch: {
-            pageSize: function(newPageSize) {
-            	this.maxPages = parseInt(this.data.length / newPageSize)
-            	this.linkedPageCount = Math.min(5, this.maxPages + 1)
-            	this.selectPage(0)
-            },
-            filterFields: function (newFields, oldFields) {
-                if (newFields.length <= oldFields.length) { return }
-            },
-            query: function(newQuery) {
+				selectAllRecords: false,
+				recordSelection: {}
+			}
+		},
+		watch: {
+			pageSize: function (newPageSize) {
+				this.maxPages = parseInt(this.data.length / newPageSize)
+				this.linkedPageCount = Math.min(5, this.maxPages + 1)
+				this.selectPage(0)
+			},
+			filterFields: function (newFields, oldFields) {
+				if (newFields.length <= oldFields.length) { return }
+			},
+			filter: function (newFilter) {
 				this.maxPages = 0
 				this.fetchedPages = 0
-                this.currentPage = 0
-                this.addData()
-            },
-            fetching: function(newFetching) {
-            	if (newFetching) {
-            		this.fetchedPages++
-                }
-            },
-            data: function(newData, oldData) {
-            	let diff = newData.length - oldData.length
-            	if (diff === this.pageSize * 1000) {
+				this.currentPage = 0
+				this.linkedPageCount = 1
+				this.linkedPageStart = 0
+				this.addData()
+			},
+			fetching: function (newFetching) {
+				if (newFetching) {
+					this.fetchedPages++
+				}
+			},
+			data: function (newData, oldData) {
+				let diff = newData.length - oldData.length
+				if (diff === this.pageSize * 1000) {
 					this.maxPages += 1000
 					this.linkedPageCount = Math.min(this.maxPages, 5)
 					/* Continue getting pages until linked amount is fulfilled, so user does not wait for it */
 					this.addData()
-				} else if (!this.fetching && (diff === 0)) {
-            		this.maxPages--
+				} else if (!this.fetching) {
+                    this.maxPages += parseInt(diff / this.pageSize)
+					if (diff === 0 && this.maxPages > 0) {
+						this.maxPages--
+					}
+					this.linkedPageCount = Math.min(5, this.maxPages + 1)
 				}
-            }
-        },
-        methods: {
-            updateSelected() {
-                let _this = this
-                let selectedRecords = Object.keys(this.recordSelection).filter(function(id) {
-                    return _this.recordSelection[id]
-                })
-                this.$emit('input', selectedRecords)
-            },
-            updateSelectedAll() {
-                if (this.selectAllRecords) {
-                    let _this = this
-                    this.data.forEach(function(record) {
-                        _this.recordSelection[record['id']] = true
-                    })
-                } else {
-                    this.recordSelection = {}
-                }
-                this.updateSelected()
-            },
-            addData() {
-                this.fetchData({
-                    skip: this.fetchedPages * this.pageSize * 1000,
-                    limit: this.pageSize * 1000,
-                    fields: this.filterFields,
-                    query: this.query
-                })
-            },
-            prevPage() {
-                if (this.firstPage) { return }
-                this.currentPage--
-                if (this.currentPage < parseInt(this.linkedPageCount / 2) + 1 + this.linkedPageStart
-                  && this.linkedPageStart > 0) {
-                    this.linkedPageStart--
-                }
+			}
+		},
+		methods: {
+			updateSelected () {
+				let _this = this
+				let selectedRecords = Object.keys(this.recordSelection).filter(function (id) {
+					return _this.recordSelection[id]
+				})
+				this.$emit('input', selectedRecords)
+			},
+			updateSelectedAll () {
+				if (this.selectAllRecords) {
+					let _this = this
+					this.data.forEach(function (record) {
+						_this.recordSelection[record['id']] = true
+					})
+				} else {
+					this.recordSelection = {}
+				}
+				this.updateSelected()
+			},
+			addData () {
+				this.fetchData({
+					skip: this.fetchedPages * this.pageSize * 1000,
+					limit: this.pageSize * 1000,
+					fields: this.filterFields,
+					filter: this.filter
+				})
+			},
+			prevPage () {
+				if (this.firstPage) { return }
+				this.currentPage--
+				if (this.currentPage < parseInt(this.linkedPageCount / 2) + 1 + this.linkedPageStart
+					&& this.linkedPageStart > 0) {
+					this.linkedPageStart--
+				}
 
-            },
-            nextPage() {
-                /* If there are no more pages to show, return */
-                if (this.lastPage) { return }
-                this.currentPage++
-                if (this.currentPage === parseInt(this.linkedPageCount / 2) + 1 + this.linkedPageStart
-                  && (this.linkedPageStart + this.linkedPageCount < this.maxPages || this.maxPages === 0)) {
-                    this.linkedPageStart++
-                }
-            },
-            selectPage(page) {
-                this.currentPage = page
-                this.linkedPageStart = Math.max(this.currentPage - parseInt(this.linkedPageCount / 2), 0)
-                this.linkedPageStart = Math.min(this.linkedPageStart, this.maxPages + 1 - this.linkedPageCount)
-            }
-        },
-        mounted() {
-            /* Get initial data for first page of the table */
-            this.addData()
-        }
-    }
+			},
+			nextPage () {
+				/* If there are no more pages to show, return */
+				if (this.lastPage) { return }
+				this.currentPage++
+				if (this.currentPage === parseInt(this.linkedPageCount / 2) + 1 + this.linkedPageStart
+					&& (this.linkedPageStart + this.linkedPageCount <= this.maxPages || this.maxPages === 0)) {
+					this.linkedPageStart++
+				}
+			},
+			selectPage (page) {
+				this.currentPage = page
+				this.linkedPageStart = Math.max(this.currentPage - parseInt(this.linkedPageCount / 2), 0)
+				this.linkedPageStart = Math.min(this.linkedPageStart, this.maxPages + 1 - this.linkedPageCount)
+			}
+		},
+		mounted () {
+			/* Get initial data for first page of the table */
+			if (!this.data || !this.data.length) {
+				this.addData()
+			}
+		}
+	}
 </script>
 
 <style lang="scss">
-    @import '../assets/scss/config';
+    @import '../scss/config';
 
     .dataTables_wrapper {
         padding-top: 10px;
+        .spinner-container {
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
         .dataTables_info {
             display: inline-block;
             font-size: 80%;
@@ -250,6 +254,7 @@
             }
         }
     }
+
     .paginated-table .table {
         border-collapse: separate;
         border-spacing: 0;
@@ -295,9 +300,10 @@
                 }
             }
             .table-row-actions {
-                text-align: center;
-                a {
+                text-align: right;
+                .table-row-action {
                     visibility: hidden;
+                    padding-right: 8px;
                     &:hover {
                         color: $color-theme;
                     }
@@ -326,29 +332,5 @@
             border-top: 1px solid $border-color;
         }
     }
-    .tag-list-item {
-        border-radius: 4px;
-        border: 1px solid $border-color;
-        border-right: 0;
-        padding: 2px;
-        margin-right: 20px;
-        position: relative;
-        margin-top: 8px;
-        &::after {
-            content: '';
-            position: absolute;
-            border-radius: 4px;
-            transform: rotate(45deg);
-            border-right: 1px solid #dcd8d8;
-            border-top: 1px solid #dcd8d8;
-            height: 20px;
-            width: 20px;
-            top: 4px;
-            right: -9px;
-        }
-    }
-    .tag-list-total {
-        font-size: 70%;
-        text-transform: uppercase;
-    }
+
 </style>

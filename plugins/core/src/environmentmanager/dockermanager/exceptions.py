@@ -25,6 +25,7 @@ class NetworkNotFound(DockerManagerException):
         """The init method."""
         super().__init__(message)
 
+
 class ImageNotFound(DockerManagerException):
     """Raised when a docker network is not found."""
 

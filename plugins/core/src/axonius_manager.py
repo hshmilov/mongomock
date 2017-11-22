@@ -28,7 +28,8 @@ def service_start(em, args):
             return
 
     if not service_image.startswith("axonius/"):
-        print("service image name should be in the form of repostiory/name, e.g. axonius/core")
+        print(
+            "service image name should be in the form of repostiory/name, e.g. axonius/core")
 
     # If we don't have a specific service name, make one.
     if service_name is None:
@@ -105,31 +106,35 @@ def service_load(em, args):
 
 def main():
     """Parse arguments and control services."""
-    
+
     parser = argparse.ArgumentParser()
     subparser = parser.add_subparsers()
 
-    sp_start = subparser.add_parser('start', help='Starts a service. type -h for help')
-    sp_start.add_argument('-i', default='axonius/core', help='The service image to start. default: axonius/core', 
+    sp_start = subparser.add_parser(
+        'start', help='Starts a service. type -h for help')
+    sp_start.add_argument('-i', default='axonius/core', help='The service image to start. default: axonius/core',
                           dest="service_image")
-    sp_start.add_argument('-n', default=None, help='The service name. default: repository_name, e.g. axonius_core', 
-                          dest="service_name")                  
-    sp_start.add_argument('--mount', default=None, 
+    sp_start.add_argument('-n', default=None, help='The service name. default: repository_name, e.g. axonius_core',
+                          dest="service_name")
+    sp_start.add_argument('--mount', default=None,
                           help='An optional mount to to have in the form of "host:guest:mode", \
                           e.g. "/mnt/hgfs/C/temp:/app:rw" ', dest="mount")
     sp_start.set_defaults(which=service_start)
 
-    sp_stop = subparser.add_parser('stop', help='Stops a service. type -h for help')
-    sp_stop.add_argument('-n', default='axonius_core', help='The service name to stop. default: axonius_core', 
+    sp_stop = subparser.add_parser(
+        'stop', help='Stops a service. type -h for help')
+    sp_stop.add_argument('-n', default='axonius_core', help='The service name to stop. default: axonius_core',
                          dest="service_name")
     sp_stop.set_defaults(which=service_stop)
 
-    sp_load = subparser.add_parser('load', help='Loads a new service image into the system')
-    sp_load.add_argument('-n', help='The image (tar file) path.', 
+    sp_load = subparser.add_parser(
+        'load', help='Loads a new service image into the system')
+    sp_load.add_argument('-n', help='The image (tar file) path.',
                          dest="image_path")
     sp_load.set_defaults(which=service_load)
 
-    sp_status = subparser.add_parser('status', help='Prints a status of the axonius system')
+    sp_status = subparser.add_parser(
+        'status', help='Prints a status of the axonius system')
     sp_status.set_defaults(which=system_status)
 
     args = parser.parse_args()

@@ -1,4 +1,5 @@
 /* eslint-disable no-undef */
+var ExtractTextPlugin = require("extract-text-webpack-plugin")
 let path = require('path')
 let webpack = require('webpack')
 
@@ -15,10 +16,7 @@ module.exports = {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    loaders: {
-                        'scss': 'vue-style-loader!css-loader!sass-loader',
-                        'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax'
-                    },
+                    extractCSS: true
                 },
             },
             {
@@ -48,10 +46,13 @@ module.exports = {
         hints: false,
     },
     devtool: '#eval-source-map',
+    plugins: [
+		new ExtractTextPlugin("style.css")
+    ]
 }
 
 if (process.env.NODE_ENV === 'production') {
-    module.exports.devtool = '#source-map'
+    module.exports.devtool = ''
     // http://vue-loader.vuejs.org/en/workflow/production.html
     module.exports.plugins = (module.exports.plugins || []).concat([
         new webpack.DefinePlugin({
@@ -60,7 +61,6 @@ if (process.env.NODE_ENV === 'production') {
             },
         }),
         new webpack.optimize.UglifyJsPlugin({
-            sourceMap: true,
             compress: {
                 warnings: false,
             },

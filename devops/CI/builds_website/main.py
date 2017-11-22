@@ -18,6 +18,7 @@ def main():
     """The main path."""
     return render_template("index.html", instances={})  # json.dumps(bm.getInstances()))
 
+
 @app.route("/images", methods=['GET', 'POST', 'DELETE'])
 def images():
     """Returns all docker images."""
@@ -28,21 +29,25 @@ def images():
     elif (request.method == "DELETE"):
         return jsonify(bm.deleteImage(request.form["repositoryName"], request.form["imageDigest"]))
 
+
 @app.route('/exports', methods=['GET'])
 def exports():
     """Return info about our exported vms."""
     return jsonify(bm.getExports())
+
 
 @app.route('/exports/<key>/url', methods=['GET'])
 def export_url(key):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
     return jsonify(bm.getExportUrl(key))
 
+
 @app.route('/exports/<key>/manifest', methods=['GET'])
 def get_export_manifest(key):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
     if(request.method == "GET"):
         return jsonify(bm.getExportManifest(key))
+
 
 @app.route("/exports/<key>", methods=['GET', 'DELETE'])
 def export(key):
@@ -54,25 +59,28 @@ def export(key):
     else:
         return "Error! Method %s unsupported." % (request.method,), 500
 
+
 @app.route('/exportsinprogress', methods=['GET'])
 def exports_in_progress():
     """Return info about our exported vms."""
     return jsonify(bm.getExportsInProgress())
 
+
 @app.route("/instances", methods=['GET', 'POST'])
 def instances():
     """Return info about ec2."""
     if(request.method == "GET"):
-            return jsonify(bm.getInstances())
+        return jsonify(bm.getInstances())
     elif(request.method == "POST"):
-            return jsonify(bm.addInstance(
-                request.form["name"],
-                request.form["owner"],
-                request.form["comments"],
-                request.form["configuration_name"],
-                request.form["configuration_code"]))
+        return jsonify(bm.addInstance(
+            request.form["name"],
+            request.form["owner"],
+            request.form["comments"],
+            request.form["configuration_name"],
+            request.form["configuration_code"]))
     else:
-            return "Error! Method %s unsupported." % (request.method, ), 500
+        return "Error! Method %s unsupported." % (request.method, ), 500
+
 
 @app.route("/instances/<instance_id>", methods=['GET', 'DELETE', 'POST'])
 def instance(instance_id):
@@ -99,6 +107,7 @@ def instance(instance_id):
     else:
         return return_unsupported()
 
+
 @app.route("/instances/<instance_id>/manifest", methods=['GET', 'POST'])
 @app.route("/instances/<instance_id>/manifest/<manifest_key>", methods=['GET', 'POST'])
 def instance_manifest(instance_id, manifest_key=None):
@@ -120,6 +129,7 @@ def instance_manifest(instance_id, manifest_key=None):
     else:
         return return_unsupported()
 
+
 @app.route("/configurations", methods=['GET', 'POST'])
 @app.route("/configurations/<object_id>", methods=['GET', 'DELETE', 'POST'])
 def configuration(object_id=None):
@@ -132,6 +142,7 @@ def configuration(object_id=None):
         return jsonify(bm.deleteConfiguration(object_id))
     else:
         return "Error! Method %s unsupported." % (request.method,), 500
+
 
 @app.after_request
 def add_header(r):
@@ -160,4 +171,4 @@ def all_exception_handler(error):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host= '0.0.0.0')
+    app.run(debug=True, host='0.0.0.0')

@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css?family=Poppins:200,300,400,500,600,700');
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype');
+}
 
 $font-stack: 'Poppins', sans-serif;
 $font-size: 100%;
@@ -10,6 +13,7 @@ $color-title: #607e8d;
 $color-text: #504e4e;
 $color-error: #f9e7eb;
 $color-disabled: #999999;
+$color-success: #70AE58;
 
 $color-yellow: #ffb22b;
 $color-aqua: #26dad2;
@@ -20,7 +24,9 @@ $background-color: #f3f4f5;
 $background-color-light: #ffffff;
 $background-color-mark: #f2f6f8;
 $background-color-highlight: #fcfcfc;
-$background-color-hover: rgba(235, 233, 250, 0.6);
+$background-color-title: #EEECEC;
+$background-color-hover: #F2F0FC;
+$background-color-error: #D90424;
 
 $media-break-sm: "(min-width : 576px)";
 $media-break-md: "(min-width : 768px)";

@@ -5,6 +5,7 @@ In general, this should be used on each repository that is a plugin/adapter, inc
 import sys
 from teamcity.messages import TeamcityServiceMessages
 
+
 def main():
     # Initialize TeamcityServiceMessages. They output messages that teamcity can read.
     tc = TeamcityServiceMessages()
@@ -13,6 +14,7 @@ def main():
         with tc.block("hello world block 2"):
             with tc.block("doing progress"):
                 tc.customMessage("text", "status")
+
 
 if __name__ == '__main__':
     sys.exit(main())

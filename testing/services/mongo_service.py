@@ -34,9 +34,13 @@ class MongoService(services.compose_service.ComposeService):
 
     def get_unique_plugin_config(self, unique_plugin_name):
         configs = self.get_configs()
-        plugin_config = list(filter(lambda k: k['plugin_unique_name'] == unique_plugin_name, configs))
+        plugin_config = list(
+            filter(lambda k: k['plugin_unique_name'] == unique_plugin_name, configs))
         assert 1 == len(plugin_config)
         return plugin_config[0]
+
+    def add_client(self, adapter_name, client_details):
+        self.client[adapter_name].clients.insert_one(client_details)
 
 
 @pytest.fixture(scope="session")

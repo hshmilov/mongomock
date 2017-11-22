@@ -30,7 +30,7 @@ def parsed_devices_match(first, second):
     :return: bool
     """
     return first['plugin_unique_name'] == second['plugin_unique_name'] and \
-           first['data']['id'] == second['data']['id']
+        first['data']['id'] == second['data']['id']
 
 
 def parsed_device_match_plugin(plugin_data, parsed_device):
@@ -41,7 +41,7 @@ def parsed_device_match_plugin(plugin_data, parsed_device):
     :return: bool
     """
     return plugin_data['associated_adapter_devices']. \
-               get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
+        get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
 
 
 class AggregatorPlugin(PluginBase):
@@ -54,23 +54,20 @@ class AggregatorPlugin(PluginBase):
         # this is a reentrant lock
         self.device_db_lock = threading.RLock()
         # Open connection to the adapters db
-        self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
+        self.devices_db_connection = self._get_db_connection(True)[
+            self.plugin_unique_name]
         # Scheduler for querying core for online adapters and querying the adapters themselves
         self._scheduler = None
         # Load devices DB, or create an empty one
         self._load_devices_from_persistent_db()
-
-    def start_serve(self):
-        """Overriding PluginBase function in order to start our managing thread first.
-        """
+        # Starting the managing thread
         self._start_managing_thread()
-        super().start_serve()
 
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.
-        
+
         Returned from the Adapter/Plugin.
-        
+
         Mapped fields will include:
         * Device type - <string?> Computer, laptop, phone, anti-virus instance...
         * OS version - <string> The version of the runnig os
@@ -112,7 +109,8 @@ class AggregatorPlugin(PluginBase):
         Currently the sampling rate is hard coded for 60 seconds.
         """
         try:
-            current_adapters = requests.get(self.core_address + '/register').json()
+            current_adapters = requests.get(
+                self.core_address + '/register').json()
 
             # let's add jobs for all adapters
             for adapter_name, adapter in current_adapters.items():
@@ -126,11 +124,13 @@ class AggregatorPlugin(PluginBase):
 
                 sample_rate = adapter['device_sample_rate']
                 self._scheduler.add_job(func=self._save_devices_from_adapter,
-                                        trigger=IntervalTrigger(seconds=sample_rate),
+                                        trigger=IntervalTrigger(
+                                            seconds=sample_rate),
                                         next_run_time=datetime.now(),
                                         kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
                                                 'plugin_name': adapter['plugin_name']},
-                                        name="Fetching job for adapter={}".format(adapter_name),
+                                        name="Fetching job for adapter={}".format(
+                                            adapter_name),
                                         id=adapter_name,
                                         max_instances=1)
 
@@ -177,7 +177,8 @@ class AggregatorPlugin(PluginBase):
             return return_error("Invalid data sent", 400)
 
         association_type = sent_plugin.get('association_type')
-        associated_adapter_devices = sent_plugin.get('associated_adapter_devices')
+        associated_adapter_devices = sent_plugin.get(
+            'associated_adapter_devices')
 
         if association_type not in ['Tag', 'Link', 'Unlink']:
             return return_error("Acceptable values for association_type are: 'Tag', 'Link', 'Unlink'", 400)
@@ -191,7 +192,8 @@ class AggregatorPlugin(PluginBase):
             if not isinstance(tagname, str):
                 return return_error("tagname must be provided as a string")
 
-        sent_plugin['accurate_for_datetime'] = datetime.now()  # user doesn't send this
+        # user doesn't send this
+        sent_plugin['accurate_for_datetime'] = datetime.now()
 
         # now let's update our db
         with self.device_db_lock:
@@ -203,7 +205,8 @@ class AggregatorPlugin(PluginBase):
                                               # is `sent_plugin` matching with any of axonius_device['adapters']?
                                               any(parsed_device_match_plugin(sent_plugin, axon_adapter_device)
                                                   for axon_adapter_device in
-                                                  axonius_device['adapters'].values()
+                                                  axonius_device['adapters'].values(
+                                              )
                                                   if axon_adapter_device['plugin_type'] == 'Adapter')}
             if association_type == 'Tag':
                 if len(axonius_device_candidates_dict) != 1:
@@ -226,17 +229,20 @@ class AggregatorPlugin(PluginBase):
 
                 collected_adapter_devices_dicts = [axonius_device['adapters'] for axonius_device in
                                                    axonius_device_candidates_dict.values()]
-                all_plugin_unique_names = list(chain.from_iterable(d.keys() for d in collected_adapter_devices_dicts))
+                all_plugin_unique_names = list(chain.from_iterable(
+                    d.keys() for d in collected_adapter_devices_dicts))
                 if len(set(all_plugin_unique_names)) != len(all_plugin_unique_names):
                     # this means we have a duplicate plugin_unique_name
                     # we strongly enforce the rule that there can't be two plugin_unique_name on the same
                     # AxoniusDevice
-                    self.logger.critical(f"Contradiction detected, sent_plugin: \n{sent_plugin}")
+                    self.logger.critical(
+                        f"Contradiction detected, sent_plugin: \n{sent_plugin}")
                     return return_error("Contradiction detected. Please resync and check yourself.", 500)
 
                 # now we can assume now that all all_plugin_unique_names are in fact unique
                 # we merge all dictionaries!
-                all_unique_adpater_devices_data = {k: v for d in collected_adapter_devices_dicts for k, v in d.items()}
+                all_unique_adpater_devices_data = {
+                    k: v for d in collected_adapter_devices_dicts for k, v in d.items()}
 
                 internal_axon_id = uuid.uuid4().hex
                 self.devices_db[internal_axon_id] = {
@@ -256,7 +262,8 @@ class AggregatorPlugin(PluginBase):
                         "All associated_adapter_devices in an unlink operation must be from the same Axonius "
                         "device, in your case, they're from "
                         f"{len(axonius_device_candidates_dict)} devices.")
-                axonius_device_to_split = list(axonius_device_candidates_dict.values())[0]
+                axonius_device_to_split = list(
+                    axonius_device_candidates_dict.values())[0]
 
                 if len(axonius_device_to_split['adapters']) == len(associated_adapter_devices):
                     return return_error("You can't remove all devices from an AxoniusDevice, that'll be unfair.")
@@ -270,7 +277,8 @@ class AggregatorPlugin(PluginBase):
                     "internal_axon_id": internal_axon_id,
                     "accurate_for_datetime": datetime.now(),
                     "adapters": {
-                        associated_adapter_devices: axonius_device_to_split['adapters'].pop(associated_adapter_devices)
+                        associated_adapter_devices: axonius_device_to_split['adapters'].pop(
+                            associated_adapter_devices)
                         for associated_adapter_devices in associated_adapter_devices
                     },
                     "tags": []
@@ -286,7 +294,8 @@ class AggregatorPlugin(PluginBase):
 
             self._save_devices_db_to_persistent_db()
 
-        self._save_parsed_in_db(sent_plugin, db_type='raw')  # raw == parsed for plugin_data
+        # raw == parsed for plugin_data
+        self._save_parsed_in_db(sent_plugin, db_type='raw')
         self._save_parsed_in_db(sent_plugin)  # save in parsed too
 
         return ""
@@ -316,7 +325,8 @@ class AggregatorPlugin(PluginBase):
                 for client_name, devices_per_client in devices:
                     # Here we have all the devices a single client sees
                     for device in devices_per_client['parsed']:
-                        device['pretty_id'] = beautiful_adapter_device_name(plugin_name, device['id'])
+                        device['pretty_id'] = beautiful_adapter_device_name(
+                            plugin_name, device['id'])
                         parsed_to_insert = {
                             'client_used': client_name,
                             'plugin_type': 'Adapter',
@@ -326,7 +336,8 @@ class AggregatorPlugin(PluginBase):
                             'data': device
                         }
 
-                        device_key = self._find_device_by_adapter(parsed_to_insert)
+                        device_key = self._find_device_by_adapter(
+                            parsed_to_insert)
 
                         if device_key:
                             # We need to update the device data
@@ -350,9 +361,11 @@ class AggregatorPlugin(PluginBase):
         except AdapterOffline:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
-            self.logger.warn("adapter {} might be offline".format(plugin_unique_name))
+            self.logger.warn(
+                "adapter {} might be offline".format(plugin_unique_name))
         except Exception as e:
-            self.logger.error("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
+            self.logger.error("Thread {0} encountered error: {1}".format(
+                threading.current_thread(), str(e)))
             raise
 
     def _save_parsed_in_db(self, device, db_type='parsed'):
@@ -419,7 +432,8 @@ class AggregatorPlugin(PluginBase):
                 axonius_device_to_change['tags'].append(tag)
             else:
                 associated_tag['tagvalue'] = tag['tagvalue']
-            axonius_device_to_change['accurate_for_datetime'] = tag.get('accurate_for_datetime')
+            axonius_device_to_change['accurate_for_datetime'] = tag.get(
+                'accurate_for_datetime')
 
     def _update_device_with_adapter(self, adapter_parsed, axonius_device_id, accurate_for_datetime=None):
         """ Updates a device in the devices_db using adapter.
@@ -480,7 +494,8 @@ class AggregatorPlugin(PluginBase):
         devices_to_save = self.devices_db.values()
         if len(devices_to_save) != 0:
             self.devices_db_connection['devices_db'].delete_many({})
-            self.devices_db_connection['devices_db'].insert_many(devices_to_save)
+            self.devices_db_connection['devices_db'].insert_many(
+                devices_to_save)
 
     def _save_devices_db_to_historical_persistent_db(self):
         """
@@ -503,12 +518,14 @@ class AggregatorPlugin(PluginBase):
                                                     ('_id',
                                                      'accurate_for_datetime', 'client_used', 'plugin_name',
                                                      'plugin_type', 'plugin_unique_name')}
-                    axon_adapter_device_snapshot['data'] = {'id': adapter_device['data']['id']}
+                    axon_adapter_device_snapshot['data'] = {
+                        'id': adapter_device['data']['id']}
                     axon_device_snapshot['adapters'][plugin_unique_name] = axon_adapter_device_snapshot
 
                 device_db_snapshot[axon_device_id] = axon_device_snapshot
 
-            self.devices_db_connection['db_historical'].insert_one({"devices_db": device_db_snapshot})
+            self.devices_db_connection['db_historical'].insert_one(
+                {"devices_db": device_db_snapshot})
 
     def _load_devices_from_persistent_db(self):
         """
@@ -516,4 +533,5 @@ class AggregatorPlugin(PluginBase):
         :return:
         """
         with self.device_db_lock:
-            self.devices_db = {k['internal_axon_id']: k for k in self.devices_db_connection['devices_db'].find()}
+            self.devices_db = {
+                k['internal_axon_id']: k for k in self.devices_db_connection['devices_db'].find()}
