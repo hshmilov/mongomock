@@ -48,8 +48,8 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                            response.status_code >= 300 or
-                            'Content-Encoding' in response.headers):
+                    response.status_code >= 300 or
+                        'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
                 compressed = io.BytesIO()
