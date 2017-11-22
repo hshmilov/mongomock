@@ -13,6 +13,7 @@ export const adapter = {
 			{status: 'success', state: 'Connected', id: 'ad_adapter_123', type: 'ad_adapter', name: 'Active Directory',
 				description: 'Manages Windows devices', connected_servers: 20 }
 		], error: ''},
+
 		/* Statically defined fields that should be presented for each adapter, in this order  */
 		fields: [
 			{path: 'name', name: 'Name', type: 'status-icon-logo-text'},
@@ -20,6 +21,8 @@ export const adapter = {
 			{path: 'connected_servers', name: 'Connected Servers'},
 			{path: 'state', name: 'State'}
 		],
+
+		/* Data about a specific adapter that is currently being configured */
 		currentAdapter: { fetching: false, data: {
 			id: 'ad_adapter',
 			name: 'Active Directory',
@@ -39,6 +42,10 @@ export const adapter = {
 	getters: {},
 	mutations: {
 		[ UPDATE_ADAPTERS ] (state, payload) {
+			/*
+				Called first before API request for adapters, in order to update state to fetching
+				Called again after API call returns with either error or result data, that is added to adapters list
+			 */
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
 				state.adapterList.data = [ ...state.adapterList.data, ...payload.data ]
@@ -48,6 +55,10 @@ export const adapter = {
 			}
 		},
 		[ SET_ADAPTER ] (state, payload) {
+			/*
+				Called first before API request for a specific adapter, in order to update state to fetching
+				Called again after API call returns with either error or data which is assigned to current adapter
+			 */
 			state.currentAdapter.fetching = payload.fetching
 			state.currentAdapter.error = payload.error
 			if (payload.data) {
@@ -85,6 +96,9 @@ export const adapter = {
 			})
 		},
 		[ UPDATE_ADAPTER ] ({dispatch}, payload) {
+			/*
+				Call API to save given adapter data to the given adapter id
+			 */
 			dispatch(REQUEST_API, {
 				rule: `api/adapters/${payload.id}`,
 				method: 'POST',

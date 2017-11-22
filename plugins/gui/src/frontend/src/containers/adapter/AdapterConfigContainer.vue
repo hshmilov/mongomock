@@ -55,6 +55,7 @@
 				/* Validation */
 
 				/* Save and return to adapters page */
+				this.updateAdapter(this.adapterData)
 				this.returnToAdapters()
             },
             configServer(serverId) {
@@ -62,7 +63,13 @@
             }
         },
         created() {
-
+			/*
+                If no adapter mapped data source, or has wrong id for current adapter selection,
+                try and fetch it (happens after refresh) and update local adapter
+             */
+			if (!this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
+				this.fetchAlert(this.$route.params.id)
+			}
         }
 	}
 </script>

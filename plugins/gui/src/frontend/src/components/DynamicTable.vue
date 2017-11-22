@@ -9,15 +9,15 @@
         <tbody>
             <tr v-for="record in data" class="table-row" @click="$emit('select', record['id'])">
                 <td>
+                    <!-- Check for connecting to server and uncheck to stop connection -->
                     <checkbox class="mr-2"></checkbox>
                 </td>
                 <generic-table-cell class="table-data" v-for="field in fields" :key="field.path"
                                     :value="record[field.path]" :type="field.type"></generic-table-cell>
             </tr>
             <tr class="table-row" @click="$emit('select', 'new')">
-                <td>
-                    <checkbox class="mr-2"></checkbox>
-                </td>
+                <!-- Entire row for clicking in order to add a newly configured row -->
+                <td></td>
                 <td class="table-data table-btn" :colspan="fields.length">{{ addNewDataLabel }}</td>
             </tr>
         </tbody>
