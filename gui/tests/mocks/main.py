@@ -329,8 +329,9 @@ def queries():
         limit = int(request.args.get('limit', 100))
         filter_str = request.args.get('filter')
         filter = json.loads(filter_str) if filter_str else {}
-        filter['archived'] = { '$exists': False }
-        result = mongo_client['api']['queries'].find(filter).sort([('_id', pymongo.DESCENDING)]).skip(skip)
+        filter['archived'] = {'$exists': False}
+        result = mongo_client['api']['queries'].find(
+            filter).sort([('_id', pymongo.DESCENDING)]).skip(skip)
         if limit > 0:
             result = result.limit(limit)
         queryList = []
@@ -385,16 +386,17 @@ def alerts():
         limit = int(request.args.get('limit', 100))
         filter_str = request.args.get('filter')
         filter = json.loads(filter_str) if filter_str else {}
-        filter['archived'] = { '$exists': False }
-        result = mongo_client['api']['alerts'].find(filter).sort([('_id', pymongo.DESCENDING)]).skip(skip)
+        filter['archived'] = {'$exists': False}
+        result = mongo_client['api']['alerts'].find(filter).sort(
+            [('_id', pymongo.DESCENDING)]).skip(skip)
         if limit:
             result = result.limit(limit)
         alertList = []
         for doc in result:
-            alertList.append({ 'id': str(doc['_id']),
-                               'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
-                               'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'],
-                               'notification': doc['action']['notification'] if doc.get('action') else False })
+            alertList.append({'id': str(doc['_id']),
+                              'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
+                              'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'],
+                              'notification': doc['action']['notification'] if doc.get('action') else False})
         return jsonify(alertList)
     elif request.method == 'POST':
         data = json.loads(request.data.decode('utf-8'))
@@ -410,7 +412,8 @@ def alerts():
 @auto_options()
 def edit_alert(alert_id):
     if request.method == 'GET':
-        doc = mongo_client['api']['alerts'].find({'_id': ObjectId(alert_id)})[0]
+        doc = mongo_client['api']['alerts'].find(
+            {'_id': ObjectId(alert_id)})[0]
         return jsonify({
             'id': str(doc['_id']),
             'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
