@@ -19,7 +19,6 @@
 <style lang="scss">
     .status-icon-logo-text {
         .status-icon {
-            border-radius: 4px;
             line-height: 64px;
             top: 0;
             left: 0;

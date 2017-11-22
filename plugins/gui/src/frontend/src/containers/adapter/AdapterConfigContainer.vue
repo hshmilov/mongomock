@@ -4,15 +4,14 @@
             <template slot="cardContent">
                 <div class="row">
                     <div class="form-group">
+                        <!-- Container for list of configured servers - both enabled and disabled -->
                         <div class="form-group-header">
                             <svg-icon name="navigation/device" width="24" height="24" :original="true"></svg-icon>
                             <span class="form-group-title">Add / update Servers</span>
                         </div>
+                        <dynamic-table class="ml-4 mt-5" :data="adapterData.servers" :fields="adapterData.fields"
+                                       addNewDataLabel="Add a server" @select="configServer"></dynamic-table>
                     </div>
-                </div>
-                <div>
-                    <!-- Container for list of configured servers - both enabled and disabled -->
-                    <dynamic-table :data="adapterData.servers" :fields="adapterData.fields"></dynamic-table>
                 </div>
                 <div>
                     <!-- Container for configuration of a single selected \ added server -->
@@ -58,8 +57,8 @@
 				/* Save and return to adapters page */
 				this.returnToAdapters()
             },
-            addServer() {
-
+            configServer(serverId) {
+                console.log(serverId)
             }
         },
         created() {

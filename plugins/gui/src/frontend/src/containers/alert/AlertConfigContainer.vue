@@ -23,9 +23,9 @@
                             <div class="form-group-header">
                                 <i class="icon-equalizer2"></i><span class="form-group-title">Alert Condition</span>
                             </div>
-                            <checkbox label="Increase in devices number" v-model="alertCondition.increase"
+                            <checkbox class="ml-4 mt-2" label="Increase in devices number" v-model="alertCondition.increase"
                                       @change="updateCriteria()"></checkbox>
-                            <checkbox label="Decrease in devices number" v-model="alertCondition.decrease"
+                            <checkbox class="ml-4" label="Decrease in devices number" v-model="alertCondition.decrease"
                                       @change="updateCriteria()"></checkbox>
                         </div>
                     </div>
@@ -35,7 +35,7 @@
                             <div class="form-group-header">
                                 <i class="icon-calendar"></i><span class="form-group-title">Schedule</span>
                             </div>
-                            <select class="custom-select col-4" :disabled="true">
+                            <select class="custom-select col-4 mt-2 ml-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Always</option>
                             </select>
                         </div>
@@ -43,7 +43,7 @@
                             <div class="form-group-header">
                                 <i class="icon-graph"></i><span class="form-group-title">Presentation</span>
                             </div>
-                            <select class="custom-select col-4" :disabled="true">
+                            <select class="custom-select col-4 mt-2 ml-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select report type...</option>
                             </select>
                         </div>
@@ -54,15 +54,15 @@
                             <div class="form-group-header">
                                 <i class="icon-bell-o"></i><span class="form-group-title">Share and Notify</span>
                             </div>
-                            <checkbox label="Add a system notification" v-model="alertData.notification"></checkbox>
-                            <checkbox label="Send an email" :disabled="true"></checkbox>
-                            <checkbox label="Add to Dashboard" :disabled="true"></checkbox>
+                            <checkbox class="ml-4 mt-2" label="Add a system notification" v-model="alertData.notification"></checkbox>
+                            <checkbox class="ml-4" label="Send an email" :disabled="true"></checkbox>
+                            <checkbox class="ml-4" label="Add to Dashboard" :disabled="true"></checkbox>
                         </div>
                         <div class="form-group col-6">
                             <div class="form-group-header">
                                 <i class="icon-dashboard"></i><span class="form-group-title">Trigger Action</span>
                             </div>
-                            <select class="custom-select col-4" :disabled="true">
+                            <select class="custom-select col-4 mt-2 ml-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select Plugin...</option>
                             </select>
                         </div>

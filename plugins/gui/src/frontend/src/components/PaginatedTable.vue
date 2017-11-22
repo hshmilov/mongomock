@@ -20,24 +20,8 @@
                         <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
                                   @change="updateSelected()"></checkbox>
                     </td>
-                    <td class="table-row-data" v-for="field in fields">
-                        <template v-if="field.type === 'timestamp'">
-                            <span>{{parseDate(record[field.path])}} {{parseTime(record[field.path])}}</span>
-                        </template>
-                        <template v-else-if="field.type === 'status'">
-                            <status-icon :value="record[field.path]"></status-icon>
-                        </template>
-                        <template v-else-if="field.type === 'type'">
-                            <type-icon :value="record[field.path]"></type-icon>
-                        </template>
-                        <template v-else-if="field.type && field.type.indexOf('list') > -1">
-                            <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
-                                         :data="record[field.path]" :limit="3"></object-list>
-                        </template>
-                        <template v-else>
-                            <span>{{ record[field.path]}}</span>
-                        </template>
-                    </td>
+                    <generic-table-cell class="table-row-data" v-for="field in fields" :key="field.path"
+                                        :type="field.type" :value="record[field.path]"></generic-table-cell>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                         <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
                             <i v-if="action.triggerFont" :class="action.triggerFont"></i>
@@ -72,15 +56,13 @@
 
 <script>
 	import Checkbox from './Checkbox.vue'
-	import ObjectList from './ObjectList.vue'
-    import StatusIcon from './StatusIcon.vue'
-    import TypeIcon from './TypeIcon.vue'
+    import GenericTableCell from './GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
     import './icons/navigation'
 
 	export default {
 		name: 'paginated-table',
-		components: { Checkbox, ObjectList, StatusIcon, TypeIcon, PulseLoader },
+		components: { Checkbox, GenericTableCell, PulseLoader },
 		props: [
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
 		],
@@ -161,18 +143,6 @@
 			}
 		},
 		methods: {
-			pad2(number) {
-				if ((number + '').length === 2) { return number }
-				return `0${number}`
-            },
-            parseDate(timestamp) {
-				let d = new Date(timestamp)
-				return `${this.pad2(d.getDate())}/${this.pad2(d.getMonth()+1)}/${this.pad2(d.getFullYear())}`
-            },
-            parseTime(timestamp) {
-				let d = new Date(timestamp)
-				return `${this.pad2(d.getHours())}:${this.pad2(d.getMinutes())}`
-            },
 			updateSelected () {
 				let _this = this
 				let selectedRecords = Object.keys(this.recordSelection).filter(function (id) {

@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'axonius';
-  src:  url('axonius.eot?q2f1r3');
-  src:  url('axonius.eot?q2f1r3#iefix') format('embedded-opentype'),
-    url('axonius.ttf?q2f1r3') format('truetype'),
-    url('axonius.woff?q2f1r3') format('woff'),
-    url('axonius.svg?q2f1r3#axonius') format('svg');
+  src:  url('axonius.eot?q1bbpt');
+  src:  url('axonius.eot?q1bbpt#iefix') format('embedded-opentype'),
+    url('axonius.ttf?q1bbpt') format('truetype'),
+    url('axonius.woff?q1bbpt') format('woff'),
+    url('axonius.svg?q1bbpt#axonius') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -54,6 +54,9 @@
 .icon-tick:before {
   content: "\e906";
 }
+.icon-checkmark2:before {
+  content: "\e903";
+}
 .icon-calendar:before {
   content: "\e904";
 }
@@ -86,9 +89,6 @@
 }
 .icon-format_list_bulleted:before {
   content: "\e908";
-}
-.icon-check:before {
-  content: "\e903";
 }
 .icon-home:before {
   content: "\e900";

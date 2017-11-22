@@ -24,15 +24,15 @@ export const adapter = {
 			id: 'ad_adapter',
 			name: 'Active Directory',
 			fields: [
-				{ path: 'status', name: '', type: 'status-icon'},
+				{ path: 'status', name: '', type: 'status'},
 				{ path: 'name', name: 'Name'},
 				{ path: 'ip', name: 'IP Address'},
 				{ path: 'last_updated', name: 'Last Updated', type: 'timestamp'}
 			],
 			servers: [
-				{ status: 'success', name: 'DC-Main', ip: '192.168.4.1', last_updated: new Date().getTime()},
-				{ status: 'error', name: 'DC-Secondary', ip: '192.168.4.2', last_updated: new Date().getTime()},
-				{ status: 'warning', name: 'DC-Secondary', ip: '192.168.4.3', last_updated: new Date().getTime()}
+				{ id:1, status: 'success', name: 'DC-Main', ip: '192.168.4.1', last_updated: new Date().getTime()},
+				{ id:2, status: 'error', name: 'DC-Secondary', ip: '192.168.4.2', last_updated: new Date().getTime()},
+				{ id:3, status: 'warning', name: 'DC-Secondary', ip: '192.168.4.3', last_updated: new Date().getTime()}
 			]
 		}, error: ''}
 	},
