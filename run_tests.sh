@@ -9,7 +9,7 @@ if [ $(autopep8 --exclude venv --recursive . --diff | wc -l) -ne 0 ]; then
 fi
 
 echo "Running unitests"
-pytest --ignore=testing
+pytest --ignore=testing --ignore=gui/node_modules/
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"
