@@ -99,7 +99,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
-    Decorator stating that the view supports ?filtered=["name","hostname",["os_type":"OS.type"]]
+    Decorator stating that the view supports ?filter={"plugin_name":"aws_adapter" ,"data.name": ["WINDOWS8", "Blah"]}
     """
 
     def wrap(func):
@@ -112,6 +112,7 @@ def filtered():
                 try:
                     mongo_filter = json.loads(mongo_filter)
 
+                    # TODO: Beautify by taking the $or case into an external method.
                     # If there are more than one filter, should be regarded as "and" logic
                     if len(mongo_filter) > 1:
                         parsed_filter['$and'] = []
@@ -121,12 +122,14 @@ def filtered():
                             if isinstance(val, list):
                                 or_list = {"$or": []}
                                 for or_val in val:
-                                    or_list["$or"].append({'adapters.{0}'.format(key): or_val})
+                                    or_list["$or"].append(
+                                        {'adapters.{0}'.format(key): or_val})
 
                                 parsed_filter['$and'].append(or_list)
 
                             else:
-                                parsed_filter['$and'].append({'adapters.{0}'.format(key): val})
+                                parsed_filter['$and'].append(
+                                    {'adapters.{0}'.format(key): val})
 
                     else:
                         mongo_filter_key = list(mongo_filter.keys())[0]
@@ -137,10 +140,12 @@ def filtered():
 
                             parsed_filter['$or'] = []
                             for or_val in mongo_filter_value:
-                                parsed_filter["$or"].append({'adapters.{0}'.format(mongo_filter_key): or_val})
+                                parsed_filter["$or"].append(
+                                    {'adapters.{0}'.format(mongo_filter_key): or_val})
 
                         else:
-                            parsed_filter['adapters.{0}'.format(mongo_filter_key)] = mongo_filter_value
+                            parsed_filter['adapters.{0}'.format(
+                                mongo_filter_key)] = mongo_filter_value
 
                 except json.JSONDecodeError:
                     pass
