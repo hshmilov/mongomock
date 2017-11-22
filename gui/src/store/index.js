@@ -5,6 +5,7 @@ import { REQUEST_API, requestApi } from '../store/actions'
 import { TOGGLE_SIDEBAR, toggleSidebar } from './mutations'
 import { device } from '../store/modules/device'
 import { query } from '../store/modules/query'
+import { alert } from '../store/modules/alert'
 import { plugin } from '../store/modules/plugin'
 
 Vue.use(Vuex)
@@ -37,6 +38,7 @@ export default new Vuex.Store({
          */
         device,
         query,
+        alert,
         plugin
     }
 

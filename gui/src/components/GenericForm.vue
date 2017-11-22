@@ -1,7 +1,7 @@
 <template>
-    <form class="form" @keyup.enter.stop="handleSubmit()">
-        <div v-bind:class="{ 'row': horizontal }">
-            <div v-for="input in schema" class="form-group" v-bind:class="{ 'col-3': horizontal }">
+    <form class="form" @keyup.enter.stop="$emit('submit', model)">
+        <div class="row">
+            <div v-for="input in schema" class="form-group col-3">
                 <label v-if="input.name" class="form-label">{{ input.name }}</label>
                 <template v-if="input.control === 'select'">
                     <select class="form-control" v-model="model[input.path]" @input="$emit('input', model)">
@@ -21,9 +21,9 @@
                            v-model="model[input.path]" @input="$emit('input', model)">
                 </template>
             </div>
-        </div>
-        <div class="form-group">
-            <a v-if="submittable" class="btn" @click="handleSubmit()">{{ submitLabel || 'Send' }}</a>
+            <div class="form-group col-1">
+                <a v-if="submitLabel" class="btn" @click="$emit('submit', model)">{{ submitLabel }}</a>
+            </div>
         </div>
     </form>
 </template>
@@ -35,7 +35,7 @@
     export default {
         name: 'generic-form',
         components: { MultipleSelect, Checkbox },
-        props: [ 'schema', 'submittable', 'submitLabel', 'horizontal', 'value' ],
+        props: [ 'schema', 'submitLabel', 'value' ],
         computed: {
             pathByName() {
                 return this.schema.reduce(function(map, input) {
@@ -53,11 +53,6 @@
         	value: function(newValue) {
         		this.model = { ...newValue }
             }
-        },
-        methods: {
-        	handleSubmit() {
-				this.$emit('submit')
-            }
         }
     }
 </script>
@@ -67,12 +62,16 @@
 
     .form {
         .form-group {
-            &.col, &.col-1 {
+            &.col-3, &.col-1 {
                 margin-bottom: 0;
             }
             &.col-1 {
-                text-align: left;
-                overflow: visible;
+                position: relative;
+                .btn {
+                    overflow: visible;
+                    position: absolute;
+                    bottom: 0;
+                }
             }
             .image-list {
                 line-height: 30px;
@@ -95,7 +94,7 @@
             }
         }
         &.row {
-            margin: 12px -15px;
+            margin: 12px -12px;
         }
     }
     .form-material {

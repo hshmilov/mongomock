@@ -2,7 +2,7 @@
     <div :class="`${customClass? customClass: ''} card`">
         <div v-if="title" class="card-header">
             <span class="card-header-title">{{ title }}</span>
-            <slot name="cardActions"></slot>
+            <slot v-if="$slots['cardActions']" name="cardActions"></slot>
         </div>
         <div class="card-body">
             <slot name="cardContent"></slot>
@@ -64,7 +64,7 @@
         }
         .card-body {
             position: relative;
-            padding: 8px 12px;
+            padding: 12px 12px;
         }
     }
 </style>

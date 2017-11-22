@@ -330,8 +330,10 @@ def queries():
         filter_str = request.args.get('filter')
         filter = json.loads(filter_str) if filter_str else {}
         filter['archived'] = {'$exists': False}
-        result = mongo_client['api']['queries'].find(filter).sort(
-            [('_id', pymongo.DESCENDING)]).skip(skip).limit(limit)
+        result = mongo_client['api']['queries'].find(
+            filter).sort([('_id', pymongo.DESCENDING)]).skip(skip)
+        if limit > 0:
+            result = result.limit(limit)
         queryList = []
         for doc in result:
             if doc.get('query'):
@@ -374,6 +376,67 @@ def get_all_fields():
             all_fields.discard('.'.join([current_adapter, 'data', 'raw']))
 
     return jsonify(all_fields)
+
+
+@app.route('/api/alerts', methods=['GET', 'POST'])
+@auto_options()
+def alerts():
+    if request.method == 'GET':
+        skip = int(request.args.get('skip', 0))
+        limit = int(request.args.get('limit', 100))
+        filter_str = request.args.get('filter')
+        filter = json.loads(filter_str) if filter_str else {}
+        filter['archived'] = {'$exists': False}
+        result = mongo_client['api']['alerts'].find(filter).sort(
+            [('_id', pymongo.DESCENDING)]).skip(skip)
+        if limit:
+            result = result.limit(limit)
+        alertList = []
+        for doc in result:
+            alertList.append({'id': str(doc['_id']),
+                              'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
+                              'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'],
+                              'notification': doc['action']['notification'] if doc.get('action') else False})
+        return jsonify(alertList)
+    elif request.method == 'POST':
+        data = json.loads(request.data.decode('utf-8'))
+        result = mongo_client['api']['alerts'].insert_one({
+            'query': json.dumps(data['query']), 'type': 'Manual', 'timestamp': datetime.now(),
+            'name': data['name'], 'criteria': data['criteria'], 'notification': data['action']['notification'],
+            'retrigger': data['retrigger']
+        })
+        return str(result.inserted_id), 200
+
+
+@app.route('/api/alerts/<alert_id>', methods=['DELETE', 'POST', 'GET'])
+@auto_options()
+def edit_alert(alert_id):
+    if request.method == 'GET':
+        doc = mongo_client['api']['alerts'].find(
+            {'_id': ObjectId(alert_id)})[0]
+        return jsonify({
+            'id': str(doc['_id']),
+            'name': doc['name'] if doc.get('name') else '', 'timestamp': doc['timestamp'],
+            'criteria': doc['criteria'], 'query': doc['query'], 'retrigger': doc['retrigger'],
+            'notification': doc['action']['notification'] if doc.get('action') else False
+        })
+    elif request.method == 'DELETE':
+        mongo_client['api']['alerts'].update_one(
+            {'_id': ObjectId(alert_id)},
+            {'$set': {'archived': True}}
+        )
+        return '', 200
+    elif request.method == 'POST':
+        data = json.loads(request.data.decode('utf-8'))
+        result = mongo_client['api']['alerts'].update_one(
+            {'_id': ObjectId(alert_id)},
+            {
+                'query': json.dumps(data['query']), 'type': 'Manual', 'timestamp': datetime.now(),
+                'name': data['name'], 'criteria': data['criteria'], 'notification': data['action']['notification'],
+                'retrigger': data['retrigger']
+            }
+        )
+        return str(result.inserted_id), 200
 
 
 @app.route('/src/<path:filename>')

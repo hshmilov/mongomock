@@ -14,15 +14,18 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr class="table-row" v-bind:class="{ active: recordSelection[record['id']] }"
+                <tr class="table-row" v-bind:class="{ active: recordSelection[record.id] }" :data-id="record.id"
                     v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
                     <td class="table-row-data">
-                        <checkbox v-if="value !== undefined" v-model="recordSelection[record['id']]"
+                        <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
                                   @change="updateSelected()"></checkbox>
                     </td>
                     <td class="table-row-data" v-for="field in fields">
                         <template v-if="field.type === undefined || !field.type || field.type=='text'">
                             <span>{{ record[field.path] || '&nbsp' }}</span>
+                        </template>
+                        <template v-else-if="field.type === 'timestamp'">
+                            <span>{{parseDate(record[field.path])}} {{parseTime(record[field.path])}}</span>
                         </template>
                         <template v-else-if="field.type.indexOf('list') > -1">
                             <object-list v-if="record[field.path] && record[field.path].length" :type="field.type"
@@ -30,7 +33,7 @@
                         </template>
                     </td>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                        <a v-for="action in actions" class="table-row-action" @click="action.handler($event, record['id'])">
+                        <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
                             <i :class="action.trigger"></i>
                         </a>
                     </td>
@@ -147,6 +150,18 @@
 			}
 		},
 		methods: {
+			pad2(number) {
+				if ((number + '').length >= 2) { return number }
+				return `0${number}`
+            },
+            parseDate(timestamp) {
+				let d = new Date(timestamp)
+				return `${this.pad2(d.getDate())}/${this.pad2(d.getMonth()+1)}/${this.pad2(d.getFullYear())}`
+            },
+            parseTime(timestamp) {
+				let d = new Date(timestamp)
+				return `${this.pad2(d.getHours())}:${this.pad2(d.getMinutes())}`
+            },
 			updateSelected () {
 				let _this = this
 				let selectedRecords = Object.keys(this.recordSelection).filter(function (id) {

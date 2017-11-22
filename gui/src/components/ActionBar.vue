@@ -1,7 +1,7 @@
 <template>
     <ul class="action-bar">
         <li v-for="action in actions" class="action-bar-item">
-            <a @click="action.perform">{{ action.name }}</a>
+            <a @click="action.handler">{{ action.title }}</a>
         </li>
     </ul>
 </template>
