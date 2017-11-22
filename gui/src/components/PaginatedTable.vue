@@ -1,8 +1,7 @@
 <template>
     <div class="table-responsive paginated-table">
         <div class="dataTables_wrapper">
-            <vue-simple-spinner v-if="data.length == 0 && fetching" class="spinner-container" size="64" :speed="1.2"
-                                line-fg-color="#26dad2"></vue-simple-spinner>
+            <pulse-loader :loading="fetching" color="#26dad2"></pulse-loader>
             <table class="table table-striped">
                 <thead>
                 <tr>
@@ -66,14 +65,11 @@
 <script>
 	import Checkbox from './Checkbox.vue'
 	import ObjectList from './ObjectList.vue'
-	import Spinner from 'vue-simple-spinner'
-	import VueSimpleSpinner from '../../node_modules/vue-simple-spinner/src/components/Spinner.vue'
+	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
 	export default {
 		name: 'paginated-table',
-		components: {
-			VueSimpleSpinner,
-			Checkbox, ObjectList, Spinner},
+		components: {Checkbox, ObjectList, PulseLoader},
 		props: [
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
 		],

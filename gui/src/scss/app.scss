@@ -166,17 +166,25 @@ a.btn:not([href]):not([tabindex]) {
   }
 }
 
-.spinner-container {
+.v-spinner {
   height: 100%;
   position: absolute;
   width: 100%;
   top: 0;
   left: 0;
   transition: opacity .3s ease;
-  .vue-simple-spinner {
+  .v-pulse {
     position: absolute;
-    top: 40%;
-    left: 50%;
+    top: 50%;
+    &.v-pulse1 {
+      left: 48%;
+    }
+    &.v-pulse2 {
+      left: 50%;
+    }
+    &.v-pulse3 {
+      left: 52%;
+    }
   }
 }
 
