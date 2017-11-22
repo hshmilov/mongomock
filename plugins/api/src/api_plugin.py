@@ -97,6 +97,41 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
 
 
 # Caution! These decorators must come BEFORE @add_rule
+def queried():
+    """
+    Decorator stating that the view supports ?fields=["name","hostname",["os_type":"OS.type"]]
+    """
+
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            pass
+
+            query = request.args.get('query')
+            parsed_query = dict()
+            if query:
+                try:
+                    query = json.loads(query)
+
+                    # Taking care and removing adapters from query.
+                    for adapter in query.pop('adapters', []):
+                        parsed_query['adapters'] = {'$elemMatch': {'plugin_name': adapter}}
+
+                    for key, val in query.items():
+                        if 'adapters' not in parsed_query:
+                            parsed_query['adapters'] = {'$elemMatch': {'data.{0}'.format(key): val}}
+                        else:
+                            parsed_query['adapters']['$elemMatch']['data.{0}'.format(key)] = val
+
+                except json.JSONDecodeError:
+                    pass
+            return func(self, query=parsed_query, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+# Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
     Decorator stating that the view supports ?fields=["name","hostname",["os_type":"OS.type"]]
@@ -142,7 +177,7 @@ def requires_aggregator():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            if self._devices_db_name is None:
+            if self._aggregator_plugin_unique_name is None:
                 return return_error("Aggregator is missing, try again later", 500)
             return func(self, *args, **kwargs)
 
@@ -187,7 +222,7 @@ class APIPlugin(PluginBase):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
 
-        super().__init__(*args, **kwargs)
+        super().__init__(special_db_credentials=['aggregator'], *args, **kwargs)
         AXONIUS_REST.root_path = os.getcwd()
         AXONIUS_REST.static_folder = 'my-project/dist/static'
         AXONIUS_REST.static_url_path = 'static'
@@ -195,32 +230,44 @@ class APIPlugin(PluginBase):
         AXONIUS_REST.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         aggregator = self._get_aggregator()
         if aggregator is None:
-            self._devices_db_name = None
+            self._aggregator_plugin_unique_name = None
         else:
-            self._devices_db_name = aggregator['plugin_unique_name']
-        self._elk_addr = config['gui_specific']['elk_addr']
-        self._elk_auth = config['gui_specific']['elk_auth']
+            self._aggregator_plugin_unique_name = aggregator['plugin_unique_name']
+            # self._elk_addr = config['gui_specific']['elk_addr']
+            # self._elk_auth = config['gui_specific']['elk_auth']
+            # self.db_user = config['gui_specific']['db_user']
+            # self.db_password = config['gui_specific']['db_password']
 
     def _get_aggregator(self):
-        # using requests directly so the api key won't be sent, so the core will give a list of the plugins
+        # using requestsg directly so the api key won't be sent, so the core will give a list of the plugins
         plugins_available = requests.get(self.core_address + '/register').json()
-        aggregator_plugin = [x for x in plugins_available.values() if x['plugin_name'] == 'aggregator_plugin']
+        aggregator_plugin = [x for x in plugins_available.values() if x['plugin_name'] == 'aggregator']
         if len(aggregator_plugin) == 0:
             return None
         if len(aggregator_plugin) != 1:
             raise RuntimeError(f"There are {len(aggregator_plugin)} aggregators, there should only be one")
         return aggregator_plugin[0]
 
-    @requires_aggregator()
-    @add_rule_unauthenticated("api/devices/<device_id>")
-    def device_by_id(self, device_id):
+    def _query_aggregator(self, resource, *args, **kwargs):
         """
+
+        :param resource:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return self.request_remote_plugin(resource, self._aggregator_plugin_unique_name, *args, **kwargs).json()
+
+    @add_rule_unauthenticated("api/adapter_devices/<device_id>")
+    def adapter_device_by_id(self, device_id):
+        """
+        -- this has to be remade, postponed because it's not for MVP
         Returns a device by id
         :param device_id: device id
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            parsed_db = db_connection[self._devices_db_name]['parsed']
+            parsed_db = db_connection[self._aggregator_plugin_unique_name]['parsed']
             device = parsed_db.find_one({'id': device_id}, sort=[('_id', pymongo.DESCENDING)])
             if device is None:
                 return return_error("Device not found", 404)
@@ -229,8 +276,8 @@ class APIPlugin(PluginBase):
     @requires_aggregator()
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("api/devices")
-    def devices(self, limit, skip, fields):
+    @add_rule_unauthenticated("api/adapter_devices")
+    def adapter_devices(self, limit, skip, query):
         """
         Returns all known devices. All parameters are generated by the decorators.
         :param limit: limit for pagination
@@ -238,7 +285,7 @@ class APIPlugin(PluginBase):
         :param fields: fields to return, or None for all
         :return:
         """
-        if fields is None:
+        if query is None:
             group_by = {"_id": "$data.id",
                         "all":
                             {"$first": "$$ROOT"}
@@ -260,9 +307,23 @@ class APIPlugin(PluginBase):
                 {"$limit": limit}
             ])
 
-            if fields is None:
+            if query is None:
                 return jsonify([beautify_db_entry(x['all']) for x in devices])
         return jsonify(devices)
+
+    @requires_aggregator()
+    @paginated()
+    @queried()
+    @add_rule_unauthenticated("api/devices")
+    def current_devices(self, limit, skip, query):
+        """
+        Get Axonius devices from the aggregator
+        """
+        with self._get_db_connection(True) as db_connection:
+            client_collection = db_connection['aggregator_plugin_1']['devices_db']
+            return jsonify(
+                beautify_db_entry(device) for device in
+                client_collection.find(query).sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
     @paginated()
     @add_rule_unauthenticated("api/filters", methods=['POST', 'GET'])
@@ -494,13 +555,13 @@ class APIPlugin(PluginBase):
             user_data = request.get_json(silent=True)
             users_collection.update({'username': user_data['username']},
                                     {'username': user_data['username'],
-                                     'firstname': user_data.get('firstname'),
-                                     'lastname': user_data.get('lastname'),
-                                     'picname': user_data.get('picname'),
+                                     'first_name': user_data.get('firstname'),
+                                     'last_name': user_data.get('lastname'),
+                                     'pic_name': user_data.get('picname'),
                                      'password': bcrypt.hash(user_data['password']),
                                      },
                                     upsert=True)
-            return ""
+            return "", 201
 
     @paginated()
     @add_rule_unauthenticated("api/logs")
