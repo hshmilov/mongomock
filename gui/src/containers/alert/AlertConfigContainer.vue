@@ -35,7 +35,7 @@
                             <div class="form-section-header">
                                 <i class="icon-calendar"></i><span class="form-section-title">Schedule</span>
                             </div>
-                            <select class="form-select col-4" :disabled="true">
+                            <select class="custom-select col-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Always</option>
                             </select>
                         </div>
@@ -43,7 +43,7 @@
                             <div class="form-section-header">
                                 <i class="icon-graph"></i><span class="form-section-title">Presentation</span>
                             </div>
-                            <select class="form-select col-4" :disabled="true">
+                            <select class="custom-select col-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select report type...</option>
                             </select>
                         </div>
@@ -62,7 +62,7 @@
                             <div class="form-section-header">
                                 <i class="icon-dashboard"></i><span class="form-section-title">Trigger Action</span>
                             </div>
-                            <select class="form-select col-4" :disabled="true">
+                            <select class="custom-select col-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select Plugin...</option>
                             </select>
                         </div>
@@ -185,7 +185,7 @@
                         margin-left: 8px;
                     }
                 }
-                .form-select, .checkbox {
+                .custom-select, .checkbox {
                     margin: 12px 24px;
                 }
                 &.action-group {

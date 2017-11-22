@@ -8,7 +8,7 @@
                 </div>
                 <div class="form-group col-6 filter-status">
                     <label class="form-label">Show Only</label>
-                    <select class="col-6">
+                    <select class="col-6 custom-select">
                         <option value="connected">Connected</option>
                         <option value="not connected">Not Connected</option>
                         <option value="connection failure">Connection Failure</option>
