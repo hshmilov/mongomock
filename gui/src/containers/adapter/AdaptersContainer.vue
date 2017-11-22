@@ -18,8 +18,7 @@
         </card>
         <scrollable-table :data="adapter.adapterList.data" :fields="adapter.fields" :actions="[
         	{triggerFont: 'icon-pencil2', handler: configAdapter},
-        	{triggerFont: 'icon-eye', handler: quickViewAdapter}
-        	]"></scrollable-table>
+        	{triggerFont: 'icon-eye', handler: quickViewAdapter}]"></scrollable-table>
     </scrollable-page>
 </template>
 
@@ -45,7 +44,7 @@
         },
         methods: {
         	configAdapter(adapterId) {
-
+                this.$router.push({path: `adapter/${adapterId}`})
             },
             quickViewAdapter(adapterId) {
 

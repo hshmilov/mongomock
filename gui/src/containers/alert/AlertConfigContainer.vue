@@ -20,8 +20,8 @@
                     <div class="row row-divider">
                         <!-- Section for defining the condition which match of will trigger the alert -->
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-equalizer2"></i><span class="form-section-title">Alert Condition</span>
+                            <div class="form-group-header">
+                                <i class="icon-equalizer2"></i><span class="form-group-title">Alert Condition</span>
                             </div>
                             <checkbox label="Increase in devices number" v-model="alertCondition.increase"
                                       @change="updateCriteria()"></checkbox>
@@ -32,16 +32,16 @@
                     <div class="row row-divider">
                         <!-- Section for defining how often conditions will be tested and how to present results -->
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-calendar"></i><span class="form-section-title">Schedule</span>
+                            <div class="form-group-header">
+                                <i class="icon-calendar"></i><span class="form-group-title">Schedule</span>
                             </div>
                             <select class="custom-select col-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Always</option>
                             </select>
                         </div>
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-graph"></i><span class="form-section-title">Presentation</span>
+                            <div class="form-group-header">
+                                <i class="icon-graph"></i><span class="form-group-title">Presentation</span>
                             </div>
                             <select class="custom-select col-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select report type...</option>
@@ -49,18 +49,18 @@
                         </div>
                     </div>
                     <div class="row row-divider">
-                        <!-- Section for defining what action will occur upon trigger -->
+                        <!-- group for defining what action will occur upon trigger -->
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-bell-o"></i><span class="form-section-title">Share and Notify</span>
+                            <div class="form-group-header">
+                                <i class="icon-bell-o"></i><span class="form-group-title">Share and Notify</span>
                             </div>
                             <checkbox label="Add a system notification" v-model="alertData.notification"></checkbox>
                             <checkbox label="Send an email" :disabled="true"></checkbox>
                             <checkbox label="Add to Dashboard" :disabled="true"></checkbox>
                         </div>
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-dashboard"></i><span class="form-section-title">Trigger Action</span>
+                            <div class="form-group-header">
+                                <i class="icon-dashboard"></i><span class="form-group-title">Trigger Action</span>
                             </div>
                             <select class="custom-select col-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select Plugin...</option>
@@ -68,7 +68,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="form-group action-group">
+                        <div class="form-group place-right">
                             <a class="btn btn-inverse" @click="returnToAlerts">cancel</a>
                             <a class="btn" @click="saveAlert">save</a>
                         </div>
@@ -89,9 +89,9 @@
     import { FETCH_ALERT, INSERT_ALERT } from '../../store/modules/alert'
 
 	export default {
-		components: { ScrollablePage, Card, Checkbox },
 		name: 'alert-config-container',
-        computed: {
+		components: { ScrollablePage, Card, Checkbox },
+		computed: {
             ...mapState([ 'alert', 'query' ]),
             ...mapGetters([ 'savedQueryOptions' ]),
             alertData() {
@@ -171,28 +171,5 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
 
-    .alert-config {
-        .row {
-            position: relative;
-            .form-group {
-                padding: 12px 24px;
-                .form-section-header {
-                    color: $color-theme;
-                    font-size: 20px;
-                    .form-section-title {
-                        margin-left: 8px;
-                    }
-                }
-                .custom-select, .checkbox {
-                    margin: 12px 24px;
-                }
-                &.action-group {
-                    width: 100%;
-                    text-align: right;
-                }
-            }
-        }
-    }
 </style>

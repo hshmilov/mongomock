@@ -43,10 +43,10 @@ export const device = {
 						{name: 'Splunk', path: 'splunk_adapter'}
 					]
 				},
-				{path: 'pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
-				{path: 'name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'IP', name: 'IP Address', selected: true},
-				{path: 'OS.type', name: 'Operating System', selected: true, control: 'text'},
+				{path: 'data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
+				{path: 'data.name', name: 'Host Name', selected: true, control: 'text'},
+				{path: 'data.IP', name: 'IP Address', selected: true},
+				{path: 'data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
 			unique: []

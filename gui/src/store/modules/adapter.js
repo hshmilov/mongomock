@@ -2,12 +2,13 @@ import { REQUEST_API } from '../actions'
 
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
+export const SAVE_ADAPTER = 'SAVE_ADAPTER'
 
 export const adapter = {
 	state: {
 		/* All adapters */
 		adapterList: {fetching: false, data: [
-			{status: 'success', state: 'Connected', plugin_name: 'ad_adapter', name: 'Active Directory',
+			{status: 'success', state: 'Connected', id: 'ad_adapter', name: 'Active Directory',
 				description: 'Manages Windows devices', connected_servers: 20 }
 		], error: ''},
 		/* Statically defined fields that should be presented for each adapter, in this order  */
@@ -16,7 +17,11 @@ export const adapter = {
 			{path: 'description', name: 'Description'},
 			{path: 'connected_servers', name: 'Connected Servers'},
 			{path: 'state', name: 'State'}
-		]
+		],
+		currentAdapter: { fetching: false, data: {
+			id: 'ad_adapter',
+			name: 'Active Directory'
+		}, error: ''}
 	},
 	getters: {},
 	mutations: {
@@ -47,6 +52,13 @@ export const adapter = {
 			dispatch(REQUEST_API, {
 				rule: `api/adapters${param}`,
 				type: UPDATE_ADAPTERS
+			})
+		},
+		[ SAVE_ADAPTER ] ({dispatch}, payload) {
+			dispatch(REQUEST_API, {
+				rule: `api/adapters/${payload.id}`,
+				method: 'POST',
+				data: payload
 			})
 		}
 	}

@@ -11,7 +11,7 @@
             <tr v-for="record in data" class="table-row">
                 <td v-for="field, index in fields" class="table-row-data">
                     <template v-if="field.type === 'status-icon-logo-text'">
-                        <status-icon-logo-text :textValue="record[field.path]" :logoValue="record['plugin_name']"
+                        <status-icon-logo-text :textValue="record[field.path]" :logoValue="record['id']"
                                                :statusIconValue="record['status']"></status-icon-logo-text>
                     </template>
                     <template v-else>
@@ -19,8 +19,8 @@
                     </template>
                 </td>
                 <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                    <a v-for="action in actions" @click="action.execute($event, record['id'])">
-                        <i :class="action.icon"></i>
+                    <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
+                        <i :class="action.triggerFont"></i>
                     </a>
                 </td>
             </tr>
@@ -78,8 +78,13 @@
             }
             &:hover, &.active {
                 background-color: $background-color-hover;
-                .table-row-actions a {
+                .table-row-data {
+                    border-left-color: $background-color-light;
+                }
+                .table-row-actions .table-row-action {
                     visibility: visible;
+                    .svg-stroke {  stroke: $color-text;  }
+                    .svg-fill {  fill: $color-text;  }
                 }
             }
         }
@@ -98,17 +103,20 @@
             &:not(:first-of-type) {
                 border-left: 2px solid $background-color;
             }
-            .table-row-actions {
-                text-align: center;
-                a {
-                    visibility: hidden;
-                    &:hover {
-                        color: $color-theme;
-                    }
-                    i {
-                        vertical-align: middle;
-                        font-size: 120%;
-                    }
+        }
+        .table-row-actions {
+            text-align: right;
+            .table-row-action {
+                visibility: hidden;
+                padding-right: 8px;
+                &:hover {
+                    color: $color-theme;
+                    .svg-stroke {  stroke: $color-theme;  }
+                    .svg-fill {  fill: $color-theme;  }
+                }
+                i {
+                    vertical-align: middle;
+                    font-size: 120%;
                 }
             }
         }
