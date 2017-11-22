@@ -126,7 +126,7 @@ class Core(PluginBase):
     def _check_plugin_online(self, plugin_unique_name):
         """ Function for checking if a plugin is online.
 
-        May block for a maximum of 60 seconds.
+        May block for a maximum of 10 seconds.
 
         :param str plugin_unique_name: The name of the plugin
 
@@ -138,7 +138,7 @@ class Core(PluginBase):
             final_url = uritools.uricompose(scheme='http', host=data['plugin_ip'], port=data['plugin_port'],
                                             path=data['path'])
 
-            check_response = requests.get(final_url, timeout=60)
+            check_response = requests.get(final_url, timeout=10)
 
             if check_response.status_code == 200:
                 return True
