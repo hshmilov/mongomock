@@ -6,7 +6,7 @@
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/plugins/api/docker-compose.yml]:api/python3.6" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/plugins/core/src" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/plugins/api/src" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -15,12 +15,12 @@
     <PathMappingSettings>
       <option name="pathMappings">
         <list>
-          <mapping local-root="$PROJECT_DIR$/plugins/gui/src" remote-root="/home/axonius/app" />
+          <mapping local-root="$PROJECT_DIR$/plugins/api/src" remote-root="/home/axonius/app" />
           <mapping local-root="$PROJECT_DIR$/plugins/axonius-libs/src/libs" remote-root="/home/axonius/libs" />
         </list>
       </option>
     </PathMappingSettings>
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/plugins/gui/src/main.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/plugins/api/src/main.py" />
     <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
