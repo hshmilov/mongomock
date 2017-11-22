@@ -114,13 +114,16 @@ def queried():
 
                     # Taking care and removing adapters from query.
                     for adapter in query.pop('adapters', []):
-                        parsed_query['adapters'] = {'$elemMatch': {'plugin_name': adapter}}
+                        parsed_query['adapters'] = {
+                            '$elemMatch': {'plugin_name': adapter}}
 
                     for key, val in query.items():
                         if 'adapters' not in parsed_query:
-                            parsed_query['adapters'] = {'$elemMatch': {'data.{0}'.format(key): val}}
+                            parsed_query['adapters'] = {
+                                '$elemMatch': {'data.{0}'.format(key): val}}
                         else:
-                            parsed_query['adapters']['$elemMatch']['data.{0}'.format(key)] = val
+                            parsed_query['adapters']['$elemMatch']['data.{0}'.format(
+                                key)] = val
 
                 except json.JSONDecodeError:
                     pass
@@ -222,7 +225,8 @@ class APIPlugin(PluginBase):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
 
-        super().__init__(special_db_credentials=['aggregator'], *args, **kwargs)
+        super().__init__(special_db_credentials=[
+            'aggregator'], *args, **kwargs)
         AXONIUS_REST.root_path = os.getcwd()
         AXONIUS_REST.static_folder = 'my-project/dist/static'
         AXONIUS_REST.static_url_path = 'static'
