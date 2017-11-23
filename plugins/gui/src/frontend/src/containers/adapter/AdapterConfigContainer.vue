@@ -1,8 +1,8 @@
 <template>
-    <scrollable-page :title="`adapters > ${adapterData.name}`" class="">
+    <scrollable-page :title="`adapters > ${adapterData.name}`">
         <card title="configure">
             <template slot="cardContent">
-                <div class="row">
+                <div class="server-list-container row">
                     <div class="form-group">
                         <!-- Container for list of configured servers - both enabled and disabled -->
                         <div class="form-group-header">
@@ -13,17 +13,24 @@
                                        addNewDataLabel="Add a server" @select="configServer"></dynamic-table>
                     </div>
                 </div>
-                <div v-if="currentServer && currentServer.id">
-                    <!-- Container for configuration of a single selected \ added server -->
-                    <status-icon-logo-text :logoValue="adapterData['plugin_name']" :textValue="currentServer['name']"></status-icon-logo-text>
-                    <generic-form :schema="adapterData.schema" v-model="currentServer"></generic-form>
-                </div>
                 <div class="row">
                     <div class="form-group place-right">
                         <a class="btn btn-inverse" @click="returnToAdapters">cancel</a>
                         <a class="btn" @click="saveAdapter">save</a>
                     </div>
                 </div>
+                <modal v-if="currentServer && currentServer.id && configServerModal.open" class="config-server"
+                       @close="configServerModal.open = false" approveText="save" @confirm="saveServer">
+                    <div slot="body">
+                        <!-- Container for configuration of a single selected \ added server -->
+                        <status-icon-logo-text :logoValue="adapterData['plugin_name']"
+                                               :textValue="currentServer['name']"></status-icon-logo-text>
+                        <div class="mt-4 ml-5">
+                            <div>Basic System Credentials</div>
+                            <generic-form :schema="adapterData.schema" v-model="currentServer"></generic-form>
+                        </div>
+                    </div>
+                </modal>
             </template>
         </card>
     </scrollable-page>
@@ -34,17 +41,16 @@
     import Card from '../../components/Card.vue'
     import DynamicTable from '../../components/DynamicTable.vue'
 	import GenericForm from '../../components/GenericForm.vue'
+	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
+	import Modal from '../../components/Modal.vue'
 	import '../../components/icons/navigation'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
 	import { FETCH_ADAPTER, UPDATE_ADAPTER } from '../../store/modules/adapter'
-	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
 
 	export default {
 		name: 'adapter-config-container',
-        components: {
-			StatusIconLogoText,
-			GenericForm, ScrollablePage, Card, DynamicTable },
+        components: { Modal, StatusIconLogoText, GenericForm, ScrollablePage, Card, DynamicTable },
         computed: {
             ...mapState([ 'adapter' ]),
             adapterData() {
@@ -53,7 +59,11 @@
         },
         data() {
 			return {
-				currentServer: {}
+				currentServerIndex: -1,
+				currentServer: {},
+                configServerModal: {
+					open: false
+                }
             }
         },
         methods: {
@@ -70,15 +80,20 @@
             },
             configServer(serverId) {
             	if (serverId === 'new') {
-					this.currentServer.id = serverId
+            		this.currentServerIndex = this.adapterData.servers.length
+					this.currentServer = { id: serverId }
 				} else {
-					this.adapterData.servers.forEach((server) => {
+					this.adapterData.servers.forEach((server, index) => {
 						if (server.id === serverId) {
+							this.currentServerIndex = index
 							this.currentServer = server
 						}
                     })
                 }
-                console.log(serverId)
+                this.configServerModal.open = true
+            },
+            saveServer() {
+
             }
         },
         created() {
@@ -94,5 +109,9 @@
 </script>
 
 <style lang="scss">
-
+    .config-server {
+        .form-group:first-of-type {
+            padding-left: 12px;
+        }
+    }
 </style>

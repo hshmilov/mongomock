@@ -1,7 +1,7 @@
 <template>
     <div class="status-icon-logo-text">
         <status-icon v-if="statusIconValue" :value="statusIconValue"></status-icon>
-        <img class="logo-container img-lg" :src="`/src/assets/images/logos/${logoValue}.png`" :title="textValue">
+        <img class="logo-container img-lg" v-bind:class="{'ml-4': statusIconValue}" :src="`/src/assets/images/logos/${logoValue}.png`" :title="textValue">
         <span class="text-container">{{textValue}}</span>
     </div>
 </template>
@@ -24,9 +24,6 @@
             left: 0;
             position: absolute;
             height: 100%;
-        }
-        .logo-container {
-            margin-left: 24px;
         }
         .text-container {
             margin-left: 12px;

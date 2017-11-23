@@ -1,7 +1,7 @@
 <template>
     <form class="form" @keyup.enter.stop="$emit('submit', model)">
         <div class="row">
-            <div v-for="input in schema" class="form-group col-3">
+            <div v-for="input in schema" class="form-group col-6">
                 <label v-if="input.name" class="form-label">{{ input.name }}</label>
                 <template v-if="input.control === 'select'">
                     <select class="form-control" v-model="model[input.path]" @input="$emit('input', model)">
@@ -21,8 +21,8 @@
                            v-model="model[input.path]" @input="$emit('input', model)">
                 </template>
             </div>
-            <div class="form-group col-1">
-                <a v-if="submitLabel" class="btn" @click="$emit('submit', model)">{{ submitLabel }}</a>
+            <div v-if="submitLabel" class="form-group col-1">
+                <a class="btn" @click="$emit('submit', model)">{{ submitLabel }}</a>
             </div>
         </div>
     </form>

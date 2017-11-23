@@ -5,6 +5,8 @@ export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const FETCH_ADAPTER = 'FETCH_ADAPTER'
 export const SET_ADAPTER = 'SET_ADAPTER'
 export const UPDATE_ADAPTER = 'UPDATE_ADAPTER'
+export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
+export const ADD_ADAPTER_SERVER = 'ADD_ADAPTER_SERVER'
 
 export const adapter = {
 	state: {
@@ -106,6 +108,9 @@ export const adapter = {
 			if (payload.data) {
 				state.currentAdapter.data = {...payload.data}
 			}
+		},
+		[ ADD_ADAPTER_SERVER ] (state, payload) {
+
 		}
 	},
 	actions: {
