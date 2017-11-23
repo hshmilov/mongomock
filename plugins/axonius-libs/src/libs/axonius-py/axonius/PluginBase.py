@@ -250,13 +250,15 @@ class PluginBase(object):
         if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(5)}
-            self.scheduler = BackgroundScheduler(executors=executors)
-            self.scheduler.start()
-            self.scheduler.add_job(func=self._check_registered_thread,
-                                   trigger=IntervalTrigger(seconds=30),
-                                   next_run_time=datetime.now(),
-                                   id='check_registered',
-                                   max_instances=1)
+            self.online_plugins_scheduler = BackgroundScheduler(
+                executors=executors)
+            self.online_plugins_scheduler.start()
+            self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
+                                                  trigger=IntervalTrigger(
+                                                      seconds=30),
+                                                  next_run_time=datetime.now(),
+                                                  id='check_registered',
+                                                  max_instances=1)
 
         # Creating open actions dict. This dict will hold all of the open actions issued by this plugin.
         # We will use this dict in order to determine what is the right callback for the action update retrieved.
