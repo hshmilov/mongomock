@@ -1,6 +1,6 @@
 <template>
     <div class="status-icon-logo-text">
-        <status-icon :value="statusIconValue"></status-icon>
+        <status-icon v-if="statusIconValue" :value="statusIconValue"></status-icon>
         <img class="logo-container img-lg" :src="`/src/assets/images/logos/${logoValue}.png`" :title="textValue">
         <span class="text-container">{{textValue}}</span>
     </div>

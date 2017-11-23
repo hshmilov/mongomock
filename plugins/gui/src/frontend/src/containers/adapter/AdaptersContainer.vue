@@ -16,7 +16,7 @@
                 </div>
             </div>
         </card>
-        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.fields" :actions="[
+        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" :actions="[
         	{triggerFont: 'icon-pencil2', handler: configAdapter},
         	{triggerFont: 'icon-eye', handler: quickViewAdapter}]"></scrollable-table>
     </scrollable-page>
