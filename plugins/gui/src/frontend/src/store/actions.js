@@ -2,7 +2,7 @@ import axios from 'axios'
 import Promise from 'promise'
 
 /* Path to the server serving the API requests */
-const BACKEND_PATH = 'http://localhost:1337/'
+const BACKEND_PATH = 'http://localhost/'
 
 /*
     A generic wrapper for requests to server.

@@ -372,7 +372,7 @@ class Core(PluginBase):
 
         address_dict = self._get_plugin_addr(plugin.lower())
 
-        address_dict['path'] = '/' + '/'.join(url)
+        address_dict['path'] = '/api/' + '/'.join(url)
 
         return address_dict
 

@@ -1,11 +1,11 @@
 version: '3'
 services:
-  api:
+  gui:
         build: .
         image: axonius/gui
         container_name: "gui"
         ports:
-            - 5050:80
+            - 80:80
         volumes:
           - ./src:/home/axonius/app
           - ../axonius-libs/src/libs:/home/axonius/libs

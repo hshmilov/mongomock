@@ -77,7 +77,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
     """
 
     def wrap(func):
-        ROUTED_FUNCTIONS.append((func, rule, methods))
+        ROUTED_FUNCTIONS.append((func, '{0}/{1}'.format('api', rule), methods))
 
         def actual_wrapper(self, *args, **kwargs):
             """This wrapper will catch every exception.
@@ -187,19 +187,19 @@ class PluginBase(object):
         try:
             self.host = temp_config['DEBUG']['host']
             self.port = int(temp_config['DEBUG']['port'])
-            self.core_address = temp_config['DEBUG']['core_address']
+            self.core_address = temp_config['DEBUG']['core_address'] + '/api'
         except KeyError:
             try:
                 # We can enter debug value on all of the config files
                 self.host = config['DEBUG']['host']
                 self.port = int(config['DEBUG']['port'])
-                self.core_address = config['DEBUG']['core_address']
+                self.core_address = config['DEBUG']['core_address'] + '/api'
             except KeyError:
                 # This is the default value, which is what nginx sets for us.
                 self.host = "0.0.0.0"
                 self.port = 443  # We listen on https.
                 # This should be dns resolved.
-                self.core_address = "https://core"
+                self.core_address = "http://core/api"
 
         try:
             self.plugin_unique_name = temp_config['registration']['plugin_unique_name']
@@ -584,10 +584,10 @@ class PluginBase(object):
             del kwargs['headers']
 
         if plugin_unique_name is None:
-            url = '{}/{}'.format(self.core_address, resource)
+            url = '{0}/{1}'.format(self.core_address, resource)
         else:
-            url = '{}/{}/{}'.format(self.core_address,
-                                    plugin_unique_name, resource)
+            url = '{0}/{1}/{2}'.format(self.core_address,
+                                       plugin_unique_name, resource)
 
         return requests.request(method, url,
                                 headers=headers, **kwargs)
