@@ -57,7 +57,7 @@ class AggregatorPlugin(PluginBase):
         self.devices_db_connection = self._get_db_connection(True)[
             self.plugin_unique_name]
         # Scheduler for querying core for online adapters and querying the adapters themselves
-        self._scheduler = None
+        self._online_adapters_scheduler = None
         # Load devices DB, or create an empty one
         self._load_devices_from_persistent_db()
         # Starting the managing thread
@@ -101,6 +101,15 @@ class AggregatorPlugin(PluginBase):
         """
         return jsonify(self.devices_db[device_id])
 
+    @add_rule("query_devices", methods=["POST"])
+    def query_devices(self):
+        jobs = self._online_adapters_scheduler.get_jobs()
+        for job in jobs:
+            self.logger.info("resetting time for {0}".format(job.name))
+            job.modify(next_run_time=datetime.now())
+        self.online_plugins_scheduler.wakeup()
+        return ""
+
     def _adapters_thread_manager(self):
         """ Function for monitoring other threads activity.
 
@@ -118,23 +127,23 @@ class AggregatorPlugin(PluginBase):
                     # This is not an adapter, not running
                     continue
 
-                if self._scheduler.get_job(adapter_name):
+                if self._online_adapters_scheduler.get_job(adapter_name):
                     # We already have a running thread for this adapter
                     continue
 
                 sample_rate = adapter['device_sample_rate']
-                self._scheduler.add_job(func=self._save_devices_from_adapter,
-                                        trigger=IntervalTrigger(
-                                            seconds=sample_rate),
-                                        next_run_time=datetime.now(),
-                                        kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
-                                                'plugin_name': adapter['plugin_name']},
-                                        name="Fetching job for adapter={}".format(
-                                            adapter_name),
-                                        id=adapter_name,
-                                        max_instances=1)
+                self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
+                                                        trigger=IntervalTrigger(
+                                                            seconds=sample_rate),
+                                                        next_run_time=datetime.now(),
+                                                        kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
+                                                                'plugin_name': adapter['plugin_name']},
+                                                        name="Fetching job for adapter={}".format(
+                                                            adapter_name),
+                                                        id=adapter_name,
+                                                        max_instances=1)
 
-                for job in self._scheduler.get_jobs():
+                for job in self._online_adapters_scheduler.get_jobs():
                     if job.id not in current_adapters:
                         # this means that the adapter has disconnected, so we stop fetching it
                         job.remove()
@@ -148,16 +157,18 @@ class AggregatorPlugin(PluginBase):
         Getting data from all adapters.
         """
 
-        if self._scheduler is None:
+        if self._online_adapters_scheduler is None:
             executors = {'default': ThreadPoolExecutor(10)}
-            self._scheduler = BackgroundScheduler(executors=executors)
-            self._scheduler.add_job(func=self._adapters_thread_manager,
-                                    trigger=IntervalTrigger(seconds=60),
-                                    next_run_time=datetime.now(),
-                                    name='adapters_thread_manager',
-                                    id='adapters_thread_manager',
-                                    max_instances=1)
-            self._scheduler.start()
+            self._online_adapters_scheduler = BackgroundScheduler(
+                executors=executors)
+            self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
+                                                    trigger=IntervalTrigger(
+                                                        seconds=60),
+                                                    next_run_time=datetime.now(),
+                                                    name='adapters_thread_manager',
+                                                    id='adapters_thread_manager',
+                                                    max_instances=1)
+            self._online_adapters_scheduler.start()
 
         else:
             raise RuntimeError("Already running")
@@ -309,6 +320,8 @@ class AggregatorPlugin(PluginBase):
         :param str plugin_name: The name of the adapter
         :param str plugin_unique_name: The name of the adapter (unique name)
         """
+        self.logger.info("Starting to fetch device for {} {}".format(
+            plugin_name, plugin_unique_name))
         try:
             devices = self._get_devices_data(plugin_unique_name)
             # This is locked although this is a (relatively) lengthy process we can't allow linking or unlinking during
@@ -367,6 +380,9 @@ class AggregatorPlugin(PluginBase):
             self.logger.error("Thread {0} encountered error: {1}".format(
                 threading.current_thread(), str(e)))
             raise
+
+        self.logger.info("Finished for {} {}".format(
+            plugin_name, plugin_unique_name))
 
     def _save_parsed_in_db(self, device, db_type='parsed'):
         """

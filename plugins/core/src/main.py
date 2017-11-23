@@ -14,6 +14,7 @@ import uuid
 
 from flask import jsonify, request, Response
 from axonius.PluginBase import PluginBase, add_rule, return_error
+from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 
 CHUNK_SIZE = 1024
 
@@ -145,8 +146,14 @@ class Core(PluginBase):
             else:
                 return False
 
-        except requests.exceptions.ConnectionError as e:
-            # The plugin is currently offline
+        except (ConnectionError, ReadTimeout, Timeout) as e:
+            self.logger.info(
+                "Got exception {} while trying to contact {}".format(e, plugin_unique_name))
+            return False
+
+        except Exception as e:
+            self.logger.fatal(
+                "Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
     def _create_db_for_plugin(self, plugin_unique_name, plugin_special_db_credentials=None):
@@ -246,15 +253,21 @@ class Core(PluginBase):
 
                 # Checking if this plugin already online for some reason
                 if plugin_unique_name in self.online_plugins:
-                    if self._check_plugin_online(plugin_unique_name):
-                        # There is already a running plugin with the same name
-                        self.logger.error(
-                            "Plugin {0} trying to register but already online")
-                        return return_error("Error - {0} is trying to register but already "
-                                            "online".format(plugin_unique_name), 400)
-                    else:
-                        # The old plugin should be deleted
+                    duplicated = self.online_plugins[plugin_unique_name]
+                    if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
+                        self.logger.warn(
+                            "Pluging {} restrated".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
+                    else:
+                        if self._check_plugin_online(plugin_unique_name):
+                            # There is already a running plugin with the same name
+                            self.logger.error(
+                                "Plugin {0} trying to register but already online")
+                            return return_error("Error - {0} is trying to register but already "
+                                                "online".format(plugin_unique_name), 400)
+                        else:
+                            # The old plugin should be deleted
+                            del self.online_plugins[plugin_unique_name]
 
             else:
                 # New plugin

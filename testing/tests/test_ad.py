@@ -18,3 +18,10 @@ def test_ad_adapter_in_configs(axonius_fixture, ad_fixture):
 
 def test_registered(axonius_fixture, ad_fixture):
     assert ad_fixture.is_plugin_registered(axonius_fixture['core'])
+
+
+def test_ad_restart(axonius_fixture, ad_fixture):
+    ad_fixture.stop()
+    ad_fixture.start()
+    ad_fixture.wait_for_service()
+    assert ad_fixture.is_plugin_registered(axonius_fixture['core'])
