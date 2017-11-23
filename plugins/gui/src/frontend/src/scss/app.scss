@@ -98,6 +98,10 @@ Formatting
   height: 24px;
 }
 
+.img-lg {
+  height: 36px;
+}
+
 .title-sm {
   color: $color-title;
   font-size: 80%;
@@ -122,6 +126,11 @@ Formatting
 
 .success-fill {
   background-color: $color-success;
+}
+
+.place-right {
+  width: 100%;
+  text-align: right;
 }
 
 /*******************
@@ -162,24 +171,23 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
 }
 
 .tag-item {
-  border-radius: 4px;
   border: 1px solid $border-color;
   border-right: 0;
-  padding: 2px;
+  padding: 2px 8px;
   margin-right: 20px;
   position: relative;
   margin-top: 8px;
+  vertical-align: middle;
   &::after {
     content: '';
     position: absolute;
-    border-radius: 4px;
     transform: rotate(45deg);
     border-right: 1px solid #dcd8d8;
     border-top: 1px solid #dcd8d8;
-    height: 20px;
-    width: 20px;
+    height: 23px;
+    width: 21px;
     top: 4px;
-    right: -9px;
+    right: -10px;
   }
 }
 
@@ -208,10 +216,34 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
 .row {
   margin-left: -12px;
   margin-right: -12px;
+  position: relative;
+  .form-group {
+    padding: 12px 24px;
+    .form-group-header {
+      color: $color-theme;
+      .svg-stroke { stroke: $color-theme }
+      .svg-fill { fill: $color-theme }
+      font-size: 20px;
+      .form-group-title {
+        margin-left: 8px;
+      }
+    }
+  }
 }
+
 .row.row-divider {
   border-top: 1px solid $border-color;
   padding-top: 12px;
+}
+
+.custom-select {
+  font-size: 14px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  height: 30px;
+  width: auto;
+  background: url(../assets/images/general/arrow_down.png) right 0.75rem center no-repeat;
 }
 
 /*******************

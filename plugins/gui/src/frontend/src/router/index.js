@@ -7,6 +7,7 @@ import SavedQueriesContainer from '../containers/device/query/SavedQueriesContai
 import PluginsContainer from '../containers/plugin/PluginsContainer.vue'
 import PluginViewContainer from '../containers/plugin/PluginViewContainer.vue'
 import AdaptersContainer from '../containers/adapter/AdaptersContainer.vue'
+import AdapterConfigContainer from '../containers/adapter/AdapterConfigContainer.vue'
 import ControlContainer from '../containers/control/ControlContainer.vue'
 import AlertsContainer from '../containers/alert/AlertsContainer.vue'
 import AlertConfigContainer from '../containers/alert/AlertConfigContainer.vue'
@@ -51,6 +52,10 @@ export default new Router({
             name: 'Adapters',
             component: AdaptersContainer
         },
+		{
+			path: '/adapter/:id',
+			component: AdapterConfigContainer
+		},
         {
             path: '/control',
             name: 'Tasks',

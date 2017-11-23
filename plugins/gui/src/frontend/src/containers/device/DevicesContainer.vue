@@ -26,7 +26,7 @@
                 <a class="btn" @click="executeQuery()">go</a>
             </template>
         </card>
-        <card :title="`devices (${device.deviceList.data.length})`">
+        <card :title="`devices (${device.deviceList.data.length})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
                 <!-- Dropdown for selecting \ creating tags for a currently selected devices --->
                 <dropdown-menu animateClass="scale-up right">
@@ -38,7 +38,7 @@
                 </dropdown-menu>
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
-                    <img slot="dropdownTrigger" src="/src/assets/images/general/filter.png">
+                    <svg-icon slot="dropdownTrigger" name="actions/add_field" height="24" :original="true"></svg-icon>
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="totalFields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
@@ -93,6 +93,7 @@
 	import InfoDialog from '../../components/InfoDialog.vue'
 	import ObjectList from '../../components/ObjectList.vue'
 	import { mixin as clickaway } from 'vue-clickaway'
+    import '../../components/icons/actions'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import { FETCH_UNIQUE_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
@@ -205,9 +206,6 @@
 					callback: () => this.saveQueryModal.open = false
 				})
 			},
-            createAlert() {
-
-            },
 			saveTags () {
 				if (!this.selectedDevices || !this.selectedDevices.length || !this.selectedTags
                     || !this.selectedTags.length) {
@@ -232,6 +230,8 @@
 
 
 <style lang="scss">
+    @import '../../scss/config';
+
     .devices-query {
         .card-body {
             display: flex;
@@ -260,4 +260,18 @@
             }
         }
     }
+    .devices-list {
+        .card-actions {
+            .svg-icon {
+                margin-right: 24px;
+                margin-top: 4px;
+                padding: 2px;
+                .svg-stroke {
+                    stroke: $color-text;
+                    stroke-width: 20px;
+                }
+            }
+        }
+    }
+
 </style>

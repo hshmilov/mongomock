@@ -1,6 +1,6 @@
 <template>
     <scrollable-page :title="`alerts > ${alertData.name? alertData.name : 'new'} alert`">
-        <card title="alert configuration" class="alert-config">
+        <card title="configure" class="alert-config">
             <template slot="cardContent">
                 <form @keyup.enter="saveAlert">
                     <div class="row">
@@ -20,55 +20,55 @@
                     <div class="row row-divider">
                         <!-- Section for defining the condition which match of will trigger the alert -->
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-equalizer2"></i><span class="form-section-title">Alert Condition</span>
+                            <div class="form-group-header">
+                                <i class="icon-equalizer2"></i><span class="form-group-title">Alert Condition</span>
                             </div>
-                            <checkbox label="Increase in devices number" v-model="alertCondition.increase"
+                            <checkbox class="ml-4 mt-2" label="Increase in devices number" v-model="alertCondition.increase"
                                       @change="updateCriteria()"></checkbox>
-                            <checkbox label="Decrease in devices number" v-model="alertCondition.decrease"
+                            <checkbox class="ml-4" label="Decrease in devices number" v-model="alertCondition.decrease"
                                       @change="updateCriteria()"></checkbox>
                         </div>
                     </div>
                     <div class="row row-divider">
                         <!-- Section for defining how often conditions will be tested and how to present results -->
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-calendar"></i><span class="form-section-title">Schedule</span>
+                            <div class="form-group-header">
+                                <i class="icon-calendar"></i><span class="form-group-title">Schedule</span>
                             </div>
-                            <select class="form-select col-4" :disabled="true">
+                            <select class="custom-select col-4 mt-2 ml-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Always</option>
                             </select>
                         </div>
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-graph"></i><span class="form-section-title">Presentation</span>
+                            <div class="form-group-header">
+                                <i class="icon-graph"></i><span class="form-group-title">Presentation</span>
                             </div>
-                            <select class="form-select col-4" :disabled="true">
+                            <select class="custom-select col-4 mt-2 ml-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select report type...</option>
                             </select>
                         </div>
                     </div>
                     <div class="row row-divider">
-                        <!-- Section for defining what action will occur upon trigger -->
+                        <!-- group for defining what action will occur upon trigger -->
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-bell-o"></i><span class="form-section-title">Share and Notify</span>
+                            <div class="form-group-header">
+                                <i class="icon-bell-o"></i><span class="form-group-title">Share and Notify</span>
                             </div>
-                            <checkbox label="Add a system notification" v-model="alertData.notification"></checkbox>
-                            <checkbox label="Send an email" :disabled="true"></checkbox>
-                            <checkbox label="Add to Dashboard" :disabled="true"></checkbox>
+                            <checkbox class="ml-4 mt-2" label="Add a system notification" v-model="alertData.notification"></checkbox>
+                            <checkbox class="ml-4" label="Send an email" :disabled="true"></checkbox>
+                            <checkbox class="ml-4" label="Add to Dashboard" :disabled="true"></checkbox>
                         </div>
                         <div class="form-group col-6">
-                            <div class="form-section-header">
-                                <i class="icon-dashboard"></i><span class="form-section-title">Trigger Action</span>
+                            <div class="form-group-header">
+                                <i class="icon-dashboard"></i><span class="form-group-title">Trigger Action</span>
                             </div>
-                            <select class="form-select col-4" :disabled="true">
+                            <select class="custom-select col-4 mt-2 ml-4" :disabled="true">
                                 <option :disabled="true" :selected="true">Select Plugin...</option>
                             </select>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="form-group action-group">
+                        <div class="form-group place-right">
                             <a class="btn btn-inverse" @click="returnToAlerts">cancel</a>
                             <a class="btn" @click="saveAlert">save</a>
                         </div>
@@ -86,12 +86,12 @@
 
     import { mapState, mapGetters, mapActions } from 'vuex'
     import { FETCH_SAVED_QUERIES } from '../../store/modules/query'
-    import { FETCH_ALERT, INSERT_ALERT } from '../../store/modules/alert'
+    import { FETCH_ALERT, UPDATE_ALERT } from '../../store/modules/alert'
 
 	export default {
-		components: { ScrollablePage, Card, Checkbox },
 		name: 'alert-config-container',
-        computed: {
+		components: { ScrollablePage, Card, Checkbox },
+		computed: {
             ...mapState([ 'alert', 'query' ]),
             ...mapGetters([ 'savedQueryOptions' ]),
             alertData() {
@@ -113,7 +113,7 @@
             }
         },
         methods: {
-            ...mapActions({ fetchAlert: FETCH_ALERT, fetchQueries: FETCH_SAVED_QUERIES, insertAlert: INSERT_ALERT }),
+            ...mapActions({ fetchAlert: FETCH_ALERT, fetchQueries: FETCH_SAVED_QUERIES, updateAlert: UPDATE_ALERT }),
             updateCriteria() {
             	/* Update the matching criteria value, according to the conditions' values */
 				if (this.alertCondition.increase && this.alertCondition.decrease) {
@@ -147,7 +147,7 @@
 					return
                 }
                 /* Save and return to alerts page */
-                this.insertAlert(this.alertData)
+                this.updateAlert(this.alertData)
 				this.returnToAlerts()
             },
             returnToAlerts() {
@@ -171,28 +171,5 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
 
-    .alert-config {
-        .row {
-            position: relative;
-            .form-group {
-                padding: 12px 24px;
-                .form-section-header {
-                    color: $color-theme;
-                    font-size: 20px;
-                    .form-section-title {
-                        margin-left: 8px;
-                    }
-                }
-                .form-select, .checkbox {
-                    margin: 12px 24px;
-                }
-                &.action-group {
-                    width: 100%;
-                    text-align: right;
-                }
-            }
-        }
-    }
 </style>

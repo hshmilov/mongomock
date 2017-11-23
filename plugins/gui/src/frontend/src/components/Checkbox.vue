@@ -1,5 +1,5 @@
 <template>
-    <div class="checkbox" v-bind:class="{ 'checked': checked }" @click="$refs.checkboxInput.click()">
+    <div class="checkbox" v-bind:class="{ 'checked': checked }" @click.stop="$refs.checkboxInput.click()">
         <input type="checkbox" ref="checkboxInput" :checked="checked" @change="updateChecked()"
                :disabled="disabled">
         <label class="checkbox-label">{{ label }}</label>

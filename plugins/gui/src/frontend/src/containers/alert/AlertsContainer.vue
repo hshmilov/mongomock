@@ -53,7 +53,7 @@
 			...mapActions({ fetchAlerts: FETCH_ALERTS, fetchAlert: FETCH_ALERT, archiveAlert: ARCHIVE_ALERT }),
             executeFilter(filterData) {
 				/*
-				    Upon submittion of the filter form, updating the data of the filter that is passed as props to the
+				    Upon submission of the filter form, updating the data of the filter that is passed as props to the
 				    paginated table, and so it is re-rendered after fetching the data with consideration to the new filter
 				 */
                 this.alertFilter = filterData

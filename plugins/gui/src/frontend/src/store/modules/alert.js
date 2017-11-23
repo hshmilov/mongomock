@@ -3,12 +3,12 @@ import { REQUEST_API } from '../actions'
 export const FETCH_ALERTS = 'FETCH_ALERTS'
 export const UPDATE_ALERTS = 'UPDATE_ALERTS'
 export const FETCH_ALERT = 'FETCH_ALERT'
-export const UPDATE_ALERT = 'UPDATE_ALERT'
+export const SET_ALERT = 'SET_ALERT'
 export const ARCHIVE_ALERT = 'ARCHIVE_ALERT'
 export const REMOVE_ALERT = 'REMOVE_ALERT'
 export const RESTART_ALERTS = 'RESTART_ALERTS'
 export const RESTART_ALERT = 'RESTART_ALERT'
-export const INSERT_ALERT = 'INSERT_ALERT'
+export const UPDATE_ALERT = 'UPDATE_ALERT'
 export const ADD_ALERT = 'ADD_ALERT'
 export const UPDATE_ALERT_QUERY = 'UPDATE_ALERT_QUERY'
 
@@ -25,13 +25,9 @@ const newAlert = {
 
 export const alert = {
 	state: {
-		/*
-			All alerts
-		 */
+		/* All alerts */
 		alertList: {fetching: false, data: [], error: ''},
-		/*
-			Statically defined fields that should be presented for each alert, in this order
-		 */
+		/* Statically defined fields that should be presented for each alert, in this order */
 		fields: [
 			{ path: 'severity', name: 'Severity', default: true, type: 'status' },
 			{ path: 'name', name: 'Name', default: true, control: 'text'},
@@ -39,9 +35,7 @@ export const alert = {
 			{ path: 'type', name: 'Source', default: true, type: 'type' },
 			{ path: 'message', name: 'Alert Info', default: true }
 		],
-		/*
-			Data of alert currently being configured
-		 */
+		/* Data of alert currently being configured */
 		currentAlert: { fetching: false, data: { ...newAlert }, error: '' }
 	},
 	getters: {
@@ -92,7 +86,7 @@ export const alert = {
 				state.alertList.error = payload.error
 			}
 		},
-		[ UPDATE_ALERT ] (state, payload) {
+		[ SET_ALERT ] (state, payload) {
 			/*
 				The data is expected to be fields and values of a specific alert and is stored for use in the
 				alert configuration page
@@ -161,7 +155,7 @@ export const alert = {
 			if (!alertId) { return }
 			dispatch(REQUEST_API, {
 				rule: `api/alerts/${alertId}`,
-				type: UPDATE_ALERT
+				type: SET_ALERT
 			})
 		},
 		[ ARCHIVE_ALERT ] ({dispatch, commit}, alertId) {
@@ -181,7 +175,7 @@ export const alert = {
 				commit(REMOVE_ALERT, alertId)
 			})
 		},
-		[ INSERT_ALERT ] ({dispatch, commit}, payload) {
+		[ UPDATE_ALERT ] ({dispatch, commit}, payload) {
 			/*
 				Call to api to add \ update an alert. If given an id, the matching alert will be updated with the
 				new data. Otherwise a new alert will be added to the collection.
