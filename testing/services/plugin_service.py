@@ -77,7 +77,10 @@ class AdapterService(PluginService):
         return self.clients()  # post to clients forces a refresh!
 
     def devices(self):
-        return requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
+        response = requests.get(self.req_url + "/devices",
+                                headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200
+        return dict(json.loads(response.content))
 
     def clients(self):
         return requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
