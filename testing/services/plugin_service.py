@@ -19,8 +19,33 @@ class PluginService(services.compose_service.ComposeService):
         self.config_file_path = config_file_path
         self.volatile_config_file_path = vol_config_file_path
 
+    def request(self, method, endpoint, api_key=None, headers=None, *kargs, **kwargs):
+        if headers is None:
+            headers = {}
+
+        if api_key is not None:
+            headers[API_KEY_HEADER] = api_key
+
+        if 'data' in kwargs and isinstance(kwargs['data'], dict):
+            kwargs['data'] = json.dumps(kwargs['data'])
+
+        return getattr(requests, method)(
+            url='{0}/{1}'.format(self.req_url, endpoint), headers=headers, *kargs, **kwargs)
+
+    def get(self, endpoint, *kargs, **kwargs):
+        return self.request('get', endpoint, *kargs, **kwargs)
+
+    def put(self, endpoint, data, *kargs, **kwargs):
+        return self.request('put', endpoint, data=data, *kargs, **kwargs)
+
+    def post(self, endpoint, data, json, *kargs, **kwargs):
+        return self.request('post', endpoint, data=data, json=json, *kargs, **kwargs)
+
+    def delete(self, endpoint, *kargs, **kwargs):
+        return self.request('delete', endpoint, *kargs, **kwargs)
+
     def version(self):
-        return requests.get(self.req_url + "/version")
+        return self.get('version')
 
     def logger(self):
         raise NotImplemented("TBD!")
@@ -29,10 +54,7 @@ class PluginService(services.compose_service.ComposeService):
         raise NotImplemented("TBD!")
 
     def schema(self, schema_type="general", api_key=None):
-        if api_key is None:
-            api_key = self.api_key
-
-        return requests.get(self.req_url + "/schema/" + schema_type, headers={API_KEY_HEADER: api_key})
+        return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
 
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
