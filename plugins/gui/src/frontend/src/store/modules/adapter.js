@@ -48,6 +48,7 @@ export const adapter = {
 				plugin_name: 'ad_adapter',
 				name: 'Active Directory',
 				schema: [
+					{path: 'ip', name: 'IP Address', control: 'text'},
 					{path: 'username', name: 'User Name', control: 'text'},
 					{path: 'password', name: 'Password', control: 'password'}
 				],
@@ -110,7 +111,8 @@ export const adapter = {
 			}
 		},
 		[ ADD_ADAPTER_SERVER ] (state, payload) {
-
+			state.currentAdapter.data = { ...state.currentAdapter.data }
+			state.currentAdapter.data.push({ ...payload })
 		}
 	},
 	actions: {
@@ -150,6 +152,28 @@ export const adapter = {
 				rule: `api/adapters/${payload.id}`,
 				method: 'POST',
 				data: payload
+			})
+		},
+		[ UPDATE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
+			/*
+				Call API to save given server data to adapter by the given adapter id,
+				either adding a new server or updating and existing one, if id is provided with the data
+			 */
+			if (!payload || !payload.adapterId || !payload.serverData) { return }
+			let rule = `api/adapter/${payload.adapterId}/server`
+			if (payload.serverData.id !== 'new') {
+				rule += '/' + payload.serverData.id
+			}
+			dispatch(REQUEST_API, {
+				rule: rule,
+				method: 'POST',
+				data: payload.serverData
+			}).then((response) => {
+				if (response === '') {
+					return
+				}
+				payload.serverData.id = response
+				commit(ADD_ADAPTER_SERVER, payload.serverData)
 			})
 		}
 	}

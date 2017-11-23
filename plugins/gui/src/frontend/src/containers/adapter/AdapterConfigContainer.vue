@@ -19,15 +19,15 @@
                         <a class="btn" @click="saveAdapter">save</a>
                     </div>
                 </div>
-                <modal v-if="currentServer && currentServer.id && configServerModal.open" class="config-server"
-                       @close="configServerModal.open = false" approveText="save" @confirm="saveServer">
+                <modal v-if="serverModal.serverData && serverModal.serverData.id && serverModal.open"
+                       class="config-server" @close="toggleServerModal" approveText="save" @confirm="saveServer">
                     <div slot="body">
                         <!-- Container for configuration of a single selected \ added server -->
                         <status-icon-logo-text :logoValue="adapterData['plugin_name']"
-                                               :textValue="currentServer['name']"></status-icon-logo-text>
+                                               :textValue="serverModal.serverData['name']"></status-icon-logo-text>
                         <div class="mt-4 ml-5">
                             <div>Basic System Credentials</div>
-                            <generic-form :schema="adapterData.schema" v-model="currentServer"></generic-form>
+                            <generic-form :schema="adapterData.schema" v-model="serverModal.serverData"></generic-form>
                         </div>
                     </div>
                 </modal>
@@ -46,7 +46,7 @@
 	import '../../components/icons/navigation'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
-	import { FETCH_ADAPTER, UPDATE_ADAPTER } from '../../store/modules/adapter'
+	import { FETCH_ADAPTER, UPDATE_ADAPTER, UPDATE_ADAPTER_SERVER } from '../../store/modules/adapter'
 
 	export default {
 		name: 'adapter-config-container',
@@ -59,15 +59,19 @@
         },
         data() {
 			return {
-				currentServerIndex: -1,
-				currentServer: {},
-                configServerModal: {
-					open: false
+				selectedServer: -1,
+				serverModal: {
+					open: false,
+				    serverData: {}
                 }
-            }
+			}
         },
         methods: {
-            ...mapActions({ fetchAdapter: FETCH_ADAPTER, updateAdapter: UPDATE_ADAPTER }),
+            ...mapActions({
+                fetchAdapter: FETCH_ADAPTER,
+                updateAdapter: UPDATE_ADAPTER,
+                updateAdapterServer: UPDATE_ADAPTER_SERVER
+            }),
 			returnToAdapters() {
 				this.$router.push({name: 'Adapters'})
             },
@@ -80,20 +84,24 @@
             },
             configServer(serverId) {
             	if (serverId === 'new') {
-            		this.currentServerIndex = this.adapterData.servers.length
-					this.currentServer = { id: serverId }
+            		this.selectedServer = this.adapterData.servers.length
+					this.serverModal.serverData = { id: serverId }
 				} else {
 					this.adapterData.servers.forEach((server, index) => {
 						if (server.id === serverId) {
-							this.currentServerIndex = index
-							this.currentServer = server
+							this.selectedServer = index
+							this.serverModal.serverData = server
 						}
                     })
                 }
-                this.configServerModal.open = true
+                this.toggleServerModal()
             },
             saveServer() {
-
+                this.updateAdapterServer({ adapterId: this.adapterData.id, serverData: this.serverModal.serverData })
+            	this.toggleServerModal()
+            },
+            toggleServerModal() {
+            	this.serverModal.open = !this.serverModal.open
             }
         },
         created() {
@@ -110,7 +118,7 @@
 
 <style lang="scss">
     .config-server {
-        .form-group:first-of-type {
+        .form-group {
             padding-left: 12px;
         }
     }

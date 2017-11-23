@@ -3,7 +3,7 @@
         <div class="modal-mask" @click.stop="$emit('close')">
             <div class="modal-wrapper">
                 <div class="modal-container" @click.stop="$emit('open')">
-                    <div class="modal-body">
+                    <div class="modal-body" @submit="$emit('confirm')">
                         <slot name="body">
                             Are you sure?
                         </slot>
