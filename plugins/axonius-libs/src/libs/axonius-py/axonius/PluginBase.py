@@ -163,8 +163,8 @@ class PluginBase(object):
 
         This will automatically add the rule of '/version' to get the Plugin version.
 
-        :param str version: The version of this app
         :param dict core_data: A data sent by the core plugin. (Will skip the registration process)
+        :param list special_db_credentials: A list of plugin names that this plugins want readonly access to their DB.
 
         :raise KeyError: In case of environment variables missing
         """

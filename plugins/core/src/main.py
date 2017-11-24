@@ -176,7 +176,9 @@ class Core(PluginBase):
         # TODO: Consider a way of requesting roles other than read-only.
         if plugin_special_db_credentials is not None:
             for current_requested_db_cred in plugin_special_db_credentials:
-                roles.append({'role': 'read', 'db': current_requested_db_cred})
+                roles.append({'role': 'read',
+                              'db': [x for x in self._get_online_plugins().values() if
+                                     x['plugin_name'] == current_requested_db_cred][0]['plugin_unique_name']})
         db_connection[plugin_unique_name].add_user(db_user,
                                                    password=db_password,
                                                    roles=roles)
@@ -200,13 +202,8 @@ class Core(PluginBase):
                 if not api_key:
                     # No api_key, Returning the current online plugins. This will be used by the aggregator
                     # To find out which adapters are available
-                    to_return_device = dict()
-                    for plugin_name, plugin in self.online_plugins.items():
-                        to_return_device[plugin_name] = {'plugin_type': plugin['plugin_type'],
-                                                         'device_sample_rate': plugin['device_sample_rate'],
-                                                         'plugin_unique_name': plugin['plugin_unique_name'],
-                                                         'plugin_name': plugin['plugin_name']}
-                    return jsonify(to_return_device)
+                    online_devices = self._get_online_plugins()
+                    return jsonify(online_devices)
                 else:
                     # This is a registered check, we should get the plugin name (a parameter) and tell if its
                     # In our online list
@@ -320,6 +317,15 @@ class Core(PluginBase):
             self.logger.info("Plugin {0} registered successfuly!".format(
                 relevant_doc['plugin_unique_name']))
             return jsonify(relevant_doc)
+
+    def _get_online_plugins(self):
+        online_devices = dict()
+        for plugin_name, plugin in self.online_plugins.items():
+            online_devices[plugin_name] = {'plugin_type': plugin['plugin_type'],
+                                           'device_sample_rate': plugin['device_sample_rate'],
+                                           'plugin_unique_name': plugin['plugin_unique_name'],
+                                           'plugin_name': plugin['plugin_name']}
+        return online_devices
 
     @add_rule("<path:full_url>", methods=['POST', 'GET'], should_authenticate=False)
     def proxy(self, full_url):
