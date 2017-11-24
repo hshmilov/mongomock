@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="API" type="docker-deploy" factoryName="Docker Deployment" server-name="Docker">
-    <deployment type="docker-compose.yml" path="$PROJECT_DIR$/plugins/api/docker-compose.yml">
+  <configuration default="false" name="GUI" type="docker-deploy" factoryName="Docker Deployment" server-name="Docker">
+    <deployment type="docker-compose.yml" path="$PROJECT_DIR$/plugins/gui/docker-compose.yml">
       <settings>
         <option name="JSONFilePath" value="" />
         <option name="command" value="" />

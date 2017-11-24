@@ -5,10 +5,11 @@ services:
         image: axonius/gui
         container_name: "gui"
         ports:
-            - 80:80
+            - 5050:80
         volumes:
           - ./src:/home/axonius/app
           - ../axonius-libs/src/libs:/home/axonius/libs
+          - ./config/nginx_conf.d:/home/axonius/config/nginx_conf.d/
 
 networks:
   default:
