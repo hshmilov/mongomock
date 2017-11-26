@@ -3,8 +3,12 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <stdio.h>
 
 #define DEFAULT_INSTRUCTION_PATH "%windir%\\axon_instructions.cfg"
+#define TEMP_RESULT_PATH "%windir%\\axoniusCommandResultTemp.txt"
+#define RESULT_PATH "%windir%\\axoniusCommandResult.txt"
+#define DEFAULT_COMMAND_SEPARATOR "_SEPARATOR_STRING_"
 
 void performAction(std::string line)
 {
@@ -51,27 +55,73 @@ void performAction(std::string line)
 	}
 	else if ("cmd" == commandType)
 	{
-		// Should run a cmd
-		std::string commandToRun = "/C " + data + " > %windir%\\axoniusCommandResult.txt";
-		OutputDebugString((std::string("AXON: Command to run is ") + commandToRun).c_str());
+		TCHAR fullTempPath[MAX_PATH];
+		TCHAR fullResultPath[MAX_PATH];
 
-		SHELLEXECUTEINFO ShExecInfo = { 0 };
-		ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-		ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-		ShExecInfo.hwnd = NULL;
-		ShExecInfo.lpVerb = NULL;
-		ShExecInfo.lpFile = "cmd.exe";
-		ShExecInfo.lpParameters = commandToRun.c_str();
-		ShExecInfo.lpDirectory = NULL;
-		ShExecInfo.nShow = SW_SHOW;
-		ShExecInfo.hInstApp = NULL;
-		BOOL shellResult = ShellExecuteEx(&ShExecInfo);
-		DWORD result = WaitForSingleObject(ShExecInfo.hProcess, 30*1000); // Wait for 30 seconds
-
-		if (result != WAIT_OBJECT_0 || shellResult == FALSE)
+		// Exapnding environment string
+		OutputDebugString("AXON: Expanding");
+		DWORD requiredSizeTemp = ExpandEnvironmentStrings(TEMP_RESULT_PATH, fullTempPath, MAX_PATH);
+		DWORD requiredSize = ExpandEnvironmentStrings(RESULT_PATH, fullResultPath, MAX_PATH);
+		if (requiredSize >= MAX_PATH || requiredSizeTemp >= MAX_PATH)
 		{
-			OutputDebugString("AXON: Executing command failed");
+			// TODO: Think about what i should do here!
+			OutputDebugString("AXON: Failed expanding environment variables");
 		}
+
+		// Trying to remove old result files (best effort)
+		remove(fullTempPath);
+		remove(fullResultPath);
+
+		size_t pos = 0;
+		std::string single_command;
+		std::string separator(DEFAULT_COMMAND_SEPARATOR);
+
+		// Splitting the cmd to single commands using predefined seperator
+		while ((pos = data.find(separator)) != std::string::npos)
+		{
+			single_command = data.substr(0, pos);
+			data.erase(0, pos + separator.length());
+			// Try running the command
+			std::string commandToRun = "/C " + single_command + " >> " + TEMP_RESULT_PATH;
+			OutputDebugString((std::string("AXON: Command to run is ") + commandToRun).c_str());
+
+			SHELLEXECUTEINFO ShExecInfo = { 0 };
+			ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+			ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+			ShExecInfo.hwnd = NULL;
+			ShExecInfo.lpVerb = NULL;
+			ShExecInfo.lpFile = "cmd.exe";
+			ShExecInfo.lpParameters = commandToRun.c_str();
+			ShExecInfo.lpDirectory = NULL;
+			ShExecInfo.nShow = SW_SHOW;
+			ShExecInfo.hInstApp = NULL;
+			BOOL shellResult = ShellExecuteEx(&ShExecInfo);
+			DWORD result = WaitForSingleObject(ShExecInfo.hProcess, 30 * 1000); // Wait for 30 seconds
+
+			if (result != WAIT_OBJECT_0 || shellResult == FALSE)
+			{
+				OutputDebugString("AXON: Executing command failed");
+			}
+
+			OutputDebugString("AXON: Writing separator back to temp file");
+			std::ofstream resultFile(fullTempPath, std::ofstream::app);
+			if (resultFile.is_open())
+			{
+				resultFile << DEFAULT_COMMAND_SEPARATOR;
+			}
+			else
+			{
+				OutputDebugString("AXON: Cant open temp result file");
+			}
+			resultFile.close();
+		}
+
+		// Renaming the temp file
+		if (0 != rename(fullTempPath, fullResultPath))
+		{
+			OutputDebugString("AXON: Rename file failed!");
+		}
+
 
 	}
 }

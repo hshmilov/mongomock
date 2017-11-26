@@ -19,6 +19,7 @@ from argparse import Namespace
 DEFAULT_SERVICE_PATH = ("ExecuteSvc/Release/ExecuteSvc.exe")
 DEFAULT_REMOTE_EXE_PATH = "AxonProcess.exe"
 DEFAULT_REMOTE_RESULT_PATH = "axoniusCommandResult.txt"
+DEFAULT_REMOTE_TEMP_RESULT_PATH = "axoniusCommandResultTemp.txt"
 DEFAULT_REMOTE_CONFIG_PATH = "axon_instructions.cfg"
 
 
@@ -41,10 +42,7 @@ def run_service(psObj, args):
 
 
 def run_exe(psObj, args):
-    try:
-        psObj.delete_file(DEFAULT_REMOTE_EXE_PATH)
-    except psexec.fileExistsException:
-        pass  # No file to delete
+    _delete_files_from_remmote(psObj, [DEFAULT_REMOTE_EXE_PATH])
 
     # Uploading the new exe file with our magic name
     send_file(psObj, Namespace(
@@ -65,19 +63,17 @@ def _alter_config_file_for_shell(config_path):
     config_file.close()
 
 
+def _delete_files_from_remmote(psObj, files):
+    for file_path in files:
+        try:
+            psObj.delete_file(file_path)
+        except psexec.fileExistsException:
+            pass
+
+
 def run_shell(psObj, args):
-    try:
-        psObj.delete_file(DEFAULT_REMOTE_EXE_PATH)
-    except psexec.fileExistsException:
-        pass  # No file to delete
-    try:
-        psObj.delete_file(DEFAULT_REMOTE_RESULT_PATH)
-    except psexec.fileExistsException:
-        pass  # No file to delete
-    try:
-        psObj.delete_file(DEFAULT_REMOTE_CONFIG_PATH)
-    except psexec.fileExistsException:
-        pass  # No file to delete
+    _delete_files_from_remmote(psObj, [DEFAULT_REMOTE_EXE_PATH,
+                                       DEFAULT_REMOTE_CONFIG_PATH])
 
     _alter_config_file_for_shell(args.config_path)
     # Uploading the config file containing our shell command

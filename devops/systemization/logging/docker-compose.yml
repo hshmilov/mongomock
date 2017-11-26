@@ -3,6 +3,11 @@ services:
   elkx:
         image: sebp/elkx:latest
         container_name: "elkx"
+        environment:
+          - ELASTICSEARCH_USER=ax_user
+          - ELASTICSEARCH_PASSWORD=ax_pass
+          - KIBANA_USER=ax_user
+          - KIBANA_PASSWORD=ax_pass
         volumes:
           - ./conf.d:/etc/logstash/conf.d/
           - ./elasticsearch.yml:/etc/elasticsearch/elasticsearch.yml

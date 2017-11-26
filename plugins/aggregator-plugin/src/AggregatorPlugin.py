@@ -293,9 +293,9 @@ class AggregatorPlugin(PluginBase):
                     "internal_axon_id": internal_axon_id,
                     "accurate_for_datetime": datetime.now(),
                     "adapters": {
-                        associated_adapter_devices: axonius_device_to_split['adapters'].pop(
-                            associated_adapter_devices)
-                        for associated_adapter_devices in associated_adapter_devices
+                        associated_adapter_device: axonius_device_to_split['adapters'].pop(
+                            associated_adapter_device)
+                        for associated_adapter_device in associated_adapter_devices
                     },
                     "tags": []
                 }
@@ -439,7 +439,6 @@ class AggregatorPlugin(PluginBase):
         Updates the devices db to either add or update the given tag
         :param tag: tag from user
         :param axonius_device_id: axonius id
-        :param accurate_for_datetime: date of tag
         :return: None
         """
         with self.device_db_lock:
@@ -512,7 +511,12 @@ class AggregatorPlugin(PluginBase):
         Saves `self.devices_db` as-is into `devices_db` in the persistent db, overriding everything that is there.
         :return:
         """
-        devices_to_save = self.devices_db.values()
+        devices_to_save = []
+        for device in self.devices_db.values():
+            device = dict(device)
+            device['adapters'] = list(device['adapters'].values())
+            devices_to_save.append(device)
+
         if len(devices_to_save) != 0:
             self.devices_db_connection['devices_db'].delete_many({})
             self.devices_db_connection['devices_db'].insert_many(
@@ -529,7 +533,7 @@ class AggregatorPlugin(PluginBase):
             for axon_device_id, axon_device in self.devices_db.items():
                 axon_device_snapshot = {
                     'accurate_for_datetime': axon_device['accurate_for_datetime'],
-                    'adapters': {},
+                    'adapters': [],
                     'tags': axon_device['tags']
                 }
                 for plugin_unique_name, adapter_device in axon_device['adapters'].items():
@@ -541,7 +545,7 @@ class AggregatorPlugin(PluginBase):
                                                      'plugin_type', 'plugin_unique_name')}
                     axon_adapter_device_snapshot['data'] = {
                         'id': adapter_device['data']['id']}
-                    axon_device_snapshot['adapters'][plugin_unique_name] = axon_adapter_device_snapshot
+                    axon_device_snapshot['adapters'].append(axon_adapter_device_snapshot)
 
                 device_db_snapshot[axon_device_id] = axon_device_snapshot
 
@@ -554,5 +558,8 @@ class AggregatorPlugin(PluginBase):
         :return:
         """
         with self.device_db_lock:
-            self.devices_db = {
-                k['internal_axon_id']: k for k in self.devices_db_connection['devices_db'].find()}
+            self.devices_db = {}
+            for axon_device in self.devices_db_connection['devices_db'].find():
+                axon_device['adapters'] = {adapter['plugin_unique_name']: adapter for adapter in
+                                           axon_device['adapters']}
+                self.devices_db[axon_device['internal_axon_id']] = axon_device

@@ -1,13 +1,11 @@
 """
-main.py Main file for running active directory plugin"
+main.py Main file for running Correlator
 """
-from ESXAdapter import ESXAdapter
-
-__author__ = "Mark Segal"
+from CorrelatorPlugin import CorrelatorPlugin
 
 
 def initialize():
-    return ESXAdapter()
+    return CorrelatorPlugin()
 
 
 def wsgi_main(*args, **kwargs):
@@ -17,6 +15,7 @@ def wsgi_main(*args, **kwargs):
     so we use this function as a proxy to the real wsgi function flask provides.
     """
 
+    # This has to be static, since wsgi_main is called a lot.
     if not hasattr(wsgi_main, "plugin"):
         wsgi_main.plugin = initialize()
 
@@ -25,6 +24,6 @@ def wsgi_main(*args, **kwargs):
 
 if __name__ == '__main__':
     # Initialize
-    ESX_WRAPPER = ESXAdapter()
+    CORRELATOR = CorrelatorPlugin()
     # Run (Blocking)
-    ESX_WRAPPER.start_serve()
+    CORRELATOR.start_serve()

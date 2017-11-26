@@ -86,7 +86,7 @@ class ExecutionPlugin(PluginBase):
                 # Currently adding all of the adapters
                 # TODO: Create a smart logic here (next version)
                 yield (adapter_name, adapter_data)
-        except KeyError as e:
+        except KeyError:
             return
 
     def request_remote_plugin_thread(self, action_id, plugin_unique_name, method, data):
@@ -158,7 +158,7 @@ class ExecutionPlugin(PluginBase):
 
             # Getting needed data to call the _create_request_thread again. It will handle the code execution
             # All over again.
-            adapters_tuple = self._actions_db[action_id]['adapters_tuple']
+            adapters_tuple = self._actions_db[action_id].get('adapters_tuple')
             action_type = self._actions_db[action_id]['action_type']
             device_id = self._actions_db[action_id]['device_id']
             issuer_unique_name = self._actions_db[action_id]['issuer_unique_name']
@@ -179,6 +179,8 @@ class ExecutionPlugin(PluginBase):
                                                  adapters_tuple,
                                                  action_id)
                 return
+
+        request_content['responder'] = self._actions_db[action_id].get('adapter_unique_name')
 
         # Updating the issuer plugin also
         to_request_params = {'action_id': action_id,
@@ -203,7 +205,7 @@ class ExecutionPlugin(PluginBase):
 
         :return action_id: The action id of the action updated (or inserted if new)
         """
-        available_data_keys = ['action_type', 'adapter_unique_name', 'issuer_unique_name', 'status', '_id'
+        available_data_keys = ['action_type', 'adapter_unique_name', 'issuer_unique_name', 'status', '_id',
                                'output', 'product', 'result', 'adapters_tuple', 'data_for_action', 'device_id',
                                'device_axon_id']
 
@@ -250,7 +252,7 @@ class ExecutionPlugin(PluginBase):
         :param str action_id: The action id of this action thread
         """
         if not adapters_tuple:
-            adapters_tuple = self._find_adapters_for_action(device_id)
+            adapters_tuple = list(self._find_adapters_for_action(device_id))
 
         adapters_count = 1
         for adapter_unique_name, device_raw_data in adapters_tuple:

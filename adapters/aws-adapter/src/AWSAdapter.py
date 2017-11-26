@@ -8,7 +8,14 @@ __author__ = "Mark Segal"
 from axonius.AdapterBase import AdapterBase
 from axonius.ParsingUtils import figure_out_os
 import boto3
+import re
 from botocore.exceptions import BotoCoreError
+
+
+"""
+Matches AWS Instance IDs
+"""
+aws_ec2_id_matcher = re.compile('i-[0-9a-fA-F]{17}')
 
 
 def _describe_images_from_client_by_id(client, amis):
@@ -147,3 +154,32 @@ class AWSAdapter(AdapterBase):
             "private_ip": [addr.get('PrivateIpAddress') for addr in interface.get("PrivateIpAddresses", [])],
             "public_ip": [public_ip]
         }
+
+    def _correlation_cmds(self):
+        """
+        Correlation commands for AWS
+        :return: shell commands that help collerations
+        """
+
+        # AWS assures us that http://169.254.169.254/latest/meta-data/instance-id will return the instance id
+        # of the AWS EC2 instance requesting it.
+        # http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+
+        # This will probably fail on Windows XP because it doesn't have Powershell, hopefully we won't
+        # encounter Windows XP that's hosted on AWS (ugh...)
+        return {
+            "Linux": "curl http://169.254.169.254/latest/meta-data/instance-id",
+            "Windows": 'powershell -Command "& ' +
+                       'Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/instance-id"'
+        }
+
+    def _parse_correlation_results(self, correlation_cmd_result, os_type):
+        """
+        Parses (very easily) the correlation cmd result, or None if failed
+        :type correlation_cmd_result: str
+        :param correlation_cmd_result: result of running cmd on a machine
+        :type os_type: str
+        :param os_type: the type of machine ran upon
+        :return:
+        """
+        return next(aws_ec2_id_matcher.findall(correlation_cmd_result.strip()), None)
