@@ -72,17 +72,16 @@ export const device = {
 				let processedData = []
 				payload.data.forEach(function (device) {
 					let processedDevice = {'id': device['internal_axon_id']}
-					processedDevice.adapters = Object.keys(device.adapters)
+					processedDevice.adapters = device.adapters.map((adapter) => {
+						return adapter.plugin_name
+					})
 					processedDevice.tags = device.tags
 					state.fields.common.forEach(function (field) {
-						if (field.path === 'adapters' ||  field.path === 'tags') {
-							return
-						}
+						if (field.path === 'adapters' ||  field.path === 'tags') { return }
 						processedDevice[field.path] = ''
 						let ind = 0
-						while (processedDevice[field.path] === '' && ind < processedDevice.adapters.length) {
-							processedDevice[field.path] = decomposeFieldPath(
-								device.adapters[processedDevice.adapters[ind]].data, field.path)
+						while (processedDevice[field.path] === '' && ind < device.adapters.length) {
+							processedDevice[field.path] = decomposeFieldPath(device.adapters[ind], field.path)
 							ind++
 						}
 					})
@@ -179,13 +178,13 @@ export const device = {
 		},
 		[ FETCH_UNIQUE_FIELDS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
-				rule: `api/fields`,
+				rule: `api/devices/fields`,
 				type: UPDATE_UNIQUE_FIELDS
 			})
 		},
 		[ FETCH_TAGS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
-				rule: `api/tags`,
+				rule: `api/devices/tags`,
 				type: UPDATE_TAGS
 			})
 		},
