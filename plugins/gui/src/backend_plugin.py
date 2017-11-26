@@ -681,11 +681,3 @@ class BackendPlugin(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
-
-    @add_rule("gui/<path:path>", should_authenticate=False)
-    def blah(self, path):
-        return send_from_directory('/home/axonius/app/frontend', path)
-
-    @add_rule("gui", should_authenticate=False)
-    def index(self):
-        return send_from_directory('/home/axonius/app/frontend', 'index.html')
