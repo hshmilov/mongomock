@@ -121,6 +121,11 @@ class AggregatorPlugin(PluginBase):
             current_adapters = requests.get(
                 self.core_address + '/register').json()
 
+            self.logger.info(
+                "registered adapters = {}".format(current_adapters))
+
+            get_devices_job_name = "Get device job"
+
             # let's add jobs for all adapters
             for adapter_name, adapter in current_adapters.items():
                 if adapter['plugin_type'] != "Adapter":
@@ -132,21 +137,21 @@ class AggregatorPlugin(PluginBase):
                     continue
 
                 sample_rate = adapter['device_sample_rate']
+
                 self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
                                                         trigger=IntervalTrigger(
                                                             seconds=sample_rate),
                                                         next_run_time=datetime.now(),
                                                         kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
                                                                 'plugin_name': adapter['plugin_name']},
-                                                        name="Fetching job for adapter={}".format(
-                                                            adapter_name),
+                                                        name=get_devices_job_name,
                                                         id=adapter_name,
                                                         max_instances=1)
 
-                for job in self._online_adapters_scheduler.get_jobs():
-                    if job.id not in current_adapters:
-                        # this means that the adapter has disconnected, so we stop fetching it
-                        job.remove()
+            for job in self._online_adapters_scheduler.get_jobs():
+                if job.id not in current_adapters and job.name == get_devices_job_name:
+                    # this means that the adapter has disconnected, so we stop fetching it
+                    job.remove()
 
         except Exception as e:
             self.logger.critical('Managing thread got exception, '
