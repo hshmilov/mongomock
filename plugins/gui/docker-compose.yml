@@ -1,6 +1,6 @@
 version: '3'
 services:
-  api:
+  gui:
         build: .
         image: axonius/gui
         container_name: "gui"
@@ -9,6 +9,7 @@ services:
         volumes:
           - ./src:/home/axonius/app
           - ../axonius-libs/src/libs:/home/axonius/libs
+          - ./config/nginx_conf.d:/home/axonius/config/nginx_conf.d/
 
 networks:
   default:

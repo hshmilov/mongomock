@@ -4,11 +4,11 @@ GUIPlugin.py: Backend services for the web app
 
 __author__ = "Mark Segal"
 
-from axonius.PluginBase import PluginBase, add_rule, AXONIUS_REST, return_error
+from axonius.PluginBase import PluginBase, add_rule, return_error
 import tarfile
 import io
 from datetime import date
-from flask import send_from_directory, jsonify, request, session, after_this_request
+from flask import jsonify, request, session, after_this_request, send_from_directory
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
 import requests
@@ -17,24 +17,25 @@ import pymongo
 from bson import SON, ObjectId
 import os
 import json
+from datetime import timedelta, datetime
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 100
 
 
-def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
-    """
-    Syntactic sugar for add_rule(should_authenticate=False, ...)
-    :param rule: rule name
-    :param require_connected: whether or not to require that the user is connected
-    :param args:
-    :param kwargs:
-    :return:
-    """
-    add_rule_res = add_rule(rule, should_authenticate=False, *args, **kwargs)
-    if require_connected:
-        return lambda func: requires_connected(add_rule_res(func))
-    return add_rule_res
+# def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
+#     """
+#     Syntactic sugar for add_rule(should_authenticate=False, ...)
+#     :param rule: rule name
+#     :param require_connected: whether or not to require that the user is connected
+#     :param args:
+#     :param kwargs:
+#     :return:
+#     """
+#     add_rule_res = add_rule(rule, should_authenticate=False, *args, **kwargs)
+#     if require_connected:
+#         return lambda func: requires_connected(add_rule_res(func))
+#     return add_rule_res
 
 
 # Caution! These decorators must come BEFORE @add_rule
@@ -165,30 +166,16 @@ def projectioned():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            def convert_field(fields):
-                for field in fields:
-                    if isinstance(field, str) and field.isidentifier():
-                        yield [field, field]
-                    if isinstance(field, list) and len(field) == 2:
-                        field_name, db_path = field
-
-                        # allow '.' in db path
-                        # str.isidentifier - validates the string to be a valid python name
-                        # for security reasons
-                        if isinstance(field_name, str) and field_name.isidentifier() and \
-                                isinstance(db_path, str) and db_path.replace('.', '').isidentifier:
-                            yield field
-
             fields = request.args.get('fields')
-            parsed_fields = None
+            mongo_fields = None
             if fields:
                 try:
                     fields = json.loads(fields)
-                    if type(fields) == list:
-                        parsed_fields = convert_field(fields)
+                    for field in fields:
+                        mongo_fields[field] = 1
                 except json.JSONDecodeError:
                     pass
-            return func(self, fields=parsed_fields, *args, **kwargs)
+            return func(self, mongo_projection=mongo_fields, *args, **kwargs)
 
         return actual_wrapper
 
@@ -240,7 +227,7 @@ def beautify_db_entry(entry):
     return tmp
 
 
-class APIPlugin(PluginBase):
+class BackendPlugin(PluginBase):
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -250,11 +237,11 @@ class APIPlugin(PluginBase):
 
         super().__init__(special_db_credentials=[
             'aggregator'], *args, **kwargs)
-        AXONIUS_REST.root_path = os.getcwd()
-        AXONIUS_REST.static_folder = 'my-project/dist/static'
-        AXONIUS_REST.static_url_path = 'static'
-        AXONIUS_REST.config['SESSION_TYPE'] = 'memcached'
-        AXONIUS_REST.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
+        # AXONIUS_REST.root_path = os.getcwd()
+        # AXONIUS_REST.static_folder = 'my-project/dist/static'
+        # AXONIUS_REST.static_url_path = 'static'
+        # AXONIUS_REST.config['SESSION_TYPE'] = 'memcached'
+        # AXONIUS_REST.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         aggregator = self._get_aggregator()
         if aggregator is None:
             self._aggregator_plugin_unique_name = None
@@ -288,7 +275,7 @@ class APIPlugin(PluginBase):
         """
         return self.request_remote_plugin(resource, self._aggregator_plugin_unique_name, *args, **kwargs).json()
 
-    @add_rule_unauthenticated("gui/adapter_devices/<device_id>")
+    @add_rule("adapter_devices/<device_id>", should_authenticate=False)
     def adapter_device_by_id(self, device_id):
         """
         -- this has to be remade, postponed because it's not for MVP
@@ -306,9 +293,10 @@ class APIPlugin(PluginBase):
 
     @requires_aggregator()
     @paginated()
+    @filtered()
     @projectioned()
-    @add_rule_unauthenticated("gui/adapter_devices")
-    def adapter_devices(self, limit, skip, query, fields):
+    @add_rule("adapter_devices", should_authenticate=False)
+    def adapter_devices(self, limit, skip, mongo_filter, mongo_projection):
         """
         Returns all known devices. All parameters are generated by the decorators.
         :param limit: limit for pagination
@@ -346,20 +334,69 @@ class APIPlugin(PluginBase):
     @requires_aggregator()
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("gui/devices")
-    def current_devices(self, limit, skip, mongo_filter):
+    @projectioned()
+    @add_rule("devices", should_authenticate=False)
+    def current_devices(self, limit, skip, mongo_filter, mongo_projection):
         """
         Get Axonius devices from the aggregator
         """
         with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
-            return jsonify(
-                beautify_db_entry(device) for device in
-                client_collection.find(mongo_filter).sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+            device_list = client_collection.find(
+                mongo_filter, mongo_projection)
+            if mongo_filter and skip == 0:
+                db_connection['api']['queries'].insert_one(
+                    {'filter': request.args.get('filter'), 'filter_type': 'history', 'timestamp': datetime.now(),
+                     'device_count': len(device_list), 'archived': False})
+            return jsonify(beautify_db_entry(device) for device in
+                           device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+
+    @requires_aggregator()
+    @add_rule("devices/fields", should_authenticate=False)
+    def get_all_fields(self):
+        """
+        Get all unique fields that devices may have data for, coming from the adapters' parsed data
+        :return:
+        """
+        all_fields = set()
+        with self._get_db_connection(True) as db_connection:
+            all_devices = list(
+                db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
+            for current_device in all_devices:
+                for current_adapter in current_device['adapters'].keys():
+                    for current_raw_field in current_device['adapters'][current_adapter]['data']['raw'].keys():
+                        all_fields.add(
+                            '.'.join([current_adapter, 'data', 'raw', current_raw_field]))
+
+            for current_device in all_devices:
+                for current_adapter in current_device['adapters'].keys():
+                    all_fields.discard('.'.join([current_adapter, 'data']))
+                    all_fields.discard(
+                        '.'.join([current_adapter, 'data', 'raw']))
+
+        return jsonify(all_fields)
+
+    @requires_aggregator()
+    @add_rule("devices/tags", should_authenticate=False)
+    def get_all_Tags(self):
+        """
+        Get all tags that currently belong to devices, to form a set of current tag values
+        :return:
+        """
+        all_tags = set()
+        with self._get_db_connection(True) as db_connection:
+            client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+
+            all_tags.update([current_tag for current_tag in
+                             client_collection.find(
+                                 {}, {'tags': True, '_id': False}).distinct("tags")
+                             if len(current_tag) != 0])
+        return jsonify(all_tags)
 
     @paginated()
-    @add_rule_unauthenticated("gui/filters", methods=['POST', 'GET'])
-    def filters(self, limit, skip):
+    @filtered()
+    @add_rule("queries", methods=['POST', 'GET'], should_authenticate=False)
+    def queries(self, limit, skip, mongo_filter):
         """
         Get and create saved filters.
         A filter is a query to run on the devices.
@@ -368,29 +405,30 @@ class APIPlugin(PluginBase):
         :param skip: start index for pagination
         :return:
         """
-        filters_collection = self._get_collection('filters')
+        queries_collection = self._get_collection('queries')
         if request.method == 'GET':
-            return jsonify(beautify_db_entry(entry) for entry in filters_collection.find({'deleted': False}).skip(
-                skip).limit(limit))
+            mongo_filter['archived'] = False
+            return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
+                           .sort([('_id', pymongo.DESCENDING)])
+                           .skip(skip).limit(limit))
         if request.method == 'POST':
-            filter_to_add = request.get_json(silent=True)
-            if filter_to_add is None:
-                return return_error("Invalid filter", 400)
-            filter_data, filter_name = filter_to_add.get(
-                'filter'), filter_to_add.get('name')
-            filters_collection.update({'name': filter_name},
-                                      {'filter': filter_data,
-                                       'name': filter_name, 'deleted': False},
-                                      upsert=True)
-            return ""
+            query_to_add = request.get_json(silent=True)
+            if query_to_add is None:
+                return return_error("Invalid query", 400)
+            query_data, query_name = query_to_add.get(
+                'query'), query_to_add.get('name')
+            result = queries_collection.update({'name': query_name},
+                                               {'query': query_data, 'name': query_name, 'query_type': 'saved',
+                                                'timestamp': datetime.now(), 'archived': False}, upsert=True)
+            return str(result.upserted_id), 200
 
-    @add_rule_unauthenticated("gui/filters/<filter_id>", methods=['DELETE'])
-    def delete_filter(self, filter_id):
-        filters_collection = self._get_collection('filters')
-        filters_collection.update({'_id': ObjectId(filter_id)},
+    @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
+    def delete_query(self, query_id):
+        queries_collection = self._get_collection('queries')
+        queries_collection.update({'_id': ObjectId(query_id)},
                                   {
                                       '$set': {
-                                          'deleted': True
+                                          'archived': True
                                       }}
                                   )
         return ""
@@ -410,7 +448,7 @@ class APIPlugin(PluginBase):
         return {'clients': clients_value.get('schema')}
 
     @paginated()
-    @add_rule_unauthenticated("gui/adapters")
+    @add_rule("adapters", should_authenticate=False)
     def adapters(self, limit, skip):
         """
         Get all adapters from the core
@@ -433,7 +471,7 @@ class APIPlugin(PluginBase):
                            adapters_from_db)
 
     @paginated()
-    @add_rule_unauthenticated("gui/adapters/<adapter_unique_name>/clients", methods=['POST', 'GET'])
+    @add_rule("adapters/<adapter_unique_name>/clients", methods=['POST', 'GET'], should_authenticate=False)
     def adapters_clients(self, adapter_unique_name, limit, skip):
         """
         Gets or creates clients in the adapter
@@ -453,11 +491,12 @@ class APIPlugin(PluginBase):
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
                     return return_error("Invalid client", 400)
-                client_collection.insert(client_to_add)
-                return ""
+                client_to_add['archived'] = False
+                result = client_collection.insert(client_to_add)
+                return str(result.inserted_id), 200
 
-    @add_rule_unauthenticated("gui/adapters/<adapter_unique_name>/clients/<client_id>", methods=['DELETE'])
-    def adapters_clients_delete(self, adapter_unique_name, client_id):
+    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'], should_authenticate=False)
+    def adapters_clients_update(self, adapter_unique_name, client_id):
         """
         Gets or creates clients in the adapter
         :param adapter_unique_name: the adapter to refer to
@@ -465,11 +504,18 @@ class APIPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            db_connection[adapter_unique_name]['clients'].delete_one(
-                {'_id': ObjectId(client_id)})
+            client_collection = db_connection[adapter_unique_name]['clients']
+            if request.method == 'POST':
+                client_to_update = request.get_json(silent=True)
+                client_collection.update_one({'_id': ObjectId(client_id)}, {
+                    '$set': client_to_update
+                })
+            if request.method == 'DELETE':
+                db_connection[adapter_unique_name]['clients'].update_one(
+                    {'_id': ObjectId(client_id)}, {'$set': {'archived': True}})
             return ""
 
-    @add_rule_unauthenticated("gui/config/<config_name>", methods=['POST', 'GET'])
+    @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
     def config(self, config_name):
         """
         Get or set config by name
@@ -491,7 +537,7 @@ class APIPlugin(PluginBase):
             return ""
 
     @paginated()
-    @add_rule_unauthenticated("gui/notifications", methods=['POST', 'GET'])
+    @add_rule("notifications", methods=['POST', 'GET'], should_authenticate=False)
     def notifications(self, limit, skip):
         """
         Get all notifications
@@ -520,7 +566,7 @@ class APIPlugin(PluginBase):
                      }, {"$set": {'seen': notifications_to_see.get('seen', True)}})
                 return str(update_result.modified_count), 200
 
-    @add_rule_unauthenticated("gui/notifications/<notification_id>", methods=['GET'])
+    @add_rule("notifications/<notification_id>", methods=['GET'], should_authenticate=False)
     def notifications_by_id(self, notification_id):
         """
         Get all notification data
@@ -531,7 +577,7 @@ class APIPlugin(PluginBase):
             notification_collection = db['core']['notifications']
             return jsonify(notification_collection.find_one({'_id': notification_id}))
 
-    @add_rule_unauthenticated("gui/login", methods=['GET', 'POST'], require_connected=False)
+    @add_rule("login", methods=['GET', 'POST'], should_authenticate=False)
     def login(self):
         """
         Get current user or login
@@ -557,7 +603,7 @@ class APIPlugin(PluginBase):
         session['user'] = user_from_db
         return ""
 
-    @add_rule_unauthenticated("gui/logout", methods=['GET'])
+    @add_rule("logout", methods=['GET'], should_authenticate=False)
     def logout(self):
         """
         Clears session, logs out
@@ -567,7 +613,7 @@ class APIPlugin(PluginBase):
         return ""
 
     @paginated()
-    @add_rule_unauthenticated("gui/users", methods=['GET', 'POST'])
+    @add_rule("users", methods=['GET', 'POST'], should_authenticate=False)
     def users(self, limit, skip):
         """
         View or add users
@@ -598,7 +644,7 @@ class APIPlugin(PluginBase):
             return "", 201
 
     @paginated()
-    @add_rule_unauthenticated("gui/logs")
+    @add_rule("logs", should_authenticate=False)
     def logs(self, limit, skip):
         """
         Maybe this should be datewise paginated, perhaps the whole scheme will change.
@@ -614,7 +660,7 @@ class APIPlugin(PluginBase):
         return jsonify(res['hits']['hits'])
 
     @gzipped_downloadable("axonius_logs_{}", "json")
-    @add_rule_unauthenticated("gui/logs/export")
+    @add_rule("logs/export", should_authenticate=False)
     def logs_export(self):
         """
         Pass 'start_date' and/or 'end_date' in GET parameters
@@ -636,6 +682,10 @@ class APIPlugin(PluginBase):
                         })
         return json.dumps(list(res['hits']['hits']))
 
-    @add_rule_unauthenticated("/", methods=['GET'])
+    @add_rule("gui/<path:path>", should_authenticate=False)
+    def blah(self, path):
+        return send_from_directory('/home/axonius/app/frontend', path)
+
+    @add_rule("gui", should_authenticate=False)
     def index(self):
-        return send_from_directory('my-project/dist', 'index.html')
+        return send_from_directory('/home/axonius/app/frontend', 'index.html')

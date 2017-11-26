@@ -18,7 +18,7 @@ export default new Vuex.Store({
         user: {
             firstname: 'Administrator',
             lastname: '',
-            picname: '/src/assets/images/users/avatar.png'
+            picname: '/api/gui/src/assets/images/users/avatar.png'
 
         },
         configuration: {

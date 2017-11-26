@@ -1,13 +1,11 @@
 """
-main.py Main file for running active directory plugin"
+main.py Main file for running Correlator
 """
-from api_plugin import APIPlugin
-
-__author__ = "Mark Segal"
+from CorrelatorPlugin import CorrelatorPlugin
 
 
 def initialize():
-    return APIPlugin()
+    return CorrelatorPlugin()
 
 
 def wsgi_main(*args, **kwargs):
@@ -26,6 +24,6 @@ def wsgi_main(*args, **kwargs):
 
 if __name__ == '__main__':
     # Initialize
-    GUI = APIPlugin()
+    CORRELATOR = CorrelatorPlugin()
     # Run (Blocking)
-    GUI.start_serve()
+    CORRELATOR.start_serve()

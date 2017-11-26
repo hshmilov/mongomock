@@ -14,6 +14,7 @@ import uuid
 
 from flask import jsonify, request, Response
 from axonius.PluginBase import PluginBase, add_rule, return_error
+from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 
 CHUNK_SIZE = 1024
 
@@ -145,8 +146,14 @@ class Core(PluginBase):
             else:
                 return False
 
-        except requests.exceptions.ConnectionError as e:
-            # The plugin is currently offline
+        except (ConnectionError, ReadTimeout, Timeout) as e:
+            self.logger.info(
+                "Got exception {} while trying to contact {}".format(e, plugin_unique_name))
+            return False
+
+        except Exception as e:
+            self.logger.fatal(
+                "Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
     def _create_db_for_plugin(self, plugin_unique_name, plugin_special_db_credentials=None):
@@ -164,12 +171,15 @@ class Core(PluginBase):
             string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
-                 {'role': 'insert_notification', 'db': 'core'}]
+                 {'role': 'insert_notification', 'db': 'core'},
+                 {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's
 
         # TODO: Consider a way of requesting roles other than read-only.
         if plugin_special_db_credentials is not None:
             for current_requested_db_cred in plugin_special_db_credentials:
-                roles.append({'role': 'read', 'db': current_requested_db_cred})
+                roles.append({'role': 'read',
+                              'db': [x for x in self._get_online_plugins().values() if
+                                     x['plugin_name'] == current_requested_db_cred][0]['plugin_unique_name']})
         db_connection[plugin_unique_name].add_user(db_user,
                                                    password=db_password,
                                                    roles=roles)
@@ -193,13 +203,8 @@ class Core(PluginBase):
                 if not api_key:
                     # No api_key, Returning the current online plugins. This will be used by the aggregator
                     # To find out which adapters are available
-                    to_return_device = dict()
-                    for plugin_name, plugin in self.online_plugins.items():
-                        to_return_device[plugin_name] = {'plugin_type': plugin['plugin_type'],
-                                                         'device_sample_rate': plugin['device_sample_rate'],
-                                                         'plugin_unique_name': plugin['plugin_unique_name'],
-                                                         'plugin_name': plugin['plugin_name']}
-                    return jsonify(to_return_device)
+                    online_devices = self._get_online_plugins()
+                    return jsonify(online_devices)
                 else:
                     # This is a registered check, we should get the plugin name (a parameter) and tell if its
                     # In our online list
@@ -246,15 +251,21 @@ class Core(PluginBase):
 
                 # Checking if this plugin already online for some reason
                 if plugin_unique_name in self.online_plugins:
-                    if self._check_plugin_online(plugin_unique_name):
-                        # There is already a running plugin with the same name
-                        self.logger.error(
-                            "Plugin {0} trying to register but already online")
-                        return return_error("Error - {0} is trying to register but already "
-                                            "online".format(plugin_unique_name), 400)
-                    else:
-                        # The old plugin should be deleted
+                    duplicated = self.online_plugins[plugin_unique_name]
+                    if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
+                        self.logger.warn(
+                            "Pluging {} restrated".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
+                    else:
+                        if self._check_plugin_online(plugin_unique_name):
+                            # There is already a running plugin with the same name
+                            self.logger.error(
+                                "Plugin {0} trying to register but already online")
+                            return return_error("Error - {0} is trying to register but already "
+                                                "online".format(plugin_unique_name), 400)
+                        else:
+                            # The old plugin should be deleted
+                            del self.online_plugins[plugin_unique_name]
 
             else:
                 # New plugin
@@ -308,6 +319,15 @@ class Core(PluginBase):
                 relevant_doc['plugin_unique_name']))
             return jsonify(relevant_doc)
 
+    def _get_online_plugins(self):
+        online_devices = dict()
+        for plugin_name, plugin in self.online_plugins.items():
+            online_devices[plugin_name] = {'plugin_type': plugin['plugin_type'],
+                                           'device_sample_rate': plugin['device_sample_rate'],
+                                           'plugin_unique_name': plugin['plugin_unique_name'],
+                                           'plugin_name': plugin['plugin_name']}
+        return online_devices
+
     @add_rule("<path:full_url>", methods=['POST', 'GET'], should_authenticate=False)
     def proxy(self, full_url):
         """Fetch the specified URL and streams it out to the client.
@@ -341,8 +361,11 @@ class Core(PluginBase):
         headers = {
             'x-api-key': url_data['api_key'],
             'x-unique-plugin-name': calling_plugin['plugin_unique_name'],
-            'x-plugin-name': calling_plugin['plugin_name']
+            'x-plugin-name': calling_plugin['plugin_name'],
         }
+        copy_headers = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding']
+        headers.update({h: request.headers[h] for h in copy_headers if request.headers.get(h, '') != ''})
+
         r = requests.request(self.get_method(), final_url,
                              headers=headers, data=data)
 
@@ -359,7 +382,7 @@ class Core(PluginBase):
 
         address_dict = self._get_plugin_addr(plugin.lower())
 
-        address_dict['path'] = '/' + '/'.join(url)
+        address_dict['path'] = '/api/' + '/'.join(url)
 
         return address_dict
 

@@ -57,7 +57,7 @@ class AggregatorPlugin(PluginBase):
         self.devices_db_connection = self._get_db_connection(True)[
             self.plugin_unique_name]
         # Scheduler for querying core for online adapters and querying the adapters themselves
-        self._scheduler = None
+        self._online_adapters_scheduler = None
         # Load devices DB, or create an empty one
         self._load_devices_from_persistent_db()
         # Starting the managing thread
@@ -101,6 +101,15 @@ class AggregatorPlugin(PluginBase):
         """
         return jsonify(self.devices_db[device_id])
 
+    @add_rule("query_devices", methods=["POST"])
+    def query_devices(self):
+        jobs = self._online_adapters_scheduler.get_jobs()
+        for job in jobs:
+            self.logger.info("resetting time for {0}".format(job.name))
+            job.modify(next_run_time=datetime.now())
+        self.online_plugins_scheduler.wakeup()
+        return ""
+
     def _adapters_thread_manager(self):
         """ Function for monitoring other threads activity.
 
@@ -112,32 +121,37 @@ class AggregatorPlugin(PluginBase):
             current_adapters = requests.get(
                 self.core_address + '/register').json()
 
+            self.logger.info(
+                "registered adapters = {}".format(current_adapters))
+
+            get_devices_job_name = "Get device job"
+
             # let's add jobs for all adapters
             for adapter_name, adapter in current_adapters.items():
                 if adapter['plugin_type'] != "Adapter":
                     # This is not an adapter, not running
                     continue
 
-                if self._scheduler.get_job(adapter_name):
+                if self._online_adapters_scheduler.get_job(adapter_name):
                     # We already have a running thread for this adapter
                     continue
 
                 sample_rate = adapter['device_sample_rate']
-                self._scheduler.add_job(func=self._save_devices_from_adapter,
-                                        trigger=IntervalTrigger(
-                                            seconds=sample_rate),
-                                        next_run_time=datetime.now(),
-                                        kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
-                                                'plugin_name': adapter['plugin_name']},
-                                        name="Fetching job for adapter={}".format(
-                                            adapter_name),
-                                        id=adapter_name,
-                                        max_instances=1)
 
-                for job in self._scheduler.get_jobs():
-                    if job.id not in current_adapters:
-                        # this means that the adapter has disconnected, so we stop fetching it
-                        job.remove()
+                self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
+                                                        trigger=IntervalTrigger(
+                                                            seconds=sample_rate),
+                                                        next_run_time=datetime.now(),
+                                                        kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
+                                                                'plugin_name': adapter['plugin_name']},
+                                                        name=get_devices_job_name,
+                                                        id=adapter_name,
+                                                        max_instances=1)
+
+            for job in self._online_adapters_scheduler.get_jobs():
+                if job.id not in current_adapters and job.name == get_devices_job_name:
+                    # this means that the adapter has disconnected, so we stop fetching it
+                    job.remove()
 
         except Exception as e:
             self.logger.critical('Managing thread got exception, '
@@ -148,16 +162,18 @@ class AggregatorPlugin(PluginBase):
         Getting data from all adapters.
         """
 
-        if self._scheduler is None:
+        if self._online_adapters_scheduler is None:
             executors = {'default': ThreadPoolExecutor(10)}
-            self._scheduler = BackgroundScheduler(executors=executors)
-            self._scheduler.add_job(func=self._adapters_thread_manager,
-                                    trigger=IntervalTrigger(seconds=60),
-                                    next_run_time=datetime.now(),
-                                    name='adapters_thread_manager',
-                                    id='adapters_thread_manager',
-                                    max_instances=1)
-            self._scheduler.start()
+            self._online_adapters_scheduler = BackgroundScheduler(
+                executors=executors)
+            self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
+                                                    trigger=IntervalTrigger(
+                                                        seconds=60),
+                                                    next_run_time=datetime.now(),
+                                                    name='adapters_thread_manager',
+                                                    id='adapters_thread_manager',
+                                                    max_instances=1)
+            self._online_adapters_scheduler.start()
 
         else:
             raise RuntimeError("Already running")
@@ -277,9 +293,9 @@ class AggregatorPlugin(PluginBase):
                     "internal_axon_id": internal_axon_id,
                     "accurate_for_datetime": datetime.now(),
                     "adapters": {
-                        associated_adapter_devices: axonius_device_to_split['adapters'].pop(
-                            associated_adapter_devices)
-                        for associated_adapter_devices in associated_adapter_devices
+                        associated_adapter_device: axonius_device_to_split['adapters'].pop(
+                            associated_adapter_device)
+                        for associated_adapter_device in associated_adapter_devices
                     },
                     "tags": []
                 }
@@ -309,6 +325,8 @@ class AggregatorPlugin(PluginBase):
         :param str plugin_name: The name of the adapter
         :param str plugin_unique_name: The name of the adapter (unique name)
         """
+        self.logger.info("Starting to fetch device for {} {}".format(
+            plugin_name, plugin_unique_name))
         try:
             devices = self._get_devices_data(plugin_unique_name)
             # This is locked although this is a (relatively) lengthy process we can't allow linking or unlinking during
@@ -368,6 +386,9 @@ class AggregatorPlugin(PluginBase):
                 threading.current_thread(), str(e)))
             raise
 
+        self.logger.info("Finished for {} {}".format(
+            plugin_name, plugin_unique_name))
+
     def _save_parsed_in_db(self, device, db_type='parsed'):
         """
         Save axonius device in DB
@@ -418,7 +439,6 @@ class AggregatorPlugin(PluginBase):
         Updates the devices db to either add or update the given tag
         :param tag: tag from user
         :param axonius_device_id: axonius id
-        :param accurate_for_datetime: date of tag
         :return: None
         """
         with self.device_db_lock:
@@ -491,7 +511,12 @@ class AggregatorPlugin(PluginBase):
         Saves `self.devices_db` as-is into `devices_db` in the persistent db, overriding everything that is there.
         :return:
         """
-        devices_to_save = self.devices_db.values()
+        devices_to_save = []
+        for device in self.devices_db.values():
+            device = dict(device)
+            device['adapters'] = list(device['adapters'].values())
+            devices_to_save.append(device)
+
         if len(devices_to_save) != 0:
             self.devices_db_connection['devices_db'].delete_many({})
             self.devices_db_connection['devices_db'].insert_many(
@@ -508,7 +533,7 @@ class AggregatorPlugin(PluginBase):
             for axon_device_id, axon_device in self.devices_db.items():
                 axon_device_snapshot = {
                     'accurate_for_datetime': axon_device['accurate_for_datetime'],
-                    'adapters': {},
+                    'adapters': [],
                     'tags': axon_device['tags']
                 }
                 for plugin_unique_name, adapter_device in axon_device['adapters'].items():
@@ -520,7 +545,7 @@ class AggregatorPlugin(PluginBase):
                                                      'plugin_type', 'plugin_unique_name')}
                     axon_adapter_device_snapshot['data'] = {
                         'id': adapter_device['data']['id']}
-                    axon_device_snapshot['adapters'][plugin_unique_name] = axon_adapter_device_snapshot
+                    axon_device_snapshot['adapters'].append(axon_adapter_device_snapshot)
 
                 device_db_snapshot[axon_device_id] = axon_device_snapshot
 
@@ -533,5 +558,8 @@ class AggregatorPlugin(PluginBase):
         :return:
         """
         with self.device_db_lock:
-            self.devices_db = {
-                k['internal_axon_id']: k for k in self.devices_db_connection['devices_db'].find()}
+            self.devices_db = {}
+            for axon_device in self.devices_db_connection['devices_db'].find():
+                axon_device['adapters'] = {adapter['plugin_unique_name']: adapter for adapter in
+                                           axon_device['adapters']}
+                self.devices_db[axon_device['internal_axon_id']] = axon_device

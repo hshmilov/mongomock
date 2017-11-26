@@ -39,8 +39,22 @@ class MongoService(services.compose_service.ComposeService):
         assert 1 == len(plugin_config)
         return plugin_config[0]
 
+    def get_collection(self, db_name, collection_name):
+        """
+        Returns a specific collection.
+
+        :param str collection_name: The name of the collection we want to get.
+        :param str db_name: The name of the db.
+
+        :return: list(dict)
+        """
+        return self.client[db_name][collection_name]
+
     def add_client(self, adapter_name, client_details):
-        self.client[adapter_name].clients.insert_one(client_details)
+        return self.client[adapter_name].clients.insert_one(client_details)
+
+    def get_devices(self, aggregator_unique_name):
+        return self.client[aggregator_unique_name]['devices_db'].find({})
 
 
 @pytest.fixture(scope="session")

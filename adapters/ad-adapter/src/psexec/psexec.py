@@ -6,6 +6,7 @@ __author__ = "Ofir Yefet"
 import sys
 import logging
 import string
+import json
 
 from impacket.dcerpc.v5 import transport
 from impacket.smbconnection import SessionError
@@ -20,8 +21,8 @@ class fileExistsException(Exception):
 
 class PSEXEC(object):
     KNOWN_PROTOCOLS = {
-        '139/SMB': (r'ncacn_np:%s[\pipe\svcctl]', 139),
         '445/SMB': (r'ncacn_np:%s[\pipe\svcctl]', 445),
+        #'139/SMB': (r'ncacn_np:%s[\pipe\svcctl]', 139),
     }
 
     def __init__(self, protocols=None, username='', password='',
