@@ -170,6 +170,7 @@ class Core(PluginBase):
         db_password = ''.join(random.choices(
             string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
+        configs = self._get_collection("configs").find()
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
                  {'role': 'insert_notification', 'db': 'core'},
                  {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's
@@ -177,9 +178,10 @@ class Core(PluginBase):
         # TODO: Consider a way of requesting roles other than read-only.
         if plugin_special_db_credentials is not None:
             for current_requested_db_cred in plugin_special_db_credentials:
-                roles.append({'role': 'read',
-                              'db': [x for x in self._get_online_plugins().values() if
-                                     x['plugin_name'] == current_requested_db_cred][0]['plugin_unique_name']})
+                relevant_db_name = next((x for x in configs if x['plugin_name'] == current_requested_db_cred), None)
+                if relevant_db_name is not None:
+                    roles.append({'role': 'read',
+                                  'db': relevant_db_name['plugin_unique_name']})
         db_connection[plugin_unique_name].add_user(db_user,
                                                    password=db_password,
                                                    roles=roles)
