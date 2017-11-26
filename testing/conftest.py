@@ -19,7 +19,7 @@ class AxoniusService(object):
         return list(cursor)
 
     def get_device_by_id(self, adapter_name, device_id):
-        cond = {'adapters.{0}.data.id'.format(adapter_name): device_id}
+        cond = {'adapters.data.id': device_id, 'adapters.plugin_unique_name': adapter_name}
         return self.get_devices_with_condition(cond)
 
     def add_client_to_adapter(self, adapter, client_details, client_id):
