@@ -2,7 +2,7 @@
     <div class="table-responsive paginated-table">
         <div class="dataTables_wrapper">
             <pulse-loader :loading="fetching" color="#26dad2"></pulse-loader>
-            <table class="table table-striped">
+            <table class="table">
                 <thead>
                 <tr>
                     <th class="table-head checkbox-container">

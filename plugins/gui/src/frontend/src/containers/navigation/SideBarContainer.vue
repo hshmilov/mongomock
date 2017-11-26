@@ -7,12 +7,6 @@
                     </div>
                     <div class="user-profile-text">
                         <h5 class="collapse-hidden color-disabled">{{ `${user.firstname} ${user.lastname}` }}</h5>
-                        <a href="#" data-toggle="tooltip" title="profile">
-                            <i class="icon-user"></i>
-                        </a>
-                        <a href="#" data-toggle="title" title="settings">
-                            <i class="icon-settings"></i>
-                        </a>
                         <a href="#" class="" data-toggle="tooltip" title="Logout">
                             <i class="icon-logout"></i>
                         </a>
@@ -21,7 +15,7 @@
                 <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
                     <nav class="sidebar-nav">
                         <nested-nav-bar>
-                            <nested-nav-item routerName="Dashboard" iconName="device"></nested-nav-item>
+                            <nested-nav-item routerPath="/" iconName="dashboard"></nested-nav-item>
                             <nested-nav-item routeName="Devices" iconName="device">
                                 <nested-nav-bar nestLevel="1" class="collapse">
                                     <nested-nav-item routeName="Saved Queries"></nested-nav-item>
@@ -30,7 +24,7 @@
                             </nested-nav-item>
                             <nested-nav-item routeName="Plugins" iconName="plugin"></nested-nav-item>
                             <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
-                            <nested-nav-item routeName="Tasks" iconName="control"></nested-nav-item>
+                            <nested-nav-item routeName="Tasks" iconName="task"></nested-nav-item>
                             <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
                         </nested-nav-bar>
                     </nav>
@@ -84,7 +78,6 @@
         position: relative;
         background-size: cover;
         font-size: $font-size-title;
-        border-bottom: 1px solid $color-light;
         .user-profile-img {
             width: 70px;
             margin: 0 auto;
@@ -93,7 +86,6 @@
             img {
                 width: 100%;
                 padding: 5px;
-                border: 1px solid $color-light;
                 border-radius: 100%;
             }
         }

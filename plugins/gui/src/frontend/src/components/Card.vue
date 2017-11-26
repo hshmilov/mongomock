@@ -21,17 +21,7 @@
     @import '../scss/config';
 
     .card {
-        -webkit-box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
-        box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
         margin-bottom: 12px;
-        &.aqua {
-            border-color: $color-aqua;
-            .card-header {
-                background-color: $color-aqua;
-                color: $color-light;
-                border-bottom-color: $color-aqua;
-            }
-        }
         .card-header {
             padding: 8px 12px;
             display: flex;
@@ -39,6 +29,7 @@
             -ms-flex-direction: row;
             flex-basis: 100%;
             -ms-flex-preferred-size: 100%;
+            background-color: $background-color-light;
             .card-header-title {
                 flex: 1 1 auto;
                 text-transform: capitalize;
