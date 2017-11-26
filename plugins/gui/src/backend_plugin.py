@@ -49,8 +49,8 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                    response.status_code >= 300 or
-                        'Content-Encoding' in response.headers):
+                            response.status_code >= 300 or
+                            'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
                 compressed = io.BytesIO()
@@ -351,9 +351,28 @@ class BackendPlugin(PluginBase):
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
+    @add_rule("devices/<device_id>", methods=['POST', 'GET'], should_authenticate=False)
+    def current_device_by_id(self, device_id):
+        """
+        Retrieve device by the given id, from current devices DB or update it
+        Currently, update works only for tags because that is the only edit operation user has
+        :return:
+        """
+        with self._get_db_connection(True) as db_connection:
+            if request.method == 'GET':
+                return jsonify(db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+                    {'internal_axon_id': device_id}))
+            elif request.method == 'POST':
+                device_to_update = request.get_json(silent=True)
+                db_connection[self._aggregator_plugin_unique_name]['devices_db'].update_one(
+                    {'internal_axon_id': device_id},
+                    {'$set': {'tags': device_to_update['tags']}}
+                )
+                return '', 200
+
     @requires_aggregator()
     @add_rule("devices/fields", should_authenticate=False)
-    def get_all_fields(self):
+    def unique_fields(self):
         """
         Get all unique fields that devices may have data for, coming from the adapters' parsed data
         :return:
@@ -377,7 +396,7 @@ class BackendPlugin(PluginBase):
 
     @requires_aggregator()
     @add_rule("devices/tags", should_authenticate=False)
-    def get_all_Tags(self):
+    def tags(self):
         """
         Get all tags that currently belong to devices, to form a set of current tag values
         :return:
@@ -494,7 +513,8 @@ class BackendPlugin(PluginBase):
                 result = client_collection.insert(client_to_add)
                 return str(result.inserted_id), 200
 
-    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'], should_authenticate=False)
+    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'],
+              should_authenticate=False)
     def adapters_clients_update(self, adapter_unique_name, client_id):
         """
         Gets or creates clients in the adapter
