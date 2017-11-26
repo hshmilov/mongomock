@@ -8,8 +8,8 @@ services:
           - 4999:80
         volumes:
           - ./src:/home/axonius/app
-          - ./logs:/log
           - ../axonius-libs/src/libs:/home/axonius/libs
+          - ../../logs:/home/axonius/logs
 
 networks:
   default:

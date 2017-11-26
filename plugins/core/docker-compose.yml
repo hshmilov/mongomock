@@ -9,8 +9,8 @@ services:
 #            - 443:443
         volumes:
           - ./src:/home/axonius/app
-          - ./logs:/log
           - ../axonius-libs/src/libs:/home/axonius/libs
+          - ../../logs:/home/axonius/logs
 
 networks:
   default:
