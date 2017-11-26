@@ -25,7 +25,7 @@ export default new Vuex.Store({
             language: 'en'
         },
         interaction: {
-            collapseSidebar: false
+            collapseSidebar: true
         }
     },
     mutations: {

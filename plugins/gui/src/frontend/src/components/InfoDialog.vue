@@ -39,7 +39,7 @@
             width: 280px;
 	    }
         .info-dialog-header {
-            background-color: $color-theme;
+            background-color: $color-theme-light;
             height: 80px;
             color: $color-light;
             position: relative;
@@ -73,11 +73,11 @@
             bottom: 0;
             width: 100%;
             border-radius: 0;
-            background-color: $color-theme;
+            background-color: $color-theme-light;
             color: $color-light !important;
             &:hover {
-                -webkit-box-shadow: 4px -2px 12px 4px rgba($color-theme, 0.42), 23px 4px 0 0 rgba(0, 0, 0, 0.12), 10px 8px 0 -5px rgba($color-theme, 0.2);
-                box-shadow: 4px -2px 12px 4px rgba($color-theme, 0.42), 23px 4px 0 0 rgba(0, 0, 0, 0.12), 10px 8px 0 -5px rgba($color-theme, 0.2);
+                -webkit-box-shadow: 4px -2px 12px 4px rgba($color-theme-light, 0.42), 23px 4px 0 0 rgba(0, 0, 0, 0.12), 10px 8px 0 -5px rgba($color-theme-light, 0.2);
+                box-shadow: 4px -2px 12px 4px rgba($color-theme-light, 0.42), 23px 4px 0 0 rgba(0, 0, 0, 0.12), 10px 8px 0 -5px rgba($color-theme-light, 0.2);
             }
         }
     }

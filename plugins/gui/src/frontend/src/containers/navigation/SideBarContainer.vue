@@ -3,16 +3,10 @@
             <div class="scroll-sidebar">
                 <div class="user-profile">
                     <div class="user-profile-img">
-                        <img :src="user.picname" alt="user" />
+                        <img :src="user.picname" />
                     </div>
                     <div class="user-profile-text">
-                        <h5 class="collapse-hidden color-disabled">{{ `${user.firstname} ${user.lastname}` }}</h5>
-                        <a href="#" data-toggle="tooltip" title="profile">
-                            <i class="icon-user"></i>
-                        </a>
-                        <a href="#" data-toggle="title" title="settings">
-                            <i class="icon-settings"></i>
-                        </a>
+                        <h5 class="collapse-hidden">{{ `${user.firstname} ${user.lastname}` }}</h5>
                         <a href="#" class="" data-toggle="tooltip" title="Logout">
                             <i class="icon-logout"></i>
                         </a>
@@ -21,6 +15,7 @@
                 <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
                     <nav class="sidebar-nav">
                         <nested-nav-bar>
+                            <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard"></nested-nav-item>
                             <nested-nav-item routeName="Devices" iconName="device">
                                 <nested-nav-bar nestLevel="1" class="collapse">
                                     <nested-nav-item routeName="Saved Queries"></nested-nav-item>
@@ -29,7 +24,7 @@
                             </nested-nav-item>
                             <nested-nav-item routeName="Plugins" iconName="plugin"></nested-nav-item>
                             <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
-                            <nested-nav-item routeName="Tasks" iconName="control"></nested-nav-item>
+                            <nested-nav-item routeName="Tasks" iconName="task"></nested-nav-item>
                             <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
                         </nested-nav-bar>
                     </nav>
@@ -64,16 +59,15 @@
         top: 0px;
         z-index: 20;
         padding-top: 60px;
-        background: $background-color-light;
-        box-shadow: 1px 0px 20px rgba(0, 0, 0, 0.08);
+        background: $color-theme-dark;
         .footer {
             position: absolute;
             width: 100%;
             bottom: 0;
-            color: $color-text;
+            color: $color-light;
             padding: 17px 15px;
-            border-top: 1px solid $border-color;
-            background: $background-color-light;
+            border-top: 1px solid $color-light;
+            background: $color-theme-dark;
         }
     }
 
@@ -83,7 +77,6 @@
         position: relative;
         background-size: cover;
         font-size: $font-size-title;
-        border-bottom: 1px solid $border-color;
         .user-profile-img {
             width: 70px;
             margin: 0 auto;
@@ -92,7 +85,6 @@
             img {
                 width: 100%;
                 padding: 5px;
-                border: 1px solid $border-color;
                 border-radius: 100%;
             }
         }
@@ -100,10 +92,13 @@
             padding: 5px 0px;
             position: relative;
             text-align: center;
+            h5 {
+                color: $color-light;
+            }
             > a {
-                color: $color-disabled;
+                color: $color-light;
                 padding: 0 5px;
-                &:hover {  color: $color-theme;  }
+                &:hover {  color: $color-theme-light;  }
                 &:after {  display: none;  }
             }
         }
@@ -116,13 +111,14 @@
         height: 100%;
         .user-profile {  flex: 0 1 auto;  }
         .scrollbar-container {
+            background-color: $color-theme-dark;
             flex: 1 1 auto;
             margin: 0;
         }
     }
 
     .sidebar-nav {
-        background: $background-color-light;
+        background: $color-theme-dark;
         padding: 0px;
         padding-top: 30px;
     }
@@ -165,7 +161,7 @@
                 top: 70px;
                 width: 0;
                 z-index: 1001;
-                background: $color-theme;
+                background: $color-theme-light;
                 opacity: 0.5;
                 display: none;
                 padding-left: 1px;
@@ -187,7 +183,7 @@
                 .nav-link {
                     width: 180px;
                     color: $color-light;
-                    background: $color-theme;
+                    background: $color-theme-light;
                     opacity: 0.5;
                     .collapse-hidden {  display: inline;  }
                     span {  opacity: 1;  }

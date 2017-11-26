@@ -24,7 +24,7 @@
             font-size: 80%;
             letter-spacing: 0.5px;
             list-style: none;
-            color: $color-theme;
+            color: $color-theme-light;
             padding-left: 12px;
             padding-right: 12px;
             border-left: 1px solid $color-text;
