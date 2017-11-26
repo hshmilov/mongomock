@@ -80,7 +80,7 @@
         .form-control {
             height: 30px;
             &:focus {
-                border-color: $color-theme;
+                border-color: $color-theme-light;
             }
         }
         .form-label {
@@ -89,7 +89,7 @@
                 margin-bottom: .5rem;
                 display: block;
                 &:hover {
-                    color: $color-theme;
+                    color: $color-theme-light;
                 }
             }
         }

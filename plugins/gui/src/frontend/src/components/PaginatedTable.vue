@@ -233,8 +233,8 @@
                 &.active,
                 &:hover {
                     color: $color-light;
-                    border: 1px solid $color-theme;
-                    background-color: $color-theme;
+                    border: 1px solid $color-theme-light;
+                    background-color: $color-theme-light;
                 }
                 &.disabled,
                 &.disabled:hover {
@@ -259,7 +259,7 @@
             text-transform: capitalize;
             padding: 8px;
             font-weight: 400;
-            color: $color-theme;
+            color: $color-theme-light;
             vertical-align: middle;
             &.checkbox-container {
                 padding-left: 9px;
@@ -271,14 +271,14 @@
             }
             &:hover, &.active {
                 .table-row-data {
-                    border-top: 1px solid $color-theme;
-                    border-bottom: 1px solid $color-theme;
+                    border-top: 1px solid $color-theme-light;
+                    border-bottom: 1px solid $color-theme-light;
                     background-color: $background-color-hover;
                     &:first-of-type {
-                        border-left: 1px solid $color-theme;
+                        border-left: 1px solid $color-theme-light;
                     }
                     &:last-of-type {
-                        border-right: 1px solid $color-theme;
+                        border-right: 1px solid $color-theme-light;
                     }
                 }
                 .table-row-actions a {
@@ -303,9 +303,9 @@
                     visibility: hidden;
                     padding-right: 8px;
                     &:hover {
-                        color: $color-theme;
-                        .svg-stroke {  stroke: $color-theme;  }
-                        .svg-fill {  fill: $color-theme;  }
+                        color: $color-theme-light;
+                        .svg-stroke {  stroke: $color-theme-light;  }
+                        .svg-fill {  fill: $color-theme-light;  }
                     }
                     i {
                         vertical-align: middle;

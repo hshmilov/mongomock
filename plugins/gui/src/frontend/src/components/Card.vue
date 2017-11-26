@@ -54,7 +54,7 @@
                     margin-left: 8px;
                     &:hover, &.show {
                         background-color: rgba(235, 233, 250, 0.6);
-                        border-color: $color-theme;
+                        border-color: $color-theme-light;
                     }
                     .dropdown-menu {
                         width: 200px;

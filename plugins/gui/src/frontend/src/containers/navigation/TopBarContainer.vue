@@ -2,23 +2,18 @@
     <header class="topbar" v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
         <nav class="navbar top-navbar navbar-expand-md navbar-light">
             <div class="navbar-header">
-                <a class="navbar-brand">
-                    <b><svg-icon name="logo/logo" height="36"></svg-icon></b>
-                    <span><svg-icon name="logo/axonius" height="20"></svg-icon></span>
-                </a>
+                <li class="nav-item m-l-10">
+                    <a class="nav-link sidebartoggler hidden-sm-down" v-on:click="toggleSidebar">
+                        <i class="icon-menu"></i>
+                    </a>
+                </li>
             </div>
             <div class="navbar-collapse">
                 <ul class="navbar-nav mr-auto mt-md-0">
-                    <li class="nav-item m-l-10">
-                        <a class="nav-link sidebartoggler hidden-sm-down" v-on:click="toggleSidebar">
-                            <i class="icon-menu"></i>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <router-link :to="{ name: 'Dashboard' }" class="nav-link nav-home" exact-active-class="active">
-                            <i class="icon-home"></i>
-                        </router-link>
-                    </li>
+                    <a class="navbar-brand">
+                        <b><svg-icon name="logo/logo" height="36"></svg-icon></b>
+                        <span><svg-icon name="logo/axonius" height="20"></svg-icon></span>
+                    </a>
                 </ul>
                 <ul class="navbar-nav my-lg-0">
                     <li class="nav-item">
@@ -53,7 +48,7 @@
     @import '../../scss/config';
 
     .topbar {
-        background: $color-theme;
+        background: $color-light;
         position: relative;
         z-index: 50;
         .top-navbar {
@@ -66,11 +61,14 @@
             -ms-flex-pack: start;
             justify-content: flex-start;
             .navbar-header {
-                background-color: $background-color-light;
+                background-color: $color-theme-dark;
                 line-height: 45px;
                 text-align: center;
                 width: 240px;
                 flex-shrink: 0;
+                .sidebartoggler {
+                    color: $color-theme-light;
+                }
                 .navbar-brand {
                     margin-right: 0px;
                     padding-bottom: 0px;
@@ -79,7 +77,7 @@
                         line-height: 62px;
                         display: inline-block;
                     }
-                    .svg-icon {  fill: $color-theme;  }
+                    .svg-icon {  fill: $color-theme-light;  }
                 }
             }
             .navbar-collapse {
@@ -99,7 +97,7 @@
                 padding-left: .75rem;
                 padding-right: .75rem;
                 line-height: 40px;
-                color: $color-light;
+                color: $color-theme-light;
             }
             .nav-item {  margin-bottom: 0;  }
             .nav-link.nav-home.active, .nav-link.nav-home:hover {  color: $color-yellow;  }

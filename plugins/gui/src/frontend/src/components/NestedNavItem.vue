@@ -36,8 +36,8 @@
             letter-spacing: 2px;
             .svg-icon {
                 margin-right: 10px;
-                .svg-fill {  fill: $color-title  }
-                .svg-stroke {  stroke: $color-title  }
+                .svg-fill {  fill: $color-light  }
+                .svg-stroke {  stroke: $color-light  }
             }
             &.has-arrow {
                 position: relative;
@@ -65,15 +65,21 @@
                 }
             }
         }
-        &.active, &:hover {
-            >.nav-link {  color: $color-theme;  }
+        &:hover {
+            >.nav-link {  color: $color-yellow;  }
             .svg-icon {
-                .svg-fill {  fill: $color-theme;  }
-                .svg-stroke {  stroke: $color-theme;  }
+                .svg-fill {  fill: $color-yellow;  }
+                .svg-stroke {  stroke: $color-yellow;  }
             }
-            .has-arrow::after {  border-color: $color-theme;  }
+            .has-arrow::after {  border-color: $color-yellow;  }
         }
         &.active {
+            >.nav-link {  color: $color-theme-light;  }
+            .svg-icon {
+                .svg-fill {  fill: $color-theme-light;  }
+                .svg-stroke {  stroke: $color-theme-light;  }
+            }
+            .has-arrow::after {  border-color: $color-theme-light;  }
             font-weight: 500;
             .nav-link.has-arrow::after {
                 -webkit-transform: rotate(-135deg) translate(0, -50%);
@@ -91,7 +97,7 @@
     .nav-nest.nest-0 > .nav-item {
         border-left: 3px solid transparent;
         &.active {
-            border-left: 3px solid $color-theme;
+            border-left: 3px solid $color-theme-light;
             >.nav-link {  font-weight: 500;  }
         }
     }

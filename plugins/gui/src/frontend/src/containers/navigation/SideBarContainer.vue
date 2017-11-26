@@ -21,6 +21,7 @@
                 <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
                     <nav class="sidebar-nav">
                         <nested-nav-bar>
+                            <nested-nav-item routerName="Dashboard" iconName="device"></nested-nav-item>
                             <nested-nav-item routeName="Devices" iconName="device">
                                 <nested-nav-bar nestLevel="1" class="collapse">
                                     <nested-nav-item routeName="Saved Queries"></nested-nav-item>
@@ -64,16 +65,16 @@
         top: 0px;
         z-index: 20;
         padding-top: 60px;
-        background: $background-color-light;
+        background: $color-theme-dark;
         box-shadow: 1px 0px 20px rgba(0, 0, 0, 0.08);
         .footer {
             position: absolute;
             width: 100%;
             bottom: 0;
-            color: $color-text;
+            color: $color-light;
             padding: 17px 15px;
-            border-top: 1px solid $border-color;
-            background: $background-color-light;
+            border-top: 1px solid $color-light;
+            background: $color-theme-dark;
         }
     }
 
@@ -83,7 +84,7 @@
         position: relative;
         background-size: cover;
         font-size: $font-size-title;
-        border-bottom: 1px solid $border-color;
+        border-bottom: 1px solid $color-light;
         .user-profile-img {
             width: 70px;
             margin: 0 auto;
@@ -92,7 +93,7 @@
             img {
                 width: 100%;
                 padding: 5px;
-                border: 1px solid $border-color;
+                border: 1px solid $color-light;
                 border-radius: 100%;
             }
         }
@@ -101,9 +102,9 @@
             position: relative;
             text-align: center;
             > a {
-                color: $color-disabled;
+                color: $color-light;
                 padding: 0 5px;
-                &:hover {  color: $color-theme;  }
+                &:hover {  color: $color-theme-light;  }
                 &:after {  display: none;  }
             }
         }
@@ -116,13 +117,14 @@
         height: 100%;
         .user-profile {  flex: 0 1 auto;  }
         .scrollbar-container {
+            background-color: $color-theme-dark;
             flex: 1 1 auto;
             margin: 0;
         }
     }
 
     .sidebar-nav {
-        background: $background-color-light;
+        background: $color-theme-dark;
         padding: 0px;
         padding-top: 30px;
     }
@@ -165,7 +167,7 @@
                 top: 70px;
                 width: 0;
                 z-index: 1001;
-                background: $color-theme;
+                background: $color-theme-light;
                 opacity: 0.5;
                 display: none;
                 padding-left: 1px;
@@ -187,7 +189,7 @@
                 .nav-link {
                     width: 180px;
                     color: $color-light;
-                    background: $color-theme;
+                    background: $color-theme-light;
                     opacity: 0.5;
                     .collapse-hidden {  display: inline;  }
                     span {  opacity: 1;  }
