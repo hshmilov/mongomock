@@ -700,8 +700,6 @@ class PluginBase(object):
             # Calling the needed function
             request_content = self.get_request_data_as_object()
 
-            request_content['responder'] = self.get_caller_plugin_name()
-
             if request_content['status'] == 'failed':
                 action_promise.do_reject(Exception(request_content))
             elif request_content['status'] == 'finished':
