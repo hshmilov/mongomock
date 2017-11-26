@@ -24,7 +24,7 @@ export default new Router({
             component: DashboardContainer
         },
         {
-            path: 'device',
+            path: '/device',
             name: 'Devices',
             component: DevicesContainer,
         },

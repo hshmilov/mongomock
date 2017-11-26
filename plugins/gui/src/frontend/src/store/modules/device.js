@@ -14,10 +14,19 @@ export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 
 export const decomposeFieldPath = (data, fieldPath) => {
+	/*
+		Find ultimate value of data, matching given field path, by recursively drilling into the dictionary,
+		until path exhausted or reached undefined.
+		For arrays along the way as well as final values, first element is returned.
+		Should last value be returned as an array, and field's type changed to a list?
+	 */
 	let decomposed = data
 	fieldPath.split('.').forEach(function (part) {
-		if (decomposed[part] === undefined) { return }
+		if (!decomposed) { return }
 		decomposed = decomposed[part]
+		if (Array.isArray(decomposed)) {
+			decomposed = !decomposed.length? null : decomposed[0]
+		}
 	})
 	return decomposed
 }
@@ -45,7 +54,7 @@ export const device = {
 				},
 				{path: 'data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
 				{path: 'data.name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'data.IP', name: 'IP Address', selected: true},
+				{path: 'data.network_interfaces.public_ip', name: 'IP Address', selected: true},
 				{path: 'data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
@@ -55,6 +64,7 @@ export const device = {
 		adapterNames: {
 			'ad_adapter': 'Active Directory',
 			'esx_adapter': 'ESX',
+			'aws_adapter': 'AWS',
 			'checkpoint_adapter': 'CheckPoint',
 			'qcore_adapter': 'QCore',
 			'splunk_adapter': 'Splunk'
