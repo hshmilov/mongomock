@@ -146,7 +146,7 @@ class Core(PluginBase):
             else:
                 return False
 
-        except (ConnectionError, ReadTimeout, Timeout) as e:
+        except (ConnectionError, ReadTimeout, Timeout, exceptions.PluginNotFoundError) as e:
             self.logger.info(
                 "Got exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
@@ -414,7 +414,7 @@ class Core(PluginBase):
         if not relevant_doc:
             self.logger.warning(
                 "No online plugin found for {0}".format(plugin_unique_name))
-            return None, None
+            raise exceptions.PluginNotFoundError()
 
         return {"plugin_ip": relevant_doc["plugin_ip"],
                 "plugin_port": str(relevant_doc["plugin_port"]),
