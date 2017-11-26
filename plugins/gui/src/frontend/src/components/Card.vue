@@ -57,7 +57,7 @@
                         border-color: $color-theme;
                     }
                     .dropdown-menu {
-                        width: 200px;
+                        width: 360px;
                     }
                 }
             }

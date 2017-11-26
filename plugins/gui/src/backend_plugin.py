@@ -363,16 +363,15 @@ class BackendPlugin(PluginBase):
             all_devices = list(
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
-                for current_adapter in current_device['adapters'].keys():
-                    for current_raw_field in current_device['adapters'][current_adapter]['data']['raw'].keys():
+                for current_adapter in current_device['adapters']:
+                    for current_raw_field in current_adapter['data']['raw'].keys():
                         all_fields.add(
-                            '.'.join([current_adapter, 'data', 'raw', current_raw_field]))
+                            '.'.join([current_adapter['plugin_name'], 'data', 'raw', current_raw_field]))
 
             for current_device in all_devices:
-                for current_adapter in current_device['adapters'].keys():
-                    all_fields.discard('.'.join([current_adapter, 'data']))
-                    all_fields.discard(
-                        '.'.join([current_adapter, 'data', 'raw']))
+                for current_adapter in current_device['adapters']:
+                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data']))
+                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data', 'raw']))
 
         return jsonify(all_fields)
 
