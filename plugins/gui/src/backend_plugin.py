@@ -8,7 +8,7 @@ from axonius.PluginBase import PluginBase, add_rule, return_error
 import tarfile
 import io
 from datetime import date
-from flask import jsonify, request, session, after_this_request
+from flask import jsonify, request, session, after_this_request, send_from_directory
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
 import requests
@@ -635,3 +635,11 @@ class BackendPlugin(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
+
+    @add_rule("gui/<path:path>", should_authenticate=False)
+    def blah(self, path):
+        return send_from_directory('/home/axonius/app/frontend', path)
+
+    @add_rule("gui", should_authenticate=False)
+    def index(self):
+        return send_from_directory('/home/axonius/app/frontend', 'index.html')
