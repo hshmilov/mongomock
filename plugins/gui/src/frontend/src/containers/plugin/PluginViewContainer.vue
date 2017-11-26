@@ -9,12 +9,12 @@
                     <span class="card-header-title">Plugin Configuration</span>
                 </div>
                 <div class="card-body"  style="height: 80vh">
-                    <h1 style="margin-bottom: 16px; color: #4796e4"><img src="/api/gui/src/assets/images/general/about.png" style="height: 40px; margin-right: 8px;"/> About</h1>
+                    <h1 style="margin-bottom: 16px; color: #4796e4"><img src="//src/assets/images/general/about.png" style="height: 40px; margin-right: 8px;"/> About</h1>
                     {{ currentPlugin['description'] }}
                     <br><br><br>
                     <hr>
 
-                    <h1 style="margin-bottom: 16px; color: #4796e4"><img src="/api/gui/src/assets/images/general/settings.png" style="height: 40px; margin-right: 8px;"/> Settings</h1>
+                    <h1 style="margin-bottom: 16px; color: #4796e4"><img src="//src/assets/images/general/settings.png" style="height: 40px; margin-right: 8px;"/> Settings</h1>
                     The following settings affect the behavior of the {{ currentPlugin['name'] }} plugin.
                     <br><br>
                     Plugin State: &nbsp;&nbsp;
@@ -36,7 +36,7 @@
                     <span class="card-header-title">Results</span>
                 </div>
                 <div class="card-body"  style="height: 80vh">
-                    <h1 style="color: #4796e4"><img src="/api/gui/src/assets/images/general/results.png" style="height: 40px; margin-right: 8px;"/> Results</h1>
+                    <h1 style="color: #4796e4"><img src="/src/assets/images/general/results.png" style="height: 40px; margin-right: 8px;"/> Results</h1>
                     <vue-chart style="height: 100%"
                             chart-type="PieChart"
                             :columns="[{'type': 'string', 'label': 'haha'}, {'type': 'number', 'label': 'hihi'}]"
