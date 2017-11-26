@@ -351,6 +351,48 @@ class BackendPlugin(PluginBase):
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
+    @requires_aggregator()
+    @add_rule("devices/fields", should_authenticate=False)
+    def get_all_fields(self):
+        """
+        Get all unique fields that devices may have data for, coming from the adapters' parsed data
+        :return:
+        """
+        all_fields = set()
+        with self._get_db_connection(True) as db_connection:
+            all_devices = list(
+                db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
+            for current_device in all_devices:
+                for current_adapter in current_device['adapters'].keys():
+                    for current_raw_field in current_device['adapters'][current_adapter]['data']['raw'].keys():
+                        all_fields.add(
+                            '.'.join([current_adapter, 'data', 'raw', current_raw_field]))
+
+            for current_device in all_devices:
+                for current_adapter in current_device['adapters'].keys():
+                    all_fields.discard('.'.join([current_adapter, 'data']))
+                    all_fields.discard(
+                        '.'.join([current_adapter, 'data', 'raw']))
+
+        return jsonify(all_fields)
+
+    @requires_aggregator()
+    @add_rule("devices/tags", should_authenticate=False)
+    def get_all_Tags(self):
+        """
+        Get all tags that currently belong to devices, to form a set of current tag values
+        :return:
+        """
+        all_tags = set()
+        with self._get_db_connection(True) as db_connection:
+            client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+
+            all_tags.update([current_tag for current_tag in
+                             client_collection.find(
+                                 {}, {'tags': True, '_id': False}).distinct("tags")
+                             if len(current_tag) != 0])
+        return jsonify(all_tags)
+
     @paginated()
     @filtered()
     @add_rule("queries", methods=['POST', 'GET'], should_authenticate=False)
@@ -449,11 +491,12 @@ class BackendPlugin(PluginBase):
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
                     return return_error("Invalid client", 400)
-                client_collection.insert(client_to_add)
-                return ""
+                client_to_add['archived'] = False
+                result = client_collection.insert(client_to_add)
+                return str(result.inserted_id), 200
 
-    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['DELETE'], should_authenticate=False)
-    def adapters_clients_delete(self, adapter_unique_name, client_id):
+    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'], should_authenticate=False)
+    def adapters_clients_update(self, adapter_unique_name, client_id):
         """
         Gets or creates clients in the adapter
         :param adapter_unique_name: the adapter to refer to
@@ -461,8 +504,15 @@ class BackendPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            db_connection[adapter_unique_name]['clients'].delete_one(
-                {'_id': ObjectId(client_id)})
+            client_collection = db_connection[adapter_unique_name]['clients']
+            if request.method == 'POST':
+                client_to_update = request.get_json(silent=True)
+                client_collection.update_one({'_id': ObjectId(client_id)}, {
+                    '$set': client_to_update
+                })
+            if request.method == 'DELETE':
+                db_connection[adapter_unique_name]['clients'].update_one(
+                    {'_id': ObjectId(client_id)}, {'$set': {'archived': True}})
             return ""
 
     @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
