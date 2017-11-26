@@ -34,7 +34,7 @@
             border: 1px solid $border-color;
             height: 30px;
             &:focus {
-                border-color: $color-theme;
+                border-color: $color-theme-light;
             }
         }
         margin-bottom: 12px;
@@ -51,7 +51,7 @@
             color: $border-color;
             font-size: 150%;
             &:hover {
-                color: $color-theme;
+                color: $color-theme-light;
                 cursor: pointer;
             }
         }

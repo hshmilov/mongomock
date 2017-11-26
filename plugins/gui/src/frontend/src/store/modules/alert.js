@@ -182,7 +182,7 @@ export const alert = {
 				If completed successfully, id of added \ updated alert should be returned and together with the
 				data, they are added to the alertList (instead of re-fetching), using a call to the mutation ADD_ALERT
 			 */
-			if (!payload) { return }
+			if (!payload || !payload.id) { return }
 			let rule = 'api/alerts'
 			if (payload.id !== 'new') {
 				rule += '/' + payload.id
