@@ -3,16 +3,15 @@ import json
 from test_helpers.utils import try_until_not_thrown
 
 epo_client_details = {
-    "admin_password": "nTiQHY3Cw6rE",
-    "admin_user": "admin",
-    "host": "ec2-18-216-71-81.us-east-2.compute.amazonaws.com",
+    "admin_password": "6c=xz@OACxaefu)h38MFLD%dpiTeQu$=",
+    "admin_user": "administrator",
+    "host": "10.0.255.180",
     "port": 8443,
-    "query_user": "admin",
-    "query_password": "nTiQHY3Cw6rE"
+    "query_user": "administrator",
+    "query_password": "6c=xz@OACxaefu)h38MFLD%dpiTeQu$="
 }
 
-EPO_DEVICE_HOSTNAME = 'EC2AMAZ-0VJ3RSP'
-EPO_AGENT_ID = 'F982D34B-A2DC-4BD2-AC9A-E2EDA0678899'
+EPO_DEVICE_HOSTNAME = 'EC2AMAZ-G3CI904'
 
 
 def test_epo_adapter_is_up(axonius_fixture, epo_fixture):
