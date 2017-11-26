@@ -2,9 +2,9 @@
 
 source ./prepare_python_env.sh
 
-if [ $(autopep8 --exclude venv --recursive . --diff | wc -l) -ne 0 ]; then
+if [ $(autopep8 --max-line-length 120 --exclude venv --recursive . --diff | wc -l) -ne 0 ]; then
     echo "Formatting failed!"
-    autopep8 --exclude venv --recursive . --diff
+    autopep8 --max-line-length 120 --exclude venv --recursive . --diff
     exit 1
 fi
 

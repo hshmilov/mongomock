@@ -9,7 +9,7 @@ import concurrent.futures
 
 from axonius.PluginBase import PluginBase, add_rule, return_error
 from abc import ABC, abstractmethod
-from flask import jsonify
+from flask import jsonify, request
 import json
 from base64 import standard_b64decode
 
@@ -72,6 +72,30 @@ class AdapterBase(PluginBase, ABC):
             self._clients = self._get_parsed_clients_config()
 
         return jsonify(self._clients.keys())
+
+    @add_rule('correlation_cmds', methods=['GET'])
+    def correlation_cmds(self):
+        """ /correlation_cmds Get a dictionary between OS type and shell command that'll figure out the device ID
+        refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/90472522/Correlation+Implementation for more
+        """
+        return jsonify(self._correlation_cmds())
+
+    @add_rule('parse_correlation_results', methods=['POST'])
+    def parse_correlation_results(self):
+        """ /parse_correlation_results Parses the given results (as string) into a device ID
+        Assumes POST data has:
+        {
+            "result": "some text",
+            "os": "Windows" # or Linux, or whatever else returned as a key from /correlation_cmds
+        }
+        :return: str
+        """
+        data = request.get_json(silent=True)
+        if data is None:
+            return return_error("No data received")
+        if 'result' not in data or 'os' not in data:
+            return return_error("Invalid data received")
+        return jsonify(self._parse_correlation_results(data['result'], data['os']))
 
     def _update_action_data(self, action_id, status, output={}):
         """ A function for updating the EC on new action status.
@@ -231,6 +255,29 @@ class AdapterBase(PluginBase, ABC):
         :return: parsed data
         """
         pass
+
+    def _correlation_cmds(self):
+        """
+        To be implemented by inheritors, otherwise leave empty.
+        Returns dict between OS type and shell, e.g.
+        {
+            "Linux": "curl http://169.254.169.254/latest/meta-data/instance-id",
+            "Windows": "powershell -Command \"& Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/instance-id\""
+        }
+        :return: shell commands that help collerations
+        """
+        return {}
+
+    def _parse_correlation_results(self, correlation_cmd_result, os_type):
+        """
+        To be implemented by inheritors, otherwise leave empty.
+        :type correlation_cmd_result: str
+        :param correlation_cmd_result: result of running cmd on a machine
+        :type os_type: str
+        :param os_type: the type of machine ran upon
+        :return:
+        """
+        raise NotImplementedError()
 
     def _get_clients_config(self):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.

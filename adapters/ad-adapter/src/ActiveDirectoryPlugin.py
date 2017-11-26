@@ -130,7 +130,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         for device_raw in devices_raw_data:
             yield{
                 'name': device_raw['name'],
-                'os': figure_out_os(device_raw['operatingSystem']),
+                'OS': figure_out_os(device_raw['operatingSystem']),
                 'id': device_raw['distinguishedName'],
                 'raw': device_raw}
 
@@ -296,7 +296,9 @@ class ActiveDirectoryPlugin(AdapterBase):
 
     def execute_shell(self, device_data, shell_command):
         # Creating a file from the buffer (to pass it on to PSEXEC)
-        conf_path = self._create_random_file(shell_command['windows'])
+        # Adding separator to the commands list
+        SEPARATOR = '_SEPARATOR_STRING_'
+        conf_path = self._create_random_file(SEPARATOR.join(shell_command['Windows']) + SEPARATOR)
 
         # Creating a file to write the result to
         result_path = self._create_random_file('')
@@ -322,6 +324,8 @@ class ActiveDirectoryPlugin(AdapterBase):
 
             result_file = open(result_path, 'r')
             product = str(result_file.read())
+            if SEPARATOR in product:
+                product = product.split(SEPARATOR)[:-1]
             result_file.close()
 
         except subprocess.CalledProcessError as e:

@@ -171,7 +171,8 @@ class Core(PluginBase):
             string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
-                 {'role': 'insert_notification', 'db': 'core'}]
+                 {'role': 'insert_notification', 'db': 'core'},
+                 {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's
 
         # TODO: Consider a way of requesting roles other than read-only.
         if plugin_special_db_credentials is not None:
@@ -360,8 +361,11 @@ class Core(PluginBase):
         headers = {
             'x-api-key': url_data['api_key'],
             'x-unique-plugin-name': calling_plugin['plugin_unique_name'],
-            'x-plugin-name': calling_plugin['plugin_name']
+            'x-plugin-name': calling_plugin['plugin_name'],
         }
+        copy_headers = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding']
+        headers.update({h: request.headers[h] for h in copy_headers if request.headers.get(h, '') != ''})
+
         r = requests.request(self.get_method(), final_url,
                              headers=headers, data=data)
 
