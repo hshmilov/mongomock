@@ -3,10 +3,10 @@
             <div class="scroll-sidebar">
                 <div class="user-profile">
                     <div class="user-profile-img">
-                        <img :src="user.picname" alt="user" />
+                        <img :src="user.picname" />
                     </div>
                     <div class="user-profile-text">
-                        <h5 class="collapse-hidden color-disabled">{{ `${user.firstname} ${user.lastname}` }}</h5>
+                        <h5 class="collapse-hidden">{{ `${user.firstname} ${user.lastname}` }}</h5>
                         <a href="#" class="" data-toggle="tooltip" title="Logout">
                             <i class="icon-logout"></i>
                         </a>
@@ -15,7 +15,7 @@
                 <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
                     <nav class="sidebar-nav">
                         <nested-nav-bar>
-                            <nested-nav-item routerPath="/" iconName="dashboard"></nested-nav-item>
+                            <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard"></nested-nav-item>
                             <nested-nav-item routeName="Devices" iconName="device">
                                 <nested-nav-bar nestLevel="1" class="collapse">
                                     <nested-nav-item routeName="Saved Queries"></nested-nav-item>
@@ -60,7 +60,6 @@
         z-index: 20;
         padding-top: 60px;
         background: $color-theme-dark;
-        box-shadow: 1px 0px 20px rgba(0, 0, 0, 0.08);
         .footer {
             position: absolute;
             width: 100%;
@@ -93,6 +92,9 @@
             padding: 5px 0px;
             position: relative;
             text-align: center;
+            h5 {
+                color: $color-light;
+            }
             > a {
                 color: $color-light;
                 padding: 0 5px;

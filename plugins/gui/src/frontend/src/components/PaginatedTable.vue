@@ -266,9 +266,6 @@
             }
         }
         .table-row {
-            &:nth-of-type(odd) {
-                background-color: $background-color-highlight;
-            }
             &:hover, &.active {
                 .table-row-data {
                     border-top: 1px solid $color-theme-light;

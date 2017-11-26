@@ -28,7 +28,7 @@
         list-style: none;
         margin-bottom: 5px;
         .nav-link {
-            color: $color-title;
+            color: $color-light;
             font-weight: 200;
             padding: 8px 35px 8px 15px;
             display: block;

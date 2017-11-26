@@ -78,6 +78,8 @@
                 flex-shrink: 0;
                 .sidebartoggler {
                     color: $color-theme-light;
+                    text-align: right;
+                    padding-right: 12px;
                 }
             }
             .navbar-collapse {
