@@ -19,12 +19,12 @@ export default new Router({
     mode: 'history',
     routes: [
         {
-            path: '/',
+            path: '/api/gui',
             name: 'Dashboard',
             component: DashboardContainer
         },
         {
-            path: '/device',
+            path: '/api/gui/device',
             name: 'Devices',
             component: DevicesContainer,
         },
