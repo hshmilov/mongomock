@@ -293,7 +293,7 @@ class BackendPlugin(PluginBase):
 
     @requires_aggregator()
     @paginated()
-    @filtered
+    @filtered()
     @projectioned()
     @add_rule("adapter_devices", should_authenticate=False)
     def adapter_devices(self, limit, skip, mongo_filter, mongo_projection):

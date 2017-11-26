@@ -3,7 +3,7 @@
 	    'flex-column align-content-start justify-content-around': vertical }">
         <div v-for="item in limitedData" :key="item" v-bind:class="{ 'd-flex flex-row': names !== undefined}">
             <template v-if="type === 'image-list'">
-                <img :src="`/src/assets/images/logos/${item}.png`"
+                <img :src="`/api/gui/src/assets/images/logos/${item}.png`"
                      class="img-md image-list-item" :title="names? names[item] : item.split('_')[0]">
             </template>
             <template v-else-if="type === 'tag-list'"><span class="tag-item">{{item}}</span></template>
