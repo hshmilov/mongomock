@@ -45,7 +45,10 @@ export const adapter = {
 			 */
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
-				state.adapterList.data = [...state.adapterList.data, ...payload.data]
+				state.adapterList.data = [...state.adapterList.data]
+				payload.data.forEach((adapter) => {
+					state.adapterList.data.push({ ...adapter, id: adapter.unique_plugin_name })
+				})
 			}
 			if (payload.error) {
 				state.adapterList.error = payload.error

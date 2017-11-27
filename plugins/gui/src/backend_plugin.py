@@ -241,8 +241,7 @@ class BackendPlugin(PluginBase):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
 
-        super().__init__(special_db_credentials=[
-            'aggregator'], *args, **kwargs)
+        super().__init__(*args, **kwargs)
         # AXONIUS_REST.root_path = os.getcwd()
         # AXONIUS_REST.static_folder = 'my-project/dist/static'
         # AXONIUS_REST.static_url_path = 'static'
@@ -389,14 +388,10 @@ class BackendPlugin(PluginBase):
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
                 for current_adapter in current_device['adapters']:
-                    for current_raw_field in current_adapter['data']['raw'].keys():
-                        all_fields.add(
-                            '.'.join([current_adapter['plugin_name'], 'data', 'raw', current_raw_field]))
-
-            for current_device in all_devices:
-                for current_adapter in current_device['adapters']:
-                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data']))
-                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data', 'raw']))
+                    data_raw = current_adapter['data']['raw']
+                    field_path = '.'.join(['adapters', current_adapter['plugin_name'], 'data.raw'])
+                    for raw_field in data_raw.keys():
+                        all_fields.add(field_path + '.{0}'.format(raw_field))
 
         return jsonify(all_fields)
 
@@ -479,22 +474,16 @@ class BackendPlugin(PluginBase):
         :return:
         """
         plugins_available = requests.get(self.core_address + '/register').json()
-        print(plugins_available)
         with self._get_db_connection(True) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
                 [('plugin_unique_name', pymongo.ASCENDING)])
-            try:
-                return jsonify({'name': adapter['plugin_name'],
-                                'unique_name': adapter['plugin_unique_name'],
-                                'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
-                                'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
-                                }
-                               for adapter in
-                               adapters_from_db)
-
-            except Exception as e:
-                print(repr(e))
-                return '', 200
+            return jsonify({'name': adapter['plugin_name'],
+                            'id': adapter['plugin_unique_name'],
+                            'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
+                            'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+                            }
+                           for adapter in
+                           adapters_from_db)
 
     @paginated()
     @add_rule("adapters/<adapter_unique_name>/clients", methods=['POST', 'GET'], should_authenticate=False)
