@@ -201,7 +201,7 @@
 					return
 				}
 				this.saveQuery({
-					query: this.selectedQuery,
+					filter: this.selectedQuery,
 					name: this.saveQueryModal.name,
 					callback: () => this.saveQueryModal.open = false
 				})

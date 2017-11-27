@@ -351,7 +351,7 @@ class BackendPlugin(PluginBase):
                 mongo_filter, mongo_projection)
             if mongo_filter and not skip:
                 db_connection[self.plugin_unique_name]['queries'].insert_one(
-                    {'filter': request.args.get('filter'), 'filter_type': 'history', 'timestamp': datetime.now(),
+                    {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
                      'device_count': device_list.count() if device_list else 0, 'archived': False})
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
@@ -439,11 +439,11 @@ class BackendPlugin(PluginBase):
             if query_to_add is None:
                 return return_error("Invalid query", 400)
             query_data, query_name = query_to_add.get(
-                'query'), query_to_add.get('name')
-            result = queries_collection.update({'name': query_name},
-                                               {'query': query_data, 'name': query_name, 'query_type': 'saved',
-                                                'timestamp': datetime.now(), 'archived': False}, upsert=True)
-            return str(result.upserted_id), 200
+                'filter'), query_to_add.get('name')
+            result = queries_collection.insert_one(
+                {'filter': json.dumps(query_data), 'name': query_name, 'query_type': 'saved',
+                 'timestamp': datetime.now(), 'archived': False})
+            return str(result.inserted_id), 200
 
     @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
     def delete_query(self, query_id):
