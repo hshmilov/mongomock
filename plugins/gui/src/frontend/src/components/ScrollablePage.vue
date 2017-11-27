@@ -48,6 +48,7 @@
             padding: 12px 24px;
             text-transform: uppercase;
             z-index: 100;
+            color: $color-text-title;
             h2 {
                 font-weight: 200;
                 letter-spacing: 1px;

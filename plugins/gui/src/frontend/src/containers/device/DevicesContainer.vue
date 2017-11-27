@@ -267,7 +267,7 @@
                 margin-top: 4px;
                 padding: 2px;
                 .svg-stroke {
-                    stroke: $color-text;
+                    stroke: $color-text-title;
                     stroke-width: 20px;
                 }
             }

@@ -48,7 +48,7 @@
                     height: 7px;
                     border-width: 1px 0 0 1px;
                     border-style: solid;
-                    border-color: $color-title;
+                    border-color: $color-text-main;
                     right: 1em;
                     -webkit-transform: rotate(135deg) translate(0, -50%);
                     -ms-transform: rotate(135deg) translate(0, -50%);

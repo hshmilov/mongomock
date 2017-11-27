@@ -41,10 +41,10 @@
         }
         .svg-icon {
             .svg-stroke {
-                stroke: $color-title
+                stroke: $color-text-main
             }
             .svg-fill {
-                fill: $color-title
+                fill: $color-text-main
             }
         }
         .object-list {

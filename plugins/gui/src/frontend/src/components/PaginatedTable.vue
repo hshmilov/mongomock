@@ -112,6 +112,12 @@
 			},
 			filterFields: function (newFields, oldFields) {
 				if (newFields.length <= oldFields.length) { return }
+				this.maxPages = 0
+				this.fetchedPages = 0
+				this.currentPage = 0
+				this.linkedPageCount = 1
+				this.linkedPageStart = 0
+				this.addData()
 			},
 			filter: function (newFilter) {
 				this.maxPages = 0
@@ -259,7 +265,7 @@
             text-transform: capitalize;
             padding: 8px;
             font-weight: 400;
-            color: $color-theme-light;
+            color: $color-text-main;
             vertical-align: middle;
             &.checkbox-container {
                 padding-left: 9px;
@@ -280,8 +286,8 @@
                 }
                 .table-row-actions a {
                     visibility: visible;
-                    .svg-stroke {  stroke: $color-text;  }
-                    .svg-fill {  fill: $color-text;  }
+                    .svg-stroke {  stroke: $color-text-title;  }
+                    .svg-fill {  fill: $color-text-title;  }
                 }
             }
             .table-row-data {
