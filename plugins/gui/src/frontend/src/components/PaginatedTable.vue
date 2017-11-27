@@ -9,7 +9,7 @@
                         <checkbox v-if="value !== undefined" v-model="selectAllRecords"
                                   @change="updateSelectedAll()"></checkbox>
                     </th>
-                    <th class="table-head" v-for="field in fields">{{ field.name }}</th>
+                    <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
                     <th class="table-head" v-if="actions !== undefined"></th>
                 </tr>
                 </thead>
@@ -20,8 +20,9 @@
                         <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
                                   @change="updateSelected()"></checkbox>
                     </td>
-                    <generic-table-cell class="table-row-data" v-for="field in fields" :key="field.path"
-                                        :type="field.type" :value="record[field.path]"></generic-table-cell>
+                    <generic-table-cell class="table-row-data" v-for="field in fields" v-if="!field.hidden"
+                                        :key="field.path" :type="field.type" :value="record[field.path]">
+                    </generic-table-cell>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                         <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
                             <i v-if="action.triggerFont" :class="action.triggerFont"></i>
