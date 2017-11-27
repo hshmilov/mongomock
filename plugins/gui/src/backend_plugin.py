@@ -235,8 +235,7 @@ class BackendPlugin(PluginBase):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
 
-        super().__init__(special_db_credentials=[
-            'aggregator'], *args, **kwargs)
+        super().__init__(*args, **kwargs)
         # AXONIUS_REST.root_path = os.getcwd()
         # AXONIUS_REST.static_folder = 'my-project/dist/static'
         # AXONIUS_REST.static_url_path = 'static'
