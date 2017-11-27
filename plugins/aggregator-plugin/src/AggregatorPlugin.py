@@ -188,7 +188,7 @@ class AggregatorPlugin(PluginBase):
         Refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/86310913/Devices+DB+Correlation+Process for more
         :return:
         """
-        sent_plugin = request.get_json(silent=True)
+        sent_plugin = self.get_request_data_as_object()
         if sent_plugin is None:
             return return_error("Invalid data sent", 400)
 
