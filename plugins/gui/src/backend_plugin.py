@@ -382,16 +382,30 @@ class BackendPlugin(PluginBase):
         Get all unique fields that devices may have data for, coming from the adapters' parsed data
         :return:
         """
+
+        def _find_paths_to_strings(data, current_path):
+            """
+            Recursion to find full paths of string \ list field values
+            :param data:
+            :param current_path:
+            :return:
+            """
+            if type(data) is dict:
+                new_paths = []
+                for current_key in data.keys():
+                    new_paths.extend(_find_paths_to_strings(
+                        data[current_key], '{0}.{1}'.format(current_path, current_key)))
+                return new_paths
+            return [current_path]
+
         all_fields = set()
         with self._get_db_connection(True) as db_connection:
             all_devices = list(
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
                 for current_adapter in current_device['adapters']:
-                    data_raw = current_adapter['data']['raw']
-                    field_path = '.'.join(['adapters', current_adapter['plugin_name'], 'data.raw'])
-                    for raw_field in data_raw.keys():
-                        all_fields.add(field_path + '.{0}'.format(raw_field))
+                    init_path = '.'.join(['adapters', current_adapter['plugin_name'], 'data.raw'])
+                    all_fields.update(_find_paths_to_strings(current_adapter['data']['raw'], init_path))
 
         return jsonify(all_fields)
 

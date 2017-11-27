@@ -12,6 +12,7 @@ export const UPDATE_DEVICE_TAGS = 'UPDATE_DEVICE_TAGS'
 export const SAVE_DEVICE_TAGS = 'SAVE_DEVICE_TAGS'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
+export const SELECT_FIELDS = 'SELECT_FIELDS'
 
 export const decomposeFieldPath = (data, fieldPath) => {
 	/*
@@ -64,6 +65,7 @@ export const device = {
 		/* Configurations specific for devices */
 		fields: {
 			common: [
+				{ path: 'internal_axon_id', name: '', hidden: true, selected: true },
 				{
 					path: 'adapters.plugin_name', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
 					options: [
@@ -104,10 +106,12 @@ export const device = {
 					processedDevice.tags = device.tags
 					state.fields.common.forEach((field) => {
 						if (field.path === 'adapters.plugin_name' ||  field.path === 'tags') { return }
+						if (!field.selected) { return }
 						let value = findValue(field, device.adapters)
 						if (value) { processedDevice[field.path] = value }
 					})
 					state.fields.unique.forEach((field) => {
+						if (!field.selected) { return }
 						let value = findValue(field, device.adapters)
 						if (value) { findValue(field, device.adapters) }
 					})
@@ -175,6 +179,14 @@ export const device = {
 			if (payload.error) {
 				state.deviceDetails.error = payload.error
 			}
+		},
+		[ SELECT_FIELDS ] (state, payload) {
+			state.fields.common.forEach((field) => {
+				field.selected = payload.indexOf(field.path) > -1
+			})
+			state.fields.unique.forEach((field) => {
+				field.selected = payload.indexOf(field.path) > -1
+			})
 		}
 	},
 	actions: {
@@ -185,6 +197,7 @@ export const device = {
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
 			if (payload.fields && payload.fields.length) {
+				commit(SELECT_FIELDS, payload.fields)
 				param += `&fields=${payload.fields}`
 			}
 			if (payload.filter && Object.keys(payload.filter).length) {

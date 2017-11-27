@@ -39,7 +39,7 @@
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
                     <svg-icon slot="dropdownTrigger" name="actions/add_field" height="24" :original="true"></svg-icon>
-                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="totalFields"
+                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="visibleFields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
             </div>
@@ -90,6 +90,11 @@
 			...mapState(['device', 'query']),
             totalFields() {
 				return [ ...this.device.fields.common, ...this.device.fields.unique ]
+            },
+            visibleFields() {
+				return this.totalFields.filter((field) => {
+					return !field.hidden
+                })
             },
             deviceFields() {
 				return this.totalFields.filter((field) => {
