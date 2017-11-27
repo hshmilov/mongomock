@@ -27,7 +27,7 @@
             color: $color-theme-light;
             padding-left: 12px;
             padding-right: 12px;
-            border-left: 1px solid $color-text;
+            border-left: 1px solid $color-text-title;
             transition: text-shadow 0.3s ease;
             &:first-of-type {
                 border-left: 0;
