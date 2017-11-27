@@ -475,22 +475,16 @@ class BackendPlugin(PluginBase):
         :return:
         """
         plugins_available = self.request_remote_plugin('register').json()
-        print(plugins_available)
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
                 [('plugin_unique_name', pymongo.ASCENDING)])
-            try:
-                return jsonify({'name': adapter['plugin_name'],
-                                'unique_name': adapter['plugin_unique_name'],
-                                'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
-                                'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
-                                }
-                               for adapter in
-                               adapters_from_db)
-
-            except Exception as e:
-                print(e)
-                return '', 200
+            return jsonify({'name': adapter['plugin_name'],
+                            'id': adapter['plugin_unique_name'],
+                            'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
+                            'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+                            }
+                           for adapter in
+                           adapters_from_db)
 
     @paginated()
     @add_rule("adapters/<adapter_unique_name>/clients", methods=['POST', 'GET'], should_authenticate=False)

@@ -44,17 +44,6 @@ export const decomposeFieldPath = (data, fieldPath) => {
 
 export const findValue = (field, data) => {
 	let value = undefined
-	let ind = 0
-	let fieldPathAdapters = field.path.replace(/adapters\./, '')
-	while (!value && ind < data.length) {
-		value = decomposeFieldPath(data[ind], fieldPathAdapters)
-		ind++
-	}
-	return value
-}
-
-export const findValue = (field, data) => {
-	let value = undefined
 	let dataIndex = 0
 	let fieldPathAdapters = field.path.replace(/adapters\./, '')
 	while (!value && dataIndex < data.length) {
