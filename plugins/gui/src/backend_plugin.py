@@ -405,7 +405,7 @@ class BackendPlugin(PluginBase):
             :param current_path:
             :return:
             """
-            if type(data) is dict:
+            if isinstance(data, dict):
                 new_paths = []
                 for current_key in data.keys():
                     new_paths.extend(_find_paths_to_strings(
