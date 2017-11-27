@@ -471,28 +471,31 @@ class BackendPlugin(PluginBase):
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @paginated()
+    @filtered()
     @add_rule("adapters", should_authenticate=False)
-    def adapters(self, limit, skip):
+    def adapters(self, mongo_filter):
         """
         Get all adapters from the core
-        :param limit: for pagination
-        :param skip: for pagination
+        :mongo_filter
         :return:
         """
         plugins_available = self.request_remote_plugin('register').json()
+        print(plugins_available)
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
-                [('plugin_unique_name', pymongo.ASCENDING)]).skip(skip).limit(limit)
-            return jsonify({'name': adapter['plugin_name'],
-                            'unique_name': adapter['plugin_unique_name'],
-                            'creators': 'Dean Sysman',
-                            'image': '<img src="deansysman.gif"/>',  # not all fields are yet functional
-                            'online': adapter['plugin_unique_name'] in plugins_available,
-                            'schemas': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
-                            }
-                           for adapter in
-                           adapters_from_db)
+                [('plugin_unique_name', pymongo.ASCENDING)])
+            try:
+                return jsonify({'name': adapter['plugin_name'],
+                                'unique_name': adapter['plugin_unique_name'],
+                                'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
+                                'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+                                }
+                               for adapter in
+                               adapters_from_db)
+
+            except Exception as e:
+                print(e)
+                return '', 200
 
     @paginated()
     @add_rule("adapters/<adapter_unique_name>/clients", methods=['POST', 'GET'], should_authenticate=False)
