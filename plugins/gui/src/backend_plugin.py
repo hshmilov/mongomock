@@ -349,7 +349,7 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
-            if mongo_filter and not skip:
+            if mongo_filter and (skip is None or skip == 0):
                 db_connection[self.plugin_unique_name]['queries'].insert_one(
                     {'filter': request.args.get('filter'), 'filter_type': 'history', 'timestamp': datetime.now(),
                      'device_count': device_list.count() if device_list else 0, 'archived': False})
