@@ -412,8 +412,7 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
 
             all_tags.update([current_tag for current_tag in
-                             client_collection.find(
-                                 {}, {'tags': True, '_id': False}).distinct("tags")
+                             client_collection.find({}, {'tags': True, '_id': False}).distinct("tags")
                              if len(current_tag) != 0])
         return jsonify(all_tags)
 
@@ -479,9 +478,9 @@ class BackendPlugin(PluginBase):
         :mongo_filter
         :return:
         """
-        plugins_available = self.request_remote_plugin('register').json()
+        plugins_available = requests.get(self.core_address + '/register').json()
         print(plugins_available)
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection(True) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
                 [('plugin_unique_name', pymongo.ASCENDING)])
             try:
@@ -494,7 +493,7 @@ class BackendPlugin(PluginBase):
                                adapters_from_db)
 
             except Exception as e:
-                print(e)
+                print(repr(e))
                 return '', 200
 
     @paginated()
