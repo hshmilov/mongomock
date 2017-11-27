@@ -49,8 +49,8 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                            response.status_code >= 300 or
-                            'Content-Encoding' in response.headers):
+                    response.status_code >= 300 or
+                        'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
                 compressed = io.BytesIO()
@@ -113,6 +113,14 @@ def filtered():
                 try:
                     mongo_filter = json.loads(mongo_filter)
 
+                    def _create_regex(value):
+                        """
+                        Wrap value with a document that tell mongo to regard it as regex
+                        :param value:
+                        :return:
+                        """
+                        return {'$regex': value}
+
                     # TODO: Beautify by taking the $or case into an external method.
                     # If there are more than one filter, should be regarded as "and" logic
                     if len(mongo_filter) > 1:
@@ -124,13 +132,13 @@ def filtered():
                                 or_list = {"$or": []}
                                 for or_val in val:
                                     or_list["$or"].append(
-                                        {'adapters.{0}'.format(key): or_val})
+                                        {key: _create_regex(or_val)})
 
                                 parsed_filter['$and'].append(or_list)
 
                             else:
                                 parsed_filter['$and'].append(
-                                    {'adapters.{0}'.format(key): val})
+                                    {key: _create_regex(val)})
 
                     else:
                         mongo_filter_key = list(mongo_filter.keys())[0]
@@ -142,15 +150,13 @@ def filtered():
                             parsed_filter['$or'] = []
                             for or_val in mongo_filter_value:
                                 parsed_filter["$or"].append(
-                                    {'adapters.{0}'.format(mongo_filter_key): or_val})
+                                    {mongo_filter_key: _create_regex(or_val)})
 
                         else:
-                            parsed_filter['adapters.{0}'.format(
-                                mongo_filter_key)] = mongo_filter_value
+                            parsed_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
 
                 except json.JSONDecodeError:
                     pass
-
             return func(self, mongo_filter=parsed_filter, *args, **kwargs)
 
         return actual_wrapper
@@ -170,8 +176,8 @@ def projectioned():
             mongo_fields = None
             if fields:
                 try:
-                    fields = json.loads(fields)
-                    for field in fields:
+                    mongo_fields = {}
+                    for field in fields.split(","):
                         mongo_fields[field] = 1
                 except json.JSONDecodeError:
                     pass
@@ -344,10 +350,10 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
-            if mongo_filter and skip == 0:
+            if mongo_filter and not skip:
                 db_connection[self.plugin_unique_name]['queries'].insert_one(
                     {'filter': request.args.get('filter'), 'filter_type': 'history', 'timestamp': datetime.now(),
-                     'device_count': len(device_list), 'archived': False})
+                     'device_count': device_list.count() if device_list else 0, 'archived': False})
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 

@@ -31,6 +31,17 @@ export const decomposeFieldPath = (data, fieldPath) => {
 	return decomposed
 }
 
+export const findValue = (field, data) => {
+	let value = ''
+	let ind = 0
+	let fieldPathAdapters = field.path.replace(/adapters\./, '')
+	while (value === '' && ind < data.length) {
+		value = decomposeFieldPath(data[ind], fieldPathAdapters)
+		ind++
+	}
+	return value
+}
+
 export const device = {
 	state: {
 		/* Devices according to some query performed by user, updating by request */
@@ -43,19 +54,20 @@ export const device = {
 		fields: {
 			common: [
 				{
-					path: 'adapters', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
+					path: 'adapters.plugin_name', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
 					options: [
 						{name: 'Active Dirsectory', path: 'ad_adapter'},
 						{name: 'ESX', path: 'esx_adapter'},
+						{name: 'AWS', path: 'aws_adapter'},
 						{name: 'CheckPoint', path: 'checkpoint_adapter'},
 						{name: 'QCore', path: 'qcore_adapter'},
 						{name: 'Splunk', path: 'splunk_adapter'}
 					]
 				},
-				{path: 'data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
-				{path: 'data.name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'data.network_interfaces.public_ip', name: 'IP Address', selected: true},
-				{path: 'data.OS.type', name: 'Operating System', selected: true, control: 'text'},
+				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
+				{path: 'adapters.data.name', name: 'Host Name', selected: true, control: 'text'},
+				{path: 'adapters.data.network_interfaces.public_ip', name: 'IP Address', selected: true},
+				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
 			unique: []
@@ -80,23 +92,19 @@ export const device = {
 			state.deviceList.fetching = payload.fetching
 			if (payload.data) {
 				let processedData = []
-				payload.data.forEach(function (device) {
+				payload.data.forEach((device) => {
+					if (!device.adapters || !device.adapters.length) { return }
 					let processedDevice = {'id': device['internal_axon_id']}
-					processedDevice.adapters = device.adapters.map((adapter) => {
+					processedDevice['adapters.plugin_name'] = device.adapters.map((adapter) => {
 						return adapter.plugin_name
 					})
 					processedDevice.tags = device.tags
-					state.fields.common.forEach(function (field) {
-						if (field.path === 'adapters' ||  field.path === 'tags') { return }
-						processedDevice[field.path] = ''
-						let ind = 0
-						while (processedDevice[field.path] === '' && ind < device.adapters.length) {
-							processedDevice[field.path] = decomposeFieldPath(device.adapters[ind], field.path)
-							ind++
-						}
+					state.fields.common.forEach((field) => {
+						if (field.path === 'adapters.plugin_name' ||  field.path === 'tags') { return }
+						processedDevice[field.path] = findValue(field, device.adapters)
 					})
-					state.fields.unique.forEach(function (field) {
-						processedDevice[field.path] = decomposeFieldPath(device.adapters, field.path)
+					state.fields.unique.forEach((field) => {
+						processedDevice[field.path] = findValue(field, device.adapters)
 					})
 					processedData.push(processedDevice)
 				})
@@ -170,6 +178,9 @@ export const device = {
 			/* Getting first page - empty table */
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
+			if (payload.fields && payload.fields.length) {
+				param += `&fields=${payload.fields}`
+			}
 			if (payload.filter && Object.keys(payload.filter).length) {
 				param += `&filter=${JSON.stringify(payload.filter)}`
 			}
