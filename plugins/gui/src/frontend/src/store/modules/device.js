@@ -53,6 +53,17 @@ export const findValue = (field, data) => {
 	return value
 }
 
+export const findValue = (field, data) => {
+	let value = undefined
+	let dataIndex = 0
+	let fieldPathAdapters = field.path.replace(/adapters\./, '')
+	while (!value && dataIndex < data.length) {
+		value = decomposeFieldPath(data[dataIndex], fieldPathAdapters)
+		dataIndex++
+	}
+	return value
+}
+
 export const device = {
 	state: {
 		/* Devices according to some query performed by user, updating by request */
