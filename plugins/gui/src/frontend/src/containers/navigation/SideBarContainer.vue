@@ -15,16 +15,16 @@
                 <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
                     <nav class="sidebar-nav">
                         <nested-nav-bar>
-                            <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard"></nested-nav-item>
+                            <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"></nested-nav-item>
                             <nested-nav-item routeName="Devices" iconName="device">
                                 <nested-nav-bar nestLevel="1" class="collapse">
                                     <nested-nav-item routeName="Saved Queries"></nested-nav-item>
                                     <nested-nav-item routeName="Queries History"></nested-nav-item>
                                 </nested-nav-bar>
                             </nested-nav-item>
-                            <nested-nav-item routeName="Plugins" iconName="plugin"></nested-nav-item>
+                            <!--<nested-nav-item routeName="Plugins" iconName="plugin"></nested-nav-item>-->
                             <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
-                            <nested-nav-item routeName="Tasks" iconName="task"></nested-nav-item>
+                            <!--<nested-nav-item routeName="Tasks" iconName="task"></nested-nav-item>-->
                             <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
                         </nested-nav-bar>
                     </nav>

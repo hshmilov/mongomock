@@ -14,7 +14,7 @@ body {
   font: 100% $font-stack;
   margin: 0;
   overflow: hidden;
-  color: $color-text;
+  color: $color-text-title;
   font-weight: 300;
   width: 100%;
   height: 100%;
@@ -26,7 +26,7 @@ a, a:hover, a:focus {
 }
 
 a.link {
-  color: $color-title;
+  color: $color-text-main;
   &:hover,
   &:focus {
     color: $color-theme-light;
@@ -45,7 +45,7 @@ html body .mdi-set {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  color: $color-title;
+  color: $color-text-title;
   font-family: $font-stack;
   font-weight: 400;
 }
@@ -103,7 +103,7 @@ Formatting
 }
 
 .title-sm {
-  color: $color-title;
+  color: $color-text-main;
   font-size: 80%;
   margin-bottom: 4px;
 }
@@ -219,6 +219,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   position: relative;
   .form-group {
     padding: 12px 24px;
+    margin-bottom: 0;
     .form-group-header {
       color: $color-theme-light;
       .svg-stroke { stroke: $color-theme-light

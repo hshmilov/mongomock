@@ -84,8 +84,8 @@
                 }
                 .table-row-actions .table-row-action {
                     visibility: visible;
-                    .svg-stroke {  stroke: $color-text;  }
-                    .svg-fill {  fill: $color-text;  }
+                    .svg-stroke {  stroke: $color-text-title;  }
+                    .svg-fill {  fill: $color-text-title;  }
                 }
             }
         }

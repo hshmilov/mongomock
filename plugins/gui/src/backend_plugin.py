@@ -113,6 +113,14 @@ def filtered():
                 try:
                     mongo_filter = json.loads(mongo_filter)
 
+                    def _create_regex(value):
+                        """
+                        Wrap value with a document that tell mongo to regard it as regex
+                        :param value:
+                        :return:
+                        """
+                        return {'$regex': value}
+
                     # TODO: Beautify by taking the $or case into an external method.
                     # If there are more than one filter, should be regarded as "and" logic
                     if len(mongo_filter) > 1:
@@ -124,13 +132,13 @@ def filtered():
                                 or_list = {"$or": []}
                                 for or_val in val:
                                     or_list["$or"].append(
-                                        {'adapters.{0}'.format(key): or_val})
+                                        {key: _create_regex(or_val)})
 
                                 parsed_filter['$and'].append(or_list)
 
                             else:
                                 parsed_filter['$and'].append(
-                                    {'adapters.{0}'.format(key): val})
+                                    {key: _create_regex(val)})
 
                     else:
                         mongo_filter_key = list(mongo_filter.keys())[0]
@@ -142,15 +150,13 @@ def filtered():
                             parsed_filter['$or'] = []
                             for or_val in mongo_filter_value:
                                 parsed_filter["$or"].append(
-                                    {'adapters.{0}'.format(mongo_filter_key): or_val})
+                                    {mongo_filter_key: _create_regex(or_val)})
 
                         else:
-                            parsed_filter['adapters.{0}'.format(
-                                mongo_filter_key)] = mongo_filter_value
+                            parsed_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
 
                 except json.JSONDecodeError:
                     pass
-
             return func(self, mongo_filter=parsed_filter, *args, **kwargs)
 
         return actual_wrapper
@@ -170,8 +176,8 @@ def projectioned():
             mongo_fields = None
             if fields:
                 try:
-                    fields = json.loads(fields)
-                    for field in fields:
+                    mongo_fields = {}
+                    for field in fields.split(","):
                         mongo_fields[field] = 1
                 except json.JSONDecodeError:
                     pass
@@ -343,10 +349,10 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
-            if mongo_filter and skip == 0:
+            if mongo_filter and not skip:
                 db_connection[self.plugin_unique_name]['queries'].insert_one(
-                    {'filter': request.args.get('filter'), 'filter_type': 'history', 'timestamp': datetime.now(),
-                     'device_count': len(device_list), 'archived': False})
+                    {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
+                     'device_count': device_list.count() if device_list else 0, 'archived': False})
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
@@ -384,7 +390,7 @@ class BackendPlugin(PluginBase):
 
     @requires_aggregator()
     @add_rule("devices/fields", should_authenticate=False)
-    def get_all_fields(self):
+    def unique_fields(self):
         """
         Get all unique fields that devices may have data for, coming from the adapters' parsed data
         :return:
@@ -395,20 +401,16 @@ class BackendPlugin(PluginBase):
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
                 for current_adapter in current_device['adapters']:
-                    for current_raw_field in current_adapter['data']['raw'].keys():
-                        all_fields.add(
-                            '.'.join([current_adapter['plugin_name'], 'data', 'raw', current_raw_field]))
-
-            for current_device in all_devices:
-                for current_adapter in current_device['adapters']:
-                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data']))
-                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data', 'raw']))
+                    data_raw = current_adapter['data']['raw']
+                    field_path = '.'.join(['adapters', current_adapter['plugin_name'], 'data.raw'])
+                    for raw_field in data_raw.keys():
+                        all_fields.add(field_path + '.{0}'.format(raw_field))
 
         return jsonify(all_fields)
 
     @requires_aggregator()
     @add_rule("devices/tags", should_authenticate=False)
-    def get_all_Tags(self):
+    def tags(self):
         """
         Get all tags that currently belong to devices, to form a set of current tag values
         :return:
@@ -446,11 +448,11 @@ class BackendPlugin(PluginBase):
             if query_to_add is None:
                 return return_error("Invalid query", 400)
             query_data, query_name = query_to_add.get(
-                'query'), query_to_add.get('name')
-            result = queries_collection.update({'name': query_name},
-                                               {'query': query_data, 'name': query_name, 'query_type': 'saved',
-                                                'timestamp': datetime.now(), 'archived': False}, upsert=True)
-            return str(result.upserted_id), 200
+                'filter'), query_to_add.get('name')
+            result = queries_collection.insert_one(
+                {'filter': json.dumps(query_data), 'name': query_name, 'query_type': 'saved',
+                 'timestamp': datetime.now(), 'archived': False})
+            return str(result.inserted_id), 200
 
     @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
     def delete_query(self, query_id):
@@ -477,25 +479,22 @@ class BackendPlugin(PluginBase):
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @paginated()
+    @filtered()
     @add_rule("adapters", should_authenticate=False)
-    def adapters(self, limit, skip):
+    def adapters(self, mongo_filter):
         """
         Get all adapters from the core
-        :param limit: for pagination
-        :param skip: for pagination
+        :mongo_filter
         :return:
         """
         plugins_available = self.request_remote_plugin('register').json()
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
-                [('plugin_unique_name', pymongo.ASCENDING)]).skip(skip).limit(limit)
+                [('plugin_unique_name', pymongo.ASCENDING)])
             return jsonify({'name': adapter['plugin_name'],
-                            'unique_name': adapter['plugin_unique_name'],
-                            'creators': 'Dean Sysman',
-                            'image': '<img src="deansysman.gif"/>',  # not all fields are yet functional
-                            'online': adapter['plugin_unique_name'] in plugins_available,
-                            'schemas': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+                            'id': adapter['plugin_unique_name'],
+                            'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
+                            'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
                             }
                            for adapter in
                            adapters_from_db)
@@ -525,7 +524,8 @@ class BackendPlugin(PluginBase):
                 result = client_collection.insert(client_to_add)
                 return str(result.inserted_id), 200
 
-    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'], should_authenticate=False)
+    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'],
+              should_authenticate=False)
     def adapters_clients_update(self, adapter_unique_name, client_id):
         """
         Gets or creates clients in the adapter

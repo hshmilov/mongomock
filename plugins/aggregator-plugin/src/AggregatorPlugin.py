@@ -193,8 +193,7 @@ class AggregatorPlugin(PluginBase):
             return return_error("Invalid data sent", 400)
 
         association_type = sent_plugin.get('association_type')
-        associated_adapter_devices = sent_plugin.get(
-            'associated_adapter_devices')
+        associated_adapter_devices = sent_plugin.get('associated_adapter_devices')
 
         if association_type not in ['Tag', 'Link', 'Unlink']:
             return return_error("Acceptable values for association_type are: 'Tag', 'Link', 'Unlink'", 400)
@@ -210,6 +209,9 @@ class AggregatorPlugin(PluginBase):
 
         # user doesn't send this
         sent_plugin['accurate_for_datetime'] = datetime.now()
+
+        # we might not trust the sender on this
+        sent_plugin['plugin_unique_name'], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
 
         # now let's update our db
         with self.device_db_lock:

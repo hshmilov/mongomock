@@ -13,7 +13,6 @@
                     {{ currentPlugin['description'] }}
                     <br><br><br>
                     <hr>
-
                     <h1 style="margin-bottom: 16px; color: #4796e4"><img src="/src/assets/images/general/settings.png" style="height: 40px; margin-right: 8px;"/> Settings</h1>
                     The following settings affect the behavior of the {{ currentPlugin['name'] }} plugin.
                     <br><br>

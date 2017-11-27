@@ -12,17 +12,7 @@ export const adapter = {
 	state: {
 		/* All adapters */
 		adapterList: {
-			fetching: false, data: [
-				{
-					status: 'success',
-					state: 'Connected',
-					id: 'ad_adapter_123',
-					type: 'ad_adapter',
-					name: 'Active Directory',
-					description: 'Manages Windows devices',
-					connected_servers: 20
-				}
-			], error: ''
+			fetching: false, data: [], error: ''
 		},
 
 		/* Statically defined fields that should be presented for each adapter, in this order  */
@@ -43,45 +33,7 @@ export const adapter = {
 
 		/* Data about a specific adapter that is currently being configured */
 		currentAdapter: {
-			fetching: false, data: {
-				id: 'ad_adapter_123',
-				plugin_name: 'ad_adapter',
-				name: 'Active Directory',
-				schema: [
-					{path: 'ip', name: 'IP Address', control: 'text'},
-					{path: 'username', name: 'User Name', control: 'text'},
-					{path: 'password', name: 'Password', control: 'password'}
-				],
-				servers: [
-					{
-						id: 1,
-						status: 'success',
-						name: 'DC-Main',
-						ip: '192.168.4.1',
-						last_updated: new Date().getTime(),
-						username: 'Shira',
-						password: 'Gold'
-					},
-					{
-						id: 2,
-						status: 'error',
-						name: 'DC-Secondary',
-						ip: '192.168.4.2',
-						last_updated: new Date().getTime(),
-						username: 'Noa',
-						password: 'Gold'
-					},
-					{
-						id: 3,
-						status: 'warning',
-						name: 'DC-Secondary',
-						ip: '192.168.4.3',
-						last_updated: new Date().getTime(),
-						username: 'Elah',
-						password: 'Gold'
-					}
-				]
-			}, error: ''
+			fetching: false, data: {}, error: ''
 		}
 	},
 	getters: {},
@@ -93,7 +45,10 @@ export const adapter = {
 			 */
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
-				state.adapterList.data = [...state.adapterList.data, ...payload.data]
+				state.adapterList.data = [...state.adapterList.data]
+				payload.data.forEach((adapter) => {
+					state.adapterList.data.push({ ...adapter, id: adapter.unique_plugin_name })
+				})
 			}
 			if (payload.error) {
 				state.adapterList.error = payload.error
@@ -107,7 +62,9 @@ export const adapter = {
 			state.currentAdapter.fetching = payload.fetching
 			state.currentAdapter.error = payload.error
 			if (payload.data) {
-				state.currentAdapter.data = {...payload.data}
+				state.currentAdapter.data = {
+					servers: [ ...payload.data ]
+				}
 			}
 		},
 		[ ADD_ADAPTER_SERVER ] (state, payload) {
@@ -118,16 +75,11 @@ export const adapter = {
 	actions: {
 		[ FETCH_ADAPTERS ] ({dispatch}, payload) {
 			/*
-				Fetch a page of limit number of adapters, starting from number skip
-				If skip is not provided, start from first
-				If limit is not provided, take remaining until the end
+				Fetch all adapters, according to given filter
 			 */
-			if (!payload) { payload = {} }
-			if (!payload.limit) { payload.limit = -1 }
-			if (!payload.skip) { payload.skip = 0 }
-			let param = `?skip=${payload.skip}&limit=${payload.limit}`
-			if (payload.filter) {
-				param += `&filter=${JSON.stringify(payload.filter)}`
+			let param = ''
+			if (payload && payload.filter) {
+				param = `?filter=${JSON.stringify(payload.filter)}`
 			}
 			dispatch(REQUEST_API, {
 				rule: `api/adapters${param}`,
@@ -140,7 +92,7 @@ export const adapter = {
 			 */
 			if (!adapterId) { return }
 			dispatch(REQUEST_API, {
-				rule: `api/adapters/${adapterId}`,
+				rule: `api/adapters/${adapterId}/clients`,
 				type: SET_ADAPTER
 			})
 		},

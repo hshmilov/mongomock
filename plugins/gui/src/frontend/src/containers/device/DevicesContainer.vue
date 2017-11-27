@@ -46,27 +46,7 @@
             <div slot="cardContent" v-on-clickaway="closeQuickView">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fields="deviceFields" :fetchData="fetchDevices"
-                                 v-model="selectedDevices" :filter="query.currentQuery"
-                                 :actions="[{ handler: executeQuickView, triggerFont: 'icon-eye'}]"></paginated-table>
-                <info-dialog :open="infoDialogOpen" title="Device Quick View" :closeDialog="closeQuickView.bind(this)">
-                    <div class="d-flex flex-row justify-content-between p-3">
-                        <div>{{ device.deviceDetails.name }}</div>
-                        <div>{{ device.deviceDetails.IP }}</div>
-                    </div>
-                    <div v-if="device.deviceDetails.data.adapters && device.deviceDetails.data.adapters.length"
-                         class="d-flex flex-column justify-content-between p-3">
-                        <div>Adapters</div>
-                        <hr class="title-separator">
-                        <object-list :data="device.deviceDetails.data.adapters" :vertical="true"
-                                     :names="device.adapterNames"></object-list>
-                    </div>
-                    <div v-if="device.deviceDetails.data.tags && device.deviceDetails.data.tags.length"
-                         class="d-flex flex-column justify-content-between align-items-start p-3">
-                        <div>Tags</div>
-                        <hr class="title-separator">
-                        <object-list :data="device.deviceDetails.data.tags" :vertical="true"></object-list>
-                    </div>
-                </info-dialog>
+                                 v-model="selectedDevices" :filter="query.currentQuery"></paginated-table>
             </div>
         </card>
         <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save"
@@ -201,7 +181,7 @@
 					return
 				}
 				this.saveQuery({
-					query: this.selectedQuery,
+					filter: this.selectedQuery,
 					name: this.saveQueryModal.name,
 					callback: () => this.saveQueryModal.open = false
 				})
@@ -267,7 +247,7 @@
                 margin-top: 4px;
                 padding: 2px;
                 .svg-stroke {
-                    stroke: $color-text;
+                    stroke: $color-text-title;
                     stroke-width: 20px;
                 }
             }

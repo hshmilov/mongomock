@@ -14,7 +14,7 @@
 <script>
     import TopBarContainer from './navigation/TopBarContainer.vue'
     import SideBarContainer from './navigation/SideBarContainer.vue'
-    import { mapState, mapGetters } from 'vuex'
+    import { REQUEST_API } from '../store/actions'
 
     export default {
         name: 'app',
