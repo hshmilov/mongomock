@@ -101,7 +101,9 @@ export const device = {
 					processedDevice['adapters.plugin_name'] = device.adapters.map((adapter) => {
 						return adapter.plugin_name
 					})
-					processedDevice.tags = device.tags
+					processedDevice.tags = device.tags.map((tag) => {
+						return tag.tagname
+					})
 					state.fields.common.forEach((field) => {
 						if (field.path === 'adapters.plugin_name' ||  field.path === 'tags') { return }
 						let value = findValue(field, device.adapters)

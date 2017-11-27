@@ -288,7 +288,7 @@ class BackendPlugin(PluginBase):
         :param device_id: device id
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection(True) as db_connection:
             parsed_db = db_connection[self._aggregator_plugin_unique_name]['parsed']
             device = parsed_db.find_one({'id': device_id}, sort=[
                 ('_id', pymongo.DESCENDING)])
@@ -320,7 +320,7 @@ class BackendPlugin(PluginBase):
             group_by['_id'] = "$data.id"
             group_by['date_fetcher'] = {"$first": "$_id"}
 
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection(True) as db_connection:
             parsed_db = db_connection[self._devices_db_name]['parsed']
             devices = parsed_db.aggregate([
                 {"$sort": SON([('_id', pymongo.DESCENDING)])},
@@ -510,7 +510,7 @@ class BackendPlugin(PluginBase):
         :param skip: for pagination (only for GET)
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
                 return jsonify(
@@ -534,7 +534,7 @@ class BackendPlugin(PluginBase):
         :param client_id: UUID of client to delete
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'POST':
                 client_to_update = request.get_json(silent=True)
@@ -576,7 +576,7 @@ class BackendPlugin(PluginBase):
         :param skip: start index for pagination
         :return:
         """
-        with self._get_db_connection(False) as db:
+        with self._get_db_connection(True) as db:
             notification_collection = db['core']['notifications']
             if request.method == 'GET':
                 return jsonify(beautify_db_entry(n) for n in
@@ -604,7 +604,7 @@ class BackendPlugin(PluginBase):
         :param notification_id: Notification ID
         :return:
         """
-        with self._get_db_connection(False) as db:
+        with self._get_db_connection(True) as db:
             notification_collection = db['core']['notifications']
             return jsonify(notification_collection.find_one({'_id': notification_id}))
 
