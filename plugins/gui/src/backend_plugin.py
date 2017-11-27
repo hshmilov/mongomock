@@ -380,7 +380,9 @@ class BackendPlugin(PluginBase):
 
                 for current_tag in device_to_update['tags']:
                     update_data = {'association_type': 'Tag',
-                                   'associated_adapter_devices': associated_adapter_devices, "tagname": current_tag}
+                                   'associated_adapter_devices': associated_adapter_devices,
+                                   "tagname": current_tag,
+                                   "tagvalue": current_tag}
                     response = self.request_remote_plugin(
                         'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data))
 
@@ -419,10 +421,10 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
 
-            all_tags.update([current_tag for current_tag in
-                             client_collection.find(
-                                 {}, {'tags': True, '_id': False}).distinct("tags")
-                             if len(current_tag) != 0])
+            for current_device in client_collection.find({"tags.tagname": {"$exists": True}}):
+                for current_tag in current_device['tags']:
+                    all_tags.add(current_tag['tagname'])
+
         return jsonify(all_tags)
 
     @paginated()
