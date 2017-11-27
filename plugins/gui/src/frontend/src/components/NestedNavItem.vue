@@ -1,5 +1,6 @@
 <template>
-    <router-link tag="li" :to="{ name: routeName, path: routerPath }" class="nav-item" exact-active-class="active">
+    <router-link tag="li" :to="{ name: routeName, path: routerPath }" class="nav-item"
+                 :active-class="!exact? 'active': ''" :exact-active-class="exact? 'active': ''">
         <a class="nav-link" v-bind:class="{ 'has-arrow': hasSlot }">
             <svg-icon v-if="iconName" :name="`navigation/${iconName}`" height="24" width="24" :original="true"></svg-icon>
             <span class="collapse-hidden">{{ routeName }}</span>
@@ -11,7 +12,7 @@
 <script>
     export default {
         name: 'nested-nav-item',
-        props: ['routeName', 'routerPath', 'iconName', 'hasWaves'],
+        props: ['routeName', 'routerPath', 'iconName', 'exact'],
         computed: {
             hasSlot() {
                 return !!this.$slots.default

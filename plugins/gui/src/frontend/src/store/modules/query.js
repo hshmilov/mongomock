@@ -6,7 +6,6 @@ export const ADD_SAVED_QUERY = 'ADD_SAVED_QUERY'
 export const ARCHIVE_SAVED_QUERY = 'ARCHIVE_SAVED_QUERY'
 export const REMOVE_SAVED_QUERY = 'REMOVE_SAVED_QUERY'
 export const ADD_EXECUTED_QUERY = 'ADD_EXECUTED_QUERY'
-export const RESTART_QUERIES = 'RESTART_QUERIES'
 export const UPDATE_SAVED_QUERIES = 'UPDATE_SAVED_QUERIES'
 export const FETCH_SAVED_QUERIES = 'FETCH_SAVED_QUERIES'
 export const UPDATE_EXECUTED_QUERIES = 'UPDATE_EXECUTED_QUERIES'
@@ -38,13 +37,6 @@ export const strToQuery = (str) => {
 	return query
 }
 
-const addExecutedQuery = (state, query) => {
-	if (!state.executedQueries.data || !state.executedQueries.data.length) { return }
-	if (Object.keys(query).length) {
-		state.executedQueries.data = [ query, ...state.executedQueries.data ]
-	}
-}
-
 export const queryToStr = (query) => {
 	let andParts = []
 	Object.keys(query).forEach(function (andKey) {
@@ -72,8 +64,9 @@ const updateQueries = (currentQueries, payload) => {
 		let processedData = []
 		payload.data.forEach(function (currentQuery) {
 			processedData.push({ ...currentQuery,
-				raw_query: currentQuery.query,
-				query: queryToStr(JSON.parse(currentQuery.query))
+				id: currentQuery.uuid,
+				raw_filter: currentQuery.filter,
+				filter: queryToStr(JSON.parse(currentQuery.filter))
 			})
 		})
 		currentQueries.data = [...currentQueries.data, ...processedData]
@@ -104,12 +97,12 @@ export const query = {
 		savedQueries: {fetching: false, data: [], error: ''},
 
 		savedFields: [
-			{path: 'query_name', name: 'Name', default: true},
-			{path: 'query', name: 'query', default: true},
+			{path: 'name', name: 'Name', default: true},
+			{path: 'filter', name: 'Query', default: true},
 			{path: 'timestamp', name: 'Save Time', type: 'timestamp', default: true},
 		],
 		executedFields: [
-			{path: 'query', name: 'query', default: true},
+			{path: 'filter', name: 'Query', default: true},
 			{path: 'device_count', name: 'Devices', default: true},
 			{path: 'timestamp', name: 'Execution Time', type: 'timestamp', default: true},
 		]
@@ -119,7 +112,7 @@ export const query = {
 		savedQueryOptions(state) {
 			return state.savedQueries.data.map(function(query_obj) {
 				return {
-					value: query_obj.raw_query,
+					value: query_obj.raw_filter,
 					name: query_obj.query_name
 				}
 			})
@@ -130,7 +123,7 @@ export const query = {
 			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
 			state.savedQueries.data = [ { ...payload,
 				query_name: payload.name,
-				query: queryToStr(payload.query),
+				filter: queryToStr(payload.filter),
 				'timestamp': new Date().getTime()
 			}, ...state.savedQueries.data ]
 		},
@@ -146,13 +139,7 @@ export const query = {
 					state.currentQuery[queryKey] = payload[queryKey]
 				}
 			})
-			addExecutedQuery(state, {
-				query: queryToStr(state.currentQuery),
-				'timestamp': new Date().getTime(),
-			})
-		},
-		[ RESTART_QUERIES ] (state) {
-			state.savedQueries.data = []
+			state.executedQueries.data = []
 		},
 		[ UPDATE_SAVED_QUERIES ] (state, payload) {
 			updateQueries(state.savedQueries, payload)
@@ -164,11 +151,8 @@ export const query = {
 			let requestedQuery = state.savedQueries.data.filter(function(savedQuery) {
 				return savedQuery.id === payload
 			})
-			state.currentQuery = strToQuery(requestedQuery[0].query)
-			addExecutedQuery(state, {
-				query: requestedQuery[0].query,
-				'timestamp': new Date().getTime(),
-			})
+			state.currentQuery = JSON.parse(requestedQuery[0].raw_filter)
+			state.executedQueries.data = []
 		}
 	},
 	actions: {
@@ -185,8 +169,8 @@ export const query = {
 			fetchQueries(dispatch, payload)
 		},
 		[ SAVE_QUERY ] ({dispatch, commit}, payload) {
-			if (!payload.query) { return }
-			if (!payload.name) { payload.name = payload.query }
+			if (!payload.filter) { return }
+			if (!payload.name) { payload.name = payload.filter }
 			dispatch(REQUEST_API, {
 				rule: 'api/queries',
 				method: 'POST',
