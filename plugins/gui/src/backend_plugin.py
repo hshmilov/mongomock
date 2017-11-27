@@ -235,8 +235,7 @@ class BackendPlugin(PluginBase):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
 
-        super().__init__(special_db_credentials=[
-            'aggregator'], *args, **kwargs)
+        super().__init__(*args, **kwargs)
         # AXONIUS_REST.root_path = os.getcwd()
         # AXONIUS_REST.static_folder = 'my-project/dist/static'
         # AXONIUS_REST.static_url_path = 'static'
@@ -350,6 +349,38 @@ class BackendPlugin(PluginBase):
                      'device_count': len(device_list), 'archived': False})
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+
+    @add_rule("devices/<device_id>", methods=['POST', 'GET'], should_authenticate=False)
+    def current_device_by_id(self, device_id):
+        """
+        Retrieve device by the given id, from current devices DB or update it
+        Currently, update works only for tags because that is the only edit operation user has
+        :return:
+        """
+        with self._get_db_connection(True) as db_connection:
+            if request.method == 'GET':
+                return jsonify(db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+                    {'internal_axon_id': device_id}))
+            elif request.method == 'POST':
+                device_to_update = self.get_request_data_as_object()
+
+                device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+                    {'internal_axon_id': device_id})
+
+                associated_adapter_devices = {}
+
+                for adapter in device['adapters']:
+                    associated_adapter_devices[adapter['plugin_unique_name']] = adapter['data']['id']
+
+                for current_tag in device_to_update['tags']:
+                    update_data = {'association_type': 'Tag',
+                                   'associated_adapter_devices': associated_adapter_devices, "tagname": current_tag}
+                    response = self.request_remote_plugin(
+                        'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data))
+
+                    if response != 200:
+                        self.logger.error('Aggregator failed to tag device.')
+                return '', 200
 
     @requires_aggregator()
     @add_rule("devices/fields", should_authenticate=False)
