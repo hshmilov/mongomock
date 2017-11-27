@@ -22,21 +22,21 @@ export const decomposeFieldPath = (data, fieldPath) => {
 	if (!data || typeof(data) === 'string' || (Array.isArray(data) && (!data.length || typeof(data[0]) === 'string'))) {
 		return data
 	}
-	if (fieldPath.indexOf('.') === -1) {
-		return data[fieldPath]
-	}
 	let nextFieldPath = fieldPath.substring(fieldPath.indexOf('.') + 1)
 	if (Array.isArray(data)) {
 		let aggregatedValues = []
 		data.forEach((item) => {
 			let foundValue = decomposeFieldPath(item, nextFieldPath)
 			if (Array.isArray(foundValue)) {
-				aggregatedValues.concat(foundValue)
+				aggregatedValues = aggregatedValues.concat(foundValue)
 			} else {
-				aggregatedValues.push(foundValue)
+				aggregatedValues = aggregatedValues.push(foundValue)
 			}
 		})
 		return aggregatedValues
+	}
+	if (fieldPath.indexOf('.') === -1) {
+		return data[fieldPath]
 	}
 	let currentFieldPath = fieldPath.substring(0, fieldPath.indexOf('.'))
 	return decomposeFieldPath(data[currentFieldPath], nextFieldPath)
@@ -77,7 +77,7 @@ export const device = {
 				},
 				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'adapters.data.network_interfaces.private_ip', name: 'IP Address', selected: true, type: 'list'},
+				{path: 'adapters.data.network_interfaces.public_ip', name: 'IP Address', selected: true, type: 'list'},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
