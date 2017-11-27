@@ -14,10 +14,19 @@ export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 
 export const decomposeFieldPath = (data, fieldPath) => {
+	/*
+		Find ultimate value of data, matching given field path, by recursively drilling into the dictionary,
+		until path exhausted or reached undefined.
+		For arrays along the way as well as final values, first element is returned.
+		Should last value be returned as an array, and field's type changed to a list?
+	 */
 	let decomposed = data
 	fieldPath.split('.').forEach(function (part) {
-		if (decomposed[part] === undefined) { return }
+		if (!decomposed) { return }
 		decomposed = decomposed[part]
+		if (Array.isArray(decomposed)) {
+			decomposed = !decomposed.length? null : decomposed[0]
+		}
 	})
 	return decomposed
 }
@@ -45,7 +54,7 @@ export const device = {
 				},
 				{path: 'data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
 				{path: 'data.name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'data.IP', name: 'IP Address', selected: true},
+				{path: 'data.network_interfaces.public_ip', name: 'IP Address', selected: true},
 				{path: 'data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
@@ -55,6 +64,7 @@ export const device = {
 		adapterNames: {
 			'ad_adapter': 'Active Directory',
 			'esx_adapter': 'ESX',
+			'aws_adapter': 'AWS',
 			'checkpoint_adapter': 'CheckPoint',
 			'qcore_adapter': 'QCore',
 			'splunk_adapter': 'Splunk'
@@ -72,17 +82,16 @@ export const device = {
 				let processedData = []
 				payload.data.forEach(function (device) {
 					let processedDevice = {'id': device['internal_axon_id']}
-					processedDevice.adapters = Object.keys(device.adapters)
+					processedDevice.adapters = device.adapters.map((adapter) => {
+						return adapter.plugin_name
+					})
 					processedDevice.tags = device.tags
 					state.fields.common.forEach(function (field) {
-						if (field.path === 'adapters' ||  field.path === 'tags') {
-							return
-						}
+						if (field.path === 'adapters' ||  field.path === 'tags') { return }
 						processedDevice[field.path] = ''
 						let ind = 0
-						while (processedDevice[field.path] === '' && ind < processedDevice.adapters.length) {
-							processedDevice[field.path] = decomposeFieldPath(
-								device.adapters[processedDevice.adapters[ind]].data, field.path)
+						while (processedDevice[field.path] === '' && ind < device.adapters.length) {
+							processedDevice[field.path] = decomposeFieldPath(device.adapters[ind], field.path)
 							ind++
 						}
 					})
@@ -179,13 +188,13 @@ export const device = {
 		},
 		[ FETCH_UNIQUE_FIELDS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
-				rule: `api/fields`,
+				rule: `api/devices/fields`,
 				type: UPDATE_UNIQUE_FIELDS
 			})
 		},
 		[ FETCH_TAGS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
-				rule: `api/tags`,
+				rule: `api/devices/tags`,
 				type: UPDATE_TAGS
 			})
 		},

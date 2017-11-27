@@ -58,7 +58,7 @@
         }
         .scrollbar-container {
             flex: 1 1 auto;
-            height: 100%;
+            height: 100vh;
             background-color: transparent;
             margin: 0;
             .page-body {

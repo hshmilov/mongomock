@@ -345,7 +345,7 @@ class BackendPlugin(PluginBase):
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
             if mongo_filter and skip == 0:
-                db_connection['api']['queries'].insert_one(
+                db_connection[self.plugin_unique_name]['queries'].insert_one(
                     {'filter': request.args.get('filter'), 'filter_type': 'history', 'timestamp': datetime.now(),
                      'device_count': len(device_list), 'archived': False})
             return jsonify(beautify_db_entry(device) for device in
@@ -363,16 +363,15 @@ class BackendPlugin(PluginBase):
             all_devices = list(
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
-                for current_adapter in current_device['adapters'].keys():
-                    for current_raw_field in current_device['adapters'][current_adapter]['data']['raw'].keys():
+                for current_adapter in current_device['adapters']:
+                    for current_raw_field in current_adapter['data']['raw'].keys():
                         all_fields.add(
-                            '.'.join([current_adapter, 'data', 'raw', current_raw_field]))
+                            '.'.join([current_adapter['plugin_name'], 'data', 'raw', current_raw_field]))
 
             for current_device in all_devices:
-                for current_adapter in current_device['adapters'].keys():
-                    all_fields.discard('.'.join([current_adapter, 'data']))
-                    all_fields.discard(
-                        '.'.join([current_adapter, 'data', 'raw']))
+                for current_adapter in current_device['adapters']:
+                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data']))
+                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data', 'raw']))
 
         return jsonify(all_fields)
 
@@ -681,11 +680,3 @@ class BackendPlugin(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
-
-    @add_rule("gui/<path:path>", should_authenticate=False)
-    def blah(self, path):
-        return send_from_directory('/home/axonius/app/frontend', path)
-
-    @add_rule("gui", should_authenticate=False)
-    def index(self):
-        return send_from_directory('/home/axonius/app/frontend', 'index.html')

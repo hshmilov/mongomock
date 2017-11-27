@@ -146,7 +146,7 @@ class Core(PluginBase):
             else:
                 return False
 
-        except (ConnectionError, ReadTimeout, Timeout) as e:
+        except (ConnectionError, ReadTimeout, Timeout, exceptions.PluginNotFoundError) as e:
             self.logger.info(
                 "Got exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
@@ -156,12 +156,11 @@ class Core(PluginBase):
                 "Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
-    def _create_db_for_plugin(self, plugin_unique_name, plugin_special_db_credentials=None):
+    def _create_db_for_plugin(self, plugin_unique_name):
         """ Creates a db for new plugin.
         This function will create a new database for the new plugin and give it the correct credentials.
 
         :param str plugin_unique_name: The unique name of the new plugin
-        :param list plugin_special_db_credentials: A list of db's to get read-only role for them.
 
         :return db_user: The user name for this db
         :return db_password: The password for this db
@@ -175,11 +174,6 @@ class Core(PluginBase):
                  {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's
 
         # TODO: Consider a way of requesting roles other than read-only.
-        if plugin_special_db_credentials is not None:
-            for current_requested_db_cred in plugin_special_db_credentials:
-                roles.append({'role': 'read',
-                              'db': [x for x in self._get_online_plugins().values() if
-                                     x['plugin_name'] == current_requested_db_cred][0]['plugin_unique_name']})
         db_connection[plugin_unique_name].add_user(db_user,
                                                    password=db_password,
                                                    roles=roles)
@@ -221,8 +215,6 @@ class Core(PluginBase):
             plugin_name = data['plugin_name']
             plugin_type = data['plugin_type']
             plugin_port = data['plugin_port']
-            plugin_special_db_credentials = data.get(
-                'special_db_credentials', None)
 
             self.logger.info(
                 "Got registration request from {0}".format(plugin_name))
@@ -279,8 +271,7 @@ class Core(PluginBase):
             if not relevant_doc:
                 # Create a new plugin line
                 # TODO: Ask the gui for permission to register this new plugin
-                plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name,
-                                                                          plugin_special_db_credentials)
+                plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name)
                 doc = {
                     'plugin_unique_name': plugin_unique_name,
                     'plugin_name': plugin_name,
@@ -414,7 +405,7 @@ class Core(PluginBase):
         if not relevant_doc:
             self.logger.warning(
                 "No online plugin found for {0}".format(plugin_unique_name))
-            return None, None
+            raise exceptions.PluginNotFoundError()
 
         return {"plugin_ip": relevant_doc["plugin_ip"],
                 "plugin_port": str(relevant_doc["plugin_port"]),

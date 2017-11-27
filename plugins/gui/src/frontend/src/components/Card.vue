@@ -48,7 +48,7 @@
                         border-color: $color-theme-light;
                     }
                     .dropdown-menu {
-                        width: 200px;
+                        width: 360px;
                     }
                 }
             }
