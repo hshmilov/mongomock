@@ -368,11 +368,26 @@ class BackendPlugin(PluginBase):
                 return jsonify(db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
                     {'internal_axon_id': device_id}))
             elif request.method == 'POST':
-                device_to_update = request.get_json(silent=True)
-                db_connection[self._aggregator_plugin_unique_name]['devices_db'].update_one(
-                    {'internal_axon_id': device_id},
-                    {'$set': {'tags': device_to_update['tags']}}
-                )
+                device_to_update = self.get_request_data_as_object()
+
+                device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+                    {'internal_axon_id': device_id})
+
+                associated_adapter_devices = {}
+
+                for adapter in device['adapters']:
+                    associated_adapter_devices[adapter['plugin_unique_name']] = adapter['data']['id']
+
+                for current_tag in device_to_update['tags']:
+                    update_data = {'association_type': 'Tag',
+                                   'associated_adapter_devices': associated_adapter_devices,
+                                   "tagname": current_tag,
+                                   "tagvalue": current_tag}
+                    response = self.request_remote_plugin(
+                        'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data))
+
+                    if response != 200:
+                        self.logger.error('Aggregator failed to tag device.')
                 return '', 200
 
     @requires_aggregator()
@@ -405,10 +420,10 @@ class BackendPlugin(PluginBase):
         all_tags = set()
         with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+            for current_device in client_collection.find({"tags.tagname": {"$exists": True}}):
+                for current_tag in current_device['tags']:
+                    all_tags.add(current_tag['tagname'])
 
-            all_tags.update([current_tag for current_tag in
-                             client_collection.find({}, {'tags': True, '_id': False}).distinct("tags")
-                             if len(current_tag) != 0])
         return jsonify(all_tags)
 
     @paginated()
