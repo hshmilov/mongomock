@@ -32,10 +32,10 @@ export const decomposeFieldPath = (data, fieldPath) => {
 }
 
 export const findValue = (field, data) => {
-	let value = ''
+	let value = undefined
 	let ind = 0
 	let fieldPathAdapters = field.path.replace(/adapters\./, '')
-	while (value === '' && ind < data.length) {
+	while (!value && ind < data.length) {
 		value = decomposeFieldPath(data[ind], fieldPathAdapters)
 		ind++
 	}
@@ -101,10 +101,12 @@ export const device = {
 					processedDevice.tags = device.tags
 					state.fields.common.forEach((field) => {
 						if (field.path === 'adapters.plugin_name' ||  field.path === 'tags') { return }
-						processedDevice[field.path] = findValue(field, device.adapters)
+						let value = findValue(field, device.adapters)
+						if (value) { processedDevice[field.path] = value }
 					})
 					state.fields.unique.forEach((field) => {
-						processedDevice[field.path] = findValue(field, device.adapters)
+						let value = findValue(field, device.adapters)
+						if (value) { findValue(field, device.adapters) }
 					})
 					processedData.push(processedDevice)
 				})

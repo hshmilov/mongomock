@@ -112,6 +112,12 @@
 			},
 			filterFields: function (newFields, oldFields) {
 				if (newFields.length <= oldFields.length) { return }
+				this.maxPages = 0
+				this.fetchedPages = 0
+				this.currentPage = 0
+				this.linkedPageCount = 1
+				this.linkedPageStart = 0
+				this.addData()
 			},
 			filter: function (newFilter) {
 				this.maxPages = 0
