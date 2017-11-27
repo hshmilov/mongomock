@@ -17,18 +17,29 @@ export const decomposeFieldPath = (data, fieldPath) => {
 	/*
 		Find ultimate value of data, matching given field path, by recursively drilling into the dictionary,
 		until path exhausted or reached undefined.
-		For arrays along the way as well as final values, first element is returned.
-		Should last value be returned as an array, and field's type changed to a list?
+		Arrays along the way will be traversed so that final value is the list of all found values
 	 */
-	let decomposed = data
-	fieldPath.split('.').forEach(function (part) {
-		if (!decomposed) { return }
-		decomposed = decomposed[part]
-		if (Array.isArray(decomposed)) {
-			decomposed = !decomposed.length? null : decomposed[0]
-		}
-	})
-	return decomposed
+	if (!data || typeof(data) === 'string' || (Array.isArray(data) && (!data.length || typeof(data[0]) === 'string'))) {
+		return data
+	}
+	let nextFieldPath = fieldPath.substring(fieldPath.indexOf('.') + 1)
+	if (Array.isArray(data)) {
+		let aggregatedValues = []
+		data.forEach((item) => {
+			let foundValue = decomposeFieldPath(item, nextFieldPath)
+			if (Array.isArray(foundValue)) {
+				aggregatedValues = aggregatedValues.concat(foundValue)
+			} else {
+				aggregatedValues = aggregatedValues.push(foundValue)
+			}
+		})
+		return aggregatedValues
+	}
+	if (fieldPath.indexOf('.') === -1) {
+		return data[fieldPath]
+	}
+	let currentFieldPath = fieldPath.substring(0, fieldPath.indexOf('.'))
+	return decomposeFieldPath(data[currentFieldPath], nextFieldPath)
 }
 
 export const findValue = (field, data) => {
@@ -66,21 +77,13 @@ export const device = {
 				},
 				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'adapters.data.network_interfaces.public_ip', name: 'IP Address', selected: true},
+				{path: 'adapters.data.network_interfaces.public_ip', name: 'IP Address', selected: true, type: 'list'},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
 			unique: []
 		},
-		tagList: {fetching: false, data: [], error: ''},
-		adapterNames: {
-			'ad_adapter': 'Active Directory',
-			'esx_adapter': 'ESX',
-			'aws_adapter': 'AWS',
-			'checkpoint_adapter': 'CheckPoint',
-			'qcore_adapter': 'QCore',
-			'splunk_adapter': 'Splunk'
-		}
+		tagList: {fetching: false, data: [], error: ''}
 	},
 	getters: {},
 	mutations: {
@@ -120,8 +123,9 @@ export const device = {
 			if (payload.data) {
 				payload.data.forEach(function (field) {
 					let fieldParts = field.split('.')
+					let fieldName = fieldParts.splice(4).join(".")
 					state.fields.unique.push({
-						path: field, name: state.adapterNames[fieldParts[0]] + ': ' + fieldParts[3], control: 'text'
+						path: field, name: fieldParts[1].split('_')[0] + ': ' + fieldName, control: 'text'
 					})
 				})
 			}

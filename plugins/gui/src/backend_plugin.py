@@ -388,14 +388,10 @@ class BackendPlugin(PluginBase):
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
                 for current_adapter in current_device['adapters']:
-                    for current_raw_field in current_adapter['data']['raw'].keys():
-                        all_fields.add(
-                            '.'.join([current_adapter['plugin_name'], 'data', 'raw', current_raw_field]))
-
-            for current_device in all_devices:
-                for current_adapter in current_device['adapters']:
-                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data']))
-                    all_fields.discard('.'.join([current_adapter['plugin_name'], 'data', 'raw']))
+                    data_raw = current_adapter['data']['raw']
+                    field_path = '.'.join(['adapters', current_adapter['plugin_name'], 'data.raw'])
+                    for raw_field in data_raw.keys():
+                        all_fields.add(field_path + '.{0}'.format(raw_field))
 
         return jsonify(all_fields)
 
@@ -470,25 +466,22 @@ class BackendPlugin(PluginBase):
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @paginated()
+    @filtered()
     @add_rule("adapters", should_authenticate=False)
-    def adapters(self, limit, skip):
+    def adapters(self, mongo_filter):
         """
         Get all adapters from the core
-        :param limit: for pagination
-        :param skip: for pagination
+        :mongo_filter
         :return:
         """
         plugins_available = self.request_remote_plugin('register').json()
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
-                [('plugin_unique_name', pymongo.ASCENDING)]).skip(skip).limit(limit)
+                [('plugin_unique_name', pymongo.ASCENDING)])
             return jsonify({'name': adapter['plugin_name'],
-                            'unique_name': adapter['plugin_unique_name'],
-                            'creators': 'Dean Sysman',
-                            'image': '<img src="deansysman.gif"/>',  # not all fields are yet functional
-                            'online': adapter['plugin_unique_name'] in plugins_available,
-                            'schemas': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+                            'id': adapter['plugin_unique_name'],
+                            'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
+                            'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
                             }
                            for adapter in
                            adapters_from_db)
