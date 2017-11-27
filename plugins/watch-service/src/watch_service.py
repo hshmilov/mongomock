@@ -18,13 +18,12 @@ class WatchService(PluginBase):
         """
         Initializes the watcher threads, gets the DB credentials and sets the default sampling rate.
         """
-        super().__init__(special_db_credentials=[
-            'aggregator'], *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._scheduler = None
-        self._device_collection_location = self.get_plugin_by_name('aggregator')[
-            'plugin_unique_name']
+        aggregator_data = self.get_plugin_by_name('aggregator')
 
+        self._device_collection_location = self.get_aggregator(aggregator_data)
         # Loading watch resources from db (If any exist).
         self._watched_queries = {
             str(watch['query']): watch for watch in self._get_collection('watches').find()}
@@ -34,6 +33,13 @@ class WatchService(PluginBase):
 
         # Starts the watch manager thread.
         self._start_managing_thread()
+
+    def get_aggregator(self, aggregator_data):
+        if aggregator_data is None:
+            self.logger.info('No Aggregator found while initiating.')
+            return None
+        else:
+            return aggregator_data['plugin_unique_name']
 
     @add_rule("trigger_watches", methods=['GET'])
     def run_jobs(self):
@@ -143,7 +149,13 @@ class WatchService(PluginBase):
         :param query: The query to use.
         :return: The results of the query.
         """
-        return list(self._get_collection('devices_db', db_name=self._device_collection_location).find(query))
+        if self._device_collection_location is None:
+            self._device_collection_location = self.get_aggregator()
+
+        if self._device_collection_location is not None:
+            return list(self._get_collection('devices_db', db_name=self._device_collection_location).find(query))
+        else:
+            return None
 
     def _start_managing_thread(self):
         """

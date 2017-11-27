@@ -158,13 +158,12 @@ class PluginBase(object):
 
     """
 
-    def __init__(self, core_data=None, special_db_credentials=None):
+    def __init__(self, core_data=None):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
 
         :param dict core_data: A data sent by the core plugin. (Will skip the registration process)
-        :param list special_db_credentials: A list of plugin names that this plugins want readonly access to their DB.
 
         :raise KeyError: In case of environment variables missing
         """
@@ -209,8 +208,7 @@ class PluginBase(object):
             pass
 
         if not core_data:
-            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key,
-                                       special_db_credentials)
+            core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
         if not core_data or core_data['status'] == 'error':
             raise RuntimeError(
                 "Register process failed, Exiting. Reason: {0}".format(core_data['message']))
@@ -306,7 +304,7 @@ class PluginBase(object):
     @retry(wait_fixed=10 * 1000,
            stop_max_delay=60 * 5 * 1000,
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
-    def _register(self, core_address, plugin_unique_name=None, api_key=None, special_db_credentials=None):
+    def _register(self, core_address, plugin_unique_name=None, api_key=None):
         """Create registration of the adapter to core.
 
         :param str core_address: The address of the core plugin
@@ -322,9 +320,6 @@ class PluginBase(object):
             register_doc['plugin_unique_name'] = plugin_unique_name
             if api_key is not None:
                 register_doc['api_key'] = api_key
-
-        if special_db_credentials is not None:
-            register_doc['special_db_credentials'] = special_db_credentials
 
         response = requests.post(core_address, data=json.dumps(register_doc))
         return response.json()
@@ -699,8 +694,6 @@ class PluginBase(object):
             action_promise = self._open_actions[action_id]
             # Calling the needed function
             request_content = self.get_request_data_as_object()
-
-            request_content['responder'] = self.get_caller_plugin_name()
 
             if request_content['status'] == 'failed':
                 action_promise.do_reject(Exception(request_content))

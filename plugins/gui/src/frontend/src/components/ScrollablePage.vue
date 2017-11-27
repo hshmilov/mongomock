@@ -45,9 +45,7 @@
             flex: 0 1 auto;
             height: 36px;
             width: 100%;
-            background-color: $background-color-light;
-            box-shadow: 1px 0px 20px rgba(0, 0, 0, 0.08);
-            padding: 0 24px;
+            padding: 12px 24px;
             text-transform: uppercase;
             z-index: 100;
             h2 {
@@ -55,15 +53,16 @@
                 letter-spacing: 1px;
                 margin-bottom: 0;
                 vertical-align: middle;
+                line-height: 24px;
             }
         }
         .scrollbar-container {
             flex: 1 1 auto;
-            height: 100%;
+            height: 100vh;
             background-color: transparent;
             margin: 0;
             .page-body {
-                padding: 12px;
+                padding: 12px 24px;
                 height: 100%;
             }
         }

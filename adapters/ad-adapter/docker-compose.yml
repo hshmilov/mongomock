@@ -9,6 +9,7 @@ services:
         volumes:
           - ./src:/home/axonius/app
           - ../../plugins/axonius-libs/src/libs:/home/axonius/libs
+          - ../../logs:/home/axonius/logs
 
 networks:
   default:

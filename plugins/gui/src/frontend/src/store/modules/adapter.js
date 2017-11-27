@@ -5,39 +5,84 @@ export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const FETCH_ADAPTER = 'FETCH_ADAPTER'
 export const SET_ADAPTER = 'SET_ADAPTER'
 export const UPDATE_ADAPTER = 'UPDATE_ADAPTER'
+export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
+export const ADD_ADAPTER_SERVER = 'ADD_ADAPTER_SERVER'
 
 export const adapter = {
 	state: {
 		/* All adapters */
-		adapterList: {fetching: false, data: [
-			{status: 'success', state: 'Connected', id: 'ad_adapter_123', type: 'ad_adapter', name: 'Active Directory',
-				description: 'Manages Windows devices', connected_servers: 20 }
-		], error: ''},
+		adapterList: {
+			fetching: false, data: [
+				{
+					status: 'success',
+					state: 'Connected',
+					id: 'ad_adapter_123',
+					type: 'ad_adapter',
+					name: 'Active Directory',
+					description: 'Manages Windows devices',
+					connected_servers: 20
+				}
+			], error: ''
+		},
 
 		/* Statically defined fields that should be presented for each adapter, in this order  */
-		fields: [
+		adapterFields: [
 			{path: 'name', name: 'Name', type: 'status-icon-logo-text'},
 			{path: 'description', name: 'Description'},
 			{path: 'connected_servers', name: 'Connected Servers'},
 			{path: 'state', name: 'State'}
 		],
 
+		/* Statically defined fields that should be presented for a single adapter's server */
+		serverFields: [
+			{path: 'status', name: '', type: 'status'},
+			{path: 'name', name: 'Name'},
+			{path: 'ip', name: 'IP Address'},
+			{path: 'last_updated', name: 'Last Updated', type: 'timestamp'}
+		],
+
 		/* Data about a specific adapter that is currently being configured */
-		currentAdapter: { fetching: false, data: {
-			id: 'ad_adapter',
-			name: 'Active Directory',
-			fields: [
-				{ path: 'status', name: '', type: 'status'},
-				{ path: 'name', name: 'Name'},
-				{ path: 'ip', name: 'IP Address'},
-				{ path: 'last_updated', name: 'Last Updated', type: 'timestamp'}
-			],
-			servers: [
-				{ id:1, status: 'success', name: 'DC-Main', ip: '192.168.4.1', last_updated: new Date().getTime()},
-				{ id:2, status: 'error', name: 'DC-Secondary', ip: '192.168.4.2', last_updated: new Date().getTime()},
-				{ id:3, status: 'warning', name: 'DC-Secondary', ip: '192.168.4.3', last_updated: new Date().getTime()}
-			]
-		}, error: ''}
+		currentAdapter: {
+			fetching: false, data: {
+				id: 'ad_adapter_123',
+				plugin_name: 'ad_adapter',
+				name: 'Active Directory',
+				schema: [
+					{path: 'ip', name: 'IP Address', control: 'text'},
+					{path: 'username', name: 'User Name', control: 'text'},
+					{path: 'password', name: 'Password', control: 'password'}
+				],
+				servers: [
+					{
+						id: 1,
+						status: 'success',
+						name: 'DC-Main',
+						ip: '192.168.4.1',
+						last_updated: new Date().getTime(),
+						username: 'Shira',
+						password: 'Gold'
+					},
+					{
+						id: 2,
+						status: 'error',
+						name: 'DC-Secondary',
+						ip: '192.168.4.2',
+						last_updated: new Date().getTime(),
+						username: 'Noa',
+						password: 'Gold'
+					},
+					{
+						id: 3,
+						status: 'warning',
+						name: 'DC-Secondary',
+						ip: '192.168.4.3',
+						last_updated: new Date().getTime(),
+						username: 'Elah',
+						password: 'Gold'
+					}
+				]
+			}, error: ''
+		}
 	},
 	getters: {},
 	mutations: {
@@ -48,7 +93,7 @@ export const adapter = {
 			 */
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
-				state.adapterList.data = [ ...state.adapterList.data, ...payload.data ]
+				state.adapterList.data = [...state.adapterList.data, ...payload.data]
 			}
 			if (payload.error) {
 				state.adapterList.error = payload.error
@@ -62,8 +107,12 @@ export const adapter = {
 			state.currentAdapter.fetching = payload.fetching
 			state.currentAdapter.error = payload.error
 			if (payload.data) {
-				state.currentAdapter.data = { ...payload.data }
+				state.currentAdapter.data = {...payload.data}
 			}
+		},
+		[ ADD_ADAPTER_SERVER ] (state, payload) {
+			state.currentAdapter.data = { ...state.currentAdapter.data }
+			state.currentAdapter.data.push({ ...payload })
 		}
 	},
 	actions: {
@@ -103,6 +152,28 @@ export const adapter = {
 				rule: `api/adapters/${payload.id}`,
 				method: 'POST',
 				data: payload
+			})
+		},
+		[ UPDATE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
+			/*
+				Call API to save given server data to adapter by the given adapter id,
+				either adding a new server or updating and existing one, if id is provided with the data
+			 */
+			if (!payload || !payload.adapterId || !payload.serverData) { return }
+			let rule = `api/adapter/${payload.adapterId}/server`
+			if (payload.serverData.id !== 'new') {
+				rule += '/' + payload.serverData.id
+			}
+			dispatch(REQUEST_API, {
+				rule: rule,
+				method: 'POST',
+				data: payload.serverData
+			}).then((response) => {
+				if (response === '') {
+					return
+				}
+				payload.serverData.id = response
+				commit(ADD_ADAPTER_SERVER, payload.serverData)
 			})
 		}
 	}

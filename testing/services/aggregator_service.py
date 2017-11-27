@@ -12,7 +12,10 @@ class AggregatorService(plugin_service.PluginService):
         super().__init__(compose_file_path, config_file_path, vol_config_file_path)
 
     def query_devices(self):
-        return requests.post(self.req_url + "/query_devices", headers={API_KEY_HEADER: self.api_key})
+        response = requests.post(
+            self.req_url + "/query_devices", headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200
+        return response
 
 
 @pytest.fixture(scope="session")

@@ -53,8 +53,8 @@
                 height: 18px;
                 border-top: 2px solid transparent;
                 border-left: 2px solid transparent;
-                border-right: 2px solid $color-theme;
-                border-bottom: 2px solid $color-theme;
+                border-right: 2px solid $color-theme-light;
+                border-bottom: 2px solid $color-theme-light;
                 -webkit-transform: rotate(40deg);
                 -ms-transform: rotate(40deg);
                 transform: rotate(40deg);
@@ -82,7 +82,7 @@
             top: 2px;
         }
         &:hover .checkbox-skin {
-            border-color: $color-theme;
+            border-color: $color-theme-light;
         }
         .checkbox-check {
             display: inline;
@@ -103,8 +103,8 @@
             transform: rotate(-45deg);
             width: 16px;
             height: 6px;
-            border-left: 2px solid $color-theme;
-            border-bottom: 2px solid $color-theme;
+            border-left: 2px solid $color-theme-light;
+            border-bottom: 2px solid $color-theme-light;
             border-right: 2px solid transparent;
             border-top: 2px solid transparent;
         }

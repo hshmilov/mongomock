@@ -111,9 +111,9 @@
                 visibility: hidden;
                 padding-right: 8px;
                 &:hover {
-                    color: $color-theme;
-                    .svg-stroke {  stroke: $color-theme;  }
-                    .svg-fill {  fill: $color-theme;  }
+                    color: $color-theme-light;
+                    .svg-stroke {  stroke: $color-theme-light;  }
+                    .svg-fill {  fill: $color-theme-light;  }
                 }
                 i {
                     vertical-align: middle;

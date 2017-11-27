@@ -14,4 +14,4 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 # Make port 80,443 available to the world outside this container
-EXPOSE 5050
+EXPOSE 80
