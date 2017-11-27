@@ -495,7 +495,7 @@ class BackendPlugin(PluginBase):
         :param skip: for pagination (only for GET)
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
                 return jsonify(
