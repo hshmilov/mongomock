@@ -13,6 +13,11 @@
                                        addNewDataLabel="Add a server" @select="configServer"></dynamic-table>
                     </div>
                 </div>
+                <div v-if="currentServer && currentServer.id">
+                    <!-- Container for configuration of a single selected \ added server -->
+                    <status-icon-logo-text :logoValue="adapterData['plugin_name']" :textValue="currentServer['name']"></status-icon-logo-text>
+                    <generic-form :schema="adapterData.schema" v-model="currentServer"></generic-form>
+                </div>
                 <div class="row">
                     <div class="form-group place-right">
                         <a class="btn btn-inverse" @click="returnToAdapters">cancel</a>
