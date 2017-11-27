@@ -1,13 +1,14 @@
 @font-face {
   font-family: 'Poppins';
-  src: url('/api/gui/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype');
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype');
 }
 
 $font-stack: 'Poppins', sans-serif;
 $font-size: 100%;
 $font-size-title: 112.5%;
 
-$color-theme: #4796e4;
+$color-theme-light: #4796e4;
+$color-theme-dark: #003366;
 $color-light: #ffffff;
 $color-title: #607e8d;
 $color-text: #504e4e;

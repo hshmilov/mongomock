@@ -18,14 +18,14 @@ export default new Vuex.Store({
         user: {
             firstname: 'Administrator',
             lastname: '',
-            picname: '/api/gui/src/assets/images/users/avatar.png'
+            picname: '/src/assets/images/users/avatar.png'
 
         },
         configuration: {
             language: 'en'
         },
         interaction: {
-            collapseSidebar: false
+            collapseSidebar: true
         }
     },
     mutations: {

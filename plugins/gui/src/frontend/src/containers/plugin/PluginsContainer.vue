@@ -5,7 +5,7 @@
         <info-dialog :open="infoDialogOpen" title="Plugin Quick View" :closeDialog="closeQuickView.bind(this)">
             <div class="info-dialog-content-title w-100 text-center mt-4">
                 <img v-if="plugin.pluginDetails.data['unique_plugin_name']" class="data-logo d-inline-block"
-                     :src="`/api/gui/src/assets/images/logos/${plugin.pluginDetails.data['unique_plugin_name']}.png`">
+                     :src="`/src/assets/images/logos/${plugin.pluginDetails.data['unique_plugin_name']}.png`">
                 <div class="d-inline-block">{{ plugin.pluginDetails.data.name }}</div>
             </div>
             <div v-if="plugin.pluginDetails.data.on" class="text-capitalize w-100 text-center mt-4">

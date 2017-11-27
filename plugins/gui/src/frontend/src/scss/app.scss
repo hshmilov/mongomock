@@ -29,7 +29,7 @@ a.link {
   color: $color-title;
   &:hover,
   &:focus {
-    color: $color-theme;
+    color: $color-theme-light;
   }
 }
 
@@ -143,21 +143,21 @@ Components
   color: $color-light;
   cursor: pointer;
   padding: 4px 12px;
-  background: $color-theme;
-  border: 1px solid $color-theme;
-  -webkit-box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba(66, 165, 245, 0.12);
-  box-shadow: 0 2px 2px 0 rgba($color-theme, 0.14), 0 3px 1px -2px rgba($color-theme, 0.2), 0 1px 5px 0 rgba($color-theme, 0.12);
+  background: $color-theme-light;
+  border: 1px solid $color-theme-light;
+  -webkit-box-shadow: 0 2px 2px 0 rgba($color-theme-light, 0.14), 0 3px 1px -2px rgba($color-theme-light, 0.2), 0 1px 5px 0 rgba(66, 165, 245, 0.12);
+  box-shadow: 0 2px 2px 0 rgba($color-theme-light, 0.14), 0 3px 1px -2px rgba($color-theme-light, 0.2), 0 1px 5px 0 rgba($color-theme-light, 0.12);
   -webkit-transition: 0.2s ease-in;
   -o-transition: 0.2s ease-in;
   transition: 0.2s ease-in;
   display: inline;
   &:hover {
-    -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
-    box-shadow: 0 14px 26px -12px rgba($color-theme, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme, 0.2);
+    -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme-light, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme-light, 0.2);
+    box-shadow: 0 14px 26px -12px rgba($color-theme-light, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme-light, 0.2);
   }
   &.btn-inverse {
-    color: $color-theme;
-    border-color: $color-theme;
+    color: $color-theme-light;
+    border-color: $color-theme-light;
     background-color: $background-color-light;
   }
 }
@@ -167,7 +167,7 @@ a.btn:not([href]):not([tabindex]) {
 }
 
 a.btn.btn-inverse:not([href]):not([tabindex]) {
-  color: $color-theme;
+  color: $color-theme-light;
 }
 
 .tag-item {
@@ -220,9 +220,11 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   .form-group {
     padding: 12px 24px;
     .form-group-header {
-      color: $color-theme;
-      .svg-stroke { stroke: $color-theme }
-      .svg-fill { fill: $color-theme }
+      color: $color-theme-light;
+      .svg-stroke { stroke: $color-theme-light
+      }
+      .svg-fill { fill: $color-theme-light
+      }
       font-size: 20px;
       .form-group-title {
         margin-left: 8px;

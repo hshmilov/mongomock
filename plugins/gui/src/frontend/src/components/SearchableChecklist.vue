@@ -91,7 +91,7 @@
             a {
                 transition: text-shadow 0.3s ease;
                 &:hover {
-                    color: $color-theme;
+                    color: $color-theme-light;
                 }
             }
         }
