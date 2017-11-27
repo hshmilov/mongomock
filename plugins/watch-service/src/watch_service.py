@@ -18,8 +18,7 @@ class WatchService(PluginBase):
         """
         Initializes the watcher threads, gets the DB credentials and sets the default sampling rate.
         """
-        super().__init__(special_db_credentials=[
-            'aggregator'], *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._scheduler = None
         aggregator_data = self.get_plugin_by_name('aggregator')
