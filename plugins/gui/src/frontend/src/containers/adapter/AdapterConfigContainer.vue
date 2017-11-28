@@ -21,7 +21,7 @@
                         <a class="btn" @click="saveAdapter">save</a>
                     </div>
                 </div>
-                <modal v-if="serverModal.serverData && serverModal.serverData.uuid && serverModal.open"
+                <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
                        class="config-server" @close="toggleServerModal" approveText="save" @confirm="saveServer">
                     <div slot="body">
                         <!-- Container for configuration of a single selected / added server -->
@@ -91,7 +91,8 @@
 				selectedServer: -1,
 				serverModal: {
 					open: false,
-					serverData: {}
+					serverData: {},
+                    uuid: null,
 				}
 			}
 		},
@@ -115,7 +116,7 @@
 			configServer (serverId) {
 				if (serverId === 'new') {
 					this.selectedServer = this.adapterData.clients.length
-					this.serverModal.serverData = {uuid: serverId}
+					this.serverModal.uuid = serverId
 				} else {
 					this.adapterData.clients.forEach((server, index) => {
 						if (server.uuid === serverId) {
@@ -135,7 +136,8 @@
 			saveServer () {
 				this.updateAdapterServer({
 					adapterId: this.adapterUniquePluginName,
-					serverData: this.serverModal.serverData
+					serverData: this.serverModal.serverData,
+                    uuid: this.serverModal.uuid
 				})
 				this.toggleServerModal()
 			},
