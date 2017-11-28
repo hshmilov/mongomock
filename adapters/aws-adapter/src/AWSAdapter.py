@@ -7,10 +7,10 @@ __author__ = "Mark Segal"
 
 from axonius.AdapterBase import AdapterBase
 from axonius.ParsingUtils import figure_out_os
+import axonius.AdapterExceptions
 import boto3
 import re
-from botocore.exceptions import BotoCoreError
-
+import botocore.exceptions
 
 """
 Matches AWS Instance IDs
@@ -29,8 +29,7 @@ def _describe_images_from_client_by_id(client, amis):
 
     # the reason I use "Filters->image-id" and not ImageIds is because if I'd use ImageIds
     # would've raise an exception if an image is not found
-    described_images = client.describe_images(
-        Filters=[{"Name": "image-id", "Values": list(amis)}])
+    described_images = client.describe_images(Filters=[{"Name": "image-id", "Values": list(amis)}])
 
     # make a dictionary from ami key to the value
     return {image['ImageId']: image for image in described_images['Images']}
@@ -51,8 +50,7 @@ class AWSAdapter(AdapterBase):
                 del aws_auth['_id']
                 clients_dict[aws_id] = boto3.client('ec2', **aws_auth)
             except BotoCoreError as e:
-                self.logger.error(
-                    "Error creating EC2 client for account {0}, reason: {1}", aws_auth.meta.id, str(e))
+                self.logger.error("Error creating EC2 client for account {0}, reason: {1}", aws_auth.meta.id, str(e))
         return clients_dict
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -72,30 +70,19 @@ class AWSAdapter(AdapterBase):
                 for instance in reservation['Instances']:
                     amis.add(instance['ImageId'])
 
-            # for some unexplained reason, if the EC2 instance is associated with a specific account
-            # AWS refuses to search the AWS store for the image id, which most of our ImageIDs come from
-            described_images_global = _describe_images_from_client_by_id(
-                boto3.client('ec2', region_name=client_data._client_config.region_name), amis)
-
-            # in case some images are private, we want to use them
-            described_image_local = _describe_images_from_client_by_id(
-                client_data, amis)
-
-            # union dictionary
-            described_images = dict(
-                described_images_global, **described_image_local)
+            described_images = _describe_images_from_client_by_id(client_data, amis)
 
             # add image information to each instance
             for reservation in instances['Reservations']:
                 for instance in reservation['Instances']:
-                    instance['DescribedImage'] = described_images.get(
-                        instance['ImageId'])
+                    instance['DescribedImage'] = described_images.get(instance['ImageId'])
 
             return instances
-        except BotoCoreError as e:
-            self.logger.error(
-                "Error fetching EC2 instances for account {0}, reason: {1}", client_name, str(e))
-            return "Server Error", 500
+        except (botocore.exceptionsNoCredentialsError, botocore.exceptionsPartialCredentialsError,
+                botocore.exceptionsCredentialRetrievalError, botocore.exceptionsUnknownCredentialError) as e:
+            raise AdapterExceptions.CredentialErrorException(repr(e))
+        except botocore.exceptionsBotoCoreError as e:
+            raise AdapterExceptions.AdapterException(repr(e))
 
     def _clients_schema(self):
         """
@@ -136,7 +123,8 @@ class AWSAdapter(AdapterBase):
                     'id': instance['InstanceId'],
                     'network_interfaces': [self._parse_network_interface(interface) for interface in
                                            instance.get('NetworkInterfaces', [])],
-                    'raw': instance}
+                    'raw': instance
+                }
 
     def _parse_network_interface(self, interface):
         """
