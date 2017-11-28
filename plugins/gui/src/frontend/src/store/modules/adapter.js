@@ -136,7 +136,7 @@ export const adapter = {
 			 */
 			if (!payload || !payload.adapterId || !payload.serverData) { return }
 			let rule = `api/adapters/${payload.adapterId}/clients`
-			if (payload.serverData.id !== 'new') {
+			if (payload.serverData.uuid !== 'new') {
 				rule += '/' + payload.serverData.uuid
 			}
 			dispatch(REQUEST_API, {
