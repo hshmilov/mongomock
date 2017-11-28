@@ -3,16 +3,17 @@
         <thead>
             <tr class="table-row">
                 <th class="table-head"></th>
-                <th class="table-head" v-for="field in fields">{{ field.name }}</th>
+                <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
             </tr>
         </thead>
         <tbody>
-            <tr v-for="record in data" class="table-row" @click="$emit('select', record['id'])">
+            <tr v-for="record in data" class="table-row" @click="$emit('select', record['uuid'])">
                 <td>
                     <!-- Check for connecting to server and uncheck to stop connection -->
-                    <checkbox class="mr-2"></checkbox>
+                    <!--<checkbox class="mr-2"></checkbox>-->
+                    <a @click.stop="$emit('delete', record['uuid'])"><i class="icon-trash-o"></i></a>
                 </td>
-                <generic-table-cell class="table-data" v-for="field in fields" :key="field.path"
+                <generic-table-cell class="table-data" v-for="field in fields" v-if="!field.hidden" :key="field.path"
                                     :value="record[field.path]" :type="field.type"></generic-table-cell>
             </tr>
             <tr class="table-row" @click="$emit('select', 'new')">

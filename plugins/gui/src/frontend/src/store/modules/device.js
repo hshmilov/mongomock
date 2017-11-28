@@ -1,5 +1,6 @@
 /* eslint-disable no-undef */
 import { REQUEST_API } from '../actions'
+import { UPDATE_ADAPTERS, adapterStaticData } from './adapter'
 
 export const RESTART_DEVICES = 'RESTART_DEVICES'
 export const FETCH_DEVICES = 'FETCH_DEVICES'
@@ -68,14 +69,7 @@ export const device = {
 				{ path: 'internal_axon_id', name: '', hidden: true, selected: true },
 				{
 					path: 'adapters.plugin_name', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
-					options: [
-						{name: 'Active Dirsectory', path: 'ad_adapter'},
-						{name: 'ESX', path: 'esx_adapter'},
-						{name: 'AWS', path: 'aws_adapter'},
-						{name: 'CheckPoint', path: 'checkpoint_adapter'},
-						{name: 'QCore', path: 'qcore_adapter'},
-						{name: 'Splunk', path: 'splunk_adapter'}
-					]
+					options: []
 				},
 				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Host Name', selected: true, control: 'text'},
@@ -188,6 +182,15 @@ export const device = {
 			})
 			state.fields.unique.forEach((field) => {
 				field.selected = payload.indexOf(field.path) > -1
+			})
+		},
+		[ UPDATE_ADAPTERS ] (state, payload) {
+			if (!payload.data) { return }
+			state.fields.common.forEach((field) => {
+				if (field.path !== 'adapters.plugin_name') { return }
+				payload.data.forEach((adapter) => {
+					field.options.push({name: adapterStaticData[adapter.plugin_name].name, path: adapter.plugin_name})
+				})
 			})
 		}
 	},

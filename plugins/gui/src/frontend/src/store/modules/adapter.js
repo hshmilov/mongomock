@@ -2,11 +2,28 @@ import { REQUEST_API } from '../actions'
 
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
-export const FETCH_ADAPTER = 'FETCH_ADAPTER'
-export const SET_ADAPTER = 'SET_ADAPTER'
+export const FETCH_ADAPTER_SERVERS = 'FETCH_ADAPTER_SERVERS'
+export const SET_ADAPTER_SERVERS = 'SET_ADAPTER_SERVERS'
 export const UPDATE_ADAPTER = 'UPDATE_ADAPTER'
 export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
 export const ADD_ADAPTER_SERVER = 'ADD_ADAPTER_SERVER'
+export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
+export const REMOVE_SERVER = 'REMOVE_SERVER'
+
+export const adapterStaticData = {
+	'ad_adapter': {
+		name: 'Active Directory',
+		description: 'Connects via Active Directory to given servers'
+	},
+	'aws_adapter': {
+		name: 'AWS',
+		description: 'Connects via AWS to given servers'
+	},
+	'esx_adapter': {
+		name: 'ESX',
+		description: 'Connects via ESX to given servers'
+	}
+}
 
 export const adapter = {
 	state: {
@@ -17,18 +34,10 @@ export const adapter = {
 
 		/* Statically defined fields that should be presented for each adapter, in this order  */
 		adapterFields: [
-			{path: 'name', name: 'Name', type: 'status-icon-logo-text'},
+			{path: 'unique_plugin_name', name: '', hidden: true },
+			{path: 'plugin_name', name: 'Name', type: 'status-icon-logo-text' },
 			{path: 'description', name: 'Description'},
-			{path: 'connected_servers', name: 'Connected Servers'},
-			{path: 'state', name: 'State'}
-		],
-
-		/* Statically defined fields that should be presented for a single adapter's server */
-		serverFields: [
-			{path: 'status', name: '', type: 'status'},
-			{path: 'name', name: 'Name'},
-			{path: 'ip', name: 'IP Address'},
-			{path: 'last_updated', name: 'Last Updated', type: 'timestamp'}
+			{path: 'status', name: '', hidden: true}
 		],
 
 		/* Data about a specific adapter that is currently being configured */
@@ -45,16 +54,25 @@ export const adapter = {
 			 */
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
-				state.adapterList.data = [...state.adapterList.data]
+				state.adapterList.data = []
 				payload.data.forEach((adapter) => {
-					state.adapterList.data.push({ ...adapter, id: adapter.unique_plugin_name })
+					let adapterId = adapter.unique_plugin_name.match(/.*_adapter_(\d*)/)[1]
+					state.adapterList.data.push({ ...adapter,
+						id: adapter.unique_plugin_name,
+						plugin_name: {
+							text: `${adapterStaticData[adapter.plugin_name].name} (${adapterId})`,
+							logo: adapter.plugin_name,
+							status: adapter.status
+						},
+						description: adapterStaticData[adapter.plugin_name].description
+					})
 				})
 			}
 			if (payload.error) {
 				state.adapterList.error = payload.error
 			}
 		},
-		[ SET_ADAPTER ] (state, payload) {
+		[ SET_ADAPTER_SERVERS ] (state, payload) {
 			/*
 				Called first before API request for a specific adapter, in order to update state to fetching
 				Called again after API call returns with either error or data which is assigned to current adapter
@@ -62,14 +80,19 @@ export const adapter = {
 			state.currentAdapter.fetching = payload.fetching
 			state.currentAdapter.error = payload.error
 			if (payload.data) {
-				state.currentAdapter.data = {
-					servers: [ ...payload.data ]
-				}
+				state.currentAdapter.data = { ...state.currentAdapter.data, ...payload.data }
 			}
 		},
 		[ ADD_ADAPTER_SERVER ] (state, payload) {
 			state.currentAdapter.data = { ...state.currentAdapter.data }
 			state.currentAdapter.data.push({ ...payload })
+		},
+		[ REMOVE_SERVER ] (state, serverId) {
+			state.currentAdapter.data = { ...state.currentAdapter.data,
+				clients: state.currentAdapter.data.clients.filter((server) => {
+					return server.uuid !== serverId
+				})
+			}
 		}
 	},
 	actions: {
@@ -81,19 +104,19 @@ export const adapter = {
 			if (payload && payload.filter) {
 				param = `?filter=${JSON.stringify(payload.filter)}`
 			}
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: `api/adapters${param}`,
 				type: UPDATE_ADAPTERS
 			})
 		},
-		[ FETCH_ADAPTER ] ({dispatch}, adapterId) {
+		[ FETCH_ADAPTER_SERVERS ] ({dispatch}, adapterId) {
 			/*
 				Fetch a single adapter with all its clients and schema and stuff, according to given id
 			 */
 			if (!adapterId) { return }
 			dispatch(REQUEST_API, {
 				rule: `api/adapters/${adapterId}/clients`,
-				type: SET_ADAPTER
+				type: SET_ADAPTER_SERVERS
 			})
 		},
 		[ UPDATE_ADAPTER ] ({dispatch}, payload) {
@@ -112,9 +135,9 @@ export const adapter = {
 				either adding a new server or updating and existing one, if id is provided with the data
 			 */
 			if (!payload || !payload.adapterId || !payload.serverData) { return }
-			let rule = `api/adapter/${payload.adapterId}/server`
+			let rule = `api/adapters/${payload.adapterId}/clients`
 			if (payload.serverData.id !== 'new') {
-				rule += '/' + payload.serverData.id
+				rule += '/' + payload.serverData.uuid
 			}
 			dispatch(REQUEST_API, {
 				rule: rule,
@@ -126,6 +149,18 @@ export const adapter = {
 				}
 				payload.serverData.id = response
 				commit(ADD_ADAPTER_SERVER, payload.serverData)
+			})
+		},
+		[ ARCHIVE_SERVER ] ({dispatch, commit}, payload) {
+			if (!payload.adapterId || !payload.serverId) { return }
+			dispatch(REQUEST_API, {
+				rule: `api/adapters/${payload.adapterId}/clients/${payload.serverId}`,
+				method: 'DELETE'
+			}).then((response) => {
+				if (response !== '') {
+					return
+				}
+				commit(REMOVE_SERVER, payload.serverId)
 			})
 		}
 	}

@@ -506,10 +506,9 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(True) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
                 [('plugin_unique_name', pymongo.ASCENDING)])
-            return jsonify({'name': adapter['plugin_name'],
-                            'id': adapter['plugin_unique_name'],
-                            'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
-                            'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+            return jsonify({'plugin_name': adapter['plugin_name'],
+                            'unique_plugin_name': adapter['plugin_unique_name'],
+                            'status': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error'
                             }
                            for adapter in
                            adapters_from_db)
@@ -527,10 +526,12 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(True) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
-                return jsonify(
-                    beautify_db_entry(client) for client in
-                    client_collection.find().sort([('_id', pymongo.ASCENDING)]).skip(
-                        skip).limit(limit))
+                return jsonify({
+                    'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
+                    'clients': [ beautify_db_entry(client) for client in
+                               client_collection.find().sort([('_id', pymongo.ASCENDING)])
+                               .skip(skip).limit(limit) ]
+                })
             if request.method == 'POST':
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
