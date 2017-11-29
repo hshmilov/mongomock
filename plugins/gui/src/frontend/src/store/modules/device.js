@@ -122,8 +122,9 @@ export const device = {
 							let keysIndex = 0
 							while (currentValue && keysIndex < keys.length) {
 								currentValue = currentValue[keys[keysIndex]]
+								keysIndex++
 							}
-							processedData[field.path] = currentValue
+							processedDevice[field.path] = currentValue
 						})
 					})
 					processedData.push(processedDevice)
