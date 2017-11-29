@@ -49,7 +49,7 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                    response.status_code >= 300 or
+                        response.status_code >= 300 or
                         'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
@@ -369,26 +369,43 @@ class BackendPlugin(PluginBase):
                     {'internal_axon_id': device_id}))
             elif request.method == 'POST':
                 device_to_update = self.get_request_data_as_object()
-
                 device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
                     {'internal_axon_id': device_id})
+                return self._tag_request_from_aggregator(device, 'create', device_to_update['tags'])
 
-                associated_adapter_devices = {}
+    def _tag_request_from_aggregator(self, device, command, tag_list):
 
-                for adapter in device['adapters']:
-                    associated_adapter_devices[adapter['plugin_unique_name']] = adapter['data']['id']
+        associated_adapter_devices = {}
+        responses = []
 
-                for current_tag in device_to_update['tags']:
-                    update_data = {'association_type': 'Tag',
-                                   'associated_adapter_devices': associated_adapter_devices,
-                                   "tagname": current_tag,
-                                   "tagvalue": current_tag}
-                    response = self.request_remote_plugin(
-                        'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data))
+        for adapter in device['adapters']:
+            associated_adapter_devices[adapter['plugin_unique_name']] = adapter['data']['id']
 
-                    if response != 200:
-                        self.logger.error('Aggregator failed to tag device.')
-                return '', 200
+        for current_tag in tag_list:
+            update_data = {'association_type': 'Tag',
+                           'associated_adapter_devices': associated_adapter_devices,
+                           "tagname": current_tag,
+                           "tagvalue": current_tag if command == "create" else ''}
+            responses.append(self.request_remote_plugin(
+                'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data)))
+
+        num_of_bad_responses = len(
+            [current_response for current_response in responses if current_response.status_code != 200])
+
+        return ('', 200) if num_of_bad_responses == 0 else return_error('tagging failed')
+
+    @add_rule("devices/<device_id>/tags", methods=['DELETE'], should_authenticate=False)
+    def remove_tags_from_device(self, device_id):
+        """
+        Retrieve device by the given id, from current devices DB or update it
+        Currently, update works only for tags because that is the only edit operation user has
+        :return:
+        """
+        with self._get_db_connection(False) as db_connection:
+            tag_list = self.get_request_data_as_object()
+            device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+                {'internal_axon_id': device_id})
+            return self._tag_request_from_aggregator(device, 'remove', tag_list['tags'])
 
     @requires_aggregator()
     @add_rule("devices/fields", should_authenticate=False)
@@ -434,9 +451,10 @@ class BackendPlugin(PluginBase):
         all_tags = set()
         with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
-            for current_device in client_collection.find({"tags.tagname": {"$exists": True}}):
+            for current_device in client_collection.find({"tags.tagvalue": {"$exists": True}}):
                 for current_tag in current_device['tags']:
-                    all_tags.add(current_tag['tagname'])
+                    if current_tag['tagvalue'] is not '':
+                        all_tags.add(current_tag['tagvalue'])
 
         return jsonify(all_tags)
 
