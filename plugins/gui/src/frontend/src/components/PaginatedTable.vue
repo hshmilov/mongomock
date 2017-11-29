@@ -20,8 +20,8 @@
                         <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
                                   @change="updateSelected()"></checkbox>
                     </td>
-                    <generic-table-cell class="table-row-data" v-for="field in fields" v-if="!field.hidden"
-                                        :key="field.path" :type="field.type" :value="record[field.path]">
+                    <generic-table-cell class="table-row-data" v-for="field, index in fields" v-if="!field.hidden"
+                                        :key="index" :type="field.type" :value="record[field.path]">
                     </generic-table-cell>
                     <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                         <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">

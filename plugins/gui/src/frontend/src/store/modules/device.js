@@ -24,33 +24,31 @@ export const decomposeFieldPath = (data, fieldPath) => {
 	if (!data || typeof(data) === 'string' || (Array.isArray(data) && (!data.length || typeof(data[0]) === 'string'))) {
 		return data
 	}
-	let nextFieldPath = fieldPath.substring(fieldPath.indexOf('.') + 1)
 	if (Array.isArray(data)) {
 		let aggregatedValues = []
 		data.forEach((item) => {
-			let foundValue = decomposeFieldPath(item, nextFieldPath)
+			let foundValue = decomposeFieldPath(item, fieldPath)
+			if (!foundValue) { return }
 			if (Array.isArray(foundValue)) {
 				aggregatedValues = aggregatedValues.concat(foundValue)
 			} else {
-				aggregatedValues = aggregatedValues.push(foundValue)
+				aggregatedValues.push(foundValue)
 			}
 		})
 		return aggregatedValues
 	}
-	if (fieldPath.indexOf('.') === -1) {
-		return data[fieldPath]
-	}
-	let currentFieldPath = fieldPath.substring(0, fieldPath.indexOf('.'))
-	return decomposeFieldPath(data[currentFieldPath], nextFieldPath)
+	if (fieldPath.indexOf('.') === -1) { return data[fieldPath] }
+	let firstPointIndex = fieldPath.indexOf('.')
+	return decomposeFieldPath(data[fieldPath.substring(0, firstPointIndex)], fieldPath.substring(firstPointIndex + 1))
 }
 
 export const findValue = (field, data) => {
-	let value = undefined
-	let dataIndex = 0
-	let fieldPathAdapters = field.path.replace(/adapters\./, '')
-	while (!value && dataIndex < data.length) {
-		value = decomposeFieldPath(data[dataIndex], fieldPathAdapters)
-		dataIndex++
+	let value = []
+	field.path.split(',').forEach((currentPath) => {
+		value = value.concat(decomposeFieldPath({ ...data }, currentPath))
+	})
+	if ((!field.type || field.type.indexOf('list') === -1) && Array.isArray(value)) {
+		return (value.length > 0) ? value[0] : ''
 	}
 	return value
 }
@@ -66,16 +64,21 @@ export const device = {
 		/* Configurations specific for devices */
 		fields: {
 			common: [
-				{ path: 'internal_axon_id', name: '', hidden: true, selected: true },
+				{path: 'internal_axon_id', name: '', hidden: true, selected: true},
 				{
 					path: 'adapters.plugin_name', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
 					options: []
 				},
 				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'adapters.data.network_interfaces.public_ip', name: 'IP Address', selected: true, type: 'list'},
+				{
+					path: 'adapters.data.network_interfaces.public_ip,adapters.data.network_interfaces.private_ip',
+					name: 'IP Addresses',
+					selected: true,
+					type: 'list'
+				},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
-				{path: 'tags', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
+				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
 			unique: []
 		},
@@ -93,23 +96,24 @@ export const device = {
 				let processedData = []
 				payload.data.forEach((device) => {
 					if (!device.adapters || !device.adapters.length) { return }
-					let processedDevice = {'id': device['internal_axon_id']}
-					processedDevice['adapters.plugin_name'] = device.adapters.map((adapter) => {
-						return adapter.plugin_name
-					})
-					processedDevice.tags = device.tags.map((tag) => {
-						return tag.tagname
-					})
+					let processedDevice = {}
 					state.fields.common.forEach((field) => {
-						if (field.path === 'adapters.plugin_name' ||  field.path === 'tags') { return }
 						if (!field.selected) { return }
-						let value = findValue(field, device.adapters)
+						let value = findValue(field, device)
 						if (value) { processedDevice[field.path] = value }
 					})
 					state.fields.unique.forEach((field) => {
 						if (!field.selected) { return }
-						let value = findValue(field, device.adapters)
-						if (value) { findValue(field, device.adapters) }
+						let fieldParts = field.path.match(/adapters\.([\w_]*)\.(.*)/)
+						let currentValue = device.adapters.filter((adapter) => {
+							return adapter.plugin_name === fieldParts[1]
+						})[0]
+						let keys = fieldParts[2].split('.')
+						let keysIndex = 0
+						while (currentValue && keysIndex < keys.length) {
+							currentValue = currentValue[keys[keysIndex]]
+						}
+						processedData[field.path] = currentValue
 					})
 					processedData.push(processedDevice)
 				})
@@ -123,7 +127,7 @@ export const device = {
 			if (payload.data) {
 				payload.data.forEach(function (field) {
 					let fieldParts = field.split('.')
-					let fieldName = fieldParts.splice(4).join(".")
+					let fieldName = fieldParts.splice(4).join('.')
 					state.fields.unique.push({
 						path: field, name: fieldParts[1].split('_')[0] + ': ' + fieldName, control: 'text'
 					})
