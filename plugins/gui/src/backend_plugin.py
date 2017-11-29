@@ -528,9 +528,9 @@ class BackendPlugin(PluginBase):
             if request.method == 'GET':
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
-                    'clients': [ beautify_db_entry(client) for client in
-                               client_collection.find({'archived': False}).sort([('_id', pymongo.ASCENDING)])
-                               .skip(skip).limit(limit) ]
+                    'clients': [beautify_db_entry(client) for client in
+                                client_collection.find({'archived': False}).sort([('_id', pymongo.ASCENDING)])
+                                .skip(skip).limit(limit)]
                 })
             if request.method == 'POST':
                 client_to_add = request.get_json(silent=True)
