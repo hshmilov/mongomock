@@ -4,9 +4,9 @@ export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const FETCH_ADAPTER_SERVERS = 'FETCH_ADAPTER_SERVERS'
 export const SET_ADAPTER_SERVERS = 'SET_ADAPTER_SERVERS'
-export const UPDATE_ADAPTER = 'UPDATE_ADAPTER'
-export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
+export const SAVE_ADAPTER_SERVER = 'SAVE_ADAPTER_SERVER'
 export const ADD_ADAPTER_SERVER = 'ADD_ADAPTER_SERVER'
+export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
 export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
 export const REMOVE_SERVER = 'REMOVE_SERVER'
 
@@ -56,11 +56,10 @@ export const adapter = {
 			if (payload.data) {
 				state.adapterList.data = []
 				payload.data.forEach((adapter) => {
-					let adapterId = adapter.unique_plugin_name.match(/.*_adapter_(\d*)/)[1]
 					state.adapterList.data.push({ ...adapter,
 						id: adapter.unique_plugin_name,
 						plugin_name: {
-							text: `${adapterStaticData[adapter.plugin_name].name} (${adapterId})`,
+							text: adapterStaticData[adapter.plugin_name].name,
 							logo: adapter.plugin_name,
 							status: adapter.status
 						},
@@ -85,7 +84,14 @@ export const adapter = {
 		},
 		[ ADD_ADAPTER_SERVER ] (state, payload) {
 			state.currentAdapter.data = { ...state.currentAdapter.data }
-			state.currentAdapter.data.push({ ...payload })
+			state.currentAdapter.data.clients.push({ ...payload })
+		},
+		[ UPDATE_ADAPTER_SERVER ] (state, payload) {
+			state.currentAdapter.data = { ...state.currentAdapter.data }
+			state.currentAdapter.data.clients.forEach((client, index) => {
+				if (client.uuid === payload.uuid) {
+					state.currentAdapter.data.clients[index] = { ...payload }}
+			})
 		},
 		[ REMOVE_SERVER ] (state, serverId) {
 			state.currentAdapter.data = { ...state.currentAdapter.data,
@@ -119,17 +125,7 @@ export const adapter = {
 				type: SET_ADAPTER_SERVERS
 			})
 		},
-		[ UPDATE_ADAPTER ] ({dispatch}, payload) {
-			/*
-				Call API to save given adapter data to the given adapter id
-			 */
-			dispatch(REQUEST_API, {
-				rule: `api/adapters/${payload.id}`,
-				method: 'POST',
-				data: payload
-			})
-		},
-		[ UPDATE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
+		[ SAVE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
 			/*
 				Call API to save given server data to adapter by the given adapter id,
 				either adding a new server or updating and existing one, if id is provided with the data
@@ -145,9 +141,11 @@ export const adapter = {
 				data: payload.serverData
 			}).then((response) => {
 				if (response === '') {
+					payload.serverData.uuid = payload.uuid
+					commit(UPDATE_ADAPTER_SERVER, payload.serverData)
 					return
 				}
-				payload.serverData.id = response
+				payload.serverData.uuid = response
 				commit(ADD_ADAPTER_SERVER, payload.serverData)
 			})
 		},

@@ -529,7 +529,7 @@ class BackendPlugin(PluginBase):
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [ beautify_db_entry(client) for client in
-                               client_collection.find().sort([('_id', pymongo.ASCENDING)])
+                               client_collection.find({'archived': False}).sort([('_id', pymongo.ASCENDING)])
                                .skip(skip).limit(limit) ]
                 })
             if request.method == 'POST':
@@ -553,6 +553,7 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'POST':
                 client_to_update = request.get_json(silent=True)
+                client_to_update['archived'] = False
                 client_collection.update_one({'_id': ObjectId(client_id)}, {
                     '$set': client_to_update
                 })

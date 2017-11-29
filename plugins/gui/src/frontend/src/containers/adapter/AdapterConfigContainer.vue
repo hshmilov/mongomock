@@ -49,7 +49,7 @@
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
 	import {
-		FETCH_ADAPTER_SERVERS, UPDATE_ADAPTER, UPDATE_ADAPTER_SERVER, ARCHIVE_SERVER, adapterStaticData
+		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER, adapterStaticData
 	} from '../../store/modules/adapter'
 
 	export default {
@@ -99,8 +99,7 @@
 		methods: {
 			...mapActions({
 				fetchAdapter: FETCH_ADAPTER_SERVERS,
-				updateAdapter: UPDATE_ADAPTER,
-				updateAdapterServer: UPDATE_ADAPTER_SERVER,
+				updateAdapterServer: SAVE_ADAPTER_SERVER,
                 archiveServer: ARCHIVE_SERVER
 			}),
 			returnToAdapters () {
@@ -110,18 +109,25 @@
 				/* Validation */
 
 				/* Save and return to adapters page */
-				this.updateAdapter(this.adapterData)
+//				this.updateAdapter(this.adapterData)
 				this.returnToAdapters()
 			},
 			configServer (serverId) {
 				if (serverId === 'new') {
 					this.selectedServer = this.adapterData.clients.length
+					this.serverModal.serverData = {}
 					this.serverModal.uuid = serverId
 				} else {
 					this.adapterData.clients.forEach((server, index) => {
 						if (server.uuid === serverId) {
 							this.selectedServer = index
-							this.serverModal.serverData = server
+							this.serverModal.serverData = {}
+							Object.keys(server).filter((key) => {
+								return key !== 'uuid'
+                            }).forEach((filteredKey) => {
+								this.serverModal.serverData[filteredKey] = server[filteredKey]
+                            })
+                            this.serverModal.uuid = server.uuid
 						}
 					})
 				}
