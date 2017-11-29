@@ -9,6 +9,7 @@
       <sourceFolder url="file://$MODULE_DIR$/testing" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/epo-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plugins/watch-service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/esx-adapter/src" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.6.3 virtualenv at ~/axonius/cortex/venv" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

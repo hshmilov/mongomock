@@ -1,6 +1,5 @@
 def initalize_fixture(request, service):
-    service.start()
-    service.wait_for_service()
+    service.start_and_wait()
 
     def fin():
         service.stop()

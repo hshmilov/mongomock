@@ -15,11 +15,16 @@ class ComposeService(services.axon_service.AxonService):
         subprocess.check_call(['docker-compose', 'up', '-d'],
                               cwd=os.path.dirname(self._compose_file_path))
 
-    def stop(self):
+    def stop(self, should_delete=True):
         subprocess.call(['docker-compose', 'stop'],
                         cwd=os.path.dirname(self._compose_file_path))
-        subprocess.call(['docker-compose', 'rm', "-f"],
-                        cwd=os.path.dirname(self._compose_file_path))
+        if should_delete:
+            subprocess.call(['docker-compose', 'rm', "-f"],
+                            cwd=os.path.dirname(self._compose_file_path))
+
+    def start_and_wait(self):
+        self.start()
+        self.wait_for_service()
 
     @abstractmethod
     def is_up(self):
