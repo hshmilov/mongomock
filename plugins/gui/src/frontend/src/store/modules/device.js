@@ -112,18 +112,19 @@ export const device = {
 						let value = findValue(field, device)
 						if (value) { processedDevice[field.path] = value }
 					})
-					state.fields.unique.forEach((field) => {
-						if (!field.selected) { return }
-						let fieldParts = field.path.match(/adapters\.([\w_]*)\.(.*)/)
-						let currentValue = device.adapters.filter((adapter) => {
-							return adapter.plugin_name === fieldParts[1]
-						})[0]
-						let keys = fieldParts[2].split('.')
-						let keysIndex = 0
-						while (currentValue && keysIndex < keys.length) {
-							currentValue = currentValue[keys[keysIndex]]
-						}
-						processedData[field.path] = currentValue
+					Object.keys(state.fields.unique).forEach((pluginName) => {
+						state.fields.unique[pluginName].forEach((field) => {
+							if (!field.selected) { return }
+							let currentValue = device.adapters.filter((adapter) => {
+								return adapter.plugin_name === pluginName
+							})[0]
+							let keys = field.path.split('.').splice(1)
+							let keysIndex = 0
+							while (currentValue && keysIndex < keys.length) {
+								currentValue = currentValue[keys[keysIndex]]
+							}
+							processedData[field.path] = currentValue
+						})
 					})
 					processedData.push(processedDevice)
 				})
@@ -135,11 +136,14 @@ export const device = {
 		},
 		[ UPDATE_UNIQUE_FIELDS ] (state, payload) {
 			if (payload.data) {
-				payload.data.forEach(function (field) {
-					let fieldParts = field.split('.')
-					let fieldName = fieldParts.splice(4).join('.')
-					state.fields.unique.push({
-						path: field, name: fieldParts[1].split('_')[0] + ': ' + fieldName, control: 'text'
+				state.fields.unique = {}
+				Object.keys(payload.data).forEach(function (pluginName) {
+					state.fields.unique[pluginName] = []
+					payload.data[pluginName].forEach((fieldPath) => {
+						let fieldName = fieldPath.split('.').splice(3).join('.')
+						state.fields.unique[pluginName].push({
+							path: fieldPath, name: `${pluginName}: ${fieldName}`, control: 'text'
+						})
 					})
 				})
 			}
@@ -194,8 +198,10 @@ export const device = {
 			state.fields.common.forEach((field) => {
 				field.selected = payload.indexOf(field.path) > -1
 			})
-			state.fields.unique.forEach((field) => {
-				field.selected = payload.indexOf(field.path) > -1
+			Object.values(state.fields.unique).forEach((pluginFields) => {
+				pluginFields.forEach((field) => {
+					field.selected = payload.indexOf(field.path) > -1
+				})
 			})
 		}
 	},
