@@ -133,7 +133,9 @@ export const device = {
 					payload.data[pluginName].forEach((fieldPath) => {
 						let fieldName = fieldPath.split('.').splice(3).join('.')
 						state.fields.unique[pluginName].push({
-							path: fieldPath, name: `${pluginName}: ${fieldName}`, control: 'text'
+							path: fieldPath,
+							name: `${adapterStaticData[pluginName].name}: ${fieldName}`,
+							control: 'text'
 						})
 					})
 				})
