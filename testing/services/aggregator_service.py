@@ -18,7 +18,7 @@ class AggregatorService(plugin_service.PluginService):
         return response
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def aggregator_fixture(request):
     service = AggregatorService()
     initalize_fixture(request, service)
