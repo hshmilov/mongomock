@@ -252,10 +252,10 @@ class BackendPlugin(PluginBase):
             self._aggregator_plugin_unique_name = None
         else:
             self._aggregator_plugin_unique_name = aggregator['plugin_unique_name']
-            # self._elk_addr = config['gui_specific']['elk_addr']
-            # self._elk_auth = config['gui_specific']['elk_auth']
-            # self.db_user = config['gui_specific']['db_user']
-            # self.db_password = config['gui_specific']['db_password']
+        self._elk_addr = config['gui_specific']['elk_addr']
+        self._elk_auth = config['gui_specific']['elk_auth']
+        self.db_user = config['gui_specific']['db_user']
+        self.db_password = config['gui_specific']['db_password']
 
     def _get_aggregator(self):
         # using requests directly so the gui key won't be sent, so the core will give a list of the plugins
@@ -345,7 +345,7 @@ class BackendPlugin(PluginBase):
         """
         Get Axonius devices from the aggregator
         """
-        with self._get_db_connection(True) as db_connection:
+        with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
@@ -363,7 +363,7 @@ class BackendPlugin(PluginBase):
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
-        with self._get_db_connection(True) as db_connection:
+        with self._get_db_connection(False) as db_connection:
             if request.method == 'GET':
                 return jsonify(db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
                     {'internal_axon_id': device_id}))
@@ -414,7 +414,7 @@ class BackendPlugin(PluginBase):
             return [current_path]
 
         all_fields = {}
-        with self._get_db_connection(True) as db_connection:
+        with self._get_db_connection(False) as db_connection:
             all_devices = list(
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
@@ -432,9 +432,8 @@ class BackendPlugin(PluginBase):
         :return:
         """
         all_tags = set()
-        with self._get_db_connection(True) as db_connection:
+        with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
-
             for current_device in client_collection.find({"tags.tagname": {"$exists": True}}):
                 for current_tag in current_device['tags']:
                     all_tags.add(current_tag['tagname'])
@@ -468,7 +467,7 @@ class BackendPlugin(PluginBase):
             result = queries_collection.insert_one(
                 {'filter': json.dumps(query_data), 'name': query_name, 'query_type': 'saved',
                  'timestamp': datetime.now(), 'archived': False})
-            return str(result.inserted_id), 200
+            return str(result), 200
 
     @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
     def delete_query(self, query_id):
@@ -503,14 +502,13 @@ class BackendPlugin(PluginBase):
         :mongo_filter
         :return:
         """
-        plugins_available = self.request_remote_plugin('register').json()
+        plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
                 [('plugin_unique_name', pymongo.ASCENDING)])
-            return jsonify({'name': adapter['plugin_name'],
-                            'id': adapter['plugin_unique_name'],
-                            'state': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error',
-                            'schema': self._get_plugin_schemas(db_connection, adapter['plugin_unique_name'])
+            return jsonify({'plugin_name': adapter['plugin_name'],
+                            'unique_plugin_name': adapter['plugin_unique_name'],
+                            'status': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error'
                             }
                            for adapter in
                            adapters_from_db)
@@ -528,17 +526,19 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
-                return jsonify(
-                    beautify_db_entry(client) for client in
-                    client_collection.find().sort([('_id', pymongo.ASCENDING)]).skip(
-                        skip).limit(limit))
+                return jsonify({
+                    'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
+                    'clients': [beautify_db_entry(client) for client in
+                                client_collection.find({'archived': False}).sort([('_id', pymongo.ASCENDING)])
+                                .skip(skip).limit(limit)]
+                })
             if request.method == 'POST':
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
                     return return_error("Invalid client", 400)
                 client_to_add['archived'] = False
                 result = client_collection.insert(client_to_add)
-                return str(result.inserted_id), 200
+                return str(result), 200
 
     @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'],
               should_authenticate=False)
@@ -553,6 +553,7 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'POST':
                 client_to_update = request.get_json(silent=True)
+                client_to_update['archived'] = False
                 client_collection.update_one({'_id': ObjectId(client_id)}, {
                     '$set': client_to_update
                 })

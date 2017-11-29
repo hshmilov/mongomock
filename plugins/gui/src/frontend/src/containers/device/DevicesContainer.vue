@@ -78,6 +78,7 @@
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import { FETCH_UNIQUE_FIELDS, FETCH_DEVICES, FETCH_DEVICE, FETCH_TAGS, SAVE_DEVICE_TAGS } from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
+    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
 
 	export default {
 		name: 'devices-container',
@@ -151,6 +152,7 @@
             if (!Object.keys(this.device.fields.unique).length) {
 				this.fetchFields()
 			}
+			this.fetchAdapters()
 			this.fetchTags()
 			this.selectedQuery = {...this.query.currentQuery}
 			this.queryDropdown.value = queryToStr(this.selectedQuery)
@@ -170,7 +172,8 @@
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
-				saveDeviceTags: SAVE_DEVICE_TAGS
+				saveDeviceTags: SAVE_DEVICE_TAGS,
+                fetchAdapters: FETCH_ADAPTERS
 			}),
 			extractQuery () {
 				this.selectedQuery = strToQuery(this.queryDropdown.value)

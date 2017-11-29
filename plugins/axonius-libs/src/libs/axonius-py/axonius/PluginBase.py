@@ -736,7 +736,7 @@ class PluginBase(object):
 
         return promise_for_action
 
-    def _get_db_connection(self, limited_user):
+    def _get_db_connection(self, limited_user=True):
         """
         Returns a new DB connection that can be queried.
         Currently, it uses mongodb
