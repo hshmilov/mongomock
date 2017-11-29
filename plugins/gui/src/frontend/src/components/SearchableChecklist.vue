@@ -4,7 +4,7 @@
         <search-input v-if="hasSearch" v-model="searchValue"></search-input>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
             <div class="checklist-list">
-                <checkbox v-for="item in requestedItems" :key="item.path" :label="item.name"
+                <checkbox v-for="item, index in requestedItems" :key="index" :label="item.name"
                           v-model="itemSelection[item.path]" @change="updateSelected()"></checkbox>
                 <checkbox v-if="producesNew && searchValue" :label="`${searchValue} (New tag)`" class="checklist-new"
                           v-model="itemSelection[searchValue]" @change="updateSelected()"></checkbox>
