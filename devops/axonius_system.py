@@ -1,6 +1,7 @@
 import services.mongo_service as db
 import services.core_service as core
 import services.aggregator_service as aggregator
+import services.gui_service as gui
 
 import argparse
 import sys
@@ -11,9 +12,11 @@ def start():
     db.MongoService().start_and_wait()
     core.CoreService().start_and_wait()
     aggregator.AggregatorService().start_and_wait()
+    gui.GuiService().start_and_wait()
 
 
 def stop():
+    gui.GuiService().stop(should_delete=False)
     aggregator.AggregatorService().stop(should_delete=False)
     core.CoreService().stop(should_delete=False)
     db.MongoService().stop(should_delete=False)
