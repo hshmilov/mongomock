@@ -3,15 +3,13 @@ AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
 
-__author__ = "Mark Segal"
-
 import concurrent.futures
 
+from axonius import AdapterExceptions
 from axonius.PluginBase import PluginBase, add_rule, return_error
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
-from base64 import standard_b64decode
 
 
 class AdapterBase(PluginBase, ABC):
@@ -208,12 +206,22 @@ class AdapterBase(PluginBase, ABC):
         """
         # Running query on each device
         for client_name, client in self._clients.items():
-            raw_devices = self._query_devices_by_client(client_name, client)
-            parsed_devices = list(self._parse_raw_data(raw_devices))
-            devices_list = {'raw': raw_devices,
-                            'parsed': parsed_devices}
+            try:
+                raw_devices = self._query_devices_by_client(client_name, client)
+                parsed_devices = list(self._parse_raw_data(raw_devices))
+            except AdapterExceptions.CredentialErrorException as e:
+                self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
+            except AdapterExceptions.AdapterException as e:
+                self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
+                self.logger.error(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+            except Exception as e:
+                self.logger.error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+            else:
+                devices_list = {'raw': raw_devices,
+                                'parsed': parsed_devices}
 
-            yield [client_name, devices_list]
+                yield [client_name, devices_list]
 
     @abstractmethod
     def _clients_schema(self):
