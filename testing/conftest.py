@@ -24,9 +24,9 @@ class AxoniusService(object):
 
     def add_client_to_adapter(self, adapter, client_details, client_id):
         adapter.add_client(self.db, client_details, client_id)
-        self.aggregator.query_devices()  # send trigger to agg to refresh devices
 
     def assert_device_aggregated(self, adapter, client_id, some_device_id):
+        self.aggregator.query_devices()  # send trigger to agg to refresh devices
         devices_as_dict = adapter.devices()
         assert client_id in devices_as_dict
 
