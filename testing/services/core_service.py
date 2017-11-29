@@ -17,7 +17,7 @@ class CoreService(plugin_service.PluginService):
 
         return requests.get(self.req_url + "/register", headers=headers)
 
-    @pytest.fixture(scope="session")
+    @pytest.fixture(scope="module")
     def core_fixture(request):
         service = CoreService()
         initalize_fixture(request, service)

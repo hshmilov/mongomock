@@ -53,9 +53,6 @@ class PluginService(services.compose_service.ComposeService):
     def action_update(self, action_id):
         raise NotImplemented("TBD!")
 
-    def schema(self, schema_type="general", api_key=None):
-        return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
-
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
         all_plugins = json.loads(core_service.register().content)
@@ -111,3 +108,6 @@ class AdapterService(PluginService):
 
     def action(self, action_type):
         raise NotImplemented("TBD!")
+
+    def schema(self, schema_type="general", api_key=None):
+        return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
