@@ -3,22 +3,15 @@
         <table class="table scrollable-table">
             <thead>
             <tr>
-                <th v-for="field in fields" class="table-head">{{ field.name }}</th>
+                <th v-for="field in fields"  v-if="!field.hidden" class="table-head">{{ field.name }}</th>
                 <th class="table-head" v-if="actions !== undefined"></th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="record in data" class="table-row">
-                <td v-for="field, index in fields" class="table-row-data">
-                    <template v-if="field.type === 'status-icon-logo-text'">
-                        <status-icon-logo-text :textValue="`${record[field.path]} (${record['id']})`"
-                                               :logoValue="record['type']"
-                                               :statusIconValue="record['status']"></status-icon-logo-text>
-                    </template>
-                    <template v-else>
-                        {{ record[field.path] }}
-                    </template>
-                </td>
+                <generic-table-cell class="table-row-data" v-for="field in fields" v-if="!field.hidden"
+                                    :key="field.path" :value="record[field.path]" :type="field.type">
+                </generic-table-cell>
                 <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                     <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
                         <i :class="action.triggerFont"></i>
@@ -33,10 +26,13 @@
 
 <script>
 	import StatusIconLogoText from './StatusIconLogoText.vue'
+	import GenericTableCell from './GenericTableCell.vue'
 
 	export default {
 		name: 'scrollable-table',
-		components: { StatusIconLogoText },
+		components: {
+			GenericTableCell,
+			StatusIconLogoText },
 		props: ['data', 'fetching', 'error', 'fields', 'actions'],
 		methods: {}
 	}

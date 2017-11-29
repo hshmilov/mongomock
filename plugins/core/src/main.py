@@ -169,7 +169,6 @@ class Core(PluginBase):
         db_password = ''.join(random.choices(
             string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
-        configs = self._get_collection("configs").find()
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
                  {'role': 'insert_notification', 'db': 'core'},
                  {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's

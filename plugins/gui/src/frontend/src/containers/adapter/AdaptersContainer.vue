@@ -17,8 +17,7 @@
             </div>
         </card>
         <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" :actions="[
-        	{triggerFont: 'icon-pencil2', handler: configAdapter},
-        	{triggerFont: 'icon-eye', handler: quickViewAdapter}]"></scrollable-table>
+        	{triggerFont: 'icon-pencil2', handler: configAdapter}]"></scrollable-table>
     </scrollable-page>
 </template>
 
@@ -30,7 +29,7 @@
 	import SearchInput from '../../components/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-    import { FETCH_ADAPTERS, FETCH_ADAPTER } from '../../store/modules/adapter'
+    import { FETCH_ADAPTERS, FETCH_ADAPTER_SERVERS } from '../../store/modules/adapter'
 
     export default {
         name: 'adapters-container',
@@ -44,7 +43,7 @@
             }
         },
         methods: {
-            ...mapActions({ fetchAdapters: FETCH_ADAPTERS, fetchAdapter: FETCH_ADAPTER }),
+            ...mapActions({ fetchAdapters: FETCH_ADAPTERS, fetchAdapter: FETCH_ADAPTER_SERVERS }),
         	configAdapter(adapterId) {
             	/*
             	    Fetch adapter requested to be configured asynchronously, before navigating to the
