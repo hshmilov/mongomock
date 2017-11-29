@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-autopep8 --max-line-length 120 --exclude venv --recursive --in-place .
+git ls-files | grep "\.py" | xargs autopep8 --max-line-length 120 --in-place
