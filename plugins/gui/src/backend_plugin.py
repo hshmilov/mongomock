@@ -413,14 +413,14 @@ class BackendPlugin(PluginBase):
                 return new_paths
             return [current_path]
 
-        all_fields = set()
+        all_fields = {}
         with self._get_db_connection(False) as db_connection:
             all_devices = list(
                 db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
             for current_device in all_devices:
                 for current_adapter in current_device['adapters']:
-                    init_path = '.'.join(['adapters', current_adapter['plugin_name'], 'data.raw'])
-                    all_fields.update(_find_paths_to_strings(current_adapter['data']['raw'], init_path))
+                    all_fields[current_adapter['plugin_name']] = _find_paths_to_strings(
+                        current_adapter['data']['raw'], 'adapters.data.raw')
 
         return jsonify(all_fields)
 

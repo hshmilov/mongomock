@@ -90,7 +90,11 @@
 		computed: {
 			...mapState(['device', 'query']),
             totalFields() {
-				return [ ...this.device.fields.common, ...this.device.fields.unique ]
+				let fields = [ ...this.device.fields.common ]
+                Object.values(this.device.fields.unique).forEach((currentFields) => {
+					fields = fields.concat(currentFields)
+                })
+                return fields
             },
             visibleFields() {
 				return this.totalFields.filter((field) => {
@@ -145,7 +149,7 @@
 			}
 		},
 		created () {
-            if (!this.device.fields.unique || !this.device.fields.unique.length) {
+            if (!Object.keys(this.device.fields.unique).length) {
 				this.fetchFields()
 			}
 			this.fetchAdapters()
