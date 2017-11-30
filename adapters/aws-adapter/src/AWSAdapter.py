@@ -46,7 +46,7 @@ class AWSAdapter(AdapterBase):
         clients_dict = {}
         for aws_auth in clients_config:
             try:
-                aws_id = str(aws_auth['_id'])
+                aws_id = aws_auth['aws_access_key_id']
                 del aws_auth['_id']
                 clients_dict[aws_id] = boto3.client('ec2', **aws_auth)
             except BotoCoreError as e:
