@@ -2,7 +2,7 @@ import pytest
 import pymongo
 
 import services.compose_service
-from services.simple_fixture import initalize_fixture
+from services.simple_fixture import initialize_fixture
 
 
 class MongoService(services.compose_service.ComposeService):
@@ -60,5 +60,5 @@ class MongoService(services.compose_service.ComposeService):
 @pytest.fixture(scope="module")
 def mongo_fixture(request):
     service = MongoService()
-    initalize_fixture(request, service)
+    initialize_fixture(request, service)
     return service

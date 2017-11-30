@@ -3,7 +3,7 @@ import pytest
 from services.mongo_service import MongoService
 from services.core_service import CoreService
 from services.aggregator_service import AggregatorService
-from services.simple_fixture import initalize_fixture
+from services.simple_fixture import initialize_fixture
 from test_helpers.utils import try_until_not_thrown
 
 
@@ -54,12 +54,12 @@ class AxoniusService(object):
 @pytest.fixture(scope="session", autouse=True)
 def axonius_fixture(request):
     mongo = MongoService()
-    initalize_fixture(request, mongo)
+    initialize_fixture(request, mongo)
 
     core = CoreService()
-    initalize_fixture(request, core)
+    initialize_fixture(request, core)
 
     aggregator = AggregatorService()
-    initalize_fixture(request, aggregator)
+    initialize_fixture(request, aggregator)
 
     return AxoniusService(mongo, core, aggregator)

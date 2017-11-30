@@ -1,7 +1,7 @@
 import pytest
 import requests
 import services.plugin_service as plugin_service
-from services.simple_fixture import initalize_fixture
+from services.simple_fixture import initialize_fixture
 
 
 class CoreService(plugin_service.PluginService):
@@ -20,5 +20,5 @@ class CoreService(plugin_service.PluginService):
     @pytest.fixture(scope="module")
     def core_fixture(request):
         service = CoreService()
-        initalize_fixture(request, service)
+        initialize_fixture(request, service)
         return service

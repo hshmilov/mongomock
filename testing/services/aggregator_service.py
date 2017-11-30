@@ -1,6 +1,6 @@
 import pytest
 import services.plugin_service as plugin_service
-from services.simple_fixture import initalize_fixture
+from services.simple_fixture import initialize_fixture
 from services.plugin_service import API_KEY_HEADER
 import requests
 
@@ -21,5 +21,5 @@ class AggregatorService(plugin_service.PluginService):
 @pytest.fixture(scope="module")
 def aggregator_fixture(request):
     service = AggregatorService()
-    initalize_fixture(request, service)
+    initialize_fixture(request, service)
     return service

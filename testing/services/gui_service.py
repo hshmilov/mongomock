@@ -1,6 +1,6 @@
 import pytest
 import services.plugin_service as plugin_service
-from services.simple_fixture import initalize_fixture
+from services.simple_fixture import initialize_fixture
 
 
 class GuiService(plugin_service.AdapterService):
@@ -13,5 +13,5 @@ class GuiService(plugin_service.AdapterService):
 @pytest.fixture(scope="module")
 def gui_fixture(request):
     service = GuiService()
-    initalize_fixture(request, service)
+    initialize_fixture(request, service)
     return service

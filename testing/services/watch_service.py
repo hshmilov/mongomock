@@ -2,7 +2,7 @@ import pytest
 import json
 
 import services.plugin_service as plugin_service
-from services.simple_fixture import initalize_fixture
+from services.simple_fixture import initialize_fixture
 
 
 class WatchService(plugin_service.PluginService):
@@ -30,5 +30,5 @@ class WatchService(plugin_service.PluginService):
 @pytest.fixture(scope="module")
 def watch_fixture(request):
     service = WatchService()
-    initalize_fixture(request, service)
+    initialize_fixture(request, service)
     return service

@@ -274,5 +274,6 @@ fabric.properties
 *supervisord.pid
 .idea/misc.xml
 .idea/cortex.iml
+.idea/markdown*
 *.filters
 *plugin_volatile_config.ini
