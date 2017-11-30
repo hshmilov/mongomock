@@ -9,7 +9,7 @@ if [ $(git ls-files | grep "\.py" | xargs autopep8 --max-line-length 120 --diff 
 fi
 
 echo "Running unitests"
-pytest --ignore=testing --ignore=plugins/gui/src/frontend
+pytest --ignore=testing --ignore=plugins/gui/src/frontend --junitxml=testing/reporting/ut_report.xml
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"
@@ -19,7 +19,7 @@ echo "Finished unitests"
 
 echo "Start integration tests"
 cd ./testing
-timeout 500 python run_tests.py $@
+timeout 500 python run_tests.py -s --junitxml=reporting/integ_report.xml tests $@
 if [ $? -ne 0 ]
 then
   echo "Integration tests failed"

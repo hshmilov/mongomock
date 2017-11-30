@@ -277,3 +277,4 @@ fabric.properties
 .idea/markdown*
 *.filters
 *plugin_volatile_config.ini
+testing/reporting/*

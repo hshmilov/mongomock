@@ -1,11 +1,9 @@
 import pytest
 import sys
 
-filtering = sys.argv[1] if len(sys.argv) == 2 else ""
-
 
 def main():
-    return pytest.main(['-s', './tests' + filtering])
+    return pytest.main(sys.argv)
 
 
 if __name__ == '__main__':
