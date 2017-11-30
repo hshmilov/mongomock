@@ -20,3 +20,7 @@ def test_aggregator_registered(axonius_fixture):
     aggregator = axonius_fixture.aggregator
     core = axonius_fixture.core
     assert aggregator.is_plugin_registered(core)
+
+
+def test_aggregator_restart(axonius_fixture):
+    axonius_fixture.restart_plugin(axonius_fixture.aggregator)
