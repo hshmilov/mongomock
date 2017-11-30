@@ -10,12 +10,14 @@ class CoreService(plugin_service.PluginService):
                  vol_config_file_path='../adapters/core/src/plugin_volatile_config.ini'):
         super().__init__(compose_file_path, config_file_path, vol_config_file_path)
 
-    def register(self, api_key=None):
+    def register(self, api_key=None, plugin_name=""):
         headers = {}
-        if not api_key:
+        params = {}
+        if api_key:
             headers[plugin_service.API_KEY_HEADER] = api_key
+            params[plugin_service.UNIQUE_KEY_PARAM] = plugin_name
 
-        return requests.get(self.req_url + "/register", headers=headers)
+        return requests.get(self.req_url + "/register", headers=headers, params=params)
 
     @pytest.fixture(scope="module")
     def core_fixture(request):

@@ -5,6 +5,7 @@ import axonius.ConfigReader
 import json
 
 API_KEY_HEADER = "x-api-key"
+UNIQUE_KEY_PARAM = "unique_name"
 
 
 class PluginService(services.compose_service.ComposeService):
@@ -55,9 +56,7 @@ class PluginService(services.compose_service.ComposeService):
 
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
-        all_plugins = json.loads(core_service.register().content)
-
-        return unique_name in all_plugins
+        return core_service.register(self.api_key, unique_name).status_code == 200
 
     def is_up(self):
         return self._is_service_alive()
