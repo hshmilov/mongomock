@@ -13,19 +13,21 @@ class LdapConnection:
     Data from the wanted ActiveDirectory.
     """
 
-    def __init__(self, server_addr, domain_name, user_name, user_password):
+    def __init__(self, server_addr, domain_name, user_name, user_password, dns_server):
         """Class initialization.
 
         :param str server_addr: Server address (name of IP)
         :param str domain_name: Domain name to connect with
         :param str user_name: User name to connect with
         :param str user_password: Password
+        :param str dns_server: Address of other dns server
         """
 
         self.server_addr = server_addr
         self.domain_name = domain_name
         self.user_name = user_name
         self.user_password = user_password
+        self.dns_server = dns_server
         self.ldap_connection = None
 
         self._connect_to_server()
@@ -87,6 +89,9 @@ class LdapConnection:
             return wanted_attr == '*' or attr_name in wanted_attr
 
         for one_device in device_list_ldap:
-            yield {attr_name: attr_val for
-                   attr_name, attr_val in one_device['attributes'].items()
-                   if is_wanted_attr(attr_name)}
+            device_dict = {attr_name: attr_val for
+                           attr_name, attr_val in one_device['attributes'].items()
+                           if is_wanted_attr(attr_name)}
+            device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
+            device_dict['AXON_DOMAIN_NAME'] = self.domain_name
+            yield device_dict

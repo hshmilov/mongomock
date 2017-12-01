@@ -22,8 +22,18 @@ class AxoniusService(object):
         cond = {'adapters.data.id': device_id, 'adapters.plugin_unique_name': adapter_name}
         return self.get_devices_with_condition(cond)
 
+    def trigger_aggregator(self):
+        self.aggregator.query_devices()  # send trigger to agg to refresh devices
+
     def add_client_to_adapter(self, adapter, client_details, client_id):
         adapter.add_client(self.db, client_details, client_id)
+        self.trigger_aggregator()
+
+    def get_device_network_interfaces(self, adapter_name, device_id):
+        device = self.get_device_by_id(adapter_name, device_id)
+        adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if
+                              adapter_device['plugin_unique_name'] == adapter_name)
+        return adapter_device['data']['network_interfaces']
 
     def assert_device_aggregated(self, adapter, client_id, some_device_id):
         self.aggregator.query_devices()  # send trigger to agg to refresh devices

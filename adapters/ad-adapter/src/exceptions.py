@@ -18,3 +18,8 @@ class LdapException(AdException):
 class NoClientError(AdException):
     def __init__(self, message="Couldnt find client for execution"):
         super().__init__(message)
+
+
+class IpResolveError(AdException):
+    def __init__(self, message=""):
+        super().__init__(message)

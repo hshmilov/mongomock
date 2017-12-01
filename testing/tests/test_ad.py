@@ -1,4 +1,5 @@
 from services.ad_service import ad_fixture
+from test_helpers.utils import try_until_not_thrown
 
 ad_client_details = {
     "admin_password": "@vULuAZa5-MPxac6acw%ff-5H=bD)DQ;",
@@ -37,6 +38,17 @@ def test_fetch_devices(axonius_fixture, ad_fixture):
         ad_fixture, ad_client_details, client_id)
     axonius_fixture.assert_device_aggregated(
         ad_fixture, client_id, SOME_DEVICE_ID)
+
+
+def test_ip_resolving(axonius_fixture, ad_fixture):
+    ad_fixture.post('resolve_ip', None, None)
+
+    def assert_ip_resolved():
+        axonius_fixture.trigger_aggregator()
+        interfaces = axonius_fixture.get_device_network_interfaces(ad_fixture.unique_name, SOME_DEVICE_ID)
+        assert len(interfaces) > 0
+
+    try_until_not_thrown(10, 0.5, assert_ip_resolved)
 
 
 def test_restart(axonius_fixture, ad_fixture):
