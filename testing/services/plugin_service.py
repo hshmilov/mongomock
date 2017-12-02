@@ -39,8 +39,8 @@ class PluginService(services.compose_service.ComposeService):
     def put(self, endpoint, data, *kargs, **kwargs):
         return self.request('put', endpoint, data=data, *kargs, **kwargs)
 
-    def post(self, endpoint, data, json, *kargs, **kwargs):
-        return self.request('post', endpoint, data=data, json=json, *kargs, **kwargs)
+    def post(self, endpoint, *kargs, **kwargs):
+        return self.request('post', endpoint, *kargs, **kwargs)
 
     def delete(self, endpoint, *kargs, **kwargs):
         return self.request('delete', endpoint, *kargs, **kwargs)
