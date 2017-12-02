@@ -90,8 +90,8 @@ class AdapterService(PluginService):
         super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
                          vol_config_file_path=vol_config_file_path)
 
-    def add_client(self, db, clients_details, client_id):
-        db.add_client(self.unique_name, clients_details)
+    def add_client(self, db, clients_details, client_id, identify_field):
+        db.add_client(self.unique_name, clients_details, identify_field)
         clients = json.loads(self.clients().content)
         assert client_id in clients
         return clients
