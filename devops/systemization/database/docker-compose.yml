@@ -9,8 +9,12 @@ services:
           - MONGO_INITDB_DATABASE=core
         volumes:
           - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+          - data_volume:/data/db
         ports:
             - 27018:27017
+
+volumes:
+  data_volume:
 
 
 networks:
