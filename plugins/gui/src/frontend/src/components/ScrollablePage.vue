@@ -1,27 +1,28 @@
 <template>
-    <div class="page-wrapper"
-         v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
-        <div v-if="title" class="page-header">
-            <h2>{{ title }}</h2>
-        </div>
-        <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
+    <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
+        <div class="page-wrapper"
+             v-bind:class=" { 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
+            <div v-if="title" class="page-header">
+                <h2>{{ title }}</h2>
+            </div>
             <div class="page-body">
                 <slot></slot>
             </div>
-        </vue-scrollbar>
-    </div>
+            <div class="clearfix"></div>
+        </div>
+    </vue-scrollbar>
 </template>
 
 <script>
-    import VueScrollbar from 'vue2-scrollbar'
-    import { mapState } from 'vuex'
+	import VueScrollbar from 'vue2-scrollbar'
+	import { mapState } from 'vuex'
 
-    export default {
-        name: 'scrollable-page',
-        components: { VueScrollbar },
-        props: ['title'],
-        computed: mapState(['interaction'])
-    }
+	export default {
+		name: 'scrollable-page',
+		components: {VueScrollbar},
+		props: ['title'],
+		computed: mapState(['interaction'])
+	}
 </script>
 
 <style lang="scss">
@@ -32,8 +33,6 @@
         padding: 62px 0 0;
         height: 100%;
         padding-left: 240px;
-        display: flex;
-        flex-flow: column;
         position: relative;
         width: 100%;
         &.collapse {
@@ -42,7 +41,6 @@
             padding-top: 60px;
         }
         .page-header {
-            flex: 0 1 auto;
             height: 36px;
             width: 100%;
             padding: 12px 24px;
@@ -57,15 +55,9 @@
                 line-height: 24px;
             }
         }
-        .scrollbar-container {
-            flex: 1 1 auto;
-            height: 100vh;
-            background-color: transparent;
-            margin: 0;
-            .page-body {
-                padding: 12px 24px;
-                height: 100%;
-            }
+        .page-body {
+            padding: 12px 24px;
+            height: 100%;
         }
     }
 </style>

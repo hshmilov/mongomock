@@ -76,7 +76,7 @@
             }
         }
         .dropdown-menu {
-            width: 100%;
+            z-index: 10;
             top: 96%;
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
             -webkit-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);

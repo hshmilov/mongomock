@@ -19,7 +19,7 @@
             <type-icon :value="value"></type-icon>
         </template>
         <template v-else-if="type && type.indexOf('list') > -1">
-            <object-list v-if="value && value.length" :type="type" :data="value" :limit="3"></object-list>
+            <object-list v-if="value && value.length" :type="type" :data="value" :limit="2"></object-list>
         </template>
         <template v-else>
             <span>{{ value }}</span>

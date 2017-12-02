@@ -1,13 +1,16 @@
 <template>
-    <div class="info-dialog d-flex flex-column" v-bind:class="{ 'show animated slideInRight': open }">
-        <div class="info-dialog-header p-3">
-            <span class="info-dialog-close" @click="closeDialog($event)">x</span>
-            <div class="info-dialog-title">{{ title }}</div>
+    <transition name="custom-classes-transition"
+                enter-active-class="animated fadeInRight" leave-active-class="animated fadeOutRight">
+        <div class="info-dialog d-flex flex-column">
+            <div class="info-dialog-header p-3">
+                <span class="info-dialog-close" @click="$emit('close')">x</span>
+                <div class="info-dialog-title">{{ title }}</div>
+            </div>
+            <div class="info-dialog-body">
+                <slot></slot>
+            </div>
         </div>
-        <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
-            <slot></slot>
-        </vue-scrollbar>
-    </div>
+    </transition>
 </template>
 
 <script>
@@ -16,7 +19,7 @@
     export default {
         name: 'info-dialog',
       components: { VueScrollbar },
-        props: ['open', 'title', 'closeDialog']
+        props: ['open', 'title']
     }
 </script>
 
@@ -33,13 +36,10 @@
         letter-spacing: 1.5px;
         font-weight: 200;
         height: 100%;
-        width: 0;
         box-shadow: -4px 0px 4px rgba(0, 0, 0, 0.5);
-        &.show {
-            width: 280px;
-	    }
+        width: 360px;
         .info-dialog-header {
-            background-color: $color-theme-light;
+            background-color: $color-theme-dark;
             height: 80px;
             color: $color-light;
             position: relative;
@@ -54,6 +54,9 @@
                 position: absolute;
                 vertical-align: bottom;
             }
+        }
+        .info-dialog-body {
+            padding: 24px;
         }
         .data-logo {
             width: 48px;

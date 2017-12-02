@@ -2,7 +2,7 @@
     <scrollable-page title="plugins" class="plugins">
         <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :clickOne="navigatePluginView"
                           :actions="[ { handler: executeQuickView, triggerFont: 'icon-eye' } ]"></scrollable-table>
-        <info-dialog :open="infoDialogOpen" title="Plugin Quick View" :closeDialog="closeQuickView.bind(this)">
+        <info-dialog :open="infoDialogOpen" title="Plugin Quick View" @close="infoDialogOpen = false">
             <div class="info-dialog-content-title w-100 text-center mt-4">
                 <img v-if="plugin.pluginDetails.data['unique_plugin_name']" class="data-logo d-inline-block"
                      :src="`/src/assets/images/logos/${plugin.pluginDetails.data['unique_plugin_name']}.png`">

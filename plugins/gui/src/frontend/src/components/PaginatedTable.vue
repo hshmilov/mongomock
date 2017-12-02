@@ -2,43 +2,46 @@
     <div class="table-responsive paginated-table">
         <div class="dataTables_wrapper">
             <pulse-loader :loading="fetching" color="#26dad2"></pulse-loader>
-            <table class="table">
-                <thead>
-                <tr>
-                    <th class="table-head checkbox-container">
-                        <checkbox v-if="value !== undefined" v-model="selectAllRecords"
-                                  @change="updateSelectedAll()"></checkbox>
-                    </th>
-                    <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
-                    <th class="table-head" v-if="actions !== undefined"></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr class="table-row" v-bind:class="{ active: recordSelection[record.id] }" :data-id="record.id"
-                    v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
-                    <td class="table-row-data">
-                        <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
-                                  @change="updateSelected()"></checkbox>
-                    </td>
-                    <generic-table-cell class="table-row-data" v-for="field, index in fields" v-if="!field.hidden"
-                                        :key="index" :type="field.type" :value="record[field.path]">
-                    </generic-table-cell>
-                    <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                        <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
-                            <i v-if="action.triggerFont" :class="action.triggerFont"></i>
-                            <svg-icon :name="`navigation/${action.triggerIcon}`" height="24" width="24" :original="true"
-                                      v-else></svg-icon>
-                        </a>
-                    </td>
-                </tr>
-                <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
-                    v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
-                    <td class="table-row-data">&nbsp</td>
-                    <td v-for="field in fields" class="table-row-data">&nbsp</td>
-                    <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
-                </tr>
-                </tbody>
-            </table>
+                <div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th class="table-head checkbox-container">
+                                    <checkbox v-if="value !== undefined" v-model="selectAllRecords"
+                                              @change="updateSelectedAll()"></checkbox>
+                                </th>
+                                <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
+                                <th class="table-head" v-if="actions !== undefined"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-row" v-bind:class="{ active: recordSelection[record.id] }"
+                                v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
+                                <td class="table-row-data">
+                                    <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
+                                              @change="updateSelected()"></checkbox>
+                                </td>
+                                <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
+                                                    v-if="!field.hidden" :type="field.type" :value="record[field.path]">
+                                </generic-table-cell>
+                                <td class="table-row-data table-row-actions" v-if="actions !== undefined">
+                                    <a v-for="action in actions" class="table-row-action" @click="action.handler(record.id)">
+                                        <i v-if="action.triggerFont" :class="action.triggerFont"></i>
+                                        <svg-icon :name="`navigation/${action.triggerIcon}`" height="24" width="24"
+                                                  :original="true" v-else></svg-icon>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
+                                v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
+                                <td class="table-row-data">&nbsp</td>
+                                <td v-for="field in fields" class="table-row-data">&nbsp</td>
+                                <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="clearfix"></div>
+                </div>
             <div v-if="error" class="dataTables_info alert-error">Problem occured while fetching data: {{ error }}</div>
             <div class="dataTables_paginate paging_simple_numbers">
                 <a @click="prevPage" class="paginate_button squash_button"
@@ -51,11 +54,13 @@
                 <a @click="nextPage" class="paginate_button"
                    :class="{ 'disabled': lastPage}">Next</a>
             </div>
+            <slot></slot>
         </div>
     </div>
 </template>
 
 <script>
+	import VueScrollbar from 'vue2-scrollbar'
 	import Checkbox from './Checkbox.vue'
     import GenericTableCell from './GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
@@ -63,9 +68,9 @@
 
 	export default {
 		name: 'paginated-table',
-		components: { Checkbox, GenericTableCell, PulseLoader },
+		components: { VueScrollbar, Checkbox, GenericTableCell, PulseLoader },
 		props: [
-			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value'
+			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value', 'active-id'
 		],
 		computed: {
 			pageSize () {
@@ -142,7 +147,7 @@
 					this.addData()
 				} else if (!this.fetching) {
                     this.maxPages += parseInt(diff / this.pageSize)
-					if (diff === 0 && this.maxPages > 0) {
+					if (diff % this.pageSize === 0 && this.maxPages > 0) {
 						this.maxPages--
 					}
 					this.linkedPageCount = Math.min(5, this.maxPages + 1)
@@ -213,6 +218,7 @@
     @import '../scss/config';
 
     .dataTables_wrapper {
+        overflow-x: hidden;
         padding-top: 10px;
         .spinner-container {
             border-bottom-left-radius: 4px;
@@ -275,15 +281,7 @@
         .table-row {
             &:hover, &.active {
                 .table-row-data {
-                    border-top: 1px solid $color-theme-light;
-                    border-bottom: 1px solid $color-theme-light;
                     background-color: $background-color-hover;
-                    &:first-of-type {
-                        border-left: 1px solid $color-theme-light;
-                    }
-                    &:last-of-type {
-                        border-right: 1px solid $color-theme-light;
-                    }
                 }
                 .table-row-actions a {
                     visibility: visible;
@@ -303,6 +301,7 @@
             }
             .table-row-actions {
                 text-align: right;
+                vertical-align: middle;
                 .table-row-action {
                     visibility: hidden;
                     padding-right: 8px;

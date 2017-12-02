@@ -482,7 +482,7 @@ class BackendPlugin(PluginBase):
             result = queries_collection.insert_one(
                 {'filter': json.dumps(query_data), 'name': query_name, 'query_type': 'saved',
                  'timestamp': datetime.now(), 'archived': False})
-            return str(result), 200
+            return str(result.inserted_id), 200
 
     @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
     def delete_query(self, query_id):
@@ -541,10 +541,11 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
+                filterArchived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
-                                client_collection.find({'archived': False}).sort([('_id', pymongo.ASCENDING)])
+                                client_collection.find(filterArchived).sort([('_id', pymongo.ASCENDING)])
                                 .skip(skip).limit(limit)]
                 })
             if request.method == 'POST':

@@ -1,18 +1,19 @@
 /* eslint-disable no-undef */
 import { REQUEST_API } from '../actions'
-import { UPDATE_ADAPTERS, adapterStaticData } from './adapter'
+import { UPDATE_ADAPTERS, adapterStaticData, adapter } from './adapter'
 
 export const RESTART_DEVICES = 'RESTART_DEVICES'
 export const FETCH_DEVICES = 'FETCH_DEVICES'
 export const UPDATE_DEVICES = 'UPDATE_DEVICES'
 export const FETCH_UNIQUE_FIELDS = 'FETCH_UNIQUE_FIELDS'
 export const UPDATE_UNIQUE_FIELDS = 'UPDATE_UNIQUE_FIELDS'
+
 export const FETCH_TAGS = 'FETCH_TAGS'
 export const UPDATE_TAGS = 'UPDATE_TAGS'
-export const UPDATE_DEVICE_TAGS = 'UPDATE_DEVICE_TAGS'
-export const SAVE_DEVICE_TAGS = 'SAVE_DEVICE_TAGS'
-export const FETCH_DEVICE = 'FETCH_DEVICE'
-export const UPDATE_DEVICE = 'UPDATE_DEVICE'
+export const CREATE_DEVICE_TAGS = 'CREATE_DEVICE_TAGS'
+export const ADD_DEVICE_TAGS = 'ADD_DEVICE_TAGS'
+export const DELETE_DEVICE_TAGS = 'DELETE_DEVICE_TAGS'
+export const REMOVE_DEVICE_TAGS = 'REMOVE_DEVICE_TAGS'
 export const SELECT_FIELDS = 'SELECT_FIELDS'
 
 export const decomposeFieldPath = (data, fieldPath) => {
@@ -42,7 +43,7 @@ export const decomposeFieldPath = (data, fieldPath) => {
 	return decomposeFieldPath(data[fieldPath.substring(0, firstPointIndex)], fieldPath.substring(firstPointIndex + 1))
 }
 
-export const findValue = (field, data) => {
+export const findValues = (field, data) => {
 	let value = []
 	field.path.split(',').forEach((currentPath) => {
 		value = value.concat(decomposeFieldPath({ ...data }, currentPath))
@@ -57,9 +58,6 @@ export const device = {
 	state: {
 		/* Devices according to some query performed by user, updating by request */
 		deviceList: {fetching: false, data: [], error: ''},
-
-		/* Info of one device that was requested */
-		deviceDetails: {fetching: false, data: {}, error: ''},
 
 		/* Configurations specific for devices */
 		fields: {
@@ -78,7 +76,7 @@ export const device = {
 					type: 'list'
 				},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
-				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
+				{path: 'tags.tagvalue', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
 			],
 			unique: []
 		},
@@ -96,18 +94,17 @@ export const device = {
 				let processedData = []
 				payload.data.forEach((device) => {
 					if (!device.adapters || !device.adapters.length) { return }
-					let processedDevice = {}
+					let processedDevice = { id: device['internal_axon_id']}
 					state.fields.common.forEach((field) => {
 						if (!field.selected) { return }
-						let value = findValue(field, device)
+						let value = findValues(field, device)
 						if (value) { processedDevice[field.path] = value }
 					})
-					Object.keys(state.fields.unique).forEach((pluginName) => {
-						state.fields.unique[pluginName].forEach((field) => {
+					device.adapters.forEach((adapter) => {
+						if (!state.fields.unique[adapter.plugin_name]) { return }
+						state.fields.unique[adapter.plugin_name].forEach((field) => {
 							if (!field.selected) { return }
-							let currentValue = device.adapters.filter((adapter) => {
-								return adapter.plugin_name === pluginName
-							})[0]
+							let currentValue = adapter
 							let keys = field.path.split('.').splice(1)
 							let keysIndex = 0
 							while (currentValue && keysIndex < keys.length) {
@@ -134,7 +131,7 @@ export const device = {
 						let fieldName = fieldPath.split('.').splice(3).join('.')
 						state.fields.unique[pluginName].push({
 							path: fieldPath,
-							name: `${adapterStaticData[pluginName].name}: ${fieldName}`,
+							name: `${adapterStaticData[pluginName].name}.${fieldName}`,
 							control: 'text'
 						})
 					})
@@ -157,13 +154,18 @@ export const device = {
 				state.tagList.error = payload.error
 			}
 		},
-		[ UPDATE_DEVICE_TAGS ] (state, payload) {
+		[ ADD_DEVICE_TAGS ] (state, payload) {
+			state.deviceList.data = [ ...state.deviceList.data ]
 			state.deviceList.data.forEach(function (device) {
 				if (payload.devices.indexOf(device['id']) > -1) {
-					device['tags'] = payload.tags
+					if (!device['tags.tagvalue']) { device['tags.tagvalue'] = [] }
+					payload.tags.forEach((tag) => {
+						if (device['tags.tagvalue'].indexOf(tag) !== -1) { return }
+						device['tags.tagvalue'].push(tag)
+					})
 				}
 			})
-			let tags = state.tagList.data.map(function (tag) {
+			let tags = state.tagList.data.map((tag) => {
 				return tag.path
 			})
 			payload.tags.forEach(function (tag) {
@@ -172,20 +174,16 @@ export const device = {
 				}
 			})
 		},
-		[ UPDATE_DEVICE ] (state, payload) {
-			state.deviceDetails.fetching = payload.fetching
-			if (payload.data) {
-				state.deviceDetails.data = {
-					adapters: Object.keys(payload.data.adapters),
-					tags: payload.data.tags
+		[ REMOVE_DEVICE_TAGS ] (state, payload) {
+			state.deviceList.data = [ ...state.deviceList.data ]
+			state.deviceList.data.forEach((device) => {
+				if (payload.devices.indexOf(device['id']) > -1) {
+					if (!device['tags.tagvalue']) { return }
+					device['tags.tagvalue'] = device['tags.tagvalue'].filter((tag) => {
+						return payload.tags.indexOf(tag) === -1
+					})
 				}
-				let adapterData = payload.data.adapters[state.deviceDetails.data.adapters[0]]
-				state.deviceDetails.name = adapterData.data.name
-				state.deviceDetails.IP = adapterData.data.IP
-			}
-			if (payload.error) {
-				state.deviceDetails.error = payload.error
-			}
+			})
 		},
 		[ SELECT_FIELDS ] (state, payload) {
 			state.fields.common.forEach((field) => {
@@ -226,14 +224,6 @@ export const device = {
 				type: UPDATE_DEVICES
 			})
 		},
-		[ FETCH_DEVICE ] ({dispatch}, deviceId) {
-			/* Fetch a single device according to requested id */
-			if (!deviceId) { return }
-			dispatch(REQUEST_API, {
-				rule: `api/devices/${deviceId}`,
-				type: UPDATE_DEVICE
-			})
-		},
 		[ FETCH_UNIQUE_FIELDS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
 				rule: `api/devices/fields`,
@@ -246,12 +236,28 @@ export const device = {
 				type: UPDATE_TAGS
 			})
 		},
-		[ SAVE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
-			commit(UPDATE_DEVICE_TAGS, payload)
+		[ CREATE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
+			if (!payload || !payload.devices || !payload.devices.length || !payload.tags || !payload.tags.length) {
+				return
+			}
+			commit(ADD_DEVICE_TAGS, payload)
 			payload.devices.forEach(function (device) {
 				dispatch(REQUEST_API, {
 					rule: `api/devices/${device}`,
 					method: 'POST',
+					data: {tags: payload.tags}
+				})
+			})
+		},
+		[ DELETE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
+			if (!payload || !payload.devices || !payload.devices.length || !payload.tags || !payload.tags.length) {
+				return
+			}
+			commit(REMOVE_DEVICE_TAGS, payload)
+			payload.devices.forEach(function (device) {
+				dispatch(REQUEST_API, {
+					rule: `api/devices/${device}/tags`,
+					method: 'DELETE',
 					data: {tags: payload.tags}
 				})
 			})
