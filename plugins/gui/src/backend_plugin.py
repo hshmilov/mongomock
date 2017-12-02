@@ -374,25 +374,22 @@ class BackendPlugin(PluginBase):
                 return self._tag_request_from_aggregator(device, 'create', device_to_update['tags'])
 
     def _tag_request_from_aggregator(self, device, command, tag_list):
-
-        associated_adapter_devices = {}
         responses = []
 
         for adapter in device['adapters']:
-            associated_adapter_devices[adapter['plugin_unique_name']] = adapter['data']['id']
+            for current_tag in tag_list:
+                update_data = {'association_type': 'Tag',
+                               'associated_adapter_devices': {
+                                   adapter['plugin_unique_name']: adapter['data']['id']
+                               },
+                               "tagname": current_tag,
+                               "tagvalue": current_tag if command == "create" else ''}
+                responses.append(self.request_remote_plugin(
+                    'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data)))
 
-        for current_tag in tag_list:
-            update_data = {'association_type': 'Tag',
-                           'associated_adapter_devices': associated_adapter_devices,
-                           "tagname": current_tag,
-                           "tagvalue": current_tag if command == "create" else ''}
-            responses.append(self.request_remote_plugin(
-                'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data)))
+        any_bad_response = any(current_response.status_code != 200 for current_response in responses)
 
-        num_of_bad_responses = len(
-            [current_response for current_response in responses if current_response.status_code != 200])
-
-        return ('', 200) if num_of_bad_responses == 0 else return_error('tagging failed')
+        return ('', 200) if any_bad_response == 0 else return_error('tagging failed')
 
     @add_rule("devices/<device_id>/tags", methods=['DELETE'], should_authenticate=False)
     def remove_tags_from_device(self, device_id):
