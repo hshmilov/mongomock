@@ -54,7 +54,7 @@ class EpoPlugin(AdapterBase):
         return {
             "properties": {
                 ADMIN_PASS: {
-                    "type": "string"
+                    "type": "password"
                 },
                 ADMIN_USER: {
                     "type": "string"
@@ -69,7 +69,7 @@ class EpoPlugin(AdapterBase):
                     "type": "string"
                 },
                 QUERY_PASS: {
-                    "type": "string"
+                    "type": "password"
                 }
             },
             "required": [

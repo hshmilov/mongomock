@@ -61,7 +61,7 @@ class PuppetAdapter(AdapterBase):
         return {
             "properties": {
                 "password": {
-                    "type": "string"
+                    "type": "password"
                 },
                 "user_name": {
                     "type": "string"

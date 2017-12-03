@@ -22,7 +22,8 @@ export const decomposeFieldPath = (data, fieldPath) => {
 		until path exhausted or reached undefined.
 		Arrays along the way will be traversed so that final value is the list of all found values
 	 */
-	if (!data || typeof(data) === 'string' || (Array.isArray(data) && (!data.length || typeof(data[0]) === 'string'))) {
+	if (!data) { return '' }
+	if (typeof(data) === 'string' || (Array.isArray(data) && (!data.length || typeof(data[0]) === 'string'))) {
 		return data
 	}
 	if (Array.isArray(data)) {
@@ -38,7 +39,7 @@ export const decomposeFieldPath = (data, fieldPath) => {
 		})
 		return aggregatedValues
 	}
-	if (fieldPath.indexOf('.') === -1) { return data[fieldPath] }
+	if (fieldPath.indexOf('.') === -1) { return decomposeFieldPath(data[fieldPath], '') }
 	let firstPointIndex = fieldPath.indexOf('.')
 	return decomposeFieldPath(data[fieldPath.substring(0, firstPointIndex)], fieldPath.substring(firstPointIndex + 1))
 }
