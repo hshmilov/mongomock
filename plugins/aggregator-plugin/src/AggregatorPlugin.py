@@ -30,7 +30,7 @@ def parsed_devices_match(first, second):
     :return: bool
     """
     return first['plugin_unique_name'] == second['plugin_unique_name'] and \
-           first['data']['id'] == second['data']['id']
+        first['data']['id'] == second['data']['id']
 
 
 def parsed_device_match_plugin(plugin_data, parsed_device):
@@ -41,7 +41,7 @@ def parsed_device_match_plugin(plugin_data, parsed_device):
     :return: bool
     """
     return plugin_data['associated_adapter_devices']. \
-               get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
+        get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
 
 
 class AggregatorPlugin(PluginBase):
@@ -224,7 +224,7 @@ class AggregatorPlugin(PluginBase):
                                               any(parsed_device_match_plugin(sent_plugin, axon_adapter_device)
                                                   for axon_adapter_device in
                                                   axonius_device['adapters'].values(
-                                                  )
+                                              )
                                                   if axon_adapter_device['plugin_type'] == 'Adapter')}
             if association_type == 'Tag':
                 if len(axonius_device_candidates_dict) != 1:
