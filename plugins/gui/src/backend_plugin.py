@@ -371,6 +371,8 @@ class BackendPlugin(PluginBase):
                 device_to_update = self.get_request_data_as_object()
                 device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
                     {'internal_axon_id': device_id})
+                if device is None:
+                    return return_error("Device ID wasn't found", 404)
                 return self._tag_request_from_aggregator(device, 'create', device_to_update['tags'])
 
     def _tag_request_from_aggregator(self, device, command, tag_list):
@@ -467,7 +469,7 @@ class BackendPlugin(PluginBase):
         :param skip: start index for pagination
         :return:
         """
-        queries_collection = self._get_collection('queries')
+        queries_collection = self._get_collection('queries', limited_user=False)
         if request.method == 'GET':
             mongo_filter['archived'] = False
             return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
@@ -486,7 +488,7 @@ class BackendPlugin(PluginBase):
 
     @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
     def delete_query(self, query_id):
-        queries_collection = self._get_collection('queries')
+        queries_collection = self._get_collection('queries', limited_user=False)
         queries_collection.update({'_id': ObjectId(query_id)},
                                   {
                                       '$set': {
@@ -585,7 +587,7 @@ class BackendPlugin(PluginBase):
         :param config_name: Config to fetch
         :return:
         """
-        configs_collection = self._get_collection('config')
+        configs_collection = self._get_collection('config', limited_user=False)
         if request.method == 'GET':
             return jsonify(
                 configs_collection.find_one({'name': config_name},
@@ -652,7 +654,7 @@ class BackendPlugin(PluginBase):
                 return return_error("Not logged in", 401)
             return jsonify(user['username']), 200
 
-        users_collection = self._get_collection('users')
+        users_collection = self._get_collection('users', limited_user=False)
         log_in_data = request.get_json(silent=True)
         if log_in_data is None:
             return return_error("No login data provided", 400)
@@ -684,7 +686,7 @@ class BackendPlugin(PluginBase):
         :param skip: start index for pagination
         :return:
         """
-        users_collection = self._get_collection('users')
+        users_collection = self._get_collection('users', limited_user=False)
         if request.method == 'GET':
             return jsonify(beautify_db_entry(n) for n in
                            users_collection.find(projection={
