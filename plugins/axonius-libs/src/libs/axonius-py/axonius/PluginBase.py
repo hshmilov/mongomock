@@ -170,7 +170,6 @@ class PluginBase(object):
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
-        self.lib_version = "%version%"
 
         # Getting values from configuration file
         temp_config = configparser.ConfigParser()
@@ -178,6 +177,7 @@ class PluginBase(object):
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
         self.version = config['DEFAULT']['version']
+        self.lib_version = self.version  # no meaning to axonius-libs right now, when we are in one repo.
         self.plugin_name = config['DEFAULT']['name']
         self.plugin_unique_name = None
         self.api_key = None
