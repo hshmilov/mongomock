@@ -114,7 +114,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         return {
             "properties": {
                 "admin_password": {
-                    "type": "string"
+                    "type": "password"
                 },
                 "admin_user": {
                     "type": "string"
@@ -126,7 +126,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                     "type": "string"
                 },
                 "query_password": {
-                    "type": "string"
+                    "type": "password"
                 },
                 "query_user": {
                     "type": "string"

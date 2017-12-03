@@ -53,7 +53,7 @@ class ESXAdapter(AdapterBase):
                     "type": "string"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "password"
                 },
                 "verify_ssl": {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     "type": "bool"
