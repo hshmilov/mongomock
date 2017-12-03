@@ -30,7 +30,7 @@ def parsed_devices_match(first, second):
     :return: bool
     """
     return first['plugin_unique_name'] == second['plugin_unique_name'] and \
-        first['data']['id'] == second['data']['id']
+           first['data']['id'] == second['data']['id']
 
 
 def parsed_device_match_plugin(plugin_data, parsed_device):
@@ -41,7 +41,7 @@ def parsed_device_match_plugin(plugin_data, parsed_device):
     :return: bool
     """
     return plugin_data['associated_adapter_devices']. \
-        get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
+               get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
 
 
 class AggregatorPlugin(PluginBase):
@@ -224,7 +224,7 @@ class AggregatorPlugin(PluginBase):
                                               any(parsed_device_match_plugin(sent_plugin, axon_adapter_device)
                                                   for axon_adapter_device in
                                                   axonius_device['adapters'].values(
-                                              )
+                                                  )
                                                   if axon_adapter_device['plugin_type'] == 'Adapter')}
             if association_type == 'Tag':
                 if len(axonius_device_candidates_dict) != 1:
@@ -513,16 +513,16 @@ class AggregatorPlugin(PluginBase):
         Saves `self.devices_db` as-is into `devices_db` in the persistent db, overriding everything that is there.
         :return:
         """
-        devices_to_save = []
+        device_db_collection = self.devices_db_connection['devices_db']
+
         for device in self.devices_db.values():
             device = dict(device)
             device['adapters'] = list(device['adapters'].values())
-            devices_to_save.append(device)
+            device_db_collection.replace_one({"internal_axon_id": device['internal_axon_id']},
+                                             device, upsert=True)
 
-        if len(devices_to_save) != 0:
-            self.devices_db_connection['devices_db'].delete_many({})
-            self.devices_db_connection['devices_db'].insert_many(
-                devices_to_save)
+        devices_axon_id_saved = [x['internal_axon_id'] for x in self.devices_db.values()]
+        self.devices_db_connection['devices_db'].delete_many({"internal_axon_id": {"$nin": devices_axon_id_saved}})
 
     def _save_devices_db_to_historical_persistent_db(self):
         """
