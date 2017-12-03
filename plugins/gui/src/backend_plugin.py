@@ -543,19 +543,18 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
-                filterArchived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
-                                client_collection.find(filterArchived).sort([('_id', pymongo.ASCENDING)])
+                                client_collection.find().sort([('_id', pymongo.ASCENDING)])
                                 .skip(skip).limit(limit)]
                 })
             if request.method == 'POST':
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
                     return return_error("Invalid client", 400)
-                client_to_add['archived'] = False
                 result = client_collection.insert(client_to_add)
+                self.request_remote_plugin("clients", adapter_unique_name, method='post')
                 return str(result), 200
 
     @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'],
@@ -571,13 +570,13 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'POST':
                 client_to_update = request.get_json(silent=True)
-                client_to_update['archived'] = False
                 client_collection.update_one({'_id': ObjectId(client_id)}, {
                     '$set': client_to_update
                 })
+                self.request_remote_plugin("clients", adapter_unique_name, method='post')
             if request.method == 'DELETE':
-                db_connection[adapter_unique_name]['clients'].update_one(
-                    {'_id': ObjectId(client_id)}, {'$set': {'archived': True}})
+                db_connection[adapter_unique_name]['clients'].delete_one(
+                    {'_id': ObjectId(client_id)})
             return ""
 
     @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)

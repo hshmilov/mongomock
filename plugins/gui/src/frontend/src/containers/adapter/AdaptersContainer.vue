@@ -8,7 +8,7 @@
                 </div>
                 <div class="form-group col-6 filter-status">
                     <label class="form-label">Show Only</label>
-                    <select class="col-6 custom-select">
+                    <select class="col-6 custom-select" :disabled="true">
                         <option value="">All</option>
                         <option value="success">Connected</option>
                         <option value="warning">Not Connected</option>

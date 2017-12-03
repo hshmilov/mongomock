@@ -99,7 +99,7 @@ class AWSAdapter(AdapterBase):
                     "type": "string"
                 },
                 "aws_secret_access_key": {
-                    "type": "string"
+                    "type": "password"
                 }
             },
             "required": [

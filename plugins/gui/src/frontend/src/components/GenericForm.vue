@@ -13,8 +13,8 @@
                                      v-model="model[input.path]" @input="$emit('input', model)">
                     </multiple-select>
                 </template>
-                <template v-else-if="input.control === 'checkbox'">
-                    <checkbox :label="input.name" v-model="model[input.path]"></checkbox>
+                <template v-else-if="input.control === 'bool'">
+                    <checkbox v-model="model[input.path]" @change="$emit('input', model)"></checkbox>
                 </template>
                 <template v-else>
                     <input class="form-control" :type="input.control" :placeholder="input.placeholder"

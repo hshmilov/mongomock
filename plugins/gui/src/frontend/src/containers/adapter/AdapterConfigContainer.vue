@@ -77,8 +77,7 @@
 						path: fieldKey, name: fieldKey, control: this.adapterData.schema.properties[fieldKey].type,
 						required: this.adapterData.schema.required.indexOf(fieldKey) > -1
 					}
-					if (field.control === 'string' && fieldKey.indexOf('password') > -1) {
-						field.control = 'password'
+					if (field.control === 'password') {
 						field.hidden = true
 					}
 					fields.push(field)

@@ -79,7 +79,14 @@ export const adapter = {
 			state.currentAdapter.fetching = payload.fetching
 			state.currentAdapter.error = payload.error
 			if (payload.data) {
-				state.currentAdapter.data = { ...state.currentAdapter.data, ...payload.data }
+				state.currentAdapter.data = {
+					...state.currentAdapter.data, ...payload.data,
+					clients: payload.data.clients.map((client) => {
+						client['date_fetched'] = undefined
+						return client
+					})
+				}
+
 			}
 		},
 		[ ADD_ADAPTER_SERVER ] (state, payload) {

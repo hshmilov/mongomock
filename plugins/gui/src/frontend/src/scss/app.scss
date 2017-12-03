@@ -262,6 +262,7 @@ Scrollbar
 *******************/
 .scrollbar-container {
   height: 100vh;
+  background-color: $background-color;
   .vue-scrollbar__scrollbar-vertical {
     width: 4px;
     left: 0;
