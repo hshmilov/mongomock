@@ -1,11 +1,24 @@
 from services.esx_service import esx_fixture
 
-client_details = {
-    "host": "vcenter",
-    "user": "administrator@vsphere.local",
-    "password": "Br!ng0rder",
-    "verify_ssl": False
-}
+client_details = [
+    ({
+        "host": "vcenter",
+        "user": "administrator@vsphere.local",
+        "password": "Br!ng0rder",
+        "verify_ssl": False
+    }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'),
+    ({
+        "host": "vcenter51.axonius.local",
+        "user": "root",
+        "password": "vmware",
+        "verify_ssl": False
+    }, "525345eb-51ef-f4d7-85bb-08e521b94528"),
+    ({
+        "host": "vcenter55.axonius.local",
+        "user": "root",
+        "password": "vmware",
+        "verify_ssl": False
+    }, "525d738d-c18f-ed57-6059-6d3378a61442")]
 
 # vcenter vm
 SOME_DEVICE_ID = '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'
@@ -31,11 +44,12 @@ def test_registered(axonius_fixture, esx_fixture):
 
 
 def test_fetch_devices(axonius_fixture, esx_fixture):
-    client_id = "{}/{}".format(client_details['host'], client_details['user'])
-    axonius_fixture.add_client_to_adapter(
-        esx_fixture, client_details, client_id)
-    axonius_fixture.assert_device_aggregated(
-        esx_fixture, client_id, SOME_DEVICE_ID)
+    axonius_fixture.clear_all_devices()
+
+    for client, some_device_id in client_details:
+        client_id = "{}/{}".format(client['host'], client['user'])
+        axonius_fixture.add_client_to_adapter(esx_fixture, client, client_id)
+        axonius_fixture.assert_device_aggregated(esx_fixture, client_id, some_device_id)
 
 
 def test_restart(axonius_fixture, esx_fixture):
