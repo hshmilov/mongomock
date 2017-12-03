@@ -50,22 +50,26 @@
                                  :actions="[{ handler: executeQuickView, triggerFont: 'icon-eye' }]">
 
                     <info-dialog v-if="deviceInfoDialog.open" :open="deviceInfoDialog.open" @close="closeQuickView"
-                                 :title="deviceInfoDialog.data['adapters.data.name']">
-                        <div class="section-container">
-                            <div class="section-header">Adapters</div>
-                            <object-list type="image-list" :vertical="true" :names="adapterNameByType"
-                                         :data="deviceInfoDialog.data['adapters.plugin_name']"></object-list>
-                        </div>
-                        <div class="section-container">
-                            <div class="section-header">Tags</div>
-                            <object-list type="tag-list" :vertical="true"
-                                         :data="deviceInfoDialog.data['tags.tagvalue']"></object-list>
-                        </div>
-                        <div class="section-container" v-for="adapter in deviceInfoDialog.data['adapters.plugin_name']">
-                            <div class="section-header">{{ adapterNameByType[adapter] }} Fields</div>
-                            <div>
-                                <div v-for="field in device.fields.unique[adapter]" v-if="field.selected">
-                                    <strong>{{ removePrefix(field.name) }}</strong> = {{ deviceInfoDialog.data[field.path] }}
+                                 :title="deviceInfoDialog.title">
+                        <pulse-loader :loading="device.deviceDetails.fetching" color="#26dad2"></pulse-loader>
+
+                        <div v-if="!device.deviceDetails.fetching && Object.keys(device.deviceDetails.data).length">
+                            <div class="section-container">
+                                <div class="section-header">Adapters</div>
+                                <object-list type="image-list" :vertical="true" :names="adapterNameByType"
+                                             :data="device.deviceDetails.data['adapters.plugin_name']"></object-list>
+                            </div>
+                            <div class="section-container">
+                                <div class="section-header">Tags</div>
+                                <object-list type="tag-list" :vertical="true"
+                                             :data="device.deviceDetails.data['tags.tagvalue']"></object-list>
+                            </div>
+                            <div class="section-container" v-for="adapter in device.deviceDetails.data['adapters.plugin_name']">
+                                <div class="section-header">{{ adapterNameByType[adapter] }} Fields</div>
+                                <div>
+                                    <div v-for="field in device.fields.unique[adapter]">
+                                        {{ removePrefix(field.name) }} = {{ device.deviceDetails.data[field.path] }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -96,6 +100,7 @@
 	import PaginatedTable from '../../components/PaginatedTable.vue'
 	import InfoDialog from '../../components/InfoDialog.vue'
 	import ObjectList from '../../components/ObjectList.vue'
+	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 	import { mixin as clickaway } from 'vue-clickaway'
 	import '../../components/icons/actions'
 
@@ -103,6 +108,7 @@
 	import {
 		FETCH_UNIQUE_FIELDS,
 		FETCH_DEVICES,
+        FETCH_DEVICE,
 		FETCH_TAGS,
 		CREATE_DEVICE_TAGS,
 		DELETE_DEVICE_TAGS
@@ -114,7 +120,7 @@
 		name: 'devices-container',
 		components: {
 			ScrollablePage, Modal, Card, ActionBar, GenericForm, ObjectList,
-			DropdownMenu, SearchableChecklist, PaginatedTable, InfoDialog
+			DropdownMenu, SearchableChecklist, PaginatedTable, InfoDialog, PulseLoader
 		},
 		mixins: [clickaway],
 		computed: {
@@ -162,8 +168,7 @@
 				selectedDevices: [],
 				selectedQuery: {},
 				deviceInfoDialog: {
-					open: false,
-                    currentId: ''
+					open: false
 				},
 				queryDropdown: {
 					open: false,
@@ -176,7 +181,7 @@
 			}
 		},
 		watch: {
-			selectedDevices: function (newDevices) {
+			selectedDevices: (newDevices) => {
 				if (newDevices.length === 1) {
 					let currentDevice = this.deviceById[newDevices[0]]
 					if (!currentDevice || !currentDevice['tags.tagvalue'] || !currentDevice['tags.tagvalue'].length) {
@@ -219,6 +224,7 @@
 			...mapActions({
 				fetchFields: FETCH_UNIQUE_FIELDS,
 				fetchDevices: FETCH_DEVICES,
+                fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
 				addDeviceTags: CREATE_DEVICE_TAGS,
@@ -259,12 +265,12 @@
 			},
 			executeQuickView (deviceId) {
 				if (!deviceId) { return }
-				this.deviceInfoDialog.data = this.deviceById[deviceId]
+				this.fetchDevice(deviceId)
+                this.deviceInfoDialog.title = this.deviceById[deviceId]['adapters.data.name']
 				this.deviceInfoDialog.open = true
 			},
             closeQuickView() {
 				this.deviceInfoDialog.open = false
-                this.deviceInfoDialog.data = {}
             },
             removePrefix(value) {
 				if (!value) { return '' }

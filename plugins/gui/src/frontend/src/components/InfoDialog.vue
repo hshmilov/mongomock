@@ -6,9 +6,12 @@
                 <span class="info-dialog-close" @click="$emit('close')">x</span>
                 <div class="info-dialog-title">{{ title }}</div>
             </div>
-            <div class="info-dialog-body">
-                <slot></slot>
-            </div>
+            <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
+                <div class="info-dialog-body">
+                    <slot></slot>
+                    <div class="clearfix"></div>
+                </div>
+            </vue-scrollbar>
         </div>
     </transition>
 </template>
@@ -18,7 +21,7 @@
 
     export default {
         name: 'info-dialog',
-      components: { VueScrollbar },
+        components: { VueScrollbar },
         props: ['open', 'title']
     }
 </script>

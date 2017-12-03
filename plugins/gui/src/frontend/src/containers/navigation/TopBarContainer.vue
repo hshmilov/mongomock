@@ -22,9 +22,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <router-link :to="{ name: 'Settings' }" class="nav-link">
+                        <!--<router-link :to="{ name: 'Settings' }" class="nav-link">-->
+                        <a class="nav-link">
                             <i class="icon-cog"></i>
-                        </router-link>
+                        </a>
+                        <!--</router-link>-->
                     </li>
                 </ul>
             </div>

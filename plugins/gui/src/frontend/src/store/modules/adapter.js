@@ -118,7 +118,7 @@ export const adapter = {
 				param = `?filter=${JSON.stringify(payload.filter)}`
 			}
 			return dispatch(REQUEST_API, {
-				rule: `api/adapters${param}`,
+				rule: `/api/adapters${param}`,
 				type: UPDATE_ADAPTERS
 			})
 		},
@@ -128,7 +128,7 @@ export const adapter = {
 			 */
 			if (!adapterId) { return }
 			dispatch(REQUEST_API, {
-				rule: `api/adapters/${adapterId}/clients`,
+				rule: `/api/adapters/${adapterId}/clients`,
 				type: SET_ADAPTER_SERVERS
 			})
 		},
@@ -138,7 +138,7 @@ export const adapter = {
 				either adding a new server or updating and existing one, if id is provided with the data
 			 */
 			if (!payload || !payload.adapterId || !payload.serverData) { return }
-			let rule = `api/adapters/${payload.adapterId}/clients`
+			let rule = `/api/adapters/${payload.adapterId}/clients`
 			if (payload.uuid !== 'new') {
 				rule += '/' + payload.uuid
 			}
@@ -159,7 +159,7 @@ export const adapter = {
 		[ ARCHIVE_SERVER ] ({dispatch, commit}, payload) {
 			if (!payload.adapterId || !payload.serverId) { return }
 			dispatch(REQUEST_API, {
-				rule: `api/adapters/${payload.adapterId}/clients/${payload.serverId}`,
+				rule: `/api/adapters/${payload.adapterId}/clients/${payload.serverId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response !== '') {

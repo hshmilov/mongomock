@@ -58,7 +58,6 @@
 </template>
 
 <script>
-	import VueScrollbar from 'vue2-scrollbar'
 	import Checkbox from './Checkbox.vue'
     import GenericTableCell from './GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
@@ -66,7 +65,7 @@
 
 	export default {
 		name: 'paginated-table',
-		components: { VueScrollbar, Checkbox, GenericTableCell, PulseLoader },
+		components: { Checkbox, GenericTableCell, PulseLoader },
 		props: [
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value', 'active-id'
 		],
