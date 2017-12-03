@@ -133,13 +133,6 @@ Formatting
   text-align: right;
 }
 
-.w-md {
-  width: 240px;
-}
-
-.w-lg {
-  width: 480px;
-}
 
 /*******************
 Components
@@ -186,6 +179,9 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   position: relative;
   margin-top: 8px;
   vertical-align: middle;
+  &:first-of-type {
+    margin-top: 0;
+  }
   &::after {
     content: '';
     position: absolute;
