@@ -49,7 +49,7 @@ class AWSAdapter(AdapterBase):
                 aws_id = aws_auth['aws_access_key_id']
                 del aws_auth['_id']
                 clients_dict[aws_id] = boto3.client('ec2', **aws_auth)
-            except BotoCoreError as e:
+            except axonius.BotoCoreError as e:
                 self.logger.error("Error creating EC2 client for account {0}, reason: {1}", aws_auth.meta.id, str(e))
         return clients_dict
 
@@ -78,11 +78,11 @@ class AWSAdapter(AdapterBase):
                     instance['DescribedImage'] = described_images.get(instance['ImageId'])
 
             return instances
-        except (botocore.exceptionsNoCredentialsError, botocore.exceptionsPartialCredentialsError,
-                botocore.exceptionsCredentialRetrievalError, botocore.exceptionsUnknownCredentialError) as e:
-            raise AdapterExceptions.CredentialErrorException(repr(e))
+        except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
+                botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
+            raise axonius.AdapterExceptions.CredentialErrorException(repr(e))
         except botocore.exceptionsBotoCoreError as e:
-            raise AdapterExceptions.AdapterException(repr(e))
+            raise axonius.AdapterExceptions.AdapterException(repr(e))
 
     def _clients_schema(self):
         """
