@@ -199,8 +199,11 @@ export const device = {
 			if (!payload.data) { return }
 			state.fields.common.forEach((field) => {
 				if (field.path !== 'adapters.plugin_name') { return }
+				let used = new Set()
 				payload.data.forEach((adapter) => {
+					if (used.has(adapter.plugin_name)) { return }
 					field.options.push({name: adapterStaticData[adapter.plugin_name].name, path: adapter.plugin_name})
+					used.add(adapter.plugin_name)
 				})
 			})
 		}

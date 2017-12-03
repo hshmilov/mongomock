@@ -78,6 +78,7 @@
         .dropdown-menu {
             z-index: 10;
             top: 96%;
+            width: 100%;
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
             -webkit-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
             -moz-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
