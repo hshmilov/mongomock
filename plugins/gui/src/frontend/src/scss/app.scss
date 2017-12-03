@@ -257,7 +257,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
 Scrollbar
 *******************/
 .scrollbar-container {
-  height: 100vh;
+  max-height: 100vh;
   .vue-scrollbar__scrollbar-vertical {
     width: 4px;
     left: 0;
