@@ -1,9 +1,6 @@
 import axios from 'axios'
 import Promise from 'promise'
 
-/* Path to the server serving the API requests */
-const BACKEND_PATH = 'http://localhost/'
-
 /*
     A generic wrapper for requests to server.
     Before request, performs given mutation to initialize error and indicate fetching in process,
@@ -31,7 +28,7 @@ export const requestApi = ({commit}, payload) => {
     if (!payload.method) { payload.method = 'GET' }
     let request_config = {
         method: payload.method,
-        url: `${BACKEND_PATH}${payload.rule}`
+        url: payload.rule
     }
     if (payload.data) {
         request_config['data'] = payload.data
