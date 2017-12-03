@@ -84,6 +84,15 @@
             -moz-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
             border-color: $border-color;
             padding: 12px;
+            &.w-lg {
+                width: 480px;
+            }
+            &.w-md {
+                width: 360px;
+            }
+            &.w-sm {
+                width: 240px;
+            }
             &.right {
                 right: 0;
                 left: auto;

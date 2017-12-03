@@ -114,6 +114,11 @@ export const device = {
 							processedDevice[field.path] = currentValue
 						})
 					})
+					if (processedDevice['tags.tagvalue']) {
+						processedDevice['tags.tagvalue'] = processedDevice['tags.tagvalue'].filter((tag, index, self) => {
+							return self.indexOf(tag) === index
+						})
+					}
 					processedData.push(processedDevice)
 				})
 				state.deviceList.data = [...state.deviceList.data, ...processedData]
