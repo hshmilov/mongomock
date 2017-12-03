@@ -513,16 +513,16 @@ class AggregatorPlugin(PluginBase):
         Saves `self.devices_db` as-is into `devices_db` in the persistent db, overriding everything that is there.
         :return:
         """
-        devices_to_save = []
+        device_db_collection = self.devices_db_connection['devices_db']
+
         for device in self.devices_db.values():
             device = dict(device)
             device['adapters'] = list(device['adapters'].values())
-            devices_to_save.append(device)
+            device_db_collection.replace_one({"internal_axon_id": device['internal_axon_id']},
+                                             device, upsert=True)
 
-        if len(devices_to_save) != 0:
-            self.devices_db_connection['devices_db'].delete_many({})
-            self.devices_db_connection['devices_db'].insert_many(
-                devices_to_save)
+        devices_axon_id_saved = [x['internal_axon_id'] for x in self.devices_db.values()]
+        self.devices_db_connection['devices_db'].delete_many({"internal_axon_id": {"$nin": devices_axon_id_saved}})
 
     def _save_devices_db_to_historical_persistent_db(self):
         """
