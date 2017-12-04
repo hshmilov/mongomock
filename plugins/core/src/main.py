@@ -11,10 +11,15 @@ import configparser
 import exceptions
 import uritools
 import uuid
+from datetime import datetime
 
 from flask import jsonify, request, Response
 from axonius.PluginBase import PluginBase, add_rule, return_error
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.executors.pool import ThreadPoolExecutor
 
 CHUNK_SIZE = 1024
 
@@ -71,8 +76,16 @@ class Core(PluginBase):
         self.adapters_lock = threading.Lock()
 
         # Create plugin cleaner thread
-        self.cleaner_thread = threading.Thread(
-            target=self.clean_offline_plugins, name='plugins_cleaner')
+        executors = {'default': ThreadPoolExecutor(1)}
+        self.cleaner_thread = BackgroundScheduler(
+            executors=executors)
+        self.cleaner_thread.add_job(func=self.clean_offline_plugins,
+                                    trigger=IntervalTrigger(
+                                        seconds=20),
+                                    next_run_time=datetime.now(),
+                                    name='clean_offline_plugins',
+                                    id='clean_offline_plugins',
+                                    max_instances=1)
         self.cleaner_thread.start()
 
     def clean_offline_plugins(self):
@@ -80,39 +93,37 @@ class Core(PluginBase):
 
         This function will run forever as a thread. It will remove from the online list plugins that do not appear
         To be online anymore.
-        Currently the sample rate is determined to be 60 seconds
+        Currently the sample rate is determined to be 20 seconds
         """
-        while True:
-            try:
+        try:
+            with self.adapters_lock:
+                # Copying the list so we wont have to lock for the whole cleaning process
+                temp_list = self.online_plugins.copy()
+
+            delete_list = []
+            for plugin_unique_name in temp_list:
                 with self.adapters_lock:
-                    # Copying the list so we wont have to lock for the whole cleaning process
-                    temp_list = self.online_plugins.copy()
+                    if not self._check_plugin_online(plugin_unique_name):
+                        if self.did_adapter_registered:
+                            # We need to wait a bit and then try to check if plugin exists again
+                            self.did_adapter_registered = False
+                            break
+                        else:
+                            # The plugin didnt answer, removing the plugin subscription
+                            delete_list.append(
+                                (plugin_unique_name, temp_list[plugin_unique_name]))
 
-                delete_list = []
-                for plugin_unique_name in temp_list:
-                    with self.adapters_lock:
-                        if not self._check_plugin_online(plugin_unique_name):
-                            if self.did_adapter_registered:
-                                # We need to wait a bit and then try to check if plugin exists again
-                                self.did_adapter_registered = False
-                                break
-                            else:
-                                # The plugin didnt answer, removing the plugin subscription
-                                delete_list.append(
-                                    (plugin_unique_name, temp_list[plugin_unique_name]))
+            with self.adapters_lock:
+                for delete_key, delete_value in delete_list:
+                    delete_candidate = self.online_plugins.get(delete_key)
+                    if delete_candidate is delete_value:
+                        self.logger.info("Plugin {0} didnt answer, deleting "
+                                         "from online plugins list".format(plugin_unique_name))
+                        del self.online_plugins[delete_key]
 
-                with self.adapters_lock:
-                    for delete_key, delete_value in delete_list:
-                        delete_candidate = self.online_plugins.get(delete_key)
-                        if delete_candidate is delete_value:
-                            self.logger.info("Plugin {0} didnt answer, deleting "
-                                             "from online plugins list".format(plugin_unique_name))
-                            del self.online_plugins[delete_key]
-
-                time.sleep(20)
-            except Exception as e:
-                self.logger.critical(
-                    "Cleaning plugins had an error. message: {0}", str(e))
+        except Exception as e:
+            self.logger.critical(
+                "Cleaning plugins had an error. message: {0}", str(e))
 
     def _setup_images(self):
         """ Setting up needed images

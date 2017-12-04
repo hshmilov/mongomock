@@ -99,7 +99,8 @@ class AdapterService(PluginService):
     def devices(self):
         response = requests.get(self.req_url + "/devices",
                                 headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200
+
+        assert response.status_code == 200, str(response)
         return dict(json.loads(response.content))
 
     def clients(self):
