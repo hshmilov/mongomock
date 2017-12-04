@@ -181,18 +181,20 @@
 			}
 		},
 		watch: {
-			selectedDevices: (newDevices) => {
-				if (newDevices.length === 1) {
+			selectedDevices: function(newDevices, oldDevices) {
+				if (newDevices.length === 0) { this.selectedTags = [] }
+				if (newDevices.length === 1 || !oldDevices.length) {
 					let currentDevice = this.deviceById[newDevices[0]]
 					if (!currentDevice || !currentDevice['tags.tagvalue'] || !currentDevice['tags.tagvalue'].length) {
 						return
 					}
                     this.selectedTags = currentDevice['tags.tagvalue']
-				} else {
+				}
+				if (newDevices.length > 1) {
 					if (!this.selectedTags.length) { return }
 					newDevices.forEach((deviceId) => {
 						let currentDevice = this.deviceById[deviceId]
-                        if (!currentDevice || currentDevice['tags.tagvalue'] || !currentDevice['tags.tagvalue'].length) {
+                        if (!currentDevice || !currentDevice['tags.tagvalue'] || !currentDevice['tags.tagvalue'].length) {
                             this.selectedTags = []
                         } else {
                             this.selectedTags = this.selectedTags.filter(function (tag) {
@@ -240,6 +242,7 @@
 			executeQuery () {
 				this.closeQuickView()
 				this.updateQuery(this.selectedQuery)
+                this.fetchFields()
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {
@@ -262,6 +265,9 @@
                 }
                 this.addDeviceTags({ devices: this.selectedDevices, tags: changes.added })
 				this.removeDeviceTags({ devices: this.selectedDevices, tags: changes.removed })
+                this.selectedTags = this.selectedTags.filter((tag) => {
+					return changes.removed.indexOf(tag) === -1
+				}).concat(changes.added)
 			},
 			executeQuickView (deviceId) {
 				if (!deviceId) { return }

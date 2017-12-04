@@ -258,6 +258,7 @@ Scrollbar
 *******************/
 .scrollbar-container {
   max-height: 100vh;
+  max-width: 100%;
   .vue-scrollbar__scrollbar-vertical {
     width: 4px;
     left: 0;

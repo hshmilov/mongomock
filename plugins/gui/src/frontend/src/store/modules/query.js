@@ -48,6 +48,7 @@ export const queryToStr = (query) => {
 			query[andKey].forEach(function(orKey) {
 				orParts.push(`${andKey}=${orKey}`)
 			})
+			if (!orParts.length) { return }
 			andParts.push(`(${orParts.join(' OR ')})`)
 		}
 	})

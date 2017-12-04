@@ -18,6 +18,9 @@
             updateChecked() {
                 this.$emit('change', this.$refs.checkboxInput.checked)
             }
+        },
+        mounted() {
+			this.$emit('change', this.$refs.checkboxInput.checked)
         }
     }
 </script>
