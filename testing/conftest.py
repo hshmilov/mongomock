@@ -1,4 +1,6 @@
 import pytest
+from datetime import datetime, timedelta
+import time
 
 from services.mongo_service import MongoService
 from services.core_service import CoreService
@@ -23,7 +25,9 @@ class AxoniusService(object):
         return self.get_devices_with_condition(cond)
 
     def clear_all_devices(self):
+        self.aggregator.stop()
         self.db.client.drop_database(self.aggregator.unique_name)
+        self.aggregator.start_and_wait()
 
     def trigger_aggregator(self):
         self.aggregator.query_devices()  # send trigger to agg to refresh devices
@@ -62,6 +66,23 @@ class AxoniusService(object):
         plugin.start()
         plugin.wait_for_service()
         assert plugin.is_plugin_registered(self.core)
+
+    def restart_core(self):
+        self.core.stop()
+        # Check that Aggregator really went down
+        current_time = datetime.now()
+        while self.aggregator.is_up():
+            assert datetime.now() - current_time < timedelta(seconds=10)
+            time.sleep(0.2)
+        # Now aggregator is down as well
+        self.core.start()
+        self.core.wait_for_service()
+
+        def assert_aggregator_registered():
+            assert self.aggregator.is_up()
+            assert self.aggregator.is_plugin_registered(self.core)
+
+        try_until_not_thrown(50, 0.2, assert_aggregator_registered)
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -10,6 +10,7 @@ services:
           - ./src:/home/axonius/app
           - ../axonius-libs/src/libs:/home/axonius/libs
           - ./config/nginx_conf.d:/home/axonius/config/nginx_conf.d/
+          - ../../logs:/home/axonius/logs
 
 networks:
   default:

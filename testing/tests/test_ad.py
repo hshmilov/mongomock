@@ -44,15 +44,6 @@ def test_registered(axonius_fixture, ad_fixture):
 
 def test_fetch_devices(axonius_fixture, ad_fixture):
     axonius_fixture.clear_all_devices()
-    client_id = ad_client1_details['dc_name']
-    axonius_fixture.add_client_to_adapter(
-        ad_fixture, ad_client1_details, client_id, 'dc_name')
-    axonius_fixture.assert_device_aggregated(
-        ad_fixture, client_id, DEVICE_ID_FOR_CLIENT_1)
-
-
-def test_multiple_clients(axonius_fixture, ad_fixture):
-    axonius_fixture.clear_all_devices()
     # Adding first client
     client_id_1 = ad_client1_details['dc_name']
     axonius_fixture.add_client_to_adapter(

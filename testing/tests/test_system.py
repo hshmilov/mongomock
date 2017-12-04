@@ -24,3 +24,7 @@ def test_aggregator_registered(axonius_fixture):
 
 def test_aggregator_restart(axonius_fixture):
     axonius_fixture.restart_plugin(axonius_fixture.aggregator)
+
+
+def test_core_restart(axonius_fixture):
+    axonius_fixture.restart_core()

@@ -63,6 +63,8 @@ class AggregatorPlugin(PluginBase):
         # Starting the managing thread
         self._start_managing_thread()
 
+        self.thread_manager_lock = threading.RLock()
+
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.
 
@@ -103,6 +105,9 @@ class AggregatorPlugin(PluginBase):
 
     @add_rule("query_devices", methods=["POST"])
     def query_devices(self):
+        self._adapters_thread_manager()
+
+        # Than we need to run other jobs (that was maybe created just now)
         jobs = self._online_adapters_scheduler.get_jobs()
         for job in jobs:
             self.logger.info("resetting time for {0}".format(job.name))
@@ -118,40 +123,41 @@ class AggregatorPlugin(PluginBase):
         Currently the sampling rate is hard coded for 60 seconds.
         """
         try:
-            current_adapters = requests.get(
-                self.core_address + '/register').json()
+            with self.thread_manager_lock:
+                current_adapters = requests.get(
+                    self.core_address + '/register').json()
 
-            self.logger.info(
-                "registered adapters = {}".format(current_adapters))
+                self.logger.info(
+                    "registered adapters = {}".format(current_adapters))
 
-            get_devices_job_name = "Get device job"
+                get_devices_job_name = "Get device job"
 
-            # let's add jobs for all adapters
-            for adapter_name, adapter in current_adapters.items():
-                if adapter['plugin_type'] != "Adapter":
-                    # This is not an adapter, not running
-                    continue
+                # let's add jobs for all adapters
+                for adapter_name, adapter in current_adapters.items():
+                    if adapter['plugin_type'] != "Adapter":
+                        # This is not an adapter, not running
+                        continue
 
-                if self._online_adapters_scheduler.get_job(adapter_name):
-                    # We already have a running thread for this adapter
-                    continue
+                    if self._online_adapters_scheduler.get_job(adapter_name):
+                        # We already have a running thread for this adapter
+                        continue
 
-                sample_rate = adapter['device_sample_rate']
+                    sample_rate = adapter['device_sample_rate']
 
-                self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
-                                                        trigger=IntervalTrigger(
-                                                            seconds=sample_rate),
-                                                        next_run_time=datetime.now(),
-                                                        kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
-                                                                'plugin_name': adapter['plugin_name']},
-                                                        name=get_devices_job_name,
-                                                        id=adapter_name,
-                                                        max_instances=1)
+                    self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
+                                                            trigger=IntervalTrigger(
+                                                                seconds=sample_rate),
+                                                            next_run_time=datetime.now(),
+                                                            kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
+                                                                    'plugin_name': adapter['plugin_name']},
+                                                            name=get_devices_job_name,
+                                                            id=adapter_name,
+                                                            max_instances=1)
 
-            for job in self._online_adapters_scheduler.get_jobs():
-                if job.id not in current_adapters and job.name == get_devices_job_name:
-                    # this means that the adapter has disconnected, so we stop fetching it
-                    job.remove()
+                for job in self._online_adapters_scheduler.get_jobs():
+                    if job.id not in current_adapters and job.name == get_devices_job_name:
+                        # this means that the adapter has disconnected, so we stop fetching it
+                        job.remove()
 
         except Exception as e:
             self.logger.critical('Managing thread got exception, '

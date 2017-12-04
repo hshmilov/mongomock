@@ -46,7 +46,14 @@ class PluginService(services.compose_service.ComposeService):
         return self.request('delete', endpoint, *kargs, **kwargs)
 
     def version(self):
-        return self.get('version')
+        return self.get('version', timeout=5)
+
+    def _trigger_check_registered(self):
+        try:
+            # Will trigger the plugin to check if he is registered. If not, the plugin will exit immediately
+            self.get('trigger_registration_check', timeout=5)
+        except:
+            pass
 
     def logger(self):
         raise NotImplemented("TBD!")
@@ -56,9 +63,11 @@ class PluginService(services.compose_service.ComposeService):
 
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
-        return core_service.register(self.api_key, unique_name).status_code == 200
+        result = core_service.register(self.api_key, unique_name)
+        return result.status_code == 200, str(result)
 
     def is_up(self):
+        self._trigger_check_registered()
         return self._is_service_alive()
 
     def _is_service_alive(self):

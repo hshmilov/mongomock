@@ -197,7 +197,13 @@ def requires_aggregator():
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
             if self._aggregator_plugin_unique_name is None:
-                return return_error("Aggregator is missing, try again later", 500)
+                # Try to get aggregator again
+                aggregator = self._get_aggregator()
+                if aggregator is None:
+                    return return_error("Aggregator is missing, try again later", 500)
+                else:
+                    self._aggregator_plugin_unique_name = aggregator['plugin_unique_name']
+
             return func(self, *args, **kwargs)
 
         return actual_wrapper

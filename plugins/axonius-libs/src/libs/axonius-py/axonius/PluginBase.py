@@ -256,6 +256,7 @@ class PluginBase(object):
                                                       seconds=30),
                                                   next_run_time=datetime.now(),
                                                   id='check_registered',
+                                                  name='check_registered',
                                                   max_instances=1)
 
         # Creating open actions dict. This dict will hold all of the open actions issued by this plugin.
@@ -280,23 +281,27 @@ class PluginBase(object):
 
         return self.wsgi_app(*args, **kwargs)
 
-    def _check_registered_thread(self):
+    def _check_registered_thread(self, retries=12):
         """Function for check that the plugin is still registered.
 
         This function will issue a get request to the Core to see if we are still registered.
         I case we arent, this function will stop this application (and let the docker manager to run it again)
+
+        :param int retries: Number of retries before exiting the plugin.
         """
         try:
+            if self.plugin_name == "core":
+                return  # No need to check on core itself
             response = self.request_remote_plugin(
-                "register?unique_name={0}".format(self.plugin_unique_name))
+                "register?unique_name={0}".format(self.plugin_unique_name),
+                timeout=5)
             if response.status_code == 404:
                 self.logger.error("Not registered to core, Exiting")
                 # TODO: Think about a better way for exiting this process
                 os._exit(1)
         except Exception as e:
             self.comm_failure_counter += 1
-            if self.comm_failure_counter > 12:  # Two minutes
-                self.comm_failure_counter = 0
+            if self.comm_failure_counter > retries:  # Two minutes
                 self.logger.error(("Error communicating with Core for more than 2 minutes, "
                                    "exiting. Reason: {0}").format(e))
                 os._exit(1)
@@ -639,6 +644,17 @@ class PluginBase(object):
                           "axonius-libs": self.lib_version}
 
         return jsonify(version_object)
+
+    @add_rule('trigger_registration_check', methods=['GET'], should_authenticate=False)
+    def trigger_registration_check(self):
+        """ /check_registered - Get the version of the app.
+
+        Accepts:
+            GET - In order to check if we are registered
+        """
+        # Will exit immediately if plugin is not registered
+        self._check_registered_thread(retries=0)
+        return ''
 
     @add_rule('logger', methods=['GET', 'PUT'])
     def _logger_func(self):
