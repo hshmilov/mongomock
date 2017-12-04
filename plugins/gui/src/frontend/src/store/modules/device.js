@@ -104,7 +104,8 @@ export const device = {
 					options: []
 				},
 				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
-				{path: 'adapters.data.name', name: 'Host Name', selected: true, control: 'text'},
+				{path: 'adapters.data.hostname', name: 'Host Name', selected: true, control: 'text'},
+				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
 				{
 					path: 'adapters.data.network_interfaces.public_ip,adapters.data.network_interfaces.private_ip',
 					name: 'IP Addresses',

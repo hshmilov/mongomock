@@ -52,11 +52,6 @@
                 float: right;
                 line-height: 12px;
             }
-            .info-dialog-title {
-                bottom: 0;
-                position: absolute;
-                vertical-align: bottom;
-            }
         }
         .info-dialog-body {
             padding: 24px;

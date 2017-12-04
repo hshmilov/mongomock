@@ -44,10 +44,14 @@ export const requestApi = ({commit}, payload) => {
             resolve(response.data)
         })
         .catch((error) => {
+            let userMessage = error.message
+            if (error.response.status >= 500) {
+                userMessage = "Verify all services are up and registered"
+            }
             if (payload.type) {
                 commit(payload.type, {
                   fetching: false,
-                  error: error.message
+                  error: userMessage
                 })
             }
             reject(error)
