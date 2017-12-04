@@ -1,4 +1,5 @@
 from services.gui_service import gui_fixture
+from services.ad_service import ad_fixture
 from test_helpers import utils
 
 
@@ -11,7 +12,7 @@ def _count_num_of_tags(device):
                 current_tag.get('tagvalue', '') != ''])
 
 
-def test_tags(axonius_fixture, gui_fixture):
+def test_tags(axonius_fixture, gui_fixture, ad_fixture):
     def create_tag():
         def create_one_tag():
             tag_test_device = gui_fixture.get_devices().json()[0]
@@ -49,7 +50,7 @@ def test_tags(axonius_fixture, gui_fixture):
             gui_fixture.remove_tags_from_device(tag_test_device['internal_axon_id'], {'tags': test_tags})
 
         if len(gui_fixture.get_devices().json()) < 3:
-            utils.populate_test_devices(axonius_fixture)
+            utils.populate_test_devices(axonius_fixture, ad_fixture)
         create_one_tag()
         create_existing_tag()
         create_multiple_tags_on_one_device()

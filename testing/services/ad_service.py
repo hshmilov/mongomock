@@ -10,7 +10,7 @@ class AdService(plugin_service.AdapterService):
         super().__init__(compose_file_path, config_file_path, vol_config_file_path)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ad_fixture(request):
     service = AdService()
     initialize_fixture(request, service)
