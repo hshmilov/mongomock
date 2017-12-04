@@ -171,14 +171,14 @@ class ActiveDirectoryPlugin(AdapterBase):
                                                               projection={'_id': True,
                                                                           'raw.AXON_DNS_ADDR': True,
                                                                           'raw.AXON_DOMAIN_NAME': True,
-                                                                          'name': True})
+                                                                          'hostname': True})
 
             for host in hosts:
                 time_before_resolve = datetime.now()
                 dns_name = host['raw']['AXON_DNS_ADDR']
                 domain_name = host['raw']['AXON_DOMAIN_NAME']
                 try:
-                    ip = self._resolve_device_name(host['name'], {"dns_name": dns_name, "domain_name": domain_name})
+                    ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "domain_name": domain_name})
                     network_interfaces = [{"MAC": None, "private_ip": [ip], "public_ip": []}]
 
                     self._get_collection("devices_data").update_one({"_id": host["_id"]},
@@ -219,7 +219,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         devices_collection = self._get_collection("devices_data")
         for device_raw in devices_raw_data:
             device_doc = {
-                'name': device_raw['name'],
+                'hostname': device_raw['name'],
                 'OS': figure_out_os(device_raw['operatingSystem']),
                 'network_interfaces': [],
                 'RESOLVE_STATUS': 'PENDING',
@@ -318,7 +318,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                 password = client_config['admin_password']
                 try:
                     device_ip = self._resolve_device_name(
-                        device_data['data']['name'], client_config)
+                        device_data['data']['hostname'], client_config)
                 except Exception as e:
                     self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
                     raise exceptions.IpResolveError("Cant Resolve Ip")
