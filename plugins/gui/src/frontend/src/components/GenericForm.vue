@@ -18,7 +18,7 @@
                 </template>
                 <template v-else>
                     <input class="form-control" :type="input.control" :placeholder="input.placeholder"
-                           v-model="model[input.path]" @input="$emit('input', model)">
+                           v-model="model[input.path]" @input="convertValue(input.path, input.control)">
                 </template>
             </div>
             <div v-if="submitLabel" class="form-group col-1">
@@ -52,6 +52,14 @@
         watch: {
         	value: function(newValue) {
         		this.model = { ...newValue }
+            }
+        },
+        methods: {
+        	convertValue(path, type) {
+        		if (type === "number") {
+        			this.model[path] = parseInt(this.model[path])
+                }
+				this.$emit('input', this.model)
             }
         }
     }

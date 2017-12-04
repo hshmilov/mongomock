@@ -80,6 +80,9 @@
 					if (field.control === 'password') {
 						field.hidden = true
 					}
+					if (field.control === 'string') {
+						field.control = 'text'
+					}
 					fields.push(field)
 				})
 				return fields
