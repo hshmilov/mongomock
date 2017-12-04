@@ -573,10 +573,10 @@ class BackendPlugin(PluginBase):
                 client_collection.update_one({'_id': ObjectId(client_id)}, {
                     '$set': client_to_update
                 })
-                self.request_remote_plugin("clients", adapter_unique_name, method='post')
             if request.method == 'DELETE':
                 db_connection[adapter_unique_name]['clients'].delete_one(
                     {'_id': ObjectId(client_id)})
+            self.request_remote_plugin("clients", adapter_unique_name, method='post')
             return ""
 
     @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
