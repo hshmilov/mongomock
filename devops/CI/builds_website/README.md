@@ -19,7 +19,3 @@ In our local network, just go to https://builds.axonius.local .
 	* boto3 (aws client)
 	* pymongo (mongodb python client)
 * run main.py.
-
-### How to deploy to builds.axonius.local ###
-Sync the current directory with /var/www/builds and then
-restart the server (sudo apache2ctl restart).

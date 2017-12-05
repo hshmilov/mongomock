@@ -156,7 +156,7 @@
                 ip = ec2["private_ip_address"];
                 ip_link = "";
                 if (ip != null) {
-                    ip_link = "<a href='https://" + ip + "' target='_blank'>https://" + ip + "</a>";
+                    ip_link = "<a href='http://" + ip + "' target='_blank'>http://" + ip + "</a>";
                 }
 
                 if (db['configuration_name'] == undefined) {
@@ -262,7 +262,7 @@
         data["action"] = "start";
         $.ajax({url: "/instances/" + id, type: "POST", data: data})
             .done(function(data) {
-                current_instances = data;
+                current_instances = data["current"];
                 update_instance_view(current_instance_details_i);
             })
             .fail(exception_modal)
@@ -275,7 +275,7 @@
         data["action"] = "stop";
         $.ajax({url: "/instances/" + id, type: "POST", data: data})
             .done(function(data) {
-                current_instances = data;
+                current_instances = data["current"];
                 update_instance_view(current_instance_details_i);
             })
             .fail(exception_modal)
@@ -286,7 +286,7 @@
         console.log("terminating " + id);
         $.ajax({url: "/instances/" + id, type: "DELETE", data: {}})
             .done(function(data) {
-                current_instances = data;
+                current_instances = data["current"];
                 for (i in current_instances) {
                     if (current_instances[i]['ec2']['state'] != 'terminated') {
                         update_instance_view(i);
@@ -307,9 +307,11 @@
 
         $.ajax({url: "/instances/" + id, type: "POST", data: data})
             .done(function(data) {
-                current_exports_in_progress = data;
-                rewrite_exports_in_progress_table();
-                changeMenu($("#vm_exports_link"));
+                flush_url("/exportsinprogress", function(data) {
+                    current_exports_in_progress = data["current"];
+                    rewrite_exports_in_progress_table();
+                    changeMenu($("#vm_exports_link"));
+                });
             })
             .fail(exception_modal)
             .always(always_function);
@@ -353,7 +355,7 @@
 
         $.ajax({url: "/instances", type: "POST", data: data})
             .done(function(data) {
-                current_instances = data;
+                current_instances = data["current"];
                 update_instance_view(0);
             })
             .fail(exception_modal)
@@ -485,7 +487,7 @@
 
         $.ajax({url: "/exports/" + key_name + "/url", type: "GET", data: data})
             .done(function(data) {
-                url = data["url"];
+                url = data["result"]["url"];
                 $(el).parent().html("<a href='" + url + "'>Click here</a>");
             })
             .fail(exception_modal)
@@ -496,7 +498,7 @@
 
         $.ajax({url: "/exports/" + id, type: "DELETE", data: data})
             .done(function(data) {
-                current_exports = data;
+                current_exports = data["current"];
                 rewrite_exports_table();
                 update_export_details(0);
             })
@@ -518,7 +520,7 @@
             if (db['teamcityBuildId'] != undefined) {
                 var bid = db['teamcityBuildId'];
                 build_link = $("<a>").attr("target", "_blank").attr("href", "https://teamcity.axonius.local/viewLog.html?buildId=" + bid);
-                $("<img>").attr("src", "http://teamcity.axonius.local/app/rest/builds/" + bid + "/statusIcon.svg").appendTo(build_link);
+                $("<img>").attr("src", "https://teamcity.axonius.local/app/rest/builds/" + bid + "/statusIcon.svg").appendTo(build_link);
             }
 
             // Push all of the data
@@ -574,7 +576,7 @@
 
         $.ajax({url: "/images", type: "DELETE", data: data})
             .done(function(data) {
-                current_images = data;
+                current_images = data["current"];
                 rewrite_images_table();
                 update_image_details(0);
             })
@@ -609,7 +611,7 @@
 
         $.ajax({url: "/configurations", type: "POST", data: data})
             .done(function(data) {
-                current_configurations = data;
+                current_configurations = data["current"];
                 rewrite_configurations_table();
                 update_configuration_details(data.length - 1);
             })
@@ -626,7 +628,7 @@
 
         $.ajax({url: "/configurations/" + id, type: "POST", data: data})
             .done(function(data) {
-                current_configurations = data;
+                current_configurations = data["current"];
                 rewrite_configurations_table();
                 update_configuration_details(current_configuration_details_i);
             })
@@ -695,7 +697,7 @@
 
         $.ajax({url: "/configurations/" + id, type: "DELETE", data: data})
             .done(function(data) {
-                current_configurations = data;
+                current_configurations = data["current"];
                 rewrite_configurations_table();
                 update_configuration_details(0);
             })
@@ -779,7 +781,7 @@
 
         // load all data.
         flush_url("/instances", function(data) {
-            current_instances = data;
+            current_instances = data["current"];
             rewrite_instances_table();
             // Get the first not terminated instance.
             for (i in current_instances) {
@@ -790,22 +792,22 @@
             }
         });
         flush_url("/exports", function(data) {
-            current_exports = data;
+            current_exports = data["current"];
             rewrite_exports_table();
             update_export_details(0);
         });
         flush_url("/exportsinprogress", function(data) {
-            current_exports_in_progress = data;
+            current_exports_in_progress = data["current"];
             rewrite_exports_in_progress_table();
         });
         flush_url("/images", function(data) {
-            current_images = data;
+            current_images = data["current"];
             rewrite_images_table();
             update_image_details(0);
         });
 
         flush_url("/configurations", function(data) {
-            current_configurations = data;
+            current_configurations = data["current"];
             rewrite_configurations_table();
             update_configuration_details(0);
         });

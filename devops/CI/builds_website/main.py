@@ -23,89 +23,105 @@ def main():
 def images():
     """Returns all docker images."""
     if (request.method == "GET"):
-        return jsonify(bm.getImages())
+        json_result = (bm.getImages())
     elif (request.method == "POST"):
-        return jsonify(bm.postImageDetails(request.form["repositoryName"], request.form["imageDigest"], request.form))
+        json_result = (bm.postImageDetails(request.form["repositoryName"], request.form["imageDigest"], request.form))
     elif (request.method == "DELETE"):
-        return jsonify(bm.deleteImage(request.form["repositoryName"], request.form["imageDigest"]))
+        json_result = (bm.deleteImage(request.form["repositoryName"], request.form["imageDigest"]))
+
+    return jsonify({"result": json_result, "current": bm.getImages()})
 
 
 @app.route('/exports', methods=['GET'])
 def exports():
     """Return info about our exported vms."""
-    return jsonify(bm.getExports())
+    json_result = (bm.getExports())
+    return jsonify({"result": json_result, "current": json_result})
 
 
 @app.route('/exports/<key>/url', methods=['GET'])
 def export_url(key):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
-    return jsonify(bm.getExportUrl(key))
+    json_result = (bm.getExportUrl(key))
+    return jsonify({"result": json_result, "current": {}})
 
 
 @app.route('/exports/<key>/manifest', methods=['GET'])
 def get_export_manifest(key):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
     if(request.method == "GET"):
-        return jsonify(bm.getExportManifest(key))
+        json_result = (bm.getExportManifest(key))
+
+    return jsonify({"result": json_result, "current": {}})
 
 
 @app.route("/exports/<key>", methods=['GET', 'DELETE'])
 def export(key):
     """Does all sort of actions on a specific export"""
     if (request.method == "GET"):
-        return jsonify(bm.getExports(key=key))
+        json_result = (bm.getExports(key=key))
     elif (request.method == "DELETE"):
-        return jsonify(bm.deleteExport(key=key))
-    else:
-        return "Error! Method %s unsupported." % (request.method,), 500
+        json_result = (bm.deleteExport(key=key))
+
+    return jsonify({"result": json_result, "current": bm.getExports()})
 
 
 @app.route('/exportsinprogress', methods=['GET'])
 def exports_in_progress():
     """Return info about our exported vms."""
-    return jsonify(bm.getExportsInProgress())
+    json_result = (bm.getExportsInProgress())
+
+    return jsonify({"result": json_result, "current": json_result})
+
+
+@app.route('/testinstances', methods=['POST'])
+def testinstances():
+    """
+    Allows to get an already-made and waiting test instance.
+    """
+
+    return jsonify({"result": bm.getTestInstance(), "current": {}})
 
 
 @app.route("/instances", methods=['GET', 'POST'])
 def instances():
     """Return info about ec2."""
     if(request.method == "GET"):
-        return jsonify(bm.getInstances())
+        json_result = (bm.getInstances())
     elif(request.method == "POST"):
-        return jsonify(bm.addInstance(
+        json_result = (bm.addInstance(
             request.form["name"],
             request.form["owner"],
             request.form["comments"],
             request.form["configuration_name"],
             request.form["configuration_code"]))
-    else:
-        return "Error! Method %s unsupported." % (request.method, ), 500
+
+    return jsonify({"result": json_result, "current": bm.getInstances()})
 
 
 @app.route("/instances/<instance_id>", methods=['GET', 'DELETE', 'POST'])
 def instance(instance_id):
     """Get information about instance and provide actions on it."""
     if (request.method == "GET"):
-        return jsonify(bm.getInstances(ec2_id=instance_id))
+        json_result = (bm.getInstances(ec2_id=instance_id))
 
     elif (request.method == "DELETE"):
-        return jsonify(bm.terminateInstance(instance_id))
+        json_result = (bm.terminateInstance(instance_id))
 
     elif (request.method == "POST"):
         action = request.form["action"]
         if (action == "start"):
-            return jsonify(bm.startInstance(ec2_id=instance_id))
+            json_result = (bm.startInstance(ec2_id=instance_id))
         elif (action == "stop"):
-            return jsonify(bm.stopInstance(ec2_id=instance_id))
+            json_result = (bm.stopInstance(ec2_id=instance_id))
         elif (action == "export"):
-            return jsonify(bm.exportInstance(
+            json_result = (bm.exportInstance(
                 ec2_id=instance_id,
                 owner=request.form["owner"],
                 client_name=request.form["client_name"],
                 comments=request.form["comments"]))
 
-    else:
-        return return_unsupported()
+    return jsonify({"result": json_result, "current": bm.getInstances()})
 
 
 @app.route("/instances/<instance_id>/manifest", methods=['GET', 'POST'])
@@ -113,7 +129,7 @@ def instance(instance_id):
 def instance_manifest(instance_id, manifest_key=None):
     """Get information about instance and provide actions on it."""
     if (request.method == "GET"):
-        return jsonify(bm.getManifest(instance_id, manifest_key))
+        json_result = (bm.getManifest(instance_id, manifest_key))
 
     elif (request.method == "POST"):
         key = request.form["key"]
@@ -124,10 +140,9 @@ def instance_manifest(instance_id, manifest_key=None):
             # Its a file.
             value = request.files["value"].read().decode("utf-8")
 
-        return jsonify(bm.postManifest(instance_id, key, value))
+        json_result = (bm.postManifest(instance_id, key, value))
 
-    else:
-        return return_unsupported()
+    return jsonify({"result": json_result, "current": {}})
 
 
 @app.route("/configurations", methods=['GET', 'POST'])
@@ -135,13 +150,14 @@ def instance_manifest(instance_id, manifest_key=None):
 def configuration(object_id=None):
     """Does all sort of actions on a specific configuration"""
     if (request.method == "GET"):
-        return jsonify(bm.getConfigurations())
+        json_result = (bm.getConfigurations())
     elif (request.method == "POST"):
-        return jsonify(bm.updateConfiguration(object_id, request.form["name"], request.form["author"], request.form["purpose"], request.form["code"]))
+        json_result = (bm.updateConfiguration(
+            object_id, request.form["name"], request.form["author"], request.form["purpose"], request.form["code"]))
     elif (request.method == "DELETE"):
-        return jsonify(bm.deleteConfiguration(object_id))
-    else:
-        return "Error! Method %s unsupported." % (request.method,), 500
+        json_result = (bm.deleteConfiguration(object_id))
+
+    return jsonify({"result": json_result, "current": bm.getConfigurations()})
 
 
 @app.after_request

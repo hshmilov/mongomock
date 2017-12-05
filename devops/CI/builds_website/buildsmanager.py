@@ -6,21 +6,25 @@ This project assumes the aws settings & credentials are already configured in th
 import boto3
 import datetime
 import json
+import redis
+import random
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
-IMAGE_ID = "ami-8f4f60ea"  # Our own imported ubuntu 16.04 Server.
+IMAGE_ID = "ami-a93811cc"  # Our own imported ubuntu 16.04 Server.
 INSTANCE_TYPE = "t2.micro"
 SUBNET_ID = "subnet-4154273a"   # Our builds subnet.
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
 S3_ACCELERATED_ENDPOINT = "http://s3-accelerate.amazonaws.com"
-# 1 hour to use it before we generate a new one.
-S3_EXPORT_URL_TIMEOUT = 3600
+S3_EXPORT_URL_TIMEOUT = 604700  # a week to use it before we generate a new one.
 
 DB_HOSTNAME = "builds.axonius.local"
+REDIS_HOSTNAME = "builds.axonius.local"
+
+NUMBER_OF_TEST_INSTANCES_AVAILABLE = 5
 
 NEW_INSTANCE_BOOT_SCRIPT = """#!/bin/bash
 set -x
@@ -30,7 +34,6 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 sudo apt-get update
 sudo apt-get install -y docker-ce
-sudo apt-get install docker-compose
 sudo apt-get install -y python3-pip
 sudo apt-get -y upgrade
 """
@@ -41,14 +44,14 @@ class BuildsManager(object):
 
     def __init__(self):
         """Initialize the object."""
-        self.db = MongoClient(
-            DB_HOSTNAME).builds  # This just connects to localhost
-        # This assumes we have the credentials already set-up.
-        self.ec2 = boto3.resource("ec2")
+        self.db = MongoClient(DB_HOSTNAME).builds  # This just connects to localhost
+        self.ec2 = boto3.resource("ec2")  # This assumes we have the credentials already set-up.
 
         self.ec2_client = boto3.client("ec2")
         self.s3_client = boto3.client("s3")
         self.ecr_client = boto3.client("ecr")
+
+        self.redis_client = redis.StrictRedis(host=REDIS_HOSTNAME)
 
     def postImageDetails(self, repositoryName, imageDigest, forms):
         """
@@ -60,6 +63,7 @@ class BuildsManager(object):
 
         self.db.images.update_one({"repositoryName": repositoryName, "imageDigest": imageDigest}, {
                                   "$set": forms}, upsert=True)
+        return True
 
     def getImages(self, repository_name=None):
         """
@@ -71,11 +75,9 @@ class BuildsManager(object):
         db_list = list(self.db.images.find({}))
 
         images_list = []
-        all_repositories = self.ecr_client.describe_repositories()[
-            'repositories']
+        all_repositories = self.ecr_client.describe_repositories()['repositories']
         for repository in all_repositories:
-            all_images = self.ecr_client.describe_images(
-                repositoryName=repository['repositoryName'])['imageDetails']
+            all_images = self.ecr_client.describe_images(repositoryName=repository['repositoryName'])['imageDetails']
 
             for image in all_images:
                 ecr = {
@@ -83,8 +85,13 @@ class BuildsManager(object):
                     "imageDigest": image['imageDigest'],
                     "imagePushedAt": image['imagePushedAt'],
                     "size": sizeof_fmt(image['imageSizeInBytes']),
-                    "imageTags": image['imageTags']
                 }
+
+                try:
+                    ecr["imageTags"] = image['imageTags']
+                except KeyError:
+                    # sometimes its empty.
+                    ecr["imageTags"] = []
 
                 db = {}
                 for d in db_list:
@@ -106,10 +113,9 @@ class BuildsManager(object):
 
     def deleteImage(self, repository_name=None, image_digest=None):
         # If we have an id, get the repo name and the digest by yourself.
-        self.ecr_client.batch_delete_image(repositoryName=repository_name, imageIds=[
-                                           {'imageDigest': image_digest}])
+        self.ecr_client.batch_delete_image(repositoryName=repository_name, imageIds=[{'imageDigest': image_digest}])
 
-        return self.getImages()
+        return True
 
     def getExportUrl(self, key_name):
         """
@@ -119,8 +125,7 @@ class BuildsManager(object):
         and returns a presigned url we can transfer to anyone in order to download this resource.
         """
 
-        s3_accelerated_client = boto3.client(
-            "s3", endpoint_url=S3_ACCELERATED_ENDPOINT)
+        s3_accelerated_client = boto3.client("s3", endpoint_url=S3_ACCELERATED_ENDPOINT)
         url = s3_accelerated_client.generate_presigned_url(
             "get_object",
             Params={"Bucket": S3_BUCKET_NAME_FOR_VM_EXPORTS, "Key": key_name},
@@ -130,10 +135,9 @@ class BuildsManager(object):
 
     def deleteExport(self, key):
         """Deletes an export. """
-        self.s3_client.delete_object(
-            Bucket=S3_BUCKET_NAME_FOR_VM_EXPORTS, Key=key)
+        self.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_VM_EXPORTS, Key=key)
 
-        return self.getExports()
+        return True
 
     def getExports(self, key=None):
         """Return all vm exports we have on our s3 bucket."""
@@ -150,8 +154,7 @@ class BuildsManager(object):
 
         exports_list = []
         for o in object_list:
-            s3 = {"ETag": o["ETag"], "Key": o["Key"],
-                  "LastModified": o["LastModified"], "Size": sizeof_fmt(o["Size"])}
+            s3 = {"ETag": o["ETag"], "Key": o["Key"], "LastModified": o["LastModified"], "Size": sizeof_fmt(o["Size"])}
             db = {}
 
             for d in exports_in_db_list:
@@ -192,8 +195,7 @@ class BuildsManager(object):
         vpcs = list(self.ec2.vpcs.all())
 
         # Get instance status. The only way to do this is with describe_instance_status
-        instance_statuses = self.ec2_client.describe_instance_status()[
-            'InstanceStatuses']
+        instance_statuses = self.ec2_client.describe_instance_status()['InstanceStatuses']
 
         instances_array = []
         for i in db_instances:
@@ -201,8 +203,7 @@ class BuildsManager(object):
             instances_array.append(i)
 
         # Lets get information about our instances.
-        ec2_instances = list(self.ec2.instances.filter(
-            Filters=[{"Name": "tag:VM-Type", "Values": ["Builds-VM"]}]))
+        ec2_instances = list(self.ec2.instances.filter(Filters=[{"Name": "tag:VM-Type", "Values": ["Builds-VM"]}]))
 
         # After we have this information, we need to build our joined array of information
         all_instances = []
@@ -229,19 +230,16 @@ class BuildsManager(object):
                     break
 
             if i.vpc is not None:
-                # a local copy we already have
-                c_vpc = vpcs[vpcs.index(i.vpc)]
+                c_vpc = vpcs[vpcs.index(i.vpc)]   # a local copy we already have
                 for tag in c_vpc.tags:
                     if tag["Key"] == "Name":
                         ec2_i["vpc_name"] = tag["Value"]
 
             if i.subnet is not None:
-                # a local copy we already have
-                c_subnet = subnets[subnets.index(i.subnet)]
+                c_subnet = subnets[subnets.index(i.subnet)]   # a local copy we already have
                 for tag in c_subnet.tags:
                     if tag["Key"] == "Name":
-                        ec2_i['subnet'] = "%s (%s)" % (
-                            tag["Value"], c_subnet.cidr_block)
+                        ec2_i['subnet'] = "%s (%s)" % (tag["Value"], c_subnet.cidr_block)
 
             db_i = {}
             for j in instances_array:
@@ -253,8 +251,7 @@ class BuildsManager(object):
             all_instances.append({"ec2": ec2_i, "db": db_i})
 
         # Sort by time of creation
-        all_instances.sort(key=lambda x: datetime.datetime.now() if (
-            x['db'] == {}) else x['db']['date'], reverse=True)
+        all_instances.sort(key=lambda x: datetime.datetime.now() if (x['db'] == {}) else x['db']['date'], reverse=True)
 
         # Convert all dates to strings
         for i in all_instances:
@@ -263,13 +260,38 @@ class BuildsManager(object):
 
         return all_instances
 
+    def getTestInstance(self):
+        """
+        Gets a new already-made test instance, creates a new one immediately.
+        """
+
+        while self.redis_client.llen('test_instances') < (NUMBER_OF_TEST_INSTANCES_AVAILABLE + 1):
+            instance_id = self.addInstance(
+                'AutoTest_{0}'.format(random.randint(1, 10000)),
+                'Builds-System',
+                'Created automatically for automatic tests',
+                'AutoTests',
+                "#!/bin/bash\n"
+                "set -x\n"
+                "exec 1>/install.log 2>&1\n"
+                "echo ubuntu:12345678 | chpasswd\n"
+                "sed -i.bak 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config\n"
+                "sed -i.bak 's/127\.0\.1\.1.*/127.0.1.1\t'`hostname`'/' /etc/hosts\n"    # surpress 'sudo: unable to resolve host'
+                "service ssh restart\n"
+            )['instance_id']
+
+            self.redis_client.lpush('test_instances', instance_id)
+
+        instance_id = self.redis_client.rpop('test_instances').decode('utf-8')
+
+        return {"instance_id": instance_id}
+
     def addInstance(self, name, owner, comments, configuration_name, configuration_code,
                     image_id=IMAGE_ID, instance_type=INSTANCE_TYPE,
                     key_name=KEY_NAME, subnet_id=SUBNET_ID):
         """As the name suggests, make a new instance."""
 
         # Give names to our instance and volume
-
         name_tag = [
             {"Key": "Name", "Value": "Builds-%s" % (name, )},
             {"Key": "VM-Type", "Value": "Builds-VM"}
@@ -308,35 +330,36 @@ class BuildsManager(object):
                                       "ec2_id": instance_id,
                                       "date": datetime.datetime.utcnow()})
 
-        return self.getInstances()  # Return new list of vms
+        return {"instance_id": instance_id}  # Return new list of vms
 
     def terminateInstance(self, ec2_id):
         """Delete an instance by its id."""
+        # If that's a test vm then remove it from the list
+        self.redis_client.lrem('test_instances', 0, ec2_id)
+
         self.ec2.instances.filter(InstanceIds=[ec2_id]).terminate()
 
         # Do not delete instances from the db. just update that they are terminated.
-        self.db.instances.update_one(
-            {"ec2_id": ec2_id}, {"$set": {"terminated": True}})
+        self.db.instances.update_one({"ec2_id": ec2_id}, {"$set": {"terminated": True}})
         # deleted = self.db.instances.delete_one({"ec2_id": ec2_id})
-        return self.getInstances()
+        return True
 
     def stopInstance(self, ec2_id):
         """Delete an instance by its id."""
         self.ec2.instances.filter(InstanceIds=[ec2_id]).stop()
-        return self.getInstances()
+        return True
 
     def startInstance(self, ec2_id):
         """Delete an instance by its id."""
         self.ec2.instances.filter(InstanceIds=[ec2_id]).start()
-        return self.getInstances()
+        return True
 
     def exportInstance(self, ec2_id, owner, client_name, comments):
         """Exports an instance by its id."""
         instance_db = self.getInstances(ec2_id=ec2_id)[0]
 
         result = self.ec2_client.create_instance_export_task(
-            Description="Export task of instance %s (%s)." % (
-                ec2_id, instance_db['db']['name']),
+            Description="Export task of instance %s (%s)." % (ec2_id, instance_db['db']['name']),
             InstanceId=ec2_id,
             TargetEnvironment='vmware',
             ExportToS3Task={
@@ -361,12 +384,11 @@ class BuildsManager(object):
         db_json['manifest'] = self.getManifest(ec2_id)
 
         self.db.exports.insert_one(db_json)
-        return self.getExportsInProgress()
+        return True
 
     def deleteConfiguration(self, object_id):
-        self.db.configurations.update_one({"_id": ObjectId(object_id)}, {
-                                          "$set": {"deleted": True}})
-        return self.getConfigurations()
+        self.db.configurations.update_one({"_id": ObjectId(object_id)}, {"$set": {"deleted": True}})
+        return True
 
     def getConfigurations(self):
         """Gets all the configurations currently on the system. """
@@ -398,12 +420,11 @@ class BuildsManager(object):
                              "date": datetime.datetime.utcnow()}
 
         if object_id is not None:
-            self.db.configurations.update_one({"_id": ObjectId(object_id)}, {
-                                              "$set": new_configuration})
+            self.db.configurations.update_one({"_id": ObjectId(object_id)}, {"$set": new_configuration})
         else:
             self.db.configurations.insert_one(new_configuration)
 
-        return self.getConfigurations()
+        return True
 
     def getManifest(self, ec2_id, key=None):
         """
