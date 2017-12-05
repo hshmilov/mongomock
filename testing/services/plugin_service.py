@@ -3,14 +3,16 @@ import services.compose_service
 import requests
 import axonius.ConfigReader
 import json
+import tempfile
+import time
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
 
 
 class PluginService(services.compose_service.ComposeService):
-    def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
-        super().__init__(compose_file_path)
+    def __init__(self, compose_file_path, config_file_path, container_name):
+        super().__init__(compose_file_path, container_name)
         self.parsed_compose_file = services.compose_parser.ServiceYmlParser(
             compose_file_path)
         port = self.parsed_compose_file.exposed_port
@@ -18,7 +20,8 @@ class PluginService(services.compose_service.ComposeService):
         self.req_url = "http://{0}:{1}/api".format(
             self.endpoint[0], self.endpoint[1])
         self.config_file_path = config_file_path
-        self.volatile_config_file_path = vol_config_file_path
+        self.container_name = container_name
+        self.last_vol_conf = None
 
     def request(self, method, endpoint, api_key=None, headers=None, *kargs, **kwargs):
         if headers is None:
@@ -46,12 +49,12 @@ class PluginService(services.compose_service.ComposeService):
         return self.request('delete', endpoint, *kargs, **kwargs)
 
     def version(self):
-        return self.get('version', timeout=5)
+        return self.get('version', timeout=15)
 
-    def _trigger_check_registered(self):
+    def trigger_check_registered(self):
         try:
             # Will trigger the plugin to check if he is registered. If not, the plugin will exit immediately
-            self.get('trigger_registration_check', timeout=5)
+            self.get('trigger_registration_check', timeout=15)
         except:
             pass
 
@@ -67,7 +70,6 @@ class PluginService(services.compose_service.ComposeService):
         return result.status_code == 200, str(result)
 
     def is_up(self):
-        self._trigger_check_registered()
         return self._is_service_alive()
 
     def _is_service_alive(self):
@@ -83,7 +85,11 @@ class PluginService(services.compose_service.ComposeService):
 
     @property
     def vol_conf(self):
-        return axonius.ConfigReader.PluginVolatileConfig(self.volatile_config_file_path)
+        # Try to get the latest, but if the container is down, use the last data.
+        (out, _, _) = self.get_file_contents_from_container("/home/axonius/app/plugin_volatile_config.ini")
+        self.last_vol_conf = axonius.ConfigReader.PluginVolatileConfig(out.decode("utf-8"))
+
+        return self.last_vol_conf
 
     @property
     def api_key(self):
@@ -95,15 +101,17 @@ class PluginService(services.compose_service.ComposeService):
 
 
 class AdapterService(PluginService):
-    def __init__(self, compose_file_path, config_file_path, vol_config_file_path):
+    def __init__(self, compose_file_path, config_file_path, container_name):
         super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
-                         vol_config_file_path=vol_config_file_path)
+                         container_name=container_name)
 
     def add_client(self, db, clients_details, client_id, identify_field):
         db.add_client(self.unique_name, clients_details, identify_field)
-        clients = json.loads(self.clients().content)
-        assert client_id in clients
-        return clients
+        clients_response = self.clients()
+        clients_content = json.loads(clients_response.content)
+
+        assert client_id in clients_content, "client_id is not in clients!"
+        return clients_content
 
     def devices(self):
         response = requests.get(self.req_url + "/devices",

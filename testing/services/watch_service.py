@@ -8,8 +8,8 @@ from services.simple_fixture import initialize_fixture
 class WatchService(plugin_service.PluginService):
     def __init__(self, compose_file_path='../plugins/watch-service/docker-compose.yml',
                  config_file_path='../plugins/watch-service/src/plugin_config.ini',
-                 vol_config_file_path='../plugins/watch-service/src/plugin_volatile_config.ini'):
-        super().__init__(compose_file_path, config_file_path, vol_config_file_path)
+                 container_name='watch-service'):
+        super().__init__(compose_file_path, config_file_path, container_name)
 
     def _request_watches(self, method, *kargs, **kwargs):
         return getattr(self, method)('watch', api_key=self.api_key, *kargs, **kwargs)

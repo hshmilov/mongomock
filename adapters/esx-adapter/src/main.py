@@ -2,6 +2,7 @@
 main.py Main file for running active directory plugin"
 """
 from ESXAdapter import ESXAdapter
+from axonius.ServerUtils import init_wsgi
 
 __author__ = "Mark Segal"
 
@@ -25,6 +26,9 @@ def wsgi_main(*args, **kwargs):
 
 if __name__ == '__main__':
     # Initialize
-    ESX_WRAPPER = ESXAdapter()
+    esx_adapter = ESXAdapter()
     # Run (Blocking)
-    ESX_WRAPPER.start_serve()
+    esx_adapter.start_serve()
+
+# Init wsgi if in it.
+wsgi_app = init_wsgi(ESXAdapter)

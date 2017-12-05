@@ -2,6 +2,7 @@
 main.py Main file for running active directory plugin"
 """
 from AWSAdapter import AWSAdapter
+from axonius.ServerUtils import init_wsgi
 
 __author__ = "Mark Segal"
 
@@ -25,6 +26,9 @@ def wsgi_main(*args, **kwargs):
 
 if __name__ == '__main__':
     # Initialize
-    AWS_WRAPPER = AWSAdapter()
+    aws_adapter = AWSAdapter()
     # Run (Blocking)
-    AWS_WRAPPER.start_serve()
+    aws_adapter.start_serve()
+
+# Init wsgi if in it.
+wsgi_app = init_wsgi(AWSAdapter)

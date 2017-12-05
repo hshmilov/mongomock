@@ -7,8 +7,11 @@ services:
         ports:
           - 5009:80
         volumes:
-          - ./src:/home/axonius/app
-          - ../axonius-libs/src/libs/axonius-py/axonius:/home/axonius/libs/axonius-py/axonius
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
 
 networks:
   default:

@@ -25,8 +25,9 @@ class AxoniusService(object):
         return self.get_devices_with_condition(cond)
 
     def clear_all_devices(self):
+        aggregator_unique_name = self.aggregator.unique_name
         self.aggregator.stop()
-        self.db.client.drop_database(self.aggregator.unique_name)
+        self.db.client.drop_database(aggregator_unique_name)
         self.aggregator.start_and_wait()
 
     def trigger_aggregator(self):
@@ -71,12 +72,12 @@ class AxoniusService(object):
         self.core.stop()
         # Check that Aggregator really went down
         current_time = datetime.now()
+        self.aggregator.trigger_check_registered()
         while self.aggregator.is_up():
             assert datetime.now() - current_time < timedelta(seconds=10)
-            time.sleep(0.2)
+            time.sleep(1)
         # Now aggregator is down as well
-        self.core.start()
-        self.core.wait_for_service()
+        self.core.start_and_wait()
 
         def assert_aggregator_registered():
             assert self.aggregator.is_up()
@@ -88,12 +89,11 @@ class AxoniusService(object):
 @pytest.fixture(scope="session", autouse=True)
 def axonius_fixture(request):
     mongo = MongoService()
-    initialize_fixture(request, mongo)
-
     core = CoreService()
-    initialize_fixture(request, core)
-
     aggregator = AggregatorService()
+
+    initialize_fixture(request, mongo)
+    initialize_fixture(request, core)
     initialize_fixture(request, aggregator)
 
     return AxoniusService(mongo, core, aggregator)

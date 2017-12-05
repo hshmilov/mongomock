@@ -1,20 +1,21 @@
 from services.esx_service import esx_fixture
+import pytest
 
 client_details = [
     ({
-        "host": "vcenter",
+        "host": "vcenter.axonius.lan",
         "user": "administrator@vsphere.local",
         "password": "Br!ng0rder",
         "verify_ssl": False
     }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'),
     ({
-        "host": "vcenter51.axonius.local",
+        "host": "vcenter51.axonius.lan",
         "user": "root",
         "password": "vmware",
         "verify_ssl": False
     }, "525345eb-51ef-f4d7-85bb-08e521b94528"),
     ({
-        "host": "vcenter55.axonius.local",
+        "host": "vcenter55.axonius.lan",
         "user": "root",
         "password": "vmware",
         "verify_ssl": False
@@ -25,7 +26,7 @@ SOME_DEVICE_ID = '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'
 
 
 def test_adapter_is_up(axonius_fixture, esx_fixture):
-    print("adapter is up")
+    assert esx_fixture.is_up()
 
 
 def test_adapter_responds_to_schema(axonius_fixture, esx_fixture):
@@ -48,7 +49,7 @@ def test_fetch_devices(axonius_fixture, esx_fixture):
 
     for client, some_device_id in client_details:
         client_id = "{}/{}".format(client['host'], client['user'])
-        axonius_fixture.add_client_to_adapter(esx_fixture, client, client_id)
+        axonius_fixture.add_client_to_adapter(esx_fixture, client, client_id, 'host')
         axonius_fixture.assert_device_aggregated(esx_fixture, client_id, some_device_id)
 
 

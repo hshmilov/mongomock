@@ -9,8 +9,8 @@ from services.simple_fixture import initialize_fixture
 class GuiService(plugin_service.PluginService):
     def __init__(self, compose_file_path='../plugins/gui/docker-compose.yml',
                  config_file_path='../plugins/gui/src/plugin_config.ini',
-                 vol_config_file_path='../plugins/gui/src/plugin_volatile_config.ini'):
-        super().__init__(compose_file_path, config_file_path, vol_config_file_path)
+                 container_name='gui'):
+        super().__init__(compose_file_path, config_file_path, container_name)
 
     def get_devices(self, *kargs, **kwargs):
         return self.get('devices', *kargs, **kwargs)

@@ -81,7 +81,7 @@ class AWSAdapter(AdapterBase):
         except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                 botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
             raise axonius.AdapterExceptions.CredentialErrorException(repr(e))
-        except botocore.exceptionsBotoCoreError as e:
+        except botocore.exceptions.BotoCoreError as e:
             raise axonius.AdapterExceptions.AdapterException(repr(e))
 
     def _clients_schema(self):

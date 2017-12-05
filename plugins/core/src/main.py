@@ -15,6 +15,7 @@ from datetime import datetime
 
 from flask import jsonify, request, Response
 from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius.ServerUtils import init_wsgi
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -260,6 +261,7 @@ class Core(PluginBase):
                             "Pluging {} restrated".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
                     else:
+                        self.logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")
                         if self._check_plugin_online(plugin_unique_name):
                             # There is already a running plugin with the same name
                             self.logger.error(
@@ -423,25 +425,10 @@ class Core(PluginBase):
                 "api_key": relevant_doc["api_key"]}
 
 
-def initialize():
-    return Core()
-
-
-def wsgi_main(*args, **kwargs):
-    """The main method for wsgi apps.
-
-    When in production mode, we use a production server with wsgi support to load our modules.
-    so we use this function as a proxy to the real wsgi function flask provides.
-    """
-
-    # This has to be static, since wsgi_main is called a lot.
-    if not hasattr(wsgi_main, "plugin"):
-        wsgi_main.plugin = initialize()
-
-    return wsgi_main.plugin.wsgi_app(*args, **kwargs)
-
-
 if __name__ == "__main__":
     """The main function for a regular terminal call."""
-    core = initialize()
+    core = Core()
     core.start_serve()
+
+# Init wsgi if in it.
+wsgi_app = init_wsgi(Core)

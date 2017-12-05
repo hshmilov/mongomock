@@ -11,7 +11,7 @@ SOME_DEVICE_ID = 'i-0ec91cae8a42be974'
 
 
 def test_adapter_is_up(axonius_fixture, aws_fixture):
-    print("Ad adapter is up")
+    assert aws_fixture.is_up()
 
 
 def test_adapter_responds_to_schema(axonius_fixture, aws_fixture):
@@ -32,7 +32,7 @@ def test_registered(axonius_fixture, aws_fixture):
 def test_fetch_devices(axonius_fixture, aws_fixture):
     client_id = client_details['aws_access_key_id']
     axonius_fixture.add_client_to_adapter(
-        aws_fixture, client_details, client_id)
+        aws_fixture, client_details, client_id, 'aws_access_key_id')
     axonius_fixture.assert_device_aggregated(
         aws_fixture, client_id, SOME_DEVICE_ID)
 

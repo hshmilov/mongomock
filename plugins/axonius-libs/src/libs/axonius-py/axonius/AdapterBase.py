@@ -204,6 +204,10 @@ class AdapterBase(PluginBase, ABC):
 
         :return: iterator([client_name, devices])
         """
+        if len(self._clients) == 0:
+            self.logger.info(f"{self.plugin_unique_name}: Trying to fetch devices but no clients found")
+            return
+
         # Running query on each device
         for client_name, client in self._clients.items():
             try:
@@ -213,8 +217,8 @@ class AdapterBase(PluginBase, ABC):
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
             except AdapterExceptions.AdapterException as e:
-                self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
                 self.logger.error(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
             except Exception as e:
                 self.logger.error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             else:

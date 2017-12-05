@@ -24,7 +24,7 @@ DEVICE_ID_FOR_CLIENT_2 = 'CN=DESKTOP-GO8PIUL,CN=Computers,DC=TestSecDomain,DC=te
 
 
 def test_adapter_is_up(axonius_fixture, ad_fixture):
-    print("Ad adapter is up")
+    assert ad_fixture.is_up()
 
 
 def test_adapter_responds_to_schema(axonius_fixture, ad_fixture):

@@ -82,7 +82,7 @@ class AggregatorPlugin(PluginBase):
         """
         devices = self.request_remote_plugin('devices', adapter)
         if devices.status_code != 200:
-            raise AdapterOffline()
+            raise AdapterOffline(str(devices.content))
         return devices.json()
 
     @add_rule("online_devices")
@@ -125,7 +125,15 @@ class AggregatorPlugin(PluginBase):
         try:
             with self.thread_manager_lock:
                 current_adapters = requests.get(
-                    self.core_address + '/register').json()
+                    self.core_address + '/register')
+
+                if current_adapters.status_code != 200:
+                    self.logger.error(f"Error getting devices from core. reason: "
+                                      f"{str(current_adapters.status_code)}, {str(current_adapters.content)}")
+
+                    return
+
+                current_adapters = current_adapters.json()
 
                 self.logger.info(
                     "registered adapters = {}".format(current_adapters))
@@ -384,11 +392,11 @@ class AggregatorPlugin(PluginBase):
                 if added_new_device:
                     self._save_devices_db_to_historical_persistent_db()
 
-        except AdapterOffline:
+        except AdapterOffline as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
             self.logger.warn(
-                "adapter {} might be offline".format(plugin_unique_name))
+                f"adapter {plugin_unique_name} might be offline. Reason {str(e)}")
         except Exception as e:
             self.logger.error("Thread {0} encountered error: {1}".format(
                 threading.current_thread(), str(e)))

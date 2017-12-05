@@ -4,7 +4,7 @@ from test_helpers import utils
 
 
 def test_plugin_is_up(axonius_fixture, gui_fixture):
-    print("GUI is up")
+    assert gui_fixture.is_up()
 
 
 def _count_num_of_tags(device):
@@ -24,7 +24,9 @@ def test_tags(axonius_fixture, gui_fixture, ad_fixture):
 
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tag_value = 'test_create_tag'
-            gui_fixture.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
+            result = gui_fixture.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
+            assert result.status_code == 200, f"Failed adding tag. reason: " \
+                                              f"{str(result.status_code)}, {str(result.content)}"
             fresh_device = gui_fixture.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 1
             assert fresh_device['tags'][-1]['tagvalue'] == test_tag_value

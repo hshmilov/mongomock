@@ -4,10 +4,14 @@
 __author__ = "Ofri Shur"
 
 from puppetadapter import PuppetAdapter
+from axonius.ServerUtils import init_wsgi
 
 if __name__ == '__main__':
     # Initialize
-    PUPPET_WRAPPER = PuppetAdapter()
+    puppet_adapter = PuppetAdapter()
 
     # Run (Blocking)
-    PUPPET_WRAPPER.start_serve()
+    puppet_adapter.start_serve()
+
+# Init wsgi if in it.
+wsgi_app = init_wsgi(PuppetAdapter)

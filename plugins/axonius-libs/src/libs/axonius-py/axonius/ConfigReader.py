@@ -28,9 +28,9 @@ class PluginConfig(object):
 
 
 class PluginVolatileConfig(object):
-    def __init__(self, config_file_path):
+    def __init__(self, config_string):
         self._config = configparser.ConfigParser()
-        self._config.read(config_file_path)
+        self._config.read_string(config_string)
 
     @property
     def api_key(self):

@@ -278,3 +278,4 @@ fabric.properties
 *.filters
 *plugin_volatile_config.ini
 testing/reporting/*
+logs/*

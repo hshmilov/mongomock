@@ -5,7 +5,7 @@ __author__ = "Ofir Yefet"
 import json
 import logging
 import logging.handlers
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 import traceback
 import requests
@@ -182,6 +182,8 @@ class PluginBase(object):
         self.plugin_unique_name = None
         self.api_key = None
 
+        print(f"{self.plugin_name} is starting")
+
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:
             self.host = temp_config['DEBUG']['host']
@@ -247,17 +249,17 @@ class PluginBase(object):
         # Adding "keepalive" thread
         if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
-            executors = {'default': ThreadPoolExecutor(5)}
+            executors = {'default': ThreadPoolExecutor(1)}
             self.online_plugins_scheduler = BackgroundScheduler(
                 executors=executors)
-            self.online_plugins_scheduler.start()
             self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
                                                   trigger=IntervalTrigger(
                                                       seconds=30),
-                                                  next_run_time=datetime.now(),
+                                                  next_run_time=datetime.now() + timedelta(seconds=20),
                                                   id='check_registered',
                                                   name='check_registered',
                                                   max_instances=1)
+            self.online_plugins_scheduler.start()
 
         # Creating open actions dict. This dict will hold all of the open actions issued by this plugin.
         # We will use this dict in order to determine what is the right callback for the action update retrieved.

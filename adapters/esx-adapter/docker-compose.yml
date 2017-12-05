@@ -7,9 +7,11 @@ services:
         ports:
             - 5111:80
         volumes:
-          - ./src:/home/axonius/app
-          - ../../plugins/axonius-libs/src/libs:/home/axonius/libs
           - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
 
 networks:
   default:

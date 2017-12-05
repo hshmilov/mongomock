@@ -1,32 +1,18 @@
-# Use openresty.
-FROM openresty/openresty:xenial
+# Use axonius-base-image. This gets is from a private repository in docker hub, use docker login to login!
+FROM axonius/axonius-base-image
 
 WORKDIR /home/axonius
 ENV HOME /home/axonius
 
-# Install dependencies and configure the rest of the things we need.
-RUN apt-get update && \
-    apt-get install -y ssh git \
-    supervisor software-properties-common python-software-properties && \
-    add-apt-repository ppa:jonathonf/python-3.6 && \
-    apt-get update && \
-    apt-get install -y python3.6 python3.6-dev python3.6-venv && \
-    curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \
-    ln -s /usr/bin/python3.6 /usr/local/bin/python3
-
+# Just copy configuration.
 COPY requirements.txt .
-
 RUN pip3 install -r requirements.txt
 
 # The following changes a lot, we want less build-time so its a different RUN command.
 RUN mkdir /home/axonius/logs
 
-# Set a label for this image.
-LABEL "com.axonius.image-type"="axonius-libs"
-
 # At this point we have openresty, python3, and axonius-libs installed.
 # Lets set up configuration files to have our final https server running.
-
 COPY src/config/uwsgi.ini ./config/uwsgi.ini
 COPY src/app/main.py ./app/main.py
 COPY src/config/supervisord.conf /etc/supervisor/supervisord.conf
@@ -38,6 +24,7 @@ COPY src/config/nginx-ssl /etc/nginx/snippets/
 
 # Install axonius-libs.
 COPY src/libs /home/axonius/libs
+COPY src/hacks /home/axonius/hacks
 RUN pip3 install -e /home/axonius/libs/axonius-py
 
 # Make port 80 available to the world outside this container

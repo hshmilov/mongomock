@@ -7,8 +7,9 @@ from services.simple_fixture import initialize_fixture
 
 class MongoService(services.compose_service.ComposeService):
     def __init__(self, endpoint=('localhost', 27018),
-                 compose_file_path='../devops/systemization/database/docker-compose.yml'):
-        super().__init__(compose_file_path)
+                 compose_file_path='../devops/systemization/database/docker-compose.yml',
+                 container_name="mongodb"):
+        super().__init__(compose_file_path, container_name=container_name)
         self.endpoint = endpoint
         self.client = None
 
