@@ -22,6 +22,10 @@ export const adapterStaticData = {
 	'esx_adapter': {
 		name: 'ESX',
 		description: 'Connects via ESX to given servers'
+	},
+	'stresstest_adapter':{
+		name: "LOL",
+		description: "i am the king of devices"
 	}
 }
 

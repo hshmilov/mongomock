@@ -18,7 +18,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 
 from axonius.PluginBase import PluginBase, add_rule, return_error
 from axonius.ParsingUtils import beautiful_adapter_device_name
-from flask import jsonify, request
+from flask import jsonify
 from exceptions import AdapterOffline
 
 
@@ -56,14 +56,18 @@ class AggregatorPlugin(PluginBase):
         # Open connection to the adapters db
         self.devices_db_connection = self._get_db_connection(True)[
             self.plugin_unique_name]
+        self.devices_db = self.devices_db_connection['devices_db']
+
         # Scheduler for querying core for online adapters and querying the adapters themselves
         self._online_adapters_scheduler = None
-        # Load devices DB, or create an empty one
-        self._load_devices_from_persistent_db()
         # Starting the managing thread
         self._start_managing_thread()
 
+        # insertion and link/unlink lock
         self.thread_manager_lock = threading.RLock()
+
+        # tagging lock
+        self.tags_lock = threading.RLock()
 
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.
@@ -80,10 +84,20 @@ class AggregatorPlugin(PluginBase):
 
         :param str adapter: The address of the adapter (url)
         """
-        devices = self.request_remote_plugin('devices', adapter)
-        if devices.status_code != 200:
-            raise AdapterOffline(str(devices.content))
-        return devices.json()
+        try:
+            clients = self.request_remote_plugin('clients', adapter).json()
+        except:
+            raise AdapterOffline()
+        for client_name in clients:
+            try:
+                devices = self.request_remote_plugin(f'devices_by_name?name={client_name}', adapter)
+            except:
+                # request failed
+                raise AdapterOffline()
+            if devices.status_code != 200:
+                self.logger.wram(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}")
+                continue
+            yield (client_name, devices.json())
 
     @add_rule("online_devices")
     def get_online_devices(self):
@@ -92,7 +106,7 @@ class AggregatorPlugin(PluginBase):
         Accepts:
             GET - for getting all devices
         """
-        return jsonify(self.devices_db)
+        return jsonify(self.devices_db.find())
 
     @add_rule("online_device/<device_id>")
     def get_online_device(self, device_id):
@@ -101,7 +115,7 @@ class AggregatorPlugin(PluginBase):
         Accepts:
             GET - for getting all devices
         """
-        return jsonify(self.devices_db[device_id])
+        return jsonify(self.devices_db.find_one({"internal_axon_id": device_id}))
 
     @add_rule("query_devices", methods=["POST"])
     def query_devices(self):
@@ -228,39 +242,42 @@ class AggregatorPlugin(PluginBase):
         sent_plugin['plugin_unique_name'], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
 
         # now let's update our db
-        with self.device_db_lock:
-            # figure out all axonius devices that at least one of its adapter_device are in the
-            # given plugin's association
-            axonius_device_candidates_dict = {axonius_id: axonius_device for axonius_id, axonius_device in
-                                              self.devices_db.items() if
-                                              # this is equivalent to:
-                                              # is `sent_plugin` matching with any of axonius_device['adapters']?
-                                              any(parsed_device_match_plugin(sent_plugin, axon_adapter_device)
-                                                  for axon_adapter_device in
-                                                  axonius_device['adapters'].values(
-                                              )
-                                                  if axon_adapter_device['plugin_type'] == 'Adapter')}
-            if association_type == 'Tag':
-                if len(axonius_device_candidates_dict) != 1:
-                    # it has been checked that at most 1 device was provided (if len(associated_adapter_devices) != 1)
-                    # then if it's not 1, its definitely 0
-                    return return_error(
-                        "A tag must be associated with just one adapter device, the device provided is unavailable")
-                # take (assumed single) key from dictionary
-                axonius_device_id, = axonius_device_candidates_dict
-                self._update_device_with_tag(sent_plugin, axonius_device_id)
-            elif association_type == 'Link':
-                # in this case, we need to link (i.e. "merge") all axonius_device_candidates_dict
+        # figure out all axonius devices that at least one of its adapter_device are in the
+        # given plugin's association
+        axonius_device_candidates = list(self.devices_db.find({"$or": [
+            {
+                'adapters': {
+                    '$elemMatch': {
+                        'plugin_unique_name': associated_plugin_unique_name,
+                        'data.id': associated_id
+                    }
+                }
+            }
+            for associated_plugin_unique_name, associated_id in associated_adapter_devices.items()
+        ]}))
+
+        if association_type == 'Tag':
+            if len(axonius_device_candidates) != 1:
+                # it has been checked that at most 1 device was provided (if len(associated_adapter_devices) != 1)
+                # then if it's not 1, its definitely 0
+                return return_error(
+                    "A tag must be associated with just one adapter device, the device provided is unavailable")
+
+            # take (assumed single) key from candidates
+            self._update_device_with_tag(sent_plugin, axonius_device_candidates[0])
+        elif association_type == 'Link':
+            with self.tags_lock:
+                # in this case, we need to link (i.e. "merge") all axonius_device_candidates
                 # if there's only one, then the link is either associated only to
                 # one device (which is as irrelevant as it gets)
                 # or all the devices are already linked. In any case, if a real merge isn't done
                 # it means someone made a mistake.
-                if len(axonius_device_candidates_dict) < 2:
-                    return return_error(f"Got a 'Link' with only {len(axonius_device_candidates_dict)} candidates",
+                if len(axonius_device_candidates) < 2:
+                    return return_error(f"Got a 'Link' with only {len(axonius_device_candidates)} candidates",
                                         400)
 
                 collected_adapter_devices_dicts = [axonius_device['adapters'] for axonius_device in
-                                                   axonius_device_candidates_dict.values()]
+                                                   axonius_device_candidates]
                 all_plugin_unique_names = list(chain.from_iterable(
                     d.keys() for d in collected_adapter_devices_dicts))
                 if len(set(all_plugin_unique_names)) != len(all_plugin_unique_names):
@@ -273,29 +290,33 @@ class AggregatorPlugin(PluginBase):
 
                 # now we can assume now that all all_plugin_unique_names are in fact unique
                 # we merge all dictionaries!
-                all_unique_adpater_devices_data = {
+                all_unique_adapter_devices_data = {
                     k: v for d in collected_adapter_devices_dicts for k, v in d.items()}
 
                 internal_axon_id = uuid.uuid4().hex
-                self.devices_db[internal_axon_id] = {
+                self.devices_db.insert_one({
                     "internal_axon_id": internal_axon_id,
                     "accurate_for_datetime": datetime.now(),
-                    "adapters": all_unique_adpater_devices_data,
+                    "adapters": all_unique_adapter_devices_data,
                     "tags": list(chain(*(axonius_device['tags'] for axonius_device in
-                                         axonius_device_candidates_dict.values())))
-                }
+                                         axonius_device_candidates)))
+                })
 
                 # now, let us delete all other AxoniusDevices
-                for axonius_device_id in axonius_device_candidates_dict:
-                    del self.devices_db[axonius_device_id]
-            elif association_type == 'Unlink':
-                if len(axonius_device_candidates_dict) != 1:
+                self.devices_db.delete_many({'$or':
+                                             [
+                                                 {'internal_axon_id': axonius_device['internal_axon_id']}
+                                                 for axonius_device in axonius_device_candidates
+                                             ]
+                                             })
+        elif association_type == 'Unlink':
+            with self.tags_lock:
+                if len(axonius_device_candidates) != 1:
                     return return_error(
                         "All associated_adapter_devices in an unlink operation must be from the same Axonius "
                         "device, in your case, they're from "
-                        f"{len(axonius_device_candidates_dict)} devices.")
-                axonius_device_to_split = list(
-                    axonius_device_candidates_dict.values())[0]
+                        f"{len(axonius_device_candidates)} devices.")
+                axonius_device_to_split = axonius_device_candidates[0]
 
                 if len(axonius_device_to_split['adapters']) == len(associated_adapter_devices):
                     return return_error("You can't remove all devices from an AxoniusDevice, that'll be unfair.")
@@ -322,9 +343,9 @@ class AggregatorPlugin(PluginBase):
                     axonius_device_to_split['tags'] = [tag for tag in axonius_device_to_split['tags']
                                                        if not parsed_device_match_plugin(tag, adapter_device)]
 
-                self.devices_db[internal_axon_id] = new_axonius_device
-
-            self._save_devices_db_to_persistent_db()
+                self.devices_db.insert_one(new_axonius_device)
+                self.devices_db.replace_one({'internal_axon_id': axonius_device_to_split['internal_axon_id']},
+                                            {'tags': axonius_device_to_split['tags']})
 
         # raw == parsed for plugin_data
         self._save_parsed_in_db(sent_plugin, db_type='raw')
@@ -354,9 +375,17 @@ class AggregatorPlugin(PluginBase):
             # adapter, which is not that bad. The only slow thing here is the DB insertion, which
             # shouldn't be so slow anyway.
             with self.device_db_lock:
-                # if this is true after going through all devices, the persistent devices db will be updated
-                added_new_device = False
                 for client_name, devices_per_client in devices:
+                    # Saving the raw data on the historic db
+                    try:
+                        self._save_data_in_history(devices_per_client['raw'],
+                                                   plugin_name,
+                                                   plugin_unique_name,
+                                                   "Adapter")
+                    except pymongo.errors.DocumentTooLarge:
+                        # wanna see my "something too large"?
+                        self.logger.warn(f"Got DocumentTooLarge for {plugin_unique_name} with client {client_name}.")
+
                     # Here we have all the devices a single client sees
                     for device in devices_per_client['parsed']:
                         device['pretty_id'] = beautiful_adapter_device_name(
@@ -369,28 +398,26 @@ class AggregatorPlugin(PluginBase):
                             'accurate_for_datetime': datetime.now(),
                             'data': device
                         }
-
-                        device_key = self._find_device_by_adapter(
-                            parsed_to_insert)
-
-                        if device_key:
-                            # We need to update the device data
-                            self._update_device_with_adapter(parsed_to_insert, device_key,
-                                                             parsed_to_insert['accurate_for_datetime'])
-                        else:
-                            self._create_device(parsed_to_insert)
-                            added_new_device = True
                         self._save_parsed_in_db(parsed_to_insert)
 
-                    # Saving the raw data on the historic db
-                    self._save_data_in_history(devices_per_client['raw'],
-                                               plugin_name,
-                                               plugin_unique_name,
-                                               "Adapter")
+                        modified_count = self.devices_db.update_one({
+                            'adapters': {
+                                '$elemMatch': {
+                                    'plugin_unique_name': plugin_unique_name,
+                                    'data.id': device['id']
+                                }
+                            }
+                        }, {"$set": {
+                            "adapters.$": parsed_to_insert,
+                        }}).modified_count
 
-                self._save_devices_db_as_is_to_persistent_db()
-                if added_new_device:
-                    self._save_devices_db_to_historical_persistent_db()
+                        if modified_count == 0:
+                            self.devices_db.insert_one({
+                                "internal_axon_id": uuid.uuid4().hex,
+                                "accurate_for_datetime": datetime.now(),
+                                "adapters": [parsed_to_insert],
+                                "tags": []
+                            })
 
         except AdapterOffline as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
@@ -432,150 +459,27 @@ class AggregatorPlugin(PluginBase):
         except pymongo.errors.PyMongoError as e:
             self.logger.error("Error in pymongo. details: {}".format(e))
 
-    def _create_device(self, device_parsed):
-        """ Creates a new device in the devices_db
-
-        Generates a unique id for the device.
-
-        :param dict device_parsed: dict
-        """
-        with self.device_db_lock:
-            internal_axon_id = uuid.uuid4().hex
-            self.devices_db[internal_axon_id] = {
-                "internal_axon_id": internal_axon_id,
-                "accurate_for_datetime": datetime.now(),
-                "adapters": {
-                    device_parsed['plugin_unique_name']: device_parsed
-                },
-                "tags": []
-            }
-
-    def _update_device_with_tag(self, tag, axonius_device_id):
+    def _update_device_with_tag(self, tag, axonius_device):
         """
         Updates the devices db to either add or update the given tag
         :param tag: tag from user
-        :param axonius_device_id: axonius id
+        :param axonius_device: axonius device from db
         :return: None
         """
-        with self.device_db_lock:
-            axonius_device_to_change = self.devices_db[axonius_device_id]
-            associated_tag = next((candidate_tag for candidate_tag in axonius_device_to_change['tags']
-                                   if candidate_tag['plugin_unique_name'] == tag['plugin_unique_name'] and
-                                   candidate_tag['tagname'] == tag['tagname'] and
-                                   candidate_tag['associated_adapter_devices'] == tag['associated_adapter_devices']),
-                                  None)
-            if associated_tag is None:
-                axonius_device_to_change['tags'].append(tag)
-            else:
-                associated_tag['tagvalue'] = tag['tagvalue']
-            axonius_device_to_change['accurate_for_datetime'] = tag.get(
-                'accurate_for_datetime')
-
-    def _update_device_with_adapter(self, adapter_parsed, axonius_device_id, accurate_for_datetime=None):
-        """ Updates a device in the devices_db using adapter.
-
-        :param dict adapter_parsed: dict
-        :param str axonius_device_id: The unique id of the device
-        """
-        added_device_plugin_unique_name = adapter_parsed['plugin_unique_name']
-        with self.device_db_lock:
-            axonius_device_to_change = self.devices_db[axonius_device_id]
-            # add or update the adapter_device within the axonius device
-            axonius_device_to_change['adapters'][added_device_plugin_unique_name] = adapter_parsed
-            # update the timestamp
-            axonius_device_to_change['accurate_for_datetime'] = accurate_for_datetime if accurate_for_datetime \
-                else datetime.now()
-
-    def _find_device_by_adapter(self, adapter_device):
-        """ Find a device in the db. This will allow for us to update our data using the newly acquired
-        parsed_device. If it's already in the DB (it has been returned previously by an adapter) we'll find it
-
-        :param dict adapter_device: A parsed device data we try to find in the devices db
-
-        :returns unique_id: The id of the found device (None if not found)
-        """
-        # Try to find according to same adapter id
-        with self.device_db_lock:
-            # figure out which axonius_devices have a matching adapter_device in their ['data']
-            potential_candidate = [axonius_id for axonius_id, axonius_device in self.devices_db.items() if
-
-                                   # this is equivalent to:
-                                   # is `adapter_device` matching with any of axonius_device['adapters'] ?
-                                   any(parsed_devices_match(adapter_device, axon_adapter_device)
-                                       for axon_adapter_device in
-                                       axonius_device['adapters'].values())]
-
-            if len(potential_candidate) > 1:
-                raise RuntimeError(
-                    f"Data inconsistency: {len(potential_candidate)} axonius devices have the same device")
-            if len(potential_candidate) == 1:
-                return potential_candidate[0]
-
-            return None
-
-    def _save_devices_db_to_persistent_db(self):
-        """
-        Makes everything persistent as its supposed to be
-        :return:
-        """
-        with self.device_db_lock:
-            self._save_devices_db_as_is_to_persistent_db()
-            self._save_devices_db_to_historical_persistent_db()
-
-    def _save_devices_db_as_is_to_persistent_db(self):
-        """
-        Saves `self.devices_db` as-is into `devices_db` in the persistent db, overriding everything that is there.
-        :return:
-        """
-        device_db_collection = self.devices_db_connection['devices_db']
-
-        for device in self.devices_db.values():
-            device = dict(device)
-            device['adapters'] = list(device['adapters'].values())
-            device_db_collection.replace_one({"internal_axon_id": device['internal_axon_id']},
-                                             device, upsert=True)
-
-        devices_axon_id_saved = [x['internal_axon_id'] for x in self.devices_db.values()]
-        self.devices_db_connection['devices_db'].delete_many({"internal_axon_id": {"$nin": devices_axon_id_saved}})
-
-    def _save_devices_db_to_historical_persistent_db(self):
-        """
-        Saves the current devices db (`self.devices_db`) to the historical persistent (mongo) db 'db_historical'
-        This doesn't save everything, rather it saves just the devices ids and tags associations.
-        :return:
-        """
-        with self.device_db_lock:
-            device_db_snapshot = {}
-            for axon_device_id, axon_device in self.devices_db.items():
-                axon_device_snapshot = {
-                    'accurate_for_datetime': axon_device['accurate_for_datetime'],
-                    'adapters': [],
-                    'tags': axon_device['tags']
+        if any(x['tagname'] == tag['tagname'] for x in axonius_device['tags']):
+            self.devices_db.update_one({
+                "internal_axon_id": axonius_device['internal_axon_id'],
+                "tags.tagname": tag['tagname']
+            }, {
+                "$set": {
+                    "tags.$": tag
                 }
-                for plugin_unique_name, adapter_device in axon_device['adapters'].items():
-                    # taking all fields, for both plugins and adapters, except the data field that'll be cleaned
-                    # in case of adapters, to not overflow the db too soon
-                    axon_adapter_device_snapshot = {k: v for k, v in adapter_device.items() if k in
-                                                    ('_id',
-                                                     'accurate_for_datetime', 'client_used', 'plugin_name',
-                                                     'plugin_type', 'plugin_unique_name')}
-                    axon_adapter_device_snapshot['data'] = {
-                        'id': adapter_device['data']['id']}
-                    axon_device_snapshot['adapters'].append(axon_adapter_device_snapshot)
-
-                device_db_snapshot[axon_device_id] = axon_device_snapshot
-
-            self.devices_db_connection['db_historical'].insert_one(
-                {"devices_db": device_db_snapshot})
-
-    def _load_devices_from_persistent_db(self):
-        """
-        Will rewrite self.devices_db with whatever's in the database
-        :return:
-        """
-        with self.device_db_lock:
-            self.devices_db = {}
-            for axon_device in self.devices_db_connection['devices_db'].find():
-                axon_device['adapters'] = {adapter['plugin_unique_name']: adapter for adapter in
-                                           axon_device['adapters']}
-                self.devices_db[axon_device['internal_axon_id']] = axon_device
+            })
+        else:
+            self.devices_db.update_one({
+                "internal_axon_id": axonius_device['internal_axon_id'],
+            }, {
+                "$addToSet": {
+                    "tags": tag
+                }
+            })

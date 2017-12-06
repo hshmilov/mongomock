@@ -20,7 +20,7 @@ import json
 from datetime import timedelta, datetime
 
 # the maximal amount of data a pagination query will give
-PAGINATION_LIMIT_MAX = 100
+PAGINATION_LIMIT_MAX = 2000
 
 
 # def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):

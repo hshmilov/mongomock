@@ -1,6 +1,6 @@
 <template>
-    <div class="paginated-table dataTables_wrapper">
-        <pulse-loader :loading="fetching" color="#26dad2"></pulse-loader>
+    <div class="paginated-table dataTables_wrapper"> 
+        <pulse-loader :loading="fetching && (!data || !data.length)" color="#26dad2"></pulse-loader>
         <div class="table table-responsive">
             <table class="table">
                 <thead>
@@ -70,18 +70,6 @@
 			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value', 'active-id'
 		],
 		computed: {
-			pageSize () {
-				if (this.$resize && this.$mq.above('height', 900)) { return 11 }
-				if (this.$resize && this.$mq.above('height', 850)) { return 10 }
-				if (this.$resize && this.$mq.above('height', 800)) { return 9 }
-				if (this.$resize && this.$mq.above('height', 750)) { return 8 }
-				if (this.$resize && this.$mq.above('height', 700)) { return 7 }
-				if (this.$resize && this.$mq.above('height', 650)) { return 6 }
-				if (this.$resize && this.$mq.above('height', 600)) { return 5 }
-				if (this.$resize && this.$mq.above('height', 550)) { return 4 }
-				if (this.$resize && this.$mq.above('height', 500)) { return 3 }
-				return 1
-			},
 			firstPage () {
 				return this.currentPage === 0
 			},
@@ -98,6 +86,7 @@
 		},
 		data () {
 			return {
+				pageSize: 10,
 				linkedPageCount: 1,
 				linkedPageStart: 0,
 				currentPage: 0,
@@ -137,8 +126,8 @@
 			},
 			data: function (newData, oldData) {
 				let diff = newData.length - oldData.length
-				if (diff === this.pageSize * 1000) {
-					this.maxPages += 1000
+				if (diff === this.pageSize * 50) {
+					this.maxPages += 50
 					this.linkedPageCount = Math.min(this.maxPages, 5)
 					/* Continue getting pages until linked amount is fulfilled, so user does not wait for it */
 					this.addData()
@@ -172,8 +161,8 @@
 			},
 			addData () {
 				this.fetchData({
-					skip: this.fetchedPages * this.pageSize * 1000,
-					limit: this.pageSize * 1000,
+					skip: this.fetchedPages * this.pageSize * 50,
+					limit: this.pageSize * 50,
 					fields: this.filterFields,
 					filter: this.filter
 				})

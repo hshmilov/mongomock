@@ -58,6 +58,34 @@ class AdapterBase(PluginBase, ABC):
         """
         return jsonify(self._query_devices())
 
+    @add_rule('devices_by_name', methods=['GET'])
+    def devices_by_client(self):
+        """ /devices_by_name?name= Query adapter to fetch all available devices from a specific client.
+        An "available" device is a device that is registered with the adapter source.
+
+        Accepts:
+           GET - Finds all available devices from a specific client, and returns them
+        """
+        client_name = request.args.get('name')
+        client = self._clients.get(client_name)
+        if client is None:
+            return return_error("Client does not exist", 404)
+
+        try:
+            raw_devices = self._query_devices_by_client(client_name, client)
+            parsed_devices = list(self._parse_raw_data(raw_devices))
+        except AdapterExceptions.CredentialErrorException as e:
+            self.reutrn_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
+        except AdapterExceptions.AdapterException as e:
+            self.return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
+        except Exception as e:
+            return return_error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
+        else:
+            devices_list = {'raw': raw_devices,
+                            'parsed': parsed_devices}
+
+            return jsonify(devices_list)
+
     @add_rule('clients', methods=['GET', 'POST'])
     def clients(self):
         """ /clients Returns all available clients, e.g. all DC servers.
