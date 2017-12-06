@@ -332,7 +332,7 @@ class Core(PluginBase):
                                            'plugin_name': plugin['plugin_name']}
         return online_devices
 
-    @add_rule("<path:full_url>", methods=['POST', 'GET'], should_authenticate=False)
+    @add_rule("<path:full_url>", methods=['POST', 'GET', 'PUT', 'DELETE'], should_authenticate=False)
     def proxy(self, full_url):
         """Fetch the specified URL and streams it out to the client.
 

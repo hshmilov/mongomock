@@ -8,6 +8,7 @@ __author__ = "Mark Segal"
 from vCenterApi import vCenterApi, rawify_vcenter_data
 from axonius.AdapterBase import AdapterBase
 from axonius.ParsingUtils import figure_out_os
+from axonius import AdapterExceptions
 from pyVmomi import vim
 
 
@@ -18,25 +19,25 @@ class ESXAdapter(AdapterBase):
         """
         super().__init__(*args, **kwargs)
 
-    def _parse_clients_data(self, clients_config):
-        clients_dict = {}
-        for esx_auth in clients_config:
-            name = '{}/{}'.format(esx_auth['host'], esx_auth['user'])
-            try:
-                clients_dict[name] = vCenterApi(host=esx_auth['host'], user=esx_auth['user'],
-                                                password=esx_auth['password'],
-                                                verify_ssl=esx_auth['verify_ssl'])
-            except vim.fault.InvalidLogin as e:
-                self.logger.error(
-                    "Credentials invalid for ESX client for account {0}".format(name))
-            except vim.fault.HostConnectFault as e:
-                self.logger.error("Unable to access vCenter, text={}, host = {}".format(
-                    e.msg, esx_auth['host']))
-            except Exception as e:
-                self.logger.error(
-                    "Unknown error on account {}, text={}".format(name, str(e)))
+    def _get_client_id(self, client_config):
+        return '{}/{}'.format(client_config['host'], client_config['user'])
 
-        return clients_dict
+    def _connect_client(self, client_config):
+        client_id = self._get_client_id(client_config)
+        try:
+            return vCenterApi(host=client_config['host'], user=client_config['user'],
+                              password=client_config['password'],
+                              verify_ssl=client_config['verify_ssl'])
+        except vim.fault.InvalidLogin as e:
+            message = "Credentials invalid for ESX client for account {0}".format(client_id)
+        except vim.fault.HostConnectFault as e:
+            message = "Unable to access vCenter, text={}, host = {}".format(
+                e.msg, client_config['host'])
+        except Exception as e:
+            message = "Unknown error on account {}, text={}".format(client_id, str(e))
+
+        self.logger.error(message)
+        raise AdapterExceptions.ClientConnectionException(message)
 
     def _clients_schema(self):
         """

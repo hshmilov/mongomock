@@ -33,8 +33,8 @@ class AxoniusService(object):
     def trigger_aggregator(self):
         self.aggregator.query_devices()  # send trigger to agg to refresh devices
 
-    def add_client_to_adapter(self, adapter, client_details, client_id, identify_field=None):
-        adapter.add_client(self.db, client_details, client_id, identify_field)
+    def add_client_to_adapter(self, adapter, client_details):
+        adapter.add_client(client_details)
         self.trigger_aggregator()
 
     def get_device_network_interfaces(self, adapter_name, device_id):

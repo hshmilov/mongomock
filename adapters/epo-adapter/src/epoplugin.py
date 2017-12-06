@@ -106,10 +106,10 @@ class EpoPlugin(AdapterBase):
                      joinTables=all_linked_tables)
         return json.dumps(raw)
 
-    def _parse_clients_data(self, clients_config):
-        clients = {}
-        for client in clients_config:
-            clients[client[EPO_HOST]] = client
-        return clients
+    def _get_client_id(self, client_config):
+        return client_config[EPO_HOST]
+
+    def _connect_client(self, client_config):
+        return client_config
 
     # Exported API functions - None for now

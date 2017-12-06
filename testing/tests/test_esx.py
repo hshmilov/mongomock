@@ -49,7 +49,7 @@ def test_fetch_devices(axonius_fixture, esx_fixture):
 
     for client, some_device_id in client_details:
         client_id = "{}/{}".format(client['host'], client['user'])
-        axonius_fixture.add_client_to_adapter(esx_fixture, client, client_id, 'host')
+        axonius_fixture.add_client_to_adapter(esx_fixture, client)
         axonius_fixture.assert_device_aggregated(esx_fixture, client_id, some_device_id)
 
 

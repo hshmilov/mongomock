@@ -19,5 +19,5 @@ def populate_test_devices(axonius_fixture, ad_fixture):
     client_id = ad_client1_details['dc_name']
     assert ad_fixture.is_up()
 
-    axonius_fixture.add_client_to_adapter(ad_fixture, ad_client1_details, client_id, 'dc_name')
+    axonius_fixture.add_client_to_adapter(ad_fixture, ad_client1_details)
     axonius_fixture.assert_device_aggregated(ad_fixture, client_id, DEVICE_ID_FOR_CLIENT_1)

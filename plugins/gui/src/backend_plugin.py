@@ -49,7 +49,7 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                        response.status_code >= 300 or
+                    response.status_code >= 300 or
                         'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
@@ -529,15 +529,28 @@ class BackendPlugin(PluginBase):
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
                 [('plugin_unique_name', pymongo.ASCENDING)])
-            return jsonify({'plugin_name': adapter['plugin_name'],
-                            'unique_plugin_name': adapter['plugin_unique_name'],
-                            'status': 'success' if (adapter['plugin_unique_name'] in plugins_available) else 'error'
-                            }
-                           for adapter in
-                           adapters_from_db)
+            adapters_to_return = []
+            for adapter in adapters_from_db:
+                status = ''
+                if not adapter['plugin_unique_name'] in plugins_available:
+                    status = 'error'
+                else:
+                    clients_configured = db_connection[adapter['plugin_unique_name']]['clients'].find(
+                        projection={'_id': 1}).count()
+                    if clients_configured:
+                        clients_connected = db_connection[adapter['plugin_unique_name']]['clients'].find(
+                            {'status': 'success'}, projection={'_id': 1}).count()
+                        status = 'success' if clients_configured == clients_connected else 'warning'
+
+                adapters_to_return.append({'plugin_name': adapter['plugin_name'],
+                                           'unique_plugin_name': adapter['plugin_unique_name'],
+                                           'status': status
+                                           })
+
+            return jsonify(adapters_to_return)
 
     @paginated()
-    @add_rule("adapters/<adapter_unique_name>/clients", methods=['POST', 'GET'], should_authenticate=False)
+    @add_rule("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'], should_authenticate=False)
     def adapters_clients(self, adapter_unique_name, limit, skip):
         """
         Gets or creates clients in the adapter
@@ -547,23 +560,22 @@ class BackendPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[adapter_unique_name]['clients']
             if request.method == 'GET':
+                client_collection = db_connection[adapter_unique_name]['clients']
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
                                 client_collection.find().sort([('_id', pymongo.ASCENDING)])
                                 .skip(skip).limit(limit)]
                 })
-            if request.method == 'POST':
+            if request.method == 'PUT':
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
                     return return_error("Invalid client", 400)
-                result = client_collection.insert(client_to_add)
-                self.request_remote_plugin("clients", adapter_unique_name, method='post')
-                return str(result), 200
+                response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
+                return response.text, response.status_code
 
-    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['POST', 'DELETE'],
+    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'],
               should_authenticate=False)
     def adapters_clients_update(self, adapter_unique_name, client_id):
         """
@@ -572,18 +584,13 @@ class BackendPlugin(PluginBase):
         :param client_id: UUID of client to delete
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[adapter_unique_name]['clients']
-            if request.method == 'POST':
-                client_to_update = request.get_json(silent=True)
-                client_collection.update_one({'_id': ObjectId(client_id)}, {
-                    '$set': client_to_update
-                })
-            if request.method == 'DELETE':
-                db_connection[adapter_unique_name]['clients'].delete_one(
-                    {'_id': ObjectId(client_id)})
-            self.request_remote_plugin("clients", adapter_unique_name, method='post')
-            return ""
+        self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
+        if request.method == 'PUT':
+            client_to_update = request.get_json(silent=True)
+            response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_update)
+            return response.text, response.status_code
+        if request.method == 'DELETE':
+            return '', 200
 
     @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
     def config(self, config_name):

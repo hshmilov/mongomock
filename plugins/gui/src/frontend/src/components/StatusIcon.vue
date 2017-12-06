@@ -20,6 +20,7 @@
         display: inline-block;
         color: $color-light;
         border-radius: 4px;
+        background-color: $background-color-disabled;
         i {
             padding: 4px;
             vertical-align: middle;

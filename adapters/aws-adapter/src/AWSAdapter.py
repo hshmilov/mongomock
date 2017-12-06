@@ -42,16 +42,30 @@ class AWSAdapter(AdapterBase):
         """
         super().__init__(*args, **kwargs)
 
-    def _parse_clients_data(self, clients_config):
-        clients_dict = {}
-        for aws_auth in clients_config:
+    def _get_client_id(self, client_config):
+        return client_config['aws_access_key_id']
+
+    def _connect_client(self, client_config):
+        try:
+            boto3_client = boto3.client('ec2', **client_config)
+            # Try to get all the instances. if we have the wrong privileges, it will throw an exception.
+            # The only way of knowing if the connection works is to try something. we use DryRun=True,
+            # and if it all works then we should get:
+            # botocore.exceptions.ClientError: An error occurred (DryRunOperation) when calling the DescribeInstances operation: Request would have succeeded, but DryRun flag is set.
             try:
-                aws_id = aws_auth['aws_access_key_id']
-                del aws_auth['_id']
-                clients_dict[aws_id] = boto3.client('ec2', **aws_auth)
-            except axonius.BotoCoreError as e:
-                self.logger.error("Error creating EC2 client for account {0}, reason: {1}", aws_auth.meta.id, str(e))
-        return clients_dict
+                boto3_client.describe_instances(DryRun=True)
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error'].get('Code') != 'DryRunOperation':
+                    raise
+            return boto3_client
+        except botocore.exceptions.BotoCoreError as e:
+            message = "Error creating EC2 client for account {0}, reason: {1}".format(
+                client_config['aws_access_key_id'], str(e))
+        except botocore.exceptions.ClientError as e:
+            message = "Error connecting to client with account {0}, reason: {1}".format(
+                client_config['aws_access_key_id'], str(e))
+        self.logger.error(message)
+        raise axonius.AdapterExceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -116,7 +130,7 @@ class AWSAdapter(AdapterBase):
                 tags_dict = {i['Key']: i['Value']
                              for i in instance.get('Tags', {})}
                 yield {
-                    "name": tags_dict.get('Name', instance['KeyName']),
+                    "name": tags_dict.get('Name', ''),
                     'OS': figure_out_os(instance['DescribedImage']['Description']
                                         if instance['DescribedImage'] is not None
                                         else None),

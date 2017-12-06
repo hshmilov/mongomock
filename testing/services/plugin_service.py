@@ -105,13 +105,8 @@ class AdapterService(PluginService):
         super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
                          container_name=container_name)
 
-    def add_client(self, db, clients_details, client_id, identify_field):
-        db.add_client(self.unique_name, clients_details, identify_field)
-        clients_response = self.clients()
-        clients_content = json.loads(clients_response.content)
-
-        assert client_id in clients_content, "client_id is not in clients!"
-        return clients_content
+    def add_client(self, client_details):
+        self.clients(client_details)
 
     def devices(self):
         response = requests.get(self.req_url + "/devices",
@@ -120,8 +115,14 @@ class AdapterService(PluginService):
         assert response.status_code == 200, str(response)
         return dict(json.loads(response.content))
 
-    def clients(self):
-        return requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
+    def clients(self, client_data=None):
+        if not client_data:
+            response = requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
+        else:
+            response = requests.put(self.req_url + "/clients",
+                                    headers={API_KEY_HEADER: self.api_key},
+                                    json=client_data)
+        assert response.status_code == 200, str(response)
 
     def action(self, action_type):
         raise NotImplemented("TBD!")

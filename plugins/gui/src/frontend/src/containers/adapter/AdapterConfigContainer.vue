@@ -9,8 +9,8 @@
                             <svg-icon name="navigation/device" width="24" height="24" :original="true"></svg-icon>
                             <span class="form-group-title">Add / update Servers</span>
                         </div>
-                        <dynamic-table v-if="schemaFields" class="ml-4 mt-5" :data="adapterData.clients"
-                                       :fields="schemaFields"
+                        <dynamic-table v-if="schemaFields" class="ml-4 mt-5" :data="adapterClients"
+                                       :fields="tableFields"
                                        addNewDataLabel="Add a server" @select="configServer" @delete="deleteServer">
                         </dynamic-table>
                     </div>
@@ -69,6 +69,15 @@
 			adapterData () {
 				return this.adapter.currentAdapter.data
 			},
+            adapterClients () {
+				return this.adapterData.clients.map((client) => {
+					return {
+						id: client.uuid,
+						status: client.status,
+                        ...client.client_config
+                    }
+                })
+            },
 			schemaFields () {
 				let fields = []
 				if (!this.adapterData.schema) { return }
@@ -86,11 +95,16 @@
 					fields.push(field)
 				})
 				return fields
-			}
+			},
+            tableFields () {
+				return [
+					{path: 'status', name: '', type: 'status'},
+                    ...this.schemaFields
+                ]
+            }
 		},
 		data () {
 			return {
-				selectedServer: -1,
 				serverModal: {
 					open: false,
 					serverData: {},
@@ -116,19 +130,12 @@
 			},
 			configServer (serverId) {
 				if (serverId === 'new') {
-					this.selectedServer = this.adapterData.clients.length
 					this.serverModal.serverData = {}
 					this.serverModal.uuid = serverId
 				} else {
 					this.adapterData.clients.forEach((server, index) => {
 						if (server.uuid === serverId) {
-							this.selectedServer = index
-							this.serverModal.serverData = {}
-							Object.keys(server).filter((key) => {
-								return key !== 'uuid'
-                            }).forEach((filteredKey) => {
-								this.serverModal.serverData[filteredKey] = server[filteredKey]
-                            })
+							this.serverModal.serverData = { ...server['client_config'] }
                             this.serverModal.uuid = server.uuid
 						}
 					})

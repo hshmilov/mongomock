@@ -6,6 +6,7 @@ __author__ = "Ofir Yefet"
 from axonius.AdapterBase import AdapterBase
 from axonius.PluginBase import add_rule
 from axonius.ParsingUtils import figure_out_os
+from axonius import AdapterExceptions
 from LdapConnection import LdapConnection
 from base64 import standard_b64decode
 
@@ -84,26 +85,27 @@ class ActiveDirectoryPlugin(AdapterBase):
         except FileExistsError:
             pass  # Folder exists
 
-    def _parse_clients_data(self, clients_config):
-        # Each client inside _clients will hold an open LDAP connection object
-        clients_dict = dict()
-        for dc_details in clients_config:
-            try:
-                clients_dict[dc_details["dc_name"]] = LdapConnection(dc_details['dc_name'],
-                                                                     dc_details['domain_name'],
-                                                                     dc_details['query_user'],
-                                                                     dc_details['query_password'],
-                                                                     dc_details.get('dns_server_address'))
-            except exceptions.LdapException as e:
-                self.logger.error("Error in ldap process for dc {0}. reason: {1}".format(
-                    dc_details["dc_name"], str(e)))
-            except KeyError as e:
-                if "dc_name" in dc_details:
-                    self.logger.error("Key error for dc {0}. details: {1}".format(
-                        dc_details["dc_name"], str(e)))
-                else:
-                    self.logger.error("Missing dc name for configuration line")
-        return clients_dict
+    def _get_client_id(self, dc_details):
+        return dc_details['dc_name']
+
+    def _connect_client(self, dc_details):
+        try:
+            return LdapConnection(dc_details['dc_name'],
+                                  dc_details['domain_name'],
+                                  dc_details['query_user'],
+                                  dc_details['query_password'],
+                                  dc_details.get('dns_server_address'))
+        except exceptions.LdapException as e:
+            message = "Error in ldap process for dc {0}. reason: {1}".format(
+                dc_details["dc_name"], str(e))
+        except KeyError as e:
+            if "dc_name" in dc_details:
+                message = "Key error for dc {0}. details: {1}".format(
+                    dc_details["dc_name"], str(e))
+            else:
+                message = "Missing dc name for configuration line"
+        self.logger.error(message)
+        raise AdapterExceptions.ClientConnectionException(message)
 
     def _clients_schema(self):
         """
@@ -483,4 +485,4 @@ class ActiveDirectoryPlugin(AdapterBase):
     def delete_file(self, device_data, file_path):
         return {"result": 'Failure', "product": 'Delete file is not implemeted yet'}
 
-    # Exported API functions - None for now
+        # Exported API functions - None for now

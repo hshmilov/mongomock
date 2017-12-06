@@ -136,7 +136,7 @@ export const adapter = {
 				type: SET_ADAPTER_SERVERS
 			})
 		},
-		[ SAVE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
+		[ SAVE_ADAPTER_SERVER ] ({dispatch}, payload) {
 			/*
 				Call API to save given server data to adapter by the given adapter id,
 				either adding a new server or updating and existing one, if id is provided with the data
@@ -148,16 +148,10 @@ export const adapter = {
 			}
 			dispatch(REQUEST_API, {
 				rule: rule,
-				method: 'POST',
+				method: 'PUT',
 				data: payload.serverData
 			}).then((response) => {
-				if (response === '') {
-					payload.serverData.uuid = payload.uuid
-					commit(UPDATE_ADAPTER_SERVER, payload.serverData)
-					return
-				}
-				payload.serverData.uuid = response
-				commit(ADD_ADAPTER_SERVER, payload.serverData)
+				dispatch(FETCH_ADAPTER_SERVERS, payload.adapterId)
 			})
 		},
 		[ ARCHIVE_SERVER ] ({dispatch, commit}, payload) {

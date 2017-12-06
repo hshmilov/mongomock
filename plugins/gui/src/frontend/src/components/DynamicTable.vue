@@ -7,11 +7,11 @@
             </tr>
         </thead>
         <tbody>
-            <tr v-for="record in data" class="table-row" @click="$emit('select', record['uuid'])">
+            <tr v-for="record in data" class="table-row" @click="$emit('select', record['id'])">
                 <td>
                     <!-- Check for connecting to server and uncheck to stop connection -->
                     <!--<checkbox class="mr-2"></checkbox>-->
-                    <a @click.stop="$emit('delete', record['uuid'])"><i class="icon-trash-o"></i></a>
+                    <a @click.stop="$emit('delete', record['id'])"><i class="icon-trash-o"></i></a>
                 </td>
                 <generic-table-cell class="table-data" v-for="field in fields" v-if="!field.hidden" :key="field.path"
                                     :value="record[field.path]" :type="field.type"></generic-table-cell>

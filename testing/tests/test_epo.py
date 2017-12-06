@@ -34,7 +34,7 @@ def test_registered(axonius_fixture, epo_fixture):
 def test_fetch_devices(axonius_fixture, epo_fixture):
     client_id = epo_client_details['host']
     axonius_fixture.add_client_to_adapter(
-        epo_fixture, epo_client_details, client_id, 'host')
+        epo_fixture, epo_client_details)
     axonius_fixture.assert_device_aggregated(
         epo_fixture, client_id, SOME_DEVICE_ID)
 

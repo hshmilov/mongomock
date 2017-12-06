@@ -5,6 +5,7 @@ __author__ = "Ofri Shur"
 
 from axonius.AdapterBase import AdapterBase
 from axonius.ParsingUtils import figure_out_os
+from axonius.AdapterExceptions import ClientConnectionException
 import exceptions
 from puppetserverconnection import PuppetServerConnection
 
@@ -26,30 +27,29 @@ class PuppetAdapter(AdapterBase):
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kargs)
 
-    def _parse_clients_data(self, clients_config):
+    def _get_client_id(self, client_config):
+        return client_config["puppet_server_name"]
 
-        clients_dict = dict()
-        for puppet_details in clients_config:
-            try:
-                clients_dict[puppet_details["puppet_server_name"]] = PuppetServerConnection(
-                    self.logger,
-                    puppet_details['puppet_server_name'],
-                    puppet_details['user_name'],
-                    puppet_details['password'])
-            except exceptions.PuppetException as e:
-                self.logger.error("Error getting information from puppet server {0}. reason: {1}".format(
-                    puppet_details["puppet_server_name"],
-                    str(e)))
-            except KeyError as e:
-                if "puppet_server_name" in puppet_details:
-                    self.logger.error("Key error for Puppet {0}. details: {1}".format(
-                        puppet_details["puppet_server_name"],
-                        str(e)))
-                else:
-                    self.logger.error(
-                        "Missing Puppet name for configuration line")
-
-        return clients_dict
+    def _connect_client(self, client_config):
+        try:
+            return PuppetServerConnection(
+                self.logger,
+                client_config['puppet_server_name'],
+                client_config['user_name'],
+                client_config['password'])
+        except exceptions.PuppetException as e:
+            message = "Error getting information from puppet server {0}. reason: {1}".format(
+                client_config["puppet_server_name"],
+                str(e))
+        except KeyError as e:
+            if "puppet_server_name" in client_config:
+                message = "Key error for Puppet {0}. details: {1}".format(
+                    client_config["puppet_server_name"],
+                    str(e))
+            else:
+                message = "Missing Puppet name for configuration line"
+        self.logger.error(message)
+        raise ClientConnectionException
 
     def _clients_schema(self):
         """

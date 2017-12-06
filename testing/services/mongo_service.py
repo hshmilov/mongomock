@@ -51,13 +51,6 @@ class MongoService(services.compose_service.ComposeService):
         """
         return self.client[db_name][collection_name]
 
-    def add_client(self, adapter_name, client_details, identify_field=None):
-        if not identify_field:
-            return self.client[adapter_name].clients.insert_one(client_details)
-        else:
-            return self.client[adapter_name].clients.replace_one({f'{identify_field}': client_details[identify_field]},
-                                                                 client_details, upsert=True)
-
     def get_devices(self, aggregator_unique_name):
         return self.client[aggregator_unique_name]['devices_db'].find({})
 

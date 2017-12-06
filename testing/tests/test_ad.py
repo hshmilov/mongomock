@@ -47,11 +47,11 @@ def test_fetch_devices(axonius_fixture, ad_fixture):
     # Adding first client
     client_id_1 = ad_client1_details['dc_name']
     axonius_fixture.add_client_to_adapter(
-        ad_fixture, ad_client1_details, client_id_1, 'dc_name')
+        ad_fixture, ad_client1_details)
     # Adding second client
     client_id_2 = ad_client2_details['dc_name']
     axonius_fixture.add_client_to_adapter(
-        ad_fixture, ad_client2_details, client_id_2, 'dc_name')
+        ad_fixture, ad_client2_details)
 
     # Checking that we have devices from both clients
     axonius_fixture.assert_device_aggregated(

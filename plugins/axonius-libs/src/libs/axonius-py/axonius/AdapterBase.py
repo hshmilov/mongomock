@@ -10,6 +10,8 @@ from axonius.PluginBase import PluginBase, add_rule, return_error
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
+from bson import ObjectId
+from threading import RLock
 
 
 class AdapterBase(PluginBase, ABC):
@@ -25,11 +27,13 @@ class AdapterBase(PluginBase, ABC):
 
         super().__init__(*args, **kwargs)
 
+        self._clients_lock = RLock()
+
         self._send_reset_to_ec()
 
         self._update_clients_schema_in_db(self._clients_schema())
 
-        self._clients = self._get_parsed_clients_config()
+        self._prepare_parsed_clients_config()
 
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=50)
@@ -41,12 +45,16 @@ class AdapterBase(PluginBase, ABC):
                                    plugin_unique_name='execution',
                                    method='POST')
 
-    def _get_parsed_clients_config(self):
-        clients_config = self._get_clients_config()
+    def _prepare_parsed_clients_config(self):
+        with self._clients_lock:
+            configured_clients = self._get_clients_config()
 
-        # self._clients might be replaced at any moment when POST /clients is received
-        # so it must be used cautiously
-        return self._parse_clients_data(clients_config)
+            # self._clients might be replaced at any moment when POST /clients is received
+            # so it must be used cautiously
+            self._clients = {}
+            for client in configured_clients:
+                # client id from DB not sent to verify it is updated
+                self._add_client(client['client_config'])
 
     @add_rule('devices', methods=['GET'])
     def devices(self):
@@ -86,18 +94,92 @@ class AdapterBase(PluginBase, ABC):
 
             return jsonify(devices_list)
 
-    @add_rule('clients', methods=['GET', 'POST'])
+    @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):
         """ /clients Returns all available clients, e.g. all DC servers.
 
         Accepts:
            GET  - Returns all available clients
            POST - Triggers a refresh on all available clients from the DB and returns them
+           PUT (expects client data) - Adds a new client, or updates existing one, according to given data.
+                                       Uniqueness compared according to _get_client_id value.
         """
-        if self.get_method() == 'POST':
-            self._clients = self._get_parsed_clients_config()
+        with self._clients_lock:
+            if self.get_method() == 'PUT':
+                client_config = request.get_json(silent=True)
+                if not client_config:
+                    return return_error("Invalid client")
+                try:
+                    return self._add_client(client_config), 200
+                except AdapterExceptions.ClientSaveException as e:
+                    return return_error(str(e))
+                except KeyError as e:
+                    return return_error("Key error for client. details: {0}".format(str(e)))
 
-        return jsonify(self._clients.keys())
+            if self.get_method() == 'POST':
+                self._prepare_parsed_clients_config()
+
+            return jsonify(self._clients.keys())
+
+    @add_rule('clients/<client_unique_id>', methods=['DELETE'])
+    def update_client(self, client_unique_id):
+        """
+        Update config of or delete and existing client for the adapter, by their client id
+
+        :param client_key:
+        :return:
+        """
+        with self._clients_lock:
+            client = self._get_collection('clients').find_one_and_delete({'_id': ObjectId(client_unique_id)})
+            if client is None:
+                return '', 204
+            client_id = ''
+            try:
+                client_id = self._get_client_id(client['client_config'])
+            except KeyError as e:
+                self.logger.info("Problem creating client id, to remove from connected clients")
+            try:
+                del self._clients[client_id]
+            except KeyError as e:
+                self.logger.info("No connected client {0} to remove".format(client_id))
+            return '', 200
+
+    def _add_client(self, client_config):
+        """
+        Execute connection to client, according to given credentials, that follow adapter's client schema.
+        Add created connection to adapter's clients dict, under generated key.
+
+        :param client_config: Credential values representing a client of the adapter
+
+        :type client_config: dict of objects, following structure stated by client schema
+
+        :return: Mongo id of created \ updated document (updated should be the given client_unique_id)
+
+        :raises AdapterExceptions.ClientSaveException: If there was a problem saving given client
+        """
+        client_id = self._get_client_id(client_config)
+        status = "error"
+        try:
+            self._clients[client_id] = self._connect_client(client_config)
+            # Got here only if connection succeeded
+            status = "success"
+        except AdapterExceptions.ClientConnectionException as e:
+            pass
+        except Exception as e:
+            self.logger.error(f"Unknown exception: {str(e)}")
+
+        result = self._get_collection('clients').replace_one({'client_id': client_id},
+                                                             {
+                                                                 'client_id': client_id,
+                                                                 'client_config': client_config,
+                                                                 'status': status
+        }, upsert=True)
+        if not result.modified_count:
+            if not result.upserted_id:
+                raise AdapterExceptions.ClientSaveException("Could not update client {0} in DB".format(client_id))
+            else:
+                return str(result.upserted_id)
+        return ''
 
     @add_rule('correlation_cmds', methods=['GET'])
     def correlation_cmds(self):
@@ -159,7 +241,7 @@ class AdapterBase(PluginBase, ABC):
             result = func(device_data, **kwargs)
         except Exception as e:
             self._update_action_data(action_id, status="failed", output={
-                                     "result": "Failure", "product": str(e)})
+                "result": "Failure", "product": str(e)})
 
         # Sending the result to the issuer
         self._update_action_data(action_id, status="finished", output=result)
@@ -203,13 +285,33 @@ class AdapterBase(PluginBase, ABC):
         return_error("Not implemented yet", 400)
 
     @abstractmethod
-    def _parse_clients_data(self, clients_config):
-        """Abstract method for retrieving clients data as dictionary from the raw clients data (fetched from config)
+    def _get_client_id(self, client_config):
+        """
+        Given all details of a client belonging to the adapter, return consistent key representing it
 
-        :param dict clients_config: The clients config as received from the configuration db
+        :param client_config: A dictionary with connection credentials for adapter's client, according to stated in
+        the appropriate schema (all required and any of optional)
 
-        :return dict: Each key of the dict is the client name, and the data is whatever the 
-                      Adapter use in order to connect to the client.
+        :type client_config: dict of objects, following structure stated by client schema
+
+        :return: unique key for the client, composed by given field values, according to adapter's definition
+        """
+        pass
+
+    @abstractmethod
+    def _connect_client(self, client_config):
+        """
+        Given all details of a client belonging to the adapter, tries connecting to it and creating a connection obj.
+        If connection attempt failed, throws exception with the reason
+
+        :param client_config: A dictionary with connection credentials for adapter's client, according to stated in
+        the appropriate schema (all required and any of optional)
+
+        :type client_config: dict of objects, following structure stated by client schema
+
+        :returns: Adapter's connection object, if connection attempt succeeded with given credentials
+
+        :raises AdapterExceptions.ClientConnectionException: In case of error connecting, return adapter's exception
         """
         pass
 
