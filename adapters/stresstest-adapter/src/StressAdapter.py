@@ -125,7 +125,7 @@ class StressAdapter(AdapterBase):
             }
 
     def _get_client_id(self, client_config):
-        return clients_config['name']
+        return client_config['name']
 
-    def connect_client(self, client_config):
+    def _connect_client(self, client_config):
         return client_config['device_count']
