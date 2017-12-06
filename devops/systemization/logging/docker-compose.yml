@@ -1,0 +1,26 @@
+version: '3'
+services:
+  elkx:
+        image: sebp/elkx:latest
+        container_name: "elkx"
+        environment:
+          - ELASTICSEARCH_USER=ax_user
+          - ELASTICSEARCH_PASSWORD=ax_pass
+          - KIBANA_USER=ax_user
+          - KIBANA_PASSWORD=ax_pass
+        volumes:
+          - esdata:/usr/share/elasticsearch/data
+          - ./conf.d:/etc/logstash/conf.d/
+          - ./elasticsearch.yml:/etc/elasticsearch/elasticsearch.yml
+        ports:
+            - 5601:5601
+            - 9200:9200
+            - 5043:5043
+
+volumes:
+  esdata:
+
+networks:
+  default:
+    external:
+      name: axonius

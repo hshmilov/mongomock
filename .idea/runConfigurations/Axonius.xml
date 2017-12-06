@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Axonius" type="CompoundRunConfigurationType" factoryName="Compound Run Configuration">
+    <toRun type="docker-deploy" name="Aggregator" />
+    <toRun type="docker-deploy" name="Core" />
+    <toRun type="docker-deploy" name="ELKX" />
+    <toRun type="docker-deploy" name="Mongo" />
+    <method />
+  </configuration>
+</component>

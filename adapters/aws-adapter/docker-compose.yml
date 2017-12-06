@@ -1,0 +1,19 @@
+version: '3'
+services:
+  aws-adapter:
+        build: .
+        image: axonius/aws-adapter
+        container_name: "aws-adapter"
+        ports:
+            - 5112:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 452 428">
+  <title>device</title>
+    <g class="svg-stroke" stroke-miterlimit="10" stroke-width="20px">
+      <path fill="none" d="M286,301H51a41.12,41.12,0,0,1-41-41V51A41.12,41.12,0,0,1,51,10H359a41.12,41.12,0,0,1,41,41V151"/>
+      <rect fill="none" x="286" y="151" width="156" height="267" rx="23" ry="23"/>
+      <circle class="svg-fill" stroke-width="10px" cx="364.26" cy="377.93" r="13.73"/>
+      <line fill="none" x1="202.5" y1="302.5" x2="202.5" y2="359.5"/>
+      <line fill="none" x1="81.5" y1="361.5" x2="278.5" y2="361.5"/>
+    </g>
+</svg>

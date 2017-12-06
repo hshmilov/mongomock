@@ -1,0 +1,48 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: elk
+  labels:
+    app: axonius
+spec:
+  selector:
+    matchLabels:
+      app: axonius
+      tier: system
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: axonius
+        tier: system
+    spec:
+      containers:
+      - image: sebp/elkx
+        name: elk
+        ports:
+        - containerPort: 5601
+          name: kibana
+        - containerPort: 9200
+          name: elastic
+        - containerPort: 5043
+          name: logstash
+        volumeMounts:
+        - name: axonius-logging-conf
+          mountPath: /etc/logstash/conf.d
+        - name: axonius-elastic-conf
+          mountPath: /etc/elasticsearch/elasticsearch.yml
+#      nodeSelector:
+#        ax_type: "cloud" # TODO: Make's it run on a specific node (this case master), Should move this implementation to gui service.
+      volumes:
+      - name: axonius-logs
+        persistentVolumeClaim:
+          claimName: ax-elastic-pv-claim
+      - name: axonius-logging-conf
+        hostPath:
+          path: /home/ubuntu/axonius/devops/systemization/logging/conf.d
+          type: Directory
+      - name: axonius-elastic-conf
+        hostPath:
+          path: /home/ubuntu/axonius/devops/systemization/logging/elasticsearch.yml
+          type: File

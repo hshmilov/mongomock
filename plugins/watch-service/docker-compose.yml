@@ -1,0 +1,19 @@
+version: '3'
+services:
+  watch-service:
+        build: .
+        image: axonius/watch-service
+        container_name: "watch-service"
+        ports:
+            - 5002:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

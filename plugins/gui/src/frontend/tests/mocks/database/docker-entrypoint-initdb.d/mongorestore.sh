@@ -1,0 +1,1 @@
+mongorestore -u ax_user -p IAmDeanSysMan /mongodump

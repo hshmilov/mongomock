@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 328.18 428.75">
+  <g fill="none" stroke-width="24px">
+    <path class="svg-stroke" d="M380.21,411.58a85,85,0,1,1,73.33,42A84.62,84.62,0,0,1,380.21,411.58Z" transform="translate(-212.4 -26.79)" stroke-linecap="round" stroke-miterlimit="10"/>
+    <path class="svg-stroke" d="M214.4,28.79H453.54V283.46a85.05,85.05,0,0,0-73.33,128.12H214.4Z" transform="translate(-212.4 -26.79)" stroke-linecap="round" stroke-miterlimit="10"/>
+    <line class="svg-stroke" x1="241.14" y1="341.71" x2="283.66" y2="341.71" stroke-linecap="round" stroke-miterlimit="10"/>
+    <line class="svg-stroke" x1="198.62" y1="341.71" x2="241.14" y2="341.71" stroke-linecap="round" stroke-miterlimit="10"/>
+    <line class="svg-stroke" x1="241.14" y1="299.19" x2="241.14" y2="384.23" stroke-linecap="round" stroke-miterlimit="10"/>
+  </g>
+</svg>

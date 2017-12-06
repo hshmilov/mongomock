@@ -1,0 +1,19 @@
+version: '3'
+services:
+  stresstest-adapter:
+        build: .
+        image: axonius/stresstest-adapter
+        container_name: "stresstest-adapter"
+        ports:
+            - 5113:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius
