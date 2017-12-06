@@ -10,6 +10,9 @@ services:
           - ../../logs:/home/axonius/logs
           - data:/home/axonius
 
+volumes:
+  data:
+
 networks:
   default:
     external:

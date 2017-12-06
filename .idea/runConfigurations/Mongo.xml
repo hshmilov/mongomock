@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Mongo" type="docker-deploy" factoryName="Docker Deployment" server-name="Docker">
-    <deployment type="docker-compose.yml" path="$PROJECT_DIR$/devops/systemization/database/docker-compose.yml">
+    <deployment type="docker-compose.yml" path="$PROJECT_DIR$/infrastructures/database/docker-compose.yml">
       <settings>
         <option name="JSONFilePath" value="" />
         <option name="command" value="" />
