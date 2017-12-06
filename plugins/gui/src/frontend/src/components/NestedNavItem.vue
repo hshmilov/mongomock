@@ -30,7 +30,7 @@
         list-style: none;
         margin-bottom: 5px;
         .nav-link {
-            color: $color-light;
+            color: $color-btn;
             font-weight: 200;
             padding: 8px 35px 8px 15px;
             display: block;
@@ -38,8 +38,8 @@
             letter-spacing: 2px;
             .svg-icon {
                 margin-right: 10px;
-                .svg-fill {  fill: $color-light  }
-                .svg-stroke {  stroke: $color-light  }
+                .svg-fill {  fill: $color-btn  }
+                .svg-stroke {  stroke: $color-btn  }
             }
             &.has-arrow {
                 position: relative;
@@ -68,12 +68,12 @@
             }
         }
         &:hover {
-            >.nav-link {  color: $color-yellow;  }
+            >.nav-link {  color: $color-btn-hover;  }
             .svg-icon {
-                .svg-fill {  fill: $color-yellow;  }
-                .svg-stroke {  stroke: $color-yellow;  }
+                .svg-fill {  fill: $color-btn-hover;  }
+                .svg-stroke {  stroke: $color-btn-hover;  }
             }
-            .has-arrow::after {  border-color: $color-yellow;  }
+            .has-arrow::after {  border-color: $color-btn-hover;  }
         }
         &.active {
             >.nav-link {  color: $color-theme-light;  }

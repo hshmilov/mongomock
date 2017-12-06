@@ -107,10 +107,11 @@ export const device = {
 				{path: 'adapters.data.hostname', name: 'Host Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
 				{
-					path: 'adapters.data.network_interfaces.public_ip,adapters.data.network_interfaces.private_ip',
+					path: 'adapters.data.network_interfaces.IP',
 					name: 'IP Addresses',
 					selected: true,
-					type: 'list'
+					type: 'list',
+					control: 'text'
 				},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
 				{path: 'tags.tagvalue', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}

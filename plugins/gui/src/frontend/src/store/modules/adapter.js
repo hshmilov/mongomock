@@ -13,15 +13,15 @@ export const REMOVE_SERVER = 'REMOVE_SERVER'
 export const adapterStaticData = {
 	'ad_adapter': {
 		name: 'Active Directory',
-		description: 'Connects via Active Directory to given servers'
+		description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticate and authorizes all users and computers.'
 	},
 	'aws_adapter': {
-		name: 'AWS',
-		description: 'Connects via AWS to given servers'
+		name: 'Amazon Elastic',
+		description: 'Amazon Elastic Compute Cloud (Amazon EC2) provides scalable computing capacity in the Amazon Web Services (AWS) cloud.'
 	},
 	'esx_adapter': {
 		name: 'ESX',
-		description: 'Connects via ESX to given servers'
+		description: 'VMware ESXi is an entreprise-class, type-1 hypervisordeveloped by VMware for deploying and serving virtual computers.'
 	},
 	'stresstest_adapter':{
 		name: "LOL",

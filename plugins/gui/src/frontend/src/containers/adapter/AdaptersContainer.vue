@@ -1,22 +1,5 @@
 <template>
     <scrollable-page title="adapters" class="adapters">
-        <card>
-            <div slot="cardContent" class="row">
-                <div class="form-group col-6 row">
-                    <label class="form-label col-3">Search:</label>
-                    <search-input class="col-9" v-model="filter.name" placeholder="Enter name..."></search-input>
-                </div>
-                <div class="form-group col-6 filter-status">
-                    <label class="form-label">Show Only</label>
-                    <select class="col-6 custom-select" :disabled="true">
-                        <option value="">All</option>
-                        <option value="success">Connected</option>
-                        <option value="warning">Not Connected</option>
-                        <option value="error">Connection Failure</option>
-                    </select>
-                </div>
-            </div>
-        </card>
         <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" :actions="[
         	{triggerFont: 'icon-pencil2', handler: configAdapter}]"></scrollable-table>
     </scrollable-page>

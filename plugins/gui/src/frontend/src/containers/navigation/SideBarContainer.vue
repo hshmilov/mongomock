@@ -94,12 +94,12 @@
             position: relative;
             text-align: center;
             h5 {
-                color: $color-light;
+                color: $color-btn;
             }
             > a {
-                color: $color-light;
+                color: $color-btn;
                 padding: 0 5px;
-                &:hover {  color: $color-theme-light;  }
+                &:hover {  color: $color-btn-hover;  }
                 &:after {  display: none;  }
             }
         }
@@ -183,7 +183,7 @@
                 }
                 .nav-link {
                     width: 180px;
-                    color: $color-light;
+                    color: $color-btn;
                     background: $color-theme-light;
                     opacity: 0.5;
                     .collapse-hidden {  display: inline;  }
