@@ -124,5 +124,8 @@ class StressAdapter(AdapterBase):
                 'name': f"avigdor no# {x['index']}"
             }
 
-    def _parse_clients_data(self, clients_config):
-        return {x['name']: x['device_count'] for x in clients_config}
+    def _get_client_id(self, client_config):
+        return clients_config['name']
+
+    def connect_client(self, client_config):
+        return client_config['device_count']

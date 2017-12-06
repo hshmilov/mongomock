@@ -103,7 +103,7 @@ export const device = {
 					path: 'adapters.plugin_name', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
 					options: []
 				},
-				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: true, control: 'text'},
+				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: false, control: 'text'},
 				{path: 'adapters.data.hostname', name: 'Host Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
 				{
