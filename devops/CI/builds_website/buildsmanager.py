@@ -21,8 +21,8 @@ S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
 S3_ACCELERATED_ENDPOINT = "http://s3-accelerate.amazonaws.com"
 S3_EXPORT_URL_TIMEOUT = 604700  # a week to use it before we generate a new one.
 
-DB_HOSTNAME = "builds.axonius.local"
-REDIS_HOSTNAME = "builds.axonius.local"
+DB_HOSTNAME = "builds.axonius.lan"
+REDIS_HOSTNAME = "builds.axonius.lan"
 
 NUMBER_OF_TEST_INSTANCES_AVAILABLE = 5
 
