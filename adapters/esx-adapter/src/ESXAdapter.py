@@ -106,8 +106,8 @@ class ESXAdapter(AdapterBase):
         """
         return {
             "MAC": raw_network.get('macAddress'),
-            "private_ip": [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])],
-            "public_ip": [],  # in vCenter/ESX it's not trivial to figure out the 'public IP'
+            "IP": [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])],
+            # in vCenter/ESX it's not trivial to figure out the 'public IP'
             # the public IP is in the 'simple case' the public IP of the host machine (which we also
             # don't know) but in other cases the host may be connected to multiple network devices
             # itself, all of which aren't necessarily accessible by us, so we leave this blank :)

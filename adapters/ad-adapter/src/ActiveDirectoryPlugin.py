@@ -179,7 +179,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                 domain_name = host['raw']['AXON_DOMAIN_NAME']
                 try:
                     ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "domain_name": domain_name})
-                    network_interfaces = [{"MAC": None, "private_ip": [ip], "public_ip": []}]
+                    network_interfaces = [{"MAC": None, "IP": [ip]}]
 
                     self._get_collection("devices_data").update_one({"_id": host["_id"]},
                                                                     {'$set': {"network_interfaces": network_interfaces,

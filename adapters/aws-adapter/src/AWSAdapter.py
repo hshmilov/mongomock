@@ -121,27 +121,31 @@ class AWSAdapter(AdapterBase):
                                         if instance['DescribedImage'] is not None
                                         else None),
                     'id': instance['InstanceId'],
-                    'network_interfaces': [self._parse_network_interface(interface) for interface in
-                                           instance.get('NetworkInterfaces', [])],
+                    'network_interfaces': self._parse_network_interfaces(instance.get('NetworkInterfaces', [])),
                     'raw': instance
                 }
 
-    def _parse_network_interface(self, interface):
+    def _parse_network_interfaces(self, interfaces):
         """
         private method to convert AWS's format for a network interface to Axoniuses format
-        :param interface: dict
-        :return: dict
+        :param interfaces: list
+        :return: list of dict
         """
-        public_ip = None
-        assoc = interface.get("Association")
-        if assoc is not None:
-            public_ip = assoc.get('PublicIp')
-
-        return {
-            "MAC": interface.get("MacAddress"),
-            "private_ip": [addr.get('PrivateIpAddress') for addr in interface.get("PrivateIpAddresses", [])],
-            "public_ip": [public_ip]
-        }
+        network_interfaces = []
+        for interface in interfaces:
+            assoc = interface.get("Association")
+            if assoc is not None:
+                public_ip = assoc.get('PublicIp')
+                if public_ip is not None:
+                    yield {
+                        "MAC": interface.get("MacAddress"),
+                        "IP": [public_ip]
+                    }
+            yield {
+                "MAC": interface.get("MacAddress"),
+                "IP": [addr.get('PrivateIpAddress') for addr in interface.get("PrivateIpAddresses", [])],
+            }
+        return network_interfaces
 
     def _correlation_cmds(self):
         """
