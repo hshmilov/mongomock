@@ -1,5 +1,0 @@
-tests to do:
-
-* test that the core service restarts each time. if it fails it should restart
-* test that a service has been created without any problems. This means that we should get the containers to see if they run okay.
-* test that if container stops running it still prints logs somewhere just so we could do something about it. use atexit

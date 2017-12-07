@@ -1,2 +1,0 @@
-ldap3==2.3
-dnspython==1.15.0
