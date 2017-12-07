@@ -8,12 +8,13 @@ client_details = [
         "password": "Br!ng0rder",
         "verify_ssl": False
     }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'),
-    ({
-        "host": "vcenter51.axonius.lan",
-        "user": "root",
-        "password": "vmware",
-        "verify_ssl": False
-    }, "525345eb-51ef-f4d7-85bb-08e521b94528"),
+    # This vcenter is currently not active!!! we should return it as soon as it becomes active again
+    # ({
+    #     "host": "vcenter51.axonius.lan",
+    #     "user": "root",
+    #     "password": "vmware",
+    #     "verify_ssl": False
+    # }, "525345eb-51ef-f4d7-85bb-08e521b94528"),
     ({
         "host": "vcenter55.axonius.lan",
         "user": "root",
