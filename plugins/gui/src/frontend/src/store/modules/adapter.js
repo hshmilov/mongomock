@@ -21,7 +21,7 @@ export const adapterStaticData = {
 	},
 	'esx_adapter': {
 		name: 'ESX',
-		description: 'VMware ESXi is an entreprise-class, type-1 hypervisordeveloped by VMware for deploying and serving virtual computers.'
+		description: 'VMware ESXi is an entreprise-class, type-1 hypervisor developed by VMware for deploying and serving virtual computers.'
 	},
 	'stresstest_adapter':{
 		name: "LOL",
