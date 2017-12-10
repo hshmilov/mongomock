@@ -641,8 +641,9 @@ class PluginBase(object):
         Accepts:
             GET - In order to retrieve the plugin version
         """
-
-        version_object = {"plugin": self.version,
+        version_object = {"plugin_name": self.plugin_name,
+                          "plugin_unique_name": self.plugin_unique_name,
+                          "plugin": self.version,
                           "axonius-libs": self.lib_version}
 
         return jsonify(version_object)

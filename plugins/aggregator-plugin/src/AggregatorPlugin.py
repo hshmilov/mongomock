@@ -60,14 +60,15 @@ class AggregatorPlugin(PluginBase):
 
         # Scheduler for querying core for online adapters and querying the adapters themselves
         self._online_adapters_scheduler = None
-        # Starting the managing thread
-        self._start_managing_thread()
 
         # insertion and link/unlink lock
         self.thread_manager_lock = threading.RLock()
 
         # tagging lock
         self.tags_lock = threading.RLock()
+
+        # Starting the managing thread
+        self._start_managing_thread()
 
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.

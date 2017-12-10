@@ -147,14 +147,20 @@ class Core(PluginBase):
         """
         try:
             # Trying a simple GET request for the version
-            data = self._translate_url(plugin_unique_name + '/version')
+            data = self._translate_url(plugin_unique_name + "/version")
             final_url = uritools.uricompose(scheme='http', host=data['plugin_ip'], port=data['plugin_port'],
                                             path=data['path'])
 
             check_response = requests.get(final_url, timeout=10)
 
             if check_response.status_code == 200:
-                return True
+                responder_name = check_response.json()['plugin_unique_name']
+                if responder_name == plugin_unique_name:
+                    return True
+                else:
+                    self.logger.info(f"Bad plugin name while checking plugin online. "
+                                     f"Expected: {plugin_unique_name}, got: {responder_name}")
+                    return False
             else:
                 return False
 
@@ -306,6 +312,27 @@ class Core(PluginBase):
                 doc['plugin_name'] = plugin_name
                 doc['plugin_ip'] = request.remote_addr
                 doc['plugin_port'] = plugin_port
+
+            # The next section is trying to find plugins with same ip address and port. If there are such we have
+            # a major problem since the core cant access both of the plugins.
+            # In most cases, if there are plugins with the same IP they are probably offline (and docker just used
+            # their IP for the next plugin)
+            same_ip_plugins = [same_ip_name for same_ip_name, same_ip_doc in self.online_plugins.items()
+                               if (same_ip_doc['plugin_ip'] == doc['plugin_ip'] and
+                                   same_ip_doc['plugin_port'] == doc['plugin_port'])]
+
+            for same_ip_plugin in same_ip_plugins:
+                # If we have reached here it means that we have another registered plugin with the same IP and port
+                if self._check_plugin_online(same_ip_plugin):
+                    self.logger.error(f"Found two online plugins with same IP. "
+                                      f"({same_ip_plugin}, {plugin_unique_name})")
+                    return return_error(f"Already have plugin with this ip: {same_ip_plugin}")
+                else:
+                    # The older plugin is no longer online, removing it from the onine_plugins list
+                    self.logger.info(
+                        f"Removing {same_ip_plugin} from online since other "
+                        f"{plugin_unique_name} got registered with same ip")
+                    del self.online_plugins[same_ip_plugin]
 
             # Setting a new doc with the wanted configuration
             collection = self._get_collection('configs', limited_user=False)
