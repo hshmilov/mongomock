@@ -21,14 +21,13 @@ docker build -t axonius/gui plugins/gui
 docker build -t axonius/ad-adapter adapters/ad-adapter
 docker build -t axonius/aws-adapter adapters/aws-adapter
 docker build -t axonius/esx-adapter adapters/esx-adapter
-#docker build -t axonius/epo-adapter adapters/epo-adapter
+docker build -t axonius/epo-adapter adapters/epo-adapter
 )
 
 echo "Removing anything irrelevant.."
 (
 docker logout
 rm -rf .git* ./testing .idea* .cache* *.bat *.sh ./devops */*/tests
-rm -rf adapters/epo-adapter # contains passwords..
 history -c
 history -w
 )
