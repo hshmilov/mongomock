@@ -1,7 +1,7 @@
 version: '3'
 services:
   elkx:
-        image: sebp/elkx:latest
+        image: sebp/elkx:562
         container_name: "elkx"
         environment:
           - ELASTICSEARCH_USER=ax_user
