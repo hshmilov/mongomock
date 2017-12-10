@@ -86,7 +86,7 @@ class ESXAdapter(AdapterBase):
                 "name": node['Name'],
                 'OS': figure_out_os(details['config']['guestFullName']),
                 'id': details['config']['instanceUuid'],
-                'network_interfaces': [self._parse_network_device(x) for x in details.get('networking', [])],
+                'network_interfaces': self._parse_network_device(details.get('networking', [])),
                 'hostname': details['guest'].get('hostName'),
                 'vmToolsStatus': details['guest'].get('toolsStatus'),
                 'physicalPath': _curr_path + "/" + node['Name'],
@@ -99,17 +99,20 @@ class ESXAdapter(AdapterBase):
             raise RuntimeError(
                 "Found weird type of node: {}".format(node['Type']))
 
-    def _parse_network_device(self, raw_network):
+    def _parse_network_device(self, raw_networks):
         """
         Parse a network device as received from vCenterAPI
-        :param raw_network: device
-        :return: dict
+        :param raw_network: raw networks from ESX
+        :return: iter(dict)
         """
-        return {
-            "MAC": raw_network.get('macAddress'),
-            "IP": [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])],
-            # in vCenter/ESX it's not trivial to figure out the 'public IP'
-            # the public IP is in the 'simple case' the public IP of the host machine (which we also
-            # don't know) but in other cases the host may be connected to multiple network devices
-            # itself, all of which aren't necessarily accessible by us, so we leave this blank :)
-        }
+        for raw_network in raw_networks:
+            ip_to_return = [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])]
+            if len(ip_to_return) != 0:  # Return only if has an IP address
+                yield {
+                    "MAC": raw_network.get('macAddress'),
+                    "IP": ip_to_return,
+                    # in vCenter/ESX it's not trivial to figure out the 'public IP'
+                    # the public IP is in the 'simple case' the public IP of the host machine (which we also
+                    # don't know) but in other cases the host may be connected to multiple network devices
+                    # itself, all of which aren't necessarily accessible by us, so we leave this blank :)
+                }

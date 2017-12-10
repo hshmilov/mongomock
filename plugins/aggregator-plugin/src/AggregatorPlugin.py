@@ -400,6 +400,18 @@ class AggregatorPlugin(PluginBase):
                         }
                         self._save_parsed_in_db(parsed_to_insert)
 
+                        device_to_update = {f"adapters.$.{key}": value
+                                            for key, value in parsed_to_insert.items() if key != 'data'}
+
+                        fields_to_update = device.keys() - ['id']
+                        for field in fields_to_update:
+                            field_of_device = device.get(field, [])
+                            try:
+                                if len(field_of_device) > 0:
+                                    device_to_update[f"adapters.$.data.{field}"] = field_of_device
+                            except TypeError:
+                                continue
+
                         modified_count = self.devices_db.update_one({
                             'adapters': {
                                 '$elemMatch': {
@@ -407,9 +419,7 @@ class AggregatorPlugin(PluginBase):
                                     'data.id': device['id']
                                 }
                             }
-                        }, {"$set": {
-                            "adapters.$": parsed_to_insert,
-                        }}).modified_count
+                        }, {"$set": device_to_update}).modified_count
 
                         if modified_count == 0:
                             self.devices_db.insert_one({
