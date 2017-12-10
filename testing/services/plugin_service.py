@@ -74,6 +74,7 @@ class PluginService(services.compose_service.ComposeService):
 
     def _is_service_alive(self):
         try:
+            self.trigger_check_registered()
             r = self.version()
             return r.status_code == 200
         except:

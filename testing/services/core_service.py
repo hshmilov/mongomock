@@ -19,6 +19,13 @@ class CoreService(plugin_service.PluginService):
 
         return requests.get(self.req_url + "/register", headers=headers, params=params)
 
+    def _is_service_alive(self):
+        try:
+            r = self.version()
+            return r.status_code == 200
+        except:
+            return False
+
     @pytest.fixture(scope="module")
     def core_fixture(request):
         service = CoreService()
