@@ -12,8 +12,32 @@ export const UPDATE_EXECUTED_QUERIES = 'UPDATE_EXECUTED_QUERIES'
 export const FETCH_EXECUTED_QUERIES = 'FETCH_EXECUTED_QUERIES'
 export const USE_SAVED_QUERY = 'USE_SAVED_QUERY'
 
+export const matchToVal = (match) => {
+	/*
+		Convert given match of type string to the appropriate type, according to its value.
+		If it is surrounded with quotes - its a string
+		If its value is 'true' or 'false', its a boolean with that value
+		Otherwise, it should be a number
+	 */
+	let strMatch = match.match(/"(.*)"/)
+	if (strMatch && strMatch.length === 2) {
+		return strMatch[1]
+	} else if (match === 'false') {
+		return false
+	} else if (match === 'true') {
+		return true
+	}
+	return parseInt(match)
+}
 
 export const strToQuery = (str) => {
+	/*
+		Given str is expected in a format representing a DB query,
+		e.g. '<field1>="<value1>" AND <field2>=<value2> AND
+		(<field3>=<value3.1> OR <field3>=<value3.2>)'
+
+		The str is parsed in two levels - the AND parts and their inner OR parts.
+	 */
 	let query = {}
 	if (!str || str === '*') { return query }
 	let andParts = str.split(' AND ')
@@ -24,13 +48,15 @@ export const strToQuery = (str) => {
 		let matchValues = orParts[0].match(/\(?(.*)(=)([^\)]*)\)?/)
 		if (matchValues === undefined || matchValues.length < 4) { return }
 		if (matchObject === undefined || matchObject === null) {
-			query[matchValues[1]] = matchValues[3]
+			/* AND expression has just one part */
+			query[matchValues[1]] = matchToVal(matchValues[3])
 		} else {
-			query[matchValues[1]] = [ matchValues[3] ]
+			/* AND expression has more than one part, separated by OR */
+			query[matchValues[1]] = [ matchToVal(matchValues[3]) ]
 			orParts.splice(1).forEach(function(orPart) {
 				matchValues = orPart.match(/\(?(.*)(=)([^\)]*)\)?/)
 				if (matchValues === undefined || matchValues.length < 4) { return }
-				query[matchValues[1]].push(matchValues[3])
+				query[matchValues[1]].push(matchToVal(matchValues[3]))
 			})
 		}
 	})
@@ -38,18 +64,32 @@ export const strToQuery = (str) => {
 }
 
 export const queryToStr = (query) => {
+	/*
+		Given query is expected to be an object where values are either primitives or an array of primitives,
+		e.g. {
+			'field1': 'value1', 'field2': value2,
+			'field3': [ value3.1, value3.2 ]
+		}
+	 */
 	let andParts = []
 	Object.keys(query).forEach(function (andKey) {
 		if (query[andKey] === undefined || !query[andKey]) { return }
-		if (typeof query[andKey] === 'string') {
-			andParts.push(`${andKey}=${query[andKey]}`)
-		} else if (typeof query[andKey] === 'object') {
+		if (typeof query[andKey] === 'object') {
+			/* Items of array are separated as OR between value of the key field */
 			let orParts = []
 			query[andKey].forEach(function(orKey) {
-				orParts.push(`${andKey}=${orKey}`)
+				if (typeof orKey === 'string') {
+					orParts.push(`${andKey}="${orKey}"`)
+				} else {
+					orParts.push(`${andKey}=${orKey}`)
+				}
 			})
 			if (!orParts.length) { return }
 			andParts.push(`(${orParts.join(' OR ')})`)
+		} else if (typeof query[andKey] === 'string') {
+			andParts.push(`${andKey}="${query[andKey]}"`)
+		} else {
+			andParts.push(`${andKey}=${query[andKey]}`)
 		}
 	})
 	if (!andParts.length) {
@@ -99,11 +139,11 @@ export const query = {
 
 		savedFields: [
 			{path: 'name', name: 'Name', default: true},
-			{path: 'filter', name: 'Query', default: true},
+			{path: 'filter', name: 'Filter', default: true},
 			{path: 'timestamp', name: 'Save Time', type: 'timestamp', default: true},
 		],
 		executedFields: [
-			{path: 'filter', name: 'Query', default: true},
+			{path: 'filter', name: 'Filter', default: true},
 			{path: 'device_count', name: 'Devices', default: true},
 			{path: 'timestamp', name: 'Execution Time', type: 'timestamp', default: true},
 		]
@@ -136,7 +176,7 @@ export const query = {
 		[UPDATE_QUERY] (state, payload) {
 			state.currentQuery = {}
 			Object.keys(payload).forEach(function(queryKey) {
-				if (payload[queryKey] && payload[queryKey].length) {
+				if (payload[queryKey]) {
 					state.currentQuery[queryKey] = payload[queryKey]
 				}
 			})

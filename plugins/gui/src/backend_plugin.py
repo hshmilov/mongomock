@@ -119,7 +119,7 @@ def filtered():
                         :param value:
                         :return:
                         """
-                        return {'$regex': value}
+                        return {'$regex': value, '$options': 'i'}
 
                     # TODO: Beautify by taking the $or case into an external method.
                     # If there are more than one filter, should be regarded as "and" logic
@@ -127,6 +127,8 @@ def filtered():
                         parsed_filter['$and'] = []
 
                         for key, val in mongo_filter.items():
+                            if not val:
+                                continue
                             # If a value is a list, should be regarded as "or" logic
                             if isinstance(val, list):
                                 or_list = {"$or": []}
@@ -136,24 +138,32 @@ def filtered():
 
                                 parsed_filter['$and'].append(or_list)
 
-                            else:
+                            elif isinstance(val, str):
                                 parsed_filter['$and'].append(
                                     {key: _create_regex(val)})
+                            else:
+                                parsed_filter['$and'].append(
+                                    {key: val})
 
                     else:
                         mongo_filter_key = list(mongo_filter.keys())[0]
                         mongo_filter_value = list(mongo_filter.values())[0]
 
-                        # If a value is a list, should be regarded as "or" logic
-                        if isinstance(mongo_filter_value, list):
+                        if mongo_filter_value:
 
-                            parsed_filter['$or'] = []
-                            for or_val in mongo_filter_value:
-                                parsed_filter["$or"].append(
-                                    {mongo_filter_key: _create_regex(or_val)})
+                            # If a value is a list, should be regarded as "or" logic
+                            if isinstance(mongo_filter_value, list):
 
-                        else:
-                            parsed_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
+                                parsed_filter['$or'] = []
+                                for or_val in mongo_filter_value:
+                                    parsed_filter["$or"].append(
+                                        {mongo_filter_key: _create_regex(or_val)})
+
+                            elif isinstance(mongo_filter_value, str):
+                                parsed_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
+
+                            else:
+                                parsed_filter[mongo_filter_key] = mongo_filter_value
 
                 except json.JSONDecodeError:
                     pass
@@ -427,13 +437,20 @@ class BackendPlugin(PluginBase):
             :param current_path:
             :return:
             """
+            if data is None or isinstance(data, list):
+                return []
             if isinstance(data, dict):
                 new_paths = []
                 for current_key in data.keys():
                     new_paths.extend(_find_paths_to_strings(
                         data[current_key], '{0}.{1}'.format(current_path, current_key)))
                 return new_paths
-            return [current_path]
+            control = 'text'
+            if isinstance(data, int):
+                control = 'number'
+            if isinstance(data, bool):
+                control = 'bool'
+            return [{'path': current_path, 'control': control}]
 
         all_fields = {}
         with self._get_db_connection(False) as db_connection:

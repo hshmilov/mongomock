@@ -97,11 +97,6 @@
 			}
 		},
 		watch: {
-			pageSize: function (newPageSize) {
-				this.maxPages = parseInt(this.data.length / newPageSize)
-				this.linkedPageCount = Math.min(5, this.maxPages + 1)
-				this.selectPage(0)
-			},
 			filterFields: function (newFields, oldFields) {
 				if (newFields.length <= oldFields.length) { return }
 				this.maxPages = 0
@@ -185,17 +180,31 @@
 					this.linkedPageStart++
 				}
 			},
-			selectPage (page) {
-				this.currentPage = page
+            restartPagination() {
+				/*
+				    Find first link to specific page, according to currently selected page.
+				    This should beg half the total number of links before current page (first calculation),
+				    unless total pages number will be passed this way (second calculation).
+				*/
 				this.linkedPageStart = Math.max(this.currentPage - parseInt(this.linkedPageCount / 2), 0)
 				this.linkedPageStart = Math.min(this.linkedPageStart, this.maxPages + 1 - this.linkedPageCount)
+            },
+			selectPage (page) {
+				this.currentPage = page
+				this.restartPagination()
 			}
 		},
 		mounted () {
 			/* Get initial data for first page of the table */
 			if (!this.data || !this.data.length) {
 				this.addData()
-			}
+			} else {
+				/* Recalculating the pagination parameters, according to data */
+				/* Max is zero-index (so needs to be rounded down) */
+				this.maxPages = parseInt(this.data.length / this.pageSize)
+				this.linkedPageCount = Math.min(5, this.maxPages + 1)
+				this.restartPagination()
+            }
 		}
 	}
 </script>

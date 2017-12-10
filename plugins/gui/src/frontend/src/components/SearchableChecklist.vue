@@ -29,7 +29,7 @@
             requestedItems() {
                 let items = this.items.filter((item) => {
                     if (this.searchValue === '') { return true }
-                    return item.name.toLowerCase().includes(this.searchValue.toLowerCase())
+                    return item.name.toLowerCase().indexOf(this.searchValue.toLowerCase()) > -1
                 })
                 this.createdItems.forEach((item) => {
                 	items.push({name: item, path: item})

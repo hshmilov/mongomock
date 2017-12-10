@@ -206,9 +206,10 @@
 			}
 		},
 		created () {
-			if (!Object.keys(this.device.fields.unique).length) {
-				this.fetchFields()
-			}
+			// TODO Improve backend operation, before returning this to life
+			//if (!Object.keys(this.device.fields.unique).length) {
+			//	this.fetchFields()
+			//}
 			this.fetchAdapters()
 			this.fetchTags()
 			this.selectedQuery = {...this.query.currentQuery}
@@ -242,7 +243,6 @@
 			executeQuery () {
 				this.closeQuickView()
 				this.updateQuery(this.selectedQuery)
-                this.fetchFields()
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {
