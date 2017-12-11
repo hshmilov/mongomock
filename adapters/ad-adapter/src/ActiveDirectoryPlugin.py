@@ -31,6 +31,8 @@ from datetime import datetime, timedelta
 AD_VERSION = '1.0.0'
 PLUGIN_TYPE = 'ad_adapter'
 
+TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
+
 
 class ActiveDirectoryPlugin(AdapterBase):
     """ A class containing all the Active Directory capabilities.
@@ -81,7 +83,7 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         # Try to create temp files dir
         try:
-            os.mkdir("temp_files")
+            os.mkdir(TEMP_FILES_FOLDER)
         except FileExistsError:
             pass  # Folder exists
 
@@ -247,7 +249,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         :return string: The name of the file created
         """
         (file_handle_os, os_path) = tempfile.mkstemp(
-            suffix='.tmp', dir='temp_files')
+            suffix='.tmp', dir=TEMP_FILES_FOLDER)
 
         with os.fdopen(file_handle_os, attrib) as file_obj:
             # Using `os.fdopen` converts the handle to an object that acts like a

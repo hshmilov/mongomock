@@ -32,10 +32,9 @@ def test_restart_data_persistency(axonius_fixture):
 
     axonius_fixture.db.stop()
     axonius_fixture.db.start_and_wait()
-    test_collection = list(axonius_fixture.db.get_collection('test_db', 'test_collection').find())
+    test_collection = list(axonius_fixture.db.get_collection('test_db', 'test_collection').find(test_document))
 
     assert len(test_collection) == 1
-    assert test_collection[0] == test_document
 
 
 def test_system_is_up(axonius_fixture):

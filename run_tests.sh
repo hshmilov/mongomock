@@ -19,7 +19,7 @@ echo "Finished unitests"
 
 echo "Start integration tests"
 cd ./testing
-timeout 600 python3 run_tests.py -s -v -l --junitxml=reporting/integ_report.xml tests $@
+timeout 600 python3 run_tests.py -x -s -v --showlocals --junitxml=reporting/integ_report.xml tests $@
 if [ $? -ne 0 ]
 then
   echo "Integration tests failed"
