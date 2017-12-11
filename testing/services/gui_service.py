@@ -31,7 +31,7 @@ class GuiService(plugin_service.PluginService):
         self.get('trigger_watches', api_key=self.api_key)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def gui_fixture(request):
     service = GuiService()
     initialize_fixture(request, service)

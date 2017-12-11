@@ -280,6 +280,7 @@ class BackendPlugin(PluginBase):
         aggregator_plugin = [x for x in plugins_available.values(
         ) if x['plugin_name'] == 'aggregator']
         if len(aggregator_plugin) == 0:
+            self.logger.warning(f"Couldn't find Aggregator. Available plugins are {str(plugins_available)}")
             return None
         if len(aggregator_plugin) != 1:
             raise RuntimeError(

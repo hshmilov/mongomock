@@ -10,7 +10,7 @@ class AwsService(plugin_service.AdapterService):
         super().__init__(compose_file_path, config_file_path, container_name)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def aws_fixture(request):
     service = AwsService()
     initialize_fixture(request, service)
