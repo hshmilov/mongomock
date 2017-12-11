@@ -36,6 +36,8 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 # Can wait up to 5 minutes if core didnt answer yet
 TIME_WAIT_FOR_REGISTER = 60 * 5
 
+VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
+
 
 @AXONIUS_REST.after_request
 def after_request(response):
@@ -173,7 +175,7 @@ class PluginBase(object):
 
         # Getting values from configuration file
         temp_config = configparser.ConfigParser()
-        temp_config.read('plugin_volatile_config.ini')
+        temp_config.read(VOLATILE_CONFIG_PATH)
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
         self.version = config['DEFAULT']['version']
@@ -222,7 +224,7 @@ class PluginBase(object):
             temp_config['registration']['plugin_unique_name'] = self.plugin_unique_name
             temp_config['registration']['api_key'] = self.api_key
 
-            with open('plugin_volatile_config.ini', 'w') as temp_config_file:
+            with open(VOLATILE_CONFIG_PATH, 'w') as temp_config_file:
                 temp_config.write(temp_config_file)
 
         # Use the data we have from the core.

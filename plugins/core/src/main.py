@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 
 from flask import jsonify, request, Response
-from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius.PluginBase import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.ServerUtils import init_wsgi
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 
@@ -39,7 +39,7 @@ class Core(PluginBase):
         log_addr = config['core_specific']['log_addr']
 
         temp_config = configparser.ConfigParser()
-        temp_config.read('plugin_volatile_config.ini')
+        temp_config.read(VOLATILE_CONFIG_PATH)
         try:
             api_key = config['core_specific']['api_key']
         except KeyError:
@@ -47,7 +47,7 @@ class Core(PluginBase):
             api_key = uuid.uuid4().hex
             temp_config['registration'] = {}
             temp_config['registration']['api_key'] = api_key
-        with open('plugin_volatile_config.ini', 'w') as temp_config_file:
+        with open(VOLATILE_CONFIG_PATH, 'w') as temp_config_file:
             temp_config.write(temp_config_file)
 
         # In order to avoid, deletion before initialization of adapter, we add this flag

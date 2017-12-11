@@ -9,6 +9,8 @@ import time
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
 
+from axonius.PluginBase import VOLATILE_CONFIG_PATH
+
 
 class PluginService(services.compose_service.ComposeService):
     def __init__(self, compose_file_path, config_file_path, container_name):
@@ -87,7 +89,7 @@ class PluginService(services.compose_service.ComposeService):
     @property
     def vol_conf(self):
         # Try to get the latest, but if the container is down, use the last data.
-        (out, _, _) = self.get_file_contents_from_container("/home/axonius/app/plugin_volatile_config.ini")
+        (out, _, _) = self.get_file_contents_from_container(VOLATILE_CONFIG_PATH)
         self.last_vol_conf = axonius.ConfigReader.PluginVolatileConfig(out.decode("utf-8"))
 
         return self.last_vol_conf
