@@ -14,33 +14,22 @@ class ComposeService(services.axon_service.AxonService):
         self.start()
 
     def start(self):
-        self.stop()
+        self.stop(should_delete=False)
         subprocess.check_call(['docker-compose', 'up', '-d'],
                               cwd=os.path.dirname(self._compose_file_path))
 
     def stop(self, should_delete=True):
-        # No need to stop if its not there.
-        p = subprocess.Popen(
-            ['docker', 'ps', '--filter', 'name={0}'.format(self.container_name)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (out, err) = p.communicate()
-        if self.container_name in out.decode("utf-8"):
-            p = subprocess.Popen(['docker', 'logs', self.container_name],
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (out, err) = p.communicate()
-            with open(os.path.join("..", "logs", "{0}_docker_logs.txt".format(self.container_name)), "a") as f:
-                f.write("====== START docker logs {0} ===========".format(self.container_name))
-                f.write("out:")
-                f.write(out.decode("utf-8"))
-                f.write("err:")
-                f.write(err.decode("utf-8"))
-                f.write("====== END   docker logs {0} ===========".format(self.container_name))
+        stdlog = open(os.path.join("..", "logs", "{0}_docker_std_logs.txt".format(self.container_name)), "a")
+        errlog = open(os.path.join("..", "logs", "{0}_docker_err_logs.txt".format(self.container_name)), "a")
 
-            p = subprocess.call(['docker-compose', 'stop'],
-                                cwd=os.path.dirname(self._compose_file_path))
+        subprocess.call(['docker-compose', 'logs'],
+                        cwd=os.path.dirname(self._compose_file_path), stderr=errlog, stdout=stdlog)
+        subprocess.call(['docker-compose', 'stop'],
+                        cwd=os.path.dirname(self._compose_file_path))
 
-            if should_delete:
-                p = subprocess.call(['docker-compose', 'rm', "-f"],
-                                    cwd=os.path.dirname(self._compose_file_path))
+        if should_delete:
+            subprocess.call(['docker-compose', 'down', "--volumes"],
+                            cwd=os.path.dirname(self._compose_file_path))
 
     def start_and_wait(self):
         """

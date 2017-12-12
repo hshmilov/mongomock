@@ -30,7 +30,7 @@ def test_restart_data_persistency(axonius_fixture):
     axonius_fixture.db.get_collection(
         'test_db', 'test_collection').insert_one(test_document)
 
-    axonius_fixture.db.stop()
+    axonius_fixture.db.stop(should_delete=False)
     axonius_fixture.db.start_and_wait()
     test_collection = list(axonius_fixture.db.get_collection('test_db', 'test_collection').find(test_document))
 
