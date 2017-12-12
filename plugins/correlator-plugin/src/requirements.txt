@@ -2,7 +2,6 @@ flask==0.12.2
 pymongo==3.5.1
 requests==2.18.4
 apscheduler==3.4.0
-axonius==1.0.0
 namedlist==1.7
 funcy==1.10
 promise==2.1

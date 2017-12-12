@@ -10,18 +10,6 @@ docker login -u axoniusdockerreadonly -p 48GguwDPOQbMNYj08Pmb
 docker pull axonius/axonius-base-image
 
 echo "Building all images"
-(
-docker pull axonius/axonius-base-image
-docker build -t axonius/axonius-libs plugins/axonius-libs
-docker build -t axonius/core plugins/core
-docker build -t axonius/aggregator plugins/aggregator-plugin
-#docker build -t axonius/watch-service plugins/watch-service
-docker build -t axonius/gui plugins/gui
-docker build -t axonius/ad-adapter adapters/ad-adapter
-docker build -t axonius/aws-adapter adapters/aws-adapter
-docker build -t axonius/esx-adapter adapters/esx-adapter
-docker build -t axonius/epo-adapter adapters/epo-adapter
-)
+source prepare_python_env.sh
+python devops/prepare_setup.py
 
-echo "Create venv"
-./create_venv.sh
