@@ -223,7 +223,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         devices_collection = self._get_collection("devices_data")
         for device_raw in devices_raw_data:
             device_doc = {
-                'hostname': device_raw['name'],
+                'hostname': device_raw['dNSHostName'],
                 'OS': figure_out_os(device_raw['operatingSystem']),
                 'network_interfaces': [],
                 'RESOLVE_STATUS': 'PENDING',
@@ -272,9 +272,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         :raises exception.IpResolveError: In case of an error in the query process
         """
         # We are assuming that the dc is the DNS server
-        device_domain = client_config['domain_name'].replace(
-            'DC=', '').replace(',', '.')
-        full_device_name = device_name + '.' + device_domain
+        full_device_name = device_name
 
         dns_server_address = client_config.get("dns_name")
         if not dns_server_address:
