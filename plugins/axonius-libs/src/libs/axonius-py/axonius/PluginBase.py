@@ -299,8 +299,8 @@ class PluginBase(object):
             response = self.request_remote_plugin(
                 "register?unique_name={0}".format(self.plugin_unique_name),
                 timeout=5)
-            if response.status_code == 404:
-                self.logger.error("Not registered to core, Exiting")
+            if response.status_code in [404, 499, 502]:  # Fault values
+                self.logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
                 os._exit(1)
         except Exception as e:
