@@ -1,4 +1,5 @@
 from services.epo_service import epo_fixture
+from test_helpers.utils import check_conf
 
 epo_client_details = {
     "admin_password": "6c=xz@OACxaefu)h38MFLD%dpiTeQu$=",
@@ -21,10 +22,7 @@ def test_adapter_responds_to_schema(axonius_fixture, epo_fixture):
 
 
 def test_adapter_in_configs(axonius_fixture, epo_fixture):
-    plugin_unique_name = epo_fixture.unique_name
-    adapter = axonius_fixture.db.get_unique_plugin_config(
-        plugin_unique_name)
-    assert adapter['plugin_name'] == 'epo_adapter'
+    check_conf(axonius_fixture, epo_fixture, "epo_adapter")
 
 
 def test_registered(axonius_fixture, epo_fixture):

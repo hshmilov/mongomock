@@ -1,5 +1,6 @@
 import pytest
 from services.aws_service import aws_fixture
+from test_helpers.utils import check_conf
 
 client_details = {
     "aws_access_key_id": "AKIAJOCJ5PGEAR6LNIFQ",
@@ -19,10 +20,7 @@ def test_adapter_responds_to_schema(axonius_fixture, aws_fixture):
 
 
 def test_adapter_in_configs(axonius_fixture, aws_fixture):
-    plugin_unique_name = aws_fixture.unique_name
-    adapter = axonius_fixture.db.get_unique_plugin_config(
-        plugin_unique_name)
-    assert adapter['plugin_name'] == 'aws_adapter'
+    check_conf(axonius_fixture, aws_fixture, "aws_adapter")
 
 
 def test_registered(axonius_fixture, aws_fixture):

@@ -1,4 +1,5 @@
 import configparser
+from axonius.consts import AdapterConsts
 
 
 class PluginConfig(object):
@@ -25,6 +26,15 @@ class PluginConfig(object):
     @property
     def core_address(self):
         return self._config['DEBUG']['core_address']
+
+
+class AdapterConfig(PluginConfig):
+    def __init__(self, config_file_path):
+        super().__init__(config_file_path)
+
+    @property
+    def default_sample_rate(self):
+        return int(self._config['DEFAULT'][AdapterConsts.DEFAULT_SAMPLE_RATE])
 
 
 class PluginVolatileConfig(object):

@@ -20,6 +20,7 @@ from axonius.PluginBase import PluginBase, add_rule, return_error
 from axonius.ParsingUtils import beautiful_adapter_device_name
 from flask import jsonify
 from exceptions import AdapterOffline
+from axonius.consts import AdapterConsts
 
 
 def parsed_devices_match(first, second):
@@ -165,7 +166,7 @@ class AggregatorPlugin(PluginBase):
                         # We already have a running thread for this adapter
                         continue
 
-                    sample_rate = adapter['device_sample_rate']
+                    sample_rate = int(adapter[AdapterConsts.DEVICE_SAMPLE_RATE])
 
                     self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
                                                             trigger=IntervalTrigger(

@@ -12,6 +12,8 @@ from flask import jsonify, request
 import json
 from bson import ObjectId
 from threading import RLock
+from axonius.ConfigReader import AdapterConfig
+from axonius.consts import AdapterConsts
 
 
 class AdapterBase(PluginBase, ABC):
@@ -24,7 +26,6 @@ class AdapterBase(PluginBase, ABC):
     """
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self._clients_lock = RLock()
@@ -445,3 +446,7 @@ class AdapterBase(PluginBase, ABC):
     @property
     def plugin_type(self):
         return "Adapter"
+
+    def populate_register_doc(self, register_doc, config_file_path):
+        config = AdapterConfig(config_file_path)
+        register_doc[AdapterConsts.DEFAULT_SAMPLE_RATE] = int(config.default_sample_rate)

@@ -1,5 +1,6 @@
 from services.ad_service import ad_fixture
-from test_helpers.utils import try_until_not_thrown
+from test_helpers.utils import try_until_not_thrown, check_conf
+from axonius.consts import AdapterConsts
 
 ad_client1_details = {
     "admin_password": "@vULuAZa5-MPxac6acw%ff-5H=bD)DQ;",
@@ -32,10 +33,8 @@ def test_adapter_responds_to_schema(axonius_fixture, ad_fixture):
 
 
 def test_adapter_in_configs(axonius_fixture, ad_fixture):
-    plugin_unique_name = ad_fixture.unique_name
-    adapter = axonius_fixture.db.get_unique_plugin_config(
-        plugin_unique_name)
-    assert adapter['plugin_name'] == 'ad_adapter'
+    adapter_name = 'ad_adapter'
+    check_conf(axonius_fixture, ad_fixture, adapter_name)
 
 
 def test_registered(axonius_fixture, ad_fixture):

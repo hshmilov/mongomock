@@ -21,6 +21,7 @@ from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
+from axonius.consts import AdapterConsts
 
 CHUNK_SIZE = 1024
 
@@ -302,9 +303,11 @@ class Core(PluginBase):
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'log_addr': self.logstash_host,
-                    'device_sample_rate': 60,  # Default sample rate is 60 seconds
-                    'status': 'ok'
+                    'status': 'ok',
                 }
+
+                if plugin_type == AdapterConsts.ADAPTER_PLUGIN_TYPE:
+                    doc[AdapterConsts.DEVICE_SAMPLE_RATE] = int(data[AdapterConsts.DEFAULT_SAMPLE_RATE])
 
             else:
                 # This is an existing plugin, we should update its data on the db (data that the plugin can change)
@@ -354,9 +357,13 @@ class Core(PluginBase):
         online_devices = dict()
         for plugin_name, plugin in self.online_plugins.items():
             online_devices[plugin_name] = {'plugin_type': plugin['plugin_type'],
-                                           'device_sample_rate': plugin['device_sample_rate'],
                                            'plugin_unique_name': plugin['plugin_unique_name'],
                                            'plugin_name': plugin['plugin_name']}
+
+            if plugin['plugin_type'] == AdapterConsts.ADAPTER_PLUGIN_TYPE:
+                online_devices[plugin_name][AdapterConsts.DEVICE_SAMPLE_RATE] = int(
+                    plugin[AdapterConsts.DEVICE_SAMPLE_RATE])
+
         return online_devices
 
     @add_rule("<path:full_url>", methods=['POST', 'GET', 'PUT', 'DELETE'], should_authenticate=False)

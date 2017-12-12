@@ -132,3 +132,7 @@ class AdapterService(PluginService):
 
     def schema(self, schema_type="general", api_key=None):
         return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
+
+    @property
+    def conf(self):
+        return axonius.ConfigReader.AdapterConfig(self.config_file_path)

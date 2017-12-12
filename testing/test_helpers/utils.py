@@ -1,4 +1,5 @@
 import time
+from axonius.consts import AdapterConsts
 
 
 def try_until_not_thrown(times, sleep_period, runnable, *args, **kwargs):
@@ -21,3 +22,10 @@ def populate_test_devices(axonius_fixture, ad_fixture):
 
     axonius_fixture.add_client_to_adapter(ad_fixture, ad_client1_details)
     axonius_fixture.assert_device_aggregated(ad_fixture, client_id, DEVICE_ID_FOR_CLIENT_1)
+
+
+def check_conf(axonius_fixture, adapter_service, adapter_name):
+    adapter = axonius_fixture.db.get_unique_plugin_config(
+        adapter_service.unique_name)
+    assert adapter['plugin_name'] == adapter_name
+    assert int(adapter[AdapterConsts.DEVICE_SAMPLE_RATE]) == adapter_service.conf.default_sample_rate

@@ -1,5 +1,6 @@
 from services.esx_service import esx_fixture
 import pytest
+from test_helpers.utils import check_conf
 
 client_details = [
     ({
@@ -35,10 +36,7 @@ def test_adapter_responds_to_schema(axonius_fixture, esx_fixture):
 
 
 def test_adapter_in_configs(axonius_fixture, esx_fixture):
-    plugin_unique_name = esx_fixture.unique_name
-    adapter = axonius_fixture.db.get_unique_plugin_config(
-        plugin_unique_name)
-    assert adapter['plugin_name'] == 'esx_adapter'
+    check_conf(axonius_fixture, esx_fixture, "esx_adapter")
 
 
 def test_registered(axonius_fixture, esx_fixture):

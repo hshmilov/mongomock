@@ -176,8 +176,11 @@ class PluginBase(object):
         # Getting values from configuration file
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
+        self.config_file_path = 'plugin_config.ini'
+
         config = configparser.ConfigParser()
-        config.read('plugin_config.ini')
+        config.read(self.config_file_path)
+
         self.version = config['DEFAULT']['version']
         self.lib_version = self.version  # no meaning to axonius-libs right now, when we are in one repo.
         self.plugin_name = config['DEFAULT']['name']
@@ -310,6 +313,13 @@ class PluginBase(object):
                                    "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
+    def populate_register_doc(self, register_doc, config_plugin_path):
+        """
+        :param register_doc: hook that allows subclass to populate plugins register doc
+        :param config_plugin_path: path to config file
+        """
+        pass
+
     @retry(wait_fixed=10 * 1000,
            stop_max_delay=60 * 5 * 1000,
            retry_on_exception=retry_if_connection_error)  # Try every 10 seconds for 5 minutes
@@ -325,6 +335,9 @@ class PluginBase(object):
                         "plugin_type": self.plugin_type,
                         "plugin_port": self.port
                         }
+
+        self.populate_register_doc(register_doc, self.config_file_path)
+
         if plugin_unique_name is not None:
             register_doc['plugin_unique_name'] = plugin_unique_name
             if api_key is not None:
