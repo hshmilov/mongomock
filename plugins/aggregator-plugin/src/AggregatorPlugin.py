@@ -412,6 +412,7 @@ class AggregatorPlugin(PluginBase):
                                     device_to_update[f"adapters.$.data.{field}"] = field_of_device
                             except TypeError:
                                 continue
+                        device_to_update['accurate_for_datetime'] = datetime.now()
 
                         modified_count = self.devices_db.update_one({
                             'adapters': {
