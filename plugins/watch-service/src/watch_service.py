@@ -24,6 +24,7 @@ class WatchService(PluginBase):
         aggregator_data = self.get_plugin_by_name('aggregator')
 
         self._device_collection_location = self.get_aggregator(aggregator_data)
+
         # Loading watch resources from db (If any exist).
         self._watched_queries = {
             str(watch['query']): watch for watch in self._get_collection('watches').find()}
@@ -36,7 +37,7 @@ class WatchService(PluginBase):
 
     def get_aggregator(self, aggregator_data):
         if aggregator_data is None:
-            self.logger.info('No Aggregator found while initiating.')
+            self.logger.error('No Aggregator found.')
             return None
         else:
             return aggregator_data['plugin_unique_name']
@@ -91,9 +92,13 @@ class WatchService(PluginBase):
         # Checks if requested query isn't already watched.
         try:
             if json.dumps(watch_data['query']) not in self._watched_queries.keys():
+                current_query_result = self.get_query_results(watch_data['query'])
+
+                if current_query_result is None:
+                    return return_error('Aggregator is down, please try again later.', 404)
                 watch_resource = {'watch_time': datetime.datetime.now(), 'criteria': int(watch_data['criteria']),
                                   'alert_types': watch_data['alert_types'],
-                                  'result': self.get_query_results(watch_data['query']),
+                                  'result': current_query_result,
                                   'query_sample_rate': self._default_query_sample_rate,
                                   'query': json.dumps(watch_data['query']),
                                   'retrigger': watch_data['retrigger'],
@@ -150,7 +155,8 @@ class WatchService(PluginBase):
         :return: The results of the query.
         """
         if self._device_collection_location is None:
-            self._device_collection_location = self.get_aggregator()
+            aggregator_data = self.get_plugin_by_name('aggregator')
+            self._device_collection_location = self.get_aggregator(aggregator_data)
 
         if self._device_collection_location is not None:
             return list(self._get_collection('devices_db', db_name=self._device_collection_location).find(query))
@@ -241,6 +247,9 @@ class WatchService(PluginBase):
 
         try:
             current_result = self.get_query_results(json.loads(query))
+            if current_result is None:
+                self.logger.info("Skipping watch trigger because there's no aggregator.")
+                return
             saved_result = self._watched_queries[query]['result']
             criteria = self._watched_queries[query]['criteria']
             retrigger = self._watched_queries[query]['retrigger']
