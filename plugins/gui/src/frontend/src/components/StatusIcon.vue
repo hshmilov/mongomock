@@ -2,7 +2,8 @@
     <div :class="`status-icon ${value}-fill`">
         <i v-if="value === 'error'" class="icon-exclamation-triangle"></i>
         <i v-else-if="value === 'warning'" class="icon-exclamation-triangle"></i>
-        <i v-else-if="value === 'success'" class="icon-checkmark2"></i>
+        <i v-else-if="value === 'info'" class="icon-info"></i>
+        <i v-else-if="value === 'success'" class="icon-check-alt"></i>
     </div>
 </template>
 

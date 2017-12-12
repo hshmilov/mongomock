@@ -650,8 +650,9 @@ class BackendPlugin(PluginBase):
                                    "plugin_name": 1,
                                    "type": 1,
                                    "title": 1,
-                                   "seen": 1}).sort(
-                                   [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+                                   "seen": 1,
+                                   "severity": 1}).sort(
+                                   [('_id', pymongo.DESCENDING)]).skip(skip).limit(limit))
             elif request.method == 'POST':
                 notifications_to_see = request.get_json(silent=True)
                 if notifications_to_see is None:
@@ -670,7 +671,7 @@ class BackendPlugin(PluginBase):
         """
         with self._get_db_connection(False) as db:
             notification_collection = db['core']['notifications']
-            return jsonify(notification_collection.find_one({'_id': notification_id}))
+            return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @add_rule("login", methods=['GET', 'POST'], should_authenticate=False)
     def login(self):

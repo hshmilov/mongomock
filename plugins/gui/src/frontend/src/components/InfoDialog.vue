@@ -67,7 +67,7 @@
         .icon-pause-circle {
             font-size: 36px;
             text-align: center;
-            color: $color-yellow;
+            color: $color-warning;
         }
         .btn {
             position: absolute;

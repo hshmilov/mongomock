@@ -1,5 +1,8 @@
 <template>
-    <scrollable-page :title="`alerts > ${alertData.name? alertData.name : 'new'} alert`">
+    <scrollable-page :breadcrumbs="[
+    	{ title: 'alerts', path: {name: 'Alerts'}},
+    	{ title: (alertData.name? alertData.name : 'new alert')}
+    ]">
         <card title="configure" class="alert-config">
             <template slot="cardContent">
                 <form @keyup.enter="saveAlert">
@@ -95,7 +98,7 @@
             ...mapState([ 'alert', 'query' ]),
             ...mapGetters([ 'savedQueryOptions' ]),
             alertData() {
-            	return this.alert.currentAlert.data
+            	return this.alert.alertDetails.data
             }
         },
         data() {

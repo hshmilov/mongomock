@@ -36,7 +36,7 @@ export const alert = {
 			{ path: 'message', name: 'Alert Info', default: true }
 		],
 		/* Data of alert currently being configured */
-		currentAlert: { fetching: false, data: { ...newAlert }, error: '' }
+		alertDetails: { fetching: false, data: { ...newAlert }, error: '' }
 	},
 	getters: {
 		filterFields(state) {
@@ -91,14 +91,14 @@ export const alert = {
 				The data is expected to be fields and values of a specific alert and is stored for use in the
 				alert configuration page
 			 */
-			state.currentAlert.fetching = payload.fetching
+			state.alertDetails.fetching = payload.fetching
 			if (payload.data) {
-				state.currentAlert.data = { ...payload.data,
+				state.alertDetails.data = { ...payload.data,
 					query: payload.data.query.replace(/\\/g, '')
 				}
 			}
 			if (payload.error) {
-				state.currentAlert.error = payload.error
+				state.alertDetails.error = payload.error
 			}
 		},
 		[ REMOVE_ALERT ] (state, payload) {
@@ -119,14 +119,14 @@ export const alert = {
 			}, ...state.alertList.data ]
 		},
 		[ RESTART_ALERT ] (state) {
-			state.currentAlert.data = { ...newAlert }
+			state.alertDetails.data = { ...newAlert }
 		},
 		[ UPDATE_ALERT_QUERY ] (state, query) {
 			/*
 				Create new alert with given query to current alert, for creating the next alert with it.
 				Clicking on new alert, or edit of existing will override it.
 			 */
-			state.currentAlert.data = { ...newAlert,
+			state.alertDetails.data = { ...newAlert,
 				query: query
 			}
 		}

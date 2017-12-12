@@ -20,11 +20,16 @@
 <style lang="scss">
     .status-icon-logo-text {
         .status-icon {
-            line-height: 64px;
             top: 0;
             left: 0;
             position: absolute;
+            width: 24px;
             height: 100%;
+            i {
+                position: absolute;
+                top: 40%;
+                left: 0;
+            }
         }
         .text-container {
             margin-left: 12px;

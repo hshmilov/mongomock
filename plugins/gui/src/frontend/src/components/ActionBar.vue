@@ -33,7 +33,7 @@
                 border-left: 0;
             }
             &:hover {
-                color: $color-yellow;
+                color: $color-warning;
             }
         }
     }

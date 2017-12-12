@@ -2,8 +2,15 @@
     <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
         <div class="page-wrapper"
              v-bind:class=" { 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
-            <div v-if="title" class="page-header">
-                <h2>{{ title }}</h2>
+            <div v-if="title || breadcrumbs" class="page-header">
+                <h2 v-if="title">{{ title }}</h2>
+                <h2 v-else>
+                    <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
+                    <span v-for="breadcrumb in breadcrumbs.splice(0, breadcrumbs.length - 1)">
+                        <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link> &gt; </span>
+                    <!-- Adding currently viewed page without a link -->
+                    {{breadcrumbs[breadcrumbs.length - 1].title}}
+                </h2>
             </div>
             <div class="page-body">
                 <slot></slot>
@@ -20,7 +27,7 @@
 	export default {
 		name: 'scrollable-page',
 		components: {VueScrollbar},
-		props: ['title'],
+		props: ['title', 'breadcrumbs'],
 		computed: mapState(['interaction'])
 	}
 </script>

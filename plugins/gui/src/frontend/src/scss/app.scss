@@ -15,7 +15,7 @@ body {
   margin: 0;
   overflow: hidden;
   color: $color-text-main;
-  font-weight: 300;
+  font-weight: 200;
   width: 100%;
   height: 100%;
 }
@@ -25,12 +25,14 @@ a, a:hover, a:focus {
   cursor: pointer;
 }
 
-a.link {
-  color: $color-text-main;
-  &:hover,
-  &:focus {
+a {
+  color: $color-text-title;
+  &:hover, &:focus {
     color: $color-theme-light;
   }
+}
+a.link {
+  color: $color-text-main;
 }
 
 .img-responsive {
@@ -121,7 +123,11 @@ Formatting
 }
 
 .warning-fill {
-  background-color: $color-yellow;
+  background-color: $color-warning;
+}
+
+.info-fill {
+  background-color: $color-info;
 }
 
 .success-fill {
@@ -131,6 +137,10 @@ Formatting
 .place-right {
   width: 100%;
   text-align: right;
+}
+
+.bold {
+  font-weight: 500;
 }
 
 
