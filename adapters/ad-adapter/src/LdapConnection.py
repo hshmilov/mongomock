@@ -93,5 +93,6 @@ class LdapConnection:
                            attr_name, attr_val in one_device['attributes'].items()
                            if is_wanted_attr(attr_name)}
             device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
+            device_dict['AXON_DC_ADDR'] = self.server_addr
             device_dict['AXON_DOMAIN_NAME'] = self.domain_name
             yield device_dict
