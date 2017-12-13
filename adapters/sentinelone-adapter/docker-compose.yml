@@ -1,0 +1,19 @@
+version: '3'
+services:
+  sentinelone-adapter:
+        build: .
+        image: axonius/sentinelone-adapter
+        container_name: "sentinelone-adapter"
+        ports:
+            - 5678:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

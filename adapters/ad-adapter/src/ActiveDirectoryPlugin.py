@@ -159,12 +159,7 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
-        try:
-            return client_data.get_device_list()
-        except exceptions.LdapException as e:
-            self.logger.error(
-                "Error while trying to get devices. Details: {0}", str(e))
-            return str(e), 500
+        return client_data.get_device_list()
 
     def _resolve_hosts_addr_thread(self):
         """ Thread for ip resolving of devices.

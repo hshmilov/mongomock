@@ -84,10 +84,11 @@ class AdapterBase(PluginBase, ABC):
             raw_devices = self._query_devices_by_client(client_name, client)
             parsed_devices = list(self._parse_raw_data(raw_devices))
         except AdapterExceptions.CredentialErrorException as e:
-            self.reutrn_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
+            return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
         except AdapterExceptions.AdapterException as e:
-            self.return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
+            return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
+            self.logger.error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
             return return_error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         else:
             devices_list = {'raw': raw_devices,

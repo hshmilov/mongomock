@@ -146,8 +146,7 @@ class ExecutionPlugin(PluginBase):
         # Updating the db on the new status and other parameters changed
         action_data = {'status': request_content['status']}
         if 'output' in request_content:
-            action_data['product'] = request_content['output'].get(
-                'product', '')
+            action_data['product'] = request_content['output'].get('product', '')
             action_data['result'] = request_content['output'].get('result', '')
 
         self._save_action_data(action_data, action_id)

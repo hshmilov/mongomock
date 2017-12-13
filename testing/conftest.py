@@ -43,7 +43,7 @@ class AxoniusService(object):
                               adapter_device['plugin_unique_name'] == adapter_name)
         return adapter_device['data']['network_interfaces']
 
-    def assert_device_aggregated(self, adapter, client_id, some_device_id):
+    def assert_device_aggregated(self, adapter, client_id, some_device_id, max_tries=60):
         self.aggregator.query_devices()  # send trigger to agg to refresh devices
         devices_as_dict = adapter.devices()
         assert client_id in devices_as_dict
@@ -60,7 +60,7 @@ class AxoniusService(object):
                 adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
-        try_until_not_thrown(60, 0.50, assert_device_inserted)
+        try_until_not_thrown(max_tries, 0.20, assert_device_inserted)
 
     def restart_plugin(self, plugin):
         plugin.stop()

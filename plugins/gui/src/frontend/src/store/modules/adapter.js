@@ -23,6 +23,10 @@ export const adapterStaticData = {
 		name: 'ESX',
 		description: 'VMware ESXi is an entreprise-class, type-1 hypervisor developed by VMware for deploying and serving virtual computers.'
 	},
+	'sentinelone_adapter': {
+		name: 'SentinelOne',
+		description: 'SentinelOne is a next-generation endpoint protection software unifying prevention, detection, and response in a single platform.'
+	},
 	'stresstest_adapter':{
 		name: "LOL",
 		description: "i am the king of devices"
