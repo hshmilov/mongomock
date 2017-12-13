@@ -60,7 +60,7 @@ class AxoniusService(object):
                 adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
-        try_until_not_thrown(60, 0.50, assert_device_inserted)
+        try_until_not_thrown(120, 0.50, assert_device_inserted)
 
     def restart_plugin(self, plugin):
         plugin.stop()
