@@ -18,7 +18,22 @@
                 <ul class="navbar-nav my-lg-0">
                     <li class="nav-item">
                         <a class="nav-link">
-                            <i class="icon-bell-o"></i>
+                            <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
+                                <i slot="dropdownTrigger" class="icon-bell-o"></i>
+                                <div slot="dropdownContent" class="preview-table">
+                                    <h5>Notifications</h5>
+                                    <div v-for="notification in notification.notificationList.data.slice(0, 5)"
+                                         @click="navigateNotification(notification.uuid)" class="item row"
+                                         v-bind:class="{ 'bold': !notification.seen }">
+                                        <status-icon :value="notification.severity"></status-icon>
+                                        <div class="col-10">{{ notification.title }}</div>
+                                        <div>{{ relativeDate(notification.date_fetched) }}</div>
+                                    </div>
+                                    <div class="view-all">
+                                        <router-link :to="{name: 'Notifications' }">View History</router-link>
+                                    </div>
+                                </div>
+                            </dropdown-menu>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -35,14 +50,42 @@
 </template>
 
 <script>
-    import { mapState, mapMutations } from 'vuex'
-    import { TOGGLE_SIDEBAR } from '../../store/mutations'
-    import '../../components/icons/logo'
+	import DropdownMenu from '../../components/DropdownMenu.vue'
+    import StatusIcon from '../../components/StatusIcon.vue'
+
+	import { mapState, mapMutations, mapActions } from 'vuex'
+	import { TOGGLE_SIDEBAR } from '../../store/mutations'
+    import { FETCH_NOTIFICATIONS, FETCH_NOTIFICATION } from '../../store/modules/notifications'
+    import { parseTime, parseDate } from '../../utils'
+	import '../../components/icons/logo'
 
     export default {
-        name: 'top-bar-container',
-        computed: mapState([ 'interaction' ]),
-        methods: mapMutations({ toggleSidebar: TOGGLE_SIDEBAR })
+		components: { DropdownMenu, StatusIcon },
+		name: 'top-bar-container',
+        computed: mapState([ 'interaction', 'notification' ]),
+        methods: {
+            ...mapMutations({ toggleSidebar: TOGGLE_SIDEBAR }),
+            ...mapActions({ fetchNotifications: FETCH_NOTIFICATIONS, fetchNotification: FETCH_NOTIFICATION }),
+            navigateNotification(notificationId) {
+				this.fetchNotification(notificationId)
+				this.$router.replace({path: `/notification/${notificationId}`})
+            },
+            relativeDate(originalDate) {
+            	let timestamp = new Date(originalDate).getTime()
+                let now = Date.now()
+                if (now - timestamp < 24 * 60 * 60 * 1000) {
+                	return parseTime(timestamp)
+                } else if (now - timestamp < 48 * 60 * 60 * 1000) {
+                	return "Yesterday"
+                }
+                return parseDate(timestamp)
+            }
+		},
+        mounted() {
+            this.fetchNotifications({
+                skip: 0, limit: 50
+            })
+        }
     }
 </script>
 
@@ -105,10 +148,13 @@
                 padding-left: .75rem;
                 padding-right: .75rem;
                 line-height: 40px;
-                color: $color-theme-light;
+                color: $color-theme-dark;
+                &:hover {
+                    color: $color-theme-light;
+                }
             }
             .nav-item {  margin-bottom: 0;  }
-            .nav-link.nav-home.active, .nav-link.nav-home:hover {  color: $color-yellow;  }
+            .nav-link.nav-home.active, .nav-link.nav-home:hover {  color: $color-warning;  }
         }
         &.collapse {
             display: block;
@@ -129,8 +175,37 @@
         }
     }
 
-    @media #{$media-break-md} {
-        
+    .preview-table {
+        color: $color-text-main;
+        line-height: initial;
+        font-size: 12px;
+        .item {
+            border-bottom: 1px solid $border-color;
+            padding: 12px 12px;
+            margin: 0 -12px;
+            text-transform: none;
+            letter-spacing: initial;
+            &:first-of-type {
+                border-top: 1px solid $border-color;
+            }
+            &:hover {
+                color: $color-theme-light
+            }
+            .status-icon {
+                text-align: center;
+                width: 20px;
+                i {
+                    font-size: 120%;
+                    padding: 0;
+                }
+            }
+        }
+        .view-all {
+            text-align: center;
+            width: 100%;
+            margin-bottom: -12px;
+            line-height: 36px;
+        }
     }
 
 </style>

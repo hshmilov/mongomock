@@ -45,7 +45,7 @@ export const requestApi = ({commit}, payload) => {
         })
         .catch((error) => {
             let userMessage = error.message
-            if (error.response.status >= 500) {
+            if (error.response && error.response.status >= 500) {
                 userMessage = "Verify all services are up and registered"
             }
             if (payload.type) {

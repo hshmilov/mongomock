@@ -1,6 +1,7 @@
 import pytest
 
-import watch_service
+# No need o import since not yet used
+# import watch_service
 
 
 def test_create_watch():

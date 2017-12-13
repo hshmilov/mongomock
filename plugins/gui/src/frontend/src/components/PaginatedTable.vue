@@ -14,17 +14,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="table-row" v-bind:class="{ active: recordSelection[record.id] }"
-                        v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)">
+                    <!-- idField should represent which field to take as id for each record.
+                        This id is used for passing to action methods or marking the row as active -->
+                    <tr class="table-row" v-bind:class="{ active: recordSelection[record[idField]] }"
+                        v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
+                        @click="$emit('click-row', record[idField])">
                         <td class="table-row-data">
-                            <checkbox v-if="value !== undefined" v-model="recordSelection[record.id]"
+                            <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]"
                                       @change="updateSelected()"></checkbox>
                         </td>
                         <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
                                             v-if="!field.hidden" :type="field.type" :value="record[field.path]">
                         </generic-table-cell>
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                            <a v-for="action in actions" class="table-row-action" @click="action.handler(record.id)">
+                            <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
                                 <i v-if="action.triggerFont" :class="action.triggerFont"></i>
                                 <svg-icon :name="`navigation/${action.triggerIcon}`" height="24" width="24"
                                           :original="true" v-else></svg-icon>
@@ -66,9 +69,10 @@
 	export default {
 		name: 'paginated-table',
 		components: { Checkbox, GenericTableCell, PulseLoader },
-		props: [
-			'fetching', 'data', 'error', 'fetchData', 'actions', 'fields', 'filter', 'value', 'active-id'
-		],
+		props: {
+			'fetching': {}, 'data': {}, 'error': {}, 'fetchData': {}, 'filter': {}, 'value': {},
+            'actions': {}, 'fields': {}, 'idField': {default: 'id'}
+		},
 		computed: {
 			firstPage () {
 				return this.currentPage === 0
@@ -202,6 +206,7 @@
 				/* Recalculating the pagination parameters, according to data */
 				/* Max is zero-index (so needs to be rounded down) */
 				this.maxPages = parseInt(this.data.length / this.pageSize)
+                this.fetchedPages = this.maxPages
 				this.linkedPageCount = Math.min(5, this.maxPages + 1)
 				this.restartPagination()
             }
@@ -275,6 +280,7 @@
             }
         }
         .table-row {
+            cursor: pointer;
             &:hover, &.active {
                 .table-row-data {
                     background-color: $background-color-hover;
@@ -300,7 +306,7 @@
                 vertical-align: middle;
                 .table-row-action {
                     visibility: hidden;
-                    padding-right: 8px;
+                    padding-right: 20px;
                     &:hover {
                         color: $color-theme-light;
                         .svg-stroke {  stroke: $color-theme-light;  }

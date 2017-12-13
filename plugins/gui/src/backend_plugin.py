@@ -97,6 +97,84 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
     return wrap
 
 
+def _parse_to_mongo_filter(object_filter):
+    """Parsed the filter received from the frontend to a mongo appropriate one.
+    :param object_filter: The filter to parse.
+    :return:
+    """
+
+    def _create_regex(value):
+        """
+        Wrap value with a document that tell mongo to regard it as regex
+        :param value:
+        :return:
+        """
+        return {'$regex': value, '$options': 'i'}
+
+    mongo_filter = dict()
+    if object_filter:
+        try:
+            object_filter = json.loads(object_filter)
+            # TODO: Beautify by taking the $or case into an external method.
+            # If there are more than one filter, should be regarded as "and" logic
+            if len(object_filter) > 1:
+                mongo_filter['$and'] = []
+
+                for key, val in object_filter.items():
+                    if val is None:
+                        # Ignore empty values
+                        continue
+                    # If a value is a list, should be regarded as "or" logic
+                    if isinstance(val, list):
+                        if not len(val):
+                            # Ignore empty values
+                            continue
+
+                        or_list = {"$or": []}
+                        for or_val in val:
+                            or_list["$or"].append(
+                                {key: _create_regex(or_val)})
+
+                        mongo_filter['$and'].append(or_list)
+
+                    elif isinstance(val, str):
+                        if not val:
+                            # Ignore empty values
+                            continue
+
+                        mongo_filter['$and'].append(
+                            {key: _create_regex(val)})
+                    else:
+                        mongo_filter['$and'].append(
+                            {key: val})
+
+            else:
+                mongo_filter_key = list(object_filter.keys())[0]
+                mongo_filter_value = list(object_filter.values())[0]
+
+                if mongo_filter_value is not None:
+
+                    # If a value is a list, should be regarded as "or" logic
+                    if isinstance(mongo_filter_value, list):
+                        if len(mongo_filter_value):
+                            mongo_filter['$or'] = []
+                            for or_val in mongo_filter_value:
+                                mongo_filter["$or"].append(
+                                    {mongo_filter_key: _create_regex(or_val)})
+
+                    elif isinstance(mongo_filter_value, str):
+                        if mongo_filter_value:
+                            mongo_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
+
+                    else:
+                        mongo_filter[mongo_filter_key] = mongo_filter_value
+
+        except json.JSONDecodeError:
+            pass
+
+        return mongo_filter
+
+
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
@@ -105,69 +183,7 @@ def filtered():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            pass
-
-            mongo_filter = request.args.get('filter')
-            parsed_filter = dict()
-            if mongo_filter:
-                try:
-                    mongo_filter = json.loads(mongo_filter)
-
-                    def _create_regex(value):
-                        """
-                        Wrap value with a document that tell mongo to regard it as regex
-                        :param value:
-                        :return:
-                        """
-                        return {'$regex': value, '$options': 'i'}
-
-                    # TODO: Beautify by taking the $or case into an external method.
-                    # If there are more than one filter, should be regarded as "and" logic
-                    if len(mongo_filter) > 1:
-                        parsed_filter['$and'] = []
-
-                        for key, val in mongo_filter.items():
-                            if not val:
-                                continue
-                            # If a value is a list, should be regarded as "or" logic
-                            if isinstance(val, list):
-                                or_list = {"$or": []}
-                                for or_val in val:
-                                    or_list["$or"].append(
-                                        {key: _create_regex(or_val)})
-
-                                parsed_filter['$and'].append(or_list)
-
-                            elif isinstance(val, str):
-                                parsed_filter['$and'].append(
-                                    {key: _create_regex(val)})
-                            else:
-                                parsed_filter['$and'].append(
-                                    {key: val})
-
-                    else:
-                        mongo_filter_key = list(mongo_filter.keys())[0]
-                        mongo_filter_value = list(mongo_filter.values())[0]
-
-                        if mongo_filter_value:
-
-                            # If a value is a list, should be regarded as "or" logic
-                            if isinstance(mongo_filter_value, list):
-
-                                parsed_filter['$or'] = []
-                                for or_val in mongo_filter_value:
-                                    parsed_filter["$or"].append(
-                                        {mongo_filter_key: _create_regex(or_val)})
-
-                            elif isinstance(mongo_filter_value, str):
-                                parsed_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
-
-                            else:
-                                parsed_filter[mongo_filter_key] = mongo_filter_value
-
-                except json.JSONDecodeError:
-                    pass
-            return func(self, mongo_filter=parsed_filter, *args, **kwargs)
+            return func(self, mongo_filter=_parse_to_mongo_filter(request.args.get('filter')), *args, **kwargs)
 
         return actual_wrapper
 
@@ -610,6 +626,93 @@ class BackendPlugin(PluginBase):
         if request.method == 'DELETE':
             return '', 200
 
+    @add_rule("alerts", methods=['GET', 'PUT'], should_authenticate=False)
+    def alerts(self):
+        """
+
+        :return:
+        """
+        queries_collection = self._get_collection('queries', limited_user=False)
+        if request.method == 'GET':
+            with self._get_db_connection(False) as db_connection:
+                alerts_to_return = []
+                for alert in db_connection[self.get_plugin_by_name('watch_service')['plugin_unique_name']][
+                        'watches'].find().sort(
+                        [('watch_time', pymongo.DESCENDING)]):
+                    # Fetching query in order to replace the string saved for aler
+                    #  with the corresponding id that the UI can recognize the query as
+                    query = queries_collection.find_one({'alertIds': {'$in': [str(alert['_id'])]}})
+                    if query is None:
+                        continue
+                    alert['query'] = str(query['_id'])
+                    alerts_to_return.append(beautify_db_entry(alert))
+                return jsonify(alerts_to_return)
+
+        if request.method == 'PUT':
+            alert_to_add = request.get_json(silent=True)
+            match_query = {'_id': ObjectId(alert_to_add['query'])}
+            query = queries_collection.find_one(match_query)
+            if query is None or not query.get('filter'):
+                return return_error("Invalid query id {0} requested for creating alert".format(alert_to_add['query']))
+
+            alert_to_add['query'] = _parse_to_mongo_filter(query['filter'])
+            response = self.request_remote_plugin("watch", "watch_service", method='put', json=alert_to_add)
+            if response is not None and response.status_code == 201:
+                # Updating saved query with the created alert's id, for reference when fetching alerts
+                alert_ids = set(query.get('alertIds') or [])
+                alert_ids.add(response.text)
+                queries_collection.update_one(match_query, {'$set': {'alertIds': list(alert_ids)}})
+            return response.text, response.status_code
+
+    @add_rule("alerts/<alert_id>", methods=['DELETE', 'POST'], should_authenticate=False)
+    def alerts_update(self, alert_id):
+        """
+
+        :param alert_id:
+        :return:
+        """
+        queries_collection = self._get_collection('queries', limited_user=False)
+        if request.method == 'DELETE':
+            response = self.request_remote_plugin("watch/{0}".format(alert_id), "watch_service", method='delete')
+            if response is None:
+                return return_error("No response whether alert was removed")
+            if response.status_code == 200:
+                query = queries_collection.find_one({'alertIds': {'$in': [alert_id]}})
+                if query is not None:
+                    alert_ids = set(query.get('alertIds') or [])
+                    alert_ids.remove(alert_id)
+                    queries_collection.update_one({'_id': query['_id']}, {'$set': {'alertIds': list(alert_ids)}})
+                    self.logger.info("Removed alert from containing query {0}".format(query['_id']))
+            return response.text, response.status_code
+
+        if request.method == 'POST':
+            alert_to_update = request.get_json(silent=True)
+            match_query = {'_id': ObjectId(alert_to_update['query'])}
+            query = queries_collection.find_one(match_query)
+            if query is None or not query.get('filter'):
+                return return_error(
+                    "Invalid query id {0} requested for creating alert".format(alert_to_update['query']))
+
+            alert_to_update['query'] = _parse_to_mongo_filter(query['filter'])
+            response = self.request_remote_plugin("watch/{0}".format(alert_id), "watch_service", method='post',
+                                                  json=alert_to_update)
+            if response is None:
+                return return_error("No response whether alert was updated")
+
+            if response.status_code == 200:
+                # Remove alert from any queries holding it now
+                query = queries_collection.find_one({'alertIds': {'$in': [alert_id]}})
+                if query is not None:
+                    alert_ids = set(query.get('alertIds') or [])
+                    alert_ids.remove(alert_id)
+                    queries_collection.update_one({'_id': query['_id']}, {'$set': {'alertIds': list(alert_ids)}})
+                # Updating saved query with the created alert's id, for reference when fetching alerts
+                alert_ids = set(query.get('alertIds') or [])
+                alert_ids.add(response.text)
+                queries_collection.update_one(match_query, {'$set': {'alertIds': list(alert_ids)}})
+
+            return response.text, response.status_code
+
     @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
     def config(self, config_name):
         """
@@ -650,8 +753,9 @@ class BackendPlugin(PluginBase):
                                    "plugin_name": 1,
                                    "type": 1,
                                    "title": 1,
-                                   "seen": 1}).sort(
-                                   [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+                                   "seen": 1,
+                                   "severity": 1}).sort(
+                                   [('_id', pymongo.DESCENDING)]).skip(skip).limit(limit))
             elif request.method == 'POST':
                 notifications_to_see = request.get_json(silent=True)
                 if notifications_to_see is None:
@@ -670,7 +774,7 @@ class BackendPlugin(PluginBase):
         """
         with self._get_db_connection(False) as db:
             notification_collection = db['core']['notifications']
-            return jsonify(notification_collection.find_one({'_id': notification_id}))
+            return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @add_rule("login", methods=['GET', 'POST'], should_authenticate=False)
     def login(self):

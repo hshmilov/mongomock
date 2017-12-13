@@ -8,6 +8,7 @@ import { query } from '../store/modules/query'
 import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
+import { notification } from '../store/modules/notifications'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -41,7 +42,8 @@ export default new Vuex.Store({
         query,
 		plugin,
 		adapter,
-		alert
+		alert,
+        notification
     }
 
 })

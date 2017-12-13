@@ -73,7 +73,7 @@ export const queryToStr = (query) => {
 	 */
 	let andParts = []
 	Object.keys(query).forEach(function (andKey) {
-		if (query[andKey] === undefined || !query[andKey]) { return }
+		if (query[andKey] === undefined) { return }
 		if (typeof query[andKey] === 'object') {
 			/* Items of array are separated as OR between value of the key field */
 			let orParts = []
@@ -120,7 +120,6 @@ const updateQueries = (currentQueries, payload) => {
 const fetchQueries = (dispatch, payload) => {
 	/* Fetch list of queries for requested page and filtering */
 	if (!payload.skip) { payload.skip = 0 }
-	if (!payload.limit) { payload.limit = -1 }
 	let param = `?limit=${payload.limit}&skip=${payload.skip}`
 	if (payload.filter) {
 		param += `&filter=${JSON.stringify(payload.filter)}`
@@ -153,8 +152,9 @@ export const query = {
 		savedQueryOptions(state) {
 			return state.savedQueries.data.map(function(query_obj) {
 				return {
-					value: query_obj.raw_filter,
-					name: query_obj.query_name
+					value: query_obj.id,
+					name: query_obj.name,
+					inUse: (query_obj['alertIds'] !== undefined && query_obj['alertIds'].length)
 				}
 			})
 		}
@@ -176,7 +176,7 @@ export const query = {
 		[UPDATE_QUERY] (state, payload) {
 			state.currentQuery = {}
 			Object.keys(payload).forEach(function(queryKey) {
-				if (payload[queryKey]) {
+				if (payload[queryKey] !== undefined) {
 					state.currentQuery[queryKey] = payload[queryKey]
 				}
 			})

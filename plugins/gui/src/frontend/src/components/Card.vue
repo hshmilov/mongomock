@@ -34,7 +34,6 @@
                 flex: 1 1 auto;
                 text-transform: capitalize;
                 letter-spacing: 0.5px;
-                font-weight: 500;
                 line-height: 30px;
             }
             .card-actions {

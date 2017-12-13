@@ -56,13 +56,13 @@
 			}),
             createAlert(queryId) {
             	/* Find requested query object in order to pass its query to the new alert */
-//            	this.query.savedQueries.data.forEach((query) => {
-//            		 if (query.id === queryId) {
-//            		 	this.updateAlertQuery(query.raw_query)
-//                     }
-//                })
+            	this.query.savedQueries.data.forEach((query) => {
+            		 if (query.id === queryId) {
+            		 	this.updateAlertQuery(query.id)
+                     }
+                })
                 /* Navigating to new alert - requested query will be selected there */
-//                this.$router.push({ path: '/alert/new'})
+                this.$router.push({ path: '/alert/new'})
             },
             runQuery(queryId) {
             	this.useQuery(queryId)

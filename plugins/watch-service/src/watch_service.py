@@ -2,6 +2,8 @@
 import threading
 import time
 import datetime
+from deepdiff import DeepDiff
+from bson.objectid import ObjectId
 
 # pip modules
 import os
@@ -18,6 +20,11 @@ class WatchService(PluginBase):
         """
         Initializes the watcher threads, gets the DB credentials and sets the default sampling rate.
         """
+
+        def _parse_mongo_id(watch):
+            watch['_id'] = str(watch['_id'])
+            return watch
+
         super().__init__(*args, **kwargs)
 
         self._scheduler = None
@@ -27,7 +34,7 @@ class WatchService(PluginBase):
 
         # Loading watch resources from db (If any exist).
         self._watched_queries = {
-            str(watch['query']): watch for watch in self._get_collection('watches').find()}
+            str(watch['query']): _parse_mongo_id(watch) for watch in self._get_collection('watches').find()}
 
         # Set's a sample rate to check the saved queries.
         self._default_query_sample_rate = 10
@@ -49,6 +56,34 @@ class WatchService(PluginBase):
                 job.modify(next_run_time=datetime.datetime.now())
             self._scheduler.wakeup()
         return '', 200
+
+    @add_rule("watch/<watch_id>", methods=['GET', 'DELETE', 'POST'])
+    def watch_by_id(self, watch_id):
+        """The specific rest watch endpoint.
+
+        Gets, Deletes and edits (currently deletes and creates again with same ID) specific watch by ID.
+
+        :return: Correct HTTP response.
+        """
+        try:
+            if self.get_method() == 'GET':
+                requested_watch = self._get_collection('watches').find_one({'_id': ObjectId(watch_id)})
+                return jsonify(requested_watch) if requested_watch is not None else return_error('A watch with that id was not found.', 404)
+            elif self.get_method() == 'DELETE':
+                return self._remove_watch(watch_id)
+            elif self.get_method() == 'POST':
+                watch_data = self.get_request_data_as_object()
+                delete_response = self._remove_watch(watch_id)
+                if delete_response[1] == 404:
+                    return return_error('A watch with that ID was not found.', 404)
+                watch_data['_id'] = watch_id
+                self._add_watch(watch_data)
+                return '', 200
+
+        except ValueError:
+            message = 'Expected JSON, got something else...'
+            self.logger.error(message)
+            return return_error(message, 400)
 
     @add_rule("watch", methods=['PUT', 'GET', 'DELETE'])
     def watch(self):
@@ -91,37 +126,47 @@ class WatchService(PluginBase):
         """
         # Checks if requested query isn't already watched.
         try:
-            if json.dumps(watch_data['query']) not in self._watched_queries.keys():
-                current_query_result = self.get_query_results(watch_data['query'])
+            if json.dumps(watch_data['query']) not in self._watched_queries.keys() and \
+                    len([current_watch for current_watch in self._watched_queries.keys()
+                         if len(DeepDiff(current_watch, watch_data['query'], ignore_order=True)) == 0]) == 0:
 
+                current_query_result = self.get_query_results(watch_data['query'])
                 if current_query_result is None:
                     return return_error('Aggregator is down, please try again later.', 404)
+
                 watch_resource = {'watch_time': datetime.datetime.now(), 'criteria': int(watch_data['criteria']),
                                   'alert_types': watch_data['alert_types'],
                                   'result': current_query_result,
                                   'query_sample_rate': self._default_query_sample_rate,
                                   'query': json.dumps(watch_data['query']),
                                   'retrigger': watch_data['retrigger'],
-                                  'triggered': 0}
+                                  'triggered': 0,
+                                  'name': watch_data['name'],
+                                  'severity': watch_data['severity']
+                                  }
+
+                if '_id' in watch_data:
+                    watch_resource['_id'] = ObjectId(watch_data['_id'])
 
                 # Adds the query to the local watch dict
                 self._watched_queries[json.dumps(
                     watch_data['query'])] = watch_resource
 
                 # Pushes the resource to the db.
-                self._get_collection('watches').insert_one(watch_resource)
-
+                insert_result = self._get_collection('watches').insert_one(watch_resource)
+                self._watched_queries[json.dumps(
+                    watch_data['query'])]['_id'] = str(insert_result.inserted_id)
                 self.logger.info('Added query to watch list')
-                return 'CREATED', 201
+                return str(insert_result.inserted_id), 201
 
             return return_error('An existing watch on a query as been requested', 409)
 
-        except KeyError:
-            message = 'The query watch request is missing data.'
+        except KeyError as e:
+            message = 'The query watch request is missing data. Details: {0}'.format(str(e))
             self.logger.error(message)
             return return_error(message, 400)
-        except TypeError:
-            message = 'The mongo query was invalid.'
+        except TypeError as e:
+            message = 'The mongo query was invalid. Details: {0}'.format(str(e))
             self.logger.error(message)
             return return_error(message, 400)
 
@@ -131,22 +176,48 @@ class WatchService(PluginBase):
         :param watch_data: The watched query to delete
         :return: Correct HTTP response.
         """
-        delete_result = self._get_collection('watches').delete_one(
-            {'query': json.dumps(watch_data['query'])})
-        try:
-            del self._watched_queries[json.dumps(watch_data['query'])]
-            if delete_result.deleted_count == 0:
+        if isinstance(watch_data, dict):
+            delete_result = self._get_collection('watches').delete_one(
+                {'query': json.dumps(watch_data['query'])})
+            try:
+                del self._watched_queries[json.dumps(watch_data['query'])]
+                if delete_result.deleted_count == 0:
+                    self.logger.info(
+                        'Successfully deleted a watch that existed only in-memory (not on the DB.')
+
+                self.logger.info('Removed query from watch.')
+                return '', 200
+            except KeyError:
+                if delete_result != 0:
+                    self.logger.info(
+                        'Deleted a watch that only existed on the DB.')
+
+                return return_error('Attempted to delete un existing watch.', 404)
+        elif isinstance(watch_data, str):
+            delete_result = self._get_collection('watches').delete_one(
+                {'_id': ObjectId(watch_data)})
+            deleted = False
+            for current_query in self._watched_queries.keys():
+                if self._watched_queries[current_query]['_id'] == watch_data:
+                    del self._watched_queries[current_query]
+                    deleted = True
+                    break
+
+            if deleted and delete_result.deleted_count == 0:
                 self.logger.info(
                     'Successfully deleted a watch that existed only in-memory (not on the DB.')
-
-            self.logger.info('Removed query from watch.')
-            return '', 200
-        except KeyError:
-            if delete_result != 0:
+            elif not deleted and delete_result.deleted_count != 0:
                 self.logger.info(
                     'Deleted a watch that only existed on the DB.')
 
-            return return_error('Attempted to delete un existing watch.', 404)
+                return return_error('Attempted to delete un existing watch.', 404)
+            elif not deleted and delete_result.deleted_count == 0:
+                self.logger.info(
+                    'Attempted to delete un existing watch.')
+                return return_error('Attempted to delete un existing watch.', 404)
+
+            self.logger.info('Removed query from watch.')
+            return '', 200
 
     def get_query_results(self, query):
         """Gets a query's results from the aggregator devices_db.
@@ -241,7 +312,8 @@ class WatchService(PluginBase):
                         self.create_notification(alert['title'], '{0}. {1}'.format(alert['message'],
                                                                                    'Num of Triggers is {0}'.format(
                                                                                        self._watched_queries[query][
-                                                                                           'triggered']), 'alert'))
+                                                                                           'triggered']), 'alert'),
+                                                 severity_type=self._watched_queries[query]['severity'])
                         self.logger.info(
                             'Watch triggered on query: {0}'.format(str(query)))
 

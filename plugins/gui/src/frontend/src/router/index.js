@@ -12,6 +12,8 @@ import ControlContainer from '../containers/control/ControlContainer.vue'
 import AlertsContainer from '../containers/alert/AlertsContainer.vue'
 import AlertConfigContainer from '../containers/alert/AlertConfigContainer.vue'
 import SettingsContainer from '../containers/setting/SettingsContainer.vue'
+import NotificationsContainer from '../containers/notification/NotificationContainer.vue'
+import NotificationViewContainer from '../containers/notification/NotificationViewContainer.vue'
 
 Vue.use(Router)
 export default new Router({
@@ -74,6 +76,15 @@ export default new Router({
             path: '/settings',
             name: 'Settings',
             component: SettingsContainer
-        }
+        },
+		{
+			path: '/notification',
+			name: 'Notifications',
+			component: NotificationsContainer
+		},
+		{
+			path: '/notification/:id',
+			component: NotificationViewContainer
+		}
     ]
 })

@@ -89,6 +89,7 @@
             vertical-align: middle;
             padding: 20px;
             position: relative;
+            min-width: 360px;
             &:first-of-type {
                 border-bottom-left-radius: 4px;
                 border-top-left-radius: 4px;
@@ -105,7 +106,7 @@
             text-align: right;
             .table-row-action {
                 visibility: hidden;
-                padding-right: 8px;
+                padding-right: 20px;
                 &:hover {
                     color: $color-theme-light;
                     .svg-stroke {  stroke: $color-theme-light;  }

@@ -8,7 +8,7 @@
             <slot v-if="!done" name="dropdownContent" :onDone="handleDone"></slot>
             <div v-if="done" class="dropdown-success animated fadeIn">
                 <div>{{successMessage}}</div>
-                <i class="icon-check"></i>
+                <i class="icon-checkmark2"></i>
             </div>
         </div>
     </div>
@@ -49,31 +49,8 @@
     @import '../scss/config';
 
     .dropdown {
-        border: 1px solid $border-color;
-        border-radius: 4px;
-        .dropdown-toggle {
-            cursor: pointer;
-            font-size: 80%;
-            padding-right: 4px;
-            padding-left: 4px;
-            i, img {
-                height: 24px;
-                margin-right: 24px;
-                margin-top: 2px;
-                font-size: 18px;
-                vertical-align: middle;
-                line-height: 28px;
-            }
-            &:after {
-                position: absolute;
-                margin-right: 8px;
-                margin-top: 12px;
-                top: 0;
-                right: 0;
-                border-top: .5em solid;
-                border-right: .5em solid transparent;
-                border-left: .5em solid transparent;
-            }
+        .dropdown-toggle:after {
+            display: none;
         }
         .dropdown-menu {
             z-index: 10;
@@ -84,6 +61,9 @@
             -moz-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
             border-color: $border-color;
             padding: 12px;
+            &.w-xl {
+                width: 600px;
+            }
             &.w-lg {
                 width: 480px;
             }

@@ -1,5 +1,8 @@
 <template>
-    <scrollable-page :title="`adapters > ${adapterName}`">
+    <scrollable-page :breadcrumbs="[
+    	{ title: 'adapters', path: { name: 'Adapters'}},
+    	{ title: adapterName }
+    ]">
         <card title="configure">
             <template slot="cardContent">
                 <div class="server-list-container row">
