@@ -7,7 +7,7 @@ services:
         ports:
             - 5050:80
         volumes:
-          - ../../logs:/home/axonius/logs
+          - ../../logs/core:/home/axonius/logs
           - data:/home/axonius
 
 volumes:

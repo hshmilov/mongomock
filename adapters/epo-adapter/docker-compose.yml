@@ -7,7 +7,7 @@ services:
         ports:
             - 5003:80
         volumes:
-          - ../../logs:/home/axonius/logs
+          - ../../logs/epo-adapter:/home/axonius/logs
           - data:/home/axonius
 
 volumes:

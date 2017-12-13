@@ -12,6 +12,9 @@ class ComposeService(services.axon_service.AxonService):
         self._compose_file_path = compose_file_path
         self.container_name = container_name
         self.start()
+        self.log_dir = os.path.join("..", "logs", self.container_name)
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
 
     def start(self):
         self.stop(should_delete=False)
@@ -19,8 +22,8 @@ class ComposeService(services.axon_service.AxonService):
                               cwd=os.path.dirname(self._compose_file_path))
 
     def stop(self, should_delete=True):
-        stdlog = open(os.path.join("..", "logs", "{0}_docker_std_logs.txt".format(self.container_name)), "a")
-        errlog = open(os.path.join("..", "logs", "{0}_docker_err_logs.txt".format(self.container_name)), "a")
+        stdlog = open(os.path.join("..", "logs", "{0}_docker_std_logs.log".format(self.container_name)), "a")
+        errlog = open(os.path.join("..", "logs", "{0}_docker_err_logs.log".format(self.container_name)), "a")
 
         subprocess.call(['docker-compose', 'logs'],
                         cwd=os.path.dirname(self._compose_file_path), stderr=errlog, stdout=stdlog)

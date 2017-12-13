@@ -7,8 +7,9 @@ services:
         ports:
           - 5000:80
         volumes:
-          - ../../logs:/home/axonius/logs
+          - ../../logs/aggregator:/home/axonius/logs
           - data:/home/axonius
+
 
 volumes:
   data:
