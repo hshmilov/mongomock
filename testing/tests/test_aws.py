@@ -1,4 +1,3 @@
-import pytest
 from services.aws_service import aws_fixture
 from test_helpers.utils import check_conf
 
