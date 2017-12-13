@@ -1,9 +1,5 @@
 <template>
     <scrollable-page title="alerts">
-        <card title="filter">
-            <!-- Form containing the fields that alert table can be filtered by -->
-            <generic-form slot="cardContent" :schema="filterFields" submitLabel="go" @submit="executeFilter"></generic-form>
-        </card>
         <card :title="`alerts (${alert.alertList.data.length})`">
             <span slot="cardActions">
                 <action-bar :actions="[{title: 'New', handler: createAlert}]"></action-bar>
@@ -25,7 +21,7 @@
     import PaginatedTable from '../../components/PaginatedTable.vue'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-    import { FETCH_ALERTS, FETCH_ALERT, ARCHIVE_ALERT, RESTART_ALERT } from '../../store/modules/alert'
+    import { FETCH_ALERTS, SET_ALERT, ARCHIVE_ALERT, RESTART_ALERT } from '../../store/modules/alert'
 
     export default {
         name: 'alert-container',
@@ -49,8 +45,8 @@
             }
         },
         methods: {
-            ...mapMutations({ restartAlert: RESTART_ALERT }),
-			...mapActions({ fetchAlerts: FETCH_ALERTS, fetchAlert: FETCH_ALERT, archiveAlert: ARCHIVE_ALERT }),
+            ...mapMutations({ restartAlert: RESTART_ALERT, setAlert: SET_ALERT }),
+			...mapActions({ fetchAlerts: FETCH_ALERTS, archiveAlert: ARCHIVE_ALERT }),
             executeFilter(filterData) {
 				/*
 				    Upon submission of the filter form, updating the data of the filter that is passed as props to the
@@ -63,8 +59,8 @@
                     Fetch the requested alert configuration and navigate to configuration page with the id, to load it
 				 */
 				if (!alertId) { return }
-                this.fetchAlert(alertId)
-				this.$router.replace({path: `/alert/${alertId}`});
+                this.setAlert(alertId)
+				this.$router.replace({path: `alert/${alertId}`})
             },
             createAlert() {
 				this.restartAlert()

@@ -150,7 +150,7 @@ export const adapter = {
 				rule: rule,
 				method: 'PUT',
 				data: payload.serverData
-			}).then((response) => {
+			}).then(() => {
 				dispatch(FETCH_ADAPTER_SERVERS, payload.adapterId)
 			})
 		},

@@ -148,7 +148,10 @@
                 padding-left: .75rem;
                 padding-right: .75rem;
                 line-height: 40px;
-                color: $color-theme-light;
+                color: $color-theme-dark;
+                &:hover {
+                    color: $color-theme-light;
+                }
             }
             .nav-item {  margin-bottom: 0;  }
             .nav-link.nav-home.active, .nav-link.nav-home:hover {  color: $color-warning;  }

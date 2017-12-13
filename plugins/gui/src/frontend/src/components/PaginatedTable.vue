@@ -306,7 +306,7 @@
                 vertical-align: middle;
                 .table-row-action {
                     visibility: hidden;
-                    padding-right: 8px;
+                    padding-right: 20px;
                     &:hover {
                         color: $color-theme-light;
                         .svg-stroke {  stroke: $color-theme-light;  }

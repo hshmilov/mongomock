@@ -2,14 +2,14 @@ import { REQUEST_API } from '../actions'
 
 export const FETCH_ALERTS = 'FETCH_ALERTS'
 export const UPDATE_ALERTS = 'UPDATE_ALERTS'
-export const FETCH_ALERT = 'FETCH_ALERT'
+export const RESTART_ALERTS = 'RESTART_ALERTS'
 export const SET_ALERT = 'SET_ALERT'
 export const ARCHIVE_ALERT = 'ARCHIVE_ALERT'
 export const REMOVE_ALERT = 'REMOVE_ALERT'
-export const RESTART_ALERTS = 'RESTART_ALERTS'
 export const RESTART_ALERT = 'RESTART_ALERT'
 export const UPDATE_ALERT = 'UPDATE_ALERT'
 export const ADD_ALERT = 'ADD_ALERT'
+export const SAVE_ALERT = 'SAVE_ALERT'
 export const UPDATE_ALERT_QUERY = 'UPDATE_ALERT_QUERY'
 
 const newAlert = {
@@ -17,10 +17,10 @@ const newAlert = {
 	name: '',
 	criteria: undefined,
 	query: '',
-	notification: false,
-	retrigger: true,
-	severity: 'error',
-	triggered: false
+	alert_types: [],
+	retrigger: false,
+	triggered: false,
+	severity: 'info'
 }
 
 export const alert = {
@@ -29,11 +29,11 @@ export const alert = {
 		alertList: {fetching: false, data: [], error: ''},
 		/* Statically defined fields that should be presented for each alert, in this order */
 		fields: [
-			{ path: 'severity', name: 'Severity', default: true, type: 'status' },
 			{ path: 'name', name: 'Name', default: true, control: 'text'},
-			{ path: 'timestamp', name: 'Creation Time', type: 'timestamp', default: true, control: 'text' },
+			{ path: 'watch_time', name: 'Creation Time', type: 'timestamp', default: true, control: 'text' },
 			{ path: 'type', name: 'Source', default: true, type: 'type' },
-			{ path: 'message', name: 'Alert Info', default: true }
+			{ path: 'message', name: 'Alert Info', default: true },
+			{ path: 'severity', name: 'Severity', default: true, type: 'status' }
 		],
 		/* Data of alert currently being configured */
 		alertDetails: { fetching: false, data: { ...newAlert }, error: '' }
@@ -46,6 +46,9 @@ export const alert = {
 		}
 	},
 	mutations: {
+		[ RESTART_ALERTS ] (state) {
+			state.alertList.data = []
+		},
 		[ UPDATE_ALERTS ] (state, payload) {
 			/*
 				Called once before AJAX call is made, just to update that fetching has started.
@@ -75,7 +78,7 @@ export const alert = {
 						message += ' detected in query result'
 					}
 					processedData.push({ ...alert,
-						severity: 'error',
+						id: alert.uuid,
 						type: 'User defined by: Administrator',
 						message: message
 					})
@@ -86,20 +89,19 @@ export const alert = {
 				state.alertList.error = payload.error
 			}
 		},
-		[ SET_ALERT ] (state, payload) {
+		[ SET_ALERT ] (state, alertId) {
 			/*
 				The data is expected to be fields and values of a specific alert and is stored for use in the
 				alert configuration page
 			 */
-			state.alertDetails.fetching = payload.fetching
-			if (payload.data) {
-				state.alertDetails.data = { ...payload.data,
-					query: payload.data.query.replace(/\\/g, '')
+			if (!alertId) { return }
+			state.alertList.data.forEach((alert) => {
+				if (alert.uuid === alertId) {
+					state.alertDetails.data = { ...alert,
+						query: alert.query.replace(/\\/g, '')
+					}
 				}
-			}
-			if (payload.error) {
-				state.alertDetails.error = payload.error
-			}
+			})
 		},
 		[ REMOVE_ALERT ] (state, payload) {
 			/*
@@ -118,6 +120,14 @@ export const alert = {
 				type: 'User defined by: Administrator'
 			}, ...state.alertList.data ]
 		},
+		[ SAVE_ALERT ] (state, payload) {
+			state.alertList.data = state.alertList.data.map((alert) => {
+				if (alert.uuid !== payload.uuid) { return alert }
+				return { ...alert,
+					...payload
+				}
+			})
+		},
 		[ RESTART_ALERT ] (state) {
 			state.alertDetails.data = { ...newAlert }
 		},
@@ -132,12 +142,15 @@ export const alert = {
 		}
 	},
 	actions: {
-		[ FETCH_ALERTS ] ({dispatch}, payload) {
+		[ FETCH_ALERTS ] ({dispatch, commit}, payload) {
 			/*
 				Call to api for getting all alerts, according to skip, limit and filter
 				The mutation UPDATE_ALERTS is called with the returned data or error, to fill it in the state
 			*/
-			if (!payload.skip) { payload.skip = 0 }
+			if (!payload.skip) {
+				commit(RESTART_ALERTS)
+				payload.skip = 0
+			}
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
 			if (payload.filter && Object.keys(payload.filter).length) {
 				param += `&filter=${JSON.stringify(payload.filter)}`
@@ -145,17 +158,6 @@ export const alert = {
 			dispatch(REQUEST_API, {
 				rule: `api/alerts${param}`,
 				type: UPDATE_ALERTS
-			})
-		},
-		[ FETCH_ALERT ] ({dispatch}, alertId) {
-			/*
-				Call to api for getting a single alert, in order to present in alert config page
-				The mutation UPDATE_ALERT is called with the returned data or error, to fill it in the state
-			*/
-			if (!alertId) { return }
-			dispatch(REQUEST_API, {
-				rule: `api/alerts/${alertId}`,
-				type: SET_ALERT
 			})
 		},
 		[ ARCHIVE_ALERT ] ({dispatch, commit}, alertId) {
@@ -184,19 +186,17 @@ export const alert = {
 			 */
 			if (!payload || !payload.id) { return }
 			let rule = 'api/alerts'
+			let method = 'PUT'
 			if (payload.id !== 'new') {
 				rule += '/' + payload.id
+				method = 'POST'
 			}
 			dispatch(REQUEST_API, {
 				rule: rule,
-				method: 'POST',
+				method: method,
 				data: payload
 			}).then((response) => {
-				if (response === '') {
-					return
-				}
-				payload.id = response
-				commit(ADD_ALERT, payload)
+				dispatch(FETCH_ALERTS, {skip: 0, limit: 50})
 			})
 		}
 	}
