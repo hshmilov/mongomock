@@ -83,7 +83,7 @@ class AxoniusService(object):
             assert self.aggregator.is_up()
             assert self.aggregator.is_plugin_registered(self.core)
 
-        try_until_not_thrown(60, 0.5, assert_aggregator_registered)
+        try_until_not_thrown(120, 0.5, assert_aggregator_registered)
 
 
 @pytest.fixture(scope="session", autouse=True)
