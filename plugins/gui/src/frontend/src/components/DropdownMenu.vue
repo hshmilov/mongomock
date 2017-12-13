@@ -49,9 +49,6 @@
     @import '../scss/config';
 
     .dropdown {
-        .dropdown-toggle:after {
-            display: none;
-        }
         .dropdown-menu {
             z-index: 10;
             top: 96%;

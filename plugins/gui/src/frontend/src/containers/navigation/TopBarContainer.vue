@@ -20,7 +20,7 @@
                         <a class="nav-link">
                             <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
                                 <i slot="dropdownTrigger" class="icon-bell-o"></i>
-                                <div slot="dropdownContent" class="preview-table">
+                                <div slot="dropdownContent" class="preview-table" v-if="notification.notificationList.data">
                                     <h5>Notifications</h5>
                                     <div v-for="notification in notification.notificationList.data.slice(0, 5)"
                                          @click="navigateNotification(notification.uuid)" class="item row"
@@ -165,6 +165,9 @@
                     display: none;
                 }
             }
+        }
+        .dropdown-toggle:after {
+            display: none;
         }
     }
 
