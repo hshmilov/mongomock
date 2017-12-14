@@ -26,6 +26,9 @@ class CoreService(plugin_service.PluginService):
         except:
             return False
 
+    def get_registered_plugins(self):
+        return self.register()
+
     @pytest.fixture(scope="module")
     def core_fixture(request):
         service = CoreService()

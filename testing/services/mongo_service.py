@@ -51,6 +51,17 @@ class MongoService(services.compose_service.ComposeService):
         """
         return self.client[db_name][collection_name]
 
+    def get_databases(self):
+        """
+        Returns a specific collection.
+
+        :param str collection_name: The name of the collection we want to get.
+        :param str db_name: The name of the db.
+
+        :return: list(dict)
+        """
+        return self.client.database_names()
+
     def get_devices(self, aggregator_unique_name):
         return self.client[aggregator_unique_name]['devices_db'].find({})
 
