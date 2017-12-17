@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+
+echo "Appending metadata"
+(
+./metadata.sh >> ../__build_metadata
+)
+
 echo "Logging in to docker..."
 (
 source ./login.sh
