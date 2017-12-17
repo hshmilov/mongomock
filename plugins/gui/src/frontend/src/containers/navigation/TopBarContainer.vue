@@ -26,7 +26,7 @@
                                          @click="navigateNotification(notification.uuid)" class="item row"
                                          v-bind:class="{ 'bold': !notification.seen }">
                                         <status-icon :value="notification.severity"></status-icon>
-                                        <div class="col-10">{{ notification.title }}</div>
+                                        <div class="col-9">{{ notification.title }}</div>
                                         <div>{{ relativeDate(notification.date_fetched) }}</div>
                                     </div>
                                     <div class="view-all">

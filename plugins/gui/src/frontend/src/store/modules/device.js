@@ -354,7 +354,11 @@ export const device = {
 				let used = new Set()
 				payload.data.forEach((adapter) => {
 					if (used.has(adapter.plugin_name)) { return }
-					field.options.push({name: adapterStaticData[adapter.plugin_name].name, path: adapter.plugin_name})
+					let name = adapter.plugin_name
+					if (adapterStaticData[adapter.plugin_name]) {
+						name = adapterStaticData[adapter.plugin_name].name
+					}
+					field.options.push({name: name, path: adapter.plugin_name})
 					used.add(adapter.plugin_name)
 				})
 			})

@@ -27,6 +27,10 @@ export const adapterStaticData = {
 		name: 'SentinelOne',
 		description: 'SentinelOne is a next-generation endpoint protection software unifying prevention, detection, and response in a single platform.'
 	},
+	'epo_adapter': {
+		name: 'McAfee',
+		description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'
+	},
 	'stresstest_adapter':{
 		name: "LOL",
 		description: "i am the king of devices"
@@ -64,14 +68,20 @@ export const adapter = {
 			if (payload.data) {
 				state.adapterList.data = []
 				payload.data.forEach((adapter) => {
+					let pluginText = adapter.plugin_name
+					let pluginDescription = ''
+					if (adapterStaticData[adapter.plugin_name]) {
+						pluginText = adapterStaticData[adapter.plugin_name].name
+						pluginDescription = adapterStaticData[adapter.plugin_name].description
+					}
 					state.adapterList.data.push({ ...adapter,
 						id: adapter.unique_plugin_name,
 						plugin_name: {
-							text: adapterStaticData[adapter.plugin_name].name,
+							text: pluginText,
 							logo: adapter.plugin_name,
 							status: adapter.status
 						},
-						description: adapterStaticData[adapter.plugin_name].description
+						description: pluginDescription
 					})
 				})
 			}
