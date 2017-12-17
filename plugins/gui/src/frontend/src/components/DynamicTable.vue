@@ -46,6 +46,7 @@
             .table-head {
                 font-size: 12px;
                 padding: 2px 16px;
+                font-weight: 300;
             }
             .table-data {
                 font-size: 14px;

@@ -23,7 +23,8 @@ export default new Router({
         {
             path: '/',
             name: 'Dashboard',
-            component: DashboardContainer
+			redirect: '/device',
+			component: DashboardContainer
         },
         {
             path: '/device',
