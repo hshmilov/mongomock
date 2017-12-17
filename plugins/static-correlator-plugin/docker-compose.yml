@@ -1,0 +1,19 @@
+version: '3'
+services:
+  static-correlator:
+        build: .
+        image: axonius/static-correlator
+        container_name: "static-correlator"
+        ports:
+          - 5010:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

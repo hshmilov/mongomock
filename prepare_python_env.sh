@@ -5,6 +5,7 @@ export PYTHONPATH="$PYTHONPATH:$CORTEX_ROOT:$CORTEX_ROOT/plugins/core/src:\
 $CORTEX_ROOT/plugins/axonius-libs/src/libs/axonius-py:\
 $CORTEX_ROOT/plugins/aggregator-plugin/src:\
 $CORTEX_ROOT/plugins/correlator-plugin/src:\
+$CORTEX_ROOT/plugins/static-correlator-plugin/src:\
 $CORTEX_ROOT/plugins/watch-service/src:\
 $CORTEX_ROOT/adapters/ad-adapter/src:\
 $CORTEX_ROOT/adapters/sentinelone-adapter/src:\

@@ -278,10 +278,10 @@ class AggregatorPlugin(PluginBase):
                     return return_error(f"Got a 'Link' with only {len(axonius_device_candidates)} candidates",
                                         400)
 
-                collected_adapter_devices_dicts = [axonius_device['adapters'] for axonius_device in
-                                                   axonius_device_candidates]
-                all_plugin_unique_names = list(chain.from_iterable(
-                    d.keys() for d in collected_adapter_devices_dicts))
+                collected_adapter_devices = [axonius_device['adapters'] for axonius_device in axonius_device_candidates]
+
+                all_plugin_unique_names = [v['plugin_unique_name'] for d in collected_adapter_devices for v in d]
+
                 if len(set(all_plugin_unique_names)) != len(all_plugin_unique_names):
                     # this means we have a duplicate plugin_unique_name
                     # we strongly enforce the rule that there can't be two plugin_unique_name on the same
@@ -292,8 +292,7 @@ class AggregatorPlugin(PluginBase):
 
                 # now we can assume now that all all_plugin_unique_names are in fact unique
                 # we merge all dictionaries!
-                all_unique_adapter_devices_data = {
-                    k: v for d in collected_adapter_devices_dicts for k, v in d.items()}
+                all_unique_adapter_devices_data = [v for d in collected_adapter_devices for v in d]
 
                 internal_axon_id = uuid.uuid4().hex
                 self.devices_db.insert_one({
@@ -327,27 +326,50 @@ class AggregatorPlugin(PluginBase):
                 # AxoniusDevice we found, so the ids will match, so we don't have to check that.
                 # We're building a new AxoniusDevice that has all the associated_adapter_devices given from
                 # the old axonius device, and at the same time deleting from the old device.
+
                 internal_axon_id = uuid.uuid4().hex
                 new_axonius_device = {
                     "internal_axon_id": internal_axon_id,
                     "accurate_for_datetime": datetime.now(),
-                    "adapters": {
-                        associated_adapter_device: axonius_device_to_split['adapters'].pop(
-                            associated_adapter_device)
-                        for associated_adapter_device in associated_adapter_devices
-                    },
+                    "adapters": [],
                     "tags": []
                 }
-                for adapter_device in new_axonius_device['adapters'].values():
-                    # "split" the tags on an adapter basis
-                    new_axonius_device['tags'] += [tag for tag in axonius_device_to_split['tags']
-                                                   if parsed_device_match_plugin(tag, adapter_device)]
-                    axonius_device_to_split['tags'] = [tag for tag in axonius_device_to_split['tags']
-                                                       if not parsed_device_match_plugin(tag, adapter_device)]
+
+                for adapter_device in axonius_device_to_split['adapters']:
+                    candidate = associated_adapter_devices.get(adapter_device['plugin_unique_name'])
+                    if candidate is not None and candidate == adapter_device['data']['id']:
+                        new_axonius_device['adapters'].append(adapter_device)
+
+                for tag in axonius_device_to_split['tags']:
+                    (tag_plugin_unique_name, tag_adapter_id), = tag['associated_adapter_devices'].items()
+
+                    candidate = associated_adapter_devices.get(tag_plugin_unique_name)
+                    if candidate is not None and candidate == tag_adapter_id:
+                        new_axonius_device['tags'].append(tag)
 
                 self.devices_db.insert_one(new_axonius_device)
-                self.devices_db.replace_one({'internal_axon_id': axonius_device_to_split['internal_axon_id']},
-                                            {'tags': axonius_device_to_split['tags']})
+
+                for adapter_to_remove_from_old in new_axonius_device['adapters']:
+                    self.devices_db.update_many({'internal_axon_id': axonius_device_to_split['internal_axon_id']},
+                                                {
+                                                    "$pull": {
+                                                        'adapters': {
+                                                            'plugin_unique_name': adapter_to_remove_from_old[
+                                                                'plugin_unique_name'],
+                                                        }
+                                                    }
+                    })
+
+                for tag_to_remove_from_old in new_axonius_device['tags']:
+                    (tag_plugin_unique_name,
+                     tag_adapter_id), = tag_to_remove_from_old['associated_adapter_devices'].items()
+                    self.devices_db.update_many({'internal_axon_id': axonius_device_to_split['internal_axon_id']},
+                                                {
+                                                    "$pull": {
+                                                        'tags': {
+                                                            f'associated_adapter_devices.{tag_plugin_unique_name}': tag_adapter_id
+                                                        }
+                                                    }})
 
         # raw == parsed for plugin_data
         self._save_parsed_in_db(sent_plugin, db_type='raw')

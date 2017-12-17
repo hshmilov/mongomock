@@ -1,5 +1,4 @@
 from services.esx_service import esx_fixture
-import pytest
 from test_helpers.utils import check_conf
 
 client_details = [

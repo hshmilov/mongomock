@@ -24,6 +24,17 @@ def populate_test_devices(axonius_fixture, ad_fixture):
     axonius_fixture.assert_device_aggregated(ad_fixture, client_id, DEVICE_ID_FOR_CLIENT_1)
 
 
+def populate_test_devices_esx(axonius_fixture, esx_fixture):
+    from tests.test_esx import client_details, SOME_DEVICE_ID
+
+    client = client_details[0][0]
+    assert esx_fixture.is_up()
+
+    client_id = f"{client['host']}/{client['user']}"
+    axonius_fixture.add_client_to_adapter(esx_fixture, client)
+    axonius_fixture.assert_device_aggregated(esx_fixture, client_id, SOME_DEVICE_ID)
+
+
 def check_conf(axonius_fixture, adapter_service, adapter_name):
     adapter = axonius_fixture.db.get_unique_plugin_config(
         adapter_service.unique_name)

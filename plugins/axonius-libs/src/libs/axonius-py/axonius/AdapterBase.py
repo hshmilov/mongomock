@@ -444,6 +444,25 @@ class AdapterBase(PluginBase, ABC):
                                        'schema': schema
             }, upsert=True)
 
+    def _tag_device(self, adapter_id, wanted_tag):
+        """ Function for tagging adapter devices.
+        This function will tag a wanted device. The tag will be related only to this adapter
+        :param adapter_id: The device id given by the current adapter
+        :param wanted_tag: The tag we want to assign to this device
+        :return:
+        """
+        tag_data = {'association_type': 'Tag',
+                    'associated_adapter_devices': {
+                        self.plugin_unique_name: adapter_id
+                    },
+                    "tagname": wanted_tag,
+                    "tagvalue": wanted_tag}
+        response = self.request_remote_plugin(
+            'plugin_push', "aggregator", 'post', data=json.dumps(tag_data))
+        if response != 200:
+            self.logger.error(f"Couldnt tag device. Reason: {response.status_code}, {str(response.content)}")
+            raise AdapterExceptions.TagDeviceError()
+
     @property
     def plugin_type(self):
         return "Adapter"
