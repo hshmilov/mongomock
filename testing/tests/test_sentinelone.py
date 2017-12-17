@@ -27,6 +27,7 @@ def test_registered(axonius_fixture, sentinelone_fixture):
     assert sentinelone_fixture.is_plugin_registered(axonius_fixture.core)
 
 
+@pytest.mark.skip(reason="Test is currently unstable")
 def test_fetch_devices(axonius_fixture, sentinelone_fixture):
     axonius_fixture.clear_all_devices()
     client_id = client_details['SentinelOne_Domain']
