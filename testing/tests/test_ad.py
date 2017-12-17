@@ -1,6 +1,7 @@
-from services.ad_service import ad_fixture
-from test_helpers.utils import try_until_not_thrown, check_conf
-from axonius.consts import AdapterConsts
+from services.adapters.ad_service import AdService, ad_fixture
+
+from test_helpers.adapter_test_base import AdapterTestBase
+from test_helpers.utils import try_until_not_thrown
 
 ad_client1_details = {
     "admin_password": "@vULuAZa5-MPxac6acw%ff-5H=bD)DQ;",
@@ -24,51 +25,52 @@ DEVICE_ID_FOR_CLIENT_1 = 'CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test'
 DEVICE_ID_FOR_CLIENT_2 = 'CN=DESKTOP-GO8PIUL,CN=Computers,DC=TestSecDomain,DC=test'
 
 
-def test_adapter_is_up(axonius_fixture, ad_fixture):
-    assert ad_fixture.is_up()
+class TestAdAdapter(AdapterTestBase):
+    @property
+    def adapter_service(self):
+        return AdService(should_start=False)
 
+    @property
+    def adapter_name(self):
+        return 'ad_adapter'
 
-def test_adapter_responds_to_schema(axonius_fixture, ad_fixture):
-    assert ad_fixture.schema().status_code == 200
+    @property
+    def some_client_id(self):
+        return ad_client1_details['dc_name']
 
+    @property
+    def some_client_details(self):
+        return ad_client1_details
 
-def test_adapter_in_configs(axonius_fixture, ad_fixture):
-    adapter_name = 'ad_adapter'
-    check_conf(axonius_fixture, ad_fixture, adapter_name)
+    @property
+    def some_device_id(self):
+        return DEVICE_ID_FOR_CLIENT_1
 
+    def test_fetch_devices(self):
+        self.axonius_service.clear_all_devices()
 
-def test_registered(axonius_fixture, ad_fixture):
-    assert ad_fixture.is_plugin_registered(axonius_fixture.core)
+        # Adding first client
+        client_id_1 = ad_client1_details['dc_name']
+        self.axonius_service.add_client_to_adapter(
+            self.adapter_service, ad_client1_details)
+        # Adding second client
+        client_id_2 = ad_client2_details['dc_name']
+        self.axonius_service.add_client_to_adapter(
+            self.adapter_service, ad_client2_details)
 
+        # Checking that we have devices from both clients
+        self.axonius_service.assert_device_aggregated(
+            self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
+        self.axonius_service.assert_device_aggregated(
+            self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
-def test_fetch_devices(axonius_fixture, ad_fixture):
-    axonius_fixture.clear_all_devices()
-    # Adding first client
-    client_id_1 = ad_client1_details['dc_name']
-    axonius_fixture.add_client_to_adapter(
-        ad_fixture, ad_client1_details)
-    # Adding second client
-    client_id_2 = ad_client2_details['dc_name']
-    axonius_fixture.add_client_to_adapter(
-        ad_fixture, ad_client2_details)
+    def test_ip_resolving(self):
+        self.adapter_service.post('resolve_ip', None, None)
 
-    # Checking that we have devices from both clients
-    axonius_fixture.assert_device_aggregated(
-        ad_fixture, client_id_1, DEVICE_ID_FOR_CLIENT_1)
-    axonius_fixture.assert_device_aggregated(
-        ad_fixture, client_id_2, DEVICE_ID_FOR_CLIENT_2)
+        def assert_ip_resolved():
+            self.axonius_service.trigger_aggregator()
+            interfaces = self.axonius_service.get_device_network_interfaces(self.adapter_service.unique_name,
+                                                                            DEVICE_ID_FOR_CLIENT_1)
+            assert len(interfaces) > 0
 
-
-def test_ip_resolving(axonius_fixture, ad_fixture):
-    ad_fixture.post('resolve_ip', None, None)
-
-    def assert_ip_resolved():
-        axonius_fixture.trigger_aggregator()
-        interfaces = axonius_fixture.get_device_network_interfaces(ad_fixture.unique_name, DEVICE_ID_FOR_CLIENT_1)
-        assert len(interfaces) > 0
-
-    try_until_not_thrown(10, 0.5, assert_ip_resolved)
-
-
-def test_restart(axonius_fixture, ad_fixture):
-    axonius_fixture.restart_plugin(ad_fixture)
+        try_until_not_thrown(10, 0.5, assert_ip_resolved)

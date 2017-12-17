@@ -7,8 +7,8 @@ from services.simple_fixture import initialize_fixture
 class CoreService(plugin_service.PluginService):
     def __init__(self, compose_file_path='../plugins/core/docker-compose.yml',
                  config_file_path='../plugins/core/src/plugin_config.ini',
-                 container_name='core'):
-        super().__init__(compose_file_path, config_file_path, container_name)
+                 container_name='core', *vargs, **kwargs):
+        super().__init__(compose_file_path, config_file_path, container_name, *vargs, **kwargs)
 
     def register(self, api_key=None, plugin_name=""):
         headers = {}

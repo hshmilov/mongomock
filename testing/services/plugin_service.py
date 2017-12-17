@@ -5,16 +5,15 @@ import axonius.ConfigReader
 import json
 import tempfile
 import time
+from axonius.PluginBase import VOLATILE_CONFIG_PATH
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
 
-from axonius.PluginBase import VOLATILE_CONFIG_PATH
-
 
 class PluginService(services.compose_service.ComposeService):
-    def __init__(self, compose_file_path, config_file_path, container_name):
-        super().__init__(compose_file_path, container_name)
+    def __init__(self, compose_file_path, config_file_path, container_name, *vargs, **kwargs):
+        super().__init__(compose_file_path, container_name, *vargs, **kwargs)
         self.parsed_compose_file = services.compose_parser.ServiceYmlParser(
             compose_file_path)
         port = self.parsed_compose_file.exposed_port
@@ -104,9 +103,9 @@ class PluginService(services.compose_service.ComposeService):
 
 
 class AdapterService(PluginService):
-    def __init__(self, compose_file_path, config_file_path, container_name):
+    def __init__(self, compose_file_path, config_file_path, container_name, *vargs, **kwargs):
         super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
-                         container_name=container_name)
+                         container_name=container_name, *vargs, **kwargs)
 
     def add_client(self, client_details):
         self.clients(client_details)

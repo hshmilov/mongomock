@@ -1,5 +1,6 @@
-from services.esx_service import esx_fixture
-from test_helpers.utils import check_conf
+import pytest
+from services.adapters.esx_service import EsxService, esx_fixture
+from test_helpers.adapter_test_base import AdapterTestBase
 
 client_details = [
     ({
@@ -26,30 +27,28 @@ client_details = [
 SOME_DEVICE_ID = '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'
 
 
-def test_adapter_is_up(axonius_fixture, esx_fixture):
-    assert esx_fixture.is_up()
+class TestEsxAdapter(AdapterTestBase):
+    @property
+    def adapter_service(self):
+        return EsxService(should_start=False)
 
+    @property
+    def adapter_name(self):
+        return 'esx_adapter'
 
-def test_adapter_responds_to_schema(axonius_fixture, esx_fixture):
-    assert esx_fixture.schema().status_code == 200
+    @property
+    def some_client_details(self):
+        return client_details
 
+    @property
+    def some_device_id(self):
+        return SOME_DEVICE_ID
 
-def test_adapter_in_configs(axonius_fixture, esx_fixture):
-    check_conf(axonius_fixture, esx_fixture, "esx_adapter")
+    def test_fetch_devices(self):
+        axonius_service = self.axonius_service
+        axonius_service.clear_all_devices()
 
-
-def test_registered(axonius_fixture, esx_fixture):
-    assert esx_fixture.is_plugin_registered(axonius_fixture.core)
-
-
-def test_fetch_devices(axonius_fixture, esx_fixture):
-    axonius_fixture.clear_all_devices()
-
-    for client, some_device_id in client_details:
-        client_id = "{}/{}".format(client['host'], client['user'])
-        axonius_fixture.add_client_to_adapter(esx_fixture, client)
-        axonius_fixture.assert_device_aggregated(esx_fixture, client_id, some_device_id)
-
-
-def test_restart(axonius_fixture, esx_fixture):
-    axonius_fixture.restart_plugin(esx_fixture)
+        for client, some_device_id in client_details:
+            client_id = "{}/{}".format(client['host'], client['user'])
+            axonius_service.add_client_to_adapter(self.adapter_service, client)
+            axonius_service.assert_device_aggregated(self.adapter_service, client_id, some_device_id)

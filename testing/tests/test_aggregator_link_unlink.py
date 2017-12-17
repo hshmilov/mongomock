@@ -1,5 +1,5 @@
-from services.ad_service import ad_fixture
-from services.esx_service import esx_fixture
+from services.adapters.ad_service import ad_fixture
+from services.adapters.esx_service import esx_fixture
 from test_helpers import utils
 
 import pytest

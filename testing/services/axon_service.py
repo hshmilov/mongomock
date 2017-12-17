@@ -3,7 +3,7 @@ from retrying import retry
 
 
 class AxonService(ABC):
-    def __init__(self):
+    def __init__(self, *vargs, **kwargs):
         pass
 
     @abstractmethod

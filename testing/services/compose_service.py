@@ -1,17 +1,18 @@
 import subprocess
 import os
 from abc import abstractmethod
-import datetime
-
 import services.axon_service
 
 
 class ComposeService(services.axon_service.AxonService):
-    def __init__(self, compose_file_path, container_name):
-        super().__init__()
+    def __init__(self, compose_file_path, container_name, should_start=True, *vargs, **kwargs):
+        super().__init__(*vargs, **kwargs)
         self._compose_file_path = compose_file_path
         self.container_name = container_name
-        self.start()
+
+        if should_start:
+            self.start()
+
         self.log_dir = os.path.join("..", "logs", self.container_name)
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)

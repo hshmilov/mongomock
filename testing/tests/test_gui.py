@@ -1,5 +1,5 @@
 from services.gui_service import gui_fixture
-from services.ad_service import ad_fixture
+from services.adapters.ad_service import ad_fixture
 from test_helpers import utils
 
 

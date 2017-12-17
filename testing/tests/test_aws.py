@@ -1,5 +1,6 @@
-from services.aws_service import aws_fixture
-from test_helpers.utils import check_conf
+from services.adapters.aws_service import AwsService, aws_fixture
+
+from test_helpers.adapter_test_base import AdapterTestBase
 
 client_details = {
     "aws_access_key_id": "AKIAJOCJ5PGEAR6LNIFQ",
@@ -10,29 +11,23 @@ client_details = {
 SOME_DEVICE_ID = 'i-0ec91cae8a42be974'
 
 
-def test_adapter_is_up(axonius_fixture, aws_fixture):
-    assert aws_fixture.is_up()
+class TestAwsAdapter(AdapterTestBase):
+    @property
+    def adapter_service(self):
+        return AwsService(should_start=False)
 
+    @property
+    def adapter_name(self):
+        return 'aws_adapter'
 
-def test_adapter_responds_to_schema(axonius_fixture, aws_fixture):
-    assert aws_fixture.schema().status_code == 200
+    @property
+    def some_client_id(self):
+        return client_details['aws_access_key_id']
 
+    @property
+    def some_client_details(self):
+        return client_details
 
-def test_adapter_in_configs(axonius_fixture, aws_fixture):
-    check_conf(axonius_fixture, aws_fixture, "aws_adapter")
-
-
-def test_registered(axonius_fixture, aws_fixture):
-    assert aws_fixture.is_plugin_registered(axonius_fixture.core)
-
-
-def test_fetch_devices(axonius_fixture, aws_fixture):
-    client_id = client_details['aws_access_key_id']
-    axonius_fixture.add_client_to_adapter(
-        aws_fixture, client_details)
-    axonius_fixture.assert_device_aggregated(
-        aws_fixture, client_id, SOME_DEVICE_ID)
-
-
-def test_restart(axonius_fixture, aws_fixture):
-    axonius_fixture.restart_plugin(aws_fixture)
+    @property
+    def some_device_id(self):
+        return SOME_DEVICE_ID

@@ -8,24 +8,28 @@ from services.simple_fixture import initialize_fixture
 class MongoService(services.compose_service.ComposeService):
     def __init__(self, endpoint=('localhost', 27018),
                  compose_file_path='../infrastructures/database/docker-compose.yml',
-                 container_name="mongo"):
-        super().__init__(compose_file_path, container_name=container_name)
+                 container_name="mongo",
+                 *vargs, **kwargs):
+        super().__init__(compose_file_path, container_name=container_name, *vargs, **kwargs)
         self.endpoint = endpoint
-        self.client = None
+        self.connect()
 
     def is_mongo_alive(self):
         try:
-            connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
-                                                                                 password="ax_pass",
-                                                                                 addr=self.endpoint[0],
-                                                                                 port=self.endpoint[1])
-            self.client = pymongo.MongoClient(connection_line)
+            self.connect()
             self.client.server_info()
             print("Mongo connection worked")
             return True
         except Exception as err:
             print(err)
             return False
+
+    def connect(self):
+        connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
+                                                                             password="ax_pass",
+                                                                             addr=self.endpoint[0],
+                                                                             port=self.endpoint[1])
+        self.client = pymongo.MongoClient(connection_line)
 
     def is_up(self):
         return self.is_mongo_alive()

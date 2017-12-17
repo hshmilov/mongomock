@@ -1,7 +1,8 @@
-from services.epo_service import epo_fixture
-from test_helpers.utils import check_conf
+from services.adapters.epo_service import EpoService, epo_fixture
 
-epo_client_details = {
+from test_helpers.adapter_test_base import AdapterTestBase
+
+client_details = {
     "admin_password": "6c=xz@OACxaefu)h38MFLD%dpiTeQu$=",
     "admin_user": "administrator",
     "host": "10.0.255.180",
@@ -13,29 +14,23 @@ epo_client_details = {
 SOME_DEVICE_ID = '6D57ECC5-88FA-4B77-BB7C-76D1EB7AEE4B'
 
 
-def test_adapter_is_up(axonius_fixture, epo_fixture):
-    assert epo_fixture.is_up()
+class TestEpoAdapter(AdapterTestBase):
+    @property
+    def adapter_service(self):
+        return EpoService(should_start=False)
 
+    @property
+    def adapter_name(self):
+        return 'epo_adapter'
 
-def test_adapter_responds_to_schema(axonius_fixture, epo_fixture):
-    assert epo_fixture.schema().status_code == 200
+    @property
+    def some_client_id(self):
+        return client_details['host']
 
+    @property
+    def some_client_details(self):
+        return client_details
 
-def test_adapter_in_configs(axonius_fixture, epo_fixture):
-    check_conf(axonius_fixture, epo_fixture, "epo_adapter")
-
-
-def test_registered(axonius_fixture, epo_fixture):
-    assert epo_fixture.is_plugin_registered(axonius_fixture.core)
-
-
-def test_fetch_devices(axonius_fixture, epo_fixture):
-    client_id = epo_client_details['host']
-    axonius_fixture.add_client_to_adapter(
-        epo_fixture, epo_client_details)
-    axonius_fixture.assert_device_aggregated(
-        epo_fixture, client_id, SOME_DEVICE_ID)
-
-
-def test_restart(axonius_fixture, epo_fixture):
-    axonius_fixture.restart_plugin(epo_fixture)
+    @property
+    def some_device_id(self):
+        return SOME_DEVICE_ID
