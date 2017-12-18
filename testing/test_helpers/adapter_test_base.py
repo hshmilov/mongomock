@@ -3,6 +3,11 @@ from test_helpers.utils import check_conf
 
 
 class AdapterTestBase(object):
+    """
+    Basic tests for adapter are defined here.
+    If one wants to skip or modify a test he can do that by overriding the corresponding method.
+    If one wants to skip a test - he can do that by overriding and marking the test with @pytest.mark.skip
+    """
     axonius_service = get_service(should_start=False)
 
     @property
