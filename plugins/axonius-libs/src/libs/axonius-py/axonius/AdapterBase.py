@@ -90,8 +90,8 @@ class AdapterBase(PluginBase, ABC):
             self.logger.error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
-            self.logger.error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
-            return return_error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
+            self.logger.error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
+            raise
         else:
             devices_list = {'raw': raw_devices,
                             'parsed': parsed_devices}
