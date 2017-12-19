@@ -67,9 +67,8 @@
                             <div class="section-container" v-for="adapter in device.deviceDetails.data['adapters.plugin_name']">
                                 <div class="section-header">{{ adapterNameByType[adapter] }} Fields</div>
                                 <div>
-                                    <div v-for="field in device.fields.unique[adapter]">
-                                        {{ removePrefix(field.name) }} = {{ device.deviceDetails.data[field.path] }}
-                                    </div>
+                                    <tree-view :data="device.deviceDetails.data['adapters.data.raw'][adapter]"
+                                               :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
                                 </div>
                             </div>
                         </div>

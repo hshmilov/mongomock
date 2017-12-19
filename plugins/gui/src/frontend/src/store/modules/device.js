@@ -272,7 +272,18 @@ export const device = {
 			state.deviceDetails.fetching = payload.fetching
 			state.deviceDetails.error = payload.error
 			if (payload.data) {
-				state.deviceDetails.data = processDevice(payload.data, state.fields)
+				state.deviceDetails.data = {
+					"adapters.plugin_name": payload.data.adapters.map((adapter) => {
+						return adapter.plugin_name
+					}),
+					"tags.tagvalue": payload.data.tags.map((tag) => {
+						return tag.tagvalue
+					}),
+					"adapters.data.raw": payload.data.adapters.reduce((map, adapter) => {
+						map[adapter.plugin_name] = adapter.data.raw
+						return map
+					}, {})
+				}
 			}
 		},
 		[ UPDATE_UNIQUE_FIELDS ] (state, payload) {

@@ -16,6 +16,7 @@
     "vue-charts": "^0.2.1",
     "vue-clickaway": "^2.1.0",
     "vue-js-toggle-button": "^1.2.0",
+    "vue-json-tree-view": "^2.1.1",
     "vue-media-queries": "0.0.3",
     "vue-router": "^3.0.1",
     "vue-spinner": "^1.0.3",
