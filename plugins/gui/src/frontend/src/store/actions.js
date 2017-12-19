@@ -45,8 +45,12 @@ export const requestApi = ({commit}, payload) => {
         })
         .catch((error) => {
             let userMessage = error.message
-            if (error.response && error.response.status >= 500) {
-                userMessage = "Verify all services are up and registered"
+            if (error.response) {
+                if (error.response.status >= 500) {
+					userMessage = "Verify all services are up and registered"
+				} else if (error.response.data.type === "PluginNotFoundException") {
+                    userMessage = error.response.data.message
+                }
             }
             if (payload.type) {
                 commit(payload.type, {

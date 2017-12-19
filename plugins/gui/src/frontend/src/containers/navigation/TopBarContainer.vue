@@ -11,7 +11,9 @@
             <div class="navbar-collapse">
                 <ul class="navbar-nav mr-auto mt-md-0">
                     <a class="navbar-brand">
-                        <b><svg-icon name="logo/logo" height="30" :original="true"></svg-icon></b>
+                        <b>
+                            <svg-icon name="logo/logo" height="30" :original="true"></svg-icon>
+                        </b>
                         <span><svg-icon name="logo/axonius" height="16" :original="true"></svg-icon></span>
                     </a>
                 </ul>
@@ -19,15 +21,22 @@
                     <li class="nav-item">
                         <a class="nav-link">
                             <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
-                                <i slot="dropdownTrigger" class="icon-bell-o"></i>
-                                <div slot="dropdownContent" class="preview-table" v-if="notification.notificationList.data">
+                                <div slot="dropdownTrigger">
+                                    <i class="icon-bell-o"></i>
+                                    <span class="badge" v-if="notification.notificationUnseen.data.count"
+                                    >{{ notification.notificationUnseen.data.count }}</span>
+                                </div>
+                                <div slot="dropdownContent" class="preview-table">
                                     <h5>Notifications</h5>
-                                    <div v-for="notification in notification.notificationList.data.slice(0, 5)"
+                                    <div v-for="notification in notification.notificationUnseen.data.list"
                                          @click="navigateNotification(notification.uuid)" class="item row"
                                          v-bind:class="{ 'bold': !notification.seen }">
                                         <status-icon :value="notification.severity"></status-icon>
                                         <div class="col-9">{{ notification.title }}</div>
                                         <div>{{ relativeDate(notification.date_fetched) }}</div>
+                                    </div>
+                                    <div v-if="!notification.notificationUnseen.data.list.length" class="item row empty">
+                                        <i class="icon-checkmark2"></i>
                                     </div>
                                     <div class="view-all">
                                         <router-link :to="{name: 'Notifications' }">View History</router-link>
@@ -51,42 +60,51 @@
 
 <script>
 	import DropdownMenu from '../../components/DropdownMenu.vue'
-    import StatusIcon from '../../components/StatusIcon.vue'
+	import StatusIcon from '../../components/StatusIcon.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import { TOGGLE_SIDEBAR } from '../../store/mutations'
-    import { FETCH_NOTIFICATIONS, FETCH_NOTIFICATION } from '../../store/modules/notifications'
-    import { parseTime, parseDate } from '../../utils'
+	import {
+		FETCH_NOTIFICATIONS_UNSEEN,
+		FETCH_NOTIFICATIONS_UNSEEN_COUNT,
+		FETCH_NOTIFICATION
+	} from '../../store/modules/notifications'
+	import { parseTime, parseDate } from '../../utils'
 	import '../../components/icons/logo'
 
-    export default {
-		components: { DropdownMenu, StatusIcon },
+	export default {
+		components: {DropdownMenu, StatusIcon},
 		name: 'top-bar-container',
-        computed: mapState([ 'interaction', 'notification' ]),
-        methods: {
-            ...mapMutations({ toggleSidebar: TOGGLE_SIDEBAR }),
-            ...mapActions({ fetchNotifications: FETCH_NOTIFICATIONS, fetchNotification: FETCH_NOTIFICATION }),
-            navigateNotification(notificationId) {
+		computed: mapState(['interaction', 'notification']),
+		methods: {
+			...mapMutations({toggleSidebar: TOGGLE_SIDEBAR}),
+			...mapActions({
+				fetchNotificationsUnseen: FETCH_NOTIFICATIONS_UNSEEN,
+				fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
+				fetchNotification: FETCH_NOTIFICATION
+			}),
+			navigateNotification (notificationId) {
 				this.fetchNotification(notificationId)
 				this.$router.replace({path: `/notification/${notificationId}`})
-            },
-            relativeDate(originalDate) {
-            	let timestamp = new Date(originalDate).getTime()
-                let now = Date.now()
-                if (now - timestamp < 24 * 60 * 60 * 1000) {
-                	return parseTime(timestamp)
-                } else if (now - timestamp < 48 * 60 * 60 * 1000) {
-                	return "Yesterday"
-                }
-                return parseDate(timestamp)
-            }
+			},
+			relativeDate (originalDate) {
+				let timestamp = new Date(originalDate).getTime()
+				let now = Date.now()
+				if (now - timestamp < 24 * 60 * 60 * 1000) {
+					return parseTime(timestamp)
+				} else if (now - timestamp < 48 * 60 * 60 * 1000) {
+					return 'Yesterday'
+				}
+				return parseDate(timestamp)
+			}
 		},
-        mounted() {
-            this.fetchNotifications({
-                skip: 0, limit: 50
-            })
-        }
-    }
+		mounted () {
+			this.fetchNotificationsUnseenCount({})
+			this.fetchNotificationsUnseen({
+				skip: 0, limit: 5
+			})
+		}
+	}
 </script>
 
 <style lang="scss">
@@ -139,22 +157,31 @@
                 font-size: 160%;
                 vertical-align: middle;
             }
-            i.ti-menu {  font-size: 120%;  }
+            i.ti-menu {
+                font-size: 120%;
+            }
             .navbar-nav {
                 flex-direction: row;
                 -ms-flex-direction: row;
             }
-            .navbar-nav>.nav-item>.nav-link {
+            .navbar-nav > .nav-item > .nav-link {
                 padding-left: .75rem;
                 padding-right: .75rem;
                 line-height: 40px;
                 color: $color-theme-dark;
                 &:hover {
                     color: $color-theme-light;
+                    .show {
+                        color: $color-theme-light;
+                    }
                 }
             }
-            .nav-item {  margin-bottom: 0;  }
-            .nav-link.nav-home.active, .nav-link.nav-home:hover {  color: $color-warning;  }
+            .nav-item {
+                margin-bottom: 0;
+            }
+            .nav-link.nav-home.active, .nav-link.nav-home:hover {
+                color: $color-warning;
+            }
         }
         &.collapse {
             display: block;
@@ -193,6 +220,13 @@
             }
             &:hover {
                 color: $color-theme-light
+            }
+            &.empty {
+                color: $color-theme-light;
+                cursor: default;
+                i {
+                    margin: auto;
+                }
             }
             .status-icon {
                 text-align: center;

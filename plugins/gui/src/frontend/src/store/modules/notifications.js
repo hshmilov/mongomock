@@ -7,6 +7,11 @@ export const FETCH_NOTIFICATION = 'FETCH_NOTIFICATION'
 export const SET_NOTIFICATION = 'SET_NOTIFICATION'
 export const UPDATE_NOTIFICATIONS_SEEN = 'UPDATE_NOTIFICATIONS_SEEN'
 export const SAVE_NOTIFICATIONS_SEEN = 'SAVE_NOTIFICATIONS_SEEN'
+export const FETCH_NOTIFICATIONS_UNSEEN_COUNT = 'FETCH_NOTIFICATIONS_UNSEEN_COUNT'
+export const SET_NOTIFICATIONS_UNSEEN_COUNT = 'UPDATE_NEW_NOTIFICATIONS_COUNT'
+export const FETCH_NOTIFICATIONS_UNSEEN = 'FETCH_NOTIFICATIONS_UNSEEN'
+export const SET_NOTIFICATIONS_UNSEEN = 'SET_NOTIFICATIONS_UNSEEN'
+
 
 export const notification = {
 	state: {
@@ -14,7 +19,9 @@ export const notification = {
 		notificationList: { fetching: false, data: [], error: '' },
 
 		/* A single fetched notification, according to user selection */
-		notificationDetails: { fetching: false, data: {}, error: '' },
+		notificationDetails: { fetching: false, data: { seen: false }, error: '' },
+
+		notificationUnseen: { fetching: false, data: { count: 0, list: [] }, error: ''},
 
 		fields: [
 			{ path: 'uuid', hidden: true },
@@ -51,6 +58,25 @@ export const notification = {
 					notification.seen = true
 				}
 			})
+			if (!state.notificationUnseen.data.count || state.notificationUnseen.data.count < notificationIds.length) { return }
+			state.notificationUnseen.data.count -= notificationIds.length
+			state.notificationUnseen.data.list = state.notificationUnseen.data.list.filter((notification) => {
+				return notificationIds.indexOf(notification.uuid) === -1
+			})
+		},
+		[ SET_NOTIFICATIONS_UNSEEN_COUNT ] (state, payload) {
+			state.notificationUnseen.fetching = payload.fetching
+			state.notificationUnseen.error = payload.error
+			if (payload.data) {
+				state.notificationUnseen.data.count = payload.data
+			}
+		},
+		[ SET_NOTIFICATIONS_UNSEEN ] (state, payload) {
+			state.notificationUnseen.fetching = payload.fetching
+			state.notificationUnseen.error = payload.error
+			if (payload.data) {
+				state.notificationUnseen.data.list = [ ...payload.data ]
+			}
 		}
 	},
 	actions: {
@@ -86,7 +112,7 @@ export const notification = {
 		},
 		[ UPDATE_NOTIFICATIONS_SEEN ] ({dispatch, commit}, notificationIds) {
 			/*
-				Mark given notifications as
+				Mark given notifications as seen by user
 			 */
 			if (!notificationIds || !notificationIds.length) { return }
 			dispatch(REQUEST_API, {
@@ -98,6 +124,37 @@ export const notification = {
 					return
 				}
 				commit(SAVE_NOTIFICATIONS_SEEN, notificationIds)
+			})
+		},
+		[ FETCH_NOTIFICATIONS_UNSEEN_COUNT ] ({dispatch}, payload) {
+			/*
+				Request the number of unseen notifications, matching a filter, if given
+			 */
+			if (!payload.filter) { payload.filter = {} }
+			payload.filter['seen'] = false
+			let rule = `/api/notifications/count?filter=${JSON.stringify(payload.filter)}`
+			dispatch(REQUEST_API, {
+				rule: rule,
+				type: SET_NOTIFICATIONS_UNSEEN_COUNT
+			})
+		},
+		[ FETCH_NOTIFICATIONS_UNSEEN ] ({dispatch}, payload) {
+			/*
+				Request unseen notifications, matching filter, if given,
+				and within the range of skip and limit, if given
+			 */
+			if (!payload.filter) { payload.filter = {} }
+			payload.filter['seen'] = false
+			let rule = `/api/notifications?filter=${JSON.stringify(payload.filter)}`
+			if (payload.skip) {
+				rule += `&skip=${payload.skip}`
+			}
+			if (payload.limit) {
+				rule += `&limit=${payload.limit}`
+			}
+			dispatch(REQUEST_API, {
+				rule: rule,
+				type: SET_NOTIFICATIONS_UNSEEN
 			})
 		}
 	}

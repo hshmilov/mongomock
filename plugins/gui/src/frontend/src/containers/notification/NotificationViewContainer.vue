@@ -23,13 +23,16 @@
 			...mapState(['notification']),
 			notificationId () {
 				return this.$route.params.id
-			}
+			},
+            notificationData () {
+				return this.notification.notificationDetails.data
+            }
 		},
         watch: {
-			notificationId(newNotificationId) {
-				if (!this.notification.notificationDetails.data.seen) {
-					this.updateNotificationsSeen([ newNotificationId ])
-				}
+			notificationData(newNotificationData) {
+				if (!newNotificationData.seen) {
+					this.updateNotificationsSeen([ this.notificationId ])
+                }
             }
         },
 		methods: {
@@ -40,9 +43,11 @@
 			    Refresh or navigation directly to the url, will cause missing or incorrect notification data.
 			    This condition should identify the situation and re-fetch the notification
 			 */
-			if (!this.notification.notificationDetails.data || !this.notification.notificationDetails.data.uuid
-                || (this.notification.notificationDetails.data.uuid !== this.notificationId)) {
+			if (!this.notificationData || !this.notificationData.uuid
+                || (this.notificationData.uuid !== this.notificationId)) {
 				this.fetchNotification(this.notificationId)
+			} else if (!this.notificationData.seen) {
+				this.updateNotificationsSeen([ this.notificationId ])
 			}
 		}
 	}

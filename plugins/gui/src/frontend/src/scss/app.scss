@@ -228,6 +228,17 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   }
 }
 
+.badge {
+  background-color: $color-theme-light;
+  color: $color-theme-dark;
+  border-radius: 100%;
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 .row {
   margin-left: -12px;
   margin-right: -12px;

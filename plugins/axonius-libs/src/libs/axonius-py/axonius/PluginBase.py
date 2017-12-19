@@ -26,6 +26,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
 from pathlib import Path
 from promise import Promise
+from axonius import PluginExceptions
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -627,7 +628,7 @@ class PluginBase(object):
                 content=content,
                 seen=False)).inserted_id
 
-    def get_plugin_by_name(self, plugin_name, verify_single=True):
+    def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
         :param plugin_name: str
@@ -642,12 +643,18 @@ class PluginBase(object):
 
         if verify_single:
             if len(found_plugins) == 0:
+                if verify_exists:
+                    raise PluginExceptions.PluginNotFoundException(
+                        "There is no plugin {0} currently registered".format(plugin_name))
                 return None
             if len(found_plugins) != 1:
                 raise RuntimeError(
                     "There are {0} plugins or {1}, there should only be one".format(len(found_plugins), plugin_name))
             return found_plugins[0]
         else:
+            if verify_exists and (not found_plugins):
+                raise PluginExceptions.PluginNotFoundException(
+                    "There is no plugin {0} currently registered".format(plugin_name))
             return found_plugins
 
     @add_rule('version', methods=['GET'], should_authenticate=False)
