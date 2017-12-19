@@ -65,15 +65,15 @@ class LdapConnection:
         try:
             if wanted_attr:
                 self.ldap_connection.search(
-                    search_base='CN=Computers,' + self.domain_name,
+                    search_base=self.domain_name,
                     # We chose some unique parameter
-                    search_filter='(&(isCriticalSystemObject=FALSE))',
+                    search_filter='(&(objectClass=Computer))',
                     attributes=wanted_attr)
             else:
                 self.ldap_connection.search(
-                    search_base='CN=Computers,' + self.domain_name,
+                    search_base=self.domain_name,
                     # We chose some unique parameter
-                    search_filter='(&(isCriticalSystemObject=FALSE))',
+                    search_filter='(&(objectClass=Computer))',
                     attributes='*')
             device_list_ldap = self.ldap_connection.response
         except ldap3.core.exceptions.LDAPException as ldap_error:
@@ -89,6 +89,8 @@ class LdapConnection:
             return wanted_attr == '*' or attr_name in wanted_attr
 
         for one_device in device_list_ldap:
+            if one_device['type'] != 'searchResEntry':
+                continue
             device_dict = {attr_name: attr_val for
                            attr_name, attr_val in one_device['attributes'].items()
                            if is_wanted_attr(attr_name)}

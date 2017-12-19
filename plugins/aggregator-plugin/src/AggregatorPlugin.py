@@ -97,7 +97,8 @@ class AggregatorPlugin(PluginBase):
                 # request failed
                 raise AdapterOffline()
             if devices.status_code != 200:
-                self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}")
+                self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}. "
+                                 f"Reason: {str(devices.content)}")
                 continue
             yield (client_name, devices.json())
 

@@ -221,10 +221,9 @@ class ActiveDirectoryPlugin(AdapterBase):
                 time_before_resolve = datetime.now()
                 dc_name = host['raw']['AXON_DC_ADDR']
                 dns_name = host['raw']['AXON_DNS_ADDR']
-                domain_name = host['raw']['AXON_DOMAIN_NAME']
                 self._find_dns_conflicts(host['hostname'],
                                          host['id'],
-                                         {"dns_name": dns_name, "domain_name": domain_name, "dc_name": dc_name})
+                                         {"dns_name": dns_name, "dc_name": dc_name})
             except Exception as e:
                 self.logger.error(f"Error finding conflicts on host{host['hostname']} . Err: {str(e)}")
             finally:
@@ -264,8 +263,8 @@ class ActiveDirectoryPlugin(AdapterBase):
         devices_collection = self._get_collection("devices_data")
         for device_raw in devices_raw_data:
             device_doc = {
-                'hostname': device_raw['dNSHostName'],
-                'OS': figure_out_os(device_raw['operatingSystem']),
+                'hostname': device_raw.get('dNSHostName', device_raw.get('name')),
+                'OS': figure_out_os(device_raw.get('operatingSystem')),
                 'network_interfaces': [],
                 'RESOLVE_STATUS': 'PENDING',
                 'id': device_raw['distinguishedName'],

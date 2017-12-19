@@ -84,11 +84,13 @@ class AdapterBase(PluginBase, ABC):
             raw_devices = self._query_devices_by_client(client_name, client)
             parsed_devices = list(self._parse_raw_data(raw_devices))
         except AdapterExceptions.CredentialErrorException as e:
-            return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
+            self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
+            return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
         except AdapterExceptions.AdapterException as e:
-            return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
+            self.logger.error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+            return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
-            self.logger.error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
+            self.logger.error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             return return_error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         else:
             devices_list = {'raw': raw_devices,
@@ -451,6 +453,7 @@ class AdapterBase(PluginBase, ABC):
         :param wanted_tag: The tag we want to assign to this device
         :return:
         """
+        self.logger.info(f"Got request to tag device {adapter_id} with {wanted_tag}")
         tag_data = {'association_type': 'Tag',
                     'associated_adapter_devices': {
                         self.plugin_unique_name: adapter_id
@@ -459,7 +462,7 @@ class AdapterBase(PluginBase, ABC):
                     "tagvalue": wanted_tag}
         response = self.request_remote_plugin(
             'plugin_push', "aggregator", 'post', data=json.dumps(tag_data))
-        if response != 200:
+        if response.status_code != 200:
             self.logger.error(f"Couldnt tag device. Reason: {response.status_code}, {str(response.content)}")
             raise AdapterExceptions.TagDeviceError()
 
