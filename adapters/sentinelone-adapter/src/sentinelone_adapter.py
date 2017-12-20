@@ -107,7 +107,7 @@ class SentinelOneAdapter(AdapterBase):
             software_information = device_raw['software_information']
             network_information = device_raw['network_information']
             device_parsed = dict()
-            device_parsed['hostname'] = network_information['computer_name']
+            device_parsed['hostname'] = network_information['computer_name'] + '@' + network_information['domain']
             device_parsed['OS'] = figure_out_os(' '.join([software_information["os_name"],
                                                           software_information["os_arch"],
                                                           software_information["os_revision"]]))
