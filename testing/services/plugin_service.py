@@ -18,8 +18,7 @@ class PluginService(services.compose_service.ComposeService):
             compose_file_path)
         port = self.parsed_compose_file.exposed_port
         self.endpoint = ('localhost', port)
-        self.req_url = "http://{0}:{1}/api".format(
-            self.endpoint[0], self.endpoint[1])
+        self.req_url = "http://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
         self.config_file_path = config_file_path
         self.container_name = container_name
         self.last_vol_conf = None

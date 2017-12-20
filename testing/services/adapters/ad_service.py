@@ -10,6 +10,9 @@ class AdService(plugin_service.AdapterService):
                  *vargs, **kwargs):
         super().__init__(compose_file_path, config_file_path, container_name, *vargs, **kwargs)
 
+    def resolve_ip(self):
+        self.post('resolve_ip', None, None)
+
 
 @pytest.fixture(scope="module", autouse=True)
 def ad_fixture(request):

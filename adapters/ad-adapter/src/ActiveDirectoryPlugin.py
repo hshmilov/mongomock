@@ -58,20 +58,18 @@ class ActiveDirectoryPlugin(AdapterBase):
         self._resolving_thread_lock = threading.RLock()
 
         executors = {'default': ThreadPoolExecutor(2)}
-        self._resolver_scheduler = BackgroundScheduler(
-            executors=executors)
+        self._resolver_scheduler = BackgroundScheduler(executors=executors)
+
         # Thread for resolving IP addresses of devices
         self._resolver_scheduler.add_job(func=self._resolve_hosts_addr_thread,
-                                         trigger=IntervalTrigger(
-                                             minutes=2),
+                                         trigger=IntervalTrigger(minutes=2),
                                          next_run_time=datetime.now(),
                                          name='resolve_host_thread',
                                          id='resolve_host_thread',
                                          max_instances=1)
         # Thread for resetting the resolving process
         self._resolver_scheduler.add_job(func=self._resolve_change_status_thread,
-                                         trigger=IntervalTrigger(
-                                             seconds=60 * 60 * 5),  # Every five hours
+                                         trigger=IntervalTrigger(seconds=60 * 60 * 5),  # Every five hours
                                          next_run_time=datetime.now() + timedelta(hours=2),
                                          name='change_resolve_status_thread',
                                          id='change_resolve_status_thread',
@@ -167,13 +165,14 @@ class ActiveDirectoryPlugin(AdapterBase):
             hosts = self._get_collection("devices_data").find({'RESOLVE_STATUS': 'PENDING'},
                                                               projection={'_id': True,
                                                                           'raw.AXON_DNS_ADDR': True,
-                                                                          'raw.AXON_DOMAIN_NAME': True,
+                                                                          'raw.AXON_DC_ADDR': True,
                                                                           'hostname': True})
-
+            hosts = list(hosts)
+            self.logger.info(f"Going to resolve for {len(hosts)} hosts")
             for host in hosts:
                 time_before_resolve = datetime.now()
-                dns_name = host['raw']['AXON_DNS_ADDR']
-                domain_name = host['raw']['AXON_DOMAIN_NAME']
+                dns_name = host['raw'].get('AXON_DNS_ADDR')
+                domain_name = host['raw'].get('AXON_DC_ADDR')
                 try:
                     ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "domain_name": domain_name})
                     network_interfaces = [{"MAC": None, "IP": [ip]}]
@@ -260,27 +259,34 @@ class ActiveDirectoryPlugin(AdapterBase):
         :param dict device_name: The name of the device to resolve
         :param dict client_config:  Client data. Must contain 'dc_name'
         :param int timeout: The timeout for the dns query process. Since we try twice the function ca block
-                            up to 2*timeout seconds
+                            up to 3*timeout seconds
         :return: The ip address of the device
         :raises exception.IpResolveError: In case of an error in the query process
         """
         # We are assuming that the dc is the DNS server
         full_device_name = device_name
 
-        dns_server_address = client_config.get("dns_name")
-        if not dns_server_address:
-            dns_server_address = client_config["dc_name"]
+        err = f"Resolving {full_device_name} f{client_config}"
         try:
-            # Try resolving using my dns list and the dns list. I am starting with the default dns list since
-            # It is more likely that they provide dns services than the DC
-            return query_dns(full_device_name, timeout)
+            dns_server = None
+            return query_dns(full_device_name, timeout, dns_server)
         except Exception as e:
-            try:
-                # Trying only our DC
-                return query_dns(full_device_name, timeout, dns_server_address)
-            except Exception as e2:
-                raise ad_exceptions.IpResolveError(
-                    f"Couldnt resolve IP. DC error: {str(e2)}, global dns error: {str(e)}")
+            err += f"failed to resolve from {dns_server} <{e}>; "
+
+        try:
+            dns_server = client_config["dns_name"]
+            return query_dns(full_device_name, timeout, dns_server)
+        except Exception as e:
+            err += f"failed to resolve from {dns_server} <{e}>; "
+
+        try:
+            dns_server = client_config["domain_name"]
+            return query_dns(full_device_name, timeout, dns_server)
+        except Exception as e:
+            err += f"failed to resolve from {dns_server} <{e}>; "
+
+        self.logger.error(err)
+        raise ad_exceptions.IpResolveError(err)
 
     def _get_basic_psexec_command(self, device_data):
         """ Function for formatting the base psexec command.

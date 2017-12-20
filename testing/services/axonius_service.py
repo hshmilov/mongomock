@@ -21,8 +21,7 @@ class AxoniusService(object):
         self.aggregator = aggregator
 
     def get_devices_with_condition(self, cond):
-        cursor = self.db.client[self.aggregator.unique_name]['devices_db'].find(
-            cond)
+        cursor = self.db.client[self.aggregator.unique_name]['devices_db'].find(cond)
         return list(cursor)
 
     def get_device_by_id(self, adapter_name, device_id):
@@ -61,8 +60,7 @@ class AxoniusService(object):
         # check that the device is collected by aggregator and now in db
 
         def assert_device_inserted():
-            devices = self.get_device_by_id(
-                adapter.unique_name, some_device_id)
+            devices = self.get_device_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
         try_until_not_thrown(max_tries, 0.20, assert_device_inserted)

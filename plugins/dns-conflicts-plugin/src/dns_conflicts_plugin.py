@@ -34,13 +34,15 @@ class DnsConflictsPlugin(PluginBase, Activatable):
     def _start(self):
         try:
             self.scheduler.resume()
+            self.check_ip_conflict_now()
             return ""
         except Exception as e:
             return return_error(f"start failed {e}")
 
-    def __init__(self, **kargs):
-        # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
+    def __init__(self, *args, **kargs):
+        PluginBase.__init__(self, *args, **kargs)
+        Activatable.__init__(self, *args, **kargs)
+
         self.resolve_lock = threading.RLock()
 
         executors = {'default': ThreadPoolExecutor(1)}
@@ -76,7 +78,9 @@ class DnsConflictsPlugin(PluginBase, Activatable):
                                                                                               'raw.AXON_DOMAIN_NAME': True,
                                                                                               'raw.AXON_DC_ADDR': True,
                                                                                               'hostname': True})
-                self.logger.info(f"Starting to search for dns conflicts for {hosts.count()} devices")
+                self.logger.info(
+                    f"Starting to search for dns conflicts for {hosts.count()} devices from {ad_adapter_unique_name}")
+
                 for host in hosts:
                     try:
                         time_before_resolve = datetime.now()
@@ -98,7 +102,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
                         time_to_sleep = max(0.0, 0.05 - resolve_time)
                         time.sleep(time_to_sleep)
 
-    def _find_dns_conflicts(self, adapter_unique_name, device_name, device_id, client_config, timeout=2):
+    def _find_dns_conflicts(self, adapter_unique_name, device_name, device_id, client_config, timeout=1):
         """ Function for finding dns resolving conflicts in Active Directory
         :param adapter_unique_name: unique name of the adapter we are working with
         :param device_name: The name of the device we try to find conflicts on
