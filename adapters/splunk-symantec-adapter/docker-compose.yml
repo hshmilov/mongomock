@@ -1,0 +1,19 @@
+version: '3'
+services:
+  splunk-symantec-adapter:
+        build: .
+        image: axonius/splunk-symantec-adapter
+        container_name: "splunk-symantec-adapter"
+        ports:
+            - 5679:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

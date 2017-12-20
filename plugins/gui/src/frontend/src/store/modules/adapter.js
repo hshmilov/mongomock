@@ -35,6 +35,10 @@ export const adapterStaticData = {
 		name: 'McAfee',
 		description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'
 	},
+	'splunk_symantec_adapter': {
+		name: 'Splunk Symantec',
+		description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
+	},
 	'stresstest_adapter':{
 		name: "LOL",
 		description: "i am the king of devices"

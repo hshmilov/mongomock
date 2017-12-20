@@ -1,0 +1,6 @@
+version: '3'
+services:
+  splunk-symantec-adapter:
+    volumes:
+          - ./src:/home/axonius/app:ro
+          - ../../plugins/axonius-libs/src/libs:/home/axonius/libs:ro
