@@ -27,6 +27,10 @@ export const adapterStaticData = {
 		name: 'SentinelOne',
 		description: 'SentinelOne is a next-generation endpoint protection software unifying prevention, detection, and response in a single platform.'
 	},
+	'symantec_adapter': {
+		name: 'Symantec',
+		description: 'Symantec Endpoint Protection Manager is a management server that manages events, policies, and client registration for the client computers that connect to your network.'
+	},
 	'epo_adapter': {
 		name: 'McAfee',
 		description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'

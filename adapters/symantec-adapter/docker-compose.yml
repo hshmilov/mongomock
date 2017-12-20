@@ -1,0 +1,19 @@
+version: '3'
+services:
+  symantec-adapter:
+        build: .
+        image: axonius/symantec-adapter
+        container_name: "symantec-adapter"
+        ports:
+            - 5676:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius
