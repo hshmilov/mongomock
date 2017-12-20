@@ -23,8 +23,3 @@ class NoClientError(AdException):
 class IpResolveError(AdException):
     def __init__(self, message=""):
         super().__init__(message)
-
-
-class NoIpFoundError(AdException):
-    def __init__(self, message=""):
-        super().__init__(message)

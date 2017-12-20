@@ -28,3 +28,8 @@ class TagDeviceError(AdapterException):
     """
     Exception to be thrown if tagging a device failed
     """
+
+
+class NoIpFoundError(AdapterException):
+    def __init__(self, message=""):
+        super().__init__(message)

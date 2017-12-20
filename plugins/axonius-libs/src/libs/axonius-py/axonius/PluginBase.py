@@ -26,6 +26,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
 from pathlib import Path
 from promise import Promise
+from axonius.AdapterExceptions import TagDeviceError
 from axonius import PluginExceptions
 
 # Starting the Flask application
@@ -638,8 +639,7 @@ class PluginBase(object):
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
         plugins_available = requests.get(
             self.core_address + '/register').json()
-        found_plugins = [x for x in plugins_available.values(
-        ) if x['plugin_name'] == plugin_name]
+        found_plugins = [x for x in plugins_available.values() if x['plugin_name'] == plugin_name]
 
         if verify_single:
             if len(found_plugins) == 0:
@@ -841,3 +841,25 @@ class PluginBase(object):
     @property
     def plugin_type(self):
         return "Plugin"
+
+    def _tag_device(self, adapter_id, tagname, tagvalue, adapter_unique_name=None):
+        """ Function for tagging adapter devices.
+        This function will tag a wanted device. The tag will be related only to this adapter
+        :param adapter_id: The device id given by the current adapter
+        :param wanted_tag: The tag we want to assign to this device
+        :param adapter_unique_name: on behalf of which adapter we are tagging
+        :return:
+        """
+        if adapter_unique_name is None:
+            adapter_unique_name = self.plugin_unique_name
+        tag_data = {'association_type': 'Tag',
+                    'associated_adapter_devices': {
+                        adapter_unique_name: adapter_id
+                    },
+                    "tagname": tagname,
+                    "tagvalue": tagvalue}
+        response = self.request_remote_plugin(
+            'plugin_push', "aggregator", 'post', data=json.dumps(tag_data))
+        if response.status_code != 200:
+            self.logger.error(f"Couldnt tag device. Reason: {response.status_code}, {str(response.content)}")
+            raise TagDeviceError()

@@ -14,19 +14,15 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
-import exceptions
+import ad_exceptions
 import configparser
 import subprocess
-import uuid
 import os
-import socket
-import errno
-import dns.resolver
-from dns.exception import DNSException
 import tempfile
 import threading
 import time
 from datetime import datetime, timedelta
+from axonius.dns_utils import query_dns
 
 # Plugin Version (Should be updated with each new version)
 AD_VERSION = '1.0.0'
@@ -61,7 +57,7 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         self._resolving_thread_lock = threading.RLock()
 
-        executors = {'default': ThreadPoolExecutor(3)}
+        executors = {'default': ThreadPoolExecutor(2)}
         self._resolver_scheduler = BackgroundScheduler(
             executors=executors)
         # Thread for resolving IP addresses of devices
@@ -80,14 +76,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                                          name='change_resolve_status_thread',
                                          id='change_resolve_status_thread',
                                          max_instances=1)
-        # Thread for resetting the resolving process
-        self._resolver_scheduler.add_job(func=self._find_dns_conflicts_thread,
-                                         trigger=IntervalTrigger(
-                                             seconds=60 * 60 * 12),  # Every 12 hours
-                                         next_run_time=datetime.now() + timedelta(minutes=30),
-                                         name='find_dns_conflicts_thread',
-                                         id='find_dns_conflicts_thread',
-                                         max_instances=1)
+
         self._resolver_scheduler.start()
 
         # Try to create temp files dir
@@ -106,7 +95,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                                   dc_details['query_user'],
                                   dc_details['query_password'],
                                   dc_details.get('dns_server_address'))
-        except exceptions.LdapException as e:
+        except ad_exceptions.LdapException as e:
             message = "Error in ldap process for dc {0}. reason: {1}".format(
                 dc_details["dc_name"], str(e))
         except KeyError as e:
@@ -203,35 +192,6 @@ class ActiveDirectoryPlugin(AdapterBase):
                     time.sleep(time_to_sleep)
             return
 
-    def _find_dns_conflicts_thread(self):
-        """ Thread for finding dns conflicts.
-        This thread will try to find ip contradiction between different dns servers. If it finds such contradiction,
-        The related device will get tagged with 'IP_CONFLICT' tag
-        """
-        hosts = self._get_collection("devices_data").find({'RESOLVE_STATUS': 'RESOLVED'},
-                                                          projection={'_id': True,
-                                                                      'id': True,
-                                                                      'raw.AXON_DNS_ADDR': True,
-                                                                      'raw.AXON_DOMAIN_NAME': True,
-                                                                      'raw.AXON_DC_ADDR': True,
-                                                                      'hostname': True})
-        self.logger.info(f"Starting to search for dns conflicts in {hosts.count()}")
-        for host in hosts:
-            try:
-                time_before_resolve = datetime.now()
-                dc_name = host['raw']['AXON_DC_ADDR']
-                dns_name = host['raw']['AXON_DNS_ADDR']
-                self._find_dns_conflicts(host['hostname'],
-                                         host['id'],
-                                         {"dns_name": dns_name, "dc_name": dc_name})
-            except Exception as e:
-                self.logger.error(f"Error finding conflicts on host{host['hostname']} . Err: {str(e)}")
-            finally:
-                # Waiting at least 50[ms] before each request
-                resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
-                time_to_sleep = max(0.0, 0.05 - resolve_time)
-                time.sleep(time_to_sleep)
-
     def _resolve_change_status_thread(self):
         """ This thread is responsible for restarting the name resolving process
         """
@@ -251,13 +211,6 @@ class ActiveDirectoryPlugin(AdapterBase):
         resolve_job.modify(next_run_time=datetime.now())
         self._resolver_scheduler.wakeup()
         return ''
-
-    @add_rule('find_conflicts', methods=['POST'], should_authenticate=False)
-    def check_ip_conflict_now(self):
-        jobs = self._resolver_scheduler.get_jobs()
-        reset_job = next(job for job in jobs if job.name == 'find_dns_conflicts_thread')
-        reset_job.modify(next_run_time=datetime.now())
-        self._resolver_scheduler.wakeup()
 
     def _parse_raw_data(self, devices_raw_data):
         devices_collection = self._get_collection("devices_data")
@@ -298,80 +251,11 @@ class ActiveDirectoryPlugin(AdapterBase):
             file_obj.write(file_buffer)
             return os_path
 
-    def _query_dns(self, name_to_query, timeout, dns_server=None):
-        """ Queries the dns server for a specific name
-
-        :param name_to_query: The name we want to query
-        :param timeout: Time to wait in case dns server doesnt answer
-        :param dns_server: The ip address of the dns server. If none is given, the function will use the default
-                           dns server of the machine
-        :return: Ip address of the wanted device
-        :raise NoIpFoundError: In case no ip was found for this device
-        """
-        my_res = dns.resolver.Resolver()
-        my_res.timeout = timeout
-        my_res.lifetime = timeout
-        if dns_server is not None:  # If dns_server is none we will just use the default dns server
-            my_res.nameservers = [dns_server]
-        try:
-            answer = my_res.query(name_to_query, 'A')
-        except DNSException:
-            raise exceptions.NoIpFoundError()
-        except Exception as e:
-            self.logger.error(f"Unrecognized exception thrown: {str(e)}")
-            raise exceptions.NoIpFoundError(str(e))
-
-        for rdata in answer:
-            try:
-                proposed_ip = str(rdata)
-                socket.inet_aton(proposed_ip)
-            except socket.error:
-                continue
-            return proposed_ip
-
-        raise exceptions.NoIpFoundError()
-
-    def _find_dns_conflicts(self, device_name, device_id, client_config, timeout=2):
-        """ Function for finding dns resolving conflicts in Active Directory
-
-        :param device_name: The name of the device we try to find conflicts on
-        :param client_config: Clients config dict. must contain 'dc_name', 'dns_name' and 'domain_name'
-        :param timeout: Timeout for the dns query
-        """
-        full_device_name = device_name
-
-        dc_as_dns_address = client_config["dc_name"]
-        dns_server_address = client_config.get("dns_name")
-
-        available_ips = dict()  # Dict is used only to remove duplicates
-        # Try default dns server
-        try:
-            available_ips[self._query_dns(full_device_name, timeout)] = 'default'
-        except exceptions.NoIpFoundError:
-            pass
-        # Try dc as dns
-        try:
-            available_ips[self._query_dns(full_device_name, timeout, dc_as_dns_address)] = 'dc_as_dns_address'
-        except exceptions.NoIpFoundError:
-            pass
-        # Try other dns (if provided)
-        try:
-            if dns_server_address is not None and dns_server_address != dc_as_dns_address:
-                available_ips[self._query_dns(full_device_name, timeout, dns_server_address)] = 'dns_server_address'
-        except exceptions.NoIpFoundError:
-            pass
-
-        if len(available_ips) > 1:
-            # If we have more than one key in available_ips that means that this device got two different IP's
-            # i.e duplicate! we need to tag this device
-            self.logger.info(f"Found ip conflict. details: {str(available_ips)}")
-            self._tag_device(device_id, "IP_CONFLICT")
-
     def _resolve_device_name(self, device_name, client_config, timeout=2):
         """ Resolve a device name address using dns servers.
         This function will first try to resolve IP using the machine network interface DNS servers.
-        If the servers cant find an appropriate IP, The function will try to query the DC (assuming that it 
-        is also a DNS server). 
+        If the servers cant find an appropriate IP, The function will try to query the DC (assuming that it
+        is also a DNS server).
 
         :param dict device_name: The name of the device to resolve
         :param dict client_config:  Client data. Must contain 'dc_name'
@@ -389,13 +273,14 @@ class ActiveDirectoryPlugin(AdapterBase):
         try:
             # Try resolving using my dns list and the dns list. I am starting with the default dns list since
             # It is more likely that they provide dns services than the DC
-            return self._query_dns(full_device_name, timeout)
+            return query_dns(full_device_name, timeout)
         except Exception as e:
             try:
                 # Trying only our DC
-                return self._query_dns(full_device_name, timeout, dns_server_address)
+                return query_dns(full_device_name, timeout, dns_server_address)
             except Exception as e2:
-                raise exceptions.IpResolveError(f"Couldnt resolve IP. DC error: {str(e2)}, global dns error: {str(e)}")
+                raise ad_exceptions.IpResolveError(
+                    f"Couldnt resolve IP. DC error: {str(e2)}, global dns error: {str(e)}")
 
     def _get_basic_psexec_command(self, device_data):
         """ Function for formatting the base psexec command.
@@ -416,7 +301,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                         device_data['data']['hostname'], client_config)
                 except Exception as e:
                     self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
-                    raise exceptions.IpResolveError("Cant Resolve Ip")
+                    raise ad_exceptions.IpResolveError("Cant Resolve Ip")
 
                 # Putting the file using usePsexec.py
                 command = ('{py} {psexec} --addr {addr} --username "{user}" '
@@ -427,7 +312,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                                                                                  password=password,
                                                                                  domain=domain_name)
                 return command
-        raise exceptions.NoClientError()  # Couldn't find an appropriate client
+        raise ad_exceptions.NoClientError()  # Couldn't find an appropriate client
 
     def put_file(self, device_data, file_buffer, dst_path):
         # Since Active Directory supports only windows, we will take the windows file

@@ -224,7 +224,7 @@ def requires_aggregator():
         def actual_wrapper(self, *args, **kwargs):
             if self._aggregator_plugin_unique_name is None:
                 # Try to get aggregator again
-                aggregator = self._get_aggregator()
+                aggregator = self.get_plugin_by_name('aggregator')
                 if aggregator is None:
                     return return_error("Aggregator is missing, try again later", 500)
                 else:
@@ -279,7 +279,7 @@ class BackendPlugin(PluginBase):
         # AXONIUS_REST.static_url_path = 'static'
         # AXONIUS_REST.config['SESSION_TYPE'] = 'memcached'
         # AXONIUS_REST.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
-        aggregator = self._get_aggregator()
+        aggregator = self.get_plugin_by_name('aggregator')
         if aggregator is None:
             self._aggregator_plugin_unique_name = None
         else:
@@ -288,20 +288,6 @@ class BackendPlugin(PluginBase):
         self._elk_auth = config['gui_specific']['elk_auth']
         self.db_user = config['gui_specific']['db_user']
         self.db_password = config['gui_specific']['db_password']
-
-    def _get_aggregator(self):
-        # using requests directly so the gui key won't be sent, so the core will give a list of the plugins
-        plugins_available = requests.get(
-            self.core_address + '/register').json()
-        aggregator_plugin = [x for x in plugins_available.values(
-        ) if x['plugin_name'] == 'aggregator']
-        if len(aggregator_plugin) == 0:
-            self.logger.warning(f"Couldn't find Aggregator. Available plugins are {str(plugins_available)}")
-            return None
-        if len(aggregator_plugin) != 1:
-            raise RuntimeError(
-                f"There are {len(aggregator_plugin)} aggregators, there should only be one")
-        return aggregator_plugin[0]
 
     def _query_aggregator(self, resource, *args, **kwargs):
         """

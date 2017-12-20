@@ -3,7 +3,7 @@
 __author__ = "Ofir Yefet"
 
 import ldap3
-import exceptions
+from ad_exceptions import LdapException
 
 
 class LdapConnection:
@@ -44,7 +44,7 @@ class LdapConnection:
                 raise_exceptions=True, receive_timeout=10)
             self.ldap_connection.bind()
         except ldap3.core.exceptions.LDAPException as ldap_error:
-            raise exceptions.LdapException(str(ldap_error))
+            raise LdapException(str(ldap_error))
 
     def get_device_list(self, wanted_attr=None):
         """Fetch device list from the ActiveDirectory.
@@ -77,7 +77,7 @@ class LdapConnection:
                     attributes='*')
             device_list_ldap = self.ldap_connection.response
         except ldap3.core.exceptions.LDAPException as ldap_error:
-            raise exceptions.LdapException(str(ldap_error))
+            raise LdapException(str(ldap_error))
 
         if len(device_list_ldap) == 0:
             return dict()

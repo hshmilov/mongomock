@@ -47,8 +47,6 @@ class TestAdAdapter(AdapterTestBase):
         return DEVICE_ID_FOR_CLIENT_1
 
     def test_fetch_devices(self):
-        self.axonius_service.clear_all_devices()
-
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']
         self.axonius_service.add_client_to_adapter(
