@@ -2,6 +2,7 @@ import subprocess
 import os
 from abc import abstractmethod
 import services.axon_service
+from test_helpers.exceptions import ComposeException
 
 
 class ComposeService(services.axon_service.AxonService):
@@ -32,7 +33,7 @@ class ComposeService(services.axon_service.AxonService):
                         cwd=os.path.dirname(self._compose_file_path))
 
         if should_delete:
-            subprocess.call(['docker-compose', 'down', "--volumes"],
+            subprocess.call(['docker-compose', 'down'],
                             cwd=os.path.dirname(self._compose_file_path))
 
     def start_and_wait(self):
@@ -54,6 +55,25 @@ class ComposeService(services.axon_service.AxonService):
         p = subprocess.Popen(['docker', 'exec', self.container_name, 'cat', file_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = p.communicate()
+
+        if p.returncode != 0:
+            raise ComposeException("Failed to run 'cat' on docker {0}".format(self.container_name))
+
+        return (out, err, p.returncode)
+
+    def run_command_in_container(self, command):
+        """
+        Gets any bash command to execute in this service's docker
+
+        :param command:
+        :return:
+        """
+        p = subprocess.Popen(['docker', 'exec', self.container_name, 'bash', '-c', command],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (out, err) = p.communicate()
+
+        if p.returncode != 0:
+            raise ComposeException("Failed to run {0} on docker {1}".format(command, self.container_name))
 
         return (out, err, p.returncode)
 

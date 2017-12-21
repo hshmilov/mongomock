@@ -55,7 +55,7 @@ class AdapterBase(PluginBase, ABC):
             self._clients = {}
             for client in configured_clients:
                 # client id from DB not sent to verify it is updated
-                self._add_client(client['client_config'])
+                self._add_client(client['client_config'], str(client['_id']))
 
     @add_rule('devices', methods=['GET'])
     def devices(self):
@@ -81,7 +81,7 @@ class AdapterBase(PluginBase, ABC):
             return return_error("Client does not exist", 404)
 
         try:
-            raw_devices = self._query_devices_by_client(client_name, client)
+            raw_devices = self._try_query_devices_by_client(client_name, client)
             parsed_devices = list(self._parse_raw_data(raw_devices))
         except AdapterExceptions.CredentialErrorException as e:
             self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
@@ -113,12 +113,10 @@ class AdapterBase(PluginBase, ABC):
                 client_config = request.get_json(silent=True)
                 if not client_config:
                     return return_error("Invalid client")
-                try:
-                    return self._add_client(client_config), 200
-                except AdapterExceptions.ClientSaveException as e:
-                    return return_error(str(e))
-                except KeyError as e:
-                    return return_error("Key error for client. details: {0}".format(str(e)))
+                add_client_result = self._add_client(client_config)
+                if len(add_client_result) == 0:
+                    return_error("Could not save client with given config", 400)
+                return jsonify(add_client_result), 200
 
             if self.get_method() == 'POST':
                 self._prepare_parsed_clients_config()
@@ -148,7 +146,7 @@ class AdapterBase(PluginBase, ABC):
                 self.logger.info("No connected client {0} to remove".format(client_id))
             return '', 200
 
-    def _add_client(self, client_config):
+    def _add_client(self, client_config, id=None):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
@@ -161,29 +159,45 @@ class AdapterBase(PluginBase, ABC):
 
         :raises AdapterExceptions.ClientSaveException: If there was a problem saving given client
         """
-        client_id = self._get_client_id(client_config)
+        client_id = None
         status = "error"
         try:
+            client_id = self._get_client_id(client_config)
             self._clients[client_id] = self._connect_client(client_config)
             # Got here only if connection succeeded
             status = "success"
         except AdapterExceptions.ClientConnectionException as e:
             pass
+        except KeyError as e:
+            self.logger.error(
+                "Got key error while handling client {0} - possibly compliance problem with schema. Details: {1}".format(
+                    client_id if client_id else (id if id else ''), str(e)))
         except Exception as e:
             self.logger.error(f"Unknown exception: {str(e)}")
 
-        result = self._get_collection('clients').replace_one({'client_id': client_id},
-                                                             {
-                                                                 'client_id': client_id,
-                                                                 'client_config': client_config,
-                                                                 'status': status
-        }, upsert=True)
-        if not result.modified_count:
-            if not result.upserted_id:
-                raise AdapterExceptions.ClientSaveException("Could not update client {0} in DB".format(client_id))
-            else:
-                return str(result.upserted_id)
-        return ''
+        if client_id is not None:
+            # Updating DB according to the axiom that client_id is a unique field across clients
+            result = self._get_collection('clients').replace_one({'client_id': client_id},
+                                                                 {
+                                                                     'client_id': client_id,
+                                                                     'client_config': client_config,
+                                                                     'status': status
+            }, upsert=True)
+
+        elif id is not None:
+            # Client id was not found due to some problem in given config data
+            # If id of an existing document is given, update its status accordingly
+            result = self._get_collection('clients').update_one({'_id': ObjectId(id)}, {'$set': {'status': status}})
+        else:
+            # No way of updating other than logs and no return value
+            self.logger.error("Not updating client since no DB id and no client id exist")
+            return {}
+
+        # Verifying update succeeded and returning the matched id and final status
+        if not result.modified_count and result.upserted_id:
+            return {"id": str(result.upserted_id), "status": status}
+
+        return {}
 
     @add_rule('correlation_cmds', methods=['GET'])
     def correlation_cmds(self):
@@ -332,6 +346,60 @@ class AdapterBase(PluginBase, ABC):
         """
         pass
 
+    def _try_query_devices_by_client(self, client_id, client, attempt=0):
+        """
+        Try querying devices for given client. If fails, try reconnecting to client.
+        If successful, try querying devices with new connection to the original client, up to 3 times.
+
+        This is an attempt to resolve problems with fetching devices that may be caused by an outdated connection
+        or to discover a real problem fetching devices, despite a working connection.
+
+        :return: Raw devices list if fetched successfully, whether immediately or with fresh connection
+        :raises Exception: If client connection or client devices query errored 3 times
+        """
+
+        def _update_client_status(status):
+            """
+            Update client document matching given match object with given status, to indicate method's result
+
+            :param client_id: Mongo ObjectId
+            :param status: String representing current status
+            :return:
+            """
+            with self._clients_lock:
+                result = clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
+                if not result or result.matched_count != 1:
+                    raise AdapterExceptions.CredentialErrorException("Could not update client {0} with status {1}")
+
+        clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
+        try:
+            raw_devices = self._query_devices_by_client(client_id, client)
+        except:
+            with self._clients_lock:
+                current_client = clients_collection.find_one({'client_id': client_id})
+                if not current_client or not current_client.get("client_config"):
+                    # No credentials to attempt reconnection
+                    raise AdapterExceptions.CredentialErrorException(
+                        "No credentials found for client {0}".format(client_id))
+            try:
+                self._clients[client_id] = self._connect_client(current_client["client_config"])
+            except:
+                # No connection to attempt querying
+                self.create_notification("Connection error to client {0}".format(client_id))
+                self.logger.error("Problem establishing connection for client {0}".format(client_id))
+                _update_client_status("error")
+                raise
+            else:
+                try:
+                    raw_devices = self._query_devices_by_client(client_id, self._clients[client_id])
+                except:
+                    # No devices despite a working connection
+                    self.logger.error("Problem querying devices for client {0}".format(client_id))
+                    _update_client_status("error")
+                    raise
+        _update_client_status("success")
+        return raw_devices
+
     def _query_devices(self):
         """
         Synchronously returns all available devices from all clients.
@@ -345,7 +413,7 @@ class AdapterBase(PluginBase, ABC):
         # Running query on each device
         for client_name, client in self._clients.items():
             try:
-                raw_devices = self._query_devices_by_client(client_name, client)
+                raw_devices = self._try_query_devices_by_client(client_name, client)
                 parsed_devices = list(self._parse_raw_data(raw_devices))
             except AdapterExceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
