@@ -7,7 +7,7 @@ services:
         ports:
             - 5679:80
         volumes:
-          - ../../logs:/home/axonius/logs
+          - ../../logs/splunk-symantec-adapter:/home/axonius/logs
           - data:/home/axonius
 
 volumes:

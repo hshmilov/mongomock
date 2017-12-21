@@ -7,7 +7,7 @@ services:
         ports:
             - 5676:80
         volumes:
-          - ../../logs:/home/axonius/logs
+          - ../../logs/symantec-adapter:/home/axonius/logs
           - data:/home/axonius
 
 volumes:

@@ -7,7 +7,7 @@ services:
         ports:
             - 5678:80
         volumes:
-          - ../../logs:/home/axonius/logs
+          - ../../logs/sentinelone-adapter:/home/axonius/logs
           - data:/home/axonius
 
 volumes:
