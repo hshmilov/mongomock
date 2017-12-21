@@ -131,7 +131,7 @@ class AWSAdapter(AdapterBase):
                              for i in instance.get('Tags', {})}
                 yield {
                     "name": tags_dict.get('Name', ''),
-                    'OS': figure_out_os(instance['DescribedImage']['Description']
+                    'OS': figure_out_os(instance['DescribedImage'].get('Description', '')
                                         if instance['DescribedImage'] is not None
                                         else None),
                     'id': instance['InstanceId'],

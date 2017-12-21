@@ -39,6 +39,10 @@ export const adapterStaticData = {
 		name: 'Splunk Symantec',
 		description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
 	},
+	'splunk_nexpose_adapter': {
+		name: 'Splunk Nexpose',
+		description: 'Rapid7 Nexpose is a vulnerability scanner which aims to support the entire vulnerability management lifecycle, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
+	},
 	'stresstest_adapter':{
 		name: "LOL",
 		description: "i am the king of devices"

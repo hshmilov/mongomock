@@ -1,0 +1,19 @@
+version: '3'
+services:
+  splunk-nexpose-adapter:
+        build: .
+        image: axonius/splunk-nexpose-adapter
+        container_name: "splunk-nexpose-adapter"
+        ports:
+            - 5681:80
+        volumes:
+          - ../../logs:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius
