@@ -12,12 +12,16 @@ export const UPDATE_PLUGIN_STOP = 'UPDATE_PLUGIN_STOP'
 
 export const pluginStaticData = {
 	'dns_conflicts_plugin': {
-		name: 'Conflict IP',
-		description: 'The Conflict IP Plugin is using AD data / Host name of devices and compares it with data from other DNS servers transmitting Conflicting IP identifications.'
+		name: 'Conflicting IP',
+		description: 'The Conflicting IP plugin uses data from Active Directory and other DNS servers to compare the hostnames of devices to identify conflicting IP addresses.'
 	},
-	'correlator_plugin': {
-		name: 'Correlator',
-		description: 'The Correlator plugin compares values across managed devices to discover instances of the same device.'
+	'static_correlator': {
+		name: 'Static Correlator',
+		description: 'The Static Correlator plugin compares values across managed devices to discover instances of the same device.'
+	},
+	'careful_execution_correlator_plugin': {
+		name: 'Execution Correlator',
+		description: 'The Execution Correlator plugin executes commands on different adapters and compares the output to identify unique devices.'
 	}
 }
 

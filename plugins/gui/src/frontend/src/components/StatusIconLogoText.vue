@@ -1,7 +1,7 @@
 <template>
     <div class="status-icon-logo-text">
         <status-icon v-if="statusIconValue" :value="statusIconValue"></status-icon>
-        <img class="logo-container img-lg" v-bind:class="{'ml-4': statusIconValue}"
+        <img class="logo-container img-w-lg" v-bind:class="{'ml-4': statusIconValue}"
              :src="`/src/assets/images/logos/${logoValue}.png`" :title="textValue">
         <span class="text-container">{{textValue}}</span>
     </div>

@@ -118,7 +118,7 @@ def _parse_to_mongo_filter(object_filter):
             # TODO: Beautify by taking the $or case into an external method.
             # If there are more than one filter, should be regarded as "and" logic
             if len(object_filter) > 1:
-                mongo_filter['$and'] = []
+                and_expressions = []
 
                 for key, val in object_filter.items():
                     if val is None:
@@ -135,19 +135,21 @@ def _parse_to_mongo_filter(object_filter):
                             or_list["$or"].append(
                                 {key: _create_regex(or_val)})
 
-                        mongo_filter['$and'].append(or_list)
+                            and_expressions.append(or_list)
 
                     elif isinstance(val, str):
                         if not val:
                             # Ignore empty values
                             continue
 
-                        mongo_filter['$and'].append(
+                        and_expressions.append(
                             {key: _create_regex(val)})
                     else:
-                        mongo_filter['$and'].append(
+                        and_expressions.append(
                             {key: val})
 
+                if and_expressions:
+                    mongo_filter['$and'] = and_expressions
             else:
                 mongo_filter_key = list(object_filter.keys())[0]
                 mongo_filter_value = list(object_filter.values())[0]
@@ -720,8 +722,8 @@ class BackendPlugin(PluginBase):
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] == "aggregator" or plugin[
-                        "plugin_name"] == "gui":
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in ["aggregator", "gui", "watch_service",
+                                                                                  "execution"]:
                     continue
 
                 processed_plugin = {'plugin_name': plugin['plugin_name'],

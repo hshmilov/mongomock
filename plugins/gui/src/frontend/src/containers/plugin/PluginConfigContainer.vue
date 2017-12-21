@@ -55,7 +55,7 @@
                         <td>{{result.adapters[0].data.pretty_id}}</td>
                         <td>{{result.adapters[0].data.hostname}}</td>
                         <td @mouseenter="openResult = result.uuid" @mouseleave="openResult = ''">
-                            There are {{result.conflicts.length}} conflicts found
+                            {{result.conflicts.length}} IPs found for this device
                             <div v-if="result.conflicts.length" v-show="openResult === result.uuid" class="bubble-mini">
                                 <div class="row header mt-2">
                                     <div class="col">IP Address</div>
