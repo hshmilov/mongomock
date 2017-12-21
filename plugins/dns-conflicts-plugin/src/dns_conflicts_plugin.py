@@ -40,8 +40,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
             return return_error(f"start failed {e}")
 
     def __init__(self, *args, **kargs):
-        PluginBase.__init__(self, *args, **kargs)
-        Activatable.__init__(self, *args, **kargs)
+        super().__init__(*args, **kargs)
 
         self.resolve_lock = threading.RLock()
 
@@ -64,6 +63,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
         This thread will try to find ip contradiction between different dns servers. If it finds such contradiction,
         The related device will get tagged with 'IP_CONFLICT' tag
         """
+        self.logger.info("Find conflicts thread had started")
         with self.resolve_lock:
             ad_adapters = self.get_plugin_by_name('ad_adapter', verify_single=False)
 

@@ -193,6 +193,7 @@ class CorrelatorBase(PluginBase, Activatable, ABC):
         :param devices_ids:
         :return:
         """
+        self.logger.info(f"Correlator {self.plugin_unique_name} started to correlate")
         for result in self._correlate_with_lock(self.get_devices_from_ids(devices_ids)):
             if isinstance(result, WarningResult):
                 self.logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
