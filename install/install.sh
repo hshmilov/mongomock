@@ -27,13 +27,13 @@ docker build -t axonius/gui plugins/gui
 docker build -t axonius/ad-adapter adapters/ad-adapter
 docker build -t axonius/aws-adapter adapters/aws-adapter
 docker build -t axonius/esx-adapter adapters/esx-adapter
-docker build -t axonius/epo-adapter adapters/epo-adapter
 docker build -t axonius/splunk-symantec-adapter adapters/splunk-symantec-adapter
 docker build -t axonius/splunk-nexpose-adapter adapters/splunk-nexpose-adapter
 docker build -t axonius/symantec-adapter adapters/symantec-adapter
 docker build -t axonius/static-correlator plugins/static-correlator-plugin
 docker build -t axonius/careful-execution-correlator plugins/careful-execution-correlator-plugin
 docker build -t axonius/dns-conflicts-plugin plugins/dns-conflicts-plugin
+docker build -t axonius/execution plugins/execution-plugin
 )
 
 echo "Removing anything irrelevant.."
@@ -60,6 +60,7 @@ docker-compose -f adapters/symantec-adapter/docker-compose.yml -f adapters/syman
 docker-compose -f plugins/static-correlator-plugin/docker-compose.yml -f plugins/static-correlator-plugin/docker-compose.prod.yml up -d
 docker-compose -f plugins/careful-execution-correlator-plugin/docker-compose.yml -f plugins/careful-execution-correlator-plugin/docker-compose.prod.yml up -d
 docker-compose -f plugins/dns-conflicts-plugin/docker-compose.yml -f plugins/dns-conflicts-plugin/docker-compose.prod.yml up -d
+docker-compose -f plugins/execution-plugin/docker-compose.yml -f plugins/execution-plugin/docker-compose.prod.yml up -d
 )
 
 echo "Done."
