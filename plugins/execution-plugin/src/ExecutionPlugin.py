@@ -38,7 +38,7 @@ class ExecutionPlugin(PluginBase):
 
         # Threadpool for creating new actions
         self._actions_thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=50)
+            max_workers=20)
 
     def _restore_actions_from_db(self):
         """ Restores actions from db.
@@ -82,7 +82,8 @@ class ExecutionPlugin(PluginBase):
             'online_device/{0}'.format(device_id), 'aggregator').json()
 
         try:
-            for adapter_name, adapter_data in result['adapters'].items():
+            for adapter_data in result['adapters']:
+                adapter_name = adapter_data['plugin_unique_name']
                 # Currently adding all of the adapters
                 # TODO: Create a smart logic here (next version)
                 yield (adapter_name, adapter_data)

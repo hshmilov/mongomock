@@ -172,9 +172,9 @@ class ActiveDirectoryPlugin(AdapterBase):
             for host in hosts:
                 time_before_resolve = datetime.now()
                 dns_name = host['raw'].get('AXON_DNS_ADDR')
-                domain_name = host['raw'].get('AXON_DC_ADDR')
+                dc_name = host['raw'].get('AXON_DC_ADDR')
                 try:
-                    ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "domain_name": domain_name})
+                    ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "dc_name": dc_name})
                     network_interfaces = [{"MAC": None, "IP": [ip]}]
 
                     self._get_collection("devices_data").update_one({"_id": host["_id"]},
@@ -280,7 +280,7 @@ class ActiveDirectoryPlugin(AdapterBase):
             err += f"failed to resolve from {dns_server} <{e}>; "
 
         try:
-            dns_server = client_config["domain_name"]
+            dns_server = client_config["dc_name"]
             return query_dns(full_device_name, timeout, dns_server)
         except Exception as e:
             err += f"failed to resolve from {dns_server} <{e}>; "
@@ -297,10 +297,10 @@ class ActiveDirectoryPlugin(AdapterBase):
         clients_config = self._get_clients_config()
         wanted_client = device_data['client_used']
         for client_config in clients_config:
+            client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
                 # We have found the correct client. Getting credentials
-                domain_name, user_name = client_config['admin_user'].split(
-                    '\\')
+                domain_name, user_name = client_config['admin_user'].split('\\')
                 password = client_config['admin_password']
                 try:
                     device_ip = self._resolve_device_name(
@@ -424,8 +424,12 @@ class ActiveDirectoryPlugin(AdapterBase):
     def execute_shell(self, device_data, shell_command):
         # Creating a file from the buffer (to pass it on to PSEXEC)
         # Adding separator to the commands list
+        shell_command_windows = shell_command.get('Windows')
+        if shell_command_windows is None:
+            return {"result": 'Failure', "product": 'No Windows command supplied'}
+
         SEPARATOR = '_SEPARATOR_STRING_'
-        conf_path = self._create_random_file(SEPARATOR.join(shell_command['Windows']) + SEPARATOR)
+        conf_path = self._create_random_file(SEPARATOR.join(shell_command_windows) + SEPARATOR)
 
         # Creating a file to write the result to
         result_path = self._create_random_file('')

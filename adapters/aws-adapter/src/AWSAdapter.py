@@ -188,4 +188,4 @@ class AWSAdapter(AdapterBase):
         :param os_type: the type of machine ran upon
         :return:
         """
-        return next(aws_ec2_id_matcher.findall(correlation_cmd_result.strip()), None)
+        return next(iter(aws_ec2_id_matcher.findall(correlation_cmd_result.strip())), None)

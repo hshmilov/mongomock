@@ -29,6 +29,7 @@ docker build -t axonius/aws-adapter adapters/aws-adapter
 docker build -t axonius/esx-adapter adapters/esx-adapter
 docker build -t axonius/epo-adapter adapters/epo-adapter
 docker build -t axonius/static-correlator-plugin plugins/static-correlator-plugin
+docker build -t axonius/careful-execution-correlator-plugin plugins/careful-execution-correlator-plugin
 
 )
 
@@ -49,6 +50,7 @@ docker-compose -f adapters/aws-adapter/docker-compose.yml -f adapters/aws-adapte
 docker-compose -f adapters/esx-adapter/docker-compose.yml -f adapters/esx-adapter/docker-compose.prod.yml up -d
 docker-compose -f plugins/aggregator-plugin/docker-compose.yml -f plugins/aggregator-plugin/docker-compose.prod.yml up -d
 docker-compose -f plugins/static-correlator-plugin/docker-compose.yml -f plugins/static-correlator-plugin/docker-compose.prod.yml up -d
+docker-compose -f plugins/careful-execution-correlator-plugin/docker-compose.yml -f plugins/careful-execution-correlator-plugin/docker-compose.prod.yml up -d
 docker-compose -f plugins/watch-service/docker-compose.yml -f plugins/watch-service/docker-compose.prod.yml up -d
 docker-compose -f plugins/gui/docker-compose.yml -f plugins/gui/docker-compose.prod.yml up -d
 )

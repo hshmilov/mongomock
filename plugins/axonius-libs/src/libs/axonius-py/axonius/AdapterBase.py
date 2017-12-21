@@ -39,6 +39,8 @@ class AdapterBase(PluginBase, ABC):
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=50)
 
+        self.feature_set.add("Adapter")
+
     def _send_reset_to_ec(self):
         """ Function for notifying the EC that this Adapted has been reset.
         """
@@ -288,19 +290,19 @@ class AdapterBase(PluginBase, ABC):
         return ''
 
     def put_file(self, device_data, file_buffer, dst_path):
-        return_error("Not implemented yet", 400)
+        raise RuntimeError("Not implemented yet")
 
     def get_file(self, device_data, file_path):
-        return_error("Not implemented yet", 400)
+        raise RuntimeError("Not implemented yet")
 
     def execute_binary(self, device_data, binary_buffer):
-        return_error("Not implemented yet", 400)
+        raise RuntimeError("Not implemented yet")
 
     def execute_shell(self, device_data, shell_command):
-        return_error("Not implemented yet", 400)
+        raise RuntimeError("Not implemented yet")
 
     def delete_file(self, device_data, file_path):
-        return_error("Not implemented yet", 400)
+        raise RuntimeError("Not implemented yet")
 
     @abstractmethod
     def _get_client_id(self, client_config):

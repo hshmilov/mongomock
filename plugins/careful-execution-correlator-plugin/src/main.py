@@ -1,15 +1,15 @@
 """
 main.py Main file for running Correlator
 """
-from CorrelatorPlugin import CorrelatorPlugin
+from CarefulExecutionCorrelatorPlugin import CarefulExecutionCorrelatorPlugin
 from axonius.ServerUtils import init_wsgi
 
 
 if __name__ == '__main__':
     # Initialize
-    CORRELATOR = CorrelatorPlugin()
+    CORRELATOR = CarefulExecutionCorrelatorPlugin()
     # Run (Blocking)
     CORRELATOR.start_serve()
 
 # Init wsgi if in it.
-wsgi_app = init_wsgi(CorrelatorPlugin)
+wsgi_app = init_wsgi(CarefulExecutionCorrelatorPlugin)

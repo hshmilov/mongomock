@@ -10,3 +10,4 @@ elasticsearch==5.4.0
 elasticsearch_dsl==5.3.0
 codenamize==1.2.2
 promise==2.1
+namedlist==1.7

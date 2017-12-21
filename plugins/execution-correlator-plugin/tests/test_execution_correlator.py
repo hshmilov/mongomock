@@ -3,12 +3,15 @@ This is a default test we do just to check that our testing system works.
 The following will be run by pytest.
 """
 
-from CorrelatorEngine import CorrelatorEngine, CorrelationResult, WarningResult, _find_contradictions, \
-    UNAVAILABLE_CMD_OUTPUT
-import CorrelatorEngine as CE
+# we're actually testing ExecutionCorrelatorEngineBase here
+from axonius.ExecutionCorrelatorEngineBase import _find_contradictions, UNAVAILABLE_CMD_OUTPUT
+from ExecutionCorrelatorEngine import ExecutionCorrelatorEngine
+import ExecutionCorrelatorEngine as CE
 import logging
 import sys
 from promise import Promise
+
+from axonius.CorrelatorBase import CorrelationResult, WarningResult
 
 correlator_logger = logging.getLogger()
 correlator_logger.setLevel(logging.DEBUG)
@@ -39,8 +42,8 @@ def correlate(devices_db, executor=None, cmds=None, parse_results=None):
             return None
         return result
 
-    correlator = CorrelatorEngine(correlator_logger, _executor, cmds or default_get_remote_plugin_correlation_cmds,
-                                  parse_results or default_parse_correlation_results)
+    correlator = ExecutionCorrelatorEngine(_executor, cmds or default_get_remote_plugin_correlation_cmds,
+                                           parse_results or default_parse_correlation_results, logger=correlator_logger)
     from datetime import timedelta
     CE.EXECUTE_TIMEOUT = timedelta(seconds=3)
 

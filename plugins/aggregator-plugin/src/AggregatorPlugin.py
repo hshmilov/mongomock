@@ -1,13 +1,9 @@
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
-
-__author__ = "Ofir Yefet"
-
 import requests
 import threading
 import pymongo
-from builtins import RuntimeError
 from datetime import datetime
 import uuid
 from itertools import chain
@@ -18,8 +14,9 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 
 from axonius.PluginBase import PluginBase, add_rule, return_error
 from axonius.ParsingUtils import beautiful_adapter_device_name
+from axonius.mixins.Activatable import Activatable, ActiveStates
 from flask import jsonify
-from exceptions import AdapterOffline
+import exceptions
 from axonius.consts import AdapterConsts
 
 
@@ -45,12 +42,13 @@ def parsed_device_match_plugin(plugin_data, parsed_device):
         get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
 
 
-class AggregatorPlugin(PluginBase):
+class AggregatorPlugin(PluginBase, Activatable):
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
         """
         super().__init__(*args, **kwargs)
+
         # Lock object for the global device list
         # this is a reentrant lock
         self.device_db_lock = threading.RLock()
@@ -69,7 +67,53 @@ class AggregatorPlugin(PluginBase):
         self.tags_lock = threading.RLock()
 
         # Starting the managing thread
-        self._start_managing_thread()
+        self._start()
+
+    def _start(self):
+        if self._online_adapters_scheduler is None:
+            executors = {'default': ThreadPoolExecutor(10)}
+            self._online_adapters_scheduler = BackgroundScheduler(
+                executors=executors)
+            self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
+                                                    trigger=IntervalTrigger(
+                                                        seconds=60),
+                                                    next_run_time=datetime.now(),
+                                                    name='adapters_thread_manager',
+                                                    id='adapters_thread_manager',
+                                                    max_instances=1)
+            self._online_adapters_scheduler.start()
+            return ""
+        else:
+            return return_error("Already running", 412)
+
+    def _stop(self):
+        if self._online_adapters_scheduler is not None:
+            with self.thread_manager_lock:
+                self._online_adapters_scheduler.shutdown(wait=True)
+                self._online_adapters_scheduler.remove_all_jobs()
+                self._online_adapters_scheduler = None
+                return ""
+        else:
+            return return_error("Not running", 412)
+
+    def _get_activatable_state(self) -> ActiveStates:
+        if self._online_adapters_scheduler is None\
+                or not self._online_adapters_scheduler.running:
+            return ActiveStates.Disabled
+
+        # if device_db_lock is taken, it means we're fetching devices
+        if self.device_db_lock.acquire(False):
+            self.device_db_lock.release()
+        else:
+            return ActiveStates.InProgress
+
+        # if thread_manager_lock is taken, it means we're fetching adapters
+        if self.thread_manager_lock.acquire(False):
+            self.thread_manager_lock.release()
+        else:
+            return ActiveStates.InProgress
+
+        return ActiveStates.Scheduled
 
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.
@@ -89,13 +133,13 @@ class AggregatorPlugin(PluginBase):
         try:
             clients = self.request_remote_plugin('clients', adapter).json()
         except:
-            raise AdapterOffline()
+            raise exceptions.AdapterOffline()
         for client_name in clients:
             try:
                 devices = self.request_remote_plugin(f'devices_by_name?name={client_name}', adapter)
             except:
                 # request failed
-                raise AdapterOffline()
+                raise exceptions.AdapterOffline()
             if devices.status_code != 200:
                 self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}. "
                                  f"Reason: {str(devices.content)}")
@@ -187,27 +231,6 @@ class AggregatorPlugin(PluginBase):
         except Exception as e:
             self.logger.critical('Managing thread got exception, '
                                  'must restart aggregator manually. Exception: {0}'.format(str(e)))
-
-    def _start_managing_thread(self):
-        """
-        Getting data from all adapters.
-        """
-
-        if self._online_adapters_scheduler is None:
-            executors = {'default': ThreadPoolExecutor(10)}
-            self._online_adapters_scheduler = BackgroundScheduler(
-                executors=executors)
-            self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
-                                                    trigger=IntervalTrigger(
-                                                        seconds=60),
-                                                    next_run_time=datetime.now(),
-                                                    name='adapters_thread_manager',
-                                                    id='adapters_thread_manager',
-                                                    max_instances=1)
-            self._online_adapters_scheduler.start()
-
-        else:
-            raise RuntimeError("Already running")
 
     @add_rule("plugin_push", methods=["POST"])
     def save_data_from_plugin(self):
@@ -455,7 +478,7 @@ class AggregatorPlugin(PluginBase):
                                 "tags": []
                             })
 
-        except AdapterOffline as e:
+        except exceptions.AdapterOffline as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
             self.logger.warn(

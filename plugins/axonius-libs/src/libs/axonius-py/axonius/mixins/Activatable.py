@@ -38,6 +38,7 @@ class Activatable(ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.feature_set.add('Activatable')
         self._activation_lock = Lock()
 
     @add_rule('start')

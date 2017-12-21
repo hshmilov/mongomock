@@ -162,7 +162,7 @@ class PluginBase(object):
 
     """
 
-    def __init__(self, core_data=None):
+    def __init__(self, core_data=None, *args, **kwargs):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -176,6 +176,8 @@ class PluginBase(object):
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
 
         # Getting values from configuration file
+        self.feature_set = {'Plugin'}
+
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
         self.config_file_path = 'plugin_config.ini'
@@ -276,6 +278,7 @@ class PluginBase(object):
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
         self.wsgi_app = AXONIUS_REST
 
+        super().__init__(*args, **kwargs)
         # Finished, Writing some log
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                               self.version,
@@ -656,6 +659,10 @@ class PluginBase(object):
                 raise PluginExceptions.PluginNotFoundException(
                     "There is no plugin {0} currently registered".format(plugin_name))
             return found_plugins
+
+    @add_rule('supported_features', should_authenticate=False)
+    def supported_features(self):
+        return jsonify(list(self.feature_set))
 
     @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):
