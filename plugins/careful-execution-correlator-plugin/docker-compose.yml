@@ -1,9 +1,9 @@
 version: '3'
 services:
-  careful-execution-correlator-plugin:
+  careful-execution-correlator:
         build: .
-        image: axonius/careful-execution-correlator-plugin
-        container_name: "careful-execution-correlator-plugin"
+        image: axonius/careful-execution-correlator
+        container_name: "careful-execution-correlator"
         ports:
           - 5039:80
         volumes:
