@@ -479,7 +479,7 @@ class BackendPlugin(PluginBase):
             for current_device in client_collection.find({"tags.tagvalue": {"$exists": True}}):
                 for current_tag in current_device['tags']:
                     if current_tag['tagvalue'] is not '':
-                        all_tags.add(current_tag['tagvalue'])
+                        all_tags.add(current_tag['tagname'])
 
         return jsonify(all_tags)
 
@@ -615,6 +615,8 @@ class BackendPlugin(PluginBase):
     @add_rule("alerts", methods=['GET', 'PUT'], should_authenticate=False)
     def alerts(self):
         """
+        GET results in list of all currently configured alerts, with their query id they were created with
+        PUT Send watch_service a new alert to be configured
 
         :return:
         """
@@ -699,6 +701,88 @@ class BackendPlugin(PluginBase):
                 queries_collection.update_one(match_query, {'$set': {'alertIds': list(alert_ids)}})
 
             return response.text, response.status_code
+
+    @filtered()
+    @add_rule("plugins", should_authenticate=False)
+    def plugins(self, mongo_filter):
+        """
+        Get all plugins configured in core and update each one's status.
+        Status will be "error" if the plugin is not registered.
+        Otherwise it will be "success", if currently running or "warning", if  stopped.
+
+        :mongo_filter
+        :return: List of plugins with
+        """
+        plugins_available = requests.get(self.core_address + '/register').json()
+        with self._get_db_connection(False) as db_connection:
+            plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
+                [('plugin_unique_name', pymongo.ASCENDING)])
+            plugins_to_return = []
+            for plugin in plugins_from_db:
+                # TODO check supported features
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] == "aggregator" or plugin[
+                        "plugin_name"] == "gui":
+                    continue
+
+                processed_plugin = {'plugin_name': plugin['plugin_name'],
+                                    'unique_plugin_name': plugin['plugin_unique_name'],
+                                    'status': 'error',
+                                    'state': 'Disabled'
+                                    }
+                if plugin['plugin_unique_name'] in plugins_available:
+                    processed_plugin['status'] = 'warning'
+                    response = self.request_remote_plugin("state", plugin['plugin_unique_name'])
+                    if response.status_code != 200:
+                        self.logger.error("Error getting state of plugin {0}".format(plugin['plugin_unique_name']))
+                        processed_plugin['status'] = 'error'
+                    else:
+                        processed_plugin['state'] = response.json()
+                        if (processed_plugin['state'] != 'Disabled'):
+                            processed_plugin['status'] = "success"
+                plugins_to_return.append(processed_plugin)
+
+            return jsonify(plugins_to_return)
+
+    @add_rule("plugins/<plugin_unique_name>", methods=['GET'], should_authenticate=False)
+    def get_plugin(self, plugin_unique_name):
+        """
+        Gather all data needed to present a single plugin, according to plugin_unique_name given in url
+
+        Currently implemented only for dns-conflicts plugin
+
+        :return: Dict containing the data according to plugin's schema for UI presentation
+        """
+        if "dns_conflicts" not in plugin_unique_name:
+            return return_error("Requested plugin not found or not yet implemented", 404)
+        state = "Disabled"
+        response = self.request_remote_plugin("state", plugin_unique_name)
+        if response.status_code == 200:
+            state = response.json()
+
+        with self._get_db_connection(False) as db_connection:
+            return jsonify({
+                'plugin_unique_name': plugin_unique_name,
+                'state': state,
+                'results': [beautify_db_entry(device) for device in
+                            db_connection[self._aggregator_plugin_unique_name]['devices_db'].find(
+                                {'tags.tagname': "IP_CONFLICT"},
+                                projection={'adapters.data.pretty_id': 1, 'tags': 1, 'adapters.data.hostname': 1}).sort(
+                                [('_id', pymongo.ASCENDING)])]
+            })
+
+    @add_rule("plugins/<plugin_unique_name>/<command>", methods=['GET'], should_authenticate=False)
+    def run_plugin(self, plugin_unique_name, command):
+        """
+        Calls endpoint of given plugin_unique_name, according to given command
+        The command should comply with the /supported_features of the plugin
+
+        :param plugin_unique_name:
+        :return:
+        """
+        response = self.request_remote_plugin(command, plugin_unique_name)
+        if response and response.status_code == 200:
+            return ""
+        return response.json(), response.status_code
 
     @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
     def config(self, config_name):

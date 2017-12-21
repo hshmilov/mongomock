@@ -10,7 +10,6 @@
     import DropdownMenu from './DropdownMenu.vue'
     import SearchableChecklist from './SearchableChecklist.vue'
     import ObjectList from './ObjectList.vue'
-    import './icons/fields'
 
     export default {
         name: 'multiple-select',

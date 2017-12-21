@@ -13,9 +13,16 @@
                                     :key="field.path" :value="record[field.path]" :type="field.type">
                 </generic-table-cell>
                 <td class="table-row-data table-row-actions" v-if="actions !== undefined">
-                    <a v-for="action in actions" class="table-row-action" @click="action.handler(record['id'])">
-                        <i :class="action.triggerFont"></i>
-                    </a>
+                    <template v-for="action in actions">
+                        <a  class="table-row-action" @click="action.condition.handler(record['id'])"
+                            v-if="action.condition && record[action.condition.field]">
+                            <i :class="action.condition.triggerFont"></i>
+                        </a>
+                        <a class="table-row-action" @click="action.handler(record['id'])"
+                           v-else-if="action.handler !== undefined">
+                            <i :class="action.triggerFont"></i>
+                        </a>
+                    </template>
                 </td>
             </tr>
             </tbody>
@@ -89,7 +96,7 @@
             vertical-align: middle;
             padding: 20px;
             position: relative;
-            min-width: 360px;
+            max-width: 240px;
             &:first-of-type {
                 border-bottom-left-radius: 4px;
                 border-top-left-radius: 4px;

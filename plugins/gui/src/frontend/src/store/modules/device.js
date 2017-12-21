@@ -79,8 +79,13 @@ export const processDevice = (device, fields, filterSelected) => {
 			processedDevice[field.path] = currentValue
 		})
 	})
-	if (processedDevice['tags.tagvalue']) {
-		processedDevice['tags.tagvalue'] = processedDevice['tags.tagvalue'].filter((tag, index, self) => {
+	if (device['tags']) {
+		processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
+			return tag.tagvalue !== undefined && tag.tagvalue !== ''
+		}).map((tag) => {
+			return tag.tagname
+		})
+		processedDevice['tags.tagname'] = processedDevice['tags.tagname'].filter((tag, index, self) => {
 			return self.indexOf(tag) === index
 		})
 	}
@@ -114,7 +119,8 @@ export const device = {
 					control: 'text'
 				},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
-				{path: 'tags.tagvalue', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []}
+				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []},
+				{path: 'tags.tagvalue', selected: true, hidden: true}
 			],
 			unique: {
 				'ad_adapter': [
@@ -495,8 +501,10 @@ export const device = {
 					"adapters.plugin_name": payload.data.adapters.map((adapter) => {
 						return adapter.plugin_name
 					}),
-					"tags.tagvalue": payload.data.tags.map((tag) => {
-						return tag.tagvalue
+					"tags.tagname": payload.data.tags.filter((tag) => {
+						return tag.tagvalue !== undefined && tag.tagvalue !== ''
+					}).map((tag) => {
+						return tag.tagname
 					}),
 					"adapters.data.raw": payload.data.adapters.reduce((map, adapter) => {
 						map[adapter.plugin_name] = adapter.data.raw
@@ -529,7 +537,7 @@ export const device = {
 					return {name: tag, path: tag}
 				})
 				state.fields.common.forEach(function (field) {
-					if (field.path === 'tags.tagvalue') {
+					if (field.path === 'tags.tagname') {
 						field.options = state.tagList.data
 					}
 				})
@@ -539,10 +547,10 @@ export const device = {
 			state.deviceList.data = [ ...state.deviceList.data ]
 			state.deviceList.data.forEach(function (device) {
 				if (payload.devices.indexOf(device['id']) > -1) {
-					if (!device['tags.tagvalue']) { device['tags.tagvalue'] = [] }
+					if (!device['tags.tagname']) { device['tags.tagname'] = [] }
 					payload.tags.forEach((tag) => {
-						if (device['tags.tagvalue'].indexOf(tag) !== -1) { return }
-						device['tags.tagvalue'].push(tag)
+						if (device['tags.tagname'].indexOf(tag) !== -1) { return }
+						device['tags.tagname'].push(tag)
 					})
 				}
 			})
@@ -559,8 +567,8 @@ export const device = {
 			state.deviceList.data = [ ...state.deviceList.data ]
 			state.deviceList.data.forEach((device) => {
 				if (payload.devices.indexOf(device['id']) > -1) {
-					if (!device['tags.tagvalue']) { return }
-					device['tags.tagvalue'] = device['tags.tagvalue'].filter((tag) => {
+					if (!device['tags.tagname']) { return }
+					device['tags.tagname'] = device['tags.tagname'].filter((tag) => {
 						return payload.tags.indexOf(tag) === -1
 					})
 				}

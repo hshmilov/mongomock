@@ -62,7 +62,7 @@
                             <div class="section-container">
                                 <div class="section-header">Tags</div>
                                 <object-list type="tag-list" :vertical="true"
-                                             :data="device.deviceDetails.data['tags.tagvalue']"></object-list>
+                                             :data="device.deviceDetails.data['tags.tagname']"></object-list>
                             </div>
                             <div class="section-container" v-for="adapter in device.deviceDetails.data['adapters.plugin_name']">
                                 <div class="section-header">{{ adapterNameByType[adapter] }} Fields</div>
@@ -184,20 +184,20 @@
 				if (newDevices.length === 0) { this.selectedTags = [] }
 				if (newDevices.length === 1 || !oldDevices.length) {
 					let currentDevice = this.deviceById[newDevices[0]]
-					if (!currentDevice || !currentDevice['tags.tagvalue'] || !currentDevice['tags.tagvalue'].length) {
+					if (!currentDevice || !currentDevice['tags.tagname'] || !currentDevice['tags.tagname'].length) {
 						return
 					}
-                    this.selectedTags = currentDevice['tags.tagvalue']
+                    this.selectedTags = currentDevice['tags.tagname']
 				}
 				if (newDevices.length > 1) {
 					if (!this.selectedTags.length) { return }
 					newDevices.forEach((deviceId) => {
 						let currentDevice = this.deviceById[deviceId]
-                        if (!currentDevice || !currentDevice['tags.tagvalue'] || !currentDevice['tags.tagvalue'].length) {
+                        if (!currentDevice || !currentDevice['tags.tagname'] || !currentDevice['tags.tagname'].length) {
                             this.selectedTags = []
                         } else {
                             this.selectedTags = this.selectedTags.filter(function (tag) {
-                                return currentDevice['tags.tagvalue'].indexOf(tag) > -1
+                                return currentDevice['tags.tagname'].indexOf(tag) > -1
                             })
                         }
 					})

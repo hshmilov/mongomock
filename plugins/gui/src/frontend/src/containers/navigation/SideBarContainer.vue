@@ -25,7 +25,7 @@
                                     <nested-nav-item routeName="Queries History"></nested-nav-item>
                                 </nested-nav-bar>
                             </nested-nav-item>
-                            <nested-nav-item routeName="Plugins" iconName="plugin" :disabled="true"></nested-nav-item>
+                            <nested-nav-item routeName="Plugins" iconName="plugin"></nested-nav-item>
                             <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
                         </nested-nav-bar>
                     </nav>

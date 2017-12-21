@@ -1,63 +1,51 @@
 <template>
     <scrollable-page title="plugins" class="plugins">
-        <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :clickOne="navigatePluginView"
-                          :actions="[ { handler: executeQuickView, triggerFont: 'icon-eye' } ]"></scrollable-table>
-        <info-dialog :open="infoDialogOpen" title="Plugin Quick View" @close="infoDialogOpen = false">
-            <div class="info-dialog-content-title w-100 text-center mt-4">
-                <img v-if="plugin.pluginDetails.data['unique_plugin_name']" class="data-logo d-inline-block"
-                     :src="`/src/assets/images/logos/${plugin.pluginDetails.data['unique_plugin_name']}.png`">
-                <div class="d-inline-block">{{ plugin.pluginDetails.data.name }}</div>
-            </div>
-            <div v-if="plugin.pluginDetails.data.on" class="text-capitalize w-100 text-center mt-4">
-                <i class="icon-play-circle"></i>
-                <div class="text-uppercase">running</div>
-            </div>
-            <div class="w-100 text-center mt-4" v-else>
-                <i class="icon-pause-circle"></i>
-                <div class="text-uppercase">paused</div>
-            </div>
-            <a @click="navigatePluginView(plugin.pluginDetails.data.name)" class="btn">Configure</a>
-        </info-dialog>
+        <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :actions="actions"></scrollable-table>
     </scrollable-page>
 </template>
 
 
 <script>
-    import ScrollablePage from '../../components/ScrollablePage.vue'
-    import ScrollableTable from '../../components/ScrollableTable.vue'
-    import InfoDialog from '../../components/InfoDialog.vue'
+	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import ScrollableTable from '../../components/ScrollableTable.vue'
+	import InfoDialog from '../../components/InfoDialog.vue'
 
-	import { mapState, mapGetters, mapActions } from 'vuex'
+	import { mapState, mapActions } from 'vuex'
+	import { FETCH_PLUGINS, FETCH_PLUGIN, START_PLUGIN, STOP_PLUGIN } from '../../store/modules/plugin'
 
-    export default {
-        name: 'plugins-container',
-        components: { ScrollablePage, ScrollableTable, InfoDialog },
-        computed: {
-            ...mapState([ 'plugin' ])
-        },
-        data() {
-			return {
-			    infoDialogOpen: false
+	export default {
+		name: 'plugins-container',
+		components: {ScrollablePage, ScrollableTable, InfoDialog},
+		computed: {
+			...mapState(['plugin']),
+            actions () {
+                return [
+                    {
+                        handler: this.startPlugin, triggerFont: 'icon-play', condition: {
+                        field: 'running', handler: this.stopPlugin, triggerFont: 'icon-checkbox-unchecked'
+                    }
+                    },
+                    { condition: { field: 'configurable', handler: this.configPlugin, triggerFont: 'icon-pencil2'}}
+                ]
             }
 		},
-        methods: {
-        	navigatePluginView(pluginId) {
-				this.$router.push({path: `plugin/${pluginId}`});
-            },
-        	executeQuickView(event, pluginId) {
-        		event.preventDefault()
-                event.stopPropagation()
-				event.target.parentElement.parentElement.parentElement.classList.add('active')
-				this.infoDialogOpen = true
-            },
-        	closeQuickView() {
-        		if (this.infoDialogOpen) {
-				    this.$el.querySelector(".table-row.active").classList.remove("active")
-                }
-				this.infoDialogOpen = false
-            }
-        }
-    }
+		data () {
+			return {
+				infoDialogOpen: false
+			}
+		},
+		methods: {
+			...mapActions({fetchPlugins: FETCH_PLUGINS, fetchPlugin: FETCH_PLUGIN,
+                startPlugin: START_PLUGIN, stopPlugin: STOP_PLUGIN}),
+			configPlugin (pluginId) {
+				this.fetchPlugin(pluginId)
+				this.$router.push({path: `plugin/${pluginId}`})
+			}
+		},
+		created () {
+			this.fetchPlugins()
+		}
+	}
 </script>
 
 
