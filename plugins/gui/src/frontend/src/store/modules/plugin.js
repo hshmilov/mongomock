@@ -99,6 +99,8 @@ export const plugin = {
 							// TODO Take only adapters relevant according to tag's 'associated_adapter_devices'
 						}
 						return processedResult
+					}).filter((result) => {
+						return result.conflicts.length > 0
 					})
 				}
 			}

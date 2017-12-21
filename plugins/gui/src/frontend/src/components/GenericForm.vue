@@ -57,7 +57,11 @@
         methods: {
         	convertValue(path, type) {
         		if (type === "number") {
-        			this.model[path] = parseInt(this.model[path])
+        			if (!this.model[path]) {
+						this.model[path] = undefined
+                    } else {
+						this.model[path] = parseInt(this.model[path])
+					}
                 }
 				this.$emit('input', this.model)
             }

@@ -62,8 +62,8 @@
                                     <div class="col">Server Name</div>
                                 </div>
                                 <div v-for="conflict in result.conflicts" class="row row-divider">
-                                    <div class="col">{{conflict.server}}</div>
                                     <div class="col">{{conflict.ip}}</div>
+                                    <div class="col">{{conflict.server}}</div>
                                 </div>
                             </div>
                         </td>
