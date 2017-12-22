@@ -83,8 +83,7 @@ class AdapterBase(PluginBase, ABC):
             return return_error("Client does not exist", 404)
 
         try:
-            raw_devices = self._try_query_devices_by_client(client_name, client)
-            parsed_devices = list(self._parse_raw_data(raw_devices))
+            raw_devices, parsed_devices = self._try_query_devices_by_client(client_name, client)
         except AdapterExceptions.CredentialErrorException as e:
             self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
@@ -357,7 +356,7 @@ class AdapterBase(PluginBase, ABC):
         This is an attempt to resolve problems with fetching devices that may be caused by an outdated connection
         or to discover a real problem fetching devices, despite a working connection.
 
-        :return: Raw devices list if fetched successfully, whether immediately or with fresh connection
+        :return: Raw and parsed devices list if fetched successfully, whether immediately or with fresh connection
         :raises Exception: If client connection or client devices query errored 3 times
         """
 
@@ -377,31 +376,34 @@ class AdapterBase(PluginBase, ABC):
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:
             raw_devices = self._query_devices_by_client(client_id, client)
-        except:
+            parsed_devices = list(self._parse_raw_data(raw_devices))
+        except Exception as e:
             with self._clients_lock:
                 current_client = clients_collection.find_one({'client_id': client_id})
                 if not current_client or not current_client.get("client_config"):
                     # No credentials to attempt reconnection
                     raise AdapterExceptions.CredentialErrorException(
-                        "No credentials found for client {0}".format(client_id))
+                        "No credentials found for client {0}. Reason: {1}".format(client_id, str(e)))
             try:
                 self._clients[client_id] = self._connect_client(current_client["client_config"])
-            except:
+            except Exception as e2:
                 # No connection to attempt querying
-                self.create_notification("Connection error to client {0}".format(client_id))
-                self.logger.error("Problem establishing connection for client {0}".format(client_id))
+                self.create_notification("Connection error to client {0}.".format(client_id))
+                self.logger.error(
+                    "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
                 _update_client_status("error")
                 raise
             else:
                 try:
                     raw_devices = self._query_devices_by_client(client_id, self._clients[client_id])
+                    parsed_devices = list(self._parse_raw_data(raw_devices))
                 except:
                     # No devices despite a working connection
                     self.logger.error("Problem querying devices for client {0}".format(client_id))
                     _update_client_status("error")
                     raise
         _update_client_status("success")
-        return raw_devices
+        return raw_devices, parsed_devices
 
     def _query_devices(self):
         """
@@ -416,8 +418,7 @@ class AdapterBase(PluginBase, ABC):
         # Running query on each device
         for client_name, client in self._clients.items():
             try:
-                raw_devices = self._try_query_devices_by_client(client_name, client)
-                parsed_devices = list(self._parse_raw_data(raw_devices))
+                raw_devices, parsed_devices = self._try_query_devices_by_client(client_name, client)
             except AdapterExceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
