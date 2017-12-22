@@ -10,6 +10,4 @@ docker login -u axoniusdockerreadonly -p 48GguwDPOQbMNYj08Pmb
 docker pull axonius/axonius-base-image
 
 echo "Building all images"
-source prepare_python_env.sh
 python devops/prepare_setup.py
-
