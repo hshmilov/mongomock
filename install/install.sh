@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo "Appending metadata"
+echo "Appending Metadata"
 (
 ./metadata.sh >> ../__build_metadata
 )
