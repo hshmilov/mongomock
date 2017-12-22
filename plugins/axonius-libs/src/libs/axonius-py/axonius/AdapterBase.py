@@ -93,7 +93,8 @@ class AdapterBase(PluginBase, ABC):
             return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
             self.logger.error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
-            raise
+            return return_error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
+            # TODO raise the error, after verifying all adapter return an expected error
         else:
             devices_list = {'raw': raw_devices,
                             'parsed': parsed_devices}
