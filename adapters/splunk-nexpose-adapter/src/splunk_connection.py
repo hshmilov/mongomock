@@ -22,16 +22,19 @@ class SplunkConnection(object):
         self.conn.logout()
         self.conn = None
 
-    def __del__(self):
+    def try_close(self):
         if hasattr(self, 'conn') and self.is_connected:
             self.close()
+
+    def __del__(self):
+        self.try_close()
 
     def __enter__(self):
         self.connect()
         return self
 
     def __exit__(self, type, value, tb):
-        self.close()
+        self.try_close()
 
     @staticmethod
     def parse_time(t):
@@ -42,11 +45,8 @@ class SplunkConnection(object):
             if not isinstance(earliest, str):
                 earliest = str(earliest)
             search += ' earliest=' + earliest
-        job = self.conn.jobs.create(search)
-        while not job.is_done():
-            time.sleep(1)
-        res = job.results()
-        reader = ResultsReader(res)
+        job = self.conn.jobs.oneshot(search, count=0)
+        reader = ResultsReader(job)
         for result in reader:
             raw = result[b'_raw'].decode('utf-8')
             new_item = split_raw(raw)

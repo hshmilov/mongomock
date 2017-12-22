@@ -43,11 +43,8 @@ class SplunkConnection(object):
             if not isinstance(earliest, str):
                 earliest = str(earliest)
             search += ' earliest=' + earliest
-        job = self.conn.jobs.create(search)
-        while not job.is_done():
-            time.sleep(1)
-        res = job.results()
-        reader = ResultsReader(res)
+        job = self.conn.jobs.oneshot(search, count=0)
+        reader = ResultsReader(job)
         for result in reader:
             raw = result[b'_raw'].decode('utf-8')
             new_item = split_raw(raw)

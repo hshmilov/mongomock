@@ -40,7 +40,8 @@ class SplunkSymantecAdapter(AdapterBase):
     def _update_new_raw_devices(self, client_data, queries_collection):
         already_updates = []
         last_ts = self.get_last_query_ts('symantec')
-        for host in client_data.get_symantec_devices_info(last_ts):
+        all_devices = list(client_data.get_symantec_devices_info(last_ts))
+        for host in all_devices:
             name = host['name']
             if name in already_updates:
                 continue
@@ -51,6 +52,8 @@ class SplunkSymantecAdapter(AdapterBase):
                 last_ts = timestamp
         if last_ts is not None:
             self.set_last_query_ts('symantec', int(last_ts + 1))
+
+        return all_devices
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -67,13 +70,15 @@ class SplunkSymantecAdapter(AdapterBase):
         host_active_hours = int(config['DEFAULT']['host_active_hours'])
         with client_data:
             queries_collection = self._get_collection('symantec_queries', limited_user=True)
-            self._update_new_raw_devices(client_data, queries_collection)
+            all_devices = self._update_new_raw_devices(client_data, queries_collection)
             active_hosts = client_data.get_symantec_active_hosts(host_active_hours)
+
             if active_hosts:
-                all_devices = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
+                self.active_hosts = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
             else:
-                all_devices = []
-        return all_devices
+                self.active_hosts = []
+            all_devices.extend(self.active_hosts)
+            return all_devices
 
     def _clients_schema(self):
         """
@@ -110,7 +115,8 @@ class SplunkSymantecAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
+        # TODO: Talk with Ofri/Avidor about this (Returns only devices that are active according to "host_active_hours"
+        for device_raw in self.active_hosts:
             host = device_raw['host']
             device_parsed = dict()
             device_parsed['hostname'] = host['name']
