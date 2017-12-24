@@ -51,6 +51,11 @@ class PluginService(services.compose_service.ComposeService):
     def version(self):
         return self.get('version', timeout=15)
 
+    def get_supported_features(self):
+        res = self.get('supported_features', timeout=15)
+        assert res.status_code == 200
+        return set(res.json())
+
     def trigger_check_registered(self):
         try:
             # Will trigger the plugin to check if he is registered. If not, the plugin will exit immediately
@@ -70,7 +75,7 @@ class PluginService(services.compose_service.ComposeService):
         return result.status_code == 200, str(result)
 
     def is_up(self):
-        return self._is_service_alive()
+        return self._is_service_alive() and "Plugin" in self.get_supported_features()
 
     def _is_service_alive(self):
         try:
@@ -130,6 +135,9 @@ class AdapterService(PluginService):
 
     def schema(self, schema_type="general", api_key=None):
         return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
+
+    def is_up(self):
+        return super().is_up() and "Adapter" in self.get_supported_features()
 
     @property
     def conf(self):

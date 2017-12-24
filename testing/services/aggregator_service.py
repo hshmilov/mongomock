@@ -50,3 +50,6 @@ class AggregatorService(plugin_service.PluginService):
         assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"
         return response
+
+    def is_up(self):
+        return super().is_up() and "Activatable" in self.get_supported_features()

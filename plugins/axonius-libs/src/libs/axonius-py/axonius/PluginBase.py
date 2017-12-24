@@ -1,4 +1,5 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
+from axonius.mixins.Feature import Feature
 
 __author__ = "Ofir Yefet"
 
@@ -150,7 +151,7 @@ def return_error(error_message, http_status=500):
     return jsonify({'status': 'error', 'message': error_message}), http_status
 
 
-class PluginBase(object):
+class PluginBase(Feature):
     """ This is an abstract class containing the implementation
     For the base capabilities of the Plugin.
 
@@ -176,8 +177,6 @@ class PluginBase(object):
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
 
         # Getting values from configuration file
-        self.feature_set = {'Plugin'}
-
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
         self.config_file_path = 'plugin_config.ini'
@@ -283,6 +282,10 @@ class PluginBase(object):
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                               self.version,
                                                                                               self.lib_version))
+
+    @classmethod
+    def specific_supported_features(cls) -> list:
+        return ["Plugin"]
 
     def wsgi_app(self, *args, **kwargs):
         """
@@ -661,8 +664,8 @@ class PluginBase(object):
             return found_plugins
 
     @add_rule('supported_features', should_authenticate=False)
-    def supported_features(self):
-        return jsonify(list(self.feature_set))
+    def get_supported_features(self):
+        return jsonify(self.supported_features)
 
     @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):

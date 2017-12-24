@@ -5,6 +5,7 @@ from threading import Lock
 from flask import jsonify
 
 from axonius.PluginBase import add_rule
+from axonius.mixins.Feature import Feature
 
 
 class ActiveStates(Enum):
@@ -31,15 +32,18 @@ class ActiveStates(Enum):
     InProgress = auto()
 
 
-class Activatable(ABC):
+class Activatable(Feature, ABC):
     """
     Defines common methods and api for plugins that can be "started" and "stopped", say, like the Aggregator.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.feature_set.add('Activatable')
         self._activation_lock = Lock()
+
+    @classmethod
+    def specific_supported_features(cls) -> list:
+        return ["Activatable"]
 
     @add_rule('start')
     def start_scheduling(self):

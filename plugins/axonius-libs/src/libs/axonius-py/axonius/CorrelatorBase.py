@@ -13,6 +13,7 @@ from axonius.mixins.Activatable import Activatable, ActiveStates
 
 # the reason for these data types is that it allows separation of the code that figures out correlations
 # and code that links devices (aggregator) or sends notifications.
+from axonius.mixins.Feature import Feature
 
 """
 Represent a link that should take place.
@@ -71,15 +72,18 @@ def figure_actual_os(adapters):
     raise OSTypeInconsistency(oses)  # some adapters disagree
 
 
-class CorrelatorBase(PluginBase, Activatable, ABC):
+class CorrelatorBase(PluginBase, Activatable, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.feature_set.add('Correlator')
 
         self._correlation_scheduler = None
 
         self._correlation_lock = threading.RLock()
         self._refresh_devices_filter()
+
+    @classmethod
+    def specific_supported_features(cls) -> list:
+        return ["Correlator"]
 
     def _refresh_devices_filter(self):
         """

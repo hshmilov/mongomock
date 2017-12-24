@@ -14,9 +14,10 @@ from bson import ObjectId
 from threading import RLock
 from axonius.ConfigReader import AdapterConfig
 from axonius.consts import AdapterConsts
+from axonius.mixins.Feature import Feature
 
 
-class AdapterBase(PluginBase, ABC):
+class AdapterBase(PluginBase, Feature, ABC):
     """
     Base abstract class for all adapters
     Terminology:
@@ -39,7 +40,9 @@ class AdapterBase(PluginBase, ABC):
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=50)
 
-        self.feature_set.add("Adapter")
+    @classmethod
+    def specific_supported_features(cls) -> list:
+        return ["Adapter"]
 
     def _send_reset_to_ec(self):
         """ Function for notifying the EC that this Adapted has been reset.
