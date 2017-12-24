@@ -8,7 +8,7 @@ if [ $(git ls-files | grep "\.py" | xargs autopep8 --max-line-length 120 --diff 
     exit 1
 fi
 
-if [ $(git ls-files | grep -E "(\.py|\.sh)" | xargs grep $(printf "\r") -r | wc -l) -ne 0 ]; then
+if [ $(git ls-files | grep -E "(\.py|\.sh|\.yml|Dockerfile)" | xargs grep $(printf "\r") -r | wc -l) -ne 0 ]; then
     echo "Windows ending files failed!"
     exit 1
 fi
