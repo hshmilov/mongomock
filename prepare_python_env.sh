@@ -10,5 +10,6 @@ $CORTEX_ROOT/plugins/static-correlator-plugin/src:\
 $CORTEX_ROOT/plugins/watch-service/src:\
 $CORTEX_ROOT/adapters/ad-adapter/src:\
 $CORTEX_ROOT/adapters/sentinelone-adapter/src:\
-$CORTEX_ROOT/testing:\
-$CORTEX_ROOT/adapters/epo-adapter/src"
+$CORTEX_ROOT/adapters/epo-adapter/src:\
+$CORTEX_ROOT/adapters/esx-adapter/src:\
+$CORTEX_ROOT/testing"
