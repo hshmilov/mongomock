@@ -279,3 +279,4 @@ fabric.properties
 *plugin_volatile_config.ini
 testing/reporting/*
 logs/*
+projectFilesBackup/*

@@ -1,6 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Epo adapter" type="docker-deploy" factoryName="Docker Deployment" server-name="Docker">
-    <deployment type="docker-compose.yml" path="$PROJECT_DIR$/adapters/epo-adapter/docker-compose.yml">
+  <configuration default="false" name="Epo adapter" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker">
+    <deployment type="docker-compose.yml">
       <settings>
         <option name="JSONFilePath" value="" />
         <option name="command" value="" />
@@ -8,8 +9,10 @@
         <option name="startBrowserSettings">
           <browser url="http://127.0.0.1" />
         </option>
+        <option name="sourceFilePath" value="$PROJECT_DIR$/adapters/epo-adapter/docker-compose.yml" />
       </settings>
     </deployment>
     <method />
   </configuration>
 </component>
+
