@@ -46,14 +46,15 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         """
 
-        # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
-
         # Getting needed paths for execution
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
         self.python_27_path = config['paths']['python_27_path']
         self.use_psexec_path = config['paths']['psexec_path']
+        self.ldap_page_size = config['others']['ldap_page_size']
+
+        # Initialize the base plugin (will initialize http server)
+        super().__init__(**kargs)
 
         self._resolving_thread_lock = threading.RLock()
 
@@ -88,7 +89,8 @@ class ActiveDirectoryPlugin(AdapterBase):
 
     def _connect_client(self, dc_details):
         try:
-            return LdapConnection(dc_details['dc_name'],
+            return LdapConnection(self.ldap_page_size,
+                                  dc_details['dc_name'],
                                   dc_details['domain_name'],
                                   dc_details['query_user'],
                                   dc_details['query_password'],

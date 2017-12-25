@@ -15,6 +15,7 @@ from threading import RLock
 from axonius.ConfigReader import AdapterConfig
 from axonius.consts import AdapterConsts
 from axonius.mixins.Feature import Feature
+from datetime import datetime
 
 
 class AdapterBase(PluginBase, Feature, ABC):
@@ -82,11 +83,18 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         client_name = request.args.get('name')
         client = self._clients.get(client_name)
+        self.logger.info(f"Trying to query devices from client {client_name}")
         if client is None:
+            self.logger.error(f"client {client_name} does not exist")
             return return_error("Client does not exist", 404)
 
         try:
+            time_before_query = datetime.now()
             raw_devices, parsed_devices = self._try_query_devices_by_client(client_name, client)
+            query_time = datetime.now() - time_before_query
+            self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
+                             f"returned {len(parsed_devices)} devices")
+            self.logger.info("Querying devices on ")
         except AdapterExceptions.CredentialErrorException as e:
             self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)

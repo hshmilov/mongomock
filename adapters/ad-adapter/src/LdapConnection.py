@@ -13,9 +13,10 @@ class LdapConnection:
     Data from the wanted ActiveDirectory.
     """
 
-    def __init__(self, server_addr, domain_name, user_name, user_password, dns_server):
+    def __init__(self, ldap_page_size, server_addr, domain_name, user_name, user_password, dns_server):
         """Class initialization.
 
+        :param int ldap_page_size: Amount of devices to fetch on each request
         :param str server_addr: Server address (name of IP)
         :param str domain_name: Domain name to connect with
         :param str user_name: User name to connect with
@@ -29,6 +30,7 @@ class LdapConnection:
         self.user_password = user_password
         self.dns_server = dns_server
         self.ldap_connection = None
+        self.ldap_page_size = ldap_page_size
 
         self._connect_to_server()
 
@@ -46,7 +48,7 @@ class LdapConnection:
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise LdapException(str(ldap_error))
 
-    def get_device_list(self, wanted_attr=None):
+    def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
 
         This function will use an LDAP query in order to get all the object under the 'COMPUTERS' tree.
@@ -63,38 +65,27 @@ class LdapConnection:
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            if wanted_attr:
-                self.ldap_connection.search(
-                    search_base=self.domain_name,
-                    # We chose some unique parameter
-                    search_filter='(&(objectClass=Computer))',
-                    attributes=wanted_attr)
-            else:
-                self.ldap_connection.search(
-                    search_base=self.domain_name,
-                    # We chose some unique parameter
-                    search_filter='(&(objectClass=Computer))',
-                    attributes='*')
-            device_list_ldap = self.ldap_connection.response
+            # The search filter will get only enabled "computer" objects
+            entry_generator = self.ldap_connection.extend.standard.paged_search(
+                search_base=self.domain_name,
+                search_filter='(&(objectClass=Computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
+                attributes='*',
+                paged_size=self.ldap_page_size,
+                generator=True)
+
+            one_device = None
+
+            for one_device in entry_generator:
+                if one_device['type'] != 'searchResEntry':
+                    continue
+                device_dict = dict(one_device['attributes'])
+                device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
+                device_dict['AXON_DC_ADDR'] = self.server_addr
+                device_dict['AXON_DOMAIN_NAME'] = self.domain_name
+                yield device_dict
+
+            if one_device is None:
+                return []
+
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise LdapException(str(ldap_error))
-
-        if len(device_list_ldap) == 0:
-            return dict()
-
-        # Getting the wanted attributes
-        wanted_attr = list(device_list_ldap[0]['attributes'].keys())
-
-        def is_wanted_attr(attr_name):
-            return wanted_attr == '*' or attr_name in wanted_attr
-
-        for one_device in device_list_ldap:
-            if one_device['type'] != 'searchResEntry':
-                continue
-            device_dict = {attr_name: attr_val for
-                           attr_name, attr_val in one_device['attributes'].items()
-                           if is_wanted_attr(attr_name)}
-            device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
-            device_dict['AXON_DC_ADDR'] = self.server_addr
-            device_dict['AXON_DOMAIN_NAME'] = self.domain_name
-            yield device_dict
