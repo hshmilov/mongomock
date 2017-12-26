@@ -51,7 +51,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         config.read('plugin_config.ini')
         self.python_27_path = config['paths']['python_27_path']
         self.use_psexec_path = config['paths']['psexec_path']
-        self.ldap_page_size = config['others']['ldap_page_size']
+        self.ldap_page_size = int(config['others']['ldap_page_size'])
 
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kargs)
@@ -171,6 +171,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                                                                           'hostname': True})
             hosts = list(hosts)
             self.logger.info(f"Going to resolve for {len(hosts)} hosts")
+            did_one_resolved = False
             for host in hosts:
                 time_before_resolve = datetime.now()
                 dns_name = host['raw'].get('AXON_DNS_ADDR')
@@ -182,8 +183,9 @@ class ActiveDirectoryPlugin(AdapterBase):
                     self._get_collection("devices_data").update_one({"_id": host["_id"]},
                                                                     {'$set': {"network_interfaces": network_interfaces,
                                                                               "RESOLVE_STATUS": "RESOLVED"}})
+                    did_one_resolved = True
                 except Exception as e:
-                    self.logger.error(f"Error resolving host ip from dc. Err: {str(e)}")
+                    self.logger.debug(f"Error resolving host ip from dc. Err: {str(e)}")
                     self._get_collection("devices_data").update_one({"_id": host["_id"]},
                                                                     {'$set': {"network_interfaces": [],
                                                                               "RESOLVE_STATUS": "FAILED"}})
@@ -191,6 +193,9 @@ class ActiveDirectoryPlugin(AdapterBase):
                     resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
                     time_to_sleep = max(0.0, 0.05 - resolve_time)
                     time.sleep(time_to_sleep)
+            if not did_one_resolved and len(hosts) != 0:
+                # Raise log message only if no host could get resolved
+                self.logger.error("Couldn't resolve IP's. Maybe dns is incorrect?")
             return
 
     def _resolve_change_status_thread(self):

@@ -55,7 +55,7 @@ class LdapConnection:
         In order to distinguish between a real device and the class object, we are searching on a specific
         Object that exists only on real devices objects.
 
-        :param wanted_attr: A list containing all the wanted attributes from the Device object. 
+        :param wanted_attr: A list containing all the wanted attributes from the Device object.
                             If not given, all available attributes will be returned.
 
         :type wanted_attr: list of str
@@ -65,7 +65,11 @@ class LdapConnection:
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            # The search filter will get only enabled "computer" objects
+            # The search filter will get only enabled "computer" objects.
+            # We are using paged search, as documented here:
+            # http://ldap3.readthedocs.io/searches.html#simple-paged-search
+            # The filter is an ldap filter that will filter only computer objects that are enabled. Can be found here:
+            # https://www.experts-exchange.com/questions/26393164/LDAP-Filter-Active-Directory-Query-for-Enabled-Computers.html
             entry_generator = self.ldap_connection.extend.standard.paged_search(
                 search_base=self.domain_name,
                 search_filter='(&(objectClass=Computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
@@ -77,6 +81,7 @@ class LdapConnection:
 
             for one_device in entry_generator:
                 if one_device['type'] != 'searchResEntry':
+                    # searchResEntry is not a wanted object
                     continue
                 device_dict = dict(one_device['attributes'])
                 device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr

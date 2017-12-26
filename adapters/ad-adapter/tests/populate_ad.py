@@ -18,6 +18,7 @@ data_schema = {
     ],
     "operatingSystem": "Windows 10 Pro",
     "operatingSystemVersion": "10.0 (15063)",
+    "userAccountControl": 4096
     #"primaryGroupID" : 515,
     #"pwdLastSet" : "Thu, 07 Dec 2017 09:08:22 GMT",
     #"sAMAccountName" : "{computer_name}$",
@@ -43,7 +44,7 @@ password = "&P?HBx-e3s"
 domain_to_add = "DC=TestSecDomain,DC=test"
 OU = "OU=TestOrg"
 address = OU + ',' + domain_to_add
-devices_num = 50000
+devices_num = 100000
 
 schema = "CN={computer_name} ,{address}"
 
@@ -58,7 +59,7 @@ ldap_connection.bind()
 #                                                uuid=str(uuid.uuid1()))
 #current_data_schema = json.loads("{" + temp_text + "}")
 
-for i in range(600, devices_num):
+for i in range(15000, devices_num):
     if i % 100 == 0:
         print(i)
     current_name = codenamize.codenamize(i) + "-PC"
