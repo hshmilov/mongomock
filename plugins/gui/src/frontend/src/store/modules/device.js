@@ -118,7 +118,16 @@ export const device = {
 					type: 'list',
 					control: 'text'
 				},
+				{
+					path: 'adapters.data.network_interfaces.MAC',
+					name: 'MAC Addresses',
+					selected: false,
+					type: 'list',
+					control: 'text'
+				},
 				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
+				{path: 'adapters.data.OS.distribution', name: 'OS Version', selected: false, control: 'text'},
+				{path: 'adapters.data.OS.bitness', name: 'OS Bitness', selected: false, control: 'text'},
 				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []},
 				{path: 'tags.tagvalue', selected: true, hidden: true}
 			],

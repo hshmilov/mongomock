@@ -29,7 +29,16 @@
 		name: 'scrollable-page',
 		components: {VueScrollbar},
 		props: ['title', 'breadcrumbs'],
-		computed: mapState(['interaction'])
+		computed: mapState(['interaction']),
+        mounted() {
+			window.addEventListener('keyup', (event) => {
+				if (event.keyCode === 40) {
+					this.$refs.Scrollbar.scrollToY(this.$refs.Scrollbar.top + 80)
+				} else if (event.keyCode === 38) {
+					this.$refs.Scrollbar.scrollToY(this.$refs.Scrollbar.top - 80)
+				}
+			})
+        }
 	}
 </script>
 
