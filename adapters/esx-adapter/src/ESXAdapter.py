@@ -92,7 +92,7 @@ class ESXAdapter(AdapterBase):
                 'physicalPath': _curr_path + "/" + node['Name'],
                 'raw': details
             }
-        elif node['Type'] in ("Datacenter", "Folder"):
+        elif node['Type'] in ("Datacenter", "Folder", "Root"):
             for child in node['Children']:
                 yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
         else:

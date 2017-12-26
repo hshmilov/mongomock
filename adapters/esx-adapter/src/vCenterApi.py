@@ -94,30 +94,36 @@ class vCenterApi():
                                              network.ipConfig.ipAddress]
             yield primitives
 
-    def _parse_vm(self, vm, depth=1):
+    def _parse_vm(self, vm_root, depth=1):
         """
         Print information for a particular virtual machine or recurse into a folder
         or vApp with depth protection
         """
         maxdepth = 100
+        if depth > maxdepth:
+            return
+
+        # if this is a Datacenter
+        if hasattr(vm_root, 'vmFolder'):
+            vm_list = vm_root.vmFolder.childEntity
+            children = [self._parse_vm(c, depth + 1) for c in vm_list]
+            return vCenterNode(Name=vm_root.name, Type="Datacenter", Children=children)
 
         # if this is a group it will have children. if it does, recurse into them
         # and then return
-        if hasattr(vm, 'childEntity'):
-            if depth > maxdepth:
-                return
-            vm_list = vm.childEntity
+        if hasattr(vm_root, 'childEntity'):
+            vm_list = vm_root.childEntity
             children = [self._parse_vm(c, depth + 1) for c in vm_list]
-            return vCenterNode(Name=vm.name, Type="Folder", Children=children)
+            return vCenterNode(Name=vm_root.name, Type="Folder", Children=children)
 
         # otherwise, we're dealing with a machine
         # let's take what we can and return it
-        summary = vm.summary
+        summary = vm_root.summary
         attributes_from_summary = ['config', 'quickStats', 'guest', 'config', 'storage', 'runtime', 'overallStatus',
                                    'customValue']
         details = {k: _take_just_primitives(summary.__getattribute__(
             k).__dict__) for k in attributes_from_summary}
-        details['networking'] = list(self._parse_networking(vm))
+        details['networking'] = list(self._parse_networking(vm_root))
 
         return vCenterNode(Name=summary.config.name, Type="Machine", Details=details)
 
@@ -129,14 +135,10 @@ class vCenterApi():
         :return vCenterNode:
         """
         try:
-            children = [vCenterNode(Name=dc.name, Type="Datacenter",
-                                    Children=[self._parse_vm(vm) for vm in dc.vmFolder.childEntity])
-                        for dc in
-                        self._session.content.rootFolder.childEntity
-
-                        # an existance of 'vmFolder' is a good indicator that the node is a 'Datacenter'
-                        if hasattr(dc, 'vmFolder')]
-            return vCenterNode(Name="Datacenters", Type="Folder", Children=children)
+            children = [self._parse_vm(x)
+                        for x in
+                        self._session.content.rootFolder.childEntity]
+            return vCenterNode(Name="Root", Type="Root", Children=children)
         except vim.fault.NoPermission:
             # we're catching and raising so it'll be sent up to _should_retry_fetchin
             # so we will still have the logic to retry 3 times in case of a deauth

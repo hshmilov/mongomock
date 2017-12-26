@@ -52,3 +52,16 @@ class TestEsxAdapter(AdapterTestBase):
             client_id = "{}/{}".format(client['host'], client['user'])
             axonius_service.add_client_to_adapter(self.adapter_service, client)
             axonius_service.assert_device_aggregated(self.adapter_service, client_id, some_device_id)
+
+    def test_folder_on_dc_level(self):
+        axonius_service = self.axonius_service
+        axonius_service.clear_all_devices()
+        client, _ = client_details[0]
+
+        client_id = "{}/{}".format(client['host'], client['user'])
+        axonius_service.add_client_to_adapter(self.adapter_service, client)
+
+        # this is the ID of a VM that is inside a datacenter that is inside a folder
+        # it is called "just_for_datacenter_folders"
+        axonius_service.assert_device_aggregated(
+            self.adapter_service, client_id, "5011b327-7833-4d80-af9f-11c0afdde448")
