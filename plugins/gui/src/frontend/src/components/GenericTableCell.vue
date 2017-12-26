@@ -22,7 +22,7 @@
             <object-list v-if="value && value.length" :type="type" :data="value" :limit="2"></object-list>
         </template>
         <template v-else>
-            <span>{{ value }}</span>
+            <span v-bind:class="{wide: wide}" :title="value">{{ value }}</span>
         </template>
     </td>
 </template>
@@ -37,7 +37,7 @@
 	export default {
 		name: 'generic-table-cell',
         components: {ObjectList, StatusIcon, StatusIconLogoText, TypeIcon},
-        props: ['value', 'type'],
+        props: ['value', 'type', 'wide'],
         methods: {
             prettyTimestamp(timestamp) {
             	return `${parseDate(timestamp)} ${parseTime(timestamp)}`
@@ -47,5 +47,12 @@
 </script>
 
 <style lang="scss">
-
+    .wide {
+        height: 3.5em;
+        line-height: 1.2em;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+    }
 </style>

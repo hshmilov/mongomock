@@ -4,7 +4,7 @@
                  :exact-active-class="(!disabled && exact)? 'active': ''">
         <a class="nav-link" v-bind:class="{ 'has-arrow': hasSlot }">
             <svg-icon v-if="iconName" :name="`navigation/${iconName}`" height="24" width="24" :original="true"></svg-icon>
-            <span class="collapse-hidden">{{ routeName }}</span>
+            <span>{{ routeName }}</span>
         </a>
         <slot></slot>
     </router-link>
@@ -82,7 +82,6 @@
                 .svg-stroke {  stroke: $color-theme-light;  }
             }
             .has-arrow::after {  border-color: $color-theme-light;  }
-            font-weight: 500;
             .nav-link.has-arrow::after {
                 -webkit-transform: rotate(-135deg) translate(0, -50%);
                 -ms-transform: rotate(-135deg) translate(0, -50%);
@@ -100,7 +99,6 @@
         border-left: 3px solid transparent;
         &.active {
             border-left: 3px solid $color-theme-light;
-            >.nav-link {  font-weight: 500;  }
         }
     }
 </style>

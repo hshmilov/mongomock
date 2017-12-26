@@ -2,16 +2,15 @@
     <div>
         <table class="table scrollable-table">
             <thead>
-            <tr>
+            <tr class="table-header">
                 <th v-for="field in fields"  v-if="!field.hidden" class="table-head">{{ field.name }}</th>
                 <th class="table-head" v-if="actions !== undefined"></th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="record in data" class="table-row">
-                <generic-table-cell class="table-row-data" v-for="field in fields" v-if="!field.hidden"
-                                    :key="field.path" :value="record[field.path]" :type="field.type">
-                </generic-table-cell>
+                <generic-table-cell class="table-row-data" v-for="field in fields" v-if="!field.hidden" :key="field.path"
+                                    :value="record[field.path]" :type="field.type" :wide="true"></generic-table-cell>
                 <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                     <template v-for="action in actions">
                         <a  class="table-row-action" @click="action.condition.handler(record['id'])"
@@ -53,30 +52,34 @@
         border-spacing: 0px 8px;
         margin-top: -8px;
         margin-bottom: 0;
-        .table-head {
-            font-size: 80%;
-            font-weight: 300;
-            background-color: $background-color-title;
+        font-size: 14px;
+        .table-header {
             border: 1px solid $border-color;
-            padding: 4px 12px;
-            &:first-of-type {
-                border-bottom-left-radius: 4px;
-                border-top-left-radius: 4px;
-            }
-            &:last-of-type {
-                border-bottom-right-radius: 4px;
-                border-top-right-radius: 4px;
-            }
-            &:not(:first-of-type) {
-                border-left: 0;
-            }
-            &:not(:last-of-type) {
-                border-right: 0;
+            border-radius: 4px;
+            .table-head {
+                font-size: 80%;
+                font-weight: 300;
+                background-color: $background-color-title;
+                border: 1px solid $border-color;
+                padding: 4px 12px;
+                &:first-of-type {
+                    border-bottom-left-radius: 4px;
+                    border-top-left-radius: 4px;
+                }
+                &:last-of-type {
+                    border-bottom-right-radius: 4px;
+                    border-top-right-radius: 4px;
+                }
+                &:not(:first-of-type) {
+                    border-left: 0;
+                }
+                &:not(:last-of-type) {
+                    border-right: 0;
+                }
             }
         }
         .table-row {
             background-color: $background-color-light;
-            box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.08);
             &.clickable {
                 cursor: pointer;
             }

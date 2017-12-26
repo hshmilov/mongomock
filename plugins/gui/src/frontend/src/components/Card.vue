@@ -41,7 +41,7 @@
                 display: flex;
                 flex-flow: row;
                 .dropdown {
-                    margin-left: 8px;
+                    margin-left: 12px;
                     &:hover, &.show {
                         background-color: rgba(235, 233, 250, 0.6);
                         border-color: $color-theme-light;

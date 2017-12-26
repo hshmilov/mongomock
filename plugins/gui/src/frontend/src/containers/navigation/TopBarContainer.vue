@@ -139,6 +139,7 @@
                 text-align: center;
                 width: 240px;
                 flex-shrink: 0;
+                transition: all ease-in 0.2s;
                 .sidebartoggler {
                     color: $color-theme-light;
                     text-align: right;

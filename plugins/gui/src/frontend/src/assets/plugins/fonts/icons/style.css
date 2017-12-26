@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'axonius';
-  src:  url('fonts/axonius.eot?gr4kn');
-  src:  url('fonts/axonius.eot?gr4kn#iefix') format('embedded-opentype'),
-    url('fonts/axonius.ttf?gr4kn') format('truetype'),
-    url('fonts/axonius.woff?gr4kn') format('woff'),
-    url('fonts/axonius.svg?gr4kn#axonius') format('svg');
+  src:  url('axonius.eot?sl7o1e');
+  src:  url('axonius.eot?sl7o1e#iefix') format('embedded-opentype'),
+    url('axonius.ttf?sl7o1e') format('truetype'),
+    url('axonius.woff?sl7o1e') format('woff'),
+    url('axonius.svg?sl7o1e#axonius') format('svg');
   font-weight: normal;
   font-style: normal;
 }
@@ -71,6 +71,12 @@
 }
 .icon-tick:before {
   content: "\e906";
+}
+.icon-plus-square:before {
+  content: "\e910";
+}
+.icon-minus-square:before {
+  content: "\e911";
 }
 .icon-play:before {
   content: "\e90e";

@@ -11,15 +11,18 @@
                 <td>
                     <!-- Check for connecting to server and uncheck to stop connection -->
                     <!--<checkbox class="mr-2"></checkbox>-->
-                    <a @click.stop="$emit('delete', record['id'])"><i class="icon-trash-o"></i></a>
                 </td>
                 <generic-table-cell class="table-data" v-for="field in fields" v-if="!field.hidden" :key="field.path"
-                                    :value="record[field.path]" :type="field.type"></generic-table-cell>
+                :value="record[field.path]" :type="field.type"></generic-table-cell>
+                <td class="table-data action">
+                    <a @click.stop="$emit('delete', record['id'])"><i class="icon-minus-square"></i></a>
+                </td>
             </tr>
             <tr class="table-row" @click="$emit('select', 'new')">
                 <!-- Entire row for clicking in order to add a newly configured row -->
                 <td></td>
-                <td class="table-data table-btn" :colspan="fields.length">{{ addNewDataLabel }}</td>
+                <td class="table-data table-btn" :colspan="fields.length">{{ addNewDataLabel }}<i
+                        class="icon-plus-square"></i></td>
             </tr>
         </tbody>
     </table>
@@ -45,14 +48,19 @@
         .table-row {
             .table-head {
                 font-size: 12px;
-                padding: 2px 16px;
+                padding: 2px 8px;
                 font-weight: 300;
             }
             .table-data {
                 font-size: 14px;
-                padding: 2px 16px;
                 border-top: 1px solid $border-color;
                 border-bottom: 1px solid $border-color;
+                padding: 2px 8px;
+                &.action {
+                    i {
+                        visibility: hidden;
+                    }
+                }
                 .status-icon {
                     font-size: 16px;
                 }
@@ -69,12 +77,21 @@
                 }
                 &.table-btn {
                     color: $color-disabled;
+                    i {
+                        float: right;
+                        margin-top: 2px;
+                    }
                 }
             }
             &:hover, &.active {
                 .table-data {
                     background-color: $background-color-hover;
                     cursor: pointer;
+                    &.action {
+                        i {
+                            visibility: visible;
+                        }
+                    }
                 }
             }
         }

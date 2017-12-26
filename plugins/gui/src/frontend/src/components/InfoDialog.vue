@@ -1,6 +1,6 @@
 <template>
-    <transition name="custom-classes-transition"
-                enter-active-class="animated fadeInRight" leave-active-class="animated fadeOutRight">
+    <transition name="custom-classes-transition" :duration="800"
+                enter-active-class="animated slideInRight" leave-active-class="animated slideOutRight">
         <div class="info-dialog d-flex flex-column">
             <div class="info-dialog-header p-3">
                 <span class="info-dialog-close" @click="$emit('close')">x</span>
@@ -44,13 +44,20 @@
         .info-dialog-header {
             background-color: $color-theme-dark;
             height: 80px;
-            color: $color-light;
+            line-height: 80px;
+            color: $color-theme-light;
             position: relative;
             font-size: 110%;
             .info-dialog-close {
                 cursor: pointer;
                 float: right;
-                line-height: 12px;
+                font-size: 18px;
+                line-height: 18px;
+                margin: -8px;
+                color: $color-btn;
+                &:hover {
+                    color: $color-light;
+                }
             }
         }
         .info-dialog-body {

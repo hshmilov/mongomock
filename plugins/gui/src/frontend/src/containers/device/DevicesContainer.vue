@@ -1,12 +1,7 @@
 <template>
     <scrollable-page title="devices">
-        <card title="query" class="devices-query">
-            <span slot="cardActions">
-                <!-- Actions for the header of the query card and apply to currently filled query -->
-                <action-bar :actions="[
-                    { title: 'Save Query', handler: openSaveQuery }
-                ]"></action-bar>
-            </span>
+        <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
+        <card class="devices-query">
             <template slot="cardContent">
                 <!-- Dropdown component for selecting a query --->
                 <dropdown-menu animateClass="scale-up right">
@@ -23,7 +18,7 @@
                                   @input="extractValue()" @submit="executeQuery()"></generic-form>
                 </dropdown-menu>
                 <!-- Button controlling the execution of currently filled query -->
-                <a class="btn" @click="executeQuery()">go</a>
+                <a class="btn btn-adjoined" @click="executeQuery()">go</a>
             </template>
         </card>
         <card :title="`devices (${device.deviceList.data.length})`" class="devices-list">
@@ -43,7 +38,7 @@
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
             </div>
-            <div slot="cardContent">
+            <div slot="cardContent" class="info-dialog-container">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
                                  :fields="deviceFields" :filter="query.currentQuery"
@@ -272,6 +267,9 @@
 				if (!deviceId) { return }
 				this.fetchDevice(deviceId)
                 this.deviceInfoDialog.title = this.deviceById[deviceId]['adapters.data.name']
+                if (!this.deviceInfoDialog.title) {
+					this.deviceInfoDialog.title = this.deviceById[deviceId]['adapters.data.hostname']
+                }
 				this.deviceInfoDialog.open = true
 			},
             closeQuickView() {
@@ -299,9 +297,6 @@
                 > .dropdown-toggle {
                     padding-right: 0;
                     padding-left: 0;
-                    &:after {
-                        margin-top: 16px;
-                    }
                     .form-control {
                         border-top-right-radius: 0;
                         border-bottom-right-radius: 0;
@@ -339,35 +334,9 @@
                 border-bottom: 1px solid $border-color;
             }
         }
-    }
-
-    .devices-query, .devices-list {
-        .dropdown {
-            border: 1px solid $border-color;
-            border-radius: 4px;
-            .dropdown-toggle {
-                cursor: pointer;
-                font-size: 80%;
-                padding-right: 4px;
-                padding-left: 4px;
-                i, img {
-                    height: 24px;
-                    margin-right: 24px;
-                    margin-top: 2px;
-                    font-size: 18px;
-                    vertical-align: middle;
-                    line-height: 28px;
-                }
-                &:after {
-                    position: absolute;
-                    margin-right: 8px;
-                    margin-top: 12px;
-                    top: 0;
-                    right: 0;
-                    border-top: .5em solid;
-                    border-right: .5em solid transparent;
-                    border-left: .5em solid transparent;
-                }
+        .dropdown-toggle {
+            .svg-icon, i {
+                margin-right: 30px;
             }
         }
     }

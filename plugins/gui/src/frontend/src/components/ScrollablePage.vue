@@ -11,6 +11,7 @@
                     <!-- Adding currently viewed page without a link -->
                     {{breadcrumbs[breadcrumbs.length - 1].title}}
                 </h2>
+                <slot name="pageAction"></slot>
             </div>
             <div class="page-body">
                 <slot></slot>
@@ -48,6 +49,7 @@
             padding-top: 60px;
         }
         .page-header {
+            display: flex;
             height: 36px;
             width: 100%;
             padding: 12px 24px;
@@ -55,11 +57,22 @@
             z-index: 100;
             color: $color-text-title;
             h2 {
+                flex: 1 0 auto;
                 font-weight: 200;
                 letter-spacing: 1px;
                 margin-bottom: 0;
                 vertical-align: middle;
                 line-height: 24px;
+                display: inline-block;
+            }
+            .action {
+                float: right;
+                font-size: 12px;
+                text-transform: none;
+                color: $color-info;
+                &:hover {
+                    color: $color-theme-light;
+                }
             }
         }
         .page-body {

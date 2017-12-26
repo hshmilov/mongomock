@@ -11,7 +11,7 @@
             <template v-else><span>{{(index? ', ': '') + item}}</span></template>
             <div v-if="names">{{ names[item] }}</div>
         </div>
-        <div v-if="data.length > limit" class="list-total">({{ data.length - limit }} more)</div>
+        <div v-if="data.length > limit" class="list-total">...</div>
     </div>
 </template>
 

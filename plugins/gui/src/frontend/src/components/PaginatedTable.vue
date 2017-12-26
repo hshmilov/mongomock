@@ -219,7 +219,7 @@
 
     .dataTables_wrapper {
         overflow-x: hidden;
-        padding-top: 10px;
+        padding: 12px;
         .spinner-container {
             border-bottom-left-radius: 4px;
             border-bottom-right-radius: 4px;
@@ -268,6 +268,7 @@
         border-collapse: separate;
         border-spacing: 0;
         overflow-x: auto;
+        font-size: 14px;
         .table-head {
             border: 0;
             text-transform: capitalize;
@@ -293,7 +294,10 @@
             }
             .table-row-data {
                 padding: 8px;
-                border-bottom: 1px solid $border-color;
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
                 &:first-of-type {
                     border-left: 1px solid $border-color;
                 }
@@ -333,8 +337,8 @@
                 }
             }
         }
-        .table-row:first-of-type:not(:hover):not(.active) .table-row-data {
-            border-top: 1px solid $border-color;
+        .table-row:last-of-type:not(:hover):not(.active) .table-row-data {
+            border-bottom: 1px solid $border-color;
         }
     }
 

@@ -89,6 +89,32 @@
                 }
             }
         }
+        .dropdown-toggle {
+            cursor: pointer;
+            font-size: 80%;
+            padding-right: 4px;
+            padding-left: 4px;
+            i, .svg-icon {
+                height: 24px;
+                margin-top: 2px;
+                font-size: 18px;
+                vertical-align: middle;
+                line-height: 28px;
+            }
+            &:after {
+                position: absolute;
+                margin: 6px 12px;
+                top: 0;
+                right: 0;
+                width: 12px;
+                height: 12px;
+                border-top: 1px solid;
+                border-left: 1px solid;
+                border-right: 0;
+                transform: rotate(225deg);
+                transition: transform 0.2s;
+            }
+        }
         .scale-up {
             -webkit-transition: all 0.3s ease;
             transition: all 0.3s ease;
@@ -103,5 +129,9 @@
         &.show>.scale-up {
             transform: scale(1);
         }
+    }
+    .show .dropdown-toggle:after {
+        transform: rotate(45deg);
+        margin: 12px 12px;
     }
 </style>
