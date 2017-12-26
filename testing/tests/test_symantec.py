@@ -1,3 +1,4 @@
+import pytest
 from services.adapters.symantec_service import SymantecService, symantec_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
@@ -32,6 +33,6 @@ class TestSymantecAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @property
+    @pytest.mark.skip
     def test_fetch_devices(self):
         pass

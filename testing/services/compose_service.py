@@ -6,35 +6,33 @@ from test_helpers.exceptions import ComposeException
 
 
 class ComposeService(services.axon_service.AxonService):
-    def __init__(self, compose_file_path, container_name, should_start=True, *vargs, **kwargs):
+    def __init__(self, compose_file_path, container_name, *vargs, **kwargs):
         super().__init__(*vargs, **kwargs)
         self._compose_file_path = compose_file_path
         self.container_name = container_name
+        self.workdir = os.path.abspath(os.path.dirname(self._compose_file_path))
+        self.log_dir = os.path.abspath(os.path.join("..", "logs", self.container_name))
 
-        if should_start:
-            self.start()
-
-        self.log_dir = os.path.join("..", "logs", self.container_name)
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
     def start(self):
-        self.stop(should_delete=False)
-        subprocess.check_call(['docker-compose', 'up', '-d'],
-                              cwd=os.path.dirname(self._compose_file_path))
+        logsfile = os.path.join(self.log_dir, "{0}_docker_err.log".format(self.container_name))
+        subprocess.check_call(['docker-compose', 'up', '-d'], cwd=self.workdir)
+        # redirect logs to logfile. Make sure redirection lives as long as process lives
+        if os.name == 'nt':  # windows
+            os.system(f"cd {self.workdir}; start cmd docker-compose logs -f >> {logsfile} ")
+        else:  # good stuff
+            os.system(f"cd {self.workdir}; docker-compose logs -f >> {logsfile} &")
 
-    def stop(self, should_delete=True):
-        stdlog = open(os.path.join("..", "logs", "{0}_docker_std_logs.log".format(self.container_name)), "a")
-        errlog = open(os.path.join("..", "logs", "{0}_docker_err_logs.log".format(self.container_name)), "a")
-
-        subprocess.call(['docker-compose', 'logs'],
-                        cwd=os.path.dirname(self._compose_file_path), stderr=errlog, stdout=stdlog)
-        subprocess.call(['docker-compose', 'stop'],
-                        cwd=os.path.dirname(self._compose_file_path))
+    def stop(self, should_delete=False):
+        # killing the container is faster than down. Then we issue down to reverse any effects up had
+        subprocess.call(['docker-compose', 'kill', '-S', 'SIGINT'], cwd=self.workdir,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.call(['docker-compose', 'down'], cwd=self.workdir)
 
         if should_delete:
-            subprocess.call(['docker-compose', 'down'],
-                            cwd=os.path.dirname(self._compose_file_path))
+            subprocess.call(['docker-compose', 'down', "--volumes"], cwd=self.workdir)
 
     def start_and_wait(self):
         """

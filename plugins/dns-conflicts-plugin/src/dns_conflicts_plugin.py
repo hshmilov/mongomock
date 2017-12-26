@@ -133,7 +133,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
         except NoIpFoundError:
             pass
 
-        self.logger.info(f"found ips {available_ips} for device f{full_device_name}")
+        self.logger.info(f"found ips {available_ips} for device {full_device_name}")
 
         if len(available_ips) > 1:
             # If we have more than one key in available_ips that means that this device got two different IP's

@@ -30,7 +30,7 @@ class AxoniusService(object):
 
     def clear_all_devices(self):
         aggregator_unique_name = self.aggregator.unique_name
-        self.aggregator.stop()
+        self.aggregator.stop(should_delete=False)
         self.db.client.drop_database(aggregator_unique_name)
         self.aggregator.start_and_wait()
 
@@ -66,7 +66,11 @@ class AxoniusService(object):
         try_until_not_thrown(max_tries, 0.20, assert_device_inserted)
 
     def restart_plugin(self, plugin):
-        plugin.stop()
+        """
+        :param plugin: plugint to restart
+        note: restarting plugin does not delete its volume
+        """
+        plugin.stop(should_delete=False)
         plugin.start()
         plugin.wait_for_service()
         assert plugin.is_plugin_registered(self.core)

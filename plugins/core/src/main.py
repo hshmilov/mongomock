@@ -235,8 +235,7 @@ class Core(PluginBase):
             plugin_type = data['plugin_type']
             plugin_port = data['plugin_port']
 
-            self.logger.info(
-                "Got registration request from {0}".format(plugin_name))
+            self.logger.info(f"Got registration request : {data} from {request.remote_addr}")
 
             relevant_doc = None
 

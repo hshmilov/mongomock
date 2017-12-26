@@ -268,7 +268,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         # We are assuming that the dc is the DNS server
         full_device_name = device_name
 
-        err = f"Resolving {full_device_name} f{client_config}"
+        err = f"Resolving {full_device_name} {client_config}"
         try:
             dns_server = None
             return query_dns(full_device_name, timeout, dns_server)
