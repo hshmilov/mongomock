@@ -1,7 +1,6 @@
+import pytest
 from services.axonius_service import get_service
 from test_helpers.utils import check_conf
-import time
-import random
 
 
 class AdapterTestBase(object):
@@ -33,7 +32,6 @@ class AdapterTestBase(object):
         raise NotImplemented
 
     def test_adapter_is_up(self):
-        time.sleep(random.randrange(1, 30))  # avoids requests storm
         assert self.adapter_service.is_up()
 
     def test_adapter_responds_to_schema(self):
@@ -45,12 +43,12 @@ class AdapterTestBase(object):
     def test_check_registration(self):
         assert self.adapter_service.is_plugin_registered(self.axonius_service.core)
 
-    def test_restart(self):
-        self.axonius_service.restart_plugin(self.adapter_service)
-
     def test_fetch_devices(self):
         self.axonius_service.add_client_to_adapter(
             self.adapter_service, self.some_client_details)
         self.axonius_service.assert_device_aggregated(
             self.adapter_service, self.some_client_id, self.some_device_id)
         self.axonius_service.db.client[self.adapter_service.unique_name].drop_collection('clients')
+
+    def test_restart(self):
+        self.axonius_service.restart_plugin(self.adapter_service)
