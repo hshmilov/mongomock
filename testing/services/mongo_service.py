@@ -11,6 +11,7 @@ class MongoService(services.compose_service.ComposeService):
                  container_name="mongo",
                  *vargs, **kwargs):
         super().__init__(compose_file_path, container_name=container_name, *vargs, **kwargs)
+        self.client = None
         self.endpoint = endpoint
         self.connect()
 

@@ -1,5 +1,7 @@
 from services.axonius_service import get_service
 from test_helpers.utils import check_conf
+import time
+import random
 
 
 class AdapterTestBase(object):
@@ -8,7 +10,7 @@ class AdapterTestBase(object):
     If one wants to skip or modify a test he can do that by overriding the corresponding method.
     If one wants to skip a test - he can do that by overriding and marking the test with @pytest.mark.skip
     """
-    axonius_service = get_service(should_start=False)
+    axonius_service = get_service()
 
     @property
     def adapter_service(self):
@@ -31,6 +33,7 @@ class AdapterTestBase(object):
         raise NotImplemented
 
     def test_adapter_is_up(self):
+        time.sleep(random.randrange(1, 30))  # avoids requests storm
         assert self.adapter_service.is_up()
 
     def test_adapter_responds_to_schema(self):

@@ -34,7 +34,7 @@ DEVICE_ID_FOR_CLIENT_2 = 'CN=DESKTOP-GO8PIUL,CN=Computers,DC=TestSecDomain,DC=te
 class TestAdAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return AdService(should_start=False)
+        return AdService()
 
     @property
     def adapter_name(self):
@@ -70,14 +70,14 @@ class TestAdAdapter(AdapterTestBase):
 
     def test_ip_resolving(self, dns_conflicts_fixture):
         self.adapter_service.resolve_ip()
+        self.axonius_service.trigger_aggregator()
 
         def assert_ip_resolved():
-            self.axonius_service.trigger_aggregator()
             interfaces = self.axonius_service.get_device_network_interfaces(self.adapter_service.unique_name,
                                                                             DEVICE_ID_FOR_CLIENT_1)
             assert len(interfaces) > 0
 
-        try_until_not_thrown(10, 0.5, assert_ip_resolved)
+        try_until_not_thrown(50, 5, assert_ip_resolved)
 
         self.check_dns_conflicts(dns_conflicts_fixture)
 
@@ -88,4 +88,4 @@ class TestAdAdapter(AdapterTestBase):
         def has_ip_conflict_tag():
             assert len(self.axonius_service.get_devices_with_condition({"tags.tagname": "IP_CONFLICT"})) > 0
 
-        try_until_not_thrown(30, 0.5, has_ip_conflict_tag)
+        try_until_not_thrown(100, 5, has_ip_conflict_tag)

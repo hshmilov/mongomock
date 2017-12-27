@@ -25,12 +25,22 @@ echo "Finished unitests"
 
 echo "Start integration tests"
 cd ./testing
-timeout 900 python3 run_tests.py -x -s -v --showlocals --junitxml=reporting/integ_report.xml tests $@
+timeout 900 python3 run_tests.py tests $@
 if [ $? -ne 0 ]
 then
   echo "Integration tests failed"
   exit 1
 fi
+cd ..
 echo "Finished integration tests"
 
+echo "Start parallel tests"
+cd ./testing
+timeout 900 python3 run_parallel_tests.py parallel_tests/test_\*.py
+if [ $? -ne 0 ]
+then
+  echo "parallel tests failed"
+  exit 1
+fi
+echo "Finished parallel tests"
 cd ..

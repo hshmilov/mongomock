@@ -41,10 +41,8 @@ def invoke_plugin_by_name(plugin_name):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Axonius system startup')
     parser.add_argument('system', choices=['up', 'down'])
-    parser.add_argument('--plugins', metavar='N', type=str, nargs='*',
-                        help='Plugins to activate')
-    parser.add_argument('--adapters', metavar='N', type=str, nargs='*',
-                        help='Plugins to activate')
+    parser.add_argument('--plugins', metavar='N', type=str, nargs='*', help='Plugins to activate')
+    parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Plugins to activate')
 
     try:
         args = parser.parse_args()

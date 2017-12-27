@@ -7,10 +7,10 @@ from services.core_service import CoreService
 from services.mongo_service import MongoService
 
 
-def get_service(should_start=True):
-    mongo = MongoService(should_start=should_start)
-    core = CoreService(should_start=should_start)
-    aggregator = AggregatorService(should_start=should_start)
+def get_service():
+    mongo = MongoService()
+    core = CoreService()
+    aggregator = AggregatorService()
     return AxoniusService(mongo, core, aggregator)
 
 
@@ -19,6 +19,22 @@ class AxoniusService(object):
         self.db = db
         self.core = core
         self.aggregator = aggregator
+
+    def stop(self, should_delete):
+        self.aggregator.stop(should_delete)
+        self.core.stop(should_delete)
+        self.db.stop(should_delete)
+
+    def start_and_wait(self):
+        # Start in parallel
+        self.db.start()
+        self.core.start()
+        self.aggregator.start()
+
+        # wait for all
+        self.db.wait_for_service()
+        self.core.wait_for_service()
+        self.aggregator.wait_for_service()
 
     def get_devices_with_condition(self, cond):
         cursor = self.db.client[self.aggregator.unique_name]['devices_db'].find(cond)
@@ -63,7 +79,7 @@ class AxoniusService(object):
             devices = self.get_device_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
-        try_until_not_thrown(max_tries, 0.20, assert_device_inserted)
+        try_until_not_thrown(max_tries, 5, assert_device_inserted)
 
     def restart_plugin(self, plugin):
         """
@@ -90,4 +106,4 @@ class AxoniusService(object):
             assert self.aggregator.is_up()
             assert self.aggregator.is_plugin_registered(self.core)
 
-        try_until_not_thrown(60, 0.5, assert_aggregator_registered)
+        try_until_not_thrown(30, 1, assert_aggregator_registered)

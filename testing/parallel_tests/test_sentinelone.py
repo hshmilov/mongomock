@@ -14,7 +14,7 @@ SOME_DEVICE_ID = '5a2d57293be1ee5df1126a75'  # test-sentinelone-linux
 class TestSentinelOneAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return SentinelOneService(should_start=False)
+        return SentinelOneService()
 
     @property
     def adapter_name(self):

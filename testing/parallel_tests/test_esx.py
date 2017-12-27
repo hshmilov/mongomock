@@ -30,7 +30,7 @@ SOME_DEVICE_ID = '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'
 class TestEsxAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return EsxService(should_start=False)
+        return EsxService()
 
     @property
     def adapter_name(self):
@@ -46,7 +46,6 @@ class TestEsxAdapter(AdapterTestBase):
 
     def test_fetch_devices(self):
         axonius_service = self.axonius_service
-        axonius_service.clear_all_devices()
 
         for client, some_device_id in client_details:
             client_id = "{}/{}".format(client['host'], client['user'])

@@ -14,7 +14,7 @@ splunk_details = {
 class TestSplunkSymantecAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return SplunkSymantecService(should_start=False)
+        return SplunkSymantecService()
 
     @property
     def adapter_name(self):

@@ -1,5 +1,5 @@
+import pytest
 from services.adapters.aws_service import AwsService, aws_fixture
-
 from test_helpers.adapter_test_base import AdapterTestBase
 
 client_details = {
@@ -14,7 +14,7 @@ SOME_DEVICE_ID = 'i-0ec91cae8a42be974'
 class TestAwsAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return AwsService(should_start=False)
+        return AwsService()
 
     @property
     def adapter_name(self):

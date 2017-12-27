@@ -220,6 +220,7 @@ $RECYCLE.BIN/
 .idea/**/sqlDataSources.xml
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
+.idea/codeStyles
 
 # Gradle:
 .idea/**/gradle.xml

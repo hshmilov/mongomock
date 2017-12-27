@@ -15,7 +15,7 @@ def try_until_not_thrown(times, sleep_period, runnable, *args, **kwargs):
 
 
 def populate_test_devices(axonius_fixture, ad_fixture):
-    from tests.test_ad import ad_client1_details, DEVICE_ID_FOR_CLIENT_1
+    from parallel_tests.test_ad import ad_client1_details, DEVICE_ID_FOR_CLIENT_1
 
     client_id = ad_client1_details['dc_name']
     assert ad_fixture.is_up()
@@ -25,7 +25,7 @@ def populate_test_devices(axonius_fixture, ad_fixture):
 
 
 def populate_test_devices_esx(axonius_fixture, esx_fixture):
-    from tests.test_esx import client_details, SOME_DEVICE_ID
+    from parallel_tests.test_esx import client_details, SOME_DEVICE_ID
 
     client = client_details[0][0]
     assert esx_fixture.is_up()

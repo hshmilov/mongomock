@@ -15,7 +15,7 @@ SOME_DEVICE_ID = 'DEDB73460A0002AB70C44D039ADC2249'  # our ESXmachine windows8
 class TestSymantecAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return SymantecService(should_start=False)
+        return SymantecService()
 
     @property
     def adapter_name(self):

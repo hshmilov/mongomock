@@ -15,7 +15,7 @@ splunk_details = {
 class TestSplunkNexposeAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return SplunkNexposeService(should_start=False)
+        return SplunkNexposeService()
 
     @property
     def adapter_name(self):

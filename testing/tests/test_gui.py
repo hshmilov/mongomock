@@ -1,3 +1,4 @@
+import pytest
 from services.gui_service import gui_fixture
 from services.adapters.ad_service import ad_fixture
 from test_helpers import utils
@@ -50,7 +51,7 @@ def test_tags(axonius_fixture, gui_fixture, ad_fixture):
         def create_multiple_tags_on_one_device():
             tag_test_device = gui_fixture.get_devices().json()[2]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
-            test_tags = ['testing_is_awesome', 'our_ci_is_the_shit']
+            test_tags = ['testing_is_awesome', 'our_ci_cures_cancer']
             gui_fixture.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': test_tags})
             fresh_device = gui_fixture.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 2
@@ -91,7 +92,7 @@ def test_tags(axonius_fixture, gui_fixture, ad_fixture):
         def remove_multiple_tags():
             tag_test_device = gui_fixture.get_devices().json()[2]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
-            test_tag_value = ['removing_tags_are awesome', 'our_ci_is_the_shit']
+            test_tag_value = ['removing_tags_are awesome', 'our_ci_cures_cancer']
             gui_fixture.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': test_tag_value})
             fresh_device = gui_fixture.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 2

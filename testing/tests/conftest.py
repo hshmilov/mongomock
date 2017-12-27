@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 @pytest.fixture(scope="session", autouse=True)
 def axonius_fixture(request):
-    service = get_service(should_start=True)
+    service = get_service()
 
     initialize_fixture(request, service.db)
     initialize_fixture(request, service.core)

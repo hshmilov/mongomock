@@ -1,5 +1,5 @@
+import pytest
 from services.adapters.epo_service import EpoService, epo_fixture
-
 from test_helpers.adapter_test_base import AdapterTestBase
 
 client_details = {
@@ -17,7 +17,7 @@ SOME_DEVICE_ID = '6D57ECC5-88FA-4B77-BB7C-76D1EB7AEE4B'
 class TestEpoAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return EpoService(should_start=False)
+        return EpoService()
 
     @property
     def adapter_name(self):
