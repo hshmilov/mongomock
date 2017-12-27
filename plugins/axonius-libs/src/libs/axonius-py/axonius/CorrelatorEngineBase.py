@@ -98,6 +98,7 @@ class CorrelatorEngineBase(ABC):
 
         correlations_with_unavailable_devices = []
 
+        self.logger.info(f"Correlating {len(devices)} devices")
         for result in itertools.chain(self._preprocess_devices(devices), self._raw_correlate(devices)):
             if not isinstance(result, CorrelationResult):
                 yield result  # only post process correlation results

@@ -1,4 +1,4 @@
-from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius.PluginBase import PluginBase, add_rule
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -6,38 +6,24 @@ from datetime import timedelta, datetime
 import time
 from axonius.dns_utils import query_dns, NoIpFoundError
 import json
-from axonius.mixins.Activatable import Activatable, ActiveStates
-from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
+from axonius.mixins.Activatable import Activatable
 import threading
 
 
 class DnsConflictsPlugin(PluginBase, Activatable):
-    def _get_activatable_state(self) -> ActiveStates:
+    def _is_work_in_progress(self) -> bool:
 
         if self.resolve_lock.acquire(False):
             self.resolve_lock.release()
-        else:
-            return ActiveStates.InProgress
+            return False
+        return True
 
-        if self.scheduler.state == STATE_RUNNING:
-            return ActiveStates.Scheduled
+    def _stop_activatable(self):
+        self.scheduler.pause()
 
-        return ActiveStates.Disabled
-
-    def _stop(self):
-        try:
-            self.scheduler.pause()
-            return ""
-        except Exception as e:
-            return return_error(f"stop failed {e}")
-
-    def _start(self):
-        try:
-            self.scheduler.resume()
-            self.check_ip_conflict_now()
-            return ""
-        except Exception as e:
-            return return_error(f"start failed {e}")
+    def _start_activatable(self):
+        self.scheduler.resume()
+        self.check_ip_conflict_now()
 
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs)

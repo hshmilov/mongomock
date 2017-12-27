@@ -14,7 +14,8 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 
 from axonius.PluginBase import PluginBase, add_rule, return_error
 from axonius.ParsingUtils import beautiful_adapter_device_name
-from axonius.mixins.Activatable import Activatable, ActiveStates
+from axonius.mixins.Activatable import Activatable
+from axonius.mixins.Triggerable import Triggerable
 from flask import jsonify
 import exceptions
 from axonius.consts import AdapterConsts
@@ -42,7 +43,7 @@ def parsed_device_match_plugin(plugin_data, parsed_device):
         get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
 
 
-class AggregatorPlugin(PluginBase, Activatable):
+class AggregatorPlugin(PluginBase, Activatable, Triggerable):
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -67,53 +68,48 @@ class AggregatorPlugin(PluginBase, Activatable):
         self.tags_lock = threading.RLock()
 
         # Starting the managing thread
-        self._start()
+        self.start_activatable()
 
-    def _start(self):
-        if self._online_adapters_scheduler is None:
-            executors = {'default': ThreadPoolExecutor(10)}
-            self._online_adapters_scheduler = BackgroundScheduler(
-                executors=executors)
-            self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
-                                                    trigger=IntervalTrigger(
-                                                        seconds=60),
-                                                    next_run_time=datetime.now(),
-                                                    name='adapters_thread_manager',
-                                                    id='adapters_thread_manager',
-                                                    max_instances=1)
-            self._online_adapters_scheduler.start()
-            return ""
-        else:
-            return return_error("Already running", 412)
+    def _start_activatable(self):
+        assert self._online_adapters_scheduler is None, "Aggregator thinks we're already running but still got a " \
+                                                        "/start request "
 
-    def _stop(self):
-        if self._online_adapters_scheduler is not None:
-            with self.thread_manager_lock:
-                self._online_adapters_scheduler.shutdown(wait=True)
-                self._online_adapters_scheduler.remove_all_jobs()
-                self._online_adapters_scheduler = None
-                return ""
-        else:
-            return return_error("Not running", 412)
+        executors = {'default': ThreadPoolExecutor(1)}
+        self._online_adapters_scheduler = BackgroundScheduler(
+            executors=executors)
+        self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
+                                                trigger=IntervalTrigger(
+                                                    seconds=60),
+                                                next_run_time=datetime.now(),
+                                                name='adapters_thread_manager',
+                                                id='adapters_thread_manager',
+                                                max_instances=1)
+        self._online_adapters_scheduler.start()
 
-    def _get_activatable_state(self) -> ActiveStates:
-        if self._online_adapters_scheduler is None\
-                or not self._online_adapters_scheduler.running:
-            return ActiveStates.Disabled
+    def _stop_activatable(self):
+        assert self._online_adapters_scheduler is not None, "Aggregator thinks we're not running but still got a " \
+                                                            "/stop request "
+
+        self._online_adapters_scheduler.remove_all_jobs()
+        self._online_adapters_scheduler.shutdown(wait=True)
+        self._online_adapters_scheduler = None
+
+    def _is_work_in_progress(self) -> bool:
+        assert self._online_adapters_scheduler is not None, "Aggregator isn't running"
 
         # if device_db_lock is taken, it means we're fetching devices
         if self.device_db_lock.acquire(False):
             self.device_db_lock.release()
         else:
-            return ActiveStates.InProgress
+            return True
 
         # if thread_manager_lock is taken, it means we're fetching adapters
         if self.thread_manager_lock.acquire(False):
             self.thread_manager_lock.release()
         else:
-            return ActiveStates.InProgress
+            return True
 
-        return ActiveStates.Scheduled
+        return False
 
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.
@@ -164,17 +160,22 @@ class AggregatorPlugin(PluginBase, Activatable):
         """
         return jsonify(self.devices_db.find_one({"internal_axon_id": device_id}))
 
-    @add_rule("query_devices", methods=["POST"])
-    def query_devices(self):
-        self._adapters_thread_manager()
+    def _triggered(self, post_json):
+        with self.thread_manager_lock:
+            current_adapters = requests.get(
+                self.core_address + '/register')
 
-        # Than we need to run other jobs (that was maybe created just now)
-        jobs = self._online_adapters_scheduler.get_jobs()
-        for job in jobs:
-            self.logger.info("resetting time for {0}".format(job.name))
-            job.modify(next_run_time=datetime.now())
-        self.online_plugins_scheduler.wakeup()
-        return ""
+            assert current_adapters.status_code == 200, "Error getting devices from core. reason:" + \
+                                                        f"{str(current_adapters.status_code)}, " + \
+                                                        str(current_adapters.content)
+
+            current_adapters = current_adapters.json()
+            # let's add jobs for all adapters
+            for adapter_name, adapter in current_adapters.items():
+                if adapter['plugin_type'] != "Adapter":
+                    # This is not an adapter, not running
+                    continue
+                self._save_devices_from_adapter(adapter['plugin_name'], adapter['plugin_unique_name'])
 
     def _adapters_thread_manager(self):
         """ Function for monitoring other threads activity.

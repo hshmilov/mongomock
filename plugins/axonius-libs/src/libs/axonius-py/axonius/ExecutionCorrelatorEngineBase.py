@@ -137,6 +137,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                 cmd = [_default_shell_command(adapter_cmd.get(os_type)) for
                        adapter_cmd in adapters_cmds.values()]
             except UnsupportedOS:
+                self.logger.info(f"Device {device['internal_axon_id']} has unsupported OS")
                 continue
             data_for_action = {
                 'shell_command': {os_type: cmd}

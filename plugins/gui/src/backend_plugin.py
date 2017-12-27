@@ -1,23 +1,20 @@
 """
 GUIPlugin.py: Backend services for the web app
 """
-
-__author__ = "Mark Segal"
-
+from axonius import PluginExceptions
 from axonius.PluginBase import PluginBase, add_rule, return_error
 import tarfile
 import io
 from datetime import date
-from flask import jsonify, request, session, after_this_request, send_from_directory
+from flask import jsonify, request, session, after_this_request
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
 import requests
 import configparser
 import pymongo
 from bson import SON, ObjectId
-import os
 import json
-from datetime import timedelta, datetime
+from datetime import datetime
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -594,7 +591,25 @@ class BackendPlugin(PluginBase):
                 client_to_add = request.get_json(silent=True)
                 if client_to_add is None:
                     return return_error("Invalid client", 400)
+
+                # adding client to specific adapter
                 response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
+                if response.status_code != 200:
+                    # failed, return immediately
+                    return response.text, response.status_code
+
+                # if we managed to add the client, trigger aggregator to aggregate right now
+                aggregator_name = self._aggregator_plugin_unique_name
+                if aggregator_name is None:
+                    # this is optional, so we don't have @requires_aggregator()
+                    # if we don't have aggregator, try to get aggregator again
+                    try:
+                        aggregator_name = self.get_plugin_by_name('aggregator')['plugin_unique_name']
+                    except PluginExceptions.PluginNotFoundException:
+                        pass
+                if aggregator_name is not None:
+                    # if there's no aggregator, that's fine
+                    self.request_remote_plugin("trigger", aggregator_name, method='post')
                 return response.text, response.status_code
 
     @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'],

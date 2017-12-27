@@ -5,16 +5,15 @@ from datetime import datetime
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from flask import request
 from namedlist import namedlist
 
-from axonius.PluginBase import PluginBase, return_error, add_rule
-from axonius.mixins.Activatable import Activatable, ActiveStates
+from axonius.PluginBase import PluginBase
+from axonius.mixins.Activatable import Activatable
+from axonius.mixins.Triggerable import Triggerable
+from axonius.mixins.Feature import Feature
 
 # the reason for these data types is that it allows separation of the code that figures out correlations
 # and code that links devices (aggregator) or sends notifications.
-from axonius.mixins.Feature import Feature
-
 """
 Represent a link that should take place.
 
@@ -52,10 +51,12 @@ def figure_actual_os(adapters):
     :param adapters: list
     :return:
     """
+
     def get_os_type(adapter):
         os = adapter.get('OS')
         if os is not None:
             return os.get('type')
+
     oses = list(set(get_os_type(adapter['data']) for adapter in adapters))
 
     if None in oses:
@@ -72,7 +73,7 @@ def figure_actual_os(adapters):
     raise OSTypeInconsistency(oses)  # some adapters disagree
 
 
-class CorrelatorBase(PluginBase, Activatable, Feature, ABC):
+class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -97,15 +98,14 @@ class CorrelatorBase(PluginBase, Activatable, Feature, ABC):
         if self._devices_filter is None:
             self._devices_filter = {}
 
-    def _start(self):
+    def _start_activatable(self):
         """
         Start the scheduler
         :return:
         """
         self._refresh_devices_filter()
 
-        if self._correlation_scheduler is not None:
-            return return_error("Correlation is already scheduled")
+        assert self._correlation_scheduler is None, "Correlation is already scheduled"
 
         executors = {'default': ThreadPoolExecutor(1)}
         self._correlation_scheduler = BackgroundScheduler(executors=executors)
@@ -117,61 +117,42 @@ class CorrelatorBase(PluginBase, Activatable, Feature, ABC):
                                             max_instances=1)
         self._correlation_scheduler.start()
 
-        return ""
-
-    def _stop(self):
+    def _stop_activatable(self):
         """
         Stop the scheduler
         :return:
         """
-        if self._correlation_scheduler is None:
-            return return_error("Not running", 412)
+        assert self._correlation_scheduler is not None, "Correlation is not running"
 
-        self._correlation_scheduler.shutdown()
+        self._correlation_scheduler.remove_all_jobs()
+        self._correlation_scheduler.shutdown(wait=True)
         self._correlation_scheduler = None
-        return ""
 
-    def _get_activatable_state(self) -> ActiveStates:
-        """
-        Get whether correlation is taking place, scheduled, or not scheduled.
-        :return:
-        """
+    def _is_work_in_progress(self) -> bool:
         if self._correlation_lock.acquire(False):
-            if self._correlation_scheduler is None:
-                state = ActiveStates.Disabled
-            else:
-                state = ActiveStates.Scheduled
             self._correlation_lock.release()
-        else:
-            state = ActiveStates.InProgress
-        return state
+            return False
+        return True
 
-    @add_rule('correlate', methods=['POST'])
-    def correlate(self):
+    def _triggered(self, post_json):
         """
         Returns any errors as-is.
         Post data is a list of axon-ids. Otherwise, will query DB-wise.
-        This should be used for "debugging purposes" or manual correlation (if needed for any reason)
-        with the benefit that any errors will be easily returned to the caller.
         :return:
         """
-        devices_to_correlate = request.get_json(silent=True)
-        if devices_to_correlate is not None:
-            devices_to_correlate = list(devices_to_correlate)
+        devices_to_correlate = None
+        if post_json is not None:
+            devices_to_correlate = list(post_json)
+        acquired = False
         try:
-            acquired = False
             if self._correlation_lock.acquire(False):
                 acquired = True
                 self.__correlate(devices_to_correlate)
             else:
-                return return_error("Correlation is already taking place, try again later", 400)
-        except Exception as e:
-            return return_error(f"Fatal error during correlations: {repr(e)}")
+                raise RuntimeError("Correlation is already taking place, try again later")
         finally:
             if acquired:
                 self._correlation_lock.release()
-
-        return ""
 
     def get_devices_from_ids(self, devices_ids=None):
         """
@@ -197,8 +178,10 @@ class CorrelatorBase(PluginBase, Activatable, Feature, ABC):
         :param devices_ids:
         :return:
         """
-        self.logger.info(f"Correlator {self.plugin_unique_name} started to correlate")
-        for result in self._correlate_with_lock(self.get_devices_from_ids(devices_ids)):
+        devices_to_correlate = self.get_devices_from_ids(devices_ids)
+        self.logger.info(
+            f"Correlator {self.plugin_unique_name} started to correlate {len(devices_to_correlate)} devices")
+        for result in self._correlate_with_lock(devices_to_correlate):
             if isinstance(result, WarningResult):
                 self.logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
                 self.create_notification(result.title, result.content, result.notification_type)

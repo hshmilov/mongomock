@@ -1,4 +1,6 @@
 import pytest
+from retrying import retry
+
 import services.plugin_service as plugin_service
 from services.plugin_service import API_KEY_HEADER
 import requests
@@ -10,11 +12,15 @@ class AggregatorService(plugin_service.PluginService):
                  container_name='aggregator', *vargs, **kwargs):
         super().__init__(compose_file_path, config_file_path, container_name, *vargs, **kwargs)
 
+    @retry(wait_fixed=3000,
+           stop_max_delay=60 * 3 * 1000)
     def query_devices(self):
         response = requests.post(
-            self.req_url + "/query_devices", headers={API_KEY_HEADER: self.api_key})
-        assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
-                                            f"{str(response.content)}"
+            self.req_url + "/trigger", headers={API_KEY_HEADER: self.api_key})
+
+        assert response.status_code == 200, \
+            f"Error in response: {str(response.status_code)}, " \
+            f"{str(response.content)}"
         return response
 
     def add_tag(self, tagname, unique_plugin_name, adapter_id):
@@ -52,4 +58,4 @@ class AggregatorService(plugin_service.PluginService):
         return response
 
     def is_up(self):
-        return super().is_up() and "Activatable" in self.get_supported_features()
+        return super().is_up() and {"Activatable", "Triggerable"}.issubset(self.get_supported_features())
