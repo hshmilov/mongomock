@@ -48,7 +48,6 @@ class AdapterTestBase(object):
             self.adapter_service, self.some_client_details)
         self.axonius_service.assert_device_aggregated(
             self.adapter_service, self.some_client_id, self.some_device_id)
-        self.axonius_service.db.client[self.adapter_service.unique_name].drop_collection('clients')
 
     def test_restart(self):
         self.axonius_service.restart_plugin(self.adapter_service)

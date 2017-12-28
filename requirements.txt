@@ -39,3 +39,4 @@ autopep8==1.3.3
 dnspython==1.15.0
 pyVmomi==6.5.0.2017.5.post1
 pyVim==0.0.21
+nexpose==0.1.7
