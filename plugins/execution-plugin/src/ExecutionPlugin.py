@@ -9,6 +9,7 @@ from bson.objectid import ObjectId
 import concurrent.futures
 
 from axonius.PluginBase import PluginBase, add_rule
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 PLUGIN_TYPE = 'execution_controller'
 
@@ -83,7 +84,7 @@ class ExecutionPlugin(PluginBase):
 
         try:
             for adapter_data in result['adapters']:
-                adapter_name = adapter_data['plugin_unique_name']
+                adapter_name = adapter_data[PLUGIN_UNIQUE_NAME]
                 # Currently adding all of the adapters
                 # TODO: Create a smart logic here (next version)
                 yield (adapter_name, adapter_data)
@@ -184,7 +185,7 @@ class ExecutionPlugin(PluginBase):
 
         # Updating the issuer plugin also
         to_request_params = {'action_id': action_id,
-                             'plugin_unique_name': self._actions_db[action_id]['issuer_unique_name'],
+                             PLUGIN_UNIQUE_NAME: self._actions_db[action_id]['issuer_unique_name'],
                              'method': 'POST',
                              'data': json.dumps(request_content)}
         threading.Thread(target=self.request_remote_plugin_thread,

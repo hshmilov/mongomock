@@ -7,6 +7,7 @@ from promise import Promise
 
 from axonius.CorrelatorBase import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os
 from axonius.CorrelatorEngineBase import CorrelatorEngineBase
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 """
 Timeout until stop waiting for execution results
@@ -114,7 +115,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
         all_adapters = {adapter_device['plugin_name']: adapter_device for adapter_device in all_adapter_devices}
 
         adapters_cmds = OrderedDict({
-            adapter['plugin_name']: self._get_remote_plugin_correlation_cmds(adapter['plugin_unique_name']) or {}
+            adapter['plugin_name']: self._get_remote_plugin_correlation_cmds(adapter[PLUGIN_UNIQUE_NAME]) or {}
             for adapter in all_adapters.values()
         })
 
@@ -211,7 +212,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
 
                 responder_plugin_device = next(adapter for
                                                adapter in associated_device['adapters']
-                                               if adapter['plugin_unique_name'] == responder_plugin_unique_name)
+                                               if adapter[PLUGIN_UNIQUE_NAME] == responder_plugin_unique_name)
                 responder_adapter_id = responder_plugin_device['data']['id']
                 yield CorrelationResult(
                     associated_adapter_devices=[(responder_plugin_unique_name, responder_adapter_id),

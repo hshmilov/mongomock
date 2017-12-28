@@ -11,6 +11,7 @@ from axonius.PluginBase import PluginBase
 from axonius.mixins.Activatable import Activatable
 from axonius.mixins.Triggerable import Triggerable
 from axonius.mixins.Feature import Feature
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 # the reason for these data types is that it allows separation of the code that figures out correlations
 # and code that links devices (aggregator) or sends notifications.
@@ -134,7 +135,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
             return False
         return True
 
-    def _triggered(self, post_json):
+    def _triggered(self, job_name, post_json):
         """
         Returns any errors as-is.
         Post data is a list of axon-ids. Otherwise, will query DB-wise.
@@ -162,7 +163,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
         :return:
         """
         with self._get_db_connection(True) as db:
-            aggregator_db = db[self.get_plugin_by_name('aggregator')['plugin_unique_name']]
+            aggregator_db = db[self.get_plugin_by_name('aggregator')[PLUGIN_UNIQUE_NAME]]
             if devices_ids is None:
                 return list(aggregator_db['devices_db'].find(self._devices_filter))
             else:

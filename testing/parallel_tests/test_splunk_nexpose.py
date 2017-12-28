@@ -35,7 +35,7 @@ class TestSplunkNexposeAdapter(AdapterTestBase):
 
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
-        self.axonius_service.aggregator.query_devices()
+        self.axonius_service.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
         devices_as_dict = self.adapter_service.devices()
         assert len(devices_as_dict) > 0
 

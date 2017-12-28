@@ -5,6 +5,7 @@ from funcy import pairwise
 
 from axonius.CorrelatorBase import CorrelationResult
 from axonius.CorrelatorEngineBase import CorrelatorEngineBase
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -75,7 +76,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                     if indexx <= indexy:
                         continue
                     if are_ips_compatible(x['data']['network_interfaces'], y['data']['network_interfaces']):
-                        yield CorrelationResult(associated_adapter_devices=[(x['plugin_unique_name'], x['data']['id']),
+                        yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
                                                                             (y['plugin_name'], y['data']['id'])],
                                                 data={
                                                     'Reason': 'They have the same OS, hostname and IPs'},

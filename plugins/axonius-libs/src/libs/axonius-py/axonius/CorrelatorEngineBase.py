@@ -4,6 +4,7 @@ import itertools
 from funcy import pairwise
 
 from axonius.CorrelatorBase import CorrelationResult, figure_actual_os, OSTypeInconsistency
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class CorrelatorEngineBase(ABC):
@@ -47,10 +48,10 @@ class CorrelatorEngineBase(ABC):
         # it's now assured that if two adapter_devices have the same plugin_name and id, they are consecutive.
         for a, b in pairwise(all_adapter_devices):
             if a['plugin_name'] == b['plugin_name'] and a['data']['id'] == b['data']['id']:
-                assert a['plugin_unique_name'] != b['plugin_unique_name'], \
-                    f"Two exact adapters were found, {a['plugin_unique_name']} and {b['plugin_unique_name']}"
-                yield CorrelationResult(associated_adapter_devices=[(a['plugin_unique_name'], a['data']['id']),
-                                                                    (b['plugin_unique_name'], b['data']['id'])],
+                assert a[PLUGIN_UNIQUE_NAME] != b[PLUGIN_UNIQUE_NAME], \
+                    f"Two exact adapters were found, {a[PLUGIN_UNIQUE_NAME]} and {b[PLUGIN_UNIQUE_NAME]}"
+                yield CorrelationResult(associated_adapter_devices=[(a[PLUGIN_UNIQUE_NAME], a['data']['id']),
+                                                                    (b[PLUGIN_UNIQUE_NAME], b['data']['id'])],
                                         data={
                                             'Reason': 'The same device is viewed ' +
                                                       'by two instances of the same adapter'},
@@ -136,7 +137,7 @@ class CorrelatorEngineBase(ABC):
                 correlation_base_axonius_device = next((axon_device for
                                                         axon_device in devices
                                                         if
-                                                        any(adapter_device['plugin_unique_name'] == first_name and
+                                                        any(adapter_device[PLUGIN_UNIQUE_NAME] == first_name and
                                                             adapter_device['data']['id'] == first_id for
                                                             adapter_device in axon_device['adapters'])), None)
                 if correlation_base_axonius_device is None:
@@ -147,7 +148,7 @@ class CorrelatorEngineBase(ABC):
                        in correlation_base_axonius_device['tags']):
                     continue
 
-                second_name = correlated_adapter_device_from_db['plugin_unique_name']
+                second_name = correlated_adapter_device_from_db[PLUGIN_UNIQUE_NAME]
                 result.associated_adapter_devices = ((first_name, first_id), (second_name, second_id))
 
             if result.associated_adapter_devices in correlations_done_already:

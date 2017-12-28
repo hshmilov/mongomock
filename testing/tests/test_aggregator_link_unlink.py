@@ -1,8 +1,8 @@
+import pytest
 from services.adapters.ad_service import ad_fixture
 from services.adapters.esx_service import esx_fixture
 from test_helpers import utils
-
-import pytest
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 def test_aggregator_is_up(axonius_fixture):
@@ -27,45 +27,45 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
     first_esx_device = next((d for d in devices_response if d['adapters'][0]['plugin_name'] == 'esx_adapter'), None)
     assert first_esx_device is not None, "No ESX device found"
 
-    axonius_fixture.aggregator.add_tag("ad_taggy", first_ad_device['adapters'][0]['plugin_unique_name'],
+    axonius_fixture.aggregator.add_tag("ad_taggy", first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME],
                                        first_ad_device['adapters'][0]['data']['id'])
     assert any(
         x['tags'] and x['tags'][0]['tagname'] == 'ad_taggy' and
-        x['adapters'][0]['plugin_unique_name'] == first_ad_device['adapters'][0]['plugin_unique_name'] and
+        x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
         x['adapters'][0]['data']['id'] == first_ad_device['adapters'][0]['data']['id']
         for x in axonius_fixture.get_devices_with_condition({})), "Tagging AD failed"
 
-    axonius_fixture.aggregator.add_tag("esx_taggy", first_esx_device['adapters'][0]['plugin_unique_name'],
+    axonius_fixture.aggregator.add_tag("esx_taggy", first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME],
                                        first_esx_device['adapters'][0]['data']['id'])
 
     assert any(
         x['tags'] and x['tags'][0]['tagname'] == 'esx_taggy' and
-        x['adapters'][0]['plugin_unique_name'] == first_esx_device['adapters'][0]['plugin_unique_name'] and
+        x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
         x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id']
         for x in axonius_fixture.get_devices_with_condition({})), "Tagging esx failed"
 
     axonius_fixture.aggregator.link({
-        first_ad_device['adapters'][0]['plugin_unique_name']: first_ad_device['adapters'][0]['data']['id'],
-        first_esx_device['adapters'][0]['plugin_unique_name']: first_esx_device['adapters'][0]['data']['id'],
+        first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME]: first_ad_device['adapters'][0]['data']['id'],
+        first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME]: first_esx_device['adapters'][0]['data']['id'],
     })
 
     devices_response = axonius_fixture.get_devices_with_condition({})
     assert not any(
         len(x['adapters']) == 1 and
-        (x['adapters'][0]['plugin_unique_name'] == first_ad_device['adapters'][0]['plugin_unique_name'] and
+        (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
          x['adapters'][0]['data']['id'] == first_ad_device['adapters'][0]['data']['id']) or
-        (x['adapters'][0]['plugin_unique_name'] == first_esx_device['adapters'][0]['plugin_unique_name'] and
+        (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
          x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id'])
         for x in devices_response), "Link didn't remove instance or 'old' device"
 
     linked_device = next((x for x in devices_response
                           if len(x['adapters']) == 2 and
-                          any(y['plugin_unique_name'] == first_ad_device['adapters'][0]['plugin_unique_name'] and
+                          any(y[PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
                               y['data']['id'] == first_ad_device['adapters'][0]['data']['id'] for y in
                               x['adapters'])
                           and
-                          any(y['plugin_unique_name'] == first_esx_device['adapters'][0][
-                              'plugin_unique_name'] and
+                          any(y[PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][
+                              PLUGIN_UNIQUE_NAME] and
                               y['data']['id'] == first_esx_device['adapters'][0]['data']['id'] for y in
                               x['adapters'])
 

@@ -70,7 +70,7 @@ class TestAdAdapter(AdapterTestBase):
 
     def test_ip_resolving(self, dns_conflicts_fixture):
         self.adapter_service.resolve_ip()
-        self.axonius_service.trigger_aggregator()
+        self.axonius_service.trigger_aggregator(self.adapter_service.unique_name)
 
         def assert_ip_resolved():
             interfaces = self.axonius_service.get_device_network_interfaces(self.adapter_service.unique_name,

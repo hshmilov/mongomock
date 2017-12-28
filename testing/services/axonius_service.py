@@ -6,6 +6,8 @@ from services.aggregator_service import AggregatorService
 from services.core_service import CoreService
 from services.mongo_service import MongoService
 
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+
 
 def get_service():
     mongo = MongoService()
@@ -50,21 +52,21 @@ class AxoniusService(object):
         self.db.client.drop_database(aggregator_unique_name)
         self.aggregator.start_and_wait()
 
-    def trigger_aggregator(self):
-        self.aggregator.query_devices()  # send trigger to agg to refresh devices
+    def trigger_aggregator(self, adapter_id):
+        self.aggregator.query_devices(adapter_id=adapter_id)  # send trigger to agg to refresh devices
 
     def add_client_to_adapter(self, adapter, client_details):
         adapter.add_client(client_details)
-        self.trigger_aggregator()
+        self.trigger_aggregator(adapter.unique_name)
 
     def get_device_network_interfaces(self, adapter_name, device_id):
         device = self.get_device_by_id(adapter_name, device_id)
         adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if
-                              adapter_device['plugin_unique_name'] == adapter_name)
+                              adapter_device[PLUGIN_UNIQUE_NAME] == adapter_name)
         return adapter_device['data']['network_interfaces']
 
-    def assert_device_aggregated(self, adapter, client_id, some_device_id, max_tries=60):
-        self.aggregator.query_devices()  # send trigger to agg to refresh devices
+    def assert_device_aggregated(self, adapter, client_id, some_device_id, max_tries=30):
+        self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
         devices_as_dict = adapter.devices()
         assert client_id in devices_as_dict
 
@@ -79,7 +81,7 @@ class AxoniusService(object):
             devices = self.get_device_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
-        try_until_not_thrown(max_tries, 5, assert_device_inserted)
+        try_until_not_thrown(max_tries, 10, assert_device_inserted)
 
     def restart_plugin(self, plugin):
         """

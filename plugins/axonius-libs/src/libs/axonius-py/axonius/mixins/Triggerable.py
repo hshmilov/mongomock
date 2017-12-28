@@ -39,7 +39,7 @@ class Triggerable(Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__trigger_lock = Lock()
-        self.__state = TriggerStates.Idle
+        self.__state = {}
         # this executor executes the trigger function
         self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.__last_error = ""
@@ -49,44 +49,53 @@ class Triggerable(Feature, ABC):
         return ["Triggerable"]
 
     @abstractmethod
-    def _triggered(self, post_json):
+    def _triggered(self, job_name: str, post_json: dict):
         """
         This is called when the plugin is triggered
         :return:
         """
         pass
 
-    @add_rule('trigger_state')
-    def get_trigger_activatable_state(self):
+    @add_rule('trigger_state/<job_name>')
+    def get_trigger_activatable_state(self, job_name: str):
         """
         Get whether plugin state and last error.
         :return:
         """
+        state = self.__state.get(job_name)
+        if state is None:
+            return return_error("Job name not found", 404)
         return jsonify({
-            "State": self.__state.value,
-            "LastError": self.__last_error
+            "state": state['state'].value,
+            "last_error": state['last_error']
         })
 
-    @add_rule('trigger', methods=['POST'])
-    def trigger(self):
+    @add_rule('trigger/<job_name>', methods=['POST'])
+    def trigger(self, job_name):
         with self.__trigger_lock:
-            if self.__state != TriggerStates.Idle:
+            job_state = self.__state.setdefault(job_name,
+                                                {
+                                                    'state': TriggerStates.Idle,
+                                                    'last_error': "No Error"
+                                                }
+                                                )
+            if job_state['state'] != TriggerStates.Idle:
                 return return_error("Plugin is not at rest", 412)
-            self.__state = TriggerStates.Triggered
+            job_state['state'] = TriggerStates.Triggered
             promise = Promise(
                 functools.partial(run_in_executor_helper,
                                   self.__executor,
-                                  functools.partial(self._triggered, request.get_json(silent=True))))
+                                  functools.partial(self._triggered, job_name, request.get_json(silent=True))))
 
             def on_success(*args):
-                self.__state = TriggerStates.Idle
+                job_state['state'] = TriggerStates.Idle
                 self.logger.info("Successfully triggered")
 
             def on_failed(err):
                 # if failed, restore to 'Disabled'
                 self.logger.error(f"Failed triggering up: {err}")
-                self.__last_error = str(repr(err))
-                self.__state = TriggerStates.Idle
+                job_state['last_error'] = str(repr(err))
+                job_state['state'] = TriggerStates.Idle
 
             promise.then(did_fulfill=on_success,
                          did_reject=on_failed)

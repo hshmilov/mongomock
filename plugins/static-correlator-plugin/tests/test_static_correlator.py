@@ -4,6 +4,7 @@ import logging
 import sys
 
 from axonius.CorrelatorBase import CorrelationResult
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 correlator_logger = logging.getLogger()
 correlator_logger.setLevel(logging.DEBUG)
@@ -39,7 +40,7 @@ def test_no_correlation():
             'adapters': [
                 {
                     'plugin_name': 'ad1',
-                    'plugin_unique_name': 'ad1',
+                    PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
                         'OS': {
@@ -64,7 +65,7 @@ def test_no_correlation():
             'adapters': [
                 {
                     'plugin_name': 'ad2',
-                    'plugin_unique_name': 'ad2',
+                    PLUGIN_UNIQUE_NAME: 'ad2',
                     'data': {
                         'id': "idad2",
                         'OS': {
@@ -89,7 +90,7 @@ def test_no_correlation():
             'adapters': [
                 {
                     'plugin_name': 'ad3',
-                    'plugin_unique_name': 'ad3',
+                    PLUGIN_UNIQUE_NAME: 'ad3',
                     'data': {
                         'id': "idad3",
                         'OS': {
@@ -114,7 +115,7 @@ def test_no_correlation():
             'adapters': [
                 {
                     'plugin_name': 'ad4',
-                    'plugin_unique_name': 'ad4',
+                    PLUGIN_UNIQUE_NAME: 'ad4',
                     'data': {
                         'id': "idad4",
                         'OS': {
@@ -150,7 +151,7 @@ def test_rule1_correlation():
             'adapters': [
                 {
                     'plugin_name': 'ad',
-                    'plugin_unique_name': 'ad1',
+                    PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
                         'OS': {
@@ -174,7 +175,7 @@ def test_rule1_correlation():
             'adapters': [
                 {
                     'plugin_name': 'esx',
-                    'plugin_unique_name': 'esx1',
+                    PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
                         'OS': {
@@ -221,7 +222,7 @@ def test_rule1_os_contradiction():
             'adapters': [
                 {
                     'plugin_name': 'ad',
-                    'plugin_unique_name': 'ad1',
+                    PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
                         'OS': {
@@ -247,7 +248,7 @@ def test_rule1_os_contradiction():
             'adapters': [
                 {
                     'plugin_name': 'esx',
-                    'plugin_unique_name': 'esx1',
+                    PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
                         'OS': {
@@ -266,7 +267,7 @@ def test_rule1_os_contradiction():
                 },
                 {
                     'plugin_name': 'aws',
-                    'plugin_unique_name': 'aws1',
+                    PLUGIN_UNIQUE_NAME: 'aws1',
                     'data': {
                         'id': "idaws1",
                         'OS': {

@@ -8,6 +8,7 @@ from axonius.dns_utils import query_dns, NoIpFoundError
 import json
 from axonius.mixins.Activatable import Activatable
 import threading
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class DnsConflictsPlugin(PluginBase, Activatable):
@@ -54,7 +55,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
             ad_adapters = self.get_plugin_by_name('ad_adapter', verify_single=False)
 
             for ad_adapter in ad_adapters:
-                ad_adapter_unique_name = ad_adapter['plugin_unique_name']
+                ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
                 self.logger.info(f"looking for ip conflicts from ad_adapter {ad_adapter_unique_name}")
                 hosts = self._get_collection("devices_data",
                                              db_name=ad_adapter_unique_name).find({'RESOLVE_STATUS': 'RESOLVED'},

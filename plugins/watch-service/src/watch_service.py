@@ -13,6 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from flask import jsonify, json
 
 from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class WatchService(PluginBase):
@@ -47,7 +48,7 @@ class WatchService(PluginBase):
             self.logger.error('No Aggregator found.')
             return None
         else:
-            return aggregator_data['plugin_unique_name']
+            return aggregator_data[PLUGIN_UNIQUE_NAME]
 
     @add_rule("trigger_watches", methods=['GET'])
     def run_jobs(self):

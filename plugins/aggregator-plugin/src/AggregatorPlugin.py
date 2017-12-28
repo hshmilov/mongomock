@@ -17,8 +17,11 @@ from axonius.ParsingUtils import beautiful_adapter_device_name
 from axonius.mixins.Activatable import Activatable
 from axonius.mixins.Triggerable import Triggerable
 from flask import jsonify
-import exceptions
+from aggregator_exceptions import AdapterOffline
 from axonius.consts import AdapterConsts
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+
+get_devices_job_name = "Get device job"
 
 
 def parsed_devices_match(first, second):
@@ -28,7 +31,7 @@ def parsed_devices_match(first, second):
     :param second: second adapter device to check
     :return: bool
     """
-    return first['plugin_unique_name'] == second['plugin_unique_name'] and \
+    return first[PLUGIN_UNIQUE_NAME] == second[PLUGIN_UNIQUE_NAME] and \
         first['data']['id'] == second['data']['id']
 
 
@@ -40,7 +43,7 @@ def parsed_device_match_plugin(plugin_data, parsed_device):
     :return: bool
     """
     return plugin_data['associated_adapter_devices']. \
-        get(parsed_device['plugin_unique_name']) == parsed_device['data']['id']
+        get(parsed_device[PLUGIN_UNIQUE_NAME]) == parsed_device['data']['id']
 
 
 class AggregatorPlugin(PluginBase, Activatable, Triggerable):
@@ -128,14 +131,16 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         """
         try:
             clients = self.request_remote_plugin('clients', adapter).json()
-        except:
-            raise exceptions.AdapterOffline()
+        except Exception as e:
+            self.logger.error(f"{repr(e)}")
+            raise AdapterOffline()
         for client_name in clients:
             try:
                 devices = self.request_remote_plugin(f'devices_by_name?name={client_name}', adapter)
-            except:
+            except Exception as e:
                 # request failed
-                raise exceptions.AdapterOffline()
+                self.logger.error(f"{repr(e)}")
+                raise AdapterOffline()
             if devices.status_code != 200:
                 self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}. "
                                  f"Reason: {str(devices.content)}")
@@ -160,22 +165,18 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         """
         return jsonify(self.devices_db.find_one({"internal_axon_id": device_id}))
 
-    def _triggered(self, post_json):
-        with self.thread_manager_lock:
-            current_adapters = requests.get(
-                self.core_address + '/register')
+    def _triggered(self, job_name, post_json):
+        current_adapters = requests.get(self.core_address + '/register')
 
-            assert current_adapters.status_code == 200, "Error getting devices from core. reason:" + \
-                                                        f"{str(current_adapters.status_code)}, " + \
-                                                        str(current_adapters.content)
+        assert current_adapters.status_code == 200, "Error getting devices from core. reason:" + \
+                                                    f"{str(current_adapters.status_code)}, " + \
+                                                    str(current_adapters.content)
 
-            current_adapters = current_adapters.json()
-            # let's add jobs for all adapters
-            for adapter_name, adapter in current_adapters.items():
-                if adapter['plugin_type'] != "Adapter":
-                    # This is not an adapter, not running
-                    continue
-                self._save_devices_from_adapter(adapter['plugin_name'], adapter['plugin_unique_name'])
+        adapter = next((adapter for adapter in current_adapters.json().values()
+                        if adapter[PLUGIN_UNIQUE_NAME] == job_name), None)
+        if adapter is None:
+            raise RuntimeError(f"Can't find plugin named {task_name}")
+        self._save_devices_from_adapter(adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME])
 
     def _adapters_thread_manager(self):
         """ Function for monitoring other threads activity.
@@ -200,8 +201,6 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 self.logger.info(
                     "registered adapters = {}".format(current_adapters))
 
-                get_devices_job_name = "Get device job"
-
                 # let's add jobs for all adapters
                 for adapter_name, adapter in current_adapters.items():
                     if adapter['plugin_type'] != "Adapter":
@@ -218,7 +217,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                             trigger=IntervalTrigger(
                                                                 seconds=sample_rate),
                                                             next_run_time=datetime.now(),
-                                                            kwargs={'plugin_unique_name': adapter['plugin_unique_name'],
+                                                            kwargs={PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
                                                                     'plugin_name': adapter['plugin_name']},
                                                             name=get_devices_job_name,
                                                             id=adapter_name,
@@ -266,7 +265,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         sent_plugin['accurate_for_datetime'] = datetime.now()
 
         # we might not trust the sender on this
-        sent_plugin['plugin_unique_name'], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
+        sent_plugin[PLUGIN_UNIQUE_NAME], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
 
         # now let's update our db
         # figure out all axonius devices that at least one of its adapter_device are in the
@@ -275,7 +274,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
             {
                 'adapters': {
                     '$elemMatch': {
-                        'plugin_unique_name': associated_plugin_unique_name,
+                        PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
                         'data.id': associated_id
                     }
                 }
@@ -305,7 +304,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 collected_adapter_devices = [axonius_device['adapters'] for axonius_device in axonius_device_candidates]
 
-                all_plugin_unique_names = [v['plugin_unique_name'] for d in collected_adapter_devices for v in d]
+                all_plugin_unique_names = [v[PLUGIN_UNIQUE_NAME] for d in collected_adapter_devices for v in d]
 
                 if len(set(all_plugin_unique_names)) != len(all_plugin_unique_names):
                     # this means we have a duplicate plugin_unique_name
@@ -361,7 +360,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 }
 
                 for adapter_device in axonius_device_to_split['adapters']:
-                    candidate = associated_adapter_devices.get(adapter_device['plugin_unique_name'])
+                    candidate = associated_adapter_devices.get(adapter_device[PLUGIN_UNIQUE_NAME])
                     if candidate is not None and candidate == adapter_device['data']['id']:
                         new_axonius_device['adapters'].append(adapter_device)
 
@@ -379,8 +378,8 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                 {
                                                     "$pull": {
                                                         'adapters': {
-                                                            'plugin_unique_name': adapter_to_remove_from_old[
-                                                                'plugin_unique_name'],
+                                                            PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
+                                                                PLUGIN_UNIQUE_NAME],
                                                         }
                                                     }
                     })
@@ -443,7 +442,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                             'client_used': client_name,
                             'plugin_type': 'Adapter',
                             'plugin_name': plugin_name,
-                            'plugin_unique_name': plugin_unique_name,
+                            PLUGIN_UNIQUE_NAME: plugin_unique_name,
                             'accurate_for_datetime': datetime.now(),
                             'data': device
                         }
@@ -465,7 +464,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                         modified_count = self.devices_db.update_one({
                             'adapters': {
                                 '$elemMatch': {
-                                    'plugin_unique_name': plugin_unique_name,
+                                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
                                     'data.id': device['id']
                                 }
                             }
@@ -479,7 +478,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                 "tags": []
                             })
 
-        except exceptions.AdapterOffline as e:
+        except AdapterOffline as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
             self.logger.warn(
@@ -514,7 +513,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         try:
             self.devices_db_connection['raw'].insert_one({'raw': device,
                                                           'plugin_name': plugin_name,
-                                                          'plugin_unique_name': plugin_unique_name,
+                                                          PLUGIN_UNIQUE_NAME: plugin_unique_name,
                                                           'plugin_type': plugin_type})
         except pymongo.errors.PyMongoError as e:
             self.logger.error("Error in pymongo. details: {}".format(e))

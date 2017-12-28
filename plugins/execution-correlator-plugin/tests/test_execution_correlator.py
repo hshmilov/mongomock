@@ -12,6 +12,7 @@ import sys
 from promise import Promise
 
 from axonius.CorrelatorBase import CorrelationResult, WarningResult
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 correlator_logger = logging.getLogger()
 correlator_logger.setLevel(logging.DEBUG)
@@ -144,7 +145,7 @@ def test_no_correlations():
                 'product': executor_result,
                 'result': 'Success',
             },
-            'responder': associated_adapter['plugin_unique_name']
+            'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     correlations = list(correlate(devices, executor=smart_executor, cmds=windows_unique_cmd_generator))
@@ -249,7 +250,7 @@ def test_simple_logic_correlation():
                 'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_2': esx, 'ad_adapter_2': ad}, shell_cmd),
                 'result': 'Success'
             },
-            'responder': associated_adapter['plugin_unique_name']
+            'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(
@@ -319,7 +320,7 @@ def test_execution_correlation():
             'output': {'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
                        'result': 'Success'
                        },
-            'responder': associated_adapter['plugin_unique_name']
+            'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(
@@ -390,7 +391,7 @@ def test_execution_nonexistent_device_nocorrelation():
             'output': {'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
                        'result': 'Success'
                        },
-            'responder': associated_adapter['plugin_unique_name']
+            'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(
@@ -461,8 +462,8 @@ def test_execution_nonexistent_device_deduction_correlation():
         associated_adapters = list([x for x in devices if x['internal_axon_id'] == axon_id][0]['adapters'])
         first_adapter = associated_adapters[-1]  # last adapter :D
 
-        response = {adapter['plugin_unique_name']: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
-        response.update({adapter['plugin_unique_name']: adapter['data']['id'] for adapter in associated_adapters})
+        response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
+        response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
 
         if axon_id in ('axon1', 'axon2'):
             response['aws_adapter_1'] = 'aws5'
@@ -470,7 +471,7 @@ def test_execution_nonexistent_device_deduction_correlation():
         return Promise.resolve({
             'output': {'product': join_with_order(response, shell_cmd),
                        'result': "Success"},
-            'responder': first_adapter['plugin_unique_name']
+            'responder': first_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(
@@ -544,13 +545,13 @@ def test_partial_cmds_execution_correlation():
         associated_adapters = list([x for x in devices if x['internal_axon_id'] == axon_id][0]['adapters'])
         first_adapter = associated_adapters[0]  # first adapter :D
 
-        response = {adapter['plugin_unique_name']: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
-        response.update({adapter['plugin_unique_name']: adapter['data']['id'] for adapter in associated_adapters})
+        response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
+        response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
         if first_adapter['plugin_name'] == 'ad_adapter':
             response['aws_adapter_1'] = 'aws1'
 
         output = join_with_order(response, shell_cmd)
-        responder = first_adapter['plugin_unique_name']
+        responder = first_adapter[PLUGIN_UNIQUE_NAME]
 
         print(f"test_partial_cmds execution: {output} for responder {responder} (cmd = {shell_cmd})")
 
@@ -638,15 +639,15 @@ def test_multi_adapter_execution_correlation():
         associated_adapters = list([x for x in devices if x['internal_axon_id'] == axon_id][0]['adapters'])
         first_adapter = associated_adapters[-1]  # last adapter :D
 
-        response = {adapter['plugin_unique_name']: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
-        response.update({adapter['plugin_unique_name']: adapter['data']['id'] for adapter in associated_adapters})
+        response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
+        response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
         if first_adapter['plugin_name'] == 'aws_adapter':
             response['ad_adapter_1'] = 'ad1'
 
         return Promise.resolve({
             'output': {'product': join_with_order(response, shell_cmd),
                        'result': 'Success'},
-            'responder': first_adapter['plugin_unique_name']
+            'responder': first_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(
@@ -836,8 +837,8 @@ def test_execution_correlation_contradiction():
         associated_adapters = list([x for x in devices if x['internal_axon_id'] == axon_id][0]['adapters'])
         first_adapter = associated_adapters[-1]  # last adapter :D
 
-        response = {adapter['plugin_unique_name']: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
-        response.update({adapter['plugin_unique_name']: adapter['data']['id'] for adapter in associated_adapters})
+        response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
+        response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
 
         response['ad_adapter_1'] = 'ad2'
         print(f"Response from test_execution_correlation_contradiction executor: {response}")
@@ -845,7 +846,7 @@ def test_execution_correlation_contradiction():
         return Promise.resolve({
             'output': {'product': join_with_order(response, shell_cmd),
                        'result': "Success"},
-            'responder': first_adapter['plugin_unique_name']
+            'responder': first_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(
@@ -913,7 +914,7 @@ def test_execution_strongly_unbound_with():
         return Promise.resolve({
             'output': {'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
                        'result': "Success"},
-            'responder': associated_adapter['plugin_unique_name']
+            'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
         })
 
     results = list(

@@ -4,6 +4,7 @@ from retrying import retry
 import services.plugin_service as plugin_service
 from services.plugin_service import API_KEY_HEADER
 import requests
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class AggregatorService(plugin_service.PluginService):
@@ -14,9 +15,9 @@ class AggregatorService(plugin_service.PluginService):
 
     @retry(wait_fixed=3000,
            stop_max_delay=60 * 3 * 1000)
-    def query_devices(self):
+    def query_devices(self, adapter_id):
         response = requests.post(
-            self.req_url + "/trigger", headers={API_KEY_HEADER: self.api_key})
+            self.req_url + f"/trigger/{adapter_id}", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, \
             f"Error in response: {str(response.status_code)}, " \

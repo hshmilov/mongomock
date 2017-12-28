@@ -22,6 +22,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.consts import AdapterConsts
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 CHUNK_SIZE = 1024
 
@@ -33,7 +34,7 @@ class Core(PluginBase):
         # Get local configuration
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
-        plugin_unique_name = config['core_specific']['plugin_unique_name']
+        plugin_unique_name = config['core_specific'][PLUGIN_UNIQUE_NAME]
         db_addr = config['core_specific']['db_addr']
         db_user = config['core_specific']['db_user']
         db_password = config['core_specific']['db_password']
@@ -155,7 +156,7 @@ class Core(PluginBase):
             check_response = requests.get(final_url, timeout=3)
 
             if check_response.status_code == 200:
-                responder_name = check_response.json()['plugin_unique_name']
+                responder_name = check_response.json()[PLUGIN_UNIQUE_NAME]
                 if responder_name == plugin_unique_name:
                     return True
                 else:
@@ -239,9 +240,9 @@ class Core(PluginBase):
 
             relevant_doc = None
 
-            if 'plugin_unique_name' in data:
+            if PLUGIN_UNIQUE_NAME in data:
                 # Plugin is trying to register with his own name
-                plugin_unique_name = data['plugin_unique_name']
+                plugin_unique_name = data[PLUGIN_UNIQUE_NAME]
                 self.logger.info(
                     "Plugin request to register with his own name: {0}".format(plugin_unique_name))
 
@@ -292,7 +293,7 @@ class Core(PluginBase):
                 # TODO: Ask the gui for permission to register this new plugin
                 plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name)
                 doc = {
-                    'plugin_unique_name': plugin_unique_name,
+                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
                     'plugin_name': plugin_name,
                     'plugin_ip': request.remote_addr,
                     'plugin_port': plugin_port,
@@ -338,7 +339,7 @@ class Core(PluginBase):
 
             # Setting a new doc with the wanted configuration
             collection = self._get_collection('configs', limited_user=False)
-            collection.replace_one(filter={'plugin_unique_name': doc['plugin_unique_name']},
+            collection.replace_one(filter={PLUGIN_UNIQUE_NAME: doc[PLUGIN_UNIQUE_NAME]},
                                    replacement=doc,
                                    upsert=True)
 
@@ -349,14 +350,14 @@ class Core(PluginBase):
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
             self.logger.info("Plugin {0} registered successfuly!".format(
-                relevant_doc['plugin_unique_name']))
+                relevant_doc[PLUGIN_UNIQUE_NAME]))
             return jsonify(relevant_doc)
 
     def _get_online_plugins(self):
         online_devices = dict()
         for plugin_name, plugin in self.online_plugins.items():
             online_devices[plugin_name] = {'plugin_type': plugin['plugin_type'],
-                                           'plugin_unique_name': plugin['plugin_unique_name'],
+                                           PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
                                            'plugin_name': plugin['plugin_name']}
 
             if plugin['plugin_type'] == AdapterConsts.ADAPTER_PLUGIN_TYPE:
@@ -397,7 +398,7 @@ class Core(PluginBase):
         # Requesting the wanted plugin
         headers = {
             'x-api-key': url_data['api_key'],
-            'x-unique-plugin-name': calling_plugin['plugin_unique_name'],
+            'x-unique-plugin-name': calling_plugin[PLUGIN_UNIQUE_NAME],
             'x-plugin-name': calling_plugin['plugin_name'],
         }
         copy_headers = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding']
@@ -444,7 +445,7 @@ class Core(PluginBase):
         else:
             candidate_plugin = self.online_plugins[plugin_unique_name]
 
-        unique_plugin = candidate_plugin['plugin_unique_name']
+        unique_plugin = candidate_plugin[PLUGIN_UNIQUE_NAME]
 
         relevant_doc = self._get_config(unique_plugin)
 

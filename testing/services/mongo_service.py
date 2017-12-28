@@ -3,6 +3,7 @@ import pymongo
 
 import services.compose_service
 from services.simple_fixture import initialize_fixture
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class MongoService(services.compose_service.ComposeService):
@@ -41,7 +42,7 @@ class MongoService(services.compose_service.ComposeService):
     def get_unique_plugin_config(self, unique_plugin_name):
         configs = self.get_configs()
         plugin_config = list(
-            filter(lambda k: k['plugin_unique_name'] == unique_plugin_name, configs))
+            filter(lambda k: k[PLUGIN_UNIQUE_NAME] == unique_plugin_name, configs))
         assert 1 == len(plugin_config)
         return plugin_config[0]
 

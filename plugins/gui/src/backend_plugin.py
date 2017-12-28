@@ -15,6 +15,7 @@ import pymongo
 from bson import SON, ObjectId
 import json
 from datetime import datetime
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -227,7 +228,7 @@ def requires_aggregator():
                 if aggregator is None:
                     return return_error("Aggregator is missing, try again later", 500)
                 else:
-                    self._aggregator_plugin_unique_name = aggregator['plugin_unique_name']
+                    self._aggregator_plugin_unique_name = aggregator[PLUGIN_UNIQUE_NAME]
 
             return func(self, *args, **kwargs)
 
@@ -282,7 +283,7 @@ class BackendPlugin(PluginBase):
         if aggregator is None:
             self._aggregator_plugin_unique_name = None
         else:
-            self._aggregator_plugin_unique_name = aggregator['plugin_unique_name']
+            self._aggregator_plugin_unique_name = aggregator[PLUGIN_UNIQUE_NAME]
         self._elk_addr = config['gui_specific']['elk_addr']
         self._elk_auth = config['gui_specific']['elk_auth']
         self.db_user = config['gui_specific']['db_user']
@@ -400,7 +401,7 @@ class BackendPlugin(PluginBase):
             for current_tag in tag_list:
                 update_data = {'association_type': 'Tag',
                                'associated_adapter_devices': {
-                                   adapter['plugin_unique_name']: adapter['data']['id']
+                                   adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id']
                                },
                                "tagname": current_tag,
                                "tagvalue": current_tag if command == "create" else ''}
@@ -547,22 +548,22 @@ class BackendPlugin(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
-                [('plugin_unique_name', pymongo.ASCENDING)])
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
                 status = ''
-                if not adapter['plugin_unique_name'] in plugins_available:
+                if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     status = 'error'
                 else:
-                    clients_configured = db_connection[adapter['plugin_unique_name']]['clients'].find(
+                    clients_configured = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
                         projection={'_id': 1}).count()
                     if clients_configured:
-                        clients_connected = db_connection[adapter['plugin_unique_name']]['clients'].find(
+                        clients_connected = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
                             {'status': 'success'}, projection={'_id': 1}).count()
                         status = 'success' if clients_configured == clients_connected else 'warning'
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
-                                           'unique_plugin_name': adapter['plugin_unique_name'],
+                                           'unique_plugin_name': adapter[PLUGIN_UNIQUE_NAME],
                                            'status': status
                                            })
 
@@ -604,12 +605,12 @@ class BackendPlugin(PluginBase):
                     # this is optional, so we don't have @requires_aggregator()
                     # if we don't have aggregator, try to get aggregator again
                     try:
-                        aggregator_name = self.get_plugin_by_name('aggregator')['plugin_unique_name']
+                        aggregator_name = self.get_plugin_by_name('aggregator')[PLUGIN_UNIQUE_NAME]
                     except PluginExceptions.PluginNotFoundException:
                         pass
                 if aggregator_name is not None:
                     # if there's no aggregator, that's fine
-                    self.request_remote_plugin("trigger", aggregator_name, method='post')
+                    self.request_remote_plugin(f"trigger/{adapter_unique_name}", aggregator_name, method='post')
                 return response.text, response.status_code
 
     @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'],
@@ -642,7 +643,7 @@ class BackendPlugin(PluginBase):
             with self._get_db_connection(False) as db_connection:
                 alerts_to_return = []
                 watch_service = self.get_plugin_by_name('watch_service')
-                for alert in db_connection[watch_service['plugin_unique_name']][
+                for alert in db_connection[watch_service[PLUGIN_UNIQUE_NAME]][
                         'watches'].find().sort(
                         [('watch_time', pymongo.DESCENDING)]):
                     # Fetching query in order to replace the string saved for aler
@@ -733,7 +734,7 @@ class BackendPlugin(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
-                [('plugin_unique_name', pymongo.ASCENDING)])
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
@@ -742,15 +743,15 @@ class BackendPlugin(PluginBase):
                     continue
 
                 processed_plugin = {'plugin_name': plugin['plugin_name'],
-                                    'unique_plugin_name': plugin['plugin_unique_name'],
+                                    'unique_plugin_name': plugin[PLUGIN_UNIQUE_NAME],
                                     'status': 'error',
                                     'state': 'Disabled'
                                     }
-                if plugin['plugin_unique_name'] in plugins_available:
+                if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
                     processed_plugin['status'] = 'warning'
-                    response = self.request_remote_plugin("state", plugin['plugin_unique_name'])
+                    response = self.request_remote_plugin("state", plugin[PLUGIN_UNIQUE_NAME])
                     if response.status_code != 200:
-                        self.logger.error("Error getting state of plugin {0}".format(plugin['plugin_unique_name']))
+                        self.logger.error("Error getting state of plugin {0}".format(plugin[PLUGIN_UNIQUE_NAME]))
                         processed_plugin['status'] = 'error'
                     else:
                         processed_plugin['state'] = response.json()
@@ -778,7 +779,7 @@ class BackendPlugin(PluginBase):
 
         with self._get_db_connection(False) as db_connection:
             return jsonify({
-                'plugin_unique_name': plugin_unique_name,
+                PLUGIN_UNIQUE_NAME: plugin_unique_name,
                 'state': state,
                 'results': [beautify_db_entry(device) for device in
                             db_connection[self._aggregator_plugin_unique_name]['devices_db'].find(

@@ -29,6 +29,7 @@ from pathlib import Path
 from promise import Promise
 from axonius.AdapterExceptions import TagDeviceError
 from axonius import PluginExceptions
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -211,7 +212,7 @@ class PluginBase(Feature):
                 self.core_address = "http://core/api"
 
         try:
-            self.plugin_unique_name = temp_config['registration']['plugin_unique_name']
+            self.plugin_unique_name = temp_config['registration'][PLUGIN_UNIQUE_NAME]
             self.api_key = temp_config['registration']['api_key']
         except KeyError:
             # We might have api_key but not have a unique plugin name.
@@ -223,11 +224,11 @@ class PluginBase(Feature):
             raise RuntimeError(
                 "Register process failed, Exiting. Reason: {0}".format(core_data['message']))
 
-        if core_data['plugin_unique_name'] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
-            self.plugin_unique_name = core_data['plugin_unique_name']
+        if core_data[PLUGIN_UNIQUE_NAME] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
+            self.plugin_unique_name = core_data[PLUGIN_UNIQUE_NAME]
             self.api_key = core_data['api_key']
             temp_config['registration'] = {}
-            temp_config['registration']['plugin_unique_name'] = self.plugin_unique_name
+            temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
             temp_config['registration']['api_key'] = self.api_key
 
             with open(VOLATILE_CONFIG_PATH, 'w') as temp_config_file:
@@ -347,7 +348,7 @@ class PluginBase(Feature):
         self.populate_register_doc(register_doc, self.config_file_path)
 
         if plugin_unique_name is not None:
-            register_doc['plugin_unique_name'] = plugin_unique_name
+            register_doc[PLUGIN_UNIQUE_NAME] = plugin_unique_name
             if api_key is not None:
                 register_doc['api_key'] = api_key
 
@@ -372,7 +373,7 @@ class PluginBase(Feature):
                 try:
                     extra['level'] = record.levelname
                     extra['message'] = message
-                    extra['plugin_unique_name'] = plugin_unique_name
+                    extra[PLUGIN_UNIQUE_NAME] = plugin_unique_name
                     current_time = datetime.utcfromtimestamp(record.created)
                     extra['@timestamp'] = current_time.strftime(
                         '%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
@@ -408,7 +409,7 @@ class PluginBase(Feature):
                     extra = dict()
                     extra['level'] = "CRITICAL"
                     extra['message'] = "Error in json formatter, not writing log"
-                    extra['plugin_unique_name'] = plugin_unique_name
+                    extra[PLUGIN_UNIQUE_NAME] = plugin_unique_name
                 return extra
 
         fatal_log_path = log_path.split('.log')[0] + '_FATAL.log'

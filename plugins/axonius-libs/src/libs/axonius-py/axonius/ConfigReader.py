@@ -1,5 +1,6 @@
 import configparser
 from axonius.consts import AdapterConsts
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class PluginConfig(object):
@@ -48,4 +49,4 @@ class PluginVolatileConfig(object):
 
     @property
     def unique_name(self):
-        return self._config['registration']['plugin_unique_name']
+        return self._config['registration'][PLUGIN_UNIQUE_NAME]
