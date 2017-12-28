@@ -4,7 +4,6 @@ from retrying import retry
 import services.plugin_service as plugin_service
 from services.plugin_service import API_KEY_HEADER
 import requests
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class AggregatorService(plugin_service.PluginService):

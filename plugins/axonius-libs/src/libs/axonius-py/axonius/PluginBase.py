@@ -618,7 +618,7 @@ class PluginBase(Feature):
         return requests.request(method, url,
                                 headers=headers, **kwargs)
 
-    def create_notification(self, title, content, severity_type='info', notification_type='basic'):
+    def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
         """
         Creates a notification (to be seen by the user in the GUI)
         :param title: A short title of the notification, e.g. "Device has found to be infected!"

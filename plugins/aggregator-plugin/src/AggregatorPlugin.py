@@ -424,6 +424,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
             # shouldn't be so slow anyway.
             with self.device_db_lock:
                 for client_name, devices_per_client in devices:
+                    time_before_client = datetime.now()
                     # Saving the raw data on the historic db
                     try:
                         self._save_data_in_history(devices_per_client['raw'],
@@ -477,6 +478,9 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                 "adapters": [parsed_to_insert],
                                 "tags": []
                             })
+                    time_for_client = datetime.now() - time_before_client
+                    self.logger.info(f"Finished aggregating for client {client_name} from adapter {plugin_unique_name},"
+                                     f" aggregation took {time_for_client.seconds}.")
 
         except AdapterOffline as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out

@@ -59,7 +59,7 @@ ldap_connection.bind()
 #                                                uuid=str(uuid.uuid1()))
 #current_data_schema = json.loads("{" + temp_text + "}")
 
-for i in range(15000, devices_num):
+for i in range(0, devices_num):
     if i % 100 == 0:
         print(i)
     current_name = codenamize.codenamize(i) + "-PC"

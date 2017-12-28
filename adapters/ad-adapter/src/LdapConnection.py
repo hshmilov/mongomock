@@ -13,9 +13,11 @@ class LdapConnection:
     Data from the wanted ActiveDirectory.
     """
 
-    def __init__(self, ldap_page_size, server_addr, domain_name, user_name, user_password, dns_server):
+    def __init__(self, logger, ldap_page_size, server_addr, domain_name,
+                 user_name, user_password, dns_server):
         """Class initialization.
 
+        :param obj logger: Logger object to send logs
         :param int ldap_page_size: Amount of devices to fetch on each request
         :param str server_addr: Server address (name of IP)
         :param str domain_name: Domain name to connect with
@@ -31,6 +33,7 @@ class LdapConnection:
         self.dns_server = dns_server
         self.ldap_connection = None
         self.ldap_page_size = ldap_page_size
+        self.logger = logger
 
         self._connect_to_server()
 
@@ -78,7 +81,7 @@ class LdapConnection:
                 generator=True)
 
             one_device = None
-
+            devices_count = 1
             for one_device in entry_generator:
                 if one_device['type'] != 'searchResEntry':
                     # searchResEntry is not a wanted object
@@ -87,6 +90,9 @@ class LdapConnection:
                 device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
                 device_dict['AXON_DC_ADDR'] = self.server_addr
                 device_dict['AXON_DOMAIN_NAME'] = self.domain_name
+                devices_count += 1
+                if devices_count % 1000 == 0:
+                    self.logger.info(f"Got {devices_count} devices so far")
                 yield device_dict
 
             if one_device is None:

@@ -94,7 +94,6 @@ class AdapterBase(PluginBase, Feature, ABC):
             query_time = datetime.now() - time_before_query
             self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
                              f"returned {len(parsed_devices)} devices")
-            self.logger.info("Querying devices on ")
         except AdapterExceptions.CredentialErrorException as e:
             self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
@@ -399,7 +398,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                 self._clients[client_id] = self._connect_client(current_client["client_config"])
             except Exception as e2:
                 # No connection to attempt querying
-                self.create_notification("Connection error to client {0}.".format(client_id))
+                self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
                 self.logger.error(
                     "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
                 _update_client_status("error")

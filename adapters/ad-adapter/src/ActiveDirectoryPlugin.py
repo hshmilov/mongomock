@@ -89,7 +89,8 @@ class ActiveDirectoryPlugin(AdapterBase):
 
     def _connect_client(self, dc_details):
         try:
-            return LdapConnection(self.ldap_page_size,
+            return LdapConnection(self.logger,
+                                  self.ldap_page_size,
                                   dc_details['dc_name'],
                                   dc_details['domain_name'],
                                   dc_details['query_user'],
@@ -220,6 +221,11 @@ class ActiveDirectoryPlugin(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         devices_collection = self._get_collection("devices_data")
+        all_devices = devices_collection.find({}, projection={'_id': False, 'id': True,
+                                                              'network_interfaces': True, 'RESOLVE_STATUS': True})
+        all_devices_ids = {device['id']: {'network_interfaces': device['network_interfaces'],
+                                          'RESOLVE_STATUS': device['RESOLVE_STATUS']} for device in all_devices}
+        to_insert = []
         for device_raw in devices_raw_data:
             device_doc = {
                 'hostname': device_raw.get('dNSHostName', device_raw.get('name')),
@@ -228,16 +234,16 @@ class ActiveDirectoryPlugin(AdapterBase):
                 'RESOLVE_STATUS': 'PENDING',
                 'id': device_raw['distinguishedName'],
                 'raw': device_raw}
-
-            device_from_db = devices_collection.find({'id': device_raw['distinguishedName']})
-            if device_from_db.count() > 0:
-                # Device is on DB
-                device_from_db = next(device_from_db)
-                device_doc['network_interfaces'] = device_from_db['network_interfaces']
-                device_doc['RESOLVE_STATUS'] = device_from_db['RESOLVE_STATUS']
-            devices_collection.replace_one({'id': device_raw['distinguishedName']}, device_doc, upsert=True)
-
+            device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])
+            if device_interfaces is not None:
+                device_doc['network_interfaces'] = device_interfaces['network_interfaces']
+                device_doc['RESOLVE_STATUS'] = device_interfaces['RESOLVE_STATUS']
+            else:
+                to_insert.append(device_doc)
             yield device_doc
+
+        if len(to_insert) > 0:
+            devices_collection.insert_many(to_insert)
 
     def _create_random_file(self, file_buffer, attrib='w'):
         """ Creating a random file in the temp_file folder.
@@ -292,7 +298,6 @@ class ActiveDirectoryPlugin(AdapterBase):
         except Exception as e:
             err += f"failed to resolve from {dns_server} <{e}>; "
 
-        self.logger.error(err)
         raise ad_exceptions.IpResolveError(err)
 
     def _get_basic_psexec_command(self, device_data):
