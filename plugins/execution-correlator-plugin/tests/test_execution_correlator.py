@@ -4,14 +4,14 @@ The following will be run by pytest.
 """
 
 # we're actually testing ExecutionCorrelatorEngineBase here
-from axonius.ExecutionCorrelatorEngineBase import _find_contradictions, UNAVAILABLE_CMD_OUTPUT
-from ExecutionCorrelatorEngine import ExecutionCorrelatorEngine
-import ExecutionCorrelatorEngine as CE
+from axonius.execution_correlator_engine_base import _find_contradictions, UNAVAILABLE_CMD_OUTPUT
+from execution_correlator_engine import ExecutionCorrelatorEngine
+import execution_correlator_engine as CE
 import logging
 import sys
 from promise import Promise
 
-from axonius.CorrelatorBase import CorrelationResult, WarningResult
+from axonius.correlator_base import CorrelationResult, WarningResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 correlator_logger = logging.getLogger()

@@ -1,5 +1,5 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
-from axonius.mixins.Feature import Feature
+from axonius.mixins.feature import Feature
 
 __author__ = "Ofir Yefet"
 
@@ -27,8 +27,8 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
 from pathlib import Path
 from promise import Promise
-from axonius.AdapterExceptions import TagDeviceError
-from axonius import PluginExceptions
+from axonius.adapter_exceptions import TagDeviceError
+from axonius import plugin_exceptions
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 # Starting the Flask application
@@ -651,7 +651,7 @@ class PluginBase(Feature):
         if verify_single:
             if len(found_plugins) == 0:
                 if verify_exists:
-                    raise PluginExceptions.PluginNotFoundException(
+                    raise plugin_exceptions.PluginNotFoundException(
                         "There is no plugin {0} currently registered".format(plugin_name))
                 return None
             if len(found_plugins) != 1:
@@ -660,7 +660,7 @@ class PluginBase(Feature):
             return found_plugins[0]
         else:
             if verify_exists and (not found_plugins):
-                raise PluginExceptions.PluginNotFoundException(
+                raise plugin_exceptions.PluginNotFoundException(
                     "There is no plugin {0} currently registered".format(plugin_name))
             return found_plugins
 

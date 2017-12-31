@@ -1,8 +1,12 @@
 """
 GUIPlugin.py: Backend services for the web app
 """
-from axonius import PluginExceptions
-from axonius.PluginBase import PluginBase, add_rule, return_error
+
+__author__ = "Mark Segal"
+
+
+from axonius import plugin_exceptions
+from axonius.plugin_base import PluginBase, add_rule, return_error
 import tarfile
 import io
 from datetime import date
@@ -617,7 +621,7 @@ class BackendPlugin(PluginBase):
                     # if we don't have aggregator, try to get aggregator again
                     try:
                         aggregator_name = self.get_plugin_by_name('aggregator')[PLUGIN_UNIQUE_NAME]
-                    except PluginExceptions.PluginNotFoundException:
+                    except plugin_exceptions.PluginNotFoundException:
                         pass
                 if aggregator_name is not None:
                     # if there's no aggregator, that's fine

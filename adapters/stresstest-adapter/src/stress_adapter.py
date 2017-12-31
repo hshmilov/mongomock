@@ -9,8 +9,8 @@ this is an imaginary adapter.
 import uuid
 import time
 import random
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
 
 OPERATION_SYSTEMS_EXAMPLES = [
     "Windows XP", "Windows 7", "Windows 8", "Windows 10",

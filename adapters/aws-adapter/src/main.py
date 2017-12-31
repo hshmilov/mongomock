@@ -1,8 +1,8 @@
 """
 main.py Main file for running active directory plugin"
 """
-from AWSAdapter import AWSAdapter
-from axonius.ServerUtils import init_wsgi
+from aws_adapter import AWSAdapter
+from axonius.server_utils import init_wsgi
 
 __author__ = "Mark Segal"
 

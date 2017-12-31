@@ -1,7 +1,7 @@
 """
 ExecutionCorrelatorPlugin.py: A Plugin for the devices correlation process
 """
-from axonius.ExecutionCorrelatorEngineBase import ExecutionCorrelatorEngineBase
+from axonius.execution_correlator_engine_base import ExecutionCorrelatorEngineBase
 
 
 class ExecutionCorrelatorEngine(ExecutionCorrelatorEngineBase):

@@ -14,14 +14,14 @@ import uuid
 from datetime import datetime
 
 from flask import jsonify, request, Response
-from axonius.PluginBase import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
-from axonius.ServerUtils import init_wsgi
+from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
+from axonius.server_utils import init_wsgi
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
-from axonius.consts import AdapterConsts
+from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 CHUNK_SIZE = 1024
@@ -306,8 +306,8 @@ class Core(PluginBase):
                     'status': 'ok',
                 }
 
-                if plugin_type == AdapterConsts.ADAPTER_PLUGIN_TYPE:
-                    doc[AdapterConsts.DEVICE_SAMPLE_RATE] = int(data[AdapterConsts.DEFAULT_SAMPLE_RATE])
+                if plugin_type == adapter_consts.ADAPTER_PLUGIN_TYPE:
+                    doc[adapter_consts.DEVICE_SAMPLE_RATE] = int(data[adapter_consts.DEFAULT_SAMPLE_RATE])
 
             else:
                 # This is an existing plugin, we should update its data on the db (data that the plugin can change)
@@ -360,9 +360,9 @@ class Core(PluginBase):
                                            PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
                                            'plugin_name': plugin['plugin_name']}
 
-            if plugin['plugin_type'] == AdapterConsts.ADAPTER_PLUGIN_TYPE:
-                online_devices[plugin_name][AdapterConsts.DEVICE_SAMPLE_RATE] = int(
-                    plugin[AdapterConsts.DEVICE_SAMPLE_RATE])
+            if plugin['plugin_type'] == adapter_consts.ADAPTER_PLUGIN_TYPE:
+                online_devices[plugin_name][adapter_consts.DEVICE_SAMPLE_RATE] = int(
+                    plugin[adapter_consts.DEVICE_SAMPLE_RATE])
 
         return online_devices
 

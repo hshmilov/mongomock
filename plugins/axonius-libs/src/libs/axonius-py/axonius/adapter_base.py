@@ -5,16 +5,16 @@ It implements API calls that are expected to be present in all adapters.
 
 import concurrent.futures
 
-from axonius import AdapterExceptions
-from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius import adapter_exceptions
+from axonius.plugin_base import PluginBase, add_rule, return_error
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
 from bson import ObjectId
 from threading import RLock
-from axonius.ConfigReader import AdapterConfig
-from axonius.consts import AdapterConsts
-from axonius.mixins.Feature import Feature
+from axonius.config_reader import AdapterConfig
+from axonius.consts import adapter_consts
+from axonius.mixins.feature import Feature
 from datetime import datetime
 
 
@@ -94,10 +94,11 @@ class AdapterBase(PluginBase, Feature, ABC):
             query_time = datetime.now() - time_before_query
             self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
                              f"returned {len(parsed_devices)} devices")
-        except AdapterExceptions.CredentialErrorException as e:
+            self.logger.info("Querying devices on ")
+        except adapter_exceptions.CredentialErrorException as e:
             self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
-        except AdapterExceptions.AdapterException as e:
+        except adapter_exceptions.AdapterException as e:
             self.logger.error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
@@ -178,7 +179,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             self._clients[client_id] = self._connect_client(client_config)
             # Got here only if connection succeeded
             status = "success"
-        except AdapterExceptions.ClientConnectionException as e:
+        except adapter_exceptions.ClientConnectionException as e:
             pass
         except KeyError as e:
             self.logger.error(
@@ -381,7 +382,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             with self._clients_lock:
                 result = clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
                 if not result or result.matched_count != 1:
-                    raise AdapterExceptions.CredentialErrorException("Could not update client {0} with status {1}")
+                    raise adapter_exceptions.CredentialErrorException("Could not update client {0} with status {1}")
 
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:
@@ -392,7 +393,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                 current_client = clients_collection.find_one({'client_id': client_id})
                 if not current_client or not current_client.get("client_config"):
                     # No credentials to attempt reconnection
-                    raise AdapterExceptions.CredentialErrorException(
+                    raise adapter_exceptions.CredentialErrorException(
                         "No credentials found for client {0}. Reason: {1}".format(client_id, str(e)))
             try:
                 self._clients[client_id] = self._connect_client(current_client["client_config"])
@@ -429,10 +430,10 @@ class AdapterBase(PluginBase, Feature, ABC):
         for client_name, client in self._clients.items():
             try:
                 raw_devices, parsed_devices = self._try_query_devices_by_client(client_name, client)
-            except AdapterExceptions.CredentialErrorException as e:
+            except adapter_exceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
-            except AdapterExceptions.AdapterException as e:
+            except adapter_exceptions.AdapterException as e:
                 self.logger.error(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
             except Exception as e:
@@ -534,4 +535,4 @@ class AdapterBase(PluginBase, Feature, ABC):
 
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)
-        register_doc[AdapterConsts.DEFAULT_SAMPLE_RATE] = int(config.default_sample_rate)
+        register_doc[adapter_consts.DEFAULT_SAMPLE_RATE] = int(config.default_sample_rate)

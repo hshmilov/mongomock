@@ -3,11 +3,11 @@
 
 __author__ = "Ofir Yefet"
 
-from axonius.AdapterBase import AdapterBase
-from axonius.PluginBase import add_rule
-from axonius.ParsingUtils import figure_out_os
-from axonius import AdapterExceptions
-from LdapConnection import LdapConnection
+from axonius.adapter_base import AdapterBase
+from axonius.plugin_base import add_rule
+from axonius.parsing_utils import figure_out_os
+from axonius import adapter_exceptions
+from ldap_connection import LdapConnection
 from base64 import standard_b64decode
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -106,7 +106,7 @@ class ActiveDirectoryPlugin(AdapterBase):
             else:
                 message = "Missing dc name for configuration line"
         self.logger.error(message)
-        raise AdapterExceptions.ClientConnectionException(message)
+        raise adapter_exceptions.ClientConnectionException(message)
 
     def _clients_schema(self):
         """
@@ -321,7 +321,7 @@ class ActiveDirectoryPlugin(AdapterBase):
                     self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
                     raise ad_exceptions.IpResolveError("Cant Resolve Ip")
 
-                # Putting the file using usePsexec.py
+                # Putting the file using use_ps_exec.py
                 command = ('{py} {psexec} --addr {addr} --username "{user}" '
                            '--password "{password}" --domain "{domain}"').format(py=self.python_27_path,
                                                                                  psexec=self.use_psexec_path,

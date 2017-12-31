@@ -5,8 +5,8 @@ from collections import OrderedDict
 from datetime import timedelta, datetime
 from promise import Promise
 
-from axonius.CorrelatorBase import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os
-from axonius.CorrelatorEngineBase import CorrelatorEngineBase
+from axonius.correlator_base import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os
+from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 """

@@ -1,7 +1,7 @@
 """
 main.py Main file for running active directory plugin"
 """
-from axonius.ServerUtils import init_wsgi
+from axonius.server_utils import init_wsgi
 from backend_plugin import BackendPlugin
 
 __author__ = "Mark Segal"

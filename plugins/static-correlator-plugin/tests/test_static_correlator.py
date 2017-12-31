@@ -1,9 +1,9 @@
-from StaticCorrelatorEngine import StaticCorrelatorEngine
+from static_correlator_engine import StaticCorrelatorEngine
 
 import logging
 import sys
 
-from axonius.CorrelatorBase import CorrelationResult
+from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 correlator_logger = logging.getLogger()

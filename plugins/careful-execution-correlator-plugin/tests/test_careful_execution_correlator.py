@@ -7,7 +7,7 @@ The following will be run by pytest.
 import logging
 
 import sys
-from CarefulExecutionCorrelatorEngine import CarefulExecutionCorrelatorEngine
+from careful_execution_correlator_engine import CarefulExecutionCorrelatorEngine
 
 correlator_logger = logging.getLogger()
 correlator_logger.setLevel(logging.DEBUG)

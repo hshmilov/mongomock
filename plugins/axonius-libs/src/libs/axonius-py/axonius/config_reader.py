@@ -1,5 +1,5 @@
 import configparser
-from axonius.consts import AdapterConsts
+from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
@@ -35,7 +35,7 @@ class AdapterConfig(PluginConfig):
 
     @property
     def default_sample_rate(self):
-        return int(self._config['DEFAULT'][AdapterConsts.DEFAULT_SAMPLE_RATE])
+        return int(self._config['DEFAULT'][adapter_consts.DEFAULT_SAMPLE_RATE])
 
 
 class PluginVolatileConfig(object):

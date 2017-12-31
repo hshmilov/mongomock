@@ -4,9 +4,9 @@ symantec_adapter.py: An adapter for Symantec Dashboard.
 
 __author__ = "Asaf & Tal"
 
-import axonius.AdapterExceptions
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
+import axonius.adapter_exceptions
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
 import symantec_connection
 import symantec_exceptions
 
@@ -29,7 +29,7 @@ class SymantecAdapter(AdapterBase):
             message = "Error connecting to client with address {0} and port {1}, reason: {2}".format(
                 client_config['SEPM_Address'], client_config['SEPM_Port'], str(e))
             self.logger.error(message)
-            raise axonius.AdapterExceptions.ClientConnectionException(message)
+            raise axonius.adapter_exceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """

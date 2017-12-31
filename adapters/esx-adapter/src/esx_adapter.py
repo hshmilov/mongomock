@@ -5,10 +5,10 @@ Currently, allows you to view ESX instances you possess.
 
 __author__ = "Mark Segal"
 
-from vCenterApi import vCenterApi, rawify_vcenter_data
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
-from axonius import AdapterExceptions
+from vcenter_api import vCenterApi, rawify_vcenter_data
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
+from axonius import adapter_exceptions
 from pyVmomi import vim
 
 
@@ -37,7 +37,7 @@ class ESXAdapter(AdapterBase):
             message = "Unknown error on account {}, text={}".format(client_id, str(e))
 
         self.logger.error(message)
-        raise AdapterExceptions.ClientConnectionException(message)
+        raise adapter_exceptions.ClientConnectionException(message)
 
     def _clients_schema(self):
         """

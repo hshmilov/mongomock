@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import itertools
 from funcy import pairwise
 
-from axonius.CorrelatorBase import CorrelationResult, figure_actual_os, OSTypeInconsistency
+from axonius.correlator_base import CorrelationResult, figure_actual_os, OSTypeInconsistency
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 

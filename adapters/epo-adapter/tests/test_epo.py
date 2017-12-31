@@ -1,4 +1,4 @@
-import epoplugin
+import epo_plugin
 import pytest
 
 list_tables = {
@@ -74,13 +74,13 @@ raw_device_data = {'EPOBranchNode.NodeName': 'My Group',
 
 
 def test_get_all_linked_tables():
-    linked_tables = epoplugin.get_all_linked_tables(list_tables)
+    linked_tables = epo_plugin.get_all_linked_tables(list_tables)
     assert len(linked_tables) > 0
     assert 'EPOComputerProperties' in linked_tables
 
 
 def test_os():
-    details = epoplugin.parse_os_details(raw_device_data)
+    details = epo_plugin.parse_os_details(raw_device_data)
     print(details)
     assert details['type'] == 'Windows'
     assert details['distribution'] == '10'

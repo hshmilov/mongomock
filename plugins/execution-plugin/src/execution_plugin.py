@@ -8,7 +8,7 @@ import json
 from bson.objectid import ObjectId
 import concurrent.futures
 
-from axonius.PluginBase import PluginBase, add_rule
+from axonius.plugin_base import PluginBase, add_rule
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 PLUGIN_TYPE = 'execution_controller'

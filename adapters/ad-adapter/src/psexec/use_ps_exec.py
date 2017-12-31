@@ -67,7 +67,7 @@ def _delete_files_from_remmote(psObj, files):
     for file_path in files:
         try:
             psObj.delete_file(file_path)
-        except psexec.fileExistsException:
+        except psexec.FileExistsException:
             pass
 
 

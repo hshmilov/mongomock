@@ -3,9 +3,9 @@
 
 __author__ = "Ofri Shur"
 
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
-from axonius.AdapterExceptions import ClientConnectionException
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
+from axonius.adapter_exceptions import ClientConnectionException
 import exceptions
 from puppetserverconnection import PuppetServerConnection
 

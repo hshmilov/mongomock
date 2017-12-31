@@ -14,7 +14,7 @@ from impacket.examples import serviceinstall
 
 
 # Some basic psexec exceptions
-class fileExistsException(Exception):
+class FileExistsException(Exception):
     def __init__(self, message=""):
         super().__init__(message)
 

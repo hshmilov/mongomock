@@ -2,7 +2,7 @@
 CorrelatorPlugin.py: A Plugin for the devices correlation process
 """
 from StaticCorrelatorEngine import StaticCorrelatorEngine
-from axonius.CorrelatorBase import CorrelatorBase
+from axonius.correlator_base import CorrelatorBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 

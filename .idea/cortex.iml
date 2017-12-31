@@ -13,8 +13,17 @@
       <sourceFolder url="file://$MODULE_DIR$/adapters/sentinelone-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plugins/dns-conflicts-plugin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk-symantec-adapter/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/adapters/nexpose-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/aws-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/puppet-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/splunk-nexpose-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/gui/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/execution-plugin/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/execution-correlator-plugin/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/careful-execution-correlator-plugin/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/static-correlator-plugin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/devops" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/nexpose-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/symantec-adapter/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/plugins/gui/src/frontend" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.6.3 virtualenv at ~/axonius/cortex/venv" jdkType="Python SDK" />

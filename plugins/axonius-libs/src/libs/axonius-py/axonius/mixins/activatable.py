@@ -7,9 +7,9 @@ import functools
 from flask import jsonify
 from promise import Promise
 
-from axonius.PluginBase import add_rule, return_error
-from axonius.ThreadingUtils import run_in_executor_helper
-from axonius.mixins.Feature import Feature
+from axonius.plugin_base import add_rule
+from axonius.threading_utils import run_in_executor_helper
+from axonius.mixins.feature import Feature
 
 
 class ActiveStates(Enum):

@@ -3,9 +3,9 @@ splunk_symantec_adapter.py: An adapter for Splunk Dashboard.
 """
 from configparser import ConfigParser
 
-from axonius.AdapterExceptions import ClientConnectionException
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
 from splunk_connection import SplunkConnection
 
 __author__ = "Asaf & Tal"

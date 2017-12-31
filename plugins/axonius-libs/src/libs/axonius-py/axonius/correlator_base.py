@@ -7,10 +7,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from namedlist import namedlist
 
-from axonius.PluginBase import PluginBase
-from axonius.mixins.Activatable import Activatable
-from axonius.mixins.Triggerable import Triggerable
-from axonius.mixins.Feature import Feature
+from axonius.plugin_base import PluginBase, return_error, add_rule
+from axonius.mixins.activatable import Activatable
+from axonius.mixins.triggerable import Triggerable
+from axonius.mixins.feature import Feature
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 # the reason for these data types is that it allows separation of the code that figures out correlations

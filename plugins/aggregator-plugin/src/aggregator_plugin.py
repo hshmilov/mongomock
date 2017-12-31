@@ -12,13 +12,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
-from axonius.PluginBase import PluginBase, add_rule, return_error
-from axonius.ParsingUtils import beautiful_adapter_device_name
-from axonius.mixins.Activatable import Activatable
-from axonius.mixins.Triggerable import Triggerable
+from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.parsing_utils import beautiful_adapter_device_name
+from axonius.mixins.activatable import Activatable
+from axonius.mixins.triggerable import Triggerable
 from flask import jsonify
 from aggregator_exceptions import AdapterOffline
-from axonius.consts import AdapterConsts
+from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 get_devices_job_name = "Get device job"
@@ -211,7 +211,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                         # We already have a running thread for this adapter
                         continue
 
-                    sample_rate = int(adapter[AdapterConsts.DEVICE_SAMPLE_RATE])
+                    sample_rate = int(adapter[adapter_consts.DEVICE_SAMPLE_RATE])
 
                     self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
                                                             trigger=IntervalTrigger(

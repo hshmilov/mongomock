@@ -3,8 +3,8 @@
 
 __author__ = "Ofir Yefet"
 
-from ActiveDirectoryPlugin import ActiveDirectoryPlugin
-from axonius.ServerUtils import init_wsgi
+from active_directory_plugin import ActiveDirectoryPlugin
+from axonius.server_utils import init_wsgi
 
 if __name__ == '__main__':
     # Initialize

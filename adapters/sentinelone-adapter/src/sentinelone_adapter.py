@@ -4,9 +4,9 @@ SentinelOneAdapter.py: An adapter for SentinelOne Dashboard.
 
 __author__ = "Asaf & Tal"
 
-import axonius.AdapterExceptions
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
+import axonius.adapter_exceptions
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
 import sentinelone_connection
 import sentinelone_exceptions
 import re
@@ -50,7 +50,7 @@ class SentinelOneAdapter(AdapterBase):
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['SentinelOne_Domain'], str(e))
             self.logger.error(message)
-            raise axonius.AdapterExceptions.ClientConnectionException(message)
+            raise axonius.adapter_exceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """

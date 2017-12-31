@@ -1,5 +1,5 @@
-from epoplugin import EpoPlugin
-from axonius.ServerUtils import init_wsgi
+from epo_plugin import EpoPlugin
+from axonius.server_utils import init_wsgi
 
 import ssl
 

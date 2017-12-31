@@ -3,8 +3,8 @@ CarefulExecutionCorrelatorEngine.py: A Plugin for the devices correlation proces
 """
 import itertools
 
-from axonius.CorrelatorBase import figure_actual_os
-from axonius.ExecutionCorrelatorEngineBase import ExecutionCorrelatorEngineBase
+from axonius.correlator_base import figure_actual_os
+from axonius.execution_correlator_engine_base import ExecutionCorrelatorEngineBase
 
 
 class CarefulExecutionCorrelatorEngine(ExecutionCorrelatorEngineBase):

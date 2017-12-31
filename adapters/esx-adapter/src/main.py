@@ -1,8 +1,8 @@
 """
 main.py Main file for running active directory plugin"
 """
-from ESXAdapter import ESXAdapter
-from axonius.ServerUtils import init_wsgi
+from esx_adapter import ESXAdapter
+from axonius.server_utils import init_wsgi
 
 __author__ = "Mark Segal"
 

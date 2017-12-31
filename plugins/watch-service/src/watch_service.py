@@ -12,7 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from flask import jsonify, json
 
-from axonius.PluginBase import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 

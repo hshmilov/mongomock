@@ -1,8 +1,8 @@
 """
 main.py Main file for running Aggregator"
 """
-from AggregatorPlugin import AggregatorPlugin
-from axonius.ServerUtils import init_wsgi
+from aggregator_plugin import AggregatorPlugin
+from axonius.server_utils import init_wsgi
 
 __author__ = "Ofir Yefet"
 

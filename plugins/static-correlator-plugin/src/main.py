@@ -1,8 +1,8 @@
 """
 main.py Main file for running Correlator
 """
-from StaticCorrelatorPlugin import StaticCorrelatorPlugin
-from axonius.ServerUtils import init_wsgi
+from static_correlator_plugin import StaticCorrelatorPlugin
+from axonius.server_utils import init_wsgi
 
 
 if __name__ == '__main__':

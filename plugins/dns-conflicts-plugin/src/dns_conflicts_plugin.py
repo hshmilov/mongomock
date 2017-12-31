@@ -1,4 +1,4 @@
-from axonius.PluginBase import PluginBase, add_rule
+from axonius.plugin_base import PluginBase, add_rule, return_error
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -6,7 +6,8 @@ from datetime import timedelta, datetime
 import time
 from axonius.dns_utils import query_dns, NoIpFoundError
 import json
-from axonius.mixins.Activatable import Activatable
+from axonius.mixins.activatable import Activatable
+from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
 import threading
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 

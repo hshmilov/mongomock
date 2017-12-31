@@ -6,7 +6,7 @@ __author__ = "Tal & Asaf"
 
 
 from sentinelone_adapter import SentinelOneAdapter
-from axonius.ServerUtils import init_wsgi
+from axonius.server_utils import init_wsgi
 
 if __name__ == '__main__':
     # Initialize

@@ -1,6 +1,6 @@
 import dns.resolver
 from dns.exception import DNSException
-from axonius.AdapterExceptions import *
+from axonius.adapter_exceptions import *
 import socket
 
 

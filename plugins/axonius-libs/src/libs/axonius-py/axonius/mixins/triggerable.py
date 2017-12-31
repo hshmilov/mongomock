@@ -8,9 +8,9 @@ import functools
 from flask import jsonify, request
 from promise import Promise
 
-from axonius.mixins.Feature import Feature
-from axonius.PluginBase import add_rule, return_error
-from axonius.ThreadingUtils import run_in_executor_helper
+from axonius.mixins.feature import Feature
+from axonius.plugin_base import add_rule, return_error
+from axonius.threading_utils import run_in_executor_helper
 
 
 class TriggerStates(Enum):

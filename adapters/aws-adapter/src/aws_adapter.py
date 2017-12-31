@@ -5,9 +5,9 @@ Currently, allows you to view AWS EC2 instances you possess.
 
 __author__ = "Mark Segal"
 
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
-import axonius.AdapterExceptions
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
+import axonius.adapter_exceptions
 import boto3
 import re
 import botocore.exceptions
@@ -65,7 +65,7 @@ class AWSAdapter(AdapterBase):
             message = "Error connecting to client with account {0}, reason: {1}".format(
                 client_config['aws_access_key_id'], str(e))
         self.logger.error(message)
-        raise axonius.AdapterExceptions.ClientConnectionException(message)
+        raise axonius.adapter_exceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """
@@ -94,9 +94,9 @@ class AWSAdapter(AdapterBase):
             return instances
         except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
                 botocore.exceptions.CredentialRetrievalError, botocore.exceptions.UnknownCredentialError) as e:
-            raise axonius.AdapterExceptions.CredentialErrorException(repr(e))
+            raise axonius.adapter_exceptions.CredentialErrorException(repr(e))
         except botocore.exceptions.BotoCoreError as e:
-            raise axonius.AdapterExceptions.AdapterException(repr(e))
+            raise axonius.adapter_exceptions.AdapterException(repr(e))
 
     def _clients_schema(self):
         """

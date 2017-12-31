@@ -1,11 +1,11 @@
 import services.compose_parser
 import services.compose_service
 import requests
-import axonius.ConfigReader
+import axonius.config_reader
 import json
 import tempfile
 import time
-from axonius.PluginBase import VOLATILE_CONFIG_PATH
+from axonius.plugin_base import VOLATILE_CONFIG_PATH
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
@@ -87,13 +87,13 @@ class PluginService(services.compose_service.ComposeService):
 
     @property
     def conf(self):
-        return axonius.ConfigReader.PluginConfig(self.config_file_path)
+        return axonius.config_reader.PluginConfig(self.config_file_path)
 
     @property
     def vol_conf(self):
         # Try to get the latest, but if the container is down, use the last data.
         (out, _, _) = self.get_file_contents_from_container(VOLATILE_CONFIG_PATH)
-        self.last_vol_conf = axonius.ConfigReader.PluginVolatileConfig(out.decode("utf-8"))
+        self.last_vol_conf = axonius.config_reader.PluginVolatileConfig(out.decode("utf-8"))
 
         return self.last_vol_conf
 
@@ -141,4 +141,4 @@ class AdapterService(PluginService):
 
     @property
     def conf(self):
-        return axonius.ConfigReader.AdapterConfig(self.config_file_path)
+        return axonius.config_reader.AdapterConfig(self.config_file_path)

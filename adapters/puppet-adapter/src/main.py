@@ -4,7 +4,7 @@
 __author__ = "Ofri Shur"
 
 from puppetadapter import PuppetAdapter
-from axonius.ServerUtils import init_wsgi
+from axonius.server_utils import init_wsgi
 
 if __name__ == '__main__':
     # Initialize

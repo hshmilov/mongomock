@@ -2,8 +2,8 @@ import time
 from contextlib import contextmanager
 import ssl
 
-from axonius.AdapterBase import AdapterBase
-from axonius.ParsingUtils import figure_out_os
+from axonius.adapter_base import AdapterBase
+from axonius.parsing_utils import figure_out_os
 
 import nexpose.nexpose as nexpose
 

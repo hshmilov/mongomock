@@ -3,8 +3,8 @@ CorrelatorPlugin.py: A Plugin for the devices correlation process
 """
 from funcy import pairwise
 
-from axonius.CorrelatorBase import CorrelationResult
-from axonius.CorrelatorEngineBase import CorrelatorEngineBase
+from axonius.correlator_base import CorrelationResult
+from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
