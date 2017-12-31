@@ -130,9 +130,12 @@ export const notification = {
 			/*
 				Request the number of unseen notifications, matching a filter, if given
 			 */
-			if (!payload.filter) { payload.filter = {} }
-			payload.filter['seen'] = false
-			let rule = `/api/notifications/count?filter=${JSON.stringify(payload.filter)}`
+			if (!payload.filter) {
+				payload.filter = "seen == false"
+			} else {
+				payload.filter = `(${payload.filter}) and seen == false`
+			}
+			let rule = `/api/notifications/count?filter=${payload.filter}`
 			dispatch(REQUEST_API, {
 				rule: rule,
 				type: SET_NOTIFICATIONS_UNSEEN_COUNT
@@ -143,9 +146,12 @@ export const notification = {
 				Request unseen notifications, matching filter, if given,
 				and within the range of skip and limit, if given
 			 */
-			if (!payload.filter) { payload.filter = {} }
-			payload.filter['seen'] = false
-			let rule = `/api/notifications?filter=${JSON.stringify(payload.filter)}`
+			if (!payload.filter) {
+				payload.filter = "seen == false"
+			} else {
+				payload.filter = `(${payload.filter}) and seen == false`
+			}
+			let rule = `/api/notifications?filter=${payload.filter}`
 			if (payload.skip) {
 				rule += `&skip=${payload.skip}`
 			}

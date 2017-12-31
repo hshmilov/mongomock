@@ -14,6 +14,7 @@ import configparser
 import pymongo
 from bson import SON, ObjectId
 import json
+import pql
 from datetime import datetime
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
@@ -183,7 +184,17 @@ def filtered():
 
     def wrap(func):
         def actual_wrapper(self, *args, **kwargs):
-            return func(self, mongo_filter=_parse_to_mongo_filter(request.args.get('filter')), *args, **kwargs)
+            filter_obj = dict()
+            try:
+                filter_expr = request.args.get('filter')
+                if filter_expr:
+                    self.logger.info("Parsing filter: {0}".format(filter_expr))
+                    filter_obj = pql.find(filter_expr)
+            except pql.matching.ParseError as e:
+                return return_error("Could not parse given expression. Details: {0}".format(e), 400)
+            except Exception as e:
+                return return_error("Could not create mongo filter. Details: {0}".format(e), 400)
+            return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
         return actual_wrapper
 
@@ -508,7 +519,7 @@ class BackendPlugin(PluginBase):
             query_data, query_name = query_to_add.get(
                 'filter'), query_to_add.get('name')
             result = queries_collection.insert_one(
-                {'filter': json.dumps(query_data), 'name': query_name, 'query_type': 'saved',
+                {'filter': query_data, 'name': query_name, 'query_type': 'saved',
                  'timestamp': datetime.now(), 'archived': False})
             return str(result.inserted_id), 200
 
@@ -662,7 +673,8 @@ class BackendPlugin(PluginBase):
             if query is None or not query.get('filter'):
                 return return_error("Invalid query id {0} requested for creating alert".format(alert_to_add['query']))
 
-            alert_to_add['query'] = _parse_to_mongo_filter(query['filter'])
+            self.logger.info("About to watch the filter: {0}".format(query['filter']))
+            alert_to_add['query'] = pql.find(query['filter'])
             response = self.request_remote_plugin("watch", "watch_service", method='put', json=alert_to_add)
             if response is not None and response.status_code == 201:
                 # Updating saved query with the created alert's id, for reference when fetching alerts
@@ -700,7 +712,7 @@ class BackendPlugin(PluginBase):
                 return return_error(
                     "Invalid query id {0} requested for creating alert".format(alert_to_update['query']))
 
-            alert_to_update['query'] = _parse_to_mongo_filter(query['filter'])
+            alert_to_update['query'] = pql.find(query['filter'])
             response = self.request_remote_plugin("watch/{0}".format(alert_id), "watch_service", method='post',
                                                   json=alert_to_update)
             if response is None:

@@ -23,7 +23,7 @@
         border-radius: 4px;
         background-color: $background-color-disabled;
         i {
-            padding: 4px;
+            padding: 5px;
             vertical-align: middle;
         }
     }

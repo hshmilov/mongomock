@@ -2,7 +2,7 @@
 
 var icon = require('vue-svgicon')
 icon.register({
-  'actions/get_msg': {
+  'action/get_msg': {
     width: 44,
     height: 38,
     viewBox: '0 0 44 38',

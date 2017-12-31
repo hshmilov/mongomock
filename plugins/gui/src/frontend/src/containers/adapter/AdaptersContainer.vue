@@ -1,7 +1,7 @@
 <template>
     <scrollable-page title="adapters" class="adapters">
         <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" :actions="[
-        	{triggerFont: 'icon-pencil2', handler: configAdapter}]"></scrollable-table>
+        	{triggerIcon: 'action/edit', handler: configAdapter}]"></scrollable-table>
     </scrollable-page>
 </template>
 

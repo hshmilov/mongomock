@@ -108,8 +108,8 @@
                 right: 0;
                 width: 12px;
                 height: 12px;
-                border-top: 1px solid;
-                border-left: 1px solid;
+                border-top: 1px solid $color-text-main;
+                border-left: 1px solid $color-text-main;
                 border-right: 0;
                 transform: rotate(225deg);
                 transition: transform 0.2s;
@@ -130,7 +130,7 @@
             transform: scale(1);
         }
     }
-    .show .dropdown-toggle:after {
+    .show > .dropdown-toggle:after {
         transform: rotate(45deg);
         margin: 12px 12px;
     }

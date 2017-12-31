@@ -57,18 +57,18 @@ export const findValues = (field, data) => {
 	return value
 }
 
-export const processDevice = (device, fields, filterSelected) => {
+export const processDevice = (device, fields) => {
 	if (!device.adapters || !device.adapters.length) { return }
 	let processedDevice = { id: device['internal_axon_id']}
 	fields.common.forEach((field) => {
-		if (filterSelected && !field.selected) { return }
+		if (!field.selected) { return }
 		let value = findValues(field, device)
 		if (value) { processedDevice[field.path] = value }
 	})
 	device.adapters.forEach((adapter) => {
 		if (!fields.unique[adapter.plugin_name]) { return }
 		fields.unique[adapter.plugin_name].forEach((field) => {
-			if (filterSelected && !field.selected) { return }
+			if (!field.selected) { return }
 			let currentValue = adapter
 			let keys = field.path.split('.').splice(1)
 			let keysIndex = 0
@@ -113,7 +113,7 @@ export const device = {
 				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
 				{
 					path: 'adapters.data.network_interfaces.IP',
-					name: 'IP Addresses',
+					name: 'IPs',
 					selected: true,
 					type: 'list',
 					control: 'text'
@@ -125,7 +125,7 @@ export const device = {
 					type: 'list',
 					control: 'text'
 				},
-				{path: 'adapters.data.OS.type', name: 'Operating System', selected: true, control: 'text'},
+				{path: 'adapters.data.OS.type', name: 'OS', selected: true, control: 'text'},
 				{path: 'adapters.data.OS.distribution', name: 'OS Version', selected: false, control: 'text'},
 				{path: 'adapters.data.OS.bitness', name: 'OS Bitness', selected: false, control: 'text'},
 				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []},
@@ -497,7 +497,7 @@ export const device = {
 			if (payload.data) {
 				let processedData = []
 				payload.data.forEach((device) => {
-					processedData.push(processDevice(device, state.fields, true))
+					processedData.push(processDevice(device, state.fields))
 				})
 				state.deviceList.data = [...state.deviceList.data, ...processedData]
 			}
@@ -623,7 +623,7 @@ export const device = {
 				param += `&fields=${payload.fields}`
 			}
 			if (payload.filter && Object.keys(payload.filter).length) {
-				param += `&filter=${JSON.stringify(payload.filter)}`
+				param += `&filter=${payload.filter}`
 			}
 			dispatch(REQUEST_API, {
 				rule: `/api/devices${param}`,

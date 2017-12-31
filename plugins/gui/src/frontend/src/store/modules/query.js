@@ -32,6 +32,7 @@ export const matchToVal = (match) => {
 
 export const strToQuery = (str) => {
 	/*
+		DEPRECATED
 		Given str is expected in a format representing a DB query,
 		e.g. '<field1>="<value1>" AND <field2>=<value2> AND
 		(<field3>=<value3.1> OR <field3>=<value3.2>)'
@@ -79,23 +80,27 @@ export const queryToStr = (query) => {
 			let orParts = []
 			query[andKey].forEach(function(orKey) {
 				if (typeof orKey === 'string') {
-					orParts.push(`${andKey}="${orKey}"`)
+					orParts.push(`${andKey}=="${orKey}"`)
 				} else {
-					orParts.push(`${andKey}=${orKey}`)
+					orParts.push(`${andKey}==${orKey}`)
 				}
 			})
 			if (!orParts.length) { return }
-			andParts.push(`(${orParts.join(' OR ')})`)
+			if (orParts.length === 1) {
+				andParts.push(orParts[0])
+			} else {
+				andParts.push(`(${orParts.join(' or ')})`)
+			}
 		} else if (typeof query[andKey] === 'string') {
-			andParts.push(`${andKey}="${query[andKey]}"`)
+			andParts.push(`${andKey}=="${query[andKey]}"`)
 		} else {
-			andParts.push(`${andKey}=${query[andKey]}`)
+			andParts.push(`${andKey}==${query[andKey]}`)
 		}
 	})
 	if (!andParts.length) {
-		return '*'
+		return ''
 	}
-	return andParts.join(' AND ')
+	return andParts.join(' and ')
 }
 
 const updateQueries = (currentQueries, payload) => {
@@ -107,7 +112,7 @@ const updateQueries = (currentQueries, payload) => {
 			processedData.push({ ...currentQuery,
 				id: currentQuery.uuid,
 				raw_filter: currentQuery.filter,
-				filter: queryToStr(JSON.parse(currentQuery.filter))
+				filter: currentQuery.filter
 			})
 		})
 		currentQueries.data = [...currentQueries.data, ...processedData]
@@ -122,7 +127,7 @@ const fetchQueries = (dispatch, payload) => {
 	if (!payload.skip) { payload.skip = 0 }
 	let param = `?limit=${payload.limit}&skip=${payload.skip}`
 	if (payload.filter) {
-		param += `&filter=${JSON.stringify(payload.filter)}`
+		param += `&filter=${payload.filter}`
 	}
 	dispatch(REQUEST_API, {
 		rule: `/api/queries${param}`,
@@ -132,7 +137,7 @@ const fetchQueries = (dispatch, payload) => {
 
 export const query = {
 	state: {
-		currentQuery: {},
+		currentQuery: "",
 		executedQueries: {fetching: false, data: [], error: ''},
 		savedQueries: {fetching: false, data: [], error: ''},
 
@@ -174,12 +179,7 @@ export const query = {
 			})
 		},
 		[UPDATE_QUERY] (state, payload) {
-			state.currentQuery = {}
-			Object.keys(payload).forEach(function(queryKey) {
-				if (payload[queryKey] !== undefined) {
-					state.currentQuery[queryKey] = payload[queryKey]
-				}
-			})
+			state.currentQuery = payload
 			state.executedQueries.data = []
 		},
 		[ UPDATE_SAVED_QUERIES ] (state, payload) {
@@ -192,27 +192,33 @@ export const query = {
 			let requestedQuery = state.savedQueries.data.filter(function(savedQuery) {
 				return savedQuery.id === payload
 			})
-			state.currentQuery = JSON.parse(requestedQuery[0].raw_filter)
+			state.currentQuery = requestedQuery[0].filter
 			state.executedQueries.data = []
 		}
 	},
 	actions: {
 		[ FETCH_SAVED_QUERIES ] ({dispatch}, payload) {
 			payload.type = UPDATE_SAVED_QUERIES
-			if (!payload.filter) { payload.filter = {} }
-			payload.filter.query_type = 'saved'
+			if (!payload.filter) {
+				payload.filter = "query_type == 'saved'"
+			} else {
+				payload.filter = `(${payload.filter}) and query_type == 'saved'`
+			}
 			fetchQueries(dispatch, payload)
 		},
 		[ FETCH_EXECUTED_QUERIES ] ({dispatch}, payload) {
 			payload.type = UPDATE_EXECUTED_QUERIES
-			if (!payload.filter) { payload.filter = {} }
-			payload.filter.query_type = 'history'
+			if (!payload.filter) {
+				payload.filter = "query_type == 'history'"
+			} else {
+				payload.filter = `(${payload.filter}) and query_type == 'history'`
+			}
 			fetchQueries(dispatch, payload)
 		},
 		[ SAVE_QUERY ] ({dispatch, commit}, payload) {
 			if (!payload.filter) { return }
 			if (!payload.name) { payload.name = payload.filter }
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: '/api/queries',
 				method: 'POST',
 				data: payload
@@ -220,14 +226,9 @@ export const query = {
 				if (response === '') {
 					return
 				}
-				if (payload.callback !== undefined) {
-					payload.callback()
-				}
 				payload.id = response
 				commit(ADD_SAVED_QUERY, payload)
-			}).catch(() => {
-
-			})
+			}).catch(console.log.bind(console))
 		},
 		[ ARCHIVE_SAVED_QUERY ] ({dispatch, commit}, queryId) {
 			if (!queryId) { return }

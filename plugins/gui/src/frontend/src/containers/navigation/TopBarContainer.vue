@@ -69,7 +69,6 @@
 		FETCH_NOTIFICATIONS_UNSEEN_COUNT,
 		FETCH_NOTIFICATION
 	} from '../../store/modules/notifications'
-	import { parseTime, parseDate } from '../../utils'
 	import '../../components/icons/logo'
 
 	export default {
@@ -87,15 +86,15 @@
 				this.fetchNotification(notificationId)
 				this.$router.replace({path: `/notification/${notificationId}`})
 			},
-			relativeDate (originalDate) {
-				let timestamp = new Date(originalDate).getTime()
+			relativeDate (timestamp) {
+				let date = new Date(timestamp).getTime()
 				let now = Date.now()
-				if (now - timestamp < 24 * 60 * 60 * 1000) {
-					return parseTime(timestamp)
-				} else if (now - timestamp < 48 * 60 * 60 * 1000) {
+				if (now - date < 24 * 60 * 60 * 1000) {
+					return date.toLocaleTimeString()
+				} else if (now - date < 48 * 60 * 60 * 1000) {
 					return 'Yesterday'
 				}
-				return parseDate(timestamp)
+				return date.toLocaleDateString()
 			}
 		},
 		mounted () {

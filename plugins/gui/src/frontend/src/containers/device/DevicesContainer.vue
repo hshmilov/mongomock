@@ -3,22 +3,32 @@
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
             <template slot="cardContent">
+                <i class="icon-help trigger-help" @click="openHelpTooltip = !openHelpTooltip"></i>
+                <div v-show="openHelpTooltip" class="help">
+                    <div>An advanced query is a recursive expression defined as:</div>
+                    <div>EXPR: [ not ] &lt;field path&gt; COMP &lt;required value&gt; [ LOGIC EXPR ]</div>
+                    <div>COMP:  == | != | > | < | >= | <= | in</div>
+                    <div>LOGIC: and | or</div>
+                    <div>The value can be a primitive, like a string or a number, or a function like:</div>
+                    <div>regex(&lt;regular expression&gt;)</div>
+                </div>
+
                 <!-- Dropdown component for selecting a query --->
                 <dropdown-menu animateClass="scale-up right">
                     <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
-                    <div slot="dropdownTrigger">
-                        <input class="form-control" v-model="queryDropdown.value" @change="extractQuery()"
-                               @keyup.enter.stop="executeQuery()" @click.stop="">
+                    <div slot="dropdownTrigger" class="input-container">
+                        <input class="form-control" v-model="selectedQuery" @keyup.enter.stop="executeQuery"
+                               @click.stop="">
                     </div>
                     <!--
                     Content is a form containing appropriate inputs for the fields that are currently selected
                     (in next section). Form content and trigger input's value sync on every change.
                     -->
-                    <generic-form slot="dropdownContent" :schema="queryFields" v-model="selectedQuery"
-                                  @input="extractValue()" @submit="executeQuery()"></generic-form>
+                    <generic-form slot="dropdownContent" :schema="queryFields" v-model="queryDropdown.value"
+                                  @input="extractValue" @submit="executeQuery"></generic-form>
                 </dropdown-menu>
                 <!-- Button controlling the execution of currently filled query -->
-                <a class="btn btn-adjoined" @click="executeQuery()">go</a>
+                <a class="btn btn-adjoined" @click="executeQuery">go</a>
             </template>
         </card>
         <card :title="`devices (${device.deviceList.data.length})`" class="devices-list">
@@ -33,7 +43,7 @@
                 </dropdown-menu>
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
-                    <svg-icon slot="dropdownTrigger" name="actions/add_field" height="24" :original="true"></svg-icon>
+                    <svg-icon slot="dropdownTrigger" name="action/add_field" height="24" :original="true"></svg-icon>
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="visibleFields"
                                           :hasSearch="true" v-model="selectedFields"></searchable-checklist>
                 </dropdown-menu>
@@ -96,7 +106,7 @@
 	import ObjectList from '../../components/ObjectList.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 	import { mixin as clickaway } from 'vue-clickaway'
-	import '../../components/icons/actions'
+	import '../../components/icons/action'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import {
@@ -160,18 +170,19 @@
 				selectedTags: [],
 				selectedFields: [],
 				selectedDevices: [],
-				selectedQuery: {},
+				selectedQuery: "",
 				deviceInfoDialog: {
 					open: false
 				},
 				queryDropdown: {
 					open: false,
-					value: '',
+					value: {},
 				},
 				saveQueryModal: {
 					open: false,
 					name: ''
-				}
+				},
+                openHelpTooltip: false
 			}
 		},
 		watch: {
@@ -206,8 +217,7 @@
 			//}
 			this.fetchAdapters()
 			this.fetchTags()
-			this.selectedQuery = {...this.query.currentQuery}
-			this.queryDropdown.value = queryToStr(this.selectedQuery)
+			this.selectedQuery = this.query.currentQuery
 			this.selectedFields = this.totalFields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
@@ -228,11 +238,8 @@
                 removeDeviceTags: DELETE_DEVICE_TAGS,
 				fetchAdapters: FETCH_ADAPTERS
 			}),
-			extractQuery () {
-				this.selectedQuery = strToQuery(this.queryDropdown.value)
-			},
 			extractValue () {
-				this.queryDropdown.value = queryToStr(this.selectedQuery)
+				this.selectedQuery = queryToStr(this.queryDropdown.value)
 			},
 			executeQuery () {
 				this.closeQuickView()
@@ -248,9 +255,10 @@
 				}
 				this.saveQuery({
 					filter: this.selectedQuery,
-					name: this.saveQueryModal.name,
-					callback: () => this.saveQueryModal.open = false
-				})
+					name: this.saveQueryModal.name
+				}).then(() => {
+					this.saveQueryModal.open = false
+                })
 			},
 			saveTags (changes) {
 				if (!changes ||
@@ -290,6 +298,23 @@
     .devices-query {
         .card-body {
             display: flex;
+            .trigger-help {
+                vertical-align: middle;
+                font-size: 24px;
+                line-height: 36px;
+                margin-right: 4px;
+                cursor: pointer;
+            }
+            .help {
+                position: absolute;
+                z-index: 10;
+                top: 50px;
+                background-color: white;
+                border-radius: 4px;
+                border: 1px solid $border-color;
+                padding: 8px;
+                font-size: 12px;
+            }
             > .dropdown {
                 flex: 1 0 auto;
                 border-top-right-radius: 0;
@@ -297,16 +322,23 @@
                 > .dropdown-toggle {
                     padding-right: 0;
                     padding-left: 0;
-                    .form-control {
-                        border-top-right-radius: 0;
-                        border-bottom-right-radius: 0;
-                        margin: -1px;
+                    .input-container {
+                        padding-right: 30px;
+                        border-top-left-radius: 4px;
+                        border-bottom-left-radius: 4px;
+                        border: 1px solid rgba(0,0,0,.15);
                         border-right: 0;
+                        .form-control {
+                            border: 0;
+                        }
+                    }
+                    &:after {
+                        top: 4px;
                     }
                 }
             }
             > .btn {
-                line-height: 28px;
+                line-height: 32px;
                 border-top-left-radius: 0;
                 border-bottom-left-radius: 0;
             }
@@ -320,7 +352,7 @@
                 margin-top: 4px;
                 padding: 2px;
                 .svg-stroke {
-                    stroke: $color-text-title;
+                    stroke: $color-text-main;
                     stroke-width: 20px;
                 }
             }

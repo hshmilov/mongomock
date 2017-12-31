@@ -1,6 +1,6 @@
 <template>
     <div class="object-list d-flex" v-bind:class="{'flex-row': !vertical,
-	    'flex-column align-content-start justify-content-around': vertical }">
+	    'flex-column align-content-start justify-content-around': vertical }" :title="allData">
         <div v-for="item, index in limitedData" :key="index" class="d-flex"
              v-bind:class="{ 'flex-row': names !== undefined, 'flex-item': !names }">
             <template v-if="type === 'image-list'">
@@ -25,6 +25,11 @@
                     return this.data
                 }
                 return this.data.slice(0, this.limit)
+            },
+            allData() {
+            	return this.data.map((item) => {
+            		return (this.names? this.names[item] : item)
+                }).join(',')
             }
         }
     }

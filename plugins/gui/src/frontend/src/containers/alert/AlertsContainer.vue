@@ -31,10 +31,10 @@
             ...mapGetters(['filterFields']),
             alertActions() {
             	/*
-            	    Optional actions for a specific alert in table - can be removed to configured
+            	    Optional action for a specific alert in table - can be removed to configured
             	 */
             	return [
-                    { handler: this.configAlert, triggerFont: 'icon-pencil2'},
+                    { handler: this.configAlert, triggerIcon: 'action/edit'},
 					{ handler: this.removeAlert, triggerFont: 'icon-trash-o'}
                 ]
             }

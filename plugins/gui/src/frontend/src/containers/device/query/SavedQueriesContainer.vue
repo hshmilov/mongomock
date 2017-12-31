@@ -33,7 +33,7 @@
 			...mapState(['query']),
             queryActions() {
                 return [
-                    {triggerIcon: 'alert', handler: this.createAlert},
+                    {triggerIcon: 'navigation/alert', handler: this.createAlert},
                     {triggerFont: 'icon-play', handler: this.runQuery},
                     {triggerFont: 'icon-trash-o', handler: this.removeQuery}
                 ]

@@ -29,7 +29,7 @@
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                             <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
                                 <i v-if="action.triggerFont" :class="action.triggerFont"></i>
-                                <svg-icon :name="`navigation/${action.triggerIcon}`" height="24" width="24"
+                                <svg-icon :name="action.triggerIcon" height="24" width="24"
                                           :original="true" v-else></svg-icon>
                             </a>
                         </td>
@@ -64,7 +64,7 @@
 	import Checkbox from './Checkbox.vue'
     import GenericTableCell from './GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
-    import './icons/navigation'
+    import './icons'
 
 	export default {
 		name: 'paginated-table',
@@ -292,12 +292,17 @@
                     .svg-fill {  fill: $color-text-title;  }
                 }
             }
+            &:first-of-type .table-row-data {
+                border-top: 1px solid $border-color;
+            }
             .table-row-data {
                 padding: 8px;
                 max-width: 120px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+                border-top: 0;
+                border-bottom: 1px solid $border-color;
                 &:first-of-type {
                     border-left: 1px solid $border-color;
                 }

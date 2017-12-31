@@ -2,7 +2,7 @@
 
 var icon = require('vue-svgicon')
 icon.register({
-  'actions/settings': {
+  'action/settings': {
     width: 33,
     height: 35,
     viewBox: '0 0 33 35',

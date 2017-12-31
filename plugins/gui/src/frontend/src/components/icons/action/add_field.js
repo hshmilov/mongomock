@@ -2,7 +2,7 @@
 
 var icon = require('vue-svgicon')
 icon.register({
-  'actions/add_field': {
+  'action/add_field': {
     width: 16,
     height: 16,
     viewBox: '0 0 328.18 428.75',

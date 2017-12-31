@@ -87,7 +87,7 @@
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
 	import { FETCH_PLUGIN, pluginStaticData, START_PLUGIN, STOP_PLUGIN } from '../../store/modules/plugin'
-	import '../../components/icons/actions'
+	import '../../components/icons/action'
 
 	export default {
 		name: 'plugins-config-container',
@@ -142,7 +142,6 @@
             width: 50vh;
         }
         .bubble {
-            flex: 1 0 auto;
             padding: 24px;
             border-radius: 4px;
             background-color: $background-color-light;

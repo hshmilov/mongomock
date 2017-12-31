@@ -37,6 +37,8 @@
     .multiple-select {
         .dropdown-toggle {
             height: 30px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
         }
         .svg-icon {
             .svg-stroke {

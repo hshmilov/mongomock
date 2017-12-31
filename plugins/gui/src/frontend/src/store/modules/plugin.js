@@ -27,15 +27,15 @@ export const pluginStaticData = {
 
 export const plugin = {
 	state: {
-		pluginList: { fetching: false, data: [], error: '' },
+		pluginList: {fetching: false, data: [], error: ''},
 		fields: [
-			{path: 'unique_plugin_name', name: '', hidden: true },
-			{path: 'plugin_name', name: 'Name', type: 'status-icon-logo-text' },
+			{path: 'unique_plugin_name', name: '', hidden: true},
+			{path: 'plugin_name', name: 'Name', type: 'status-icon-logo-text'},
 			{path: 'description', name: 'Description'},
 			{path: 'status', name: '', hidden: true},
 			{path: 'state', name: 'Status'}
 		],
-		currentPlugin: { data: { state: 'Disabled', results: [] }, fetching: false, error: ''}
+		currentPlugin: {data: {state: 'Disabled', results: []}, fetching: false, error: ''}
 
 	},
 	getters: {},
@@ -66,7 +66,8 @@ export const plugin = {
 						},
 						state: plugin.state,
 						description: description,
-						running: (plugin.state !== 'Disabled' && plugin.status !== 'error'),
+						startable: (plugin.status !== 'error' && plugin.state === 'Disabled'),
+						stoppable: (plugin.status !== 'error' && (plugin.state === 'Scheduled' || plugin.state === 'InProgress')),
 						configurable: plugin.plugin_name === 'dns_conflicts_plugin'
 					}
 				})
@@ -80,7 +81,8 @@ export const plugin = {
 			state.pluginList.fetching = payload.fetching
 			state.pluginList.error = payload.error
 			if (payload.data) {
-				state.currentPlugin.data = { ...payload.data,
+				state.currentPlugin.data = {
+					...payload.data,
 					results: payload.data.results.map((result) => {
 						let processedResult = {
 							uuid: result.uuid,
@@ -94,7 +96,7 @@ export const plugin = {
 						if (tag && tag.length && tag[0].tagvalue) {
 							let conflictMap = JSON.parse(tag[0].tagvalue)
 							processedResult.conflicts = Object.keys(conflictMap).map((conflictIP) => {
-								return { ip: conflictIP, server: conflictMap[conflictIP] }
+								return {ip: conflictIP, server: conflictMap[conflictIP]}
 							})
 							// TODO Take only adapters relevant according to tag's 'associated_adapter_devices'
 						}
@@ -108,9 +110,10 @@ export const plugin = {
 		[ UPDATE_PLUGIN_START ] (state, pluginId) {
 			state.pluginList.data.forEach((plugin) => {
 				if (plugin.id === pluginId) {
-					plugin.state = 'Scheduled'
-					plugin.running = true
-					plugin.plugin_name.status = "success"
+					plugin.state = 'StartingUp'
+					plugin.startable = false
+					plugin.stoppable = false
+					plugin.plugin_name.status = 'success'
 				}
 			})
 			if (state.currentPlugin.data.plugin_unique_name === pluginId) {
@@ -120,9 +123,10 @@ export const plugin = {
 		[ UPDATE_PLUGIN_STOP ] (state, pluginId) {
 			state.pluginList.data.forEach((plugin) => {
 				if (plugin.id === pluginId) {
-					plugin.state = 'Disabled'
-					plugin.running = false
-					plugin.plugin_name.status = "warning"
+					plugin.state = 'ShuttingDown'
+					plugin.startable = false
+					plugin.stoppable = false
+					plugin.plugin_name.status = 'warning'
 				}
 			})
 			if (state.currentPlugin.data.plugin_unique_name === pluginId) {
@@ -148,7 +152,7 @@ export const plugin = {
 			/*
 				Fetching plugin data according to given id - unique_plugin_name value
 			 */
-			if (!pluginId){ return }
+			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
 				rule: `/api/plugins/${pluginId}`,
 				type: UPDATE_PLUGIN
@@ -162,7 +166,7 @@ export const plugin = {
 			dispatch(REQUEST_API, {
 				rule: `/api/plugins/${pluginId}/start`
 			}).then((response) => {
-				if (response !== "") {
+				if (response !== '') {
 					return
 				}
 				commit(UPDATE_PLUGIN_START, pluginId)
@@ -176,7 +180,7 @@ export const plugin = {
 			dispatch(REQUEST_API, {
 				rule: `/api/plugins/${pluginId}/stop`
 			}).then((response) => {
-				if (response !== "") {
+				if (response !== '') {
 					return
 				}
 				commit(UPDATE_PLUGIN_STOP, pluginId)

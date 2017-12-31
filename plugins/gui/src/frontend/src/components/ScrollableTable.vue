@@ -13,13 +13,11 @@
                                     :value="record[field.path]" :type="field.type" :wide="true"></generic-table-cell>
                 <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                     <template v-for="action in actions">
-                        <a  class="table-row-action" @click="action.condition.handler(record['id'])"
-                            v-if="action.condition && record[action.condition.field]">
-                            <i :class="action.condition.triggerFont"></i>
-                        </a>
-                        <a class="table-row-action" @click="action.handler(record['id'])"
-                           v-else-if="action.handler !== undefined">
-                            <i :class="action.triggerFont"></i>
+                        <a  class="table-row-action" @click="action.handler(record['id'])"
+                            v-if="!action.conditionField || record[action.conditionField]">
+                            <i :class="action.triggerFont" v-if="action.triggerFont"></i>
+                            <svg-icon :name="action.triggerIcon" height="24" width="24"
+                                      :original="true" v-else></svg-icon>
                         </a>
                     </template>
                 </td>
@@ -33,6 +31,7 @@
 <script>
 	import StatusIconLogoText from './StatusIconLogoText.vue'
 	import GenericTableCell from './GenericTableCell.vue'
+	import './icons'
 
 	export default {
 		name: 'scrollable-table',
@@ -54,13 +53,12 @@
         margin-bottom: 0;
         font-size: 14px;
         .table-header {
-            border: 1px solid $border-color;
-            border-radius: 4px;
+            border: 0;
             .table-head {
+                background-color: transparent;
                 font-size: 80%;
                 font-weight: 300;
-                background-color: $background-color-title;
-                border: 1px solid $border-color;
+                border: 0;
                 padding: 4px 12px;
                 &:first-of-type {
                     border-bottom-left-radius: 4px;

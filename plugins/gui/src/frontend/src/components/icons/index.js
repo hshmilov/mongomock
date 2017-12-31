@@ -1,4 +1,4 @@
 /* eslint-disable */
-require('./actions')
+require('./action')
 require('./logo')
 require('./navigation')

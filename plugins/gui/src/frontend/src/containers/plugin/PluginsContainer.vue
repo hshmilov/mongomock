@@ -20,12 +20,9 @@
 			...mapState(['plugin']),
             actions () {
                 return [
-                    {
-                        handler: this.startPlugin, triggerFont: 'icon-play', condition: {
-                        field: 'running', handler: this.stopPlugin, triggerFont: 'icon-checkbox-unchecked'
-                    }
-                    },
-                    { condition: { field: 'configurable', handler: this.configPlugin, triggerFont: 'icon-pencil2'}}
+                    { handler: this.startPlugin, triggerFont: 'icon-play', conditionField: 'startable' },
+                    { handler: this.stopPlugin, triggerFont: 'icon-checkbox-unchecked', conditionField: 'stoppable' },
+                    { handler: this.configPlugin, triggerIcon: 'action/edit', conditionField: 'configurable' }
                 ]
             }
 		},

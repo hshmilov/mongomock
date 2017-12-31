@@ -32,7 +32,6 @@
 	import StatusIcon from './StatusIcon.vue'
     import StatusIconLogoText from './StatusIconLogoText.vue'
 	import TypeIcon from './TypeIcon.vue'
-    import { parseDate, parseTime } from '../utils'
 
 	export default {
 		name: 'generic-table-cell',
@@ -40,7 +39,8 @@
         props: ['value', 'type', 'wide'],
         methods: {
             prettyTimestamp(timestamp) {
-            	return `${parseDate(timestamp)} ${parseTime(timestamp)}`
+            	let date = new Date(timestamp)
+            	return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
             }
         }
 	}
