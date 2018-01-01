@@ -382,7 +382,8 @@ class AdapterBase(PluginBase, Feature, ABC):
             with self._clients_lock:
                 result = clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
                 if not result or result.matched_count != 1:
-                    raise adapter_exceptions.CredentialErrorException("Could not update client {0} with status {1}")
+                    raise adapter_exceptions.CredentialErrorException(
+                        f"Could not update client {client_id} with status {status}")
 
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:

@@ -64,10 +64,10 @@ export const plugin = {
 							logo: plugin.plugin_name,
 							status: plugin.status
 						},
-						state: plugin.state,
+						state: plugin.state.State,
 						description: description,
-						startable: (plugin.status !== 'error' && plugin.state === 'Disabled'),
-						stoppable: (plugin.status !== 'error' && (plugin.state === 'Scheduled' || plugin.state === 'InProgress')),
+						startable: (plugin.status !== 'error' && plugin.state.State === 'Disabled'),
+						stoppable: (plugin.status !== 'error' && (plugin.state.State === 'Scheduled' || plugin.state.State === 'InProgress')),
 						configurable: plugin.plugin_name === 'dns_conflicts_plugin'
 					}
 				})

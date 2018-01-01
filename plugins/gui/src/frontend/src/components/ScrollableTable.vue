@@ -90,6 +90,10 @@
                     visibility: visible;
                     .svg-stroke {  stroke: $color-text-title;  }
                     .svg-fill {  fill: $color-text-title;  }
+                    &:hover {
+                        .svg-stroke {  stroke: $color-theme-light;  }
+                        .svg-fill {  fill: $color-theme-light;  }
+                    }
                 }
             }
         }

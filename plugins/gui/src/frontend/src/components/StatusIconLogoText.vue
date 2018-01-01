@@ -27,7 +27,7 @@
             height: 100%;
             i {
                 position: absolute;
-                top: 40%;
+                top: 34%;
                 left: 0;
             }
         }

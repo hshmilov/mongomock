@@ -771,7 +771,7 @@ class BackendPlugin(PluginBase):
                         processed_plugin['status'] = 'error'
                     else:
                         processed_plugin['state'] = response.json()
-                        if (processed_plugin['state'] != 'Disabled'):
+                        if (processed_plugin['state']['State'] != 'Disabled'):
                             processed_plugin['status'] = "success"
                 plugins_to_return.append(processed_plugin)
 

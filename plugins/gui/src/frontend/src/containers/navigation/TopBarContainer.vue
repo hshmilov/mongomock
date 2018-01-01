@@ -32,7 +32,7 @@
                                          @click="navigateNotification(notification.uuid)" class="item row"
                                          v-bind:class="{ 'bold': !notification.seen }">
                                         <status-icon :value="notification.severity"></status-icon>
-                                        <div class="col-9">{{ notification.title }}</div>
+                                        <div class="col">{{ notification.title }}</div>
                                         <div>{{ relativeDate(notification.date_fetched) }}</div>
                                     </div>
                                     <div v-if="!notification.notificationUnseen.data.list.length" class="item row empty">
@@ -48,7 +48,7 @@
                     <li class="nav-item">
                         <!--<router-link :to="{ name: 'Settings' }" class="nav-link">-->
                         <a class="nav-link">
-                            <i class="icon-cog"></i>
+                            <i class="icon-settings"></i>
                         </a>
                         <!--</router-link>-->
                     </li>
@@ -87,11 +87,11 @@
 				this.$router.replace({path: `/notification/${notificationId}`})
 			},
 			relativeDate (timestamp) {
-				let date = new Date(timestamp).getTime()
+				let date = new Date(timestamp)
 				let now = Date.now()
-				if (now - date < 24 * 60 * 60 * 1000) {
+				if (now - date.getTime() < 24 * 60 * 60 * 1000) {
 					return date.toLocaleTimeString()
-				} else if (now - date < 48 * 60 * 60 * 1000) {
+				} else if (now - date.getTime() < 48 * 60 * 60 * 1000) {
 					return 'Yesterday'
 				}
 				return date.toLocaleDateString()
