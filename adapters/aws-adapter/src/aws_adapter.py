@@ -11,6 +11,12 @@ import axonius.adapter_exceptions
 import boto3
 import re
 import botocore.exceptions
+from botocore.config import Config
+
+AWS_ACCESS_KEY_ID = 'aws_access_key_id'
+REGION_NAME = 'region_name'
+AWS_SECRET_ACCESS_KEY = 'aws_secret_access_key'
+PROXY = 'proxy'
 
 """
 Matches AWS Instance IDs
@@ -43,11 +49,23 @@ class AWSAdapter(AdapterBase):
         super().__init__(*args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['aws_access_key_id']
+        return client_config[AWS_ACCESS_KEY_ID]
 
     def _connect_client(self, client_config):
         try:
-            boto3_client = boto3.client('ec2', **client_config)
+            params = dict()
+            params[REGION_NAME] = client_config[REGION_NAME]
+            params[AWS_ACCESS_KEY_ID] = client_config[AWS_ACCESS_KEY_ID]
+            params[AWS_SECRET_ACCESS_KEY] = client_config[AWS_SECRET_ACCESS_KEY]
+
+            proxies = dict()
+            if PROXY in client_config:
+                self.logger.info(f"Setting proxy {client_config[PROXY]}")
+                proxies['https'] = client_config[PROXY]
+
+            config = Config(proxies=proxies)
+            boto3_client = boto3.client('ec2', **params, config=config)
+
             # Try to get all the instances. if we have the wrong privileges, it will throw an exception.
             # The only way of knowing if the connection works is to try something. we use DryRun=True,
             # and if it all works then we should get:
@@ -60,10 +78,10 @@ class AWSAdapter(AdapterBase):
             return boto3_client
         except botocore.exceptions.BotoCoreError as e:
             message = "Error creating EC2 client for account {0}, reason: {1}".format(
-                client_config['aws_access_key_id'], str(e))
+                client_config[AWS_ACCESS_KEY_ID], str(e))
         except botocore.exceptions.ClientError as e:
             message = "Error connecting to client with account {0}, reason: {1}".format(
-                client_config['aws_access_key_id'], str(e))
+                client_config[AWS_ACCESS_KEY_ID], str(e))
         self.logger.error(message)
         raise axonius.adapter_exceptions.ClientConnectionException(message)
 
@@ -106,20 +124,23 @@ class AWSAdapter(AdapterBase):
         """
         return {
             "properties": {
-                "region_name": {
+                REGION_NAME: {
                     "type": "string"
                 },
-                "aws_access_key_id": {
+                AWS_ACCESS_KEY_ID: {
                     "type": "string"
                 },
-                "aws_secret_access_key": {
+                AWS_SECRET_ACCESS_KEY: {
                     "type": "password"
+                },
+                PROXY: {
+                    "type": "string"
                 }
             },
             "required": [
-                "region_name",
-                "aws_access_key_id",
-                "aws_secret_access_key"
+                REGION_NAME,
+                AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY
             ],
             "type": "object"
         }

@@ -4,8 +4,9 @@ from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fi
 
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
+from test_helpers.machines import FAKE_DNS_IP
 
-fakednsaddr = "10.0.236.211"
+fakednsaddr = FAKE_DNS_IP
 
 ad_client1_details = {
     "admin_password": "@vULuAZa5-MPxac6acw%ff-5H=bD)DQ;",
@@ -58,7 +59,7 @@ class TestAdAdapter(AdapterTestBase):
         self.axonius_service.add_client_to_adapter(
             self.adapter_service, ad_client1_details)
         # Adding second client
-        #client_id_2 = ad_client2_details['dc_name']
+        # client_id_2 = ad_client2_details['dc_name']
         # self.axonius_service.add_client_to_adapter(
         #    self.adapter_service, ad_client2_details)
 
