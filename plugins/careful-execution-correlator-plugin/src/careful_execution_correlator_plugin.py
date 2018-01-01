@@ -2,7 +2,7 @@
 ExecutionCorrelatorPlugin.py: A Plugin for the devices correlation process
 """
 from axonius.correlator_base import CorrelatorBase
-from CarefulExecutionCorrelatorEngine import CarefulExecutionCorrelatorEngine
+from careful_execution_correlator_engine import CarefulExecutionCorrelatorEngine
 
 
 class CarefulExecutionCorrelatorPlugin(CorrelatorBase):
