@@ -47,6 +47,10 @@ export const adapterStaticData = {
 		name: 'Rapid7 Nexpose',
 		description: 'Rapid7 Nexpose is a vulnerability scanner which aims to support the entire vulnerability management lifecycle, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
 	},
+	'nessus_adapter': {
+		name: 'Nessus',
+		description: 'Nessus is a vulnerability scanning platform for auditors and security analysts.'
+	},
 	'stresstest_adapter':{
 		name: "LOL",
 		description: "i am the king of devices"
