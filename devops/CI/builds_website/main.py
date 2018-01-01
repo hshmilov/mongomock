@@ -167,7 +167,7 @@ def get_install_script():
         branch = "master"
 
     return "# how to use: curl -k https://builds.axonius.lan/install[?branch=develop] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/axonius/cortex {0}\n" \
-        "history -c\nhistory -w\nrm -rf .git*\ncd install\nchmod 777 *\n./install.sh\nexit\n".format(branch)
+        "history -c\nhistory -w\ncd install\nchmod 777 *\n./install.sh\nexit\n".format(branch)
 
 
 @app.after_request
