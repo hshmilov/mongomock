@@ -89,13 +89,13 @@ class SymantecAdapter(AdapterBase):
             if 0 == device_raw['onlineStatus']:
                 continue
             device_parsed = dict()
-            device_parsed['hostname'] = device_raw['computerName'] + '@' + device_raw['domainOrWorkgroup']
+            device_parsed['hostname'] = device_raw['computerName'] + '.' + device_raw['domainOrWorkgroup']
             device_parsed['OS'] = figure_out_os(' '.join([device_raw["operatingSystem"],
                                                           str(device_raw["osbitness"]),
                                                           str(device_raw["osversion"]),
                                                           str(device_raw["osmajor"]),
                                                           str(device_raw["osminor"])]))
-            device_parsed['network_interfaces'] = [{"MAC": mac, "IP": IP}
+            device_parsed['network_interfaces'] = [{"MAC": mac, "IP": [IP]}
                                                    for mac, IP in list(zip(device_raw['macAddresses'], device_raw['ipAddresses']))]
 
             device_parsed['id'] = device_raw['agentId']
