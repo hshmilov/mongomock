@@ -11,6 +11,7 @@ import re
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
 ubuntu_full = re.compile(r'([Uu]buntu \d\d\.\d\d(?:\.\d+)?)')
+mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 
 
 def figure_out_os(s):
@@ -38,7 +39,7 @@ def figure_out_os(s):
     orig_s = s
     s = s.lower()
 
-    makes_64bit = ['amd64', '64-bit', 'x64', '64 bit']
+    makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64']
     makes_32bit = ['32-bit', 'x86']
 
     bitness = None
@@ -51,6 +52,8 @@ def figure_out_os(s):
     distribution = None
     linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
                    'debian', 'fedora', 'centos', 'oracle', 'opensuse']
+
+    ios_names = ["iphone", "ipad"]
 
     if 'windows' in s:
         os_type = 'Windows'
@@ -85,6 +88,18 @@ def figure_out_os(s):
             version = osx_version.findall(s)
             if len(version) > 0:
                 distribution = version[0]
+    elif any(x in s for x in ios_names):
+        os_type = 'iOS'
+        version = mobile_version.findall(s)
+        if len(version):
+            distribution = version[0]
+
+    elif 'android' in s:
+        os_type = 'Android'
+        version = mobile_version.findall(s)
+        if len(version):
+            distribution = version[0]
+
     return {"type": os_type,
             "distribution": distribution,
             "bitness": bitness}

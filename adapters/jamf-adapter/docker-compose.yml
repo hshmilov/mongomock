@@ -1,0 +1,19 @@
+version: '3'
+services:
+  jamf-adapter:
+        build: .
+        image: axonius/jamf-adapter
+        container_name: "jamf-adapter"
+        ports:
+            - 5004:80
+        volumes:
+          - ../../logs/jamf-adapter:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

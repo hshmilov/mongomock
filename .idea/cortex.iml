@@ -22,6 +22,7 @@
       <sourceFolder url="file://$MODULE_DIR$/plugins/careful-execution-correlator-plugin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plugins/static-correlator-plugin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/devops" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/jamf-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/nexpose-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/symantec-adapter/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/plugins/gui/src/frontend" />
