@@ -9,6 +9,7 @@ class AdvancedSearchRAII(object):
         self.jamf_connection = jamf_connection
         self.url = url
         self.data = data
+        self.search_results = None
 
     def __enter__(self):
         post_headers = self.jamf_connection.headers
@@ -35,11 +36,13 @@ class AdvancedSearchRAII(object):
         created = False
         tries = 0
         while not created and tries < 5:
-            requests.get(self.jamf_connection.get_url_request(self.url + "/id/" + str(self.id)),
-                         self.jamf_connection.headers)
+            response = requests.get(self.jamf_connection.get_url_request(self.url + "/id/" + str(self.id)),
+                                    headers=self.jamf_connection.headers)
+
             try:
                 response.raise_for_status()
                 created = True
+                self.search_results = response
             except requests.HTTPError as e:
                 if "Not Found for url" in str(e):
                     tries += 1

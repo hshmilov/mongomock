@@ -103,8 +103,14 @@ class JamfConnection(object):
         """
         search = AdvancedSearchRAII(self, url, data)
         with search:
-            response = self._get(url + "/id/" + str(search.id),
-                                 headers=headers)
+            if search.search_results != None:
+                try:
+                    response = search.search_results.json()
+                except JSONDecodeError:
+                    response = Xml2Json(search.search_results.text).result
+            else:
+                response = self._get(url + "/id/" + str(search.id),
+                                     headers=headers)
             return response[xml_name][device_list_name]
 
     def get_devices(self):
