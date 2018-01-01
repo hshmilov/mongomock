@@ -47,6 +47,10 @@ export const adapterStaticData = {
 		name: 'Rapid7 Nexpose',
 		description: 'Rapid7 Nexpose is a vulnerability scanner which aims to support the entire vulnerability management lifecycle, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
 	},
+	'qualys_adapter': {
+		name: 'Qualys',
+		description: 'The Qualys Cloud Platform monitors customer�s global security and compliance posture using sensors.'
+  },
 	'jamf_adapter': {
 		name: 'Jamf',
 		description: 'Jamf Pro simplifies the complexities associated with getting your people the Apple devices they need with everything they need on them.'

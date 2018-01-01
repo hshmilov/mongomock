@@ -1,0 +1,19 @@
+version: '3'
+services:
+  qualys-adapter:
+        build: .
+        image: axonius/qualys-adapter
+        container_name: "qualys-adapter"
+        ports:
+            - 5677:80
+        volumes:
+          - ../../logs/qualys-adapter:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius
