@@ -89,7 +89,11 @@ class SymantecAdapter(AdapterBase):
             if 0 == device_raw['onlineStatus']:
                 continue
             device_parsed = dict()
-            device_parsed['hostname'] = device_raw['computerName'] + '.' + device_raw['domainOrWorkgroup']
+            if device_raw['domainOrWorkgroup'] == 'WORKGROUP' or device_raw['domainOrWorkgroup'] == '':
+                # Special case for workgroup
+                device_parsed['hostname'] = device_raw['computerName']
+            else:
+                device_parsed['hostname'] = device_raw['computerName'] + '.' + device_raw['domainOrWorkgroup']
             device_parsed['OS'] = figure_out_os(' '.join([device_raw["operatingSystem"],
                                                           str(device_raw["osbitness"]),
                                                           str(device_raw["osversion"]),

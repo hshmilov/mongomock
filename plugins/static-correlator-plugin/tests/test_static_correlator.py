@@ -102,7 +102,7 @@ def test_no_correlation():
                         'network_interfaces': [{
                             'MAC': 'mymac',
                             'IP': [
-                                '1.1.1.1'
+                                '1.1.1.3'
                             ]
                         }
                         ]
@@ -125,7 +125,7 @@ def test_no_correlation():
                         },
                         'hostname': "nothostname",
                         'network_interfaces': [{
-                            'MAC': 'mymac',
+                            'MAC': 'mymac1',
                             'IP': [
                                 '1.1.1.1'
                             ]
@@ -290,3 +290,72 @@ def test_rule1_os_contradiction():
     ]
     results = correlate(devices)
     assert len(results) == 0
+
+
+def test_rule2_correlation():
+    """
+    Test a very simple correlation that should happen
+    because IP+MAC+OS
+    :return:
+    """
+    devices = [
+        {
+            'tags': [],
+            'adapters': [
+                {
+                    'plugin_name': 'ad',
+                    PLUGIN_UNIQUE_NAME: 'ad1',
+                    'data': {
+                        'id': "idad1",
+                        'OS': {
+                            'bitness': 32,
+                            'distribution': 'Ubuntu',
+                            'type': 'Linux'
+                        },
+                        'hostname': "ubuntuLolol",  # Capital letter in in purpose
+                        'network_interfaces': [{
+                            'MAC': 'AA-BB-CC-11-22-33',
+                            'IP': [
+                                '1.1.1.1'
+                            ]
+                        }
+                        ]}
+                }
+            ],
+        },
+        {
+            'tags': [],
+            'adapters': [
+                {
+                    'plugin_name': 'esx',
+                    PLUGIN_UNIQUE_NAME: 'esx1',
+                    'data': {
+                        'id': "idesx1",
+                        'OS': {
+                            'bitness': 32,
+                            'distribution': 'Ubuntu',
+                            'type': 'Linux'
+                        },
+                        'network_interfaces': [{
+                            'MAC': 'AA:bb-CC-11-22-33',
+                            'IP': [
+                                '1.1.1.1'
+                            ]
+                        }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+    results = correlate(devices)
+    assert len(results) == 1
+
+    result = results[0]
+    assert isinstance(result, CorrelationResult)
+    assert len(result.associated_adapter_devices) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert (('ad1' == first_name and 'esx1' == second_name) or
+            ('ad1' == second_name and 'esx1' == first_name))
+    assert (('idad1' == first_id and 'idesx1' == second_id) or
+            ('idad1' == second_id and 'idesx1' == first_id))

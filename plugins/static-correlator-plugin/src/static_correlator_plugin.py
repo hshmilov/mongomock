@@ -1,7 +1,7 @@
 """
 CorrelatorPlugin.py: A Plugin for the devices correlation process
 """
-from StaticCorrelatorEngine import StaticCorrelatorEngine
+from static_correlator_engine import StaticCorrelatorEngine
 from axonius.correlator_base import CorrelatorBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
