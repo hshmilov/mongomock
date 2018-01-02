@@ -125,4 +125,4 @@ class JamfConnection(object):
                                    data=jamf_consts.ADVANCED_MOBILE_SEARCH,
                                    xml_name=jamf_consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
                                    device_list_name=jamf_consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
-                                   headers=non_json_headers)['mobile_device']
+                                   headers=non_json_headers).get('mobile_device', [])
