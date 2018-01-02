@@ -4,11 +4,12 @@ from jamf_exceptions import JamfRequestException
 
 
 class JamfAdvancedSearch(object):
-    def __init__(self, jamf_connection, url, data):
+    def __init__(self, jamf_connection, url, data, headers):
         self.jamf_connection = jamf_connection
         self.url = url
         self.data = data
         self.search_results = None
+        self.headers = headers
 
     def _create_query(self):
         post_headers = self.jamf_connection.headers
@@ -32,7 +33,7 @@ class JamfAdvancedSearch(object):
     def _get_query_results(self):
         try:
             response = requests.get(self.jamf_connection.get_url_request(self.url + "/name/Axonius-Adapter-Inventory"),
-                                    headers=self.jamf_connection.headers)
+                                    headers=self.headers)
             response.raise_for_status()
             return response
         except requests.HTTPError as e:

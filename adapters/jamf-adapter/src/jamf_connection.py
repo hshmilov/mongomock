@@ -101,7 +101,7 @@ class JamfConnection(object):
         :return: the response
         :rtype: list of computers
         """
-        search = JamfAdvancedSearch(self, url, data)
+        search = JamfAdvancedSearch(self, url, data, headers)
         with search:
             try:
                 response = search.search_results.json()
