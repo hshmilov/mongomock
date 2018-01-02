@@ -26,7 +26,7 @@ def main():
         pattern = sys.argv[1]
         print(f"Running in parallel for pattern {pattern}")
         runner.append_test_pattern(pattern)
-        return runner.wait_for_all(500, 1)
+        return runner.wait_for_all(1000, 1)
     finally:
         axonius.stop(should_delete=True)
 
