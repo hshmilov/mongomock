@@ -4,20 +4,20 @@ from jamf_exceptions import JamfRequestException
 
 
 class JamfAdvancedSearch(object):
-    def __init__(self, jamf_connection, url, data, headers):
+    def __init__(self, jamf_connection, url, data, headers, update_query=False):
         self.jamf_connection = jamf_connection
         self.url = url
-        self.data = data
         self.search_results = None
         self.headers = headers
-        self._update_query()
+        if update_query:
+            self._update_query(data)
 
-    def _request_for_query(self, request_method, url_addition, error_message):
+    def _request_for_query(self, request_method, url_addition, data, error_message):
         post_headers = self.jamf_connection.headers
         post_headers['Content-Type'] = 'application/xml'
         response = request_method(self.jamf_connection.get_url_request(self.url + url_addition),
-                                 headers=post_headers,
-                                 data=self.data)
+                                  headers=post_headers,
+                                  data=data)
         try:
             response.raise_for_status()
             response_tree = ET.fromstring(response.text)
@@ -34,11 +34,12 @@ class JamfAdvancedSearch(object):
     def _create_query(self):
         self._request_for_query(requests.post, "/id/0", "Search creation returned an error")
 
-    def _update_query(self):
+    def _update_query(self, data):
         try:
-            self._request_for_query(requests.put, "/name/Axonius-Adapter-Inventory", "Search update returned an error")
+            self._request_for_query(requests.put, "/name/Axonius-Adapter-Inventory", data,
+                                    "Search update returned an error")
         except JamfRequestException:
-            self._create_query()
+            self._create_query(data)
 
     def _get_query_results(self):
         try:
