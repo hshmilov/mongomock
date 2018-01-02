@@ -119,13 +119,18 @@ class JamfConnection(object):
         """
         non_json_headers = self.headers.copy()
         non_json_headers.pop("Accept")
-        return self._get_jamf_devices(url=jamf_consts.ADVANCED_COMPUTER_SEARCH_URL,
-                                      data=jamf_consts.ADVANCED_COMPUTER_SEARCH,
-                                      xml_name=jamf_consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,
-                                      device_list_name=jamf_consts.ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME,
-                                      headers=self.headers) + \
-            self._get_jamf_devices(url=jamf_consts.ADVANCED_MOBILE_SEARCH_URL,
-                                   data=jamf_consts.ADVANCED_MOBILE_SEARCH,
-                                   xml_name=jamf_consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
-                                   device_list_name=jamf_consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
-                                   headers=non_json_headers).get('mobile_device', [])
+        computers = self._get_jamf_devices(url=jamf_consts.ADVANCED_COMPUTER_SEARCH_URL,
+                                           data=jamf_consts.ADVANCED_COMPUTER_SEARCH,
+                                           xml_name=jamf_consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,
+                                           device_list_name=jamf_consts.ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME,
+                                           headers=self.headers)
+        if type(computers) == dict:
+            computers = [computers]
+        mobile_devices = self._get_jamf_devices(url=jamf_consts.ADVANCED_MOBILE_SEARCH_URL,
+                                                data=jamf_consts.ADVANCED_MOBILE_SEARCH,
+                                                xml_name=jamf_consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
+                                                device_list_name=jamf_consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
+                                                headers=non_json_headers).get('mobile_device', [])
+        if type(mobile_devices) == dict:
+            mobile_devices = [mobile_devices]
+        return computers + mobile_devices
