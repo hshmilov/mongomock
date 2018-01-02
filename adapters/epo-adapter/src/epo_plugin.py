@@ -1,7 +1,7 @@
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
+from axonius.parsing_utils import figure_out_os, format_mac
 import json
-
+import ipaddress
 import mcafee
 
 ADMIN_PASS = 'admin_password'
@@ -33,6 +33,23 @@ def parse_os_details(device_raw_data):
     details = figure_out_os(device_raw_data.get('EPOLeafNode.os', ''))
     details['bitness'] = 64 if device_raw_data.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
     return details
+
+
+def parse_network(raw_data):
+    mac = format_mac(raw_data['EPOComputerProperties.NetAddress'])
+    ipv4 = raw_data['EPOComputerProperties.IPV4x']
+
+    # epo is a motherfucker? Seems like he loves to flip the msb of the binary repr of ip addr...
+    ipv4 = (ipv4 & 0xffffffff) ^ 0x80000000
+
+    # to string
+    ipv4 = str(ipaddress.IPv4Address(ipv4))
+
+    ipv6 = raw_data['EPOComputerProperties.IPV6'].lower()
+    res = dict()
+    res['MAC'] = mac
+    res['IP'] = [ipv4, ipv6]
+    return [res]
 
 
 class EpoPlugin(AdapterBase):
@@ -87,9 +104,11 @@ class EpoPlugin(AdapterBase):
         raw_data = json.loads(raw_data)
         for device_raw_data in raw_data:
             yield {
-                'hostname': device_raw_data.get('EPOComputerProperties.ComputerName', ''),
+                'hostname': device_raw_data.get('EPOComputerProperties.IPHostName',
+                                                device_raw_data.get('EPOComputerProperties.ComputerName', '')),
                 'OS': parse_os_details(device_raw_data),
                 'id': device_raw_data['EPOLeafNode.AgentGUID'],
+                'network_interfaces': parse_network(device_raw_data),
                 'raw': json.dumps(device_raw_data)}
 
     def _query_devices_by_client(self, client_name, client_data):

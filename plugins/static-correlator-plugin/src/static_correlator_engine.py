@@ -19,6 +19,9 @@ def _are_ips_compatible(first_list, second_list):
 
     first_set = set(extract_all_ips(first_list))
     second_set = set(extract_all_ips(second_list))
+
+    if len(first_set) == 0 or len(second_set) == 0:
+        return False
     return first_set.issubset(second_set) or second_set.issubset(first_set)
 
 
@@ -33,6 +36,9 @@ def _are_macs_compatible(first_list, second_list):
 
     first_set = set(extract_all_macs(first_list))
     second_set = set(extract_all_macs(second_list))
+
+    if len(first_set) == 0 or len(second_set) == 0:
+        return False
     return first_set.issubset(second_set) or second_set.issubset(first_set)
 
 

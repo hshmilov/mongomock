@@ -28,7 +28,7 @@ raw_device_data = {'EPOBranchNode.NodeName': 'My Group',
                    'EPOComputerProperties.IPHostName': 'EC2AMAZ-0VJ3RSP.us-east-2.compute.internal',
                    'EPOComputerProperties.IPSubnet': '0:0:0:0:0:FFFF:AC1F:1000',
                    'EPOComputerProperties.IPSubnetMask': '0:0:0:0:0:FFFF:FFFF:F000',
-                   'EPOComputerProperties.IPV4x': 740234570,
+                   'EPOComputerProperties.IPV4x': -1979646028,
                    'EPOComputerProperties.IPV6': '0:0:0:0:0:FFFF:AC1F:154A',
                    'EPOComputerProperties.IPXAddress': 'N/A',
                    'EPOComputerProperties.IsPortable': 0,
@@ -85,6 +85,17 @@ def test_os():
     assert details['type'] == 'Windows'
     assert details['distribution'] == '10'
     assert details['bitness'] == 64
+
+
+def test_parse_network():
+    parsed = epo_plugin.parse_network(raw_device_data)
+    expected = [
+        {
+            "MAC": "06:f4:17:36:0e:d8".upper(),
+            "IP": ["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a"]
+        }
+    ]
+    assert parsed == expected
 
 
 if __name__ == '__main__':
