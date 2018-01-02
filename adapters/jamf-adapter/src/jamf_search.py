@@ -3,7 +3,7 @@ import requests
 from jamf_exceptions import JamfRequestException
 
 
-class AdvancedSearchRAII(object):
+class JamfAdvancedSearch(object):
     def __init__(self, jamf_connection, url, data):
         self.jamf_connection = jamf_connection
         self.url = url

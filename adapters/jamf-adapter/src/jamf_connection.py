@@ -1,7 +1,7 @@
 import requests
 import base64
 from jamf_exceptions import JamfConnectionError, JamfRequestException
-from jamf_search import AdvancedSearchRAII
+from jamf_search import JamfAdvancedSearch
 import jamf_consts
 from json import JSONDecodeError
 from jamf_xml_parser import Xml2Json
@@ -101,7 +101,7 @@ class JamfConnection(object):
         :return: the response
         :rtype: list of computers
         """
-        search = AdvancedSearchRAII(self, url, data)
+        search = JamfAdvancedSearch(self, url, data)
         with search:
             if search.search_results is not None:
                 try:
