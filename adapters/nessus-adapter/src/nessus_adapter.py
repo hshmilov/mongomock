@@ -107,7 +107,7 @@ class NessusAdapter(AdapterBase):
                     'name': 'Username'
                 },
                 PASSWORD: {
-                    'type': 'string',
+                    'type': 'password',
                     'name': 'Password'
                 }
             },

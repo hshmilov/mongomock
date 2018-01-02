@@ -49,7 +49,7 @@ export const adapterStaticData = {
 	},
 	'qualys_adapter': {
 		name: 'Qualys',
-		description: 'The Qualys Cloud Platform monitors customer�s global security and compliance posture using sensors.'
+		description: 'The Qualys Cloud Platform monitors customer\'s global security and compliance posture using sensors.'
   },
 	'jamf_adapter': {
 		name: 'Jamf',
