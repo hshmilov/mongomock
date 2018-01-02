@@ -103,7 +103,7 @@ class JamfConnection(object):
         """
         search = AdvancedSearchRAII(self, url, data)
         with search:
-            if search.search_results != None:
+            if search.search_results is not None:
                 try:
                     response = search.search_results.json()
                 except JSONDecodeError:
