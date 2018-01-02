@@ -1,7 +1,7 @@
 ADVANCED_COMPUTER_SEARCH_URL = 'advancedcomputersearches'
 ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 <advanced_computer_search>
-    <name>Axonius-Inventory-123456</name>
+    <name>Axonius-Adapter-Inventory</name>
     <display_fields>
         <size>91</size>
         <display_field>
@@ -284,7 +284,7 @@ ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME = 'computers'
 ADVANCED_MOBILE_SEARCH_URL = 'advancedmobiledevicesearches'
 ADVANCED_MOBILE_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 <advanced_mobile_device_search>
-    <name>Axonius-Inventory-123456</name>
+    <name>Axonius-Adapter-Inventory</name>
     <criteria>
         <size>0</size>
     </criteria>
