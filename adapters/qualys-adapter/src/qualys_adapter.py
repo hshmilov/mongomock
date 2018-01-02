@@ -96,13 +96,13 @@ class QualysAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device_raw = device_raw['HostAsset']
-            if 'STATUS_ACTIVE' != device_raw['agentInfo']['status']:
+            device_raw = device_raw.get('HostAsset', '')
+            if 'STATUS_ACTIVE' != device_raw.get('agentInfo', {}).get('status', ''):
                 continue
             device_parsed = dict()
-            device_parsed['hostname'] = device_raw['name']
-            device_parsed['OS'] = figure_out_os(device_raw['os'])
-            ifaces = device_raw['networkInterface']['list']
+            device_parsed['hostname'] = device_raw.get('name', '')
+            device_parsed['OS'] = figure_out_os(device_raw.get('os', ''))
+            ifaces = device_raw.get('networkInterface', {}).get('list')
             iface_dict = []
             for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
                 iface_dict.append({'MAC': mac, 'IP': [ip_iface['HostAssetInterface']['address']

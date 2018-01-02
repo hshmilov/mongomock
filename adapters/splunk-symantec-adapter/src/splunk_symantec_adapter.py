@@ -14,7 +14,7 @@ __author__ = "Asaf & Tal"
 class SplunkSymantecAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
-        return '{}:{}'.format(client_config['host'], client_config['port'])
+        return '{0}:{1}'.format(client_config['host'], client_config['port'])
 
     def _connect_client(self, client_config):
         try:
@@ -64,15 +64,22 @@ class SplunkSymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Splunk Server
         """
+        # TODO: Weiss - Why reading a config file every get_devices?
         config = ConfigParser()
         config.read(self.config_file_path)
 
+        # TODO: Weiss - Do this once on load.
         host_active_hours = int(config['DEFAULT']['host_active_hours'])
+
         with client_data:
             queries_collection = self._get_collection('symantec_queries', limited_user=True)
+            # Update all_devices from splunk
             all_devices = self._update_new_raw_devices(client_data, queries_collection)
+
+            # Get "Active" devices
             active_hosts = client_data.get_symantec_active_hosts(host_active_hours)
 
+            #
             if active_hosts:
                 self.active_hosts = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
             else:
@@ -115,25 +122,26 @@ class SplunkSymantecAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        # TODO: Talk with Ofri/Avidor about this (Returns only devices that are active according to "host_active_hours"
         for device_raw in self.active_hosts:
-            host = device_raw['host']
+            host = device_raw.get('host', '')
             device_parsed = dict()
-            device_parsed['hostname'] = host['name']
-            if host['type'] == 'symantec_mac':
+            device_parsed['hostname'] = host.get('name', '')
+            if host.get('type', '') == 'symantec_mac':
                 device_parsed['OS'] = figure_out_os('OS X')
                 device_parsed['network_interfaces'] = []
-                if host['local mac'] != '000000000000':
-                    device_parsed['network_interfaces'].append({'MAC': host['local mac'],
-                                                                'IP': host['local ips'].split(' ')})
-                if host['remote mac'] != '000000000000':
-                    device_parsed['network_interfaces'].append({'MAC': ':'.join([host['remote mac'][index:index + 2]
+                if host.get('local mac', '') != '000000000000':
+                    device_parsed['network_interfaces'].append({'MAC': host.get('local mac', ''),
+                                                                'IP': host.get('local ips', '').split(' ')})
+                if host.get('remote mac', '') != '000000000000':
+                    device_parsed['network_interfaces'].append({'MAC': ':'.join([host.get('remote mac', '')[
+                                                                                 index:index + 2]
                                                                                  for index in range(0, 12, 2)]),
                                                                 'IP': host['remote ips'].split(' ')})
             else:
-                device_parsed['OS'] = figure_out_os(host['os'])
-                device_parsed['network_interfaces'] = [{'MAC': iface['mac'],
-                                                        'IP': iface['ip'].split(' ')} for iface in host['network']]
+                device_parsed['OS'] = figure_out_os(host.get('os', ''))
+                device_parsed['network_interfaces'] = [{'MAC': iface.get('mac', ''),
+                                                        'IP': iface.get('ip', '').split(' ')} for iface in
+                                                       host.get('network', [{}])]
             device_parsed['id'] = host['name']
             device_parsed['raw'] = device_raw
             yield device_parsed

@@ -30,8 +30,8 @@ def parse_os_details(device_raw_data):
     :param device_raw_data: device raw data as retrieved by query
     :return: parsed os details struct
     """
-    details = figure_out_os(device_raw_data['EPOLeafNode.os'])
-    details['bitness'] = 64 if device_raw_data['EPOComputerProperties.OSBitMode'] == 1 else 32
+    details = figure_out_os(device_raw_data.get('EPOLeafNode.os', ''))
+    details['bitness'] = 64 if device_raw_data.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
     return details
 
 
@@ -87,8 +87,8 @@ class EpoPlugin(AdapterBase):
         raw_data = json.loads(raw_data)
         for device_raw_data in raw_data:
             yield {
-                'name': device_raw_data['EPOComputerProperties.ComputerName'],
-                'os': parse_os_details(device_raw_data),
+                'hostname': device_raw_data.get('EPOComputerProperties.ComputerName', ''),
+                'OS': parse_os_details(device_raw_data),
                 'id': device_raw_data['EPOLeafNode.AgentGUID'],
                 'raw': json.dumps(device_raw_data)}
 

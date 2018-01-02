@@ -89,18 +89,19 @@ class SymantecAdapter(AdapterBase):
             if 0 == device_raw['onlineStatus']:
                 continue
             device_parsed = dict()
-            if device_raw['domainOrWorkgroup'] == 'WORKGROUP' or device_raw['domainOrWorkgroup'] == '':
+            if device_raw.get('domainOrWorkgroup', '') == 'WORKGROUP' or device_raw.get('domainOrWorkgroup', '') == '':
                 # Special case for workgroup
-                device_parsed['hostname'] = device_raw['computerName']
+                device_parsed['hostname'] = device_raw.get('computerName', '')
             else:
-                device_parsed['hostname'] = device_raw['computerName'] + '.' + device_raw['domainOrWorkgroup']
-            device_parsed['OS'] = figure_out_os(' '.join([device_raw["operatingSystem"],
-                                                          str(device_raw["osbitness"]),
-                                                          str(device_raw["osversion"]),
-                                                          str(device_raw["osmajor"]),
-                                                          str(device_raw["osminor"])]))
+                device_parsed['hostname'] = device_raw.get(
+                    'computerName', '') + '.' + device_raw.get('domainOrWorkgroup', '')
+            device_parsed['OS'] = figure_out_os(' '.join([device_raw.get("operatingSystem", ''),
+                                                          str(device_raw.get("osbitness", '')),
+                                                          str(device_raw.get("osversion", '')),
+                                                          str(device_raw.get("osmajor", '')),
+                                                          str(device_raw.get("osminor", ''))]))
             device_parsed['network_interfaces'] = [{"MAC": mac, "IP": [IP]}
-                                                   for mac, IP in list(zip(device_raw['macAddresses'], device_raw['ipAddresses']))]
+                                                   for mac, IP in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', '')))]
 
             device_parsed['id'] = device_raw['agentId']
             device_parsed['raw'] = device_raw

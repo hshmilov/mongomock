@@ -124,16 +124,15 @@ class NessusAdapter(AdapterBase):
         """
         try:
             for device_raw in raw_data:
-                device_parsed = {'id': device_raw['id'], 'hostname': None, 'OS': None, 'network_interfaces': None}
-                device_parsed['hostname'] = None
-                if device_raw.get('info'):
-                    if device_raw['info'].get('host-ip'):
-                        device_parsed['network_interfaces'] = [{'MAC': None, 'IP': device_raw['info']['host-ip']}]
-                    if device_raw['info'].get('operating-system'):
-                        device_parsed['OS'] = figure_out_os(device_raw['info']['operating-system'])
-
-                device_parsed['raw'] = device_raw
-                yield device_parsed
+                yield {'id': device_raw['id'],
+                       'hostname': '',
+                       'OS': figure_out_os(device_raw.get('info', {}).get('operating-system', '')),
+                       'network_interfaces': [
+                           {'MAC': '',
+                            'IP': device_raw.get('info', {}).get('host-ip', '')
+                            }
+                ],
+                    'raw': device_raw}
         except NessusException as e:
             self.logger.error('Error parsing devices. Details: {0}'.format(str(e)))
             raise AdapterException('Nessus Adapter failed parsing devices')

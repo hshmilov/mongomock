@@ -146,8 +146,9 @@ class AWSAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, raw_data):
-        for reservation in raw_data['Reservations']:
-            for instance in reservation['Instances']:
+        for reservation in raw_data.get('Reservations', []):
+            for instance in reservation.get('Instances', []):
+                # TODO: Weiss - This is a bit of a weird dict comprehension.
                 tags_dict = {i['Key']: i['Value']
                              for i in instance.get('Tags', {})}
                 yield {
@@ -180,7 +181,6 @@ class AWSAdapter(AdapterBase):
                 "MAC": interface.get("MacAddress"),
                 "IP": [addr.get('PrivateIpAddress') for addr in interface.get("PrivateIpAddresses", [])],
             }
-        return network_interfaces
 
     def _correlation_cmds(self):
         """

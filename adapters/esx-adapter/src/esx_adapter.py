@@ -80,20 +80,20 @@ class ESXAdapter(AdapterBase):
         :param _curr_path: internally used
         :return: iterator(dict)
         """
-        if node['Type'] == 'Machine':
-            details = node['Details']
+        if node.get('Type', '') == 'Machine':
+            details = node.get('Details', {})
             yield {
-                "name": node['Name'],
-                'OS': figure_out_os(details['config']['guestFullName']),
-                'id': details['config']['instanceUuid'],
+                "name": node.get('Name', ''),
+                'OS': figure_out_os(details.get('config', {}).get('guestFullName', '')),
+                'id': details.get('config', {})['instanceUuid'],
                 'network_interfaces': self._parse_network_device(details.get('networking', [])),
-                'hostname': details['guest'].get('hostName'),
-                'vmToolsStatus': details['guest'].get('toolsStatus'),
-                'physicalPath': _curr_path + "/" + node['Name'],
+                'hostname': details.get('guest', {}).get('hostName', ''),
+                'vmToolsStatus': details.get('guest', {}).get('toolsStatus', ''),
+                'physicalPath': _curr_path + "/" + node.get('Name', ''),
                 'raw': details
             }
-        elif node['Type'] in ("Datacenter", "Folder", "Root"):
-            for child in node['Children']:
+        elif node.get('Type', '') in ("Datacenter", "Folder", "Root"):
+            for child in node.get('Children', [{}]):
                 yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
         else:
             raise RuntimeError(
@@ -109,7 +109,7 @@ class ESXAdapter(AdapterBase):
             ip_to_return = [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])]
             if len(ip_to_return) != 0:  # Return only if has an IP address
                 yield {
-                    "MAC": raw_network.get('macAddress'),
+                    "MAC": raw_network.get('macAddress', ''),
                     "IP": ip_to_return,
                     # in vCenter/ESX it's not trivial to figure out the 'public IP'
                     # the public IP is in the 'simple case' the public IP of the host machine (which we also

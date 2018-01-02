@@ -78,11 +78,9 @@ class ActiveDirectoryPlugin(AdapterBase):
 
         self._resolver_scheduler.start()
 
-        # Try to create temp files dir
-        try:
-            os.mkdir(TEMP_FILES_FOLDER)
-        except FileExistsError:
-            pass  # Folder exists
+        # create temp files dir
+        os.makedirs(TEMP_FILES_FOLDER, exist_ok=True)
+        # TODO: Weiss: Ask why not using tempfile to creage dir.
 
     def _get_client_id(self, dc_details):
         return dc_details['dc_name']
@@ -228,8 +226,8 @@ class ActiveDirectoryPlugin(AdapterBase):
         to_insert = []
         for device_raw in devices_raw_data:
             device_doc = {
-                'hostname': device_raw.get('dNSHostName', device_raw.get('name')),
-                'OS': figure_out_os(device_raw.get('operatingSystem')),
+                'hostname': device_raw.get('dNSHostName', device_raw.get('name', '')),
+                'OS': figure_out_os(device_raw.get('operatingSystem', '')),
                 'network_interfaces': [],
                 'RESOLVE_STATUS': 'PENDING',
                 'id': device_raw['distinguishedName'],
