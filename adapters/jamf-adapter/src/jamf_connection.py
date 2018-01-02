@@ -103,14 +103,10 @@ class JamfConnection(object):
         """
         search = JamfAdvancedSearch(self, url, data)
         with search:
-            if search.search_results is not None:
-                try:
-                    response = search.search_results.json()
-                except JSONDecodeError:
-                    response = Xml2Json(search.search_results.text).result
-            else:
-                response = self._get(url + "/id/" + str(search.id),
-                                     headers=headers)
+            try:
+                response = search.search_results.json()
+            except JSONDecodeError:
+                response = Xml2Json(search.search_results.text).result
             return response[xml_name][device_list_name]
 
     def get_devices(self):
