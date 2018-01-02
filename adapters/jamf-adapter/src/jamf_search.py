@@ -10,11 +10,12 @@ class JamfAdvancedSearch(object):
         self.data = data
         self.search_results = None
         self.headers = headers
+        self._update_query()
 
-    def _create_query(self):
+    def _request_for_query(self, request_method, url_addition, error_message):
         post_headers = self.jamf_connection.headers
         post_headers['Content-Type'] = 'application/xml'
-        response = requests.post(self.jamf_connection.get_url_request(self.url + "/id/0"),
+        response = request_method(self.jamf_connection.get_url_request(self.url + url_addition),
                                  headers=post_headers,
                                  data=self.data)
         try:
@@ -23,12 +24,21 @@ class JamfAdvancedSearch(object):
             int(response_tree.find("id").text)
         except ValueError:
             # conversion of the query id to int failed
-            self.jamf_connection.logger.error(f"Search creation returned an error: {response.text}")
-            raise JamfRequestException(f"Search creation returned an error: {response.text}")
+            self.jamf_connection.logger.error(error_message + f": {response.text}")
+            raise JamfRequestException(error_message + f": {response.text}")
         except Exception as e:
             # any other error during creation of the query or during the conversion
-            self.jamf_connection.logger.error(f"Search creation returned an error: {str(e)}")
-            raise JamfRequestException(str(e))
+            self.jamf_connection.logger.error(error_message + f": {str(e)}")
+            raise JamfRequestException(error_message + str(e))
+
+    def _create_query(self):
+        self._request_for_query(requests.post, "/id/0", "Search creation returned an error")
+
+    def _update_query(self):
+        try:
+            self._request_for_query(requests.put, "/name/Axonius-Adapter-Inventory", "Search update returned an error")
+        except JamfRequestException:
+            self._create_query()
 
     def _get_query_results(self):
         try:
@@ -44,10 +54,6 @@ class JamfAdvancedSearch(object):
             raise JamfRequestException(f"An unknown error has occurred: {str(e)}")
 
     def __enter__(self):
-        self.search_results = self._get_query_results()
-        if self.search_results is None:
-            self._create_query()
-
         tries = 0
         while self.search_results is None:
             self.search_results = self._get_query_results()
