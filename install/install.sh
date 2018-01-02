@@ -42,7 +42,13 @@ docker-compose -f plugins/careful-execution-correlator-plugin/docker-compose.yml
 # Adapters
 docker-compose -f adapters/ad-adapter/docker-compose.yml -f adapters/ad-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/aws-adapter/docker-compose.yml -f adapters/aws-adapter/docker-compose.prod.yml up -d
+docker-compose -f adapters/epo-adapter/docker-compose.yml -f adapters/epo-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/esx-adapter/docker-compose.yml -f adapters/esx-adapter/docker-compose.prod.yml up -d
+docker-compose -f adapters/jamf-adapter/docker-compose.yml -f adapters/jamf-adapter/docker-compose.prod.yml up -d
+docker-compose -f adapters/nessus-adapter/docker-compose.yml -f adapters/nessus-adapter/docker-compose.prod.yml up -d
+docker-compose -f adapters/nexpose-adapter/docker-compose.yml -f adapters/nexpose-adapter/docker-compose.prod.yml up -d
+#docker-compose -f adapters/puppet-adapter/docker-compose.yml -f adapters/puppet-adapter/docker-compose.prod.yml up -d
+docker-compose -f adapters/qualys-adapter/docker-compose.yml -f adapters/qualys-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/splunk-symantec-adapter/docker-compose.yml -f adapters/splunk-symantec-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/splunk-nexpose-adapter/docker-compose.yml -f adapters/splunk-nexpose-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/symantec-adapter/docker-compose.yml -f adapters/symantec-adapter/docker-compose.prod.yml up -d
