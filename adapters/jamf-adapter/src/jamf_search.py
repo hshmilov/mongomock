@@ -3,48 +3,65 @@ import requests
 from jamf_exceptions import JamfRequestException
 
 
-class AdvancedSearchRAII(object):
-    def __init__(self, jamf_connection, url, data):
-        self.id = None
+class JamfAdvancedSearch(object):
+    def __init__(self, jamf_connection, url, data, headers, update_query=False):
         self.jamf_connection = jamf_connection
         self.url = url
-        self.data = data
+        self.search_results = None
+        self.headers = headers
+        if update_query:
+            self._update_query(data)
 
-    def __enter__(self):
+    def _request_for_query(self, request_method, url_addition, data, error_message):
         post_headers = self.jamf_connection.headers
         post_headers['Content-Type'] = 'application/xml'
-        try:
-            requests.delete(self.jamf_connection.get_url_request(self.url + "/name/Axonius-Inventory-123456"),
-                            headers=self.jamf_connection.headers)
-        except:
-            pass
-        response = requests.post(self.jamf_connection.get_url_request(self.url + "/id/0"),
-                                 headers=post_headers,
-                                 data=self.data)
+        response = request_method(self.jamf_connection.get_url_request(self.url + url_addition),
+                                  headers=post_headers,
+                                  data=data)
         try:
             response.raise_for_status()
-        except Exception as e:
-            self.jamf_connection.logger.error(f"Search creation returned an error: {str(e)}")
-            raise JamfRequestException(str(e))
-        try:
             response_tree = ET.fromstring(response.text)
-            self.id = int(response_tree.find("id").text)
+            int(response_tree.find("id").text)
         except ValueError:
-            self.jamf_connection.logger.error(f"Search creation returned an error: {response.text}")
-            raise JamfRequestException(f"Search creation returned an error: {response.text}")
-        created = False
+            # conversion of the query id to int failed
+            self.jamf_connection.logger.error(error_message + f": {response.text}")
+            raise JamfRequestException(error_message + f": {response.text}")
+        except Exception as e:
+            # any other error during creation of the query or during the conversion
+            self.jamf_connection.logger.error(error_message + f": {str(e)}")
+            raise JamfRequestException(error_message + str(e))
+
+    def _create_query(self):
+        self._request_for_query(requests.post, "/id/0", "Search creation returned an error")
+
+    def _update_query(self, data):
+        try:
+            self._request_for_query(requests.put, "/name/Axonius-Adapter-Inventory", data,
+                                    "Search update returned an error")
+        except JamfRequestException:
+            self._create_query(data)
+
+    def _get_query_results(self):
+        try:
+            response = requests.get(self.jamf_connection.get_url_request(self.url + "/name/Axonius-Adapter-Inventory"),
+                                    headers=self.headers)
+            response.raise_for_status()
+            return response
+        except requests.HTTPError as e:
+            self.jamf_connection.logger.warn(f"Our search query doesn't exist: {str(e)}")
+            return None
+        except Exception as e:
+            self.jamf_connection.logger.warn(f"An unknown error has occurred: {str(e)}")
+            raise JamfRequestException(f"An unknown error has occurred: {str(e)}")
+
+    def __enter__(self):
         tries = 0
-        while not created and tries < 5:
-            requests.get(self.jamf_connection.get_url_request(self.url + "/id/" + str(self.id)),
-                         self.jamf_connection.headers)
-            try:
-                response.raise_for_status()
-                created = True
-            except requests.HTTPError as e:
-                if "Not Found for url" in str(e):
-                    tries += 1
+        while self.search_results is None:
+            self.search_results = self._get_query_results()
+            tries += 1
+            if tries >= 5:
+                self.jamf_connection.logger.error(f"Search creation succeeded but no results returned after 5 times")
+                raise JamfRequestException(f"Search creation succeeded but no results returned after 5 times")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.id is not None:
-            requests.delete(self.jamf_connection.get_url_request(self.url + "/id/" + str(self.id)),
-                            headers=self.jamf_connection.headers)
+        self.search_results = None

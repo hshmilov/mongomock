@@ -1,7 +1,7 @@
 import requests
 import base64
 from jamf_exceptions import JamfConnectionError, JamfRequestException
-from jamf_search import AdvancedSearchRAII
+from jamf_search import JamfAdvancedSearch
 import jamf_consts
 from json import JSONDecodeError
 from jamf_xml_parser import Xml2Json
@@ -23,6 +23,7 @@ class JamfConnection(object):
         self.url = url + 'JSSResource/'
         self.headers = {'Accept': 'application/json'}
         self.auth = None
+        self._update_query = True
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -101,10 +102,14 @@ class JamfConnection(object):
         :return: the response
         :rtype: list of computers
         """
-        search = AdvancedSearchRAII(self, url, data)
+        search = JamfAdvancedSearch(self, url, data, headers, self._update_query)
+        # update has succeeded or an exception would have been raised
+        self._update_query = False
         with search:
-            response = self._get(url + "/id/" + str(search.id),
-                                 headers=headers)
+            try:
+                response = search.search_results.json()
+            except JSONDecodeError:
+                response = Xml2Json(search.search_results.text).result
             return response[xml_name][device_list_name]
 
     def get_devices(self):
@@ -123,4 +128,4 @@ class JamfConnection(object):
                                    data=jamf_consts.ADVANCED_MOBILE_SEARCH,
                                    xml_name=jamf_consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
                                    device_list_name=jamf_consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
-                                   headers=non_json_headers)['mobile_device']
+                                   headers=non_json_headers).get('mobile_device', [])
