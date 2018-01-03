@@ -1,4 +1,5 @@
 from axonius.adapter_base import AdapterBase
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.parsing_utils import figure_out_os, format_mac
 import json
 import ipaddress
@@ -112,12 +113,8 @@ class EpoPlugin(AdapterBase):
                 'raw': json.dumps(device_raw_data)}
 
     def _query_devices_by_client(self, client_name, client_data):
-        host = client_data[EPO_HOST]
-        port = client_data[EPO_PORT]
-        user = client_data[QUERY_USER]
-        passw = client_data[QUERY_PASS]
-
-        mc = mcafee.client(host, port, user, passw)
+        mc = mcafee.client(client_data[EPO_HOST], client_data[EPO_PORT],
+                           client_data[QUERY_USER], client_data[QUERY_PASS])
         table = mc.run("core.listTables", table=LEAF_NODE_TABLE)
 
         all_linked_tables = get_all_linked_tables(table)
@@ -129,6 +126,13 @@ class EpoPlugin(AdapterBase):
         return client_config[EPO_HOST]
 
     def _connect_client(self, client_config):
+        try:
+            mcafee.client(client_config[EPO_HOST], client_config[EPO_PORT],
+                          client_config[QUERY_USER], client_config[QUERY_PASS])
+        except Exception as e:
+            message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
+            self.logger.error(message)
+            raise ClientConnectionException(message)
         return client_config
 
     # Exported API functions - None for now
