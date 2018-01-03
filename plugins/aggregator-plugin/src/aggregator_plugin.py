@@ -165,7 +165,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         """
         return jsonify(self.devices_db.find_one({"internal_axon_id": device_id}))
 
-    def _triggered(self, job_name, post_json):
+    def _triggered(self, job_name, post_json, *args):
         current_adapters = requests.get(self.core_address + '/register')
 
         assert current_adapters.status_code == 200, "Error getting devices from core. reason:" + \

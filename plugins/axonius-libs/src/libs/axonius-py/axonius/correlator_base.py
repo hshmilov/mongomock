@@ -135,7 +135,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
             return False
         return True
 
-    def _triggered(self, job_name, post_json):
+    def _triggered(self, job_name, post_json, *args):
         """
         Returns any errors as-is.
         Post data is a list of axon-ids. Otherwise, will query DB-wise.
