@@ -4,13 +4,12 @@ from jamf_exceptions import JamfRequestException
 
 
 class JamfAdvancedSearch(object):
-    def __init__(self, jamf_connection, url, data, headers, update_query=False):
+    def __init__(self, jamf_connection, url, data, headers):
         self.jamf_connection = jamf_connection
         self.url = url
         self.search_results = None
         self.headers = headers
-        if update_query:
-            self._update_query(data)
+        self._update_query(data)
 
     def _request_for_query(self, request_method, url_addition, data, error_message):
         post_headers = self.jamf_connection.headers

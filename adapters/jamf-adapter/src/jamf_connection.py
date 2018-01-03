@@ -23,7 +23,6 @@ class JamfConnection(object):
         self.url = url + 'JSSResource/'
         self.headers = {'Accept': 'application/json'}
         self.auth = None
-        self._update_query = True
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -102,9 +101,8 @@ class JamfConnection(object):
         :return: the response
         :rtype: list of computers
         """
-        search = JamfAdvancedSearch(self, url, data, headers, self._update_query)
+        search = JamfAdvancedSearch(self, url, data, headers)
         # update has succeeded or an exception would have been raised
-        self._update_query = False
         with search:
             try:
                 response = search.search_results.json()
