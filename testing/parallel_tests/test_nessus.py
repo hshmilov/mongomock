@@ -1,6 +1,6 @@
-import pytest
 from services.adapters.nessus_service import NessusService, nessus_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
+
 
 client_details = {
     "host": "192.168.20.21",

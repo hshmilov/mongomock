@@ -18,14 +18,14 @@ class PuppetAdapter(AdapterBase):
     """
 
     # Functions
-    def __init__(self, **kargs):
+    def __init__(self, **kwargs):
         """Class initialization.
 
         Check AdapterBase documentation for additional params and exception details.
         """
 
         # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
+        super().__init__(**kwargs)
 
     def _get_client_id(self, client_config):
         return client_config["puppet_server_name"]
@@ -104,7 +104,7 @@ class PuppetAdapter(AdapterBase):
             device_parsed['os']['major'] = device_raw["os"]['release']['major']
             if 'minor' in device_raw['os']['release']:
                 device_parsed['os']['minor'] = device_raw["os"]['release']['minor']
-            device_parsed['id'] = device_raw[u'certname']
+            device_parsed['id'] = device_raw['certname']
             device_parsed['raw'] = device_raw
             yield device_parsed
 

@@ -1,17 +1,14 @@
 import pytest
 import pymongo
 
-import services.compose_service
+from services.compose_service import ComposeService
 from services.simple_fixture import initialize_fixture
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
-class MongoService(services.compose_service.ComposeService):
-    def __init__(self, endpoint=('localhost', 27018),
-                 compose_file_path='../infrastructures/database/docker-compose.yml',
-                 container_name="mongo",
-                 *vargs, **kwargs):
-        super().__init__(compose_file_path, container_name=container_name, *vargs, **kwargs)
+class MongoService(ComposeService):
+    def __init__(self, endpoint=('localhost', 27018), **kwargs):
+        super().__init__('../infrastructures/database/docker-compose.yml', **kwargs)
         self.client = None
         self.endpoint = endpoint
         self.connect()
@@ -20,11 +17,11 @@ class MongoService(services.compose_service.ComposeService):
         try:
             self.connect()
             self.client.server_info()
-            print("Mongo connection worked")
-            return True
         except Exception as err:
             print(err)
             return False
+        print("Mongo connection worked")
+        return True
 
     def connect(self):
         connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user="ax_user",
@@ -41,9 +38,8 @@ class MongoService(services.compose_service.ComposeService):
 
     def get_unique_plugin_config(self, unique_plugin_name):
         configs = self.get_configs()
-        plugin_config = list(
-            filter(lambda k: k[PLUGIN_UNIQUE_NAME] == unique_plugin_name, configs))
-        assert 1 == len(plugin_config)
+        plugin_config = list(filter(lambda k: k[PLUGIN_UNIQUE_NAME] == unique_plugin_name, configs))
+        assert len(plugin_config) == 1
         return plugin_config[0]
 
     def get_collection(self, db_name, collection_name):
@@ -58,14 +54,6 @@ class MongoService(services.compose_service.ComposeService):
         return self.client[db_name][collection_name]
 
     def get_databases(self):
-        """
-        Returns a specific collection.
-
-        :param str collection_name: The name of the collection we want to get.
-        :param str db_name: The name of the db.
-
-        :return: list(dict)
-        """
         return self.client.database_names()
 
     def get_devices(self, aggregator_unique_name):

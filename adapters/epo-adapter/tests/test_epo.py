@@ -1,4 +1,4 @@
-import epo_plugin
+import epo_adapter
 import pytest
 
 list_tables = {
@@ -74,13 +74,13 @@ raw_device_data = {'EPOBranchNode.NodeName': 'My Group',
 
 
 def test_get_all_linked_tables():
-    linked_tables = epo_plugin.get_all_linked_tables(list_tables)
+    linked_tables = epo_adapter.get_all_linked_tables(list_tables)
     assert len(linked_tables) > 0
     assert 'EPOComputerProperties' in linked_tables
 
 
 def test_os():
-    details = epo_plugin.parse_os_details(raw_device_data)
+    details = epo_adapter.parse_os_details(raw_device_data)
     print(details)
     assert details['type'] == 'Windows'
     assert details['distribution'] == '10'
@@ -88,7 +88,7 @@ def test_os():
 
 
 def test_parse_network():
-    parsed = epo_plugin.parse_network(raw_device_data)
+    parsed = epo_adapter.parse_network(raw_device_data)
     expected = [
         {
             "MAC": "06:f4:17:36:0e:d8".upper(),

@@ -27,8 +27,8 @@ class DnsConflictsPlugin(PluginBase, Activatable):
         self.scheduler.resume()
         self.check_ip_conflict_now()
 
-    def __init__(self, *args, **kargs):
-        super().__init__(*args, **kargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.resolve_lock = threading.RLock()
 

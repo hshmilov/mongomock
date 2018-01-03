@@ -8,3 +8,7 @@ class ServiceYmlParser(object):
     @property
     def exposed_port(self):
         return int(next(iter(self.parsed['services'].values()))['ports'][0].split(':')[0])
+
+    @property
+    def container_name(self):
+        return next(iter(self.parsed['services'].values()))['container_name']

@@ -1,4 +1,3 @@
-"""ActiveDirectoryPlugin.py: Implementation of the ActiveDirectory Adapter."""
 # TODO ofir: Change the return values protocol
 
 __author__ = "Ofir Yefet"
@@ -31,7 +30,7 @@ PLUGIN_TYPE = 'ad_adapter'
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 
-class ActiveDirectoryPlugin(AdapterBase):
+class ActiveDirectoryAdapter(AdapterBase):
     """ A class containing all the Active Directory capabilities.
 
     Check AdapterBase documentation for additional params and exception details.
@@ -39,7 +38,7 @@ class ActiveDirectoryPlugin(AdapterBase):
     """
 
     # Functions
-    def __init__(self, **kargs):
+    def __init__(self, **kwargs):
         """Class initialization.
 
         Check AdapterBase documentation for additional params and exception details.
@@ -54,7 +53,7 @@ class ActiveDirectoryPlugin(AdapterBase):
         self.ldap_page_size = int(config['others']['ldap_page_size'])
 
         # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
+        super().__init__(**kwargs)
 
         self._resolving_thread_lock = threading.RLock()
 

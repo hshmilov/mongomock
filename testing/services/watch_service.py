@@ -1,27 +1,24 @@
 import pytest
-import json
 
-import services.plugin_service as plugin_service
+from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
 
 
-class WatchService(plugin_service.PluginService):
-    def __init__(self, compose_file_path='../plugins/watch-service/docker-compose.yml',
-                 config_file_path='../plugins/watch-service/src/plugin_config.ini',
-                 container_name='watch-service', *vargs, **kwargs):
-        super().__init__(compose_file_path, config_file_path, container_name, *vargs, **kwargs)
+class WatchService(PluginService):
+    def __init__(self, **kwargs):
+        super().__init__(service_dir='../plugins/watch-service', **kwargs)
 
-    def _request_watches(self, method, *kargs, **kwargs):
-        return getattr(self, method)('watch', api_key=self.api_key, *kargs, **kwargs)
+    def _request_watches(self, method, *vargs, **kwargs):
+        return getattr(self, method)('watch', api_key=self.api_key, *vargs, **kwargs)
 
-    def get_watches(self, *kargs, **kwargs):
-        return self._request_watches('get', *kargs, **kwargs)
+    def get_watches(self, *vargs, **kwargs):
+        return self._request_watches('get', *vargs, **kwargs)
 
-    def create_watch(self, data, *kargs, **kwargs):
-        return self._request_watches('put', data=data, *kargs, **kwargs)
+    def create_watch(self, data, *vargs, **kwargs):
+        return self._request_watches('put', data=data, *vargs, **kwargs)
 
-    def delete_watch(self, data, *kargs, **kwargs):
-        return self._request_watches('delete', data=data, *kargs, **kwargs)
+    def delete_watch(self, data, *vargs, **kwargs):
+        return self._request_watches('delete', data=data, *vargs, **kwargs)
 
     def run_jobs(self):
         self.get('trigger_watches', api_key=self.api_key)

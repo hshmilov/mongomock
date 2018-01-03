@@ -1,4 +1,4 @@
-from epo_plugin import EpoPlugin
+from epo_adapter import EpoAdapter
 from axonius.server_utils import init_wsgi
 
 import ssl
@@ -18,10 +18,10 @@ else:
 
 if __name__ == '__main__':
     # Initialize
-    epo_adapter = EpoPlugin()
+    epo_adapter = EpoAdapter()
 
     # Run (Blocking)
     epo_adapter.start_serve()
 
 # Init wsgi if in it.
-wsgi_app = init_wsgi(EpoPlugin)
+wsgi_app = init_wsgi(EpoAdapter)

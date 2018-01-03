@@ -1,6 +1,4 @@
-import pytest
 from services.adapters.nexpose_service import NexposeService, nexpose_fixture
-
 from test_helpers.adapter_test_base import AdapterTestBase
 
 

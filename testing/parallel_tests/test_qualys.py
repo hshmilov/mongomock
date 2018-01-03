@@ -1,6 +1,6 @@
 from services.adapters.qualys_service import QualysService, qualys_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-import pytest
+
 
 client_details = {
     "Qualys_Domain": "qualysapi.qg2.apps.qualys.eu",

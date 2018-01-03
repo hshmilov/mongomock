@@ -1,22 +1,18 @@
 import pytest
 from retrying import retry
 
-import services.plugin_service as plugin_service
-from services.plugin_service import API_KEY_HEADER
+from services.plugin_service import API_KEY_HEADER, PluginService
 import requests
 
 
-class AggregatorService(plugin_service.PluginService):
-    def __init__(self, compose_file_path='../plugins/aggregator-plugin/docker-compose.yml',
-                 config_file_path='../plugins/aggregator-plugin/src/plugin_config.ini',
-                 container_name='aggregator', *vargs, **kwargs):
-        super().__init__(compose_file_path, config_file_path, container_name, *vargs, **kwargs)
+class AggregatorService(PluginService):
+    def __init__(self, **kwargs):
+        super().__init__(service_dir='../plugins/aggregator-plugin', **kwargs)
 
     @retry(wait_fixed=3000,
            stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
-        response = requests.post(
-            self.req_url + f"/trigger/{adapter_id}", headers={API_KEY_HEADER: self.api_key})
+        response = requests.post(self.req_url + f"/trigger/{adapter_id}", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, \
             f"Error in response: {str(response.status_code)}, " \

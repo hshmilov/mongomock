@@ -48,7 +48,7 @@ def after_request(response):
     """This function is used to allow other domains to send post messages to this app.
 
     These headers are used to provide the cross origin resource sharing (cors) policy of this domain. 
-    Modern browsers do not permit sending requests (especially post, put, etc) to differnet domains 
+    Modern browsers do not permit sending requests (especially post, put, etc) to different domains
     without the explicit permission of the webserver on this domain. 
     This is why we have to add headers that say that we allow these methods from all domains.
 
@@ -57,10 +57,8 @@ def after_request(response):
     :return: Fixed response that allow other domain to send all methods
     """
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods',
-                         'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
 
@@ -77,7 +75,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
     :param str rule: The address. for example, if rule='device' 
             This function will be accessed when browsing '/device'
     :param methods: Methods that this function will handle
-    :param bool should_authenticate: Wheather to check api key or not. True by default
+    :param bool should_authenticate: Whether to check api key or not. True by default
 
     :type methods: list of str
     """
@@ -101,7 +99,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                 return func(self, *args, **kwargs)
             except Exception as err:
                 try:
-                    # We excpect the first argument to be a PluginBase object (which have a logger object)
+                    # We expect the first argument to be a PluginBase object (which have a logger object)
                     logger = getattr(self, "logger", None)
                     if logger:
                         # Adding exception details for the json logger
@@ -113,8 +111,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                         extra_log['err_traceback'] = tb
                         extra_log['err_type'] = err_type
                         extra_log['err_message'] = err_message
-                        logger.error(
-                            "Unhandled exception thrown from plugin", extra=extra_log)
+                        logger.error("Unhandled exception thrown from plugin", extra=extra_log)
                     return json.dumps({"status": "error", "type": err_type, "message": err_message}), 400
                 except Exception as second_err:
                     return json.dumps({"status": "error", "type": type(second_err).__name__,
@@ -221,8 +218,7 @@ class PluginBase(Feature):
         if not core_data:
             core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
         if not core_data or core_data['status'] == 'error':
-            raise RuntimeError(
-                "Register process failed, Exiting. Reason: {0}".format(core_data['message']))
+            raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data['message']))
 
         if core_data[PLUGIN_UNIQUE_NAME] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
             self.plugin_unique_name = core_data[PLUGIN_UNIQUE_NAME]
@@ -259,11 +255,9 @@ class PluginBase(Feature):
         if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(1)}
-            self.online_plugins_scheduler = BackgroundScheduler(
-                executors=executors)
+            self.online_plugins_scheduler = BackgroundScheduler(executors=executors)
             self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
-                                                  trigger=IntervalTrigger(
-                                                      seconds=30),
+                                                  trigger=IntervalTrigger(seconds=30),
                                                   next_run_time=datetime.now() + timedelta(seconds=20),
                                                   id='check_registered',
                                                   name='check_registered',
@@ -308,9 +302,7 @@ class PluginBase(Feature):
         try:
             if self.plugin_name == "core":
                 return  # No need to check on core itself
-            response = self.request_remote_plugin(
-                "register?unique_name={0}".format(self.plugin_unique_name),
-                timeout=5)
+            response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name), timeout=5)
             if response.status_code in [404, 499, 502]:  # Fault values
                 self.logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
@@ -375,8 +367,7 @@ class PluginBase(Feature):
                     extra['message'] = message
                     extra[PLUGIN_UNIQUE_NAME] = plugin_unique_name
                     current_time = datetime.utcfromtimestamp(record.created)
-                    extra['@timestamp'] = current_time.strftime(
-                        '%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+                    extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
                     # Adding the frame details of the log message.
                     # This is in a different try because failing in this process does
@@ -422,9 +413,9 @@ class PluginBase(Feature):
         fatal_logger.addHandler(file_handler_fatal)
         fatal_logger.setLevel(self.log_level)
 
-        # Custummized logger handler in order to send logs to logstash using http
+        # Customized logger handler in order to send logs to logstash using http
         class LogstashHttpServer(logging.Handler):
-            def __init__(self, **kargs):
+            def __init__(self, **kwargs):
                 """
                     Logging handler for connecting logstash through http.
                 """
@@ -484,8 +475,7 @@ class PluginBase(Feature):
                                     warning_count = warning_count + 1
                                 except Exception as e:
                                     exception_log = "Error while sending log. *Log is lost*. Error details: " \
-                                                    "type={0}, message={1}".format(
-                                                        type(e).__name__, str(e))
+                                                    "type={0}, message={1}".format(type(e).__name__, str(e))
                                     print("[fatal error]: %s" %
                                           (exception_log,))
                                     fatal_logger.error(exception_log)
@@ -619,33 +609,25 @@ class PluginBase(Feature):
                                 headers=headers, **kwargs)
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
-        """
-        Creates a notification (to be seen by the user in the GUI)
-        :param title: A short title of the notification, e.g. "Device has found to be infected!"
-        :param content: The content of the notification
-        :param notification_type: tbd
-        :return: _id of the notification in the db
-        """
         with self._get_db_connection(True) as db:
-            return db['core']['notifications'].insert_one(dict(
-                who=self.plugin_unique_name,
-                plugin_name=self.plugin_name,
-                severity=severity_type,
-                type=notification_type,
-                title=title,
-                content=content,
-                seen=False)).inserted_id
+            return db['core']['notifications'].insert_one(dict(who=self.plugin_unique_name,
+                                                               plugin_name=self.plugin_name,
+                                                               severity=severity_type,
+                                                               type=notification_type,
+                                                               title=title,
+                                                               content=content,
+                                                               seen=False)).inserted_id
 
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
         :param plugin_name: str
         :param verify_single: If True, will raise if many instances are found.
+        :param verify_exists: If True, will raise if no instances are found.
         :return: if verify_single: single plugin data or None; if not verify_single: all plugin datas
         """
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
-        plugins_available = requests.get(
-            self.core_address + '/register').json()
+        plugins_available = requests.get(self.core_address + '/register').json()
         found_plugins = [x for x in plugins_available.values() if x['plugin_name'] == plugin_name]
 
         if verify_single:
@@ -754,8 +736,7 @@ class PluginBase(Feature):
                 action_promise.do_resolve(request_content)
             return ''
         else:
-            self.logger.error(
-                'Got unrecognized action_id update. Action ID: {0}'.format(action_id))
+            self.logger.error('Got unrecognized action_id update. Action ID: {0}'.format(action_id))
             return return_error('Unrecognized action_id {0}'.format(action_id), 404)
 
     def request_action(self, action_type, axon_id, data_for_action=None):
@@ -836,8 +817,7 @@ class PluginBase(Feature):
             schema_func = getattr(self, schema_type)
             return jsonify(schema_func())
         else:
-            self.logger.warning(
-                "Someone tried to get wrong schema '{0}'".format(schema_type))
+            self.logger.warning("Someone tried to get wrong schema '{0}'".format(schema_type))
             return return_error("No such schema. should implement {0}".format(schema_type), 400)
 
     def _general_schema(self):
@@ -869,8 +849,7 @@ class PluginBase(Feature):
                     },
                     "tagname": tagname,
                     "tagvalue": tagvalue}
-        response = self.request_remote_plugin(
-            'plugin_push', "aggregator", 'post', data=json.dumps(tag_data))
+        response = self.request_remote_plugin('plugin_push', "aggregator", 'post', data=json.dumps(tag_data))
         if response.status_code != 200:
-            self.logger.error(f"Couldnt tag device. Reason: {response.status_code}, {str(response.content)}")
+            self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError()

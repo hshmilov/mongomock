@@ -1,15 +1,18 @@
 import subprocess
 import os
 from abc import abstractmethod
-import services.axon_service
+from services.axon_service import AxonService
+from services.compose_parser import ServiceYmlParser
 from test_helpers.exceptions import ComposeException
 
 
-class ComposeService(services.axon_service.AxonService):
-    def __init__(self, compose_file_path, container_name, *vargs, **kwargs):
-        super().__init__(*vargs, **kwargs)
+class ComposeService(AxonService):
+    def __init__(self, compose_file_path, override_compose_file_path=None, **kwargs):
+        super().__init__(**kwargs)
         self._compose_file_path = compose_file_path
-        self.container_name = container_name
+        self._override_compose_file_path = override_compose_file_path
+        self.parsed_compose_file = ServiceYmlParser(compose_file_path)
+        self.container_name = self.parsed_compose_file.container_name
         self.workdir = os.path.abspath(os.path.dirname(self._compose_file_path))
         self.log_dir = os.path.abspath(os.path.join("..", "logs", self.container_name))
 
@@ -17,8 +20,14 @@ class ComposeService(services.axon_service.AxonService):
             os.makedirs(self.log_dir)
 
     def start(self):
-        logsfile = os.path.join(self.log_dir, "{0}_docker_err.log".format(self.container_name))
-        subprocess.check_call(['docker-compose', 'up', '-d'], cwd=self.workdir)
+        logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
+
+        docker_up = ['docker-compose', '-f', os.path.relpath(self._compose_file_path, self.workdir)]
+        if self._override_compose_file_path is not None:
+            docker_up.extend(['-f', os.path.relpath(self._override_compose_file_path, self.workdir)])
+        docker_up.extend(['up', '-d'])
+        subprocess.check_call(docker_up, cwd=self.workdir)
+
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
             os.system(f"cd {self.workdir}; start cmd docker-compose logs -f >> {logsfile} ")
@@ -57,7 +66,7 @@ class ComposeService(services.axon_service.AxonService):
         if p.returncode != 0:
             raise ComposeException("Failed to run 'cat' on docker {0}".format(self.container_name))
 
-        return (out, err, p.returncode)
+        return out, err, p.returncode
 
     def run_command_in_container(self, command):
         """
@@ -73,7 +82,7 @@ class ComposeService(services.axon_service.AxonService):
         if p.returncode != 0:
             raise ComposeException("Failed to run {0} on docker {1}".format(command, self.container_name))
 
-        return (out, err, p.returncode)
+        return out, err, p.returncode
 
     @abstractmethod
     def is_up(self):

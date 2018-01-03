@@ -277,12 +277,12 @@ class AdapterBase(PluginBase, Feature, ABC):
         # Sending the result to the issuer
         self._update_action_data(action_id, status="finished", output=result)
 
-    def _create_action_thread(self, device, func, action_id, **kargs):
+    def _create_action_thread(self, device, func, action_id, **kwargs):
         """ Function for creating action thread.
         """
         # Getting action id
         self._thread_pool.submit(
-            self._run_action_thread, func, device, action_id, **kargs)
+            self._run_action_thread, func, device, action_id, **kwargs)
 
     @add_rule('action/<action_type>', methods=['POST'])
     def rest_new_action(self, action_type):

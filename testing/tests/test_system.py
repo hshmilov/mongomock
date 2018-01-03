@@ -26,8 +26,7 @@ def test_core_restart(axonius_fixture):
 
 def test_restart_data_persistency(axonius_fixture):
     test_document = {'Test{0}'.format(random.randint(1, 100)): random.randint(1, 100), 'This': 'Is A Test'}
-    axonius_fixture.db.get_collection(
-        'test_db', 'test_collection').insert_one(test_document)
+    axonius_fixture.db.get_collection('test_db', 'test_collection').insert_one(test_document)
 
     axonius_fixture.db.stop(should_delete=False)
     axonius_fixture.db.start_and_wait()

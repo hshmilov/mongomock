@@ -1,6 +1,6 @@
-import pytest
 from services.adapters.esx_service import EsxService, esx_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
+
 
 client_details = [
     ({

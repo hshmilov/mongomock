@@ -1,6 +1,7 @@
 from services.adapters.jamf_service import JamfService, jamf_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
+
 # this is our aws SEP manager and its name is Windows-Sep-Server
 client_details = {
     "Jamf_Domain": "https://axoniusdev.jamfcloud.com",
@@ -8,7 +9,7 @@ client_details = {
     "password": "wBV8LgOP4uHrnKiq3VMQ"
 }
 
-SOME_DEVICE_ID = 'ea47e7b3c04f6560f2ac739bb0b0f9df83355ebc'  # our Ipad
+SOME_DEVICE_ID = 'ea47e7b3c04f6560f2ac739bb0b0f9df83355ebc'  # our iPad
 
 
 class TestJamfAdapter(AdapterTestBase):

@@ -22,7 +22,7 @@ class ExecutionPlugin(PluginBase):
     """
 
     # Functions
-    def __init__(self, **kargs):
+    def __init__(self, **kwargs):
         """Class initialization.
 
         Will restore old actions from db
@@ -30,7 +30,7 @@ class ExecutionPlugin(PluginBase):
         """
 
         # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
+        super().__init__(**kwargs)
 
         self._actions_db = dict()
 

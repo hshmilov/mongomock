@@ -3,7 +3,7 @@
 __author__ = "Ofri Shur"
 
 """ The attributes we want to export from the puppet server db and their alias in our server. """
-DEVICE_ATTRIBUTES = {u'certname': "DeviceName",
+DEVICE_ATTRIBUTES = {'certname': "DeviceName",
                      "certname": "DeviceName",
                      "operatingsystem": "operatingsystem",
                      "ipaddress": "ipaddress",
@@ -23,7 +23,7 @@ CERTIFICATE_PREFIX_IN_PUPPET_SERVER = "axonius-certificate-"
 """ Puppet connection method """
 PUPPET_CONNECTION_METHOD = "https://"
 
-""" The port for quering from the PuppetDb """
+""" The port for querying from the PuppetDb """
 PUPPET_PORT_STRING = ":8081"
 
 """ Location of the CA certificate of the PuppetDb query interface in the server """
@@ -32,7 +32,7 @@ CA_FILE_PUPPET_SERVER_PATH = "/etc/puppetlabs/puppet/ssl/certs/ca.pem"
 """ Relative location of ssl certificates """
 CERTS_FILES_DIRECTORY = "certs"
 
-""" Relative location of the pricate keys certificates """
+""" Relative location of the private keys certificates """
 PRIVATE_KEYS_DIRECTORY = "private_keys"
 
 """ Name of the ca certificate file """
@@ -42,14 +42,14 @@ CA_FILE_NAME = "ca.pem"
 CERTIFICATES_SUFFIX = ".pem"
 
 """ Puppet command to clean a certificate in the server  """
-CERTIFICATES_CLEAN_COMMAN = "sudo -S /opt/puppetlabs/bin/puppet cert clean "
+CERTIFICATES_CLEAN_COMMAND = "sudo -S /opt/puppetlabs/bin/puppet cert clean "
 
 """ Puppet command to create new certificates in the server """
 CERTIFICATES_CREATE_COMMAND = "sudo -S /opt/puppetlabs/bin/puppet cert generate "
 
 """ Private keys location in the puppet server """
 PRIVATE_KEYS_LOCATION_IN_PUPPET_SERVER = "/etc/puppetlabs/puppet/ssl/private_keys/"
-""" Certficates location in puppet server """
+""" Certificate's location in puppet server """
 CERTIFICATE_LOCATION_IN_PUPPET_SERVER = "/etc/puppetlabs/puppet/ssl/certs/"
 
 """ A command to make a file read/write to everyone """

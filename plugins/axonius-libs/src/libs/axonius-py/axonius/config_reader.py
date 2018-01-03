@@ -1,11 +1,12 @@
-import configparser
+from configparser import ConfigParser
+
 from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class PluginConfig(object):
     def __init__(self, config_file_path):
-        self._config = configparser.ConfigParser()
+        self._config = ConfigParser()
         self._config.read(config_file_path)
 
     @property
@@ -40,7 +41,7 @@ class AdapterConfig(PluginConfig):
 
 class PluginVolatileConfig(object):
     def __init__(self, config_string):
-        self._config = configparser.ConfigParser()
+        self._config = ConfigParser()
         self._config.read_string(config_string)
 
     @property

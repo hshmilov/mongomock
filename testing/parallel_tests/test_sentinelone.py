@@ -1,6 +1,8 @@
+import pytest
+
 from services.adapters.sentinelone_service import SentinelOneService, sentinelone_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-import pytest
+
 
 client_details = {
     "SentinelOne_Domain": "axonius.sentinelone.net",

@@ -53,12 +53,12 @@ def parse_network(raw_data):
     return [res]
 
 
-class EpoPlugin(AdapterBase):
+class EpoAdapter(AdapterBase):
     """
     Connects axonius to mcafee epo
     """
 
-    def __init__(self, **kargs):
+    def __init__(self, **kwargs):
         """Class initialization.
 
         Check AdapterBase documentation for additional params and exception details.
@@ -66,7 +66,7 @@ class EpoPlugin(AdapterBase):
         """
 
         # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
+        super().__init__(**kwargs)
 
     def _clients_schema(self):
         return {

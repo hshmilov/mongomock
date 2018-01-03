@@ -1,7 +1,6 @@
-import pytest
-from services.adapters.splunk_symantec_service import SplunkSymantecService, splunk_symanctec_fixture
-
+from services.adapters.splunk_symantec_service import SplunkSymantecService, splunk_symantec_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
+
 
 splunk_details = {
     "host": "10.0.2.4",

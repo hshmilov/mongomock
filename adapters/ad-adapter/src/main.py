@@ -3,15 +3,15 @@
 
 __author__ = "Ofir Yefet"
 
-from active_directory_plugin import ActiveDirectoryPlugin
+from active_directory_adapter import ActiveDirectoryAdapter
 from axonius.server_utils import init_wsgi
 
 if __name__ == '__main__':
     # Initialize
-    ad_adapter = ActiveDirectoryPlugin()
+    ad_adapter = ActiveDirectoryAdapter()
 
     # Run (Blocking)
     ad_adapter.start_serve()
 
 # Init wsgi if in it.
-wsgi_app = init_wsgi(ActiveDirectoryPlugin)
+wsgi_app = init_wsgi(ActiveDirectoryAdapter)

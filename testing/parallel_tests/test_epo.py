@@ -1,6 +1,6 @@
-import pytest
 from services.adapters.epo_service import EpoService, epo_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
+
 
 client_details = {
     "admin_password": "6c=xz@OACxaefu)h38MFLD%dpiTeQu$=",

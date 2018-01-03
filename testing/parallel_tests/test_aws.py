@@ -1,4 +1,3 @@
-import pytest
 from services.adapters.aws_service import AwsService, aws_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 

@@ -1,4 +1,3 @@
-import pytest
 from services.axonius_service import get_service
 from test_helpers.utils import check_conf
 
@@ -44,10 +43,8 @@ class AdapterTestBase(object):
         assert self.adapter_service.is_plugin_registered(self.axonius_service.core)
 
     def test_fetch_devices(self):
-        self.axonius_service.add_client_to_adapter(
-            self.adapter_service, self.some_client_details)
-        self.axonius_service.assert_device_aggregated(
-            self.adapter_service, self.some_client_id, self.some_device_id)
+        self.axonius_service.add_client_to_adapter(self.adapter_service, self.some_client_details)
+        self.axonius_service.assert_device_aggregated(self.adapter_service, self.some_client_id, self.some_device_id)
 
     def test_restart(self):
         self.axonius_service.restart_plugin(self.adapter_service)

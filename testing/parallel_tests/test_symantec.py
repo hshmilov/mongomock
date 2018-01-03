@@ -1,4 +1,5 @@
 import pytest
+
 from services.adapters.symantec_service import SymantecService, symantec_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
@@ -9,7 +10,7 @@ client_details = {
     "password": "7ldUJKtYG8oe1243fds"
 }
 
-SOME_DEVICE_ID = 'DEDB73460A0002AB70C44D039ADC2249'  # our ESXmachine windows8
+SOME_DEVICE_ID = 'DEDB73460A0002AB70C44D039ADC2249'  # our ESX machine windows8
 
 
 class TestSymantecAdapter(AdapterTestBase):

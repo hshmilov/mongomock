@@ -19,7 +19,7 @@ class NexposePlugin(AdapterBase):
     Connects axonius to Rapid7's nexpose.
     """
 
-    def __init__(self, **kargs):
+    def __init__(self, **kwargs):
         """Class initialization.
 
         Check AdapterBase documentation for additional params and exception details.
@@ -27,7 +27,7 @@ class NexposePlugin(AdapterBase):
         """
 
         # Initialize the base plugin (will initialize http server)
-        super().__init__(**kargs)
+        super().__init__(**kwargs)
 
     def _wait_for_status(self, session, expected_status, message):
         self.logger.info(message)

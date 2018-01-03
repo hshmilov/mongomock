@@ -1,11 +1,11 @@
+from bson.objectid import ObjectId
 import datetime
+import pytest
 import time
 
-import pytest
-from bson.objectid import ObjectId
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-
 from services.watch_service import watch_fixture
+
 
 NO_RESULT_WATCH_DB_DOC = {
     "alert_types": [
@@ -41,8 +41,7 @@ WATCH = {
 
 DEVICE_ONE = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55, 378000),
               'adapters': [
-                  {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55,
-                                                              378000),
+                  {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55, 378000),
                    'client_used': '10.0.229.30',
                    'data': {'id': 'CN=DESKTOP-123123,CN=Computers,DC=TestDomain,DC=test',
                             'name': 'DESKTOP-MPP10U1',
@@ -99,8 +98,7 @@ DEVICE_ONE = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 5
 DEVICE_TWO = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55, 380000),
               'adapters': [
                   {'_id': ObjectId('5a118573861256000131ad31'),
-                   'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55,
-                                                              380000),
+                   'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 55, 380000),
                    'client_used': '10.0.229.30',
                    'data': {'id': 'CN=WINDOWS8,CN=Computers,DC=TestDomain,DC=test',
                             'name': 'DESKTOP-MPP10U1',
@@ -158,8 +156,7 @@ AGGREGATOR_UNIQUE_NAME = None
 
 
 def test_valid_watch_creation(axonius_fixture, watch_fixture):
-    num_of_watches = len(list(axonius_fixture.db.get_collection(
-        watch_fixture.unique_name, 'watches').find()))
+    num_of_watches = len(list(axonius_fixture.db.get_collection(watch_fixture.unique_name, 'watches').find()))
     response = watch_fixture.create_watch(WATCH)
     assert response.status_code == 201
     assert len(list(axonius_fixture.db.get_collection(
@@ -167,27 +164,21 @@ def test_valid_watch_creation(axonius_fixture, watch_fixture):
 
 
 def test_invalid_watch_creation(axonius_fixture, watch_fixture):
-    num_of_watches = len(list(axonius_fixture.db.get_collection(
-        watch_fixture.unique_name, 'watches').find()))
+    num_of_watches = len(list(axonius_fixture.db.get_collection(watch_fixture.unique_name, 'watches').find()))
     response = watch_fixture.create_watch('blah')
-    assert response.json()[
-        'message'] == 'Expected JSON, got something else...'
-    assert len(list(axonius_fixture.db.get_collection(
-        watch_fixture.unique_name, 'watches').find())) == num_of_watches
+    assert response.json()['message'] == 'Expected JSON, got something else...'
+    assert len(list(axonius_fixture.db.get_collection(watch_fixture.unique_name, 'watches').find())) == num_of_watches
 
 
 def test_duplicate_watch_creation(axonius_fixture, watch_fixture):
-    num_of_watches = len(list(axonius_fixture.db.get_collection(
-        watch_fixture.unique_name, 'watches').find()))
+    num_of_watches = len(list(axonius_fixture.db.get_collection(watch_fixture.unique_name, 'watches').find()))
     response = watch_fixture.create_watch(WATCH)
     assert response.status_code == 409
-    assert len(list(axonius_fixture.db.get_collection(
-        watch_fixture.unique_name, 'watches').find())) == num_of_watches
+    assert len(list(axonius_fixture.db.get_collection(watch_fixture.unique_name, 'watches').find())) == num_of_watches
 
 
 def test_valid_watch_deletion(axonius_fixture, watch_fixture):
-    num_of_watches = len(list(axonius_fixture.db.get_collection(
-        watch_fixture.unique_name, 'watches').find()))
+    num_of_watches = len(list(axonius_fixture.db.get_collection(watch_fixture.unique_name, 'watches').find()))
     watch_fixture.delete_watch(WATCH)
     assert len(list(axonius_fixture.db.get_collection(
         watch_fixture.unique_name, 'watches').find())) == num_of_watches - 1
@@ -222,8 +213,7 @@ def test_full_watches_list(axonius_fixture, watch_fixture):
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]['query'] == NO_RESULT_WATCH_DB_DOC['query']
-    assert response.json()[
-        0]['alert_types'] == NO_RESULT_WATCH_DB_DOC['alert_types']
+    assert response.json()[0]['alert_types'] == NO_RESULT_WATCH_DB_DOC['alert_types']
     watch_fixture.delete_watch(WATCH)
 
 
@@ -246,8 +236,7 @@ def test_positive_criteria_trigger(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Add device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_ONE)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -255,8 +244,7 @@ def test_positive_criteria_trigger(axonius_fixture, watch_fixture):
 
     assert watch_fixture.get_watches().json()[0]['triggered'] == 1
 
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_TWO)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_TWO)
 
     try:
         # Wait to see no new notifications are created by watch
@@ -267,8 +255,7 @@ def test_positive_criteria_trigger(axonius_fixture, watch_fixture):
 
     watch_fixture.delete_watch(WATCH)
 
-    axonius_fixture.db.get_collection(
-        aggregator_unique_name, 'devices_db').drop()
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').drop()
 
 
 def test_negative_criteria_trigger(axonius_fixture, watch_fixture):
@@ -278,16 +265,13 @@ def test_negative_criteria_trigger(axonius_fixture, watch_fixture):
     WATCH['criteria'] = -1
     WATCH['alert_types'][0]['title'] = 'Another Watch'
     # Add devices
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_ONE)
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_TWO)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_ONE)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_TWO)
 
     watch_fixture.create_watch(WATCH)
 
     # Remove device.
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(
-        WATCH['query'])
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(WATCH['query'])
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -296,8 +280,7 @@ def test_negative_criteria_trigger(axonius_fixture, watch_fixture):
     assert watch_fixture.get_watches().json()[0]['triggered'] == 1
 
     # Remove another device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(
-        WATCH['query'])
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(WATCH['query'])
 
     try:
         # Wait to see no new notifications are created by watch
@@ -308,8 +291,7 @@ def test_negative_criteria_trigger(axonius_fixture, watch_fixture):
 
     watch_fixture.delete_watch(WATCH)
 
-    axonius_fixture.db.get_collection(
-        aggregator_unique_name, 'devices_db').drop()
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').drop()
 
 
 def test_any_criteria_trigger(axonius_fixture, watch_fixture):
@@ -322,12 +304,10 @@ def test_any_criteria_trigger(axonius_fixture, watch_fixture):
 
     # Check no devices are in the DB
     assert len(list(
-        axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').find(
-            WATCH['query']))) == 0
+        axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').find(WATCH['query']))) == 0
 
     # Add device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_ONE)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -340,8 +320,7 @@ def test_any_criteria_trigger(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Remove device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(
-        WATCH['query'])
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(WATCH['query'])
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -349,8 +328,7 @@ def test_any_criteria_trigger(axonius_fixture, watch_fixture):
 
     watch_fixture.delete_watch(WATCH)
 
-    axonius_fixture.db.get_collection(
-        aggregator_unique_name, 'devices_db').drop()
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').drop()
 
 
 def test_retrigger_one_change(axonius_fixture, watch_fixture):
@@ -362,8 +340,7 @@ def test_retrigger_one_change(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Add device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_ONE)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -381,11 +358,9 @@ def test_retrigger_one_change(axonius_fixture, watch_fixture):
     watch_fixture.delete_watch(WATCH)
 
     # Remove device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(
-        WATCH['query'])
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').delete_one(WATCH['query'])
 
-    axonius_fixture.db.get_collection(
-        aggregator_unique_name, 'devices_db').drop()
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').drop()
 
 
 def test_retrigger_multiple_changes(axonius_fixture, watch_fixture):
@@ -397,8 +372,7 @@ def test_retrigger_multiple_changes(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Add device
-    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(
-        DEVICE_ONE)
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').insert_one(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -417,16 +391,14 @@ def test_retrigger_multiple_changes(axonius_fixture, watch_fixture):
 
     watch_fixture.delete_watch(WATCH)
 
-    axonius_fixture.db.get_collection(
-        aggregator_unique_name, 'devices_db').drop()
+    axonius_fixture.db.get_collection(aggregator_unique_name, 'devices_db').drop()
 
 
 def wait_for_notification(watch_fixture, notification_db, notification, interval=5, num_intervals=3):
     def got_notified(starting_num_of_notifications):
         return len(list(notification_db.find({'title': notification['title']}))) == starting_num_of_notifications + 1
 
-    curent_num_of_notifications = len(
-        list(notification_db.find({'title': notification['title']})))
+    curent_num_of_notifications = len(list(notification_db.find({'title': notification['title']})))
     success = False
     for x in range(1, num_intervals):
         try:

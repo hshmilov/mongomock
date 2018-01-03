@@ -12,13 +12,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
+from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import beautiful_adapter_device_name
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from flask import jsonify
 from aggregator_exceptions import AdapterOffline
-from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 get_devices_job_name = "Get device job"
@@ -78,11 +78,9 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                         "/start request "
 
         executors = {'default': ThreadPoolExecutor(1)}
-        self._online_adapters_scheduler = BackgroundScheduler(
-            executors=executors)
+        self._online_adapters_scheduler = BackgroundScheduler(executors=executors)
         self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
-                                                trigger=IntervalTrigger(
-                                                    seconds=60),
+                                                trigger=IntervalTrigger(seconds=60),
                                                 next_run_time=datetime.now(),
                                                 name='adapters_thread_manager',
                                                 id='adapters_thread_manager',
@@ -187,8 +185,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         """
         try:
             with self.thread_manager_lock:
-                current_adapters = requests.get(
-                    self.core_address + '/register')
+                current_adapters = requests.get(self.core_address + '/register')
 
                 if current_adapters.status_code != 200:
                     self.logger.error(f"Error getting devices from core. reason: "
@@ -198,8 +195,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 current_adapters = current_adapters.json()
 
-                self.logger.info(
-                    "registered adapters = {}".format(current_adapters))
+                self.logger.info("registered adapters = {}".format(current_adapters))
 
                 # let's add jobs for all adapters
                 for adapter_name, adapter in current_adapters.items():
@@ -211,11 +207,10 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                         # We already have a running thread for this adapter
                         continue
 
-                    sample_rate = int(adapter[adapter_consts.DEVICE_SAMPLE_RATE])
+                    sample_rate = int(adapter[DEVICE_SAMPLE_RATE])
 
                     self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
-                                                            trigger=IntervalTrigger(
-                                                                seconds=sample_rate),
+                                                            trigger=IntervalTrigger(seconds=sample_rate),
                                                             next_run_time=datetime.now(),
                                                             kwargs={PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
                                                                     'plugin_name': adapter['plugin_name']},
@@ -310,8 +305,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                     # this means we have a duplicate plugin_unique_name
                     # we strongly enforce the rule that there can't be two plugin_unique_name on the same
                     # AxoniusDevice
-                    self.logger.critical(
-                        f"Contradiction detected, sent_plugin: \n{sent_plugin}")
+                    self.logger.critical(f"Contradiction detected, sent_plugin: \n{sent_plugin}")
                     return return_error("Contradiction detected. Please resync and check yourself.", 500)
 
                 # now we can assume now that all all_plugin_unique_names are in fact unique
@@ -410,8 +404,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         :param str plugin_name: The name of the adapter
         :param str plugin_unique_name: The name of the adapter (unique name)
         """
-        self.logger.info("Starting to fetch device for {} {}".format(
-            plugin_name, plugin_unique_name))
+        self.logger.info("Starting to fetch device for {} {}".format(plugin_name, plugin_unique_name))
         try:
             devices = self._get_devices_data(plugin_unique_name)
             # This is locked although this is a (relatively) lengthy process we can't allow linking or unlinking during
@@ -437,8 +430,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                     # Here we have all the devices a single client sees
                     for device in devices_per_client['parsed']:
-                        device['pretty_id'] = beautiful_adapter_device_name(
-                            plugin_name, device['id'])
+                        device['pretty_id'] = beautiful_adapter_device_name(plugin_name, device['id'])
                         parsed_to_insert = {
                             'client_used': client_name,
                             'plugin_type': 'Adapter',
@@ -485,15 +477,12 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         except AdapterOffline as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
-            self.logger.warn(
-                f"adapter {plugin_unique_name} might be offline. Reason {str(e)}")
+            self.logger.warn(f"adapter {plugin_unique_name} might be offline. Reason {str(e)}")
         except Exception as e:
-            self.logger.error("Thread {0} encountered error: {1}".format(
-                threading.current_thread(), str(e)))
+            self.logger.error("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info("Finished for {} {}".format(
-            plugin_name, plugin_unique_name))
+        self.logger.info("Finished for {} {}".format(plugin_name, plugin_unique_name))
 
     def _save_parsed_in_db(self, device, db_type='parsed'):
         """

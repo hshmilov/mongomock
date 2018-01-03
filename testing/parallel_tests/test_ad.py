@@ -1,10 +1,9 @@
-import pytest
 from services.adapters.ad_service import AdService, ad_fixture
 from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fixture
-
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
 from test_helpers.machines import FAKE_DNS_IP
+
 
 fakednsaddr = FAKE_DNS_IP
 
@@ -56,18 +55,15 @@ class TestAdAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']
-        self.axonius_service.add_client_to_adapter(
-            self.adapter_service, ad_client1_details)
+        self.axonius_service.add_client_to_adapter(self.adapter_service, ad_client1_details)
+
         # Adding second client
         # client_id_2 = ad_client2_details['dc_name']
-        # self.axonius_service.add_client_to_adapter(
-        #    self.adapter_service, ad_client2_details)
+        # self.axonius_service.add_client_to_adapter(self.adapter_service, ad_client2_details)
 
         # Checking that we have devices from both clients
-        self.axonius_service.assert_device_aggregated(
-            self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
-        # self.axonius_service.assert_device_aggregated(
-        #    self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
+        self.axonius_service.assert_device_aggregated(self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
+        # self.axonius_service.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
     def test_ip_resolving(self, dns_conflicts_fixture):
         self.adapter_service.resolve_ip()

@@ -1,5 +1,5 @@
 """
-The purpose of this file is to export the ActiveDirectoryPlugin exceptions.
+The purpose of this file is to export the ActiveDirectoryAdapter exceptions.
 """
 
 __author__ = 'Ofir Yefet'
@@ -16,7 +16,7 @@ class LdapException(AdException):
 
 
 class NoClientError(AdException):
-    def __init__(self, message="Couldnt find client for execution"):
+    def __init__(self, message="Couldn't find client for execution"):
         super().__init__(message)
 
 

@@ -6,7 +6,6 @@ import random
 import string
 import requests
 import threading
-import time
 import configparser
 import exceptions
 import uritools
@@ -28,7 +27,7 @@ CHUNK_SIZE = 1024
 
 
 class Core(PluginBase):
-    def __init__(self, **kargs):
+    def __init__(self, **kwargs):
         """ Initialize all needed configurations
         """
         # Get local configuration
@@ -66,7 +65,7 @@ class Core(PluginBase):
 
         # Initialize the base plugin (will initialize http server)
         # No registration process since we are sending core_data
-        super().__init__(core_data=core_data, **kargs)
+        super().__init__(core_data=core_data, **kwargs)
 
         # Get the needed docker socket
         # self.docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
@@ -80,11 +79,9 @@ class Core(PluginBase):
 
         # Create plugin cleaner thread
         executors = {'default': ThreadPoolExecutor(1)}
-        self.cleaner_thread = BackgroundScheduler(
-            executors=executors)
+        self.cleaner_thread = BackgroundScheduler(executors=executors)
         self.cleaner_thread.add_job(func=self.clean_offline_plugins,
-                                    trigger=IntervalTrigger(
-                                        seconds=20),
+                                    trigger=IntervalTrigger(seconds=20),
                                     next_run_time=datetime.now(),
                                     name='clean_offline_plugins',
                                     id='clean_offline_plugins',
@@ -113,8 +110,7 @@ class Core(PluginBase):
                             break
                         else:
                             # The plugin didnt answer, removing the plugin subscription
-                            delete_list.append(
-                                (plugin_unique_name, temp_list[plugin_unique_name]))
+                            delete_list.append((plugin_unique_name, temp_list[plugin_unique_name]))
 
             with self.adapters_lock:
                 for delete_key, delete_value in delete_list:
@@ -125,8 +121,7 @@ class Core(PluginBase):
                         del self.online_plugins[delete_key]
 
         except Exception as e:
-            self.logger.critical(
-                "Cleaning plugins had an error. message: {0}", str(e))
+            self.logger.critical("Cleaning plugins had an error. message: {0}", str(e))
 
     def _setup_images(self):
         """ Setting up needed images
@@ -167,13 +162,11 @@ class Core(PluginBase):
                 return False
 
         except (ConnectionError, ReadTimeout, Timeout, exceptions.PluginNotFoundError) as e:
-            self.logger.info(
-                "Got exception {} while trying to contact {}".format(e, plugin_unique_name))
+            self.logger.info("Got exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
         except Exception as e:
-            self.logger.fatal(
-                "Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
+            self.logger.fatal("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
     def _create_db_for_plugin(self, plugin_unique_name):
@@ -186,8 +179,7 @@ class Core(PluginBase):
         :return db_password: The password for this db
         """
         db_user = plugin_unique_name
-        db_password = ''.join(random.choices(
-            string.ascii_letters + string.digits, k=16))
+        db_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
                  {'role': 'insert_notification', 'db': 'core'},
@@ -243,8 +235,7 @@ class Core(PluginBase):
             if PLUGIN_UNIQUE_NAME in data:
                 # Plugin is trying to register with his own name
                 plugin_unique_name = data[PLUGIN_UNIQUE_NAME]
-                self.logger.info(
-                    "Plugin request to register with his own name: {0}".format(plugin_unique_name))
+                self.logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
 
                 # Trying to get the configuration of the current plugin
                 relevant_doc = self._get_config(plugin_unique_name)
@@ -264,15 +255,13 @@ class Core(PluginBase):
                 if plugin_unique_name in self.online_plugins:
                     duplicated = self.online_plugins[plugin_unique_name]
                     if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
-                        self.logger.warn(
-                            "Pluging {} restrated".format(plugin_unique_name))
+                        self.logger.warn("Pluging {} restrated".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
                     else:
                         self.logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")
                         if self._check_plugin_online(plugin_unique_name):
                             # There is already a running plugin with the same name
-                            self.logger.error(
-                                "Plugin {0} trying to register but already online")
+                            self.logger.error("Plugin {0} trying to register but already online")
                             return return_error("Error - {0} is trying to register but already "
                                                 "online".format(plugin_unique_name), 400)
                         else:
@@ -332,9 +321,8 @@ class Core(PluginBase):
                     return return_error(f"Already have plugin with this ip: {same_ip_plugin}")
                 else:
                     # The older plugin is no longer online, removing it from the onine_plugins list
-                    self.logger.info(
-                        f"Removing {same_ip_plugin} from online since other "
-                        f"{plugin_unique_name} got registered with same ip")
+                    self.logger.info(f"Removing {same_ip_plugin} from online since other "
+                                     f"{plugin_unique_name} got registered with same ip")
                     del self.online_plugins[same_ip_plugin]
 
             # Setting a new doc with the wanted configuration
@@ -349,8 +337,7 @@ class Core(PluginBase):
             self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
-            self.logger.info("Plugin {0} registered successfuly!".format(
-                relevant_doc[PLUGIN_UNIQUE_NAME]))
+            self.logger.info("Plugin {0} registered successfuly!".format(relevant_doc[PLUGIN_UNIQUE_NAME]))
             return jsonify(relevant_doc)
 
     def _get_online_plugins(self):
@@ -378,11 +365,9 @@ class Core(PluginBase):
         api_key = self.get_request_header('x-api-key')
 
         # Checking api key
-        calling_plugin = next((plugin for plugin in self.online_plugins.values(
-        ) if plugin['api_key'] == api_key), None)
+        calling_plugin = next((plugin for plugin in self.online_plugins.values() if plugin['api_key'] == api_key), None)
         if calling_plugin is None:
-            self.logger.warning(
-                "Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
+            self.logger.warning("Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
             return return_error("Api key not valid", 401)
 
         try:
@@ -450,8 +435,7 @@ class Core(PluginBase):
         relevant_doc = self._get_config(unique_plugin)
 
         if not relevant_doc:
-            self.logger.warning(
-                "No online plugin found for {0}".format(plugin_unique_name))
+            self.logger.warning("No online plugin found for {0}".format(plugin_unique_name))
             raise exceptions.PluginNotFoundError()
 
         return {"plugin_ip": relevant_doc["plugin_ip"],

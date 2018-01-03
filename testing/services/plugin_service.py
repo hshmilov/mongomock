@@ -1,29 +1,28 @@
-import services.compose_parser
-import services.compose_service
 import requests
-import axonius.config_reader
 import json
-import tempfile
-import time
+
+from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
+from services.compose_service import ComposeService
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
 
 
-class PluginService(services.compose_service.ComposeService):
-    def __init__(self, compose_file_path, config_file_path, container_name, *vargs, **kwargs):
-        super().__init__(compose_file_path, container_name, *vargs, **kwargs)
-        self.parsed_compose_file = services.compose_parser.ServiceYmlParser(
-            compose_file_path)
+class PluginService(ComposeService):
+    def __init__(self, service_dir, mode='', **kwargs):
+        if mode == '':
+            mode = 'override'
+        compose_file_path = service_dir + '/docker-compose.yml'
+        override_compose_file_path = service_dir + f'/docker-compose.{mode}.yml'
+        super().__init__(compose_file_path, override_compose_file_path=override_compose_file_path, **kwargs)
         port = self.parsed_compose_file.exposed_port
         self.endpoint = ('localhost', port)
         self.req_url = "http://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
-        self.config_file_path = config_file_path
-        self.container_name = container_name
+        self.config_file_path = service_dir + '/src/plugin_config.ini'
         self.last_vol_conf = None
 
-    def request(self, method, endpoint, api_key=None, headers=None, *kargs, **kwargs):
+    def request(self, method, endpoint, api_key=None, headers=None, *vargs, **kwargs):
         if headers is None:
             headers = {}
 
@@ -33,20 +32,20 @@ class PluginService(services.compose_service.ComposeService):
         if 'data' in kwargs and isinstance(kwargs['data'], dict):
             kwargs['data'] = json.dumps(kwargs['data'])
 
-        return getattr(requests, method)(
-            url='{0}/{1}'.format(self.req_url, endpoint), headers=headers, *kargs, **kwargs)
+        return getattr(requests, method)(url='{0}/{1}'.format(self.req_url, endpoint),
+                                         headers=headers, *vargs, **kwargs)
 
-    def get(self, endpoint, *kargs, **kwargs):
-        return self.request('get', endpoint, *kargs, **kwargs)
+    def get(self, endpoint, *vargs, **kwargs):
+        return self.request('get', endpoint, *vargs, **kwargs)
 
-    def put(self, endpoint, data, *kargs, **kwargs):
-        return self.request('put', endpoint, data=data, *kargs, **kwargs)
+    def put(self, endpoint, data, *vargs, **kwargs):
+        return self.request('put', endpoint, data=data, *vargs, **kwargs)
 
-    def post(self, endpoint, *kargs, **kwargs):
-        return self.request('post', endpoint, *kargs, **kwargs)
+    def post(self, endpoint, *vargs, **kwargs):
+        return self.request('post', endpoint, *vargs, **kwargs)
 
-    def delete(self, endpoint, *kargs, **kwargs):
-        return self.request('delete', endpoint, *kargs, **kwargs)
+    def delete(self, endpoint, *vargs, **kwargs):
+        return self.request('delete', endpoint, *vargs, **kwargs)
 
     def version(self):
         return self.get('version', timeout=15)
@@ -72,7 +71,7 @@ class PluginService(services.compose_service.ComposeService):
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
         result = core_service.register(self.api_key, unique_name)
-        return result.status_code == 200, str(result)
+        return result.status_code == 200
 
     def is_up(self):
         return self._is_service_alive() and "Plugin" in self.get_supported_features()
@@ -87,13 +86,13 @@ class PluginService(services.compose_service.ComposeService):
 
     @property
     def conf(self):
-        return axonius.config_reader.PluginConfig(self.config_file_path)
+        return PluginConfig(self.config_file_path)
 
     @property
     def vol_conf(self):
         # Try to get the latest, but if the container is down, use the last data.
         (out, _, _) = self.get_file_contents_from_container(VOLATILE_CONFIG_PATH)
-        self.last_vol_conf = axonius.config_reader.PluginVolatileConfig(out.decode("utf-8"))
+        self.last_vol_conf = PluginVolatileConfig(out.decode("utf-8"))
 
         return self.last_vol_conf
 
@@ -107,9 +106,6 @@ class PluginService(services.compose_service.ComposeService):
 
 
 class AdapterService(PluginService):
-    def __init__(self, compose_file_path, config_file_path, container_name, *vargs, **kwargs):
-        super().__init__(compose_file_path=compose_file_path, config_file_path=config_file_path,
-                         container_name=container_name, *vargs, **kwargs)
 
     def add_client(self, client_details):
         self.clients(client_details)
@@ -141,4 +137,4 @@ class AdapterService(PluginService):
 
     @property
     def conf(self):
-        return axonius.config_reader.AdapterConfig(self.config_file_path)
+        return AdapterConfig(self.config_file_path)

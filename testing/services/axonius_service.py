@@ -72,8 +72,7 @@ class AxoniusService(object):
 
         # check the device is read by adapter
         devices_list = devices_as_dict[client_id]['parsed']
-        assert 1 == len(
-            list(filter(lambda device: device['id'] == some_device_id, devices_list)))
+        assert len(list(filter(lambda device: device['id'] == some_device_id, devices_list))) == 1
 
         # check that the device is collected by aggregator and now in db
 
