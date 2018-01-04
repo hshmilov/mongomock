@@ -1,5 +1,5 @@
 from services.axonius_service import get_service
-from services.adapters.splunk_symantec_service import SplunkSymantecService
+from services.adapters.splunk_symantec_service import SplunkSymantecService, splunk_symantec_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
 
