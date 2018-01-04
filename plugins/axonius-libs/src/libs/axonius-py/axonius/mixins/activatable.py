@@ -64,7 +64,7 @@ class Activatable(Feature, ABC):
     def specific_supported_features(cls) -> list:
         return ["Activatable"]
 
-    @add_rule('start')
+    @add_rule('start', methods=["POST"])
     def start_scheduling(self):
         """
         Start scheduling
@@ -72,7 +72,7 @@ class Activatable(Feature, ABC):
         """
         return self.start_activatable()
 
-    @add_rule('stop')
+    @add_rule('stop', methods=["POST"])
     def stop_scheduling(self):
         """
         Stop scheduling
