@@ -1,7 +1,6 @@
 """
 splunk_symantec_adapter.py: An adapter for Splunk Dashboard.
 """
-from configparser import ConfigParser
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
@@ -10,15 +9,30 @@ from splunk_connection import SplunkConnection
 
 __author__ = "Asaf & Tal"
 
+SPLUNK_HOST = 'host'
+SPLUNK_PORT = 'port'
+SPLUNK_USER = 'username'
+SPLUNK_PASSWORD = 'password'
+SPLUNK_ONLINE_HOURS = 'online_hours'
+
 
 class SplunkSymantecAdapter(AdapterBase):
+    def __init__(self, **kwargs):
+        # Initialize the base plugin (will initialize http server)
+        super().__init__(**kwargs)
+        self._online_hours = 24
 
     def _get_client_id(self, client_config):
-        return '{0}:{1}'.format(client_config['host'], client_config['port'])
+        return '{0}:{1}'.format(client_config[SPLUNK_HOST], client_config[SPLUNK_PORT])
 
     def _connect_client(self, client_config):
         try:
-            connection = SplunkConnection(**client_config)
+            self._online_hours = int(client_config[SPLUNK_ONLINE_HOURS] or self._online_hours)
+            assert self._online_hours > 0, "You entered an invalid amount of hours as online hours"
+            # copying as otherwise we would pop it from the client saved in the gui
+            client_con = client_config.copy()
+            client_con.pop(SPLUNK_ONLINE_HOURS)
+            connection = SplunkConnection(**client_con)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -40,8 +54,7 @@ class SplunkSymantecAdapter(AdapterBase):
     def _update_new_raw_devices(self, client_data, queries_collection):
         already_updates = []
         last_ts = self.get_last_query_ts('symantec')
-        all_devices = list(client_data.get_symantec_devices_info(last_ts))
-        for host in all_devices:
+        for host in client_data.get_symantec_devices_info(last_ts):
             name = host['name']
             if name in already_updates:
                 continue
@@ -53,8 +66,6 @@ class SplunkSymantecAdapter(AdapterBase):
         if last_ts is not None:
             self.set_last_query_ts('symantec', int(last_ts + 1))
 
-        return all_devices
-
     def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific Splunk domain
@@ -64,27 +75,19 @@ class SplunkSymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Splunk Server
         """
-        # TODO: Weiss - Why reading a config file every get_devices?
-        config = ConfigParser()
-        config.read(self.config_file_path)
-
-        # TODO: Weiss - Do this once on load.
-        host_active_hours = int(config['DEFAULT']['host_active_hours'])
-
         with client_data:
             queries_collection = self._get_collection('symantec_queries', limited_user=True)
             # Update all_devices from splunk
-            all_devices = self._update_new_raw_devices(client_data, queries_collection)
+            self._update_new_raw_devices(client_data, queries_collection)
 
             # Get "Active" devices
-            active_hosts = client_data.get_symantec_active_hosts(host_active_hours)
+            active_hosts = client_data.get_symantec_active_hosts(self._online_hours)
 
             #
             if active_hosts:
-                self.active_hosts = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
+                all_devices = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
             else:
-                self.active_hosts = []
-            all_devices.extend(self.active_hosts)
+                all_devices = []
             return all_devices
 
     def _clients_schema(self):
@@ -95,34 +98,38 @@ class SplunkSymantecAdapter(AdapterBase):
         """
         return {
             "properties": {
-                "host": {
+                SPLUNK_HOST: {
                     "type": "string",
                     "name": "Host"
                 },
-                "port": {
+                SPLUNK_PORT: {
                     "type": "integer",
                     "name": "Port"
                 },
-                "username": {
+                SPLUNK_USER: {
                     "type": "string",
                     "name": "Username"
                 },
-                "password": {
+                SPLUNK_PASSWORD: {
                     "type": "password",
                     "name": "Password"
+                },
+                SPLUNK_ONLINE_HOURS: {
+                    "type": "integer",
+                    "name": "Hours within device is considered online (default is 24)"
                 }
             },
             "required": [
-                "host",
-                "port",
-                "username",
-                "password"
+                SPLUNK_HOST,
+                SPLUNK_PORT,
+                SPLUNK_USER,
+                SPLUNK_PASSWORD
             ],
             "type": "object"
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in self.active_hosts:
+        for device_raw in devices_raw_data:
             host = device_raw.get('host', '')
             device_parsed = dict()
             device_parsed['hostname'] = host.get('name', '')

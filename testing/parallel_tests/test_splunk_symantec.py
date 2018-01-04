@@ -1,3 +1,4 @@
+from services.axonius_service import get_service
 from services.adapters.splunk_symantec_service import SplunkSymantecService, splunk_symantec_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
@@ -7,6 +8,7 @@ splunk_details = {
     "port": "8089",
     "username": "admin",
     "password": "IAmDeanSysMan1@",
+    "online_hours": "24"
 }
 
 
@@ -34,11 +36,13 @@ class TestSplunkSymantecAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         devices_as_dict = self.adapter_service.devices()
-        assert len(devices_as_dict) > 0
+        # splunk symantec returns only online devices - both in raw and parsed devices
+        assert len(devices_as_dict[self.some_client_id]['raw']) == 0
+        assert len(devices_as_dict[self.some_client_id]['parsed']) == 0
 
-        # check the device is read by adapter
-        devices_list = devices_as_dict[self.some_client_id]['raw']
-        ofri_machine = list(filter(lambda device: device['name'] == 'Axonius-Ofri', devices_list))
-        assert len(ofri_machine) == 1
-        assert ofri_machine[0]['os'] == 'Windows 10 (10.0.16299 ) '
-        assert ofri_machine[0]['network'][2]['mac'] == 'f8-59-71-94-58-09'
+        # we test that the cache database of splunk symantec has devices from all times
+        axonius_service = get_service()
+        ofri_machine = axonius_service.db.client[self.adapter_service.unique_name]['symantec_queries']\
+            .find({'name': 'Axonius-Ofri'}).next()
+        assert ofri_machine['host']['os'] == 'Windows 10 (10.0.16299 ) '
+        assert ofri_machine['host']['network'][2]['mac'] == 'f8-59-71-94-58-09'
