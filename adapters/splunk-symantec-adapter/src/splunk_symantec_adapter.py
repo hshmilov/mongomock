@@ -14,14 +14,14 @@ class SplunkSymantecAdapter(AdapterBase):
     def __init__(self, **kwargs):
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
-        self._online_hours = -1
+        self._online_hours = 24
 
     def _get_client_id(self, client_config):
         return '{0}:{1}'.format(client_config['host'], client_config['port'])
 
     def _connect_client(self, client_config):
         try:
-            self._online_hours = int(client_config['online_hours'])
+            self._online_hours = int(client_config['online_hours'] or self._online_hours)
             assert self._online_hours > 0, "You entered an invalid amount of hours as online hours"
             # copying as otherwise we would pop it from the client saved in the gui
             client_con = client_config.copy()
@@ -110,15 +110,14 @@ class SplunkSymantecAdapter(AdapterBase):
                 },
                 "online_hours": {
                     "type": "integer",
-                    "name": "Hours within device is considered online"
+                    "name": "Hours within device is considered online (default is 24)"
                 }
             },
             "required": [
                 "host",
                 "port",
                 "username",
-                "password",
-                "online_hours"
+                "password"
             ],
             "type": "object"
         }
