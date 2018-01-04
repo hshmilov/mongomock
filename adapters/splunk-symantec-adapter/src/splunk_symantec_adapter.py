@@ -9,6 +9,12 @@ from splunk_connection import SplunkConnection
 
 __author__ = "Asaf & Tal"
 
+SPLUNK_HOST = 'host'
+SPLUNK_PORT = 'port'
+SPLUNK_USER = 'username'
+SPLUNK_PASSWORD = 'password'
+SPLUNK_ONLINE_HOURS = 'online_hours'
+
 
 class SplunkSymantecAdapter(AdapterBase):
     def __init__(self, **kwargs):
@@ -17,15 +23,15 @@ class SplunkSymantecAdapter(AdapterBase):
         self._online_hours = 24
 
     def _get_client_id(self, client_config):
-        return '{0}:{1}'.format(client_config['host'], client_config['port'])
+        return '{0}:{1}'.format(client_config[SPLUNK_HOST], client_config[SPLUNK_PORT])
 
     def _connect_client(self, client_config):
         try:
-            self._online_hours = int(client_config['online_hours'] or self._online_hours)
+            self._online_hours = int(client_config[SPLUNK_ONLINE_HOURS] or self._online_hours)
             assert self._online_hours > 0, "You entered an invalid amount of hours as online hours"
             # copying as otherwise we would pop it from the client saved in the gui
             client_con = client_config.copy()
-            client_con.pop('online_hours')
+            client_con.pop(SPLUNK_ONLINE_HOURS)
             connection = SplunkConnection(**client_con)
             with connection:
                 pass  # check that the connection credentials are valid
@@ -92,32 +98,32 @@ class SplunkSymantecAdapter(AdapterBase):
         """
         return {
             "properties": {
-                "host": {
+                SPLUNK_HOST: {
                     "type": "string",
                     "name": "Host"
                 },
-                "port": {
+                SPLUNK_PORT: {
                     "type": "integer",
                     "name": "Port"
                 },
-                "username": {
+                SPLUNK_USER: {
                     "type": "string",
                     "name": "Username"
                 },
-                "password": {
+                SPLUNK_PASSWORD: {
                     "type": "password",
                     "name": "Password"
                 },
-                "online_hours": {
+                SPLUNK_ONLINE_HOURS: {
                     "type": "integer",
                     "name": "Hours within device is considered online (default is 24)"
                 }
             },
             "required": [
-                "host",
-                "port",
-                "username",
-                "password"
+                SPLUNK_HOST,
+                SPLUNK_PORT,
+                SPLUNK_USER,
+                SPLUNK_PASSWORD
             ],
             "type": "object"
         }
