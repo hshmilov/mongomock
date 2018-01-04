@@ -366,6 +366,8 @@ class PluginBase(Feature):
                 try:
                     extra['level'] = record.levelname
                     extra['message'] = message
+                    if record.exc_info:
+                        extra['exc_info'] = self.formatException(record.exc_info)
                     extra[PLUGIN_UNIQUE_NAME] = plugin_unique_name
                     current_time = datetime.utcfromtimestamp(record.created)
                     extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'

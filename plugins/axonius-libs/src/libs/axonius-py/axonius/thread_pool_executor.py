@@ -12,5 +12,5 @@ class LoggedThreadPoolExecutor(ThreadPoolExecutor):
         return f
 
     def _logger_listener(self, future):
-        if future.exception:
-            self._user_logger.exception('Async job error', exc_info=future.exception)
+        if future.exception():
+            self._user_logger.exception('Async job error', exc_info=future.exception())
