@@ -118,8 +118,13 @@ class EpoAdapter(AdapterBase):
         table = mc.run("core.listTables", table=LEAF_NODE_TABLE)
 
         all_linked_tables = get_all_linked_tables(table)
-        raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
-                     joinTables=all_linked_tables)
+
+        raw = dict()
+        try:
+            raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
+        except Exception as e:
+            self.logger.warn(f"Failed to query all linked tables - {e}")
+            raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables="EPOComputerProperties")
         return json.dumps(raw)
 
     def _get_client_id(self, client_config):
