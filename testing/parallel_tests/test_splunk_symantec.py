@@ -8,6 +8,7 @@ splunk_details = {
     "port": "8089",
     "username": "admin",
     "password": "IAmDeanSysMan1@",
+    "online_hours": "24"
 }
 
 

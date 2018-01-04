@@ -1,7 +1,6 @@
 """
 splunk_symantec_adapter.py: An adapter for Splunk Dashboard.
 """
-from configparser import ConfigParser
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
@@ -12,13 +11,22 @@ __author__ = "Asaf & Tal"
 
 
 class SplunkSymantecAdapter(AdapterBase):
+    def __init__(self, **kwargs):
+        # Initialize the base plugin (will initialize http server)
+        super().__init__(**kwargs)
+        self._online_hours = -1
 
     def _get_client_id(self, client_config):
         return '{0}:{1}'.format(client_config['host'], client_config['port'])
 
     def _connect_client(self, client_config):
         try:
-            connection = SplunkConnection(**client_config)
+            self._online_hours = int(client_config['online_hours'])
+            assert self._online_hours > 0, "You entered an invalid amount of hours as online hours"
+            # copying as otherwise we would pop it from the client saved in the gui
+            client_con = client_config.copy()
+            client_con.pop('online_hours')
+            connection = SplunkConnection(**client_con)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -61,25 +69,13 @@ class SplunkSymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Splunk Server
         """
-        # TODO: Weiss - Why reading a config file every get_devices?
-        # Asaf: for a configuration to be configurable you must allow changes while running -
-        #       otherwise it's called compigulation.
-        config = ConfigParser()
-        config.read(self.config_file_path)
-
-        # TODO: Weiss - Do this once on load.
-        # Asaf: again - read above comment - the idea is to allow changes mid running and relieve the user of the need
-        #       to reset the adapter. Considering you might want to allow different configurations per organization
-        #       and you don't want the user to know how to reset an adapter - you want it the be configurable
-        host_active_hours = int(config['DEFAULT']['host_active_hours'])
-
         with client_data:
             queries_collection = self._get_collection('symantec_queries', limited_user=True)
             # Update all_devices from splunk
             self._update_new_raw_devices(client_data, queries_collection)
 
             # Get "Active" devices
-            active_hosts = client_data.get_symantec_active_hosts(host_active_hours)
+            active_hosts = client_data.get_symantec_active_hosts(self._online_hours)
 
             #
             if active_hosts:
@@ -111,13 +107,18 @@ class SplunkSymantecAdapter(AdapterBase):
                 "password": {
                     "type": "password",
                     "name": "Password"
+                },
+                "online_hours": {
+                    "type": "integer",
+                    "name": "Hours within device is considered online"
                 }
             },
             "required": [
                 "host",
                 "port",
                 "username",
-                "password"
+                "password",
+                "online_hours"
             ],
             "type": "object"
         }
