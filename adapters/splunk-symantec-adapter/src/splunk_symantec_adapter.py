@@ -40,8 +40,7 @@ class SplunkSymantecAdapter(AdapterBase):
     def _update_new_raw_devices(self, client_data, queries_collection):
         already_updates = []
         last_ts = self.get_last_query_ts('symantec')
-        all_devices = list(client_data.get_symantec_devices_info(last_ts))
-        for host in all_devices:
+        for host in client_data.get_symantec_devices_info(last_ts):
             name = host['name']
             if name in already_updates:
                 continue
@@ -53,8 +52,6 @@ class SplunkSymantecAdapter(AdapterBase):
         if last_ts is not None:
             self.set_last_query_ts('symantec', int(last_ts + 1))
 
-        return all_devices
-
     def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific Splunk domain
@@ -65,26 +62,30 @@ class SplunkSymantecAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Splunk Server
         """
         # TODO: Weiss - Why reading a config file every get_devices?
+        # Asaf: for a configuration to be configurable you must allow changes while running -
+        #       otherwise it's called compigulation.
         config = ConfigParser()
         config.read(self.config_file_path)
 
         # TODO: Weiss - Do this once on load.
+        # Asaf: again - read above comment - the idea is to allow changes mid running and relieve the user of the need
+        #       to reset the adapter. Considering you might want to allow different configurations per organization
+        #       and you don't want the user to know how to reset an adapter - you want it the be configurable
         host_active_hours = int(config['DEFAULT']['host_active_hours'])
 
         with client_data:
             queries_collection = self._get_collection('symantec_queries', limited_user=True)
             # Update all_devices from splunk
-            all_devices = self._update_new_raw_devices(client_data, queries_collection)
+            self._update_new_raw_devices(client_data, queries_collection)
 
             # Get "Active" devices
             active_hosts = client_data.get_symantec_active_hosts(host_active_hours)
 
             #
             if active_hosts:
-                self.active_hosts = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
+                all_devices = list(queries_collection.find({'$or': [{'name': name} for name in active_hosts]}))
             else:
-                self.active_hosts = []
-            all_devices.extend(self.active_hosts)
+                all_devices = []
             return all_devices
 
     def _clients_schema(self):
@@ -122,7 +123,7 @@ class SplunkSymantecAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in self.active_hosts:
+        for device_raw in devices_raw_data:
             host = device_raw.get('host', '')
             device_parsed = dict()
             device_parsed['hostname'] = host.get('name', '')
