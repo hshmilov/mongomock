@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
-import concurrent.futures
 
 import functools
 from flask import jsonify
 from promise import Promise
 
 from axonius.plugin_base import add_rule
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.threading_utils import run_in_executor_helper
 from axonius.mixins.feature import Feature
 
@@ -54,15 +54,11 @@ class Activatable(Feature, ABC):
         self.__activation_lock = RLock()
 
         # this executor starts and closes the activatable
-        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self.__executor = LoggedThreadPoolExecutor(self.logger, max_workers=1)
 
         # this is used internally for startup and shutdown logic
         self.__shutdown_startup_state = ActiveStates.Disabled
         self.__last_error = ""
-
-    @classmethod
-    def specific_supported_features(cls) -> list:
-        return ["Activatable"]
 
     @classmethod
     def specific_supported_features(cls) -> list:

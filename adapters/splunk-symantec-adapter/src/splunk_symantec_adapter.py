@@ -38,7 +38,7 @@ class SplunkSymantecAdapter(AdapterBase):
             return connection
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             raise ClientConnectionException(message)
 
     def get_last_query_ts(self, name):

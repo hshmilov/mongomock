@@ -79,10 +79,11 @@ class AWSAdapter(AdapterBase):
         except botocore.exceptions.BotoCoreError as e:
             message = "Error creating EC2 client for account {0}, reason: {1}".format(
                 client_config[AWS_ACCESS_KEY_ID], str(e))
+            self.logger.exception(message)
         except botocore.exceptions.ClientError as e:
             message = "Error connecting to client with account {0}, reason: {1}".format(
                 client_config[AWS_ACCESS_KEY_ID], str(e))
-        self.logger.error(message)
+            self.logger.exception(message)
         raise axonius.adapter_exceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):

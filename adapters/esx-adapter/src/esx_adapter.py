@@ -30,13 +30,13 @@ class ESXAdapter(AdapterBase):
                               verify_ssl=client_config['verify_ssl'])
         except vim.fault.InvalidLogin as e:
             message = "Credentials invalid for ESX client for account {0}".format(client_id)
+            self.logger.error(message)
         except vim.fault.HostConnectFault as e:
-            message = "Unable to access vCenter, text={}, host = {}".format(
-                e.msg, client_config['host'])
+            message = "Unable to access vCenter, text={}, host = {}".format(e.msg, client_config['host'])
+            self.logger.exception(message)
         except Exception as e:
             message = "Unknown error on account {}, text={}".format(client_id, str(e))
-
-        self.logger.error(message)
+            self.logger.exception(message)
         raise adapter_exceptions.ClientConnectionException(message)
 
     def _clients_schema(self):

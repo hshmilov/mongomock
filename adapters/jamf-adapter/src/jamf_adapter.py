@@ -25,7 +25,7 @@ class JamfAdapter(AdapterBase):
         except jamf_exceptions.JamfException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Jamf_Domain'], str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             raise axonius.adapter_exceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):

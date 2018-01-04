@@ -131,7 +131,7 @@ class EpoAdapter(AdapterBase):
                           client_config[QUERY_USER], client_config[QUERY_PASS])
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             raise ClientConnectionException(message)
         return client_config
 

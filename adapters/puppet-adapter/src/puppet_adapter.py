@@ -41,14 +41,13 @@ class PuppetAdapter(AdapterBase):
             message = "Error getting information from puppet server {0}. reason: {1}".format(
                 client_config["puppet_server_name"],
                 str(e))
+            self.logger.exception(message)
         except KeyError as e:
             if "puppet_server_name" in client_config:
-                message = "Key error for Puppet {0}. details: {1}".format(
-                    client_config["puppet_server_name"],
-                    str(e))
+                message = f"Key error for Puppet {0}. details: {1}".format(client_config["puppet_server_name"], str(e))
             else:
                 message = "Missing Puppet name for configuration line"
-        self.logger.error(message)
+            self.logger.error(message)
         raise ClientConnectionException
 
     def _clients_schema(self):
@@ -90,8 +89,7 @@ class PuppetAdapter(AdapterBase):
         try:
             return client_data.get_device_list()
         except exceptions.PuppetException as e:
-            self.logger.error(
-                "Error while trying to get devices. Details: {0}", str(e))
+            self.logger.exception("Error while trying to get devices. Details: {0}", str(e))
             return str(e), 500
 
     def _parse_raw_data(self, devices_raw_data):

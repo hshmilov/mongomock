@@ -43,7 +43,7 @@ class NessusAdapter(AdapterBase):
             port = client_config[PORT] if PORT in client_config else ''
             message = 'Error connecting to client with address {0} and port {1}, reason: {2}'.format(
                 client_config[HOST], port, str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -80,8 +80,8 @@ class NessusAdapter(AdapterBase):
                         device_dict[hostname]['scans'][scan['id']] = host
 
                 return device_dict.values()
-        except NessusException as e:
-            self.logger.error('Error querying devices from client {0}. Details: {1}'.format(client_name, str(e)))
+        except NessusException:
+            self.logger.exception(f'Error querying devices from client {client_name}')
             raise AdapterException('Nessus Adapter failed querying devices for {0}'.format(client_name))
 
     def _clients_schema(self):
@@ -134,5 +134,5 @@ class NessusAdapter(AdapterBase):
                 ],
                     'raw': device_raw}
         except NessusException as e:
-            self.logger.error('Error parsing devices. Details: {0}'.format(str(e)))
+            self.logger.exception('Error parsing devices.')
             raise AdapterException('Nessus Adapter failed parsing devices')

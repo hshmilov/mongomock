@@ -23,11 +23,11 @@ class JamfAdvancedSearch(object):
             int(response_tree.find("id").text)
         except ValueError:
             # conversion of the query id to int failed
-            self.jamf_connection.logger.error(error_message + f": {response.text}")
+            self.jamf_connection.logger.exception(error_message + f": {response.text}")
             raise JamfRequestException(error_message + f": {response.text}")
         except Exception as e:
             # any other error during creation of the query or during the conversion
-            self.jamf_connection.logger.error(error_message + f": {str(e)}")
+            self.jamf_connection.logger.exception(error_message)
             raise JamfRequestException(error_message + str(e))
 
     def _create_query(self):

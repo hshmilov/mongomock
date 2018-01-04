@@ -8,10 +8,10 @@ from datetime import datetime
 import uuid
 from itertools import chain
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import beautiful_adapter_device_name
@@ -78,7 +78,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                         "/start request "
 
         executors = {'default': ThreadPoolExecutor(1)}
-        self._online_adapters_scheduler = BackgroundScheduler(executors=executors)
+        self._online_adapters_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
         self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
                                                 trigger=IntervalTrigger(seconds=60),
                                                 next_run_time=datetime.now(),
@@ -130,14 +130,14 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         try:
             clients = self.request_remote_plugin('clients', adapter).json()
         except Exception as e:
-            self.logger.error(f"{repr(e)}")
+            self.logger.exception(f"{repr(e)}")
             raise AdapterOffline()
         for client_name in clients:
             try:
                 devices = self.request_remote_plugin(f'devices_by_name?name={client_name}', adapter)
             except Exception as e:
                 # request failed
-                self.logger.error(f"{repr(e)}")
+                self.logger.exception(f"{repr(e)}")
                 raise AdapterOffline()
             if devices.status_code != 200:
                 self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}. "
@@ -479,7 +479,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
             # and then the scheduler will remove this task
             self.logger.warn(f"adapter {plugin_unique_name} might be offline. Reason {str(e)}")
         except Exception as e:
-            self.logger.error("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
+            self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
         self.logger.info("Finished for {} {}".format(plugin_name, plugin_unique_name))
@@ -509,7 +509,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                           PLUGIN_UNIQUE_NAME: plugin_unique_name,
                                                           'plugin_type': plugin_type})
         except pymongo.errors.PyMongoError as e:
-            self.logger.error("Error in pymongo. details: {}".format(e))
+            self.logger.exception("Error in pymongo. details: {}".format(e))
 
     def _update_device_with_tag(self, tag, axonius_device):
         """

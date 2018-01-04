@@ -1,15 +1,16 @@
-from axonius.plugin_base import PluginBase, add_rule, return_error
-from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import timedelta, datetime
+import json
+import time
+import threading
+
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
-from datetime import timedelta, datetime
-import time
-from axonius.dns_utils import query_dns, NoIpFoundError
-import json
-from axonius.mixins.activatable import Activatable
-from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
-import threading
+
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.dns_utils import query_dns, NoIpFoundError
+from axonius.mixins.activatable import Activatable
+from axonius.plugin_base import PluginBase, add_rule
 
 
 class DnsConflictsPlugin(PluginBase, Activatable):
@@ -33,7 +34,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
         self.resolve_lock = threading.RLock()
 
         executors = {'default': ThreadPoolExecutor(1)}
-        self.scheduler = BackgroundScheduler(executors=executors)
+        self.scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
 
         # Thread for resetting the resolving process
         self.scheduler.add_job(func=self._find_dns_conflicts_thread,
@@ -83,7 +84,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
                                                  host['id'],
                                                  {"dns_name": dns_name, "domain_name": domain_name, "dc_name": dc_name})
                     except Exception as e:
-                        self.logger.error(f"Error finding conflicts on host{host['hostname']} . Err: {str(e)}")
+                        self.logger.exception(f"Error finding conflicts on host{host['hostname']} . Err: {str(e)}")
                     finally:
                         # Waiting at least 50[ms] before each request
                         resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds

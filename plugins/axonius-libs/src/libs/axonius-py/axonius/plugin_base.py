@@ -1,5 +1,4 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
-from axonius.mixins.feature import Feature
 
 __author__ = "Ofir Yefet"
 
@@ -21,15 +20,17 @@ import json_log_formatter
 from pymongo import MongoClient
 # bson is requirement of mongo and its not recommended to install it manually
 from bson import ObjectId
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
 from pathlib import Path
 from promise import Promise
-from axonius.adapter_exceptions import TagDeviceError
+
 from axonius import plugin_exceptions
+from axonius.adapter_exceptions import TagDeviceError
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.mixins.feature import Feature
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -111,7 +112,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                         extra_log['err_traceback'] = tb
                         extra_log['err_type'] = err_type
                         extra_log['err_message'] = err_message
-                        logger.error("Unhandled exception thrown from plugin", extra=extra_log)
+                        logger.exception("Unhandled exception thrown from plugin", extra=extra_log)
                     return json.dumps({"status": "error", "type": err_type, "message": err_message}), 400
                 except Exception as second_err:
                     return json.dumps({"status": "error", "type": type(second_err).__name__,
@@ -255,7 +256,7 @@ class PluginBase(Feature):
         if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(1)}
-            self.online_plugins_scheduler = BackgroundScheduler(executors=executors)
+            self.online_plugins_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
             self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
                                                   trigger=IntervalTrigger(seconds=30),
                                                   next_run_time=datetime.now() + timedelta(seconds=20),
@@ -310,8 +311,8 @@ class PluginBase(Feature):
         except Exception as e:
             self.comm_failure_counter += 1
             if self.comm_failure_counter > retries:  # Two minutes
-                self.logger.error(("Error communicating with Core for more than 2 minutes, "
-                                   "exiting. Reason: {0}").format(e))
+                self.logger.exception(("Error communicating with Core for more than 2 minutes, "
+                                       "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
     def populate_register_doc(self, register_doc, config_plugin_path):
@@ -478,7 +479,7 @@ class PluginBase(Feature):
                                                     "type={0}, message={1}".format(type(e).__name__, str(e))
                                     print("[fatal error]: %s" %
                                           (exception_log,))
-                                    fatal_logger.error(exception_log)
+                                    fatal_logger.exception(exception_log)
                                     warning_count = warning_count + 1
                                     continue
                                     # In any other cases, we should just try the other log lines
@@ -498,7 +499,7 @@ class PluginBase(Feature):
                     exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__,
                                                                                                       str(e))
                     print("[fatal error]: %s" % (exception_message,))
-                    fatal_logger.error(exception_message)
+                    fatal_logger.exception(exception_message)
                     return 'Bad'
 
         # Creating the logger using our custumized logger fomatter

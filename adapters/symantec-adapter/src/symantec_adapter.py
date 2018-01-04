@@ -28,7 +28,7 @@ class SymantecAdapter(AdapterBase):
         except symantec_exceptions.SymantecException as e:
             message = "Error connecting to client with address {0} and port {1}, reason: {2}".format(
                 client_config['SEPM_Address'], client_config['SEPM_Port'], str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             raise axonius.adapter_exceptions.ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):

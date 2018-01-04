@@ -3,13 +3,13 @@
 __author__ = "Ofir Yefet"
 
 from axonius.adapter_base import AdapterBase
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import add_rule
 from axonius.parsing_utils import figure_out_os
 from axonius import adapter_exceptions
 from ldap_connection import LdapConnection
 from base64 import standard_b64decode
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
@@ -58,7 +58,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         self._resolving_thread_lock = threading.RLock()
 
         executors = {'default': ThreadPoolExecutor(2)}
-        self._resolver_scheduler = BackgroundScheduler(executors=executors)
+        self._resolver_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
 
         # Thread for resolving IP addresses of devices
         self._resolver_scheduler.add_job(func=self._resolve_hosts_addr_thread,
@@ -96,13 +96,14 @@ class ActiveDirectoryAdapter(AdapterBase):
         except ad_exceptions.LdapException as e:
             message = "Error in ldap process for dc {0}. reason: {1}".format(
                 dc_details["dc_name"], str(e))
+            self.logger.exception(message)
         except KeyError as e:
             if "dc_name" in dc_details:
                 message = "Key error for dc {0}. details: {1}".format(
                     dc_details["dc_name"], str(e))
             else:
                 message = "Missing dc name for configuration line"
-        self.logger.error(message)
+            self.logger.error(message)
         raise adapter_exceptions.ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -312,8 +313,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 domain_name, user_name = client_config['admin_user'].split('\\')
                 password = client_config['admin_password']
                 try:
-                    device_ip = self._resolve_device_name(
-                        device_data['data']['hostname'], client_config)
+                    device_ip = self._resolve_device_name(device_data['data']['hostname'], client_config)
                 except Exception as e:
                     self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
                     raise ad_exceptions.IpResolveError("Cant Resolve Ip")

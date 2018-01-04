@@ -3,10 +3,10 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 
 from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from namedlist import namedlist
 
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import PluginBase, return_error, add_rule
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
@@ -109,7 +109,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
         assert self._correlation_scheduler is None, "Correlation is already scheduled"
 
         executors = {'default': ThreadPoolExecutor(1)}
-        self._correlation_scheduler = BackgroundScheduler(executors=executors)
+        self._correlation_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
         self._correlation_scheduler.add_job(func=self.__correlate,
                                             trigger=IntervalTrigger(hours=2),
                                             next_run_time=datetime.now(),

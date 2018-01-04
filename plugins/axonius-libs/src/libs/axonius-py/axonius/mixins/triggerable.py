@@ -1,4 +1,3 @@
-import concurrent.futures
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
@@ -10,6 +9,7 @@ from promise import Promise
 
 from axonius.mixins.feature import Feature
 from axonius.plugin_base import add_rule, return_error
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.threading_utils import run_in_executor_helper
 
 
@@ -41,7 +41,7 @@ class Triggerable(Feature, ABC):
         self.__trigger_lock = RLock()
         self.__state = {}
         # this executor executes the trigger function
-        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        self.__executor = LoggedThreadPoolExecutor(self.logger, max_workers=10)
         self.__last_error = ""
 
     @classmethod

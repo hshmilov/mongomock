@@ -24,7 +24,7 @@ class CorrelatorEngineBase(ABC):
                 if os is not None:
                     yield device
             except OSTypeInconsistency:
-                self.logger.error("OS inconsistent over correlated devices", device['internal_axon_id'])
+                self.logger.exception("OS inconsistent over correlated devices", device['internal_axon_id'])
 
     def _preprocess_devices(self, devices):
         """

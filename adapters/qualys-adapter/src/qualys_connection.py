@@ -72,7 +72,7 @@ class QualysConnection(object):
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
-            self.logger.error('Post request failed. {0}'.format(str(e)), name, headers, cookies, auth, data)
+            self.logger.exception('Post request failed. {0}'.format(str(e)), name, headers, cookies, auth, data)
             raise e
         response = response.json()
         return response['ServiceResponse']

@@ -3,10 +3,9 @@ AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
 
-import concurrent.futures
-
 from axonius import adapter_exceptions
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
@@ -38,8 +37,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         self._prepare_parsed_clients_config()
 
-        self._thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=50)
+        self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -96,13 +94,13 @@ class AdapterBase(PluginBase, Feature, ABC):
                              f"returned {len(parsed_devices)} devices")
             self.logger.info("Querying devices on ")
         except adapter_exceptions.CredentialErrorException as e:
-            self.logger.error(f"Credentials error for {client_name} on {self.plugin_unique_name}")
+            self.logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
         except adapter_exceptions.AdapterException as e:
-            self.logger.error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+            self.logger.exception(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
-            self.logger.error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
+            self.logger.exception(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
             return return_error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
             # TODO raise the error, after verifying all adapter return an expected error
         else:
@@ -182,11 +180,11 @@ class AdapterBase(PluginBase, Feature, ABC):
         except adapter_exceptions.ClientConnectionException as e:
             pass
         except KeyError as e:
-            self.logger.error(
+            self.logger.exception(
                 "Got key error while handling client {0} - possibly compliance problem with schema. Details: {1}".format(
                     client_id if client_id else (id if id else ''), str(e)))
         except Exception as e:
-            self.logger.error(f"Unknown exception: {str(e)}")
+            self.logger.exception(f"Unknown exception: {str(e)}")
 
         if client_id is not None:
             # Updating DB according to the axiom that client_id is a unique field across clients
@@ -281,8 +279,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         """ Function for creating action thread.
         """
         # Getting action id
-        self._thread_pool.submit(
-            self._run_action_thread, func, device, action_id, **kwargs)
+        self._thread_pool.submit(self._run_action_thread, func, device, action_id, **kwargs)
 
     @add_rule('action/<action_type>', methods=['POST'])
     def rest_new_action(self, action_type):
@@ -401,7 +398,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             except Exception as e2:
                 # No connection to attempt querying
                 self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
-                self.logger.error(
+                self.logger.exception(
                     "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
                 _update_client_status("error")
                 raise
@@ -411,7 +408,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                     parsed_devices = list(self._parse_raw_data(raw_devices))
                 except:
                     # No devices despite a working connection
-                    self.logger.error("Problem querying devices for client {0}".format(client_id))
+                    self.logger.exception("Problem querying devices for client {0}".format(client_id))
                     _update_client_status("error")
                     raise
         _update_client_status("success")
@@ -435,10 +432,10 @@ class AdapterBase(PluginBase, Feature, ABC):
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
             except adapter_exceptions.AdapterException as e:
-                self.logger.error(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                self.logger.exception(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
             except Exception as e:
-                self.logger.error(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                self.logger.exception(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             else:
                 devices_list = {'raw': raw_devices,
                                 'parsed': parsed_devices}

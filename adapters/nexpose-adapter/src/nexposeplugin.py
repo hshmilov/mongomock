@@ -52,8 +52,8 @@ class NexposePlugin(AdapterBase):
         session.Open()
         try:
             yield session
-        except Exception as err:
-            self.logger.error('An exception occurred while in session', err)
+        except:
+            self.logger.exception('An exception occurred while in session')
         finally:
             session.Close()
 

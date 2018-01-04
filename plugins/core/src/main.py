@@ -1,4 +1,5 @@
 """app.py: This is the core process of Axonius system"""
+from axonius.background_scheduler import LoggedBackgroundScheduler
 
 __author__ = "Ofir Yefet"
 
@@ -17,7 +18,6 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CON
 from axonius.server_utils import init_wsgi
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
 
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.consts import adapter_consts
@@ -79,7 +79,7 @@ class Core(PluginBase):
 
         # Create plugin cleaner thread
         executors = {'default': ThreadPoolExecutor(1)}
-        self.cleaner_thread = BackgroundScheduler(executors=executors)
+        self.cleaner_thread = LoggedBackgroundScheduler(self.logger, executors=executors)
         self.cleaner_thread.add_job(func=self.clean_offline_plugins,
                                     trigger=IntervalTrigger(seconds=20),
                                     next_run_time=datetime.now(),

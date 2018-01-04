@@ -6,10 +6,10 @@ from flask import jsonify
 import threading
 import json
 from bson.objectid import ObjectId
-import concurrent.futures
 
 from axonius.plugin_base import PluginBase, add_rule
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
 PLUGIN_TYPE = 'execution_controller'
 
@@ -38,8 +38,7 @@ class ExecutionPlugin(PluginBase):
         self._restore_actions_from_db()
 
         # Threadpool for creating new actions
-        self._actions_thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=20)
+        self._actions_thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=20)
 
     def _restore_actions_from_db(self):
         """ Restores actions from db.

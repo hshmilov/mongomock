@@ -49,7 +49,7 @@ class PuppetServerConnection:
             if not os.path.exists(os.path.join(self.local_SSL_files_locations, config.PRIVATE_KEYS_DIRECTORY)):
                 os.makedirs(os.path.join(self.local_SSL_files_locations, config.PRIVATE_KEYS_DIRECTORY))
         except os.error as directory_error:
-            self.logger.error("Error while creating directories")
+            self.logger.exception("Error while creating directories")
             raise exceptions.PuppetException(str(directory_error))
         # Init local locations of the certificates files.
         self.certificate_name_in_puppet_server = config.CERTIFICATE_PREFIX_IN_PUPPET_SERVER + self.puppet_server_address
@@ -84,7 +84,7 @@ class PuppetServerConnection:
             for line in data:
                 self.logger.debug("Error of ssh comand:{0}".format(line))
         except:
-            self.logger.error("Error occured in ssh command input or output")
+            self.logger.exception("Error occured in ssh command input or output")
 
     def _generate_certificates_at_puppet_server(self):
         """ This function uses ssh to connect to the puppet server and creates the ssl certificates in the server.
@@ -190,8 +190,8 @@ class PuppetServerConnection:
                                           cert=(self.local_certificate_file_path, self.local_private_key_file_path),
                                           verify=self.local_ca_file_path)
         except requests.RequestException as err:
-            self.logger.error("Error in querying the nodes from the puppet server." +
-                              " Error information:{0}".format(str(err)))
+            self.logger.exception("Error in querying the nodes from the puppet server." +
+                                  " Error information:{0}".format(str(err)))
             raise exceptions.PuppetException("Error in querying the nodes from the puppet server." +
                                              f" Error information:{str(err)}")
         parsed_query_nodes_json = self._parse_json_request(query_response)
@@ -204,7 +204,7 @@ class PuppetServerConnection:
             try:
                 yield self._query_fact_device(s, json_node)
             except exceptions.PuppetException as err:
-                self.logger.error(f"Error in getting information about node:{str(json_node)}. Error:{str(err)}")
+                self.logger.exception(f"Error in getting information about node:{str(json_node)}. Error:{str(err)}")
 
     def _query_fact_device(self, opened_session, basic_json_node=None):
         """ This function gets a json with basic information about a node (or nothing if not needed),

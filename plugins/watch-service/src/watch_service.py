@@ -1,17 +1,16 @@
 # Standard modules
 import threading
-import time
 import datetime
 from deepdiff import DeepDiff
 from bson.objectid import ObjectId
 
 # pip modules
 import os
-from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from flask import jsonify, json
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.triggers.interval import IntervalTrigger
 
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
@@ -83,7 +82,7 @@ class WatchService(PluginBase):
 
         except ValueError:
             message = 'Expected JSON, got something else...'
-            self.logger.error(message)
+            self.logger.exception(message)
             return return_error(message, 400)
 
     @add_rule("watch", methods=['PUT', 'GET', 'DELETE'])
@@ -113,7 +112,7 @@ class WatchService(PluginBase):
                 return self._remove_watch(self.get_request_data_as_object())
         except ValueError:
             message = 'Expected JSON, got something else...'
-            self.logger.error(message)
+            self.logger.exception(message)
             return return_error(message, 400)
 
     def _add_watch(self, watch_data):
@@ -164,11 +163,11 @@ class WatchService(PluginBase):
 
         except KeyError as e:
             message = 'The query watch request is missing data. Details: {0}'.format(str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             return return_error(message, 400)
         except TypeError as e:
             message = 'The mongo query was invalid. Details: {0}'.format(str(e))
-            self.logger.error(message)
+            self.logger.exception(message)
             return return_error(message, 400)
 
     def _remove_watch(self, watch_data):
@@ -241,7 +240,7 @@ class WatchService(PluginBase):
         """
         if self._scheduler is None:
             executors = {'default': ThreadPoolExecutor(10)}
-            self._scheduler = BackgroundScheduler(executors=executors)
+            self._scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
             self._scheduler.add_job(func=self._watch_thread_manager,
                                     trigger=IntervalTrigger(seconds=60),
                                     next_run_time=datetime.datetime.now(),
@@ -338,7 +337,7 @@ class WatchService(PluginBase):
                     self._watched_queries[query]['result'] = current_result
 
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 "Thread {0} encountered error: {1}. Repeated errors like this could be a race condition of a deleted watch.".format(
                     threading.current_thread(), str(e)))
             raise
