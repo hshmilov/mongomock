@@ -120,7 +120,7 @@ export const device = {
 				},
 				{
 					path: 'adapters.data.network_interfaces.MAC',
-					name: 'MAC Addresses',
+					name: 'MACs',
 					selected: false,
 					type: 'list',
 					control: 'text'

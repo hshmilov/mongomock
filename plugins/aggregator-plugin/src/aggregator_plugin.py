@@ -18,7 +18,7 @@ from axonius.parsing_utils import beautiful_adapter_device_name
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from flask import jsonify
-from aggregator_exceptions import AdapterOffline
+from aggregator_exceptions import AdapterOffline, ClientsUnavailable
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 get_devices_job_name = "Get device job"
@@ -132,6 +132,10 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         except Exception as e:
             self.logger.exception(f"{repr(e)}")
             raise AdapterOffline()
+        if 'status' in clients and 'message' in clients:
+            self.logger.error(
+                f'Request for clients from {adapter} failed. Status: {clients.get("status", "")}, Message \'{clients.get("message", "")}\'')
+            raise ClientsUnavailable()
         for client_name in clients:
             try:
                 devices = self.request_remote_plugin(f'devices_by_name?name={client_name}', adapter)

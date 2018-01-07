@@ -128,7 +128,7 @@ class NessusAdapter(AdapterBase):
                        'hostname': '',
                        'OS': figure_out_os(device_raw.get('info', {}).get('operating-system', '')),
                        'network_interfaces': [
-                           {'MAC': '',
+                           {'MAC': device_raw.get('info', {}).get('mac-address', ''),
                             'IP': device_raw.get('info', {}).get('host-ip', '')
                             }
                 ],
