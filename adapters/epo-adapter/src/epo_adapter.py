@@ -1,6 +1,7 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.parsing_utils import figure_out_os, format_mac
+from axonius.parsing_utils import format_mac
+from axonius.parsing_utils import figure_out_os
 import json
 import ipaddress
 import mcafee
@@ -110,7 +111,7 @@ class EpoAdapter(AdapterBase):
                 'OS': parse_os_details(device_raw_data),
                 'id': device_raw_data['EPOLeafNode.AgentGUID'],
                 'network_interfaces': parse_network(device_raw_data),
-                'raw': json.dumps(device_raw_data)}
+                'raw': device_raw_data}
 
     def _query_devices_by_client(self, client_name, client_data):
         mc = mcafee.client(client_data[EPO_HOST], client_data[EPO_PORT],

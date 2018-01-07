@@ -1,5 +1,6 @@
 import epo_adapter
 import pytest
+from axonius.utils.mongo_escaping import escape_dict
 
 list_tables = {
     'columns': '\r\n    Name                         Type          Select? Condition? GroupBy? Order? Number? \r\n    ---------------------------- ------------- ------- ---------- -------- ------ -------\r\n    AutoID                       int           False   False      False    True   True   \r\n    Tags                         string        True    False      False    True   False  \r\n    ExcludedTags                 string        True    False      False    True   False  \r\n    AppliedTags                  applied_tags  False   True       False    False  False  \r\n    LastUpdate                   timestamp     True    True       True     True   False  \r\n    os                           string        True    False      False    False  False  \r\n    products                     string        False   False      False    False  False  \r\n    NodeName                     string        True    True       True     True   False  \r\n    ManagedState                 enum          True    True       False    True   False  \r\n    AgentVersion                 string_lookup True    True       True     True   False  \r\n    AgentGUID                    string        True    False      False    True   False  \r\n    Type                         int           False   False      False    True   False  \r\n    ParentID                     int           False   False      False    True   True   \r\n    ResortEnabled                boolean       True    True       False    True   False  \r\n    ServerKeyHash                string        True    True       False    True   False  \r\n    NodePath                     string_lookup False   False      False    True   False  \r\n    TransferSiteListsID          isNotNull     True    True       False    True   False  \r\n    SequenceErrorCount           int           True    True       False    True   True   \r\n    SequenceErrorCountLastUpdate timestamp     True    True       False    True   False  \r\n    LastCommSecure               string_enum   True    True       True     True   False  \r\n    TenantId                     int           False   False      False    True   True   \r\n',
@@ -96,6 +97,11 @@ def test_parse_network():
         }
     ]
     assert parsed == expected
+
+
+def test_escape_dict():
+    for key in escape_dict(raw_device_data.copy()):
+        assert '.' not in key
 
 
 if __name__ == '__main__':

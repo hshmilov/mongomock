@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Epo Debug" type="PythonConfigurationType" factoryName="Python">
     <option name="INTERPRETER_OPTIONS" value="" />
@@ -6,7 +5,7 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/adapters/epo-adapter/docker-compose.yml]:epo-adapter/python3.6" />
+    <option name="SDK_HOME" value="docker-compose://[$PROJECT_DIR$/adapters/epo-adapter/docker-compose.yml, $PROJECT_DIR$/adapters/epo-adapter/docker-compose.override.yml]:epo-adapter/python3.6" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/adapters/epo-adapter/src" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
@@ -25,7 +24,7 @@
     <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
+    <option name="MODULE_MODE" value="false" />
     <method />
   </configuration>
 </component>
-

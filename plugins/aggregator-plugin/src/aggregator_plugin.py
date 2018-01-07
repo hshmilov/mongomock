@@ -177,7 +177,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         adapter = next((adapter for adapter in current_adapters.json().values()
                         if adapter[PLUGIN_UNIQUE_NAME] == job_name), None)
         if adapter is None:
-            raise RuntimeError(f"Can't find plugin named {task_name}")
+            raise RuntimeError(f"Can't find plugin named {job_name}")
         self._save_devices_from_adapter(adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME])
 
     def _adapters_thread_manager(self):

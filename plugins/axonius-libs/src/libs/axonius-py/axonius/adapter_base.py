@@ -5,6 +5,7 @@ It implements API calls that are expected to be present in all adapters.
 
 from axonius import adapter_exceptions
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.utils.mongo_escaping import escape_dict
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from abc import ABC, abstractmethod
 from flask import jsonify, request
@@ -356,6 +357,15 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         pass
 
+    def parse_raw_data_hook(self, raw_devices):
+        """
+        :param raw_devices: raw devices as fetched by adapter
+        :return: iterator of processed raw device entries
+        """
+        for parsed_device in self._parse_raw_data(raw_devices):
+            parsed_device['raw'] = escape_dict(parsed_device['raw'])
+            yield parsed_device
+
     def _try_query_devices_by_client(self, client_id, client, attempt=0):
         """
         Try querying devices for given client. If fails, try reconnecting to client.
@@ -385,7 +395,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:
             raw_devices = self._query_devices_by_client(client_id, client)
-            parsed_devices = list(self._parse_raw_data(raw_devices))
+            parsed_devices = list(self.parse_raw_data_hook(raw_devices))
         except Exception as e:
             with self._clients_lock:
                 current_client = clients_collection.find_one({'client_id': client_id})
@@ -405,7 +415,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             else:
                 try:
                     raw_devices = self._query_devices_by_client(client_id, self._clients[client_id])
-                    parsed_devices = list(self._parse_raw_data(raw_devices))
+                    parsed_devices = list(self.parse_raw_data_hook(raw_devices))
                 except:
                     # No devices despite a working connection
                     self.logger.exception("Problem querying devices for client {0}".format(client_id))

@@ -40,3 +40,8 @@ class TestNessusAdapter(AdapterTestBase):
         devices_list = devices_as_dict[self.some_client_id]['parsed']
         nessus_device = list(filter(lambda device: device['id'] == SOME_DEVICE_ID, devices_list))
         assert len(nessus_device[0]['raw']['vulnerabilities']) == 52
+
+
+if __name__ == '__main__':
+    import pytest
+    pytest.main(["parallel_tests/test_nessus.py"])
