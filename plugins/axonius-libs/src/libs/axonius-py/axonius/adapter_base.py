@@ -81,15 +81,13 @@ class AdapterBase(PluginBase, Feature, ABC):
            GET - Finds all available devices from a specific client, and returns them
         """
         client_name = request.args.get('name')
-        client = self._clients.get(client_name)
         self.logger.info(f"Trying to query devices from client {client_name}")
-        if client is None:
+        if client_name not in self._clients:
             self.logger.error(f"client {client_name} does not exist")
             return return_error("Client does not exist", 404)
-
         try:
             time_before_query = datetime.now()
-            raw_devices, parsed_devices = self._try_query_devices_by_client(client_name, client)
+            raw_devices, parsed_devices = self._try_query_devices_by_client(client_name)
             query_time = datetime.now() - time_before_query
             self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
                              f"returned {len(parsed_devices)} devices")
@@ -178,24 +176,23 @@ class AdapterBase(PluginBase, Feature, ABC):
             self._clients[client_id] = self._connect_client(client_config)
             # Got here only if connection succeeded
             status = "success"
-        except adapter_exceptions.ClientConnectionException as e:
-            pass
-        except KeyError as e:
+        except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
+            id_for_log = client_id if client_id else (id if id else '')
             self.logger.exception(
-                "Got key error while handling client {0} - possibly compliance problem with schema. Details: {1}".format(
-                    client_id if client_id else (id if id else ''), str(e)))
-        except Exception as e:
-            self.logger.exception(f"Unknown exception: {str(e)}")
+                f"Got error while handling client {id_for_log} - \
+                possibly compliance problem with schema. Details: {repr(e)}")
+            if client_id in self._clients:
+                del self._clients[client_id]
 
         if client_id is not None:
             # Updating DB according to the axiom that client_id is a unique field across clients
+            self.logger.info(f"Setting {client_id} status to {status}")
             result = self._get_collection('clients').replace_one({'client_id': client_id},
                                                                  {
                                                                      'client_id': client_id,
                                                                      'client_config': client_config,
                                                                      'status': status
             }, upsert=True)
-
         elif id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
@@ -366,7 +363,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             parsed_device['raw'] = escape_dict(parsed_device['raw'])
             yield parsed_device
 
-    def _try_query_devices_by_client(self, client_id, client, attempt=0):
+    def _try_query_devices_by_client(self, client_id):
         """
         Try querying devices for given client. If fails, try reconnecting to client.
         If successful, try querying devices with new connection to the original client, up to 3 times.
@@ -394,7 +391,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:
-            raw_devices = self._query_devices_by_client(client_id, client)
+            raw_devices = self._query_devices_by_client(client_id, self._clients[client_id])
             parsed_devices = list(self.parse_raw_data_hook(raw_devices))
         except Exception as e:
             with self._clients_lock:
@@ -435,9 +432,9 @@ class AdapterBase(PluginBase, Feature, ABC):
             return
 
         # Running query on each device
-        for client_name, client in self._clients.items():
+        for client_name in self._clients:
             try:
-                raw_devices, parsed_devices = self._try_query_devices_by_client(client_name, client)
+                raw_devices, parsed_devices = self._try_query_devices_by_client(client_name)
             except adapter_exceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
