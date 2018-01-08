@@ -3,20 +3,16 @@
 __author__ = "Ofir Yefet"
 
 import json
-import logging
-import logging.handlers
 from datetime import datetime, timedelta
 import sys
 import traceback
 import requests
-import time
-import inspect
 import configparser
 import os
+import logging
 
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
-import json_log_formatter
 from pymongo import MongoClient
 # bson is requirement of mongo and its not recommended to install it manually
 from bson import ObjectId
@@ -29,8 +25,10 @@ from promise import Promise
 from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.mixins.feature import Feature
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH
+from axonius.logging.logger import create_logger
+
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -40,8 +38,6 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 
 # Can wait up to 5 minutes if core didnt answer yet
 TIME_WAIT_FOR_REGISTER = 60 * 5
-
-VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
 
 
 @AXONIUS_REST.after_request
@@ -242,7 +238,7 @@ class PluginBase(Feature):
         self.log_level = logging.INFO
 
         # Creating logger
-        self.logger = self._create_logger(self.logstash_host, self.log_path)
+        self.logger = create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, self.log_path)
 
         # Adding rules to flask
         for routed in ROUTED_FUNCTIONS:
@@ -348,182 +344,6 @@ class PluginBase(Feature):
         response = requests.post(core_address, data=json.dumps(register_doc))
         return response.json()
 
-    def _create_logger(self, logstash_host, log_path):
-        """ Creating Json logger.
-
-        Creating a logging object to be used by the plugin. This object is the pythonic logger object
-        And can be used the same. The output file of the logs will be in a JSON format and will be entered to
-        An ELK stack.
-
-        :param str logstash_host: The address of logstash HTTP interface.
-        :param str log_path: The path for the log file.
-        """
-        plugin_unique_name = self.plugin_unique_name
-
-        # Custumized logger formatter in order to enter some extra fields to the log message
-        class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
-            def json_record(self, message, extra, record):
-                try:
-                    extra['level'] = record.levelname
-                    extra['message'] = message
-                    if record.exc_info:
-                        extra['exc_info'] = self.formatException(record.exc_info)
-                    extra[PLUGIN_UNIQUE_NAME] = plugin_unique_name
-                    current_time = datetime.utcfromtimestamp(record.created)
-                    extra['@timestamp'] = current_time.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-                    # Adding the frame details of the log message.
-                    # This is in a different try because failing in this process does
-                    # not mean failing in the format process, so we need a
-                    # different handling type for error in this part
-                    try:
-                        frame_stack = inspect.stack()
-                        # Currently we have a list with all frames. The first 2 frames are this logger frame,
-                        # The next lines are the pythonic library. We want to skip all of these frames to reach
-                        # the first frame that is not logging function. This is the function that created
-                        # this log message.
-                        # Skipping the first two lines (belogs to the formatter)
-                        for current_frame in frame_stack[3:]:
-                            if (("lib" in current_frame.filename and "logging" in current_frame.filename) or
-                                    current_frame.function == 'emit'):
-                                # We are skipping this frame because it belongs to the pythonic logging lib. or
-                                # It belongs to the emit function (the function that sends the logs to logstash)
-                                continue
-                            else:
-                                # This is the frame that we are looking for (The one who initiated a log print)
-                                extra['funcName'] = current_frame.function
-                                extra['lineNumber'] = current_frame.lineno
-                                extra['filename'] = current_frame.filename
-                                break
-                    except Exception:
-                        pass
-                except Exception:
-                    # We are doing the minimum in order to make sure that this log formmating won't fail
-                    # And that we will be able to send this message anyway
-                    extra = dict()
-                    extra['level'] = "CRITICAL"
-                    extra['message'] = "Error in json formatter, not writing log"
-                    extra[PLUGIN_UNIQUE_NAME] = plugin_unique_name
-                return extra
-
-        fatal_log_path = log_path.split('.log')[0] + '_FATAL.log'
-        file_handler_fatal = logging.handlers.RotatingFileHandler(fatal_log_path,
-                                                                  maxBytes=50 * 1024 * 1024,  # 150Mb Max
-                                                                  backupCount=3)
-        formatter = CustomisedJSONFormatter()
-        file_handler_fatal.setFormatter(formatter)
-        fatal_logger = logging.getLogger('axonius_plugin_fatal_log')
-        fatal_logger.addHandler(file_handler_fatal)
-        fatal_logger.setLevel(self.log_level)
-
-        # Customized logger handler in order to send logs to logstash using http
-        class LogstashHttpServer(logging.Handler):
-            def __init__(self, **kwargs):
-                """
-                    Logging handler for connecting logstash through http.
-                """
-                self.bulk_size = 100  # lines
-                self.max_time = 30  # Secs
-                self.error_cooldown = 120  # Secs
-                self.max_logs = 100000  # lines
-                self.warning_before_cooldown = 3
-                self.currentLogs = []
-                self.last_sent = time.time()
-                self.last_error_time = 0
-                super().__init__()
-
-            def emit(self, record):
-                """ The callback that is called in each log message.
-
-                This function will actually send the log to logstash. I order to be more efficient, log messages are
-                Not sent directly but instead this function saves a bulk of log messages and then send them together.
-                This will avoid the TCP/SSL connection overhead.
-                Since we cant send a bulk of messages in one http request (Logstash do not support this) we will create
-                One TCP session (with keep alive) and post messages one by one.
-                """
-                try:
-                    log_entry = self.format(record)
-                    current_time = time.time()
-
-                    # Checking if we can append the new log entry
-                    if len(self.currentLogs) < self.max_logs:
-                        self.currentLogs.append(log_entry)
-
-                    # Checking if we need to dump logs to the server
-                    if ((len(self.currentLogs) > self.bulk_size or
-                         current_time - self.last_sent > self.max_time) and
-                            current_time - self.last_error_time > self.max_time):
-                        self.last_sent = current_time
-                        with requests.Session() as s:  # Sending all logs on one session
-                            new_list = []
-                            # The warning count will count how much time we couldnt save a log due to an error.
-                            # In case of too much errors (defined by 'warning_before_cooldown') we will enter
-                            # some cooldown period (defined by 'error_cooldown')
-                            warning_count = 0
-                            for log_line in self.currentLogs:
-                                try:
-                                    if warning_count > self.warning_before_cooldown:
-                                        # Something bad with the connection, not trying to send anymore. Just append
-                                        # All the messages that we couldnt send
-                                        new_list.append(log_line)
-                                    else:
-                                        s.post(logstash_host,
-                                               data=log_line, timeout=2)
-
-                                except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout,
-                                        requests.exceptions.InvalidSchema):
-                                    # We should add this log line again to the list because the problem
-                                    # Is in the connection and not in the log
-                                    new_list.append(log_line)
-                                    warning_count = warning_count + 1
-                                except Exception as e:
-                                    exception_log = "Error while sending log. *Log is lost*. Error details: " \
-                                                    "type={0}, message={1}".format(type(e).__name__, str(e))
-                                    print("[fatal error]: %s" %
-                                          (exception_log,))
-                                    fatal_logger.exception(exception_log)
-                                    warning_count = warning_count + 1
-                                    continue
-                                    # In any other cases, we should just try the other log lines
-                                    # (This line will not be sent anymore)
-                            if warning_count != 0:
-                                warning_message = "connection error occured {0} times while sending log." \
-                                    .format(warning_count)
-                                print("[fatal error]: %s." %
-                                      (warning_message,))
-                                fatal_logger.warning(warning_message)
-                                if warning_count > self.warning_before_cooldown:
-                                    self.last_error_time = time.time()
-                            self.currentLogs = new_list
-                        return ''
-                except Exception as e:  # We must catch every exception from the logger
-                    # Nothing we can do here
-                    exception_message = "Error on logger Error details: type={0}, message={0}".format(type(e).__name__,
-                                                                                                      str(e))
-                    print("[fatal error]: %s" % (exception_message,))
-                    fatal_logger.exception(exception_message)
-                    return 'Bad'
-
-        # Creating the logger using our custumized logger fomatter
-        formatter = CustomisedJSONFormatter()
-        # Creating a rotating file log handler
-        file_handler = logging.handlers.RotatingFileHandler(log_path,
-                                                            maxBytes=50 * 1024 * 1024,  # 150Mb Max
-                                                            backupCount=3)
-        file_handler.setFormatter(formatter)
-
-        # Creating logstash file handler (implemeted above)
-        logstash_handler = LogstashHttpServer()
-        logstash_handler.setFormatter(formatter)
-
-        # Building the logger object
-        logger = logging.getLogger('axonius_plugin_log')
-        logger.addHandler(file_handler)
-        logger.addHandler(logstash_handler)
-        logger.setLevel(self.log_level)
-
-        return logger
-
     def start_serve(self):
         """Start Http server.
 
@@ -569,8 +389,8 @@ class PluginBase(Feature):
         post_data = self.get_request_data()
         if post_data:
             # To make it string instead of bytes
-            decodedData = post_data.decode('utf-8')
-            data = json.loads(decodedData)
+            decoded_data = post_data.decode('utf-8')
+            data = json.loads(decoded_data)
             return data
         else:
             return None
@@ -840,7 +660,6 @@ class PluginBase(Feature):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param adapter_id: The device id given by the current adapter
-        :param wanted_tag: The tag we want to assign to this device
         :param adapter_unique_name: on behalf of which adapter we are tagging
         :return:
         """
