@@ -76,12 +76,12 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
-    @pytest.mark.skip
     def test_dns_conflicts(self, dns_conflicts_fixture):
         dns_conflicts_fixture.activateable_start()
         dns_conflicts_fixture.find_conflicts()
 
         def has_ip_conflict_tag():
+            dns_conflicts_fixture.find_conflicts()
             assert len(self.axonius_service.get_devices_with_condition({"tags.tagname": "IP_CONFLICT"})) > 0
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
