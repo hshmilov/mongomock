@@ -27,6 +27,10 @@ class PuppetAdapter(AdapterBase):
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
 
+    def _parse_correlation_results(self, correlation_cmd_result, os_type):
+        self.logger.error("_parse_correlation_results is not implemented for puppet adapter")
+        raise NotImplementedError("_parse_correlation_results is not implemented for puppet adapter")
+
     def _get_client_id(self, client_config):
         return client_config["puppet_server_name"]
 
@@ -35,8 +39,9 @@ class PuppetAdapter(AdapterBase):
             return PuppetServerConnection(
                 self.logger,
                 client_config['puppet_server_name'],
-                client_config['user_name'],
-                client_config['password'])
+                bytes(client_config['ca_file']),
+                bytes(client_config['cert_file']),
+                bytes(client_config['private_key']))
         except exceptions.PuppetException as e:
             message = "Error getting information from puppet server {0}. reason: {1}".format(
                 client_config["puppet_server_name"],
@@ -59,20 +64,42 @@ class PuppetAdapter(AdapterBase):
         """
         return {
             "properties": {
-                "password": {
-                    "type": "password"
-                },
-                "user_name": {
-                    "type": "string"
-                },
                 "puppet_server_name": {
                     "type": "string"
+                },
+                "ca_file": {
+                    "type": "array",
+                    "title": "The binary contents of the ca_file",
+                    "description": "bytes",
+                    "items": {
+                        "type": "integer",
+                        "default": 0,
+                    }
+                },
+                "cert_file": {
+                    "type": "array",
+                    "title": "The binary contents of the cert_file",
+                    "description": "bytes",
+                    "items": {
+                        "type": "integer",
+                        "default": 0,
+                    }
+                },
+                "private_key": {
+                    "type": "array",
+                    "title": "The binary contents of the private_key",
+                    "description": "bytes",
+                    "items": {
+                        "type": "integer",
+                        "default": 0,
+                    }
                 }
             },
             "required": [
                 "puppet_server_name",
-                "user_name",
-                "password"
+                "ca_file",
+                "cert_file",
+                "private_key"
             ],
             "type": "object"
         }
@@ -86,11 +113,7 @@ class PuppetAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Puppet Server
         """
-        try:
-            return client_data.get_device_list()
-        except exceptions.PuppetException as e:
-            self.logger.exception("Error while trying to get devices. Details: {0}", str(e))
-            return str(e), 500
+        return list(client_data.get_device_list())
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
@@ -102,8 +125,24 @@ class PuppetAdapter(AdapterBase):
             device_parsed['os']['major'] = device_raw["os"]['release']['major']
             if 'minor' in device_raw['os']['release']:
                 device_parsed['os']['minor'] = device_raw["os"]['release']['minor']
-            device_parsed['id'] = device_raw['certname']
+            device_parsed['id'] = device_raw[u'certname']
+
+            def parse_network(interfaces):
+                for inet in interfaces.values():
+                    res = {
+                        "IP": [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
+                              [x['address'] for x in inet.get('bindings6', []) if x.get('address')]
+                    }
+                    mac = inet.get('mac')
+                    if mac:
+                        res['MAC'] = mac
+                    yield res
+
+            raw_networking = device_raw.get('networking')
+            if raw_networking:
+                device_parsed['network_interfaces'] = parse_network(raw_networking.get('interfaces', {}))
             device_parsed['raw'] = device_raw
+
             yield device_parsed
 
     # Exported API functions - None for now

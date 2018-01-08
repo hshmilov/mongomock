@@ -91,10 +91,13 @@
 					}
 					if (field.control === 'password') {
 						field.hidden = true
-					}
-					if (field.control === 'string') {
+					} else if (field.control === 'string') {
 						field.control = 'text'
-					}
+                        field.type = 'text'
+					} else if (field.control === 'array') {
+						field.type = 'bytes'
+                    }
+
 					fields.push(field)
 				})
 				return fields

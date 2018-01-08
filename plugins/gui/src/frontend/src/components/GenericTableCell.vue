@@ -21,6 +21,9 @@
         <template v-else-if="type && type.indexOf('list') > -1">
             <object-list v-if="value && value.length" :type="type" :data="value" :limit="2"></object-list>
         </template>
+        <template v-else-if="type === 'bytes'">
+            <span :title="value">{{ value.length }} bytes</span>
+        </template>
         <template v-else>
             <span v-bind:class="{wide: wide}" :title="value">{{ value }}</span>
         </template>

@@ -21,7 +21,7 @@
             <tr class="table-row" @click="$emit('select', 'new')">
                 <!-- Entire row for clicking in order to add a newly configured row -->
                 <td></td>
-                <td class="table-data table-btn" :colspan="fields.length">{{ addNewDataLabel }}<i
+                <td class="table-data table-btn" :colspan="fields.length + 1">{{ addNewDataLabel }}<i
                         class="icon-plus-square"></i></td>
             </tr>
         </tbody>

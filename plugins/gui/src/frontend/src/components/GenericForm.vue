@@ -16,6 +16,9 @@
                 <template v-else-if="input.control === 'bool'">
                     <checkbox v-model="model[input.path]" @change="$emit('input', model)"></checkbox>
                 </template>
+                <template v-else-if="input.control === 'array'">
+                    <input type="file" @change="uploadFile" :name="input.path">
+                </template>
                 <template v-else>
                     <input class="form-control" :type="input.control" :placeholder="input.placeholder"
                            v-model="model[input.path]" @input="convertValue(input.path, input.control)">
@@ -55,6 +58,19 @@
             }
         },
         methods: {
+        	uploadFile(uploadEvent) {
+				const files = uploadEvent.target.files || e.dataTransfer.files
+				if (!files.length) return
+
+                const name = uploadEvent.target.name
+				let reader = new FileReader()
+                const vm = this
+				reader.onload = (loadEvent) => {
+					vm.model[name] = Array.prototype.slice.call(new Uint8Array(loadEvent.target.result))
+					this.$emit('input', this.model)
+				}
+				reader.readAsArrayBuffer(files[0])
+            },
         	convertValue(path, type) {
         		if (type === "number") {
         			if (!this.model[path]) {

@@ -50,18 +50,22 @@ export const adapterStaticData = {
 	'qualys_adapter': {
 		name: 'Qualys',
 		description: 'The Qualys Cloud Platform monitors customer\'s global security and compliance posture using sensors.'
-  },
+	},
 	'jamf_adapter': {
 		name: 'Jamf',
 		description: 'Jamf Pro simplifies the complexities associated with getting your people the Apple devices they need with everything they need on them.'
-  },
+	},
 	'nessus_adapter': {
 		name: 'Nessus',
 		description: 'Nessus is a vulnerability scanning platform for auditors and security analysts.'
 	},
-	'stresstest_adapter':{
-		name: "LOL",
-		description: "i am the king of devices"
+	'puppet_adapter': {
+		name: 'Puppet',
+		description: 'Puppet automates delivery and operation of software accross its lifecycle.'
+	},
+	'stresstest_adapter': {
+		name: 'LOL',
+		description: 'i am the king of devices'
 	}
 }
 
@@ -74,8 +78,8 @@ export const adapter = {
 
 		/* Statically defined fields that should be presented for each adapter, in this order  */
 		adapterFields: [
-			{path: 'unique_plugin_name', name: '', hidden: true },
-			{path: 'plugin_name', name: 'Name', type: 'status-icon-logo-text' },
+			{path: 'unique_plugin_name', name: '', hidden: true},
+			{path: 'plugin_name', name: 'Name', type: 'status-icon-logo-text'},
 			{path: 'description', name: 'Description'},
 			{path: 'status', name: '', hidden: true}
 		],
@@ -102,7 +106,8 @@ export const adapter = {
 						pluginText = adapterStaticData[adapter.plugin_name].name
 						pluginDescription = adapterStaticData[adapter.plugin_name].description
 					}
-					state.adapterList.data.push({ ...adapter,
+					state.adapterList.data.push({
+						...adapter,
 						id: adapter.unique_plugin_name,
 						plugin_name: {
 							text: pluginText,
@@ -136,18 +141,20 @@ export const adapter = {
 			}
 		},
 		[ ADD_ADAPTER_SERVER ] (state, payload) {
-			state.currentAdapter.data = { ...state.currentAdapter.data }
-			state.currentAdapter.data.clients.push({ ...payload })
+			state.currentAdapter.data = {...state.currentAdapter.data}
+			state.currentAdapter.data.clients.push({...payload})
 		},
 		[ UPDATE_ADAPTER_SERVER ] (state, payload) {
-			state.currentAdapter.data = { ...state.currentAdapter.data }
+			state.currentAdapter.data = {...state.currentAdapter.data}
 			state.currentAdapter.data.clients.forEach((client, index) => {
 				if (client.uuid === payload.uuid) {
-					state.currentAdapter.data.clients[index] = { ...payload }}
+					state.currentAdapter.data.clients[index] = {...payload}
+				}
 			})
 		},
 		[ REMOVE_SERVER ] (state, serverId) {
-			state.currentAdapter.data = { ...state.currentAdapter.data,
+			state.currentAdapter.data = {
+				...state.currentAdapter.data,
 				clients: state.currentAdapter.data.clients.filter((server) => {
 					return server.uuid !== serverId
 				})
