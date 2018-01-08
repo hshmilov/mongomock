@@ -14,6 +14,7 @@ QUERY_PASS = 'query_password'
 QUERY_USER = 'query_user'
 
 LEAF_NODE_TABLE = 'EPOLeafNode'
+IP_ADDR = 'IP'
 
 
 def get_all_linked_tables(table):
@@ -37,20 +38,41 @@ def parse_os_details(device_raw_data):
     return details
 
 
-def parse_network(raw_data):
-    mac = format_mac(raw_data['EPOComputerProperties.NetAddress'])
-    ipv4 = raw_data['EPOComputerProperties.IPV4x']
-
-    # epo is a motherfucker? Seems like he loves to flip the msb of the binary repr of ip addr...
-    ipv4 = (ipv4 & 0xffffffff) ^ 0x80000000
-
-    # to string
-    ipv4 = str(ipaddress.IPv4Address(ipv4))
-
-    ipv6 = raw_data['EPOComputerProperties.IPV6'].lower()
+def parse_network(raw_data, logger):
     res = dict()
-    res['MAC'] = mac
-    res['IP'] = [ipv4, ipv6]
+    res[IP_ADDR] = []
+
+    raw_ipv4 = raw_data.get('EPOComputerProperties.IPV4x')
+    parsed_ipv4 = None
+    try:
+        # epo is a motherfucker? Seems like he flips the msb of the binary repr of ip addr...
+        ipv4 = (raw_ipv4 & 0xffffffff) ^ 0x80000000
+        parsed_ipv4 = str(ipaddress.IPv4Address(ipv4))
+        res[IP_ADDR].append(parsed_ipv4)
+    except:
+        logger.info(f"Error reading IPv4 {raw_ipv4}")
+
+    raw_ipv6 = raw_data.get('EPOComputerProperties.IPV6').lower()
+    res[IP_ADDR].append(raw_ipv6)
+
+    ipv4mapped = ipaddress.IPv6Address(raw_ipv6).ipv4_mapped
+    if str(ipv4mapped) != parsed_ipv4:
+        logger.info(f"ipv4/6 mismatch: raw4={raw_ipv4} raw6={raw_ipv6} parsed4={parsed_ipv4} ip4-6mapped={ipv4mapped}")
+        if ipv4mapped:
+            # epo's ipv4 reporting is problematic.
+            # But we noticed that mapped ipv6 addresses tend to have the correct value
+            # In such a case we add the mapped ipv4 address
+            res[IP_ADDR].append(str(ipv4mapped))
+
+    raw_mac = raw_data.get('EPOComputerProperties.NetAddress')
+    try:
+        mac = format_mac(raw_mac)
+        res['MAC'] = mac
+    except:
+        logger.info(f"Failed formatting {raw_mac}")
+
+    # unique
+    res[IP_ADDR] = list(set(res[IP_ADDR]))
     return [res]
 
 
@@ -105,12 +127,15 @@ class EpoAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         raw_data = json.loads(raw_data)
         for device_raw_data in raw_data:
+            epo_id = device_raw_data.get('EPOLeafNode.AgentGUID')
+            if epo_id is None:
+                self.logger.error(f"Got epo device without EPOLeafNode.AgentGUID {raw_data}")
             yield {
                 'hostname': device_raw_data.get('EPOComputerProperties.IPHostName',
                                                 device_raw_data.get('EPOComputerProperties.ComputerName', '')),
                 'OS': parse_os_details(device_raw_data),
-                'id': device_raw_data['EPOLeafNode.AgentGUID'],
-                'network_interfaces': parse_network(device_raw_data),
+                'id': epo_id,
+                'network_interfaces': parse_network(device_raw_data, self.logger),
                 'raw': device_raw_data}
 
     def _query_devices_by_client(self, client_name, client_data):

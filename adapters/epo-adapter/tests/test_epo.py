@@ -1,6 +1,7 @@
 import epo_adapter
 import pytest
 from axonius.utils.mongo_escaping import escape_dict
+from unittest.mock import MagicMock
 
 list_tables = {
     'columns': '\r\n    Name                         Type          Select? Condition? GroupBy? Order? Number? \r\n    ---------------------------- ------------- ------- ---------- -------- ------ -------\r\n    AutoID                       int           False   False      False    True   True   \r\n    Tags                         string        True    False      False    True   False  \r\n    ExcludedTags                 string        True    False      False    True   False  \r\n    AppliedTags                  applied_tags  False   True       False    False  False  \r\n    LastUpdate                   timestamp     True    True       True     True   False  \r\n    os                           string        True    False      False    False  False  \r\n    products                     string        False   False      False    False  False  \r\n    NodeName                     string        True    True       True     True   False  \r\n    ManagedState                 enum          True    True       False    True   False  \r\n    AgentVersion                 string_lookup True    True       True     True   False  \r\n    AgentGUID                    string        True    False      False    True   False  \r\n    Type                         int           False   False      False    True   False  \r\n    ParentID                     int           False   False      False    True   True   \r\n    ResortEnabled                boolean       True    True       False    True   False  \r\n    ServerKeyHash                string        True    True       False    True   False  \r\n    NodePath                     string_lookup False   False      False    True   False  \r\n    TransferSiteListsID          isNotNull     True    True       False    True   False  \r\n    SequenceErrorCount           int           True    True       False    True   True   \r\n    SequenceErrorCountLastUpdate timestamp     True    True       False    True   False  \r\n    LastCommSecure               string_enum   True    True       True     True   False  \r\n    TenantId                     int           False   False      False    True   True   \r\n',
@@ -89,14 +90,16 @@ def test_os():
 
 
 def test_parse_network():
-    parsed = epo_adapter.parse_network(raw_device_data)
+    parsed = epo_adapter.parse_network(raw_device_data, MagicMock())
     expected = [
         {
             "MAC": "06:f4:17:36:0e:d8".upper(),
-            "IP": ["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a"]
+            "IP": sorted(["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a", '172.31.21.74'])
         }
     ]
-    assert parsed == expected
+    assert len(parsed) == len(expected)
+    assert parsed[0]["MAC"] == expected[0]["MAC"]
+    assert sorted(parsed[0]["IP"]) == sorted(expected[0]["IP"])
 
 
 def test_escape_dict():
