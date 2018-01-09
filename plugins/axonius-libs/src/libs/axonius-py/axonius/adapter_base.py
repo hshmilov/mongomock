@@ -7,6 +7,7 @@ from axonius import adapter_exceptions
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.mongo_escaping import escape_dict
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.consts.adapter_consts import LAST_SEEN_PARSED_FIELD
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
@@ -16,6 +17,7 @@ from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
 from axonius.mixins.feature import Feature
 from datetime import datetime
+from datetime import timedelta
 
 
 class AdapterBase(PluginBase, Feature, ABC):
@@ -29,6 +31,12 @@ class AdapterBase(PluginBase, Feature, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        device_alive_thresh = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS, -1)
+
+        self.logger.info(f"Setting last seen threshold to {device_alive_thresh}")
+
+        self.last_seen_timedelta = timedelta(device_alive_thresh)
 
         self._clients_lock = RLock()
 
@@ -359,8 +367,18 @@ class AdapterBase(PluginBase, Feature, ABC):
         :param raw_devices: raw devices as fetched by adapter
         :return: iterator of processed raw device entries
         """
+
+        now = datetime.now()
+
         for parsed_device in self._parse_raw_data(raw_devices):
             parsed_device['raw'] = escape_dict(parsed_device['raw'])
+
+            if LAST_SEEN_PARSED_FIELD in parsed_device and \
+                    now - parsed_device[LAST_SEEN_PARSED_FIELD] > self.last_seen_timedelta:
+                self.logger.info(f"Skipping device {parsed_device} - last seen more then {self.last_seen_timedelta}")
+                # skip the device is wasn't seen for too long ...
+                continue
+
             yield parsed_device
 
     def _try_query_devices_by_client(self, client_id):

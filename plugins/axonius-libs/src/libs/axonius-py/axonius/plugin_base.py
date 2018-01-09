@@ -10,6 +10,7 @@ import requests
 import configparser
 import os
 import logging
+import socket
 
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
@@ -176,12 +177,12 @@ class PluginBase(Feature):
         temp_config.read(VOLATILE_CONFIG_PATH)
         self.config_file_path = 'plugin_config.ini'
 
-        config = configparser.ConfigParser()
-        config.read(self.config_file_path)
+        self.config = configparser.ConfigParser()
+        self.config.read(self.config_file_path)
 
-        self.version = config['DEFAULT']['version']
+        self.version = self.config['DEFAULT']['version']
         self.lib_version = self.version  # no meaning to axonius-libs right now, when we are in one repo.
-        self.plugin_name = config['DEFAULT']['name']
+        self.plugin_name = self.config['DEFAULT']['name']
         self.plugin_unique_name = None
         self.api_key = None
 
@@ -195,9 +196,9 @@ class PluginBase(Feature):
         except KeyError:
             try:
                 # We can enter debug value on all of the config files
-                self.host = config['DEBUG']['host']
-                self.port = int(config['DEBUG']['port'])
-                self.core_address = config['DEBUG']['core_address'] + '/api'
+                self.host = self.config['DEBUG']['host']
+                self.port = int(self.config['DEBUG']['port'])
+                self.core_address = self.config['DEBUG']['core_address'] + '/api'
             except KeyError:
                 # This is the default value, which is what nginx sets for us.
                 self.host = "0.0.0.0"
@@ -268,6 +269,11 @@ class PluginBase(Feature):
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
         self.wsgi_app = AXONIUS_REST
+
+        for section in self.config.sections():
+            self.logger.info(f"Config {section}: {dict(self.config[section])}")
+
+        self.logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
 
         super().__init__(*args, **kwargs)
         # Finished, Writing some log

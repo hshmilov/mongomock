@@ -1,7 +1,8 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.parsing_utils import format_mac
+from axonius.parsing_utils import format_mac, parse_date
 from axonius.parsing_utils import figure_out_os
+from axonius.consts import adapter_consts
 import json
 import ipaddress
 import mcafee
@@ -128,15 +129,23 @@ class EpoAdapter(AdapterBase):
         raw_data = json.loads(raw_data)
         for device_raw_data in raw_data:
             epo_id = device_raw_data.get('EPOLeafNode.AgentGUID')
+
             if epo_id is None:
-                self.logger.error(f"Got epo device without EPOLeafNode.AgentGUID {raw_data}")
-            yield {
+                self.logger.error(f"Got epo device without EPOLeafNode.AgentGUID {device_raw_data}")
+
+            parsed = {
                 'hostname': device_raw_data.get('EPOComputerProperties.IPHostName',
                                                 device_raw_data.get('EPOComputerProperties.ComputerName', '')),
                 'OS': parse_os_details(device_raw_data),
                 'id': epo_id,
                 'network_interfaces': parse_network(device_raw_data, self.logger),
                 'raw': device_raw_data}
+
+            last_seen = parse_date(device_raw_data['EPOLeafNode.LastUpdate'])
+            if last_seen:
+                parsed[adapter_consts.LAST_SEEN_PARSED_FIELD] = last_seen
+
+            yield parsed
 
     def _query_devices_by_client(self, client_name, client_data):
         mc = mcafee.client(client_data[EPO_HOST], client_data[EPO_PORT],
