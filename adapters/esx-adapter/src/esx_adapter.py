@@ -82,13 +82,21 @@ class ESXAdapter(AdapterBase):
         """
         if node.get('Type', '') == 'Machine':
             details = node.get('Details', {})
+            guest = details.get('guest', {})
+            alternative_network_interfaces = []
+            if 'ipAddress' in guest:
+                # if nothing is found in raw.networking this will be used
+                alternative_network_interfaces = [{
+                    "IP": [guest.get('ipAddress')]
+                }]
             yield {
                 "name": node.get('Name', ''),
                 'OS': figure_out_os(details.get('config', {}).get('guestFullName', '')),
                 'id': details.get('config', {})['instanceUuid'],
-                'network_interfaces': self._parse_network_device(details.get('networking', [])),
-                'hostname': details.get('guest', {}).get('hostName', ''),
-                'vmToolsStatus': details.get('guest', {}).get('toolsStatus', ''),
+                'network_interfaces': self._parse_network_device(
+                    details.get('networking', [])) or alternative_network_interfaces,
+                'hostname': guest.get('hostName', ''),
+                'vmToolsStatus': guest.get('toolsStatus', ''),
                 'physicalPath': _curr_path + "/" + node.get('Name', ''),
                 'raw': details
             }
