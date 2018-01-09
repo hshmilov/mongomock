@@ -19,22 +19,13 @@ def unescape_key(key):
     return key.replace(FILLER * 2, BAD_KEY).replace(FILLER + HELPER, FILLER)
 
 
-def escape_dict(adict: dict):
+def escape_dict(to_escape: object):
     """
-    Remove illegal character '.' for mongo
-    :param adict:
+    Remove illegal character '.' for mongo from dictionaries
+    :param to_escape: escape this object. if it's not a dict, returned as-s
     :return escaped dict
-    :note The function modifies the dict
     """
-    keys = list(adict)
-    for key in keys:
-        value = adict[key]
+    if not isinstance(to_escape, dict):
+        return to_escape
 
-        if isinstance(value, dict):
-            escape_dict(value)
-
-        if isinstance(key, str) and BAD_KEY in key:
-            escaped = escape_key(key)
-            adict[escaped] = value
-            del adict[key]
-    return adict
+    return {escape_key(str(k)): escape_dict(v) for k, v in to_escape.items()}

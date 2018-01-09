@@ -29,6 +29,22 @@ def test_recursive_escaping():
                 assert BAD_KEY not in k
 
 
+def test_similar_names():
+    d = {
+        "a.b": 1,
+        "a##b": 2
+    }
+    escaped_d = escape_dict(dict(d))
+    assert len(d) == len(escaped_d)
+
+
+def test_fractions():
+    d = {
+        1.5: "asd"
+    }
+    assert str(list(escape_dict(d).keys())[0]) != "1.5"
+
+
 if __name__ == '__main__':
     import pytest
 
