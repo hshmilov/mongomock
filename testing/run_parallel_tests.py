@@ -11,7 +11,7 @@ import sys
 class ParallelTestsRunner(ParallelRunner):
 
     def append_test_pattern(self, pattern, **kwargs):
-        for file in glob.glob(pattern):
+        for file in sorted(glob.glob(pattern)):
             test_case = os.path.basename(file).split(".")[0]
             command = f"pytest -x -s -v --showlocals --junitxml=reporting/{test_case}.xml {file}"
             self.append_single(test_case, command, **kwargs)

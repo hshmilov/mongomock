@@ -14,8 +14,6 @@ def test_registered(axonius_fixture):
 
 
 def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
-    axonius_fixture.clear_all_devices()
-
     utils.populate_test_devices(axonius_fixture, ad_fixture)
     utils.populate_test_devices_esx(axonius_fixture, esx_fixture)
 
@@ -74,5 +72,3 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
 
     assert any(x['tagname'] == 'esx_taggy' for x in linked_device['tags']), "ESX tag is gone"
     assert any(x['tagname'] == 'ad_taggy' for x in linked_device['tags']), "AD tag is gone"
-
-    axonius_fixture.clear_all_devices()

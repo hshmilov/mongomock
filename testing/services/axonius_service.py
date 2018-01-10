@@ -46,12 +46,6 @@ class AxoniusService(object):
         cond = {'adapters.data.id': device_id, 'adapters.plugin_unique_name': adapter_name}
         return self.get_devices_with_condition(cond)
 
-    def clear_all_devices(self):
-        aggregator_unique_name = self.aggregator.unique_name
-        self.aggregator.stop(should_delete=False)
-        self.db.client.drop_database(aggregator_unique_name)
-        self.aggregator.start_and_wait()
-
     def get_device_network_interfaces(self, adapter_name, device_id):
         device = self.get_device_by_id(adapter_name, device_id)
         adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if
@@ -81,8 +75,7 @@ class AxoniusService(object):
         note: restarting plugin does not delete its volume
         """
         plugin.stop(should_delete=False)
-        plugin.start()
-        plugin.wait_for_service()
+        plugin.start_and_wait()
         assert plugin.is_plugin_registered(self.core)
 
     def restart_core(self):

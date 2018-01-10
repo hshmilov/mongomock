@@ -30,7 +30,6 @@ from axonius.mixins.feature import Feature
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH
 from axonius.logging.logger import create_logger
 
-
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
 
@@ -88,6 +87,12 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
             the exception name with the Exception string.
             In case of exception, a detailed traceback will be sent to log
             """
+            # We expect the first argument to be a PluginBase object (which have a logger object)
+            logger = getattr(self, "logger", None)
+
+            if logger:
+                logger.info(f"Rule={rule} request={request}")
+
             try:
                 if should_authenticate:
                     # finding the api key
@@ -97,8 +102,6 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                 return func(self, *args, **kwargs)
             except Exception as err:
                 try:
-                    # We expect the first argument to be a PluginBase object (which have a logger object)
-                    logger = getattr(self, "logger", None)
                     if logger:
                         # Adding exception details for the json logger
                         _, _, exc_traceback = sys.exc_info()
@@ -235,7 +238,7 @@ class PluginBase(Feature):
         self.db_password = core_data['db_password']
         self.logstash_host = core_data['log_addr']
 
-        self.log_path = LOG_PATH + '/' + self.plugin_unique_name + '.log'
+        self.log_path = LOG_PATH + '/' + self.plugin_unique_name + '_axonius.log'
         self.log_level = logging.INFO
 
         # Creating logger
