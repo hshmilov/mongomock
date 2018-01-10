@@ -41,7 +41,7 @@ class Triggerable(Feature, ABC):
         self.__trigger_lock = RLock()
         self.__state = {}
         # this executor executes the trigger function
-        self.__executor = LoggedThreadPoolExecutor(self.logger, max_workers=10)
+        self.__executor = LoggedThreadPoolExecutor(self.logger, max_workers=20)
         self.__last_error = ""
 
     @classmethod

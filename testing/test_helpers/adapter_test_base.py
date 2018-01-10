@@ -1,3 +1,4 @@
+import pytest
 from services.axonius_service import get_service
 from test_helpers.utils import check_conf
 
@@ -30,6 +31,9 @@ class AdapterTestBase(object):
     def some_device_id(self):
         raise NotImplemented
 
+    def drop_clients(self):
+        self.axonius_service.db.client[self.adapter_service.unique_name].drop_collection('clients')
+
     def test_adapter_is_up(self):
         assert self.adapter_service.is_up()
 
@@ -43,8 +47,11 @@ class AdapterTestBase(object):
         assert self.adapter_service.is_plugin_registered(self.axonius_service.core)
 
     def test_fetch_devices(self):
-        self.axonius_service.add_client_to_adapter(self.adapter_service, self.some_client_details)
+        self.adapter_service.add_client(self.some_client_details)
         self.axonius_service.assert_device_aggregated(self.adapter_service, self.some_client_id, self.some_device_id)
 
     def test_restart(self):
-        self.axonius_service.restart_plugin(self.adapter_service)
+        service = self.adapter_service
+        # it's ok to restart adapter in adapter test
+        service.take_process_ownership()
+        self.axonius_service.restart_plugin(service)

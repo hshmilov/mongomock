@@ -15,11 +15,18 @@ class ComposeService(AxonService):
         self.container_name = self.parsed_compose_file.container_name
         self.workdir = os.path.abspath(os.path.dirname(self._compose_file_path))
         self.log_dir = os.path.abspath(os.path.join("..", "logs", self.container_name))
+        self._process_owner = False
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
+    def take_process_ownership(self):
+        self._process_owner = True
+
     def start(self):
+
+        assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
+
         logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
 
         docker_up = ['docker-compose', '-f', os.path.relpath(self._compose_file_path, self.workdir)]
@@ -35,6 +42,9 @@ class ComposeService(AxonService):
             os.system(f"cd {self.workdir}; docker-compose logs -f >> {logsfile} &")
 
     def stop(self, should_delete=False):
+
+        assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
+
         # killing the container is faster than down. Then we issue down to reverse any effects up had
         subprocess.call(['docker-compose', 'kill', '-S', 'SIGINT'], cwd=self.workdir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)

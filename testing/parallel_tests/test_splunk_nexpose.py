@@ -1,3 +1,4 @@
+import pytest
 from services.adapters.splunk_nexpose_service import SplunkNexposeService, splunk_nexpose_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 

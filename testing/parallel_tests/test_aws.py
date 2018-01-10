@@ -1,3 +1,4 @@
+import pytest
 from services.adapters.aws_service import AwsService, aws_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
@@ -37,6 +38,7 @@ class TestAwsAdapter(AdapterTestBase):
         return SOME_DEVICE_ID
 
     def test_proxy(self):
+        self.drop_clients()
         self.adapter_service.add_client(client_with_proxy)  # set client to use proxy
         assert self.some_client_id in self.adapter_service.devices()
         self.adapter_service.add_client(client_details)  # restore

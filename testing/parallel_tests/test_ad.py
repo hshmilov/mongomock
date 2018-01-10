@@ -55,7 +55,7 @@ class TestAdAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']
-        self.axonius_service.add_client_to_adapter(self.adapter_service, ad_client1_details)
+        self.adapter_service.add_client(ad_client1_details)
 
         # Adding second client
         # client_id_2 = ad_client2_details['dc_name']
@@ -67,7 +67,7 @@ class TestAdAdapter(AdapterTestBase):
 
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()
-        self.axonius_service.trigger_aggregator(self.adapter_service.unique_name)
+        self.axonius_service.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
 
         def assert_ip_resolved():
             interfaces = self.axonius_service.get_device_network_interfaces(self.adapter_service.unique_name,

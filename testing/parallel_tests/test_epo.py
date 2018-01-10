@@ -43,7 +43,7 @@ class TestEpoAdapter(AdapterTestBase):
         Thus the status of the client in the DB should eventually be "error"
         :return:
         """
-        self.axonius_service.db.client[self.adapter_service.unique_name].drop_collection('clients')
+        self.drop_clients()
 
         def _verify_client_status(status):
             current_client = adapter_db['clients'].find_one()

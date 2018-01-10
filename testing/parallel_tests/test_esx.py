@@ -1,3 +1,4 @@
+import pytest
 from services.adapters.esx_service import EsxService, esx_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 
@@ -47,18 +48,21 @@ class TestEsxAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         axonius_service = self.axonius_service
 
+        for client, _ in client_details:
+            self.adapter_service.add_client(client)
+
         for client, some_device_id in client_details:
             client_id = "{}/{}".format(client['host'], client['user'])
-            axonius_service.add_client_to_adapter(self.adapter_service, client)
             axonius_service.assert_device_aggregated(self.adapter_service, client_id, some_device_id)
 
     def test_folder_on_dc_level(self):
         axonius_service = self.axonius_service
-        axonius_service.clear_all_devices()
+        self.drop_clients()
+
         client, _ = client_details[0]
 
         client_id = "{}/{}".format(client['host'], client['user'])
-        axonius_service.add_client_to_adapter(self.adapter_service, client)
+        self.adapter_service.add_client(client)
 
         # this is the ID of a VM that is inside a datacenter that is inside a folder
         # it is called "just_for_datacenter_folders"

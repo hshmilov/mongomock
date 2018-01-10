@@ -1,3 +1,4 @@
+import pytest
 from services.adapters.nessus_service import NessusService, nessus_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 

@@ -52,13 +52,6 @@ class AxoniusService(object):
         self.db.client.drop_database(aggregator_unique_name)
         self.aggregator.start_and_wait()
 
-    def trigger_aggregator(self, adapter_id):
-        self.aggregator.query_devices(adapter_id=adapter_id)  # send trigger to agg to refresh devices
-
-    def add_client_to_adapter(self, adapter, client_details):
-        adapter.add_client(client_details)
-        self.trigger_aggregator(adapter.unique_name)
-
     def get_device_network_interfaces(self, adapter_name, device_id):
         device = self.get_device_by_id(adapter_name, device_id)
         adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if

@@ -420,6 +420,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
             # adapter, which is not that bad. The only slow thing here is the DB insertion, which
             # shouldn't be so slow anyway.
             with self.device_db_lock:
+                now = datetime.now()
                 for client_name, devices_per_client in devices:
                     time_before_client = datetime.now()
                     # Saving the raw data on the historic db
@@ -478,7 +479,9 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                     self.logger.info(f"Finished aggregating for client {client_name} from adapter {plugin_unique_name},"
                                      f" aggregation took {time_for_client.seconds}.")
 
-        except AdapterOffline as e:
+            self.logger.info(f"Time spent in lock = {(datetime.now() - now).total_seconds()} seconds")
+
+        except (AdapterOffline, ClientsUnavailable) as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
             self.logger.warn(f"adapter {plugin_unique_name} might be offline. Reason {str(e)}")
