@@ -26,6 +26,7 @@ def main():
         axonius.db.take_process_ownership()
         axonius.core.take_process_ownership()
         axonius.aggregator.take_process_ownership()
+        axonius.gui.take_process_ownership()
 
         axonius.start_and_wait()
         runner = ParallelTestsRunner()

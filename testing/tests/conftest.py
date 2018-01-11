@@ -1,15 +1,23 @@
 import pytest
-
 from services.axonius_service import get_service
-from services.simple_fixture import initialize_fixture
 
 
 @pytest.fixture(scope="session", autouse=True)
 def axonius_fixture(request):
-    service = get_service()
+    system = get_service()
 
-    initialize_fixture(request, service.db)
-    initialize_fixture(request, service.core)
-    initialize_fixture(request, service.aggregator)
+    for service in system.axonius_services:
+        # we start the process so we own it
+        service.take_process_ownership()
 
-    return service
+        # good cleanup before the test run
+        service.stop(should_delete=True)
+
+        # spawn docker in parallel for all
+        service.start()
+
+    for service in system.axonius_services:
+        service.wait_for_service()
+        request.addfinalizer(lambda: service.stop(should_delete=True))
+
+    return system

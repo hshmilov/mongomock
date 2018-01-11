@@ -5,6 +5,7 @@ from test_helpers.utils import try_until_not_thrown
 from services.aggregator_service import AggregatorService
 from services.core_service import CoreService
 from services.mongo_service import MongoService
+from services.gui_service import GuiService
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
@@ -13,30 +14,32 @@ def get_service():
     mongo = MongoService()
     core = CoreService()
     aggregator = AggregatorService()
-    return AxoniusService(mongo, core, aggregator)
+    gui = GuiService()
+    return AxoniusService(mongo, core, aggregator, gui)
 
 
 class AxoniusService(object):
-    def __init__(self, db, core, aggregator):
+    def __init__(self, db, core, aggregator, gui):
         self.db = db
         self.core = core
         self.aggregator = aggregator
+        self.gui = gui
+
+        self.axonius_services = [db, core, aggregator, gui]
 
     def stop(self, should_delete):
-        self.aggregator.stop(should_delete)
-        self.core.stop(should_delete)
-        self.db.stop(should_delete)
+        # Not critical but lets stop in reverse order
+        for service in self.axonius_services[::-1]:
+            service.stop(should_delete)
 
     def start_and_wait(self):
         # Start in parallel
-        self.db.start()
-        self.core.start()
-        self.aggregator.start()
+        for service in self.axonius_services:
+            service.start()
 
         # wait for all
-        self.db.wait_for_service()
-        self.core.wait_for_service()
-        self.aggregator.wait_for_service()
+        for service in self.axonius_services:
+            service.wait_for_service()
 
     def get_devices_with_condition(self, cond):
         cursor = self.db.client[self.aggregator.unique_name]['devices_db'].find(cond)

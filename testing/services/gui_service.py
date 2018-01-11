@@ -1,10 +1,7 @@
+import pytest
 import requests
 import json
-
-import pytest
-
 from services.plugin_service import PluginService
-from services.simple_fixture import initialize_fixture
 
 
 class GuiService(PluginService):
@@ -38,7 +35,8 @@ class GuiService(PluginService):
         return self.get('tags', session=self._session, *vargs, **kwargs)
 
     def remove_tags_from_device(self, id, tag_list, *vargs, **kwargs):
-        return self.delete('devices/{0}/tags'.format(id), data=json.dumps(tag_list), session=self._session, *vargs, **kwargs)
+        return self.delete('devices/{0}/tags'.format(id), data=json.dumps(tag_list), session=self._session, *vargs,
+                           **kwargs)
 
     def add_tags_to_device(self, id, tag_list, *vargs, **kwargs):
         return self.post('devices/{0}'.format(id), data=json.dumps(tag_list), session=self._session, *vargs, **kwargs)
@@ -53,18 +51,11 @@ class GuiService(PluginService):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)
 
     def login_default_user(self):
-        return self.post('login', data=json.dumps(self.default_user), session=self._session)
+        resp = self.post('login', data=json.dumps(self.default_user), session=self._session)
+        assert resp.status_code == 200
 
     def login_user(self, credentials):
         return self.post('login', data=json.dumps(credentials), session=self._session)
 
     def logout_user(self):
         return self.get('logout', session=self._session)
-
-
-@pytest.fixture(scope="module")
-def gui_fixture(request):
-    service = GuiService()
-    initialize_fixture(request, service)
-    # service.login_default_user()
-    return service

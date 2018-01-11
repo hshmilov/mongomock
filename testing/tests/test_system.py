@@ -20,6 +20,10 @@ def test_aggregator_restart(axonius_fixture):
     axonius_fixture.restart_plugin(axonius_fixture.aggregator)
 
 
+def test_gui_restart(axonius_fixture):
+    axonius_fixture.restart_plugin(axonius_fixture.gui)
+
+
 def test_core_restart(axonius_fixture):
     axonius_fixture.restart_core()
 

@@ -58,10 +58,3 @@ class MongoService(ComposeService):
 
     def get_devices(self, aggregator_unique_name):
         return self.client[aggregator_unique_name]['devices_db'].find({})
-
-
-@pytest.fixture(scope="module")
-def mongo_fixture(request):
-    service = MongoService()
-    initialize_fixture(request, service)
-    return service
