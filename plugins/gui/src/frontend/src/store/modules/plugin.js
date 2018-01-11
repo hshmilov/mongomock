@@ -164,7 +164,8 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}/start`
+				rule: `/api/plugins/${pluginId}/start`,
+				method: 'POST'
 			}).then((response) => {
 				if (response !== '') {
 					return
@@ -178,7 +179,8 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}/stop`
+				rule: `/api/plugins/${pluginId}/stop`,
+				method: 'POST'
 			}).then((response) => {
 				if (response !== '') {
 					return

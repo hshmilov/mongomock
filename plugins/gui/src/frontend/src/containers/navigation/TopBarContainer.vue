@@ -1,23 +1,17 @@
 <template>
     <header class="topbar" v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
-        <nav class="navbar top-navbar navbar-expand-md navbar-light">
+        <nav class="navbar top-navbar navbar-expand navbar-light">
             <div class="navbar-header">
-                <li class="nav-item m-l-10">
-                    <a class="nav-link sidebartoggler hidden-sm-down" v-on:click="toggleSidebar">
-                        <i class="icon-menu"></i>
-                    </a>
-                </li>
+                <a class="nav-link sidebartoggler hidden-sm-down" v-on:click="toggleSidebar">
+                    <i class="icon-menu"></i>
+                </a>
             </div>
             <div class="navbar-collapse">
-                <ul class="navbar-nav mr-auto mt-md-0">
-                    <a class="navbar-brand">
-                        <b>
-                            <svg-icon name="logo/logo" height="30" :original="true"></svg-icon>
-                        </b>
-                        <span><svg-icon name="logo/axonius" height="16" :original="true"></svg-icon></span>
-                    </a>
-                </ul>
-                <ul class="navbar-nav my-lg-0">
+                <span class="mr-auto">
+                    <svg-icon name="logo/logo" height="30" :original="true"></svg-icon>
+                    <svg-icon name="logo/axonius" height="16" :original="true"></svg-icon>
+                </span>
+                <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link">
                             <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
@@ -142,7 +136,6 @@
                 .sidebartoggler {
                     color: $color-theme-light;
                     text-align: right;
-                    padding-right: 12px;
                 }
             }
             .navbar-collapse {

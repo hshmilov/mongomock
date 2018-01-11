@@ -34,7 +34,7 @@
             queryActions() {
                 return [
                     {triggerIcon: 'navigation/alert', handler: this.createAlert},
-                    {triggerFont: 'icon-play', handler: this.runQuery},
+                    {triggerFont: 'icon-play2', handler: this.runQuery},
                     {triggerFont: 'icon-trash-o', handler: this.removeQuery}
                 ]
             }

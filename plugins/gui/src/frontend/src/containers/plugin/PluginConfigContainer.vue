@@ -139,9 +139,10 @@
     .plugin-config {
         display: flex;
         .container {
-            width: 50vh;
+            width: 40vw;
         }
         .bubble {
+            width: 60vw;
             padding: 24px;
             border-radius: 4px;
             background-color: $background-color-light;

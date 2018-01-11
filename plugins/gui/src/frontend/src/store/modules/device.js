@@ -53,6 +53,8 @@ export const findValues = (field, data) => {
 	})
 	if ((!field.type || field.type.indexOf('list') === -1) && Array.isArray(value)) {
 		return (value.length > 0) ? value[0] : ''
+	} else if (Array.isArray(value)) {
+		return Array.from(new Set(value))
 	}
 	return value
 }

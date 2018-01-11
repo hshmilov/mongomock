@@ -25,6 +25,12 @@ class GuiService(PluginService):
     def add_tags_to_device(self, id, tag_list, *vargs, **kwargs):
         return self.post('devices/{0}'.format(id), data=json.dumps(tag_list), *vargs, **kwargs)
 
+    def activate_plugin_job(self, plugin_id, *vargs, **kwargs):
+        return self.post(f'plugins/{plugin_id}/start', *vargs, **kwargs)
+
+    def deactivate_plugin_job(self, plugin_id, *vargs, **kwargs):
+        return self.post(f'plugins/{plugin_id}/stop', *vargs, **kwargs)
+
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key)
 

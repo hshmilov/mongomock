@@ -141,7 +141,7 @@ class Activatable(Feature, ABC):
 
             def on_failed(err):
                 # if failed, restore to 'Disabled'
-                self.logger.error(f"Failed starting up: {err}")
+                self.logger.exception(f"Failed starting up: {err}")
                 self.__last_error = str(repr(err))
                 self._set_activation_state(ActiveStates.Disabled)
 

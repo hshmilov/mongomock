@@ -804,7 +804,7 @@ class BackendPlugin(PluginBase):
                                 [('_id', pymongo.ASCENDING)])]
             })
 
-    @add_rule("plugins/<plugin_unique_name>/<command>", methods=['GET'], should_authenticate=False)
+    @add_rule("plugins/<plugin_unique_name>/<command>", methods=['POST'], should_authenticate=False)
     def run_plugin(self, plugin_unique_name, command):
         """
         Calls endpoint of given plugin_unique_name, according to given command
@@ -813,7 +813,7 @@ class BackendPlugin(PluginBase):
         :param plugin_unique_name:
         :return:
         """
-        response = self.request_remote_plugin(command, plugin_unique_name)
+        response = self.request_remote_plugin(command, plugin_unique_name, method='post')
         if response and response.status_code == 200:
             return ""
         return response.json(), response.status_code
