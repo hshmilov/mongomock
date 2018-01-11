@@ -6,10 +6,17 @@ Currently, allows you to view ESX instances you possess.
 __author__ = "Mark Segal"
 
 from vcenter_api import vCenterApi, rawify_vcenter_data
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, DeviceRunningState
 from axonius.parsing_utils import figure_out_os
 from axonius import adapter_exceptions
 from pyVmomi import vim
+
+# translation table between ESX values to parsed values
+POWER_STATE_MAP = {
+    'poweredOff': DeviceRunningState.TurnedOff.value,
+    'poweredOn': DeviceRunningState.TurnedOn.value,
+    'suspended': DeviceRunningState.Suspended.value,
+}
 
 
 class ESXAdapter(AdapterBase):
@@ -98,6 +105,8 @@ class ESXAdapter(AdapterBase):
                 'hostname': guest.get('hostName', ''),
                 'vmToolsStatus': guest.get('toolsStatus', ''),
                 'physicalPath': _curr_path + "/" + node.get('Name', ''),
+                'powerState': POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
+                                                  DeviceRunningState.Unknown),
                 'raw': details
             }
         elif node.get('Type', '') in ("Datacenter", "Folder", "Root"):

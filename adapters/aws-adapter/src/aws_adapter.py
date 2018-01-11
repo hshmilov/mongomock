@@ -5,7 +5,7 @@ Currently, allows you to view AWS EC2 instances you possess.
 
 __author__ = "Mark Segal"
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, DeviceRunningState
 from axonius.parsing_utils import figure_out_os
 import axonius.adapter_exceptions
 import boto3
@@ -22,6 +22,16 @@ PROXY = 'proxy'
 Matches AWS Instance IDs
 """
 aws_ec2_id_matcher = re.compile('i-[0-9a-fA-F]{17}')
+
+# translation table between AWS values to parsed values
+POWER_STATE_MAP = {
+    'terminated': DeviceRunningState.TurnedOff.value,
+    'stopped': DeviceRunningState.TurnedOff.value,
+    'running': DeviceRunningState.TurnedOn.value,
+    'pending': DeviceRunningState.TurnedOff.value,
+    'shutting-down': DeviceRunningState.ShuttingDown.value,
+    'stopping': DeviceRunningState.ShuttingDown.value,
+}
 
 
 def _describe_images_from_client_by_id(client, amis):
@@ -150,6 +160,7 @@ class AWSAdapter(AdapterBase):
         for reservation in raw_data.get('Reservations', []):
             for instance in reservation.get('Instances', []):
                 # TODO: Weiss - This is a bit of a weird dict comprehension.
+                state = instance.get('State', {}).get('Name')
                 tags_dict = {i['Key']: i['Value']
                              for i in instance.get('Tags', {})}
                 yield {
@@ -159,6 +170,7 @@ class AWSAdapter(AdapterBase):
                                         else None),
                     'id': instance['InstanceId'],
                     'network_interfaces': self._parse_network_interfaces(instance.get('NetworkInterfaces', [])),
+                    'powerState': POWER_STATE_MAP.get(state, DeviceRunningState.Unknown),
                     'raw': instance
                 }
 

@@ -18,6 +18,37 @@ from axonius.consts import adapter_consts
 from axonius.mixins.feature import Feature
 from datetime import datetime
 from datetime import timedelta
+from enum import Enum, auto
+
+
+class DeviceRunningState(Enum):
+    """
+    Defines the state of device. i.e. if it is turned on or not
+    """
+
+    def _generate_next_value_(name, *args):
+        return name
+
+    """
+    Device is on
+    """
+    TurnedOn = auto()
+    """
+    Device is off
+    """
+    TurnedOff = auto()
+    """
+    Device is suspended, i.e. hibenate
+    """
+    Suspended = auto()
+    """
+    Plugin is in the process of shutting down
+    """
+    ShuttingDown = auto()
+    """
+    State is unknown
+    """
+    Unknown = auto()
 
 
 class AdapterBase(PluginBase, Feature, ABC):
