@@ -42,7 +42,7 @@ class CorrelatorEngineBase(ABC):
         # sort by 'plugin_name'
         all_adapter_devices.sort(key=lambda adapter_device: adapter_device['plugin_name'])
         # then by 'id'
-        all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data']['id'])
+        all_adapter_devices.sort(key=lambda adapter_device: str(adapter_device['data']['id']))
         # that was just O(nlogn)
 
         # it's now assured that if two adapter_devices have the same plugin_name and id, they are consecutive.

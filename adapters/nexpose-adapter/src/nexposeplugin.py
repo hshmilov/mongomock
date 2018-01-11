@@ -97,7 +97,7 @@ class NexposePlugin(AdapterBase):
         for device_raw_data in raw_data:
             yield {
                 'OS': figure_out_os(device_raw_data.get('os_name')),
-                'id': device_raw_data['id'],
+                'id': str(device_raw_data['id']),
                 'network_interfaces': _create_network_interface(device_raw_data.get('addresses', ''),
                                                                 device_raw_data.get('mac_address', '')),
                 'hostname': device_raw_data['host_names'][0] if len(device_raw_data.get('host_names', [])) > 0 else '',

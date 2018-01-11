@@ -31,7 +31,7 @@ class TestNexposeAdapter(AdapterTestBase):
 
     @property
     def some_device_id(self):
-        return 10
+        return '10'
 
     def test_fetch_devices(self):
         super().test_fetch_devices()
