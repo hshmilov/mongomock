@@ -121,7 +121,7 @@
                 padding-bottom: 0px;
                 padding-top: 0px;
                 cursor: default;
-                b {
+                .navbar-logo {
                     line-height: 62px;
                     display: inline-block;
                 }

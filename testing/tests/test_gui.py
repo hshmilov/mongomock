@@ -3,6 +3,8 @@ from services.gui_service import gui_fixture
 from services.adapters.ad_service import ad_fixture
 from services.dns_conflicts_service import dns_conflicts_fixture
 from test_helpers import utils
+from decorator import decorate
+from inspect import getfullargspec
 
 
 def test_plugin_is_up(axonius_fixture, gui_fixture):
@@ -112,3 +114,22 @@ def test_tags(axonius_fixture, gui_fixture, ad_fixture):
 
 def test_restart(axonius_fixture, gui_fixture):
     axonius_fixture.restart_plugin(gui_fixture)
+
+
+def test_login(axonius_fixture, gui_fixture):
+    gui_fixture.logout_user()
+
+    bad_credentials_1 = {**gui_fixture.default_user, 'user_name': 'admin1'}
+    bad_credentials_2 = {**gui_fixture.default_user, 'password': 'admin1'}
+
+    response = gui_fixture.login_user(bad_credentials_1)
+    assert response.status_code, 401
+
+    response = gui_fixture.login_user(bad_credentials_2)
+    assert response.status_code, 401
+
+    response = gui_fixture.get_devices()
+    assert response.status_code, 401
+
+    response = gui_fixture.login_user(gui_fixture.default_user)
+    assert response.status_code, 200

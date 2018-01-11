@@ -5,20 +5,34 @@
     -->
     <div id="app">
         <!-- Nested navigation linking to routes defined in router/index.js -->
-        <top-bar-container></top-bar-container>
-        <side-bar-container></side-bar-container>
-        <router-view></router-view>
+        <template v-if="user.data.user_name">
+            <top-bar-container></top-bar-container>
+            <side-bar-container></side-bar-container>
+            <router-view></router-view>
+        </template>
+        <template v-else>
+            <login-container></login-container>
+        </template>
     </div>
 </template>
 
 <script>
     import TopBarContainer from './navigation/TopBarContainer.vue'
     import SideBarContainer from './navigation/SideBarContainer.vue'
-    import { REQUEST_API } from '../store/actions'
+    import LoginContainer from './user/LoginContainer.vue'
+    import { GET_USER } from '../store/modules/user'
+    import { mapState, mapActions } from 'vuex'
 
     export default {
         name: 'app',
-        components: { TopBarContainer, SideBarContainer }
+        components: {
+			LoginContainer,
+			TopBarContainer, SideBarContainer },
+        computed: mapState(['user']),
+        methods: mapActions({ getUser: GET_USER }),
+        created() {
+        	this.getUser()
+        }
     }
 </script>
 

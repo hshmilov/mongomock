@@ -1,3 +1,4 @@
+import requests
 import json
 
 import pytest
@@ -9,21 +10,38 @@ from services.simple_fixture import initialize_fixture
 class GuiService(PluginService):
     def __init__(self, **kwargs):
         super().__init__(service_dir='../plugins/gui', **kwargs)
+        self._session = requests.Session()
+        self.default_user = {'user_name': 'admin', 'password': 'bestadminpassword'}
+        self.logged_in = False
+
+    def __del__(self):
+        self._session.close()
+
+    def start_and_wait(self):
+        super().start_and_wait()
+        self.login_default_user()
+        self.logged_in = True
+
+    def stop(self, *vargs, **kwargs):
+        if self.logged_in:
+            self.logout_user()
+            self.logged_in = False
+        super().stop(*vargs, **kwargs)
 
     def get_devices(self, *vargs, **kwargs):
-        return self.get('devices', *vargs, **kwargs)
+        return self.get('devices', session=self._session, *vargs, **kwargs)
 
     def get_device_by_id(self, id, *vargs, **kwargs):
-        return self.get('devices/{0}'.format(id), *vargs, **kwargs)
+        return self.get('devices/{0}'.format(id), session=self._session, *vargs, **kwargs)
 
     def get_all_tags(self, *vargs, **kwargs):
-        return self.get('tags', *vargs, **kwargs)
+        return self.get('tags', session=self._session, *vargs, **kwargs)
 
     def remove_tags_from_device(self, id, tag_list, *vargs, **kwargs):
-        return self.delete('devices/{0}/tags'.format(id), data=json.dumps(tag_list), *vargs, **kwargs)
+        return self.delete('devices/{0}/tags'.format(id), data=json.dumps(tag_list), session=self._session, *vargs, **kwargs)
 
     def add_tags_to_device(self, id, tag_list, *vargs, **kwargs):
-        return self.post('devices/{0}'.format(id), data=json.dumps(tag_list), *vargs, **kwargs)
+        return self.post('devices/{0}'.format(id), data=json.dumps(tag_list), session=self._session, *vargs, **kwargs)
 
     def activate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/start', *vargs, **kwargs)
@@ -32,11 +50,21 @@ class GuiService(PluginService):
         return self.post(f'plugins/{plugin_id}/stop', *vargs, **kwargs)
 
     def get_queries(self):
-        self.get('trigger_watches', api_key=self.api_key)
+        self.get('trigger_watches', api_key=self.api_key, session=self._session)
+
+    def login_default_user(self):
+        return self.post('login', data=json.dumps(self.default_user), session=self._session)
+
+    def login_user(self, credentials):
+        return self.post('login', data=json.dumps(credentials), session=self._session)
+
+    def logout_user(self):
+        return self.get('logout', session=self._session)
 
 
 @pytest.fixture(scope="module")
 def gui_fixture(request):
     service = GuiService()
     initialize_fixture(request, service)
+    # service.login_default_user()
     return service

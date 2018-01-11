@@ -1,6 +1,8 @@
 import axios from 'axios'
 import Promise from 'promise'
 
+import { INIT_USER, SET_USER } from './modules/user'
+
 /*
     A generic wrapper for requests to server.
     Before request, performs given mutation to initialize error and indicate fetching in process,
@@ -15,7 +17,7 @@ import Promise from 'promise'
     }
  */
 export const REQUEST_API = 'REQUEST_API'
-export const requestApi = ({commit}, payload) => {
+export const requestApi = ({dispatch, commit}, payload) => {
     if (!payload.rule) {
         return
     }
@@ -41,21 +43,21 @@ export const requestApi = ({commit}, payload) => {
                   data: response.data
                 })
             }
-            resolve(response.data)
+            resolve(response)
         })
         .catch((error) => {
-            let userMessage = error.message
-            if (error.response) {
-                if (error.response.status >= 500) {
-					userMessage = "Verify all services are up and registered"
-				} else if (error.response.data.type === "PluginNotFoundException") {
-                    userMessage = error.response.data.message
-                }
+			let errorMessage = error.response.data.message
+			if (error.response.status === 401) {
+				commit(INIT_USER, { fetching: false, error: errorMessage })
+				return
+			}
+            if (error.response.status >= 500) {
+                errorMessage = "Verify all services are up and registered"
             }
             if (payload.type) {
                 commit(payload.type, {
                   fetching: false,
-                  error: userMessage
+                  error: errorMessage
                 })
             }
             reject(error)

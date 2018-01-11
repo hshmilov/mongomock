@@ -3,11 +3,11 @@
             <div class="scroll-sidebar">
                 <div class="user">
                     <div class="user-profile">
-                        <img :src="user.picname" />
-                        <h5>{{ `${user.firstname} ${user.lastname}` }}</h5>
+                        <img :src="user.data.pic_name" />
+                        <h5>{{ `${user.data.first_name} ${user.data.last_name}` }}</h5>
                     </div>
                     <div class="user-actions">
-                        <a href="#" class="" data-toggle="tooltip" title="Logout">
+                        <a @click="logout" class="" data-toggle="tooltip" title="Logout">
                             <i class="icon-logout"></i>
                         </a>
                     </div>
@@ -42,12 +42,14 @@
     import VueScrollbar from 'vue2-scrollbar'
     import NestedNavBar from '../../components/NestedNavBar.vue'
     import NestedNavItem from '../../components/NestedNavItem.vue'
-    import { mapState } from 'vuex'
+    import { LOGOUT } from '../../store/modules/user'
+    import { mapState, mapActions } from 'vuex'
 
     export default {
         name: 'side-bar-container',
         components: { VueScrollbar, NestedNavBar, NestedNavItem },
-        computed: mapState([ 'user', 'interaction' ])
+        computed: mapState([ 'user', 'interaction' ]),
+        methods: mapActions({ logout: LOGOUT })
     }
 </script>
 

@@ -41,3 +41,4 @@ pyVmomi==6.5.0.2017.5.post1
 pyVim==0.0.21
 nexpose==0.1.7
 boto3==1.5.7
+decorator==4.1.2

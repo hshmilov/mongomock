@@ -9,6 +9,7 @@ import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
 import { notification } from '../store/modules/notifications'
+import { user } from '../store/modules/user'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -16,12 +17,6 @@ export default new Vuex.Store({
         /*
             General data that the system uses throughout pages
          */
-        user: {
-            firstname: 'Administrator',
-            lastname: '',
-            picname: '/src/assets/images/users/avatar.png'
-
-        },
         configuration: {
             language: 'en'
         },
@@ -43,7 +38,8 @@ export default new Vuex.Store({
 		plugin,
 		adapter,
 		alert,
-        notification
+        notification,
+        user
     }
 
 })

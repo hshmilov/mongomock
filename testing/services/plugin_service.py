@@ -22,7 +22,7 @@ class PluginService(ComposeService):
         self.config_file_path = service_dir + '/src/plugin_config.ini'
         self.last_vol_conf = None
 
-    def request(self, method, endpoint, api_key=None, headers=None, *vargs, **kwargs):
+    def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
         if headers is None:
             headers = {}
 
@@ -31,6 +31,11 @@ class PluginService(ComposeService):
 
         if 'data' in kwargs and isinstance(kwargs['data'], dict):
             kwargs['data'] = json.dumps(kwargs['data'])
+
+        if session:
+            with session:
+                return getattr(session, method)(url='{0}/{1}'.format(self.req_url, endpoint),
+                                                headers=headers, *vargs, **kwargs)
 
         return getattr(requests, method)(url='{0}/{1}'.format(self.req_url, endpoint),
                                          headers=headers, *vargs, **kwargs)

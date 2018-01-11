@@ -25,7 +25,7 @@
                     (in next section). Form content and trigger input's value sync on every change.
                     -->
                     <generic-form slot="dropdownContent" :schema="queryFields" v-model="queryDropdown.value"
-                                  @input="extractValue" @submit="executeQuery"></generic-form>
+                                  @input="extractValue" @submit="executeQuery" :condensed="true"></generic-form>
                 </dropdown-menu>
                 <!-- Button controlling the execution of currently filled query -->
                 <a class="btn btn-adjoined" @click="executeQuery">go</a>
@@ -314,6 +314,9 @@
                 border: 1px solid $border-color;
                 padding: 8px;
                 font-size: 12px;
+                box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+                -webkit-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+                -moz-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
             }
             > .dropdown {
                 flex: 1 0 auto;

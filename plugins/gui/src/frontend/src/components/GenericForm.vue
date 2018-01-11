@@ -1,31 +1,35 @@
 <template>
     <form class="form" @keyup.enter.stop="$emit('submit', model)">
-        <div class="row">
-            <div v-for="input in schema" class="form-group col-6">
-                <label v-if="input.name" class="form-label">{{ input.name }}</label>
-                <template v-if="input.control === 'select'">
-                    <select class="form-control" v-model="model[input.path]" @input="$emit('input', model)">
-                        <option v-for="option in input.options">{{ option.text }}</option>
-                    </select>
-                </template>
-                <template v-else-if="input.control === 'multiple-select'">
-                    <multiple-select :title="`Select ${input.name}:`" :items="input.options" :type="input.type"
-                                     v-model="model[input.path]" @input="$emit('input', model)">
-                    </multiple-select>
-                </template>
-                <template v-else-if="input.control === 'bool'">
-                    <checkbox v-model="model[input.path]" @change="$emit('input', model)"></checkbox>
-                </template>
-                <template v-else-if="input.control === 'array'">
-                    <input type="file" @change="uploadFile" :name="input.path">
-                </template>
-                <template v-else>
-                    <input class="form-control" :type="input.control" :placeholder="input.placeholder"
-                           v-model="model[input.path]" @input="convertValue(input.path, input.control)">
-                </template>
+        <div v-bind:class="{'row': !vertical}">
+            <div v-for="input in schema" v-bind:class="{ 'col-6': !vertical, 'row': vertical }">
+                <div class="form-group">
+                    <label v-if="input.name" class="form-label">{{ input.name }}</label>
+                    <template v-if="input.control === 'select'">
+                        <select class="form-control" v-model="model[input.path]" @input="$emit('input', model)" :ref="'fields'">
+                            <option v-for="option in input.options">{{ option.text }}</option>
+                        </select>
+                    </template>
+                    <template v-else-if="input.control === 'multiple-select'">
+                        <multiple-select :title="`Select ${input.name}:`" :items="input.options" :type="input.type"
+                                         v-model="model[input.path]" @input="$emit('input', model)">
+                        </multiple-select>
+                    </template>
+                    <template v-else-if="input.control === 'bool'">
+                        <checkbox v-model="model[input.path]" @change="$emit('input', model)"></checkbox>
+                    </template>
+                    <template v-else-if="input.control === 'array'">
+                        <input type="file" @change="uploadFile" :name="input.path">
+                    </template>
+                    <template v-else>
+                        <input class="form-control" :type="input.control" :placeholder="input.placeholder"
+                               v-model="model[input.path]" @input="convertValue(input.path, input.control)" :ref="'fields'">
+                    </template>
+                </div>
             </div>
-            <div v-if="submitLabel" class="form-group col-1">
-                <a class="btn" @click="$emit('submit', model)">{{ submitLabel }}</a>
+            <div v-bind:class="{ 'col-6': !vertical, 'row': vertical }">
+                <div v-if="submitLabel" class="form-group btn-group" v-bind:class="{ 'col-1': condensed }">
+                    <a class="btn" @click="$emit('submit', model)">{{ submitLabel }}</a>
+                </div>
             </div>
         </div>
     </form>
@@ -38,7 +42,7 @@
     export default {
         name: 'generic-form',
         components: { MultipleSelect, Checkbox },
-        props: [ 'schema', 'submitLabel', 'value' ],
+        props: [ 'schema', 'submitLabel', 'condensed', 'value', 'vertical' ],
         computed: {
             pathByName() {
                 return this.schema.reduce(function(map, input) {
@@ -81,6 +85,11 @@
                 }
 				this.$emit('input', this.model)
             }
+        },
+        mounted() {
+        	if (this.$refs.fields) {
+				this.$refs.fields[0].focus()
+			}
         }
     }
 </script>
@@ -89,6 +98,14 @@
     @import '../scss/config';
 
     .form {
+        .row > .form-group {
+            width: 100%;
+            margin-left: -10px;
+            margin-right: -10px;
+            .btn {
+                margin: auto;
+            }
+        }
         .form-group {
             &.col-3, &.col-1 {
                 margin-bottom: 0;

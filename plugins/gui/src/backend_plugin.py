@@ -4,7 +4,6 @@ GUIPlugin.py: Backend services for the web app
 
 __author__ = "Mark Segal"
 
-
 from axonius import plugin_exceptions
 from axonius.plugin_base import PluginBase, add_rule, return_error
 import tarfile
@@ -26,22 +25,41 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 PAGINATION_LIMIT_MAX = 2000
 
 
-# def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
-#     """
-#     Syntactic sugar for add_rule(should_authenticate=False, ...)
-#     :param rule: rule name
-#     :param require_connected: whether or not to require that the user is connected
-#     :param args:
-#     :param kwargs:
-#     :return:
-#     """
-#     add_rule_res = add_rule(rule, should_authenticate=False, *args, **kwargs)
-#     if require_connected:
-#         return lambda func: requires_connected(add_rule_res(func))
-#     return add_rule_res
+def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
+    """
+    Syntactic sugar for add_rule(should_authenticate=False, ...)
+    :param rule: rule name
+    :param require_connected: whether or not to require that the user is connected
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    add_rule_res = add_rule(rule, should_authenticate=False, *args, **kwargs)
+    if require_connected:
+        return lambda func: requires_connected(add_rule_res(func))
+    return add_rule_res
 
 
 # Caution! These decorators must come BEFORE @add_rule
+
+
+def requires_connected(func):
+    """
+    Decorator stating that the view requires the user to be connected
+    """
+
+    def wrapper(self, *args, **kwargs):
+        user = session.get('user')
+        if user is None:
+            return return_error("You're not connected", 401)
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+# Caution! These decorators must come BEFORE @add_rule
+
+
 def gzipped_downloadable(filename, extension):
     filename = filename.format(date.today())
 
@@ -52,7 +70,7 @@ def gzipped_downloadable(filename, extension):
                 response.direct_passthrough = False
 
                 if (response.status_code < 200 or
-                    response.status_code >= 300 or
+                        response.status_code >= 300 or
                         'Content-Encoding' in response.headers):
                     return response
                 uncompressed = io.BytesIO(response.data)
@@ -252,21 +270,6 @@ def requires_aggregator():
     return wrap
 
 
-# Caution! These decorators must come BEFORE @add_rule
-def requires_connected(func):
-    """
-    Decorator stating that the view requires the user to be connected
-    """
-
-    def wrapper(self, *args, **kwargs):
-        user = session.get('user')
-        if user is None:
-            return return_error("You're not connected", 401)
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
-
 def beautify_db_entry(entry):
     """
     Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
@@ -292,8 +295,8 @@ class BackendPlugin(PluginBase):
         # AXONIUS_REST.root_path = os.getcwd()
         # AXONIUS_REST.static_folder = 'my-project/dist/static'
         # AXONIUS_REST.static_url_path = 'static'
-        # AXONIUS_REST.config['SESSION_TYPE'] = 'memcached'
-        # AXONIUS_REST.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
+        self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
+        self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         aggregator = self.get_plugin_by_name('aggregator')
         if aggregator is None:
             self._aggregator_plugin_unique_name = None
@@ -303,78 +306,20 @@ class BackendPlugin(PluginBase):
         self._elk_auth = config['gui_specific']['elk_auth']
         self.db_user = config['gui_specific']['db_user']
         self.db_password = config['gui_specific']['db_password']
-
-    def _query_aggregator(self, resource, *args, **kwargs):
-        """
-
-        :param resource:
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        return self.request_remote_plugin(resource, self._aggregator_plugin_unique_name, *args, **kwargs).json()
-
-    @add_rule("adapter_devices/<device_id>", should_authenticate=False)
-    def adapter_device_by_id(self, device_id):
-        """
-        -- this has to be remade, postponed because it's not for MVP
-        Returns a device by id
-        :param device_id: device id
-        :return:
-        """
-        with self._get_db_connection(False) as db_connection:
-            parsed_db = db_connection[self._aggregator_plugin_unique_name]['parsed']
-            device = parsed_db.find_one({'id': device_id}, sort=[
-                ('_id', pymongo.DESCENDING)])
-            if device is None:
-                return return_error("Device not found", 404)
-            return jsonify(beautify_db_entry(device))
+        self._get_collection('users', limited_user=False).update({'user_name': 'admin'},
+                                                                 {'user_name': 'admin',
+                                                                  'first_name': 'administrator',
+                                                                  'last_name': '',
+                                                                  'pic_name': 'avatar.png',
+                                                                  'password': bcrypt.hash('bestadminpassword'),
+                                                                  },
+                                                                 upsert=True)
 
     @requires_aggregator()
     @paginated()
     @filtered()
     @projectioned()
-    @add_rule("adapter_devices", should_authenticate=False)
-    def adapter_devices(self, limit, skip, mongo_filter, mongo_projection):
-        """
-        Returns all known devices. All parameters are generated by the decorators.
-        :param limit: limit for pagination
-        :param skip: start index for pagination
-        :param fields: fields to return, or None for all
-        :return:
-        """
-        if query is None:
-            group_by = {"_id": "$data.id",
-                        "all":
-                            {"$first": "$$ROOT"}
-                        }
-        else:
-            group_by = {field_name: {'$first': '$' + db_path}
-                        for field_name, db_path in fields}
-            group_by['_id'] = "$data.id"
-            group_by['date_fetcher'] = {"$first": "$_id"}
-
-        with self._get_db_connection(False) as db_connection:
-            parsed_db = db_connection[self._devices_db_name]['parsed']
-            devices = parsed_db.aggregate([
-                {"$sort": SON([('_id', pymongo.DESCENDING)])},
-                {
-                    "$group": group_by
-                },
-                {"$sort": SON([('all.data.name', pymongo.ASCENDING)])},
-                {"$skip": skip},
-                {"$limit": limit}
-            ])
-
-            if query is None:
-                return jsonify([beautify_db_entry(x['all']) for x in devices])
-        return jsonify(devices)
-
-    @requires_aggregator()
-    @paginated()
-    @filtered()
-    @projectioned()
-    @add_rule("devices", should_authenticate=False)
+    @add_rule_unauthenticated("devices")
     def current_devices(self, limit, skip, mongo_filter, mongo_projection):
         """
         Get Axonius devices from the aggregator
@@ -390,7 +335,17 @@ class BackendPlugin(PluginBase):
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
-    @add_rule("devices/<device_id>", methods=['POST', 'GET'], should_authenticate=False)
+    def _query_aggregator(self, resource, *args, **kwargs):
+        """
+
+        :param resource:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        return self.request_remote_plugin(resource, self._aggregator_plugin_unique_name, *args, **kwargs).json()
+
+    @add_rule_unauthenticated("devices/<device_id>", methods=['POST', 'GET'])
     def current_device_by_id(self, device_id):
         """
         Retrieve device by the given id, from current devices DB or update it
@@ -427,7 +382,7 @@ class BackendPlugin(PluginBase):
 
         return ('', 200) if any_bad_response == 0 else return_error('tagging failed')
 
-    @add_rule("devices/<device_id>/tags", methods=['DELETE'], should_authenticate=False)
+    @add_rule_unauthenticated("devices/<device_id>/tags", methods=['DELETE'])
     def remove_tags_from_device(self, device_id):
         """
         Retrieve device by the given id, from current devices DB or update it
@@ -441,7 +396,7 @@ class BackendPlugin(PluginBase):
             return self._tag_request_from_aggregator(device, 'remove', tag_list['tags'])
 
     @requires_aggregator()
-    @add_rule("devices/fields", should_authenticate=False)
+    @add_rule_unauthenticated("devices/fields")
     def unique_fields(self):
         """
         Get all unique fields that devices may have data for, coming from the adapters' parsed data
@@ -482,7 +437,7 @@ class BackendPlugin(PluginBase):
         return jsonify(all_fields)
 
     @requires_aggregator()
-    @add_rule("devices/tags", should_authenticate=False)
+    @add_rule_unauthenticated("devices/tags")
     def tags(self):
         """
         Get all tags that currently belong to devices, to form a set of current tag values
@@ -500,7 +455,7 @@ class BackendPlugin(PluginBase):
 
     @paginated()
     @filtered()
-    @add_rule("queries", methods=['POST', 'GET'], should_authenticate=False)
+    @add_rule_unauthenticated("queries", methods=['POST', 'GET'])
     def queries(self, limit, skip, mongo_filter):
         """
         Get and create saved filters.
@@ -527,7 +482,7 @@ class BackendPlugin(PluginBase):
                  'timestamp': datetime.now(), 'archived': False})
             return str(result.inserted_id), 200
 
-    @add_rule("queries/<query_id>", methods=['DELETE'], should_authenticate=False)
+    @add_rule_unauthenticated("queries/<query_id>", methods=['DELETE'])
     def delete_query(self, query_id):
         queries_collection = self._get_collection('queries', limited_user=False)
         queries_collection.update({'_id': ObjectId(query_id)},
@@ -553,7 +508,7 @@ class BackendPlugin(PluginBase):
         return {'clients': clients_value.get('schema')}
 
     @filtered()
-    @add_rule("adapters", should_authenticate=False)
+    @add_rule_unauthenticated("adapters")
     def adapters(self, mongo_filter):
         """
         Get all adapters from the core
@@ -585,7 +540,7 @@ class BackendPlugin(PluginBase):
             return jsonify(adapters_to_return)
 
     @paginated()
-    @add_rule("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'], should_authenticate=False)
+    @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'])
     def adapters_clients(self, adapter_unique_name, limit, skip):
         """
         Gets or creates clients in the adapter
@@ -628,8 +583,7 @@ class BackendPlugin(PluginBase):
                     self.request_remote_plugin(f"trigger/{adapter_unique_name}", aggregator_name, method='post')
                 return response.text, response.status_code
 
-    @add_rule("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'],
-              should_authenticate=False)
+    @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id):
         """
         Gets or creates clients in the adapter
@@ -645,7 +599,7 @@ class BackendPlugin(PluginBase):
         if request.method == 'DELETE':
             return '', 200
 
-    @add_rule("alerts", methods=['GET', 'PUT'], should_authenticate=False)
+    @add_rule_unauthenticated("alerts", methods=['GET', 'PUT'])
     def alerts(self):
         """
         GET results in list of all currently configured alerts, with their query id they were created with
@@ -687,7 +641,7 @@ class BackendPlugin(PluginBase):
                 queries_collection.update_one(match_query, {'$set': {'alertIds': list(alert_ids)}})
             return response.text, response.status_code
 
-    @add_rule("alerts/<alert_id>", methods=['DELETE', 'POST'], should_authenticate=False)
+    @add_rule_unauthenticated("alerts/<alert_id>", methods=['DELETE', 'POST'])
     def alerts_update(self, alert_id):
         """
 
@@ -737,7 +691,7 @@ class BackendPlugin(PluginBase):
             return response.text, response.status_code
 
     @filtered()
-    @add_rule("plugins", should_authenticate=False)
+    @add_rule_unauthenticated("plugins")
     def plugins(self, mongo_filter):
         """
         Get all plugins configured in core and update each one's status.
@@ -777,7 +731,7 @@ class BackendPlugin(PluginBase):
 
             return jsonify(plugins_to_return)
 
-    @add_rule("plugins/<plugin_unique_name>", methods=['GET'], should_authenticate=False)
+    @add_rule_unauthenticated("plugins/<plugin_unique_name>", methods=['GET'])
     def get_plugin(self, plugin_unique_name):
         """
         Gather all data needed to present a single plugin, according to plugin_unique_name given in url
@@ -804,7 +758,7 @@ class BackendPlugin(PluginBase):
                                 [('_id', pymongo.ASCENDING)])]
             })
 
-    @add_rule("plugins/<plugin_unique_name>/<command>", methods=['POST'], should_authenticate=False)
+    @add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
         """
         Calls endpoint of given plugin_unique_name, according to given command
@@ -818,7 +772,7 @@ class BackendPlugin(PluginBase):
             return ""
         return response.json(), response.status_code
 
-    @add_rule("config/<config_name>", methods=['POST', 'GET'], should_authenticate=False)
+    @add_rule_unauthenticated("config/<config_name>", methods=['POST', 'GET'])
     def config(self, config_name):
         """
         Get or set config by name
@@ -841,7 +795,7 @@ class BackendPlugin(PluginBase):
 
     @paginated()
     @filtered()
-    @add_rule("notifications", methods=['POST', 'GET'], should_authenticate=False)
+    @add_rule_unauthenticated("notifications", methods=['POST', 'GET'])
     def notifications(self, limit, skip, mongo_filter):
         """
         Get all notifications
@@ -872,7 +826,7 @@ class BackendPlugin(PluginBase):
                 return str(update_result.modified_count), 200
 
     @filtered()
-    @add_rule("notifications/count", methods=['GET'], should_authenticate=False)
+    @add_rule_unauthenticated("notifications/count", methods=['GET'])
     def notifications_count(self, mongo_filter):
         """
         Fetches from core's notification collection, according to given mongo_filter,
@@ -884,7 +838,7 @@ class BackendPlugin(PluginBase):
             notification_collection = db['core']['notifications']
             return str(notification_collection.find(mongo_filter).count())
 
-    @add_rule("notifications/<notification_id>", methods=['GET'], should_authenticate=False)
+    @add_rule_unauthenticated("notifications/<notification_id>", methods=['GET'])
     def notifications_by_id(self, notification_id):
         """
         Get all notification data
@@ -904,24 +858,27 @@ class BackendPlugin(PluginBase):
         if request.method == 'GET':
             user = session.get('user')
             if user is None:
-                return return_error("Not logged in", 401)
-            return jsonify(user['username']), 200
+                return return_error("Enter credentials to log in", 401)
+            del user['password']
+            return jsonify(user), 200
 
         users_collection = self._get_collection('users', limited_user=False)
-        log_in_data = request.get_json(silent=True)
+        log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
             return return_error("No login data provided", 400)
-        username = log_in_data.get('username')
+        user_name = log_in_data.get('user_name')
         password = log_in_data.get('password')
-        user_from_db = users_collection.find_one({'username': username})
+        user_from_db = users_collection.find_one({'user_name': user_name})
         if user_from_db is None:
-            return return_error("No such username", 401)
+            self.logger.info(f"Unknown user {user_name} tried logging in")
+            return return_error("Wrong user name or password", 401)
         if not bcrypt.verify(password, user_from_db['password']):
-            return return_error("Wrong password", 401)
+            self.logger.info(f"User {user_name} tried logging in with wrong password")
+            return return_error("Wrong user name or password", 401)
         session['user'] = user_from_db
         return ""
 
-    @add_rule("logout", methods=['GET'], should_authenticate=False)
+    @add_rule_unauthenticated("logout", methods=['GET'])
     def logout(self):
         """
         Clears session, logs out
@@ -930,39 +887,39 @@ class BackendPlugin(PluginBase):
         session['user'] = None
         return ""
 
-    @paginated()
-    @add_rule("users", methods=['GET', 'POST'], should_authenticate=False)
-    def users(self, limit, skip):
-        """
-        View or add users
-        :param limit: limit for pagination
-        :param skip: start index for pagination
-        :return:
-        """
-        users_collection = self._get_collection('users', limited_user=False)
-        if request.method == 'GET':
-            return jsonify(beautify_db_entry(n) for n in
-                           users_collection.find(projection={
-                               "_id": 1,
-                               "username": 1,
-                               "firstname": 1,
-                               "lastname": 1,
-                               "picname": 1}).sort(
-                               [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
-        elif request.method == 'POST':
-            user_data = request.get_json(silent=True)
-            users_collection.update({'username': user_data['username']},
-                                    {'username': user_data['username'],
-                                     'first_name': user_data.get('firstname'),
-                                     'last_name': user_data.get('lastname'),
-                                     'pic_name': user_data.get('picname'),
-                                     'password': bcrypt.hash(user_data['password']),
-                                     },
-                                    upsert=True)
-            return "", 201
+    # @paginated()
+    # @add_rule("users", methods=['GET', 'POST'])
+    # def users(self, limit, skip):
+    #     """
+    #     View or add users
+    #     :param limit: limit for pagination
+    #     :param skip: start index for pagination
+    #     :return:
+    #     """
+    #     users_collection = self._get_collection('users', limited_user=False)
+    #     if request.method == 'GET':
+    #         return jsonify(beautify_db_entry(n) for n in
+    #                        users_collection.find(projection={
+    #                            "_id": 1,
+    #                            "user_name": 1,
+    #                            "first_name": 1,
+    #                            "last_name": 1,
+    #                            "pic_name": 1}).sort(
+    #                            [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+    #     elif request.method == 'POST':
+    #         user_data = self.get_request_data_as_object()
+    #         users_collection.update({'user_name': user_data['user_name']},
+    #                                 {'user_name': user_data['user_name'],
+    #                                  'first_name': user_data.get('first_name'),
+    #                                  'last_name': user_data.get('last_name'),
+    #                                  'pic_name': user_data.get('pic_name'),
+    #                                  'password': bcrypt.hash(user_data['password']),
+    #                                  },
+    #                                 upsert=True)
+    #         return "", 201
 
     @paginated()
-    @add_rule("logs", should_authenticate=False)
+    @add_rule_unauthenticated("logs")
     def logs(self, limit, skip):
         """
         Maybe this should be datewise paginated, perhaps the whole scheme will change.
@@ -999,3 +956,63 @@ class BackendPlugin(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
+
+    ########
+    # UNUSED
+    ########
+
+    @add_rule_unauthenticated("adapter_devices/<device_id>")
+    def adapter_device_by_id(self, device_id):
+        """
+        -- this has to be remade, postponed because it's not for MVP
+        Returns a device by id
+        :param device_id: device id
+        :return:
+        """
+        with self._get_db_connection(False) as db_connection:
+            parsed_db = db_connection[self._aggregator_plugin_unique_name]['parsed']
+            device = parsed_db.find_one({'id': device_id}, sort=[
+                ('_id', pymongo.DESCENDING)])
+            if device is None:
+                return return_error("Device not found", 404)
+            return jsonify(beautify_db_entry(device))
+
+    @requires_aggregator()
+    @paginated()
+    @filtered()
+    @projectioned()
+    @add_rule_unauthenticated("adapter_devices")
+    def adapter_devices(self, limit, skip, mongo_filter, mongo_projection):
+        """
+        Returns all known devices. All parameters are generated by the decorators.
+        :param limit: limit for pagination
+        :param skip: start index for pagination
+        :param fields: fields to return, or None for all
+        :return:
+        """
+        if query is None:
+            group_by = {"_id": "$data.id",
+                        "all":
+                            {"$first": "$$ROOT"}
+                        }
+        else:
+            group_by = {field_name: {'$first': '$' + db_path}
+                        for field_name, db_path in fields}
+            group_by['_id'] = "$data.id"
+            group_by['date_fetcher'] = {"$first": "$_id"}
+
+        with self._get_db_connection(False) as db_connection:
+            parsed_db = db_connection[self._devices_db_name]['parsed']
+            devices = parsed_db.aggregate([
+                {"$sort": SON([('_id', pymongo.DESCENDING)])},
+                {
+                    "$group": group_by
+                },
+                {"$sort": SON([('all.data.name', pymongo.ASCENDING)])},
+                {"$skip": skip},
+                {"$limit": limit}
+            ])
+
+            if query is None:
+                return jsonify([beautify_db_entry(x['all']) for x in devices])
+        return jsonify(devices)
