@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # first build libs
     runner.append_single("axonius-libs", "docker build ../plugins/axonius-libs -t axonius/axonius-libs")
     print("waiting to build axonius-libs")
-    runner.wait_for_all()
+    assert runner.wait_for_all() == 0
 
     # venv
     runner.append_single("venv", "../create_venv.sh")
@@ -39,4 +39,4 @@ if __name__ == '__main__':
     # adapters
     runner.append_docker_pattern('../adapters/*-adapter', 'adapters')
 
-    runner.wait_for_all()
+    assert runner.wait_for_all() == 0
