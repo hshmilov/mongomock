@@ -3,6 +3,7 @@
 __author__ = "Ofir Yefet"
 
 from axonius.adapter_base import AdapterBase
+from axonius.consts import adapter_consts
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import add_rule
 from axonius.parsing_utils import figure_out_os
@@ -17,6 +18,7 @@ import ad_exceptions
 import configparser
 import subprocess
 import os
+import sys
 import tempfile
 import threading
 import time
@@ -224,11 +226,34 @@ class ActiveDirectoryAdapter(AdapterBase):
         all_devices_ids = {device['id']: {'network_interfaces': device['network_interfaces'],
                                           'RESOLVE_STATUS': device['RESOLVE_STATUS']} for device in all_devices}
         to_insert = []
+        no_timestamp_count = 0
         for device_raw in devices_raw_data:
+            if 'userCertificate' in device_raw:
+                # Special case where we want to remove 'userCertificate' key
+                del device_raw['userCertificate']
+            if sys.getsizeof(device_raw) > 1e5:  # Device bigger than ~100kb
+                self.logger.error(f"Device name {device_raw.get('dNSHostName', device_raw.get('name', ''))} "
+                                  f"is to big for insertion. size is {sys.getsizeof(device_raw)} Bytes")
+                continue
+            last_seen = device_raw.get('lastLogon', device_raw.get('lastLogonTimestamp'))
+            if last_seen is None:
+                # No data on the last timestamp of the device. Not inserting this device.
+                no_timestamp_count += 1
+                continue
+            if type(last_seen) != datetime:
+                self.logger.error(f"Unrecognized date format for "
+                                  f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
+                                  f"Got type {type(last_seen)} instead of datetime")
+                continue
+            # Replacing to non timezone (To fit our schema). We know this is not accurate. But since we use
+            # this value in days resolution it is fine
+            last_seen.replace(tzinfo=None)
+
             device_doc = {
                 'hostname': device_raw.get('dNSHostName', device_raw.get('name', '')),
                 'OS': figure_out_os(device_raw.get('operatingSystem', '')),
                 'network_interfaces': [],
+                adapter_consts.LAST_SEEN_PARSED_FIELD: last_seen,
                 'RESOLVE_STATUS': 'PENDING',
                 'id': device_raw['distinguishedName'],
                 'raw': device_raw}
@@ -242,6 +267,8 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         if len(to_insert) > 0:
             devices_collection.insert_many(to_insert)
+        if no_timestamp_count != 0:
+            self.logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
 
     def _create_random_file(self, file_buffer, attrib='w'):
         """ Creating a random file in the temp_file folder.

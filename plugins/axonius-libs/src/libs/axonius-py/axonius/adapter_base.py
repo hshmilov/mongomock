@@ -67,7 +67,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         self.logger.info(f"Setting last seen threshold to {device_alive_thresh}")
 
-        self.last_seen_timedelta = timedelta(device_alive_thresh)
+        self.last_seen_timedelta = timedelta(hours=device_alive_thresh)
 
         self._clients_lock = RLock()
 
@@ -401,16 +401,27 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         now = datetime.now()
 
+        skipped_count = 0
         for parsed_device in self._parse_raw_data(raw_devices):
             parsed_device['raw'] = escape_dict(parsed_device['raw'])
 
-            if LAST_SEEN_PARSED_FIELD in parsed_device and \
-                    now - parsed_device[LAST_SEEN_PARSED_FIELD] > self.last_seen_timedelta:
-                self.logger.info(f"Skipping device {parsed_device} - last seen more then {self.last_seen_timedelta}")
+            if LAST_SEEN_PARSED_FIELD in parsed_device:
+                device_time = parsed_device[LAST_SEEN_PARSED_FIELD]
+                # Getting the time zone from the original device
+                now = datetime.now(tz=device_time.tzinfo)
+
+            if self.last_seen_timedelta.days != -1 and now - device_time > self.last_seen_timedelta:
                 # skip the device is wasn't seen for too long ...
+                # We are not printing logs here since it will blow the log up
+                skipped_count += 1
                 continue
 
             yield parsed_device
+
+        if skipped_count > 0:
+            self.logger.info(f"Skipped {skipped_count} old devices")
+        else:
+            self.logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
 
     def _try_query_devices_by_client(self, client_id):
         """

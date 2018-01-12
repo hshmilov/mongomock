@@ -141,7 +141,13 @@ class EpoAdapter(AdapterBase):
                 'network_interfaces': parse_network(device_raw_data, self.logger),
                 'raw': device_raw_data}
 
-            last_seen = parse_date(device_raw_data['EPOLeafNode.LastUpdate'])
+            try:
+                last_seen = parse_date(device_raw_data['EPOLeafNode.LastUpdate'])
+            except KeyError:
+                # No date for this device, we don't want to enter devices with no date so continuing.
+                self.logger.warning(f"Found device with no date. Not inserting to db. "
+                                    f"device name: {parsed['hostname']}")
+                continue
             if last_seen:
                 parsed[adapter_consts.LAST_SEEN_PARSED_FIELD] = last_seen
 

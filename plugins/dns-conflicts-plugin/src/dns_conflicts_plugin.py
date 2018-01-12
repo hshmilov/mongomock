@@ -1,3 +1,4 @@
+
 from datetime import timedelta, datetime
 import json
 import time
@@ -26,7 +27,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
 
     def _start_activatable(self):
         self.scheduler.resume()
-        self.check_ip_conflict_now()
+        self._check_ip_conflict_now()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -133,8 +134,11 @@ class DnsConflictsPlugin(PluginBase, Activatable):
 
     @add_rule('find_conflicts', methods=['POST'], should_authenticate=False)
     def check_ip_conflict_now(self):
+        self._check_ip_conflict_now()
+        return ""
+
+    def _check_ip_conflict_now(self):
         jobs = self.scheduler.get_jobs()
         reset_job = next(job for job in jobs if job.name == 'find_dns_conflicts_thread')
         reset_job.modify(next_run_time=datetime.now())
         self.scheduler.wakeup()
-        return ""

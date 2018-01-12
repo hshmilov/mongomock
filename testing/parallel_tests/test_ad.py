@@ -63,6 +63,9 @@ class TestAdAdapter(AdapterTestBase):
 
         # Checking that we have devices from both clients
         self.axonius_service.assert_device_aggregated(self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
+        # Testing the ability to filter old devices
+        devices_list = self.axonius_service.get_devices_with_condition({"adapters.hostname": "nonExistance"})
+        assert len(devices_list) == 0, "Found device that should have been filtered"
         # self.axonius_service.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
     def test_ip_resolving(self):
