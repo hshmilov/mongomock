@@ -34,9 +34,9 @@ class ParallelRunner(object):
                             print(f'{name} failed')
                             self.pump_std(name, proc)
                             ret_code = proc.returncode
-                        else:
-                            seconds = int(time.time() - self.start_times[name])
-                            print(f"Finished {name} in {seconds} seconds")
+
+                        seconds = int(time.time() - self.start_times[name])
+                        print(f"Finished {name} in {seconds} seconds")
 
                         del self.wait_list[name]
                         del self.start_times[name]
