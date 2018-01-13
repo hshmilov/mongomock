@@ -6,9 +6,8 @@ from flask import jsonify
 import threading
 import json
 from bson.objectid import ObjectId
-
 from axonius.plugin_base import PluginBase, add_rule
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
 PLUGIN_TYPE = 'execution_controller'
@@ -65,12 +64,14 @@ class ExecutionPlugin(PluginBase):
             # Saving the new action state
             self._save_action_data(action, action_id)
 
-    def _find_adapters_for_action(self, device_id):
+    def _find_adapters_for_action(self, device_id, adapters_whitelist=None):
         """ This function should find the right adapters for executing actions
 
         The function will use the data saved on the devices db in order to find the best adapters for running code
 
         :param str device_id: The Axon id of the device we want to run code on
+        :param list adapters_whitelist: a list of adapters whitelist, which are the only one we can execute code from.
+        e.g., ["ad_adapter", "esx_adapter"]. If None, there is no whitelist.
 
         :return list of tuples: A list of tuple from kind (<adapter_unique_name>, <device_raw_data>). The list is sorted
                              In a descending order of the best adapters to run code on. The device_raw_data is the raw
@@ -78,17 +79,33 @@ class ExecutionPlugin(PluginBase):
 
         .. note:: We should still need to implement this function
         """
-        result = self.request_remote_plugin(
-            'online_device/{0}'.format(device_id), 'aggregator').json()
+
+        try:
+            result = self.request_remote_plugin(
+                'online_device/{0}'.format(device_id), 'aggregator').json()
+        except Exception as e:
+            self.logger.error(
+                "Error querying for device {0}. error: {1}. Are you sure this device exists?".format(device_id, str(e)))
+            raise
+
+        if result is None:
+            self.logger.error(
+                "result is None in _find_adapters_for_action: could not get result about the device. Are you sure the device exists?")
+            raise ValueError(
+                "Error in _find_adapters_for_action: could not get results about the device from the aggregator.")
 
         try:
             for adapter_data in result['adapters']:
-                adapter_name = adapter_data[PLUGIN_UNIQUE_NAME]
+                adapter_unique_name = adapter_data[PLUGIN_UNIQUE_NAME]
+                adapter_name = adapter_data[PLUGIN_NAME]
                 # Currently adding all of the adapters
                 # TODO: Create a smart logic here (next version)
-                yield (adapter_name, adapter_data)
-        except KeyError:
-            return
+
+                if adapters_whitelist is None or adapter_name in adapters_whitelist:
+                    yield (adapter_unique_name, adapter_data)
+        except Exception as e:
+            self.logger.error("Error searching for adapters for device {0}. error: {1}".format(device_id, str(e)))
+            raise
 
     def request_remote_plugin_thread(self, action_id, plugin_unique_name, method, data):
         """ Function for request action from other adapter
@@ -237,7 +254,8 @@ class ExecutionPlugin(PluginBase):
 
         return action_id
 
-    def _create_request_thread(self, action_type, device_id, issuer, data, adapters_tuple, action_id):
+    def _create_request_thread(self, action_type, device_id, issuer, data, adapters_tuple, action_id,
+                               adapters_whitelist=None):
         """ A function for creating an action request
 
         This function should run as a new thread (since it could block for a while). It will try to request action from
@@ -250,46 +268,59 @@ class ExecutionPlugin(PluginBase):
         :param dict data: Extra data for the action
         :param list adapters_tuple: A list of tuples containing the adapters capable of running action on this device
         :param str action_id: The action id of this action thread
+        :param list adapters_whitelist: a whitelist of adapters from which we can execute code. e.g. ["ad_adapter"].
         """
-        if not adapters_tuple:
-            adapters_tuple = list(self._find_adapters_for_action(device_id))
 
-        adapters_count = 1
-        for adapter_unique_name, device_raw_data in adapters_tuple:
-            # Requesting the adapter for the action
-            result = self.request_action(action_type,
-                                         self.ec_callback,
-                                         data,
-                                         adapter_unique_name,
-                                         action_id,
-                                         device_raw_data)
+        try:
+            if not adapters_tuple:
+                adapters_tuple = list(self._find_adapters_for_action(device_id, adapters_whitelist))
 
-            if result.status_code == 200:
-                # Action submitted successfully, Adding it to db
-                self._save_action_data({'action_type': action_type,
-                                        'data_for_action': data,
-                                        'adapter_unique_name': adapter_unique_name,
-                                        'device_id': device_id,
-                                        'issuer_unique_name': issuer,
-                                        'adapters_tuple': adapters_tuple[adapters_count:],
-                                        'status': 'pending',
-                                        'output': {}},
+            adapters_count = 1
+            for adapter_unique_name, device_raw_data in adapters_tuple:
+                # Requesting the adapter for the action
+                self.logger.info(f"requesting {action_type} from {adapter_unique_name}, action id is {action_id}")
+                result = self.request_action(action_type,
+                                             self.ec_callback,
+                                             data,
+                                             adapter_unique_name,
+                                             action_id,
+                                             device_raw_data)
+
+                if result.status_code == 200:
+                    # Action submitted successfully, Adding it to db
+                    self._save_action_data({'action_type': action_type,
+                                            'data_for_action': data,
+                                            'adapter_unique_name': adapter_unique_name,
+                                            'device_id': device_id,
+                                            'issuer_unique_name': issuer,
+                                            'adapters_tuple': adapters_tuple[adapters_count:],
+                                            'status': 'pending',
+                                            'output': {}},
+                                           action_id)
+                    self.request_remote_plugin('action_update/{0}'.format(action_id),
+                                               plugin_unique_name=issuer,
+                                               method='POST',
+                                               data=json.dumps({'status': 'pending', 'output': ''}))
+                    return json.dumps({'action_id': action_id})
+                self.logger.warning("Adapter failed running code on {id}. Reason: {mess}".format(id=device_id,
+                                                                                                 mess=result.content))
+                adapters_count += 1
+            self.request_remote_plugin('action_update/{0}'.format(action_id),
+                                       plugin_unique_name=issuer,
+                                       method='POST',
+                                       data=json.dumps({'status': 'failed', 'output': ''}))
+            self._save_action_data({'status': 'failed',
+                                    'product': 'No executing adapters'},
+                                   action_id)
+        except Exception as e:
+            # Just update the status and raise it.
+            try:
+                self._save_action_data({'status': 'failed',
+                                        'product': 'General error happened: {0}'.format(str(e))},
                                        action_id)
-                self.request_remote_plugin('action_update/{0}'.format(action_id),
-                                           plugin_unique_name=issuer,
-                                           method='POST',
-                                           data=json.dumps({'status': 'pending', 'output': ''}))
-                return json.dumps({'action_id': action_id})
-            self.logger.warning("Adapter failed running code on {id}. Reason: {mess}".format(id=device_id,
-                                                                                             mess=result.content))
-            adapters_count += 1
-        self.request_remote_plugin('action_update/{0}'.format(action_id),
-                                   plugin_unique_name=issuer,
-                                   method='POST',
-                                   data=json.dumps({'status': 'failed', 'output': ''}))
-        self._save_action_data({'status': 'failed',
-                                'product': 'No executing adapters'},
-                               action_id)
+            except Exception:
+                pass
+            raise
 
     def request_action(self, action_type, callback_function, data_for_action,
                        plugin_unique_name, action_id, device_raw):
@@ -311,8 +342,7 @@ class ExecutionPlugin(PluginBase):
 
         :return result: the result of the request (as returned from the REST request)
         """
-        if data_for_action:
-            data = data_for_action.copy()
+        data = data_for_action.copy() if data_for_action else {}
 
         data['device_data'] = device_raw
         result = self.request_remote_plugin('action/' + action_type + '?action_id=' + action_id,
@@ -349,6 +379,13 @@ class ExecutionPlugin(PluginBase):
         # Getting the action parameters
         data_for_action = self.get_request_data_as_object()
 
+        # Checkout if we have a whitelist of adapters. If we do have, remove it from the data_for_action
+        # object, as it passes to the execution function.
+
+        adapters_whitelist = data_for_action.pop("adapters_to_whitelist", None)
+        if adapters_whitelist is not None:
+            self.logger.info(f"Using adapters {adapters_whitelist}")
+
         action_id = self._save_action_data({'action_type': action_type,
                                             'issuer_unique_name': issuer_unique_name,
                                             'status': 'pending',
@@ -360,6 +397,7 @@ class ExecutionPlugin(PluginBase):
                                          issuer_unique_name,
                                          data_for_action,
                                          None,
-                                         action_id)
+                                         action_id,
+                                         adapters_whitelist)
 
         return jsonify({'action_id': action_id})

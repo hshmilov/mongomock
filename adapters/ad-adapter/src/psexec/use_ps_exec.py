@@ -1,4 +1,4 @@
-"""usePsexec.py: Python script to enable some basic psexec commands.
+"""use_ps_exec.py: Python script to enable some basic psexec commands.
    Works only on python 2.x !!!
 """
 __author__ = "Ofir Yefet"
@@ -83,18 +83,22 @@ def run_shell(psObj, args):
     # Running the service (It will look for the config file in the remote sytem)
     run_service(psObj, {})
 
-    get_result = 1
-    execution_time = time.time()
     time.sleep(5)  # Sleeping a bit to let the command start
-    # Waiting 30 seconds for the file to appear
-    while (get_result != 0) or time.time() - execution_time > 30:
+    execution_time = time.time()
+
+    # Waiting a maximum of 30 seconds for the file to appear
+    while (time.time() - execution_time) < 30:
         try:
             get_result = get_file(psObj, Namespace(
                 remote_path=DEFAULT_REMOTE_RESULT_PATH, local_path=args.result_path))
-        except Exception as e:
+            if get_result == 0:
+                # We could not get the file,
+                return 0
+        except Exception:
             pass
         time.sleep(5)
-    return 0
+
+    return 1000
 
 
 def main():

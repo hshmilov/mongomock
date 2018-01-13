@@ -21,11 +21,14 @@ import time
 
 URL = "http://localhost/api/version?whoami=periodic_api_version_runner"
 SLEEP_COUNT = 10  # In seconds.
+DEBUG = False
 
 
 def debug_print(s):
-    s = "[periodic-api-version-runner] {0}".format(s)
-    print(s)
+    if DEBUG is True:
+        s = "[periodic-api-version-runner] {0}".format(s)
+        print(s)
+        sys.stdout.flush()
 
 
 def main():

@@ -5,6 +5,7 @@ It implements API calls that are expected to be present in all adapters.
 
 from axonius import adapter_exceptions
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.parsing_utils import get_exception_string
 from axonius.utils.mongo_escaping import escape_dict
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.consts.adapter_consts import LAST_SEEN_PARSED_FIELD
@@ -305,9 +306,11 @@ class AdapterBase(PluginBase, Feature, ABC):
         try:
             # Running the function, it should block until action is finished
             result = func(device_data, **kwargs)
-        except Exception as e:
+        except Exception:
+            self.logger.exception(f"Failed running actionid {action_id}")
             self._update_action_data(action_id, status="failed", output={
-                "result": "Failure", "product": str(e)})
+                "result": "Failure", "product": get_exception_string()})
+            return
 
         # Sending the result to the issuer
         self._update_action_data(action_id, status="finished", output=result)
@@ -325,10 +328,13 @@ class AdapterBase(PluginBase, Feature, ABC):
         request_data = self.get_request_data_as_object()
         device_data = request_data.pop('device_data')
 
-        if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'delete_file']:
+        if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'execute_wmi_queries',
+                               'delete_file']:
             return return_error("Invalid action type", 400)
 
         needed_action_function = getattr(self, action_type)
+
+        self.logger.info("Got action type {0}. Request data is {1}".format(action_type, request_data))
 
         self._create_action_thread(
             device_data, needed_action_function, action_id, **request_data)
@@ -344,6 +350,9 @@ class AdapterBase(PluginBase, Feature, ABC):
         raise RuntimeError("Not implemented yet")
 
     def execute_shell(self, device_data, shell_command):
+        raise RuntimeError("Not implemented yet")
+
+    def execute_wmi_queries(self, device_data, wmi_queries):
         raise RuntimeError("Not implemented yet")
 
     def delete_file(self, device_data, file_path):

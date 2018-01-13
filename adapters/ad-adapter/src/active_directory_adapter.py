@@ -22,12 +22,9 @@ import sys
 import tempfile
 import threading
 import time
+import json
 from datetime import datetime, timedelta
 from axonius.dns_utils import query_dns
-
-# Plugin Version (Should be updated with each new version)
-AD_VERSION = '1.0.0'
-PLUGIN_TYPE = 'ad_adapter'
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -50,9 +47,10 @@ class ActiveDirectoryAdapter(AdapterBase):
         # Getting needed paths for execution
         config = configparser.ConfigParser()
         config.read('plugin_config.ini')
-        self.python_27_path = config['paths']['python_27_path']
-        self.use_psexec_path = config['paths']['psexec_path']
-        self.ldap_page_size = int(config['others']['ldap_page_size'])
+        self.__python_27_path = config['paths']['python_27_path']
+        self.__use_psexec_path = config['paths']['psexec_path']
+        self.__use_wmiquery_path = config['paths']['wmiquery_path']
+        self.__ldap_page_size = int(config['others']['ldap_page_size'])
 
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
@@ -89,7 +87,7 @@ class ActiveDirectoryAdapter(AdapterBase):
     def _connect_client(self, dc_details):
         try:
             return LdapConnection(self.logger,
-                                  self.ldap_page_size,
+                                  self.__ldap_page_size,
                                   dc_details['dc_name'],
                                   dc_details['domain_name'],
                                   dc_details['query_user'],
@@ -325,6 +323,31 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         raise ad_exceptions.IpResolveError(err)
 
+    def _get_basic_wmiquery_command(self, device_data):
+        """ Function for formatting the base wmiqery command.
+
+        :param dict device_data: The device_data used to create this command
+        :return string: The basic command
+        """
+        clients_config = self._get_clients_config()
+        wanted_client = device_data['client_used']
+        for client_config in clients_config:
+            client_config = client_config['client_config']
+            if client_config["dc_name"] == wanted_client:
+                # We have found the correct client. Getting credentials
+                domain_name, user_name = client_config['admin_user'].split('\\')
+                password = client_config['admin_password']
+                try:
+                    device_ip = self._resolve_device_name(
+                        device_data['data']['hostname'], client_config)
+                except Exception as e:
+                    self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
+                    raise ad_exceptions.IpResolveError("Cant Resolve Ip")
+
+                # Putting the file using usePsexec.py
+                return [self.__python_27_path, self.__use_wmiquery_path, domain_name, user_name, password, device_ip]
+        raise ad_exceptions.NoClientError()  # Couldn't find an appropriate client
+
     def _get_basic_psexec_command(self, device_data):
         """ Function for formatting the base psexec command.
 
@@ -345,15 +368,9 @@ class ActiveDirectoryAdapter(AdapterBase):
                     self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
                     raise ad_exceptions.IpResolveError("Cant Resolve Ip")
 
-                # Putting the file using use_ps_exec.py
-                command = ('{py} {psexec} --addr {addr} --username "{user}" '
-                           '--password "{password}" --domain "{domain}"').format(py=self.python_27_path,
-                                                                                 psexec=self.use_psexec_path,
-                                                                                 addr=device_ip,
-                                                                                 user=user_name,
-                                                                                 password=password,
-                                                                                 domain=domain_name)
-                return command
+                # Putting the file using usePsexec.py
+                return [self.__python_27_path, self.__use_psexec_path, "--addr", device_ip, "--username", user_name,
+                        "--password", password, "--domain", domain_name]
         raise ad_exceptions.NoClientError()  # Couldn't find an appropriate client
 
     def put_file(self, device_data, file_buffer, dst_path):
@@ -365,12 +382,9 @@ class ActiveDirectoryAdapter(AdapterBase):
         file_path = self._create_random_file(file_buffer)
         try:
             # Getting the base command (same for all actions)
-            base_command = self._get_basic_psexec_command(device_data)
+            command = self._get_basic_psexec_command(device_data)
+            command = command + ["sendfile", "--remote", dst_path, "--local", file_path]
 
-            # Building the full command
-            command = "{base_command} sendfile --remote {remote} --local {local}".format(base_command=base_command,
-                                                                                         remote=dst_path,
-                                                                                         local=file_path)
             # Running the command
             command_result = subprocess.run(command, stdout=subprocess.PIPE)
 
@@ -399,12 +413,9 @@ class ActiveDirectoryAdapter(AdapterBase):
         local_file_path = self._create_random_file('')
         try:
             # Getting the base command (same for all actions)
-            base_command = self._get_basic_psexec_command(device_data)
+            command = self._get_basic_psexec_command(device_data)
+            command = command + ["getfile", "--remote", remote_file_path, "--local", local_file_path]
 
-            # Building the full command
-            command = "{base_command} getfile --remote {remote} --local {local}".format(base_command=base_command,
-                                                                                        remote=remote_file_path,
-                                                                                        local=local_file_path)
             # Running the command
             command_result = subprocess.run(command, stdout=subprocess.PIPE)
 
@@ -433,11 +444,9 @@ class ActiveDirectoryAdapter(AdapterBase):
         exe_path = self._create_random_file(binary_buffer, 'wb')
         try:
             # Getting the base command (same for all actions)
-            base_command = self._get_basic_psexec_command(device_data)
+            command = self._get_basic_psexec_command(device_data)
+            command = command + ["runexe", "--exepath", exe_path]
 
-            # Building the full command
-            command = "{base_command} runexe --exepath {exe_path}".format(base_command=base_command,
-                                                                          exe_path=exe_path)
             # Running the command
             command_result = subprocess.run(command, stdout=subprocess.PIPE)
 
@@ -457,6 +466,43 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         return {"result": result, "product": product}
 
+    def execute_wmi_queries(self, device_data, wmi_queries):
+        # Creating a file from the buffer (to pass it on to PSEXEC)
+        # Adding separator to the commands list
+        queries = wmi_queries
+        if queries is None:
+            return {"result": 'Failure', "product": 'No WMI Queries list command supplied'}
+
+        # Getting the base command (same for all actions)
+        command = self._get_basic_wmiquery_command(device_data)
+        product = []
+        for single_query in queries:
+            single_command = command + [single_query]
+
+            self.logger.info("running query {0}".format(single_query))
+
+            # Running the command
+            command_result = subprocess.run(
+                single_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            # Checking if return code is zero, if not, it will raise an exception
+            try:
+                command_result.check_returncode()
+            except subprocess.CalledProcessError as e:
+                raise ValueError("single_query: {0}, stdout: {1}, stderr: {2}, exception: {3}"
+                                 .format(single_query,
+                                         str(command_result.stdout),
+                                         str(command_result.stderr),
+                                         str(e)))
+
+            product.append(json.loads(command_result.stdout.strip()))
+            self.logger.info("query returned with return code 0 (successfully).")
+
+        # If we got here that means the the command executed successfuly
+        result = 'Success'
+
+        return {"result": result, "product": product}
+
     def execute_shell(self, device_data, shell_command):
         # Creating a file from the buffer (to pass it on to PSEXEC)
         # Adding separator to the commands list
@@ -471,17 +517,12 @@ class ActiveDirectoryAdapter(AdapterBase):
         result_path = self._create_random_file('')
         try:
             # Getting the base command (same for all actions)
-            base_command = self._get_basic_psexec_command(device_data)
-
-            # Building the full command
-            command = ("{base_command} runshell --command_path {command_path} "
-                       "--result_path {result_path}").format(base_command=base_command,
-                                                             command_path=conf_path,
-                                                             result_path=result_path)
+            command = self._get_basic_psexec_command(device_data)
+            command = command + ["runshell", "--command_path", conf_path, "--result_path", result_path]
 
             # Running the command
             command_result = subprocess.run(
-                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             # Checking if return code is zero, if not, it will raise an exception
             command_result.check_returncode()
@@ -497,7 +538,8 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         except subprocess.CalledProcessError as e:
             result = 'Failure'
-            product = str(command_result.stdout)
+            product = "stdout: {0}, stderr: {1}, exception: {2}"\
+                .format(str(command_result.stdout), str(command_result.stderr), str(e))
         except Exception as e:
             raise e
         finally:

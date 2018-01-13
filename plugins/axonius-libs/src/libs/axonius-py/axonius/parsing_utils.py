@@ -6,12 +6,25 @@ __author__ = "Mark Segal"
 
 import codenamize
 import re
+import sys
+import os
 import dateutil.parser
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
 ubuntu_full = re.compile(r'([Uu]buntu \d\d\.\d\d(?:\.\d+)?)')
 mobile_version = re.compile(r'(\d+\.\d+.\d+)')
+
+
+def get_exception_string():
+    """
+    when inside a catch exception flow, returns a really informative string representing it.
+    :return: a string representing the exception.
+    """
+
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    return "{0}:{1}, in location {2}:{3}".format(exc_type, exc_obj, fname, exc_tb.tb_lineno)
 
 
 def figure_out_os(s):

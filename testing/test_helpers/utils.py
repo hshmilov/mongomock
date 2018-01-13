@@ -5,14 +5,16 @@ from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
 
 def try_until_not_thrown(times, sleep_period, runnable, *args, **kwargs):
     success = False
-    for x in range(1, times):
+    i = 0
+
+    while success is False:
         try:
-            runnable(*args, **kwargs)
-            success = True
-            return
+            return runnable(*args, **kwargs)
         except:
+            i = i + 1
+            if i == times:
+                raise
             time.sleep(sleep_period)
-    assert success
 
 
 def populate_test_devices(axonius_fixture, ad_fixture):
