@@ -55,4 +55,4 @@ class SplunkConnection(object):
 
     def get_nexpose_devices(self):
         return self.fetch('search sourcetype="rapid7:nexpose:asset" site_id=* index=rapid7 | dedup asset_id | fields version asset_id ip hostname site_name version mac description installed_software services',
-                          lambda raw: dict([x[:-1].split('="', 2) for x in raw.split(', ')]))
+                          lambda raw: dict([x.split('="', 1) for x in raw[:-1].split('", ')]))
