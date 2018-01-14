@@ -15,7 +15,7 @@ fi
 
 
 echo "Running unitests"
-pytest --ignore=testing --ignore=plugins/gui/src/frontend --durations=0 --junitxml=testing/reporting/ut_report.xml
+pytest --ignore=testing --ignore=plugins/gui/src/frontend --junitxml=testing/reporting/ut_report.xml
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"

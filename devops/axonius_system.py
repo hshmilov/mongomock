@@ -9,17 +9,17 @@ import importlib
 
 
 def start():
-    db.MongoService().start_and_wait()
-    core.CoreService().start_and_wait()
-    aggregator.AggregatorService().start_and_wait()
-    gui.GuiService().start_and_wait()
+    services = [db.MongoService(), core.CoreService(), aggregator.AggregatorService(), gui.GuiService()]
+    for service in services:
+        service.take_process_ownership()
+        service.start_and_wait()
 
 
 def stop():
-    gui.GuiService().stop(should_delete=False)
-    aggregator.AggregatorService().stop(should_delete=False)
-    core.CoreService().stop(should_delete=False)
-    db.MongoService().stop(should_delete=False)
+    services = [db.MongoService(), core.CoreService(), aggregator.AggregatorService(), gui.GuiService()]
+    for service in services[::-1]:
+        service.take_process_ownership()
+        service.stop(should_delete=False)
 
 
 def start_plugin(plugin_name):

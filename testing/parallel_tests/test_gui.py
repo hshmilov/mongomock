@@ -1,6 +1,8 @@
 import pytest
 from services.axonius_service import get_service
-from test_helpers.utils import try_until_not_thrown
+from test_helpers.device_helper import get_device_dict, filter_by_plugin_name
+
+GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 
 
 def _count_num_of_tags(device):
@@ -8,27 +10,25 @@ def _count_num_of_tags(device):
                 current_tag.get('tagvalue', '') != ''])
 
 
-@pytest.mark.skip
 def test_tags_via_gui():
     axonius_service = get_service()
     gui_service = axonius_service.gui
     gui_service.login_default_user()
 
-    # can't start the test until we have some devices aggregated
-    # when parallel test run there are many adapters and we just wait for devices
-    # if you want to run this test standalone - just populate db with some devices
-    # It can be a good idea in the future to provide such a utility function
-    def has_at_least_one_device():
-        assert len(gui_service.get_devices().json()) > 2
+    for x in [1, 2, 3]:
+        axonius_service.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
 
-    try_until_not_thrown(15, 5, has_at_least_one_device)
+    def get_gui_test_devices():
+        devices_response = gui_service.get_devices()
+        assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
+                                                    f"{devices_response.content}"
+
+        tag_test_device = filter_by_plugin_name(devices_response.json(), GUI_TEST_PLUGIN)
+        return tag_test_device
 
     def create_tag():
         def create_one_tag():
-            devices_response = gui_service.get_devices()
-            assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
-                                                        f"{devices_response.content}"
-            tag_test_device = devices_response.json()[0]
+            tag_test_device = get_gui_test_devices()[0]
 
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tag_value = 'test_create_tag'
@@ -41,7 +41,7 @@ def test_tags_via_gui():
             gui_service.remove_tags_from_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
 
         def create_existing_tag():
-            tag_test_device = gui_service.get_devices().json()[1]
+            tag_test_device = get_gui_test_devices()[1]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tag_value = 'another_test_create_tag'
             gui_service.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
@@ -57,7 +57,7 @@ def test_tags_via_gui():
             gui_service.remove_tags_from_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
 
         def create_multiple_tags_on_one_device():
-            tag_test_device = gui_service.get_devices().json()[2]
+            tag_test_device = get_gui_test_devices()[2]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tags = ['testing_is_awesome', 'our_ci_cures_cancer']
             gui_service.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': test_tags})
@@ -72,7 +72,7 @@ def test_tags_via_gui():
 
     def remove_tag():
         def remove_one_tag():
-            tag_test_device = gui_service.get_devices().json()[0]
+            tag_test_device = get_gui_test_devices()[0]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tag_value = 'test_remove_tag'
             gui_service.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
@@ -84,7 +84,7 @@ def test_tags_via_gui():
                         current_tag['tagvalue'] != '']) == starting_num_of_tags_on_device
 
         def remove_non_existing_tag():
-            tag_test_device = gui_service.get_devices().json()[1]
+            tag_test_device = get_gui_test_devices()[1]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tag_value = 'another_remove_tag'
             gui_service.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': [test_tag_value]})
@@ -96,7 +96,7 @@ def test_tags_via_gui():
                         current_tag['tagvalue'] != '']) == starting_num_of_tags_on_device + 1
 
         def remove_multiple_tags():
-            tag_test_device = gui_service.get_devices().json()[2]
+            tag_test_device = get_gui_test_devices()[2]
             starting_num_of_tags_on_device = _count_num_of_tags(tag_test_device)
             test_tag_value = ['removing_tags_are awesome', 'our_ci_cures_cancer']
             gui_service.add_tags_to_device(tag_test_device['internal_axon_id'], {'tags': test_tag_value})
@@ -133,3 +133,7 @@ def test_login():
 
     response = gui_service.login_user(gui_service.default_user)
     assert response.status_code == 200
+
+
+if __name__ == '__main__':
+    pytest.main(["parallel_tests/test_gui.py"])

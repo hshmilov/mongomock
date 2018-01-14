@@ -1,9 +1,9 @@
+import time
 from abc import ABC, abstractmethod
-from retrying import retry
 
 
 class AxonService(ABC):
-    def __init__(self, **kwargs):
+    def __init__(self):
         pass
 
     @abstractmethod
@@ -18,6 +18,16 @@ class AxonService(ABC):
     def is_up(self):
         pass
 
-    @retry(wait_fixed=1000, stop_max_delay=60 * 5 * 1000)  # Try every 0.25 seconds for 5 minutes
-    def wait_for_service(self):
-        assert self.is_up(), "Service failed to start"
+    def wait_for_service(self, interval=0.25, num_intervals=4 * 60 * 2):
+
+        success = False
+        for x in range(1, num_intervals):
+            try:
+                assert self.is_up()
+                success = True
+                break
+            except:
+                time.sleep(interval)
+
+        if not success:
+            raise Exception("Service failed to start")

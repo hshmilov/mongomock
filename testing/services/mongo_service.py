@@ -56,5 +56,8 @@ class MongoService(ComposeService):
     def get_databases(self):
         return self.client.database_names()
 
+    def get_devices_db(self, aggregator_unique_name):
+        return self.client[aggregator_unique_name]['devices_db']
+
     def get_devices(self, aggregator_unique_name):
-        return self.client[aggregator_unique_name]['devices_db'].find({})
+        return self.get_devices_db(aggregator_unique_name).find({})

@@ -4,10 +4,8 @@ from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
 
 
 def try_until_not_thrown(times, sleep_period, runnable, *args, **kwargs):
-    success = False
     i = 0
-
-    while success is False:
+    while True:
         try:
             return runnable(*args, **kwargs)
         except:

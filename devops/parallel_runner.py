@@ -36,10 +36,10 @@ class ParallelRunner(object):
                             ret_code = proc.returncode
 
                         seconds = int(time.time() - self.start_times[name])
-                        print(f"Finished {name} in {seconds} seconds")
-
                         del self.wait_list[name]
                         del self.start_times[name]
+
+                        print(f"Finished {name} in {seconds} seconds. Still waiting for {list(self.wait_list.keys())}")
 
                 if bool(self.wait_list):
                     time.sleep(sleep_period)

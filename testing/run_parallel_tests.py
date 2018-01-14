@@ -1,11 +1,11 @@
 import pytest
-import sys
 import glob
 import os
+import sys
+import time
 
 from devops.parallel_runner import ParallelRunner
 from services.axonius_service import get_service
-import sys
 
 
 class ParallelTestsRunner(ParallelRunner):

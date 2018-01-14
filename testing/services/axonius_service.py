@@ -41,8 +41,14 @@ class AxoniusService(object):
         for service in self.axonius_services:
             service.wait_for_service()
 
+    def get_devices_db(self):
+        return self.db.get_devices_db(self.aggregator.unique_name)
+
+    def insert_device(self, device_data):
+        self.get_devices_db().insert_one(device_data)
+
     def get_devices_with_condition(self, cond):
-        cursor = self.db.client[self.aggregator.unique_name]['devices_db'].find(cond)
+        cursor = self.get_devices_db().find(cond)
         return list(cursor)
 
     def get_device_by_id(self, adapter_name, device_id):
