@@ -40,7 +40,7 @@ class StressAdapter(AdapterBase):
 
         if device_count > 0xffff:
             # We don't support it mostly because of our network interfaces generation.
-            raise NotImplemented("Stress adapter does not support more than 0xffff devices for the same client.")
+            raise NotImplementedError("Stress adapter does not support more than 0xffff devices for the same client.")
 
         list_of_devices = []
 

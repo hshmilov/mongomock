@@ -144,7 +144,7 @@ class SentinelOneAdapter(AdapterBase):
         #     OSX_NAME: """system_profiler SPHardwareDataType | awk '/UUID/ { print $3; }'""",
         #     LINUX_NAME: """cat /sys/class/dmi/id/product_uuid"""
         # }
-        raise NotImplemented('; cannot be used as a separator')
+        raise NotImplementedError('; cannot be used as a separator')
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
         """

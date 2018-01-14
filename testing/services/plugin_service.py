@@ -68,10 +68,10 @@ class PluginService(ComposeService):
             pass
 
     def logger(self):
-        raise NotImplemented("TBD!")
+        raise NotImplementedError("TBD!")
 
     def action_update(self, action_id):
-        raise NotImplemented("TBD!")
+        raise NotImplementedError("TBD!")
 
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
@@ -132,7 +132,7 @@ class AdapterService(PluginService):
         assert response.status_code == 200, str(response)
 
     def action(self, action_type):
-        raise NotImplemented("TBD!")
+        raise NotImplementedError("TBD!")
 
     def schema(self, schema_type="general", api_key=None):
         return self.get('{0}/{1}'.format('schema', schema_type), api_key=self.api_key if api_key is None else api_key)
