@@ -1,3 +1,4 @@
+import pytest
 from services.axonius_service import get_service
 from test_helpers.utils import try_until_not_thrown
 
@@ -7,6 +8,7 @@ def _count_num_of_tags(device):
                 current_tag.get('tagvalue', '') != ''])
 
 
+@pytest.mark.skip
 def test_tags_via_gui():
     axonius_service = get_service()
     gui_service = axonius_service.gui
