@@ -13,23 +13,23 @@ class AdapterTestBase(object):
 
     @property
     def adapter_service(self):
-        raise NotImplemented()
+        raise NotImplementedError
 
     @property
     def adapter_name(self):
-        raise NotImplemented()
+        raise NotImplementedError
 
     @property
     def some_client_id(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def some_client_details(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def some_device_id(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def drop_clients(self):
         self.axonius_service.db.client[self.adapter_service.unique_name].drop_collection('clients')

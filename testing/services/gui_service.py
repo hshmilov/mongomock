@@ -2,13 +2,14 @@ import pytest
 import requests
 import json
 from services.plugin_service import PluginService
+from test_credentials.test_gui_credentials import *
 
 
 class GuiService(PluginService):
     def __init__(self, **kwargs):
         super().__init__(service_dir='../plugins/gui', **kwargs)
         self._session = requests.Session()
-        self.default_user = {'user_name': 'admin', 'password': 'bestadminpassword'}
+        self.default_user = DEFAULT_USER
         self.logged_in = False
 
     def __del__(self):

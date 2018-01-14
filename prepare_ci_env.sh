@@ -6,7 +6,7 @@ docker volume rm $(docker volume ls -q)
 docker rmi $(docker images -q --filter=reference='axonius/*')
 
 echo "Logging to docker hub and pulling axonius-base-image"
-docker login -u axoniusdockerreadonly -p 48GguwDPOQbMNYj08Pmb
+source testing/test_credentials/docker_login.sh
 docker pull axonius/axonius-base-image
 
 echo "Building all images"

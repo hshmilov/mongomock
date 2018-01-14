@@ -2,15 +2,7 @@ import pytest
 
 from services.adapters.symantec_service import SymantecService, symantec_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-
-# this is our aws SEP manager and its name is Windows-Sep-Server
-client_details = {
-    "Symantec_Domain": "10.0.2.171",
-    "username": "admin",
-    "password": "7ldUJKtYG8oe1243fds"
-}
-
-SOME_DEVICE_ID = 'DEDB73460A0002AB70C44D039ADC2249'  # our ESX machine windows8
+from test_credentials.test_symantec_credentials import *
 
 
 class TestSymantecAdapter(AdapterTestBase):

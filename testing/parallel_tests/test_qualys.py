@@ -1,14 +1,6 @@
 from services.adapters.qualys_service import QualysService, qualys_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-
-
-client_details = {
-    "Qualys_Domain": "qualysapi.qg2.apps.qualys.eu",
-    "username": "axnus5fs",
-    "password": "7ldUJKtYG8oe1243fds"
-}
-
-SOME_DEVICE_ID = '1d05fe7f-7abe-4087-9e32-9c39a2442e94'  # ip-10-0-229-166 test-qualys-linux
+from test_credentials.test_qualys_credentials import *
 
 
 class TestQualysAdapter(AdapterTestBase):

@@ -1,15 +1,7 @@
 import pytest
 from services.adapters.nexpose_service import NexposeService, nexpose_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-
-
-nexpose_details = {
-    "host": "192.168.20.10",
-    "port": "3780",
-    "username": "nxadmin",
-    "password": "IAmDeanSysMan1@",
-    "verify_ssl": False
-}
+from test_credentials.test_nexpose_credentials import *
 
 
 class TestNexposeAdapter(AdapterTestBase):
@@ -31,7 +23,7 @@ class TestNexposeAdapter(AdapterTestBase):
 
     @property
     def some_device_id(self):
-        return '10'
+        return SOME_DEVICE_ID
 
     def test_fetch_devices(self):
         super().test_fetch_devices()
@@ -39,5 +31,6 @@ class TestNexposeAdapter(AdapterTestBase):
 
         # check the device is read by adapter
         devices_list = devices_as_dict[self.some_client_id]['parsed']
-        nexpose_device = list(filter(lambda device: device['hostname'] == 'nexpose', devices_list))
-        assert nexpose_device[0]['raw']['mac_address'] == '00:50:56:91:00:66'
+        nexpose_device = list(filter(lambda device: device['hostname'] == FETCHED_DEVICE_EXAMPLE['hostname'],
+                                     devices_list))
+        assert nexpose_device[0]['raw']['mac_address'] == FETCHED_DEVICE_EXAMPLE['raw']['mac_address']
