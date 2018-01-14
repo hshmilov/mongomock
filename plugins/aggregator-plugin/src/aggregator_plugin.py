@@ -213,7 +213,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 current_adapters = current_adapters.json()
 
-                self.logger.info("registered adapters = {}".format(current_adapters))
+                self.logger.debug("registered adapters = {}".format(current_adapters))
 
                 # let's add jobs for all adapters
                 for adapter_name, adapter in current_adapters.items():
@@ -496,7 +496,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                               self.__device_inserter,
                                                               insert_device_to_db,
                                                               args=[device_to_update, parsed_to_insert])))
-
+                devices_count = len(promises)
                 promise_all = Promise.all(promises)
                 Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
                 promises = []
@@ -504,7 +504,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                     self.logger.error("Error in insertion to DB", exc_info=promise_all.reason)
                 time_for_client = datetime.now() - time_before_client
                 self.logger.info(f"Finished aggregating for client {client_name} from adapter {plugin_unique_name},"
-                                 f" aggregation took {time_for_client.seconds}.")
+                                 f" aggregation took {time_for_client.seconds} seconds and returned {devices_count}.")
 
         except (AdapterOffline, ClientsUnavailable) as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out

@@ -50,6 +50,7 @@ class TestAdAdapter(AdapterTestBase):
         self.axonius_service.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
 
         def assert_ip_resolved():
+            self.axonius_service.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
             interfaces = self.axonius_service.get_device_network_interfaces(self.adapter_service.unique_name,
                                                                             DEVICE_ID_FOR_CLIENT_1)
             assert len(interfaces) > 0

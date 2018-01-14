@@ -203,24 +203,24 @@ class Core(PluginBase):
             POST - For registering. Should send the following data on the page:
                    {"plugin_name": <plugin_name>, "plugin_unique_name"(Optional):<plugin_unique_name>}
         """
-        with self.adapters_lock:  # Locking the adapters list, in case "register" will get called from 2 plugins
-            if self.get_method() == 'GET':
-                api_key = self.get_request_header('x-api-key')
-                if not api_key:
-                    # No api_key, Returning the current online plugins. This will be used by the aggregator
-                    # To find out which adapters are available
-                    online_devices = self._get_online_plugins()
-                    return jsonify(online_devices)
-                else:
-                    # This is a registered check, we should get the plugin name (a parameter) and tell if its
-                    # In our online list
-                    unique_name = request.args.get('unique_name')
-                    if unique_name in self.online_plugins:
-                        if api_key == self.online_plugins[unique_name]['api_key']:
-                            return 'OK'
-                    # If we reached here than plugin is not registered, returning error
-                    return return_error('Plugin not registered', 404)
+        if self.get_method() == 'GET':
+            api_key = self.get_request_header('x-api-key')
+            if not api_key:
+                # No api_key, Returning the current online plugins. This will be used by the aggregator
+                # To find out which adapters are available
+                online_devices = self._get_online_plugins()
+                return jsonify(online_devices)
+            else:
+                # This is a registered check, we should get the plugin name (a parameter) and tell if its
+                # In our online list
+                unique_name = request.args.get('unique_name')
+                if unique_name in self.online_plugins:
+                    if api_key == self.online_plugins[unique_name]['api_key']:
+                        return 'OK'
+                # If we reached here than plugin is not registered, returning error
+                return return_error('Plugin not registered', 404)
 
+        with self.adapters_lock:  # Locking the adapters list, in case "register" will get called from 2 plugins
             # method == POST
             data = self.get_request_data_as_object()
 

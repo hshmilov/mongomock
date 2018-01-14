@@ -22,6 +22,7 @@ class TestSplunkSymantecAdapter(AdapterTestBase):
     def some_client_details(self):
         return splunk_details
 
+    @pytest.mark.skip
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         devices_as_dict = self.adapter_service.devices()
