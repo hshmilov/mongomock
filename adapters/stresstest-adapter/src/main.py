@@ -1,6 +1,6 @@
 """main.py: Main file for running Stress test plugin"""
 
-from StressAdapter import StressAdapter
+from stress_adapter import StressAdapter
 from axonius.server_utils import init_wsgi
 
 if __name__ == '__main__':
