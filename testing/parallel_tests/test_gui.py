@@ -8,11 +8,11 @@ GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 def test_devices():
     axonius_service = get_service()
     gui_service = axonius_service.gui
+    gui_service.login_default_user()
 
     for x in [4, 5, 6]:
         axonius_service.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
 
-    gui_service.login_default_user()
     devices_response = gui_service.get_devices()
     assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
                                                 f"{devices_response.content}"

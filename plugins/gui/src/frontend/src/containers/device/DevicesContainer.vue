@@ -51,7 +51,7 @@
             <div slot="cardContent" class="info-dialog-container">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                 :fields="deviceFields" :filter="query.currentQuery" :actions="deviceActions">
+                                 :fields="deviceFields" :filter="query.currentQuery" @click-row="configDevice">
 
                     <!--info-dialog v-if="deviceInfoDialog.open" :open="deviceInfoDialog.open" @close="closeQuickView"
                                  :title="deviceInfoDialog.title">
