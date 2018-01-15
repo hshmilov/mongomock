@@ -1,5 +1,5 @@
 BAD_KEY = '.'
-FILLER = '#'
+FILLER = '_DOT_'
 HELPER = ';'
 
 
