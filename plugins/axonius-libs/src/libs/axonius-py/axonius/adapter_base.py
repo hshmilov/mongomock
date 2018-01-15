@@ -148,6 +148,47 @@ class AdapterBase(PluginBase, Feature, ABC):
 
             return jsonify(devices_list)
 
+    @add_rule('users', methods=['GET'])
+    def users(self):
+        """
+        Some adapters can get a list of users (serve not only as inventory). Get a list of users.
+        # TODO Avidor: This has to be a well-defined format. currently there is no scheme for that,
+        # so i define my own here.
+        :return: an object in the following format
+
+        {
+        "client_id_1":
+            {
+            "user_id_1":{
+                        "some_parsed_key_name": "some_parsed_key_value"
+                        "raw": {}
+                        }
+            }
+        }
+
+        """
+
+        current_clients = self._clients.copy()
+        users_object = {}
+        try:
+            for key, value in current_clients.items():
+                data = self._query_users_by_client(key, value)
+                users_object[key] = data
+        except NotImplementedError:
+            return_error("/users is not implemented in this adapter.", 400)
+
+        return jsonify(users_object)
+
+    def _query_users_by_client(self, key, data):
+        """
+
+        :param key: the client key
+        :param data: the client data
+        :return: refer to users()
+        """
+
+        return NotImplementedError()
+
     @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):
         """ /clients Returns all available clients, e.g. all DC servers.

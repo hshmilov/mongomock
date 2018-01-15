@@ -85,14 +85,19 @@ export const processDevice = (device, fields) => {
 		})
 	})
 	if (device['tags']) {
-		processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
-			return tag.tagvalue !== undefined && tag.tagvalue !== ''
-		}).map((tag) => {
-			return tag.tagname
-		})
-		processedDevice['tags.tagname'] = processedDevice['tags.tagname'].filter((tag, index, self) => {
-			return self.indexOf(tag) === index
-		})
+	   device['tags'].filter((tag) => {
+		  return tag.tagname === 'FIELD'
+	   }).forEach((tag) => {
+		  processedDevice[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
+	   })
+	   processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
+		  return tag.tagname !== 'FIELD' && tag.tagvalue !== undefined && tag.tagvalue !== ''
+	   }).map((tag) => {
+		  return tag.tagname
+	   })
+	   processedDevice['tags.tagname'] = processedDevice['tags.tagname'].filter((tag, index, self) => {
+		  return self.indexOf(tag) === index
+	   })
 	}
 	return processedDevice
 }
@@ -226,7 +231,8 @@ export const device = {
 				{path: 'adapters.data.OS.distribution', name: 'OS Version', selected: false, control: 'text'},
 				{path: 'adapters.data.OS.bitness', name: 'OS Bitness', selected: false, control: 'text'},
 				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []},
-				{path: 'tags.tagvalue', selected: true, hidden: true}
+				{path: 'tags.tagvalue', selected: true, hidden: true},
+				{path: 'last_used_user', selected: false, name: 'Last User Logged'}
 			],
 			unique: {}
 		},
@@ -271,7 +277,7 @@ export const device = {
 					...payload.data,
 					data: merge.all(adapterDatas),
 					tags: payload.data.tags.filter((tag) => {
-						return tag.tagvalue !== undefined && tag.tagvalue !== ''
+						return tag.tagname !== 'FIELD' && tag.tagvalue !== undefined && tag.tagvalue !== ''
 					})
 				}
 			}
@@ -293,19 +299,21 @@ export const device = {
 			}
 		},
 		[ UPDATE_TAGS ] (state, payload) {
-			state.tagList.fetching = payload.fetching
-			state.tagList.error = payload.error
-			if (payload.data) {
-				state.tagList.data = payload.data.map(function (tag) {
-					return {name: tag, path: tag}
-				})
-				state.fields.common.forEach(function (field) {
-					if (field.path === 'tags.tagname') {
-						field.options = state.tagList.data
-					}
-				})
-			}
-		},
+            state.tagList.fetching = payload.fetching
+            state.tagList.error = payload.error
+            if (payload.data) {
+                state.tagList.data = payload.data.filter((tag) => {
+                    return tag !== 'FIELD' && tag !== ''
+                }).map(function (tag) {
+                    return {name: tag, path: tag}
+                })
+                state.fields.common.forEach(function (field) {
+                    if (field.path === 'tags.tagname') {
+                        field.options = state.tagList.data
+                    }
+                })
+            }
+        },
 		[ ADD_DEVICE_TAGS ] (state, payload) {
 			state.deviceList.data = [ ...state.deviceList.data ]
 			state.deviceList.data.forEach(function (device) {

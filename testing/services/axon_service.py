@@ -18,7 +18,7 @@ class AxonService(ABC):
     def is_up(self):
         pass
 
-    def wait_for_service(self, interval=0.25, num_intervals=4 * 60 * 2):
+    def wait_for_service(self, interval=0.25, num_intervals=4 * 30):
 
         success = False
         for x in range(1, num_intervals):

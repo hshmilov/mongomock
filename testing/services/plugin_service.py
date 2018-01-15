@@ -115,6 +115,13 @@ class AdapterService(PluginService):
     def add_client(self, client_details):
         self.clients(client_details)
 
+    def users(self):
+        response = requests.get(self.req_url + "/users",
+                                headers={API_KEY_HEADER: self.api_key})
+
+        assert response.status_code == 200, str(response)
+        return response.json()
+
     def devices(self):
         response = requests.get(self.req_url + "/devices",
                                 headers={API_KEY_HEADER: self.api_key})

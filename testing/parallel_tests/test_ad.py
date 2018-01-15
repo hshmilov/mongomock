@@ -1,11 +1,15 @@
 import pytest
 from services.adapters.ad_service import AdService, ad_fixture
 from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fixture
+from services.ad_users_associator_service import ad_users_associator_fixture
 from services.execution_service import execution_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
 from test_credentials.test_ad_credentials import *
 import time
+
+CLIENT_ID_1_ADMIN_SID = "S-1-5-21-4050441107-50035988-2732102988-500"
+CLIENT_ID_1_ADMIN_CAPTION = "Administrator@TestDomain.test"
 
 
 class TestAdAdapter(AdapterTestBase):
@@ -28,6 +32,20 @@ class TestAdAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return DEVICE_ID_FOR_CLIENT_1
+
+    def test_users(self):
+        """
+        Tests "/users" of active directory. We assume to have ad_client_1_details.
+        """
+
+        # We might not have the client yet, so add it. if we re-add it afterwards nothing happens.
+        client_id_1 = ad_client1_details['dc_name']
+        self.adapter_service.add_client(ad_client1_details)
+        users = self.adapter_service.users()
+
+        assert client_id_1 in users
+        assert CLIENT_ID_1_ADMIN_SID in users[client_id_1]
+        assert CLIENT_ID_1_ADMIN_CAPTION == users[client_id_1][CLIENT_ID_1_ADMIN_SID]["raw"]["caption"]
 
     def test_fetch_devices(self):
         # Adding first client
@@ -66,6 +84,17 @@ class TestAdAdapter(AdapterTestBase):
             assert len(self.axonius_service.get_devices_with_condition({"tags.tagname": "IP_CONFLICT"})) > 0
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
+
+    def test_ad_users_association(self, execution_fixture, ad_users_associator_fixture):
+        ad_users_associator_fixture.activateable_start()
+        ad_users_associator_fixture.associate()
+
+        def has_ad_users_association_tag():
+            #  ad_users_associator_fixture.associate()
+            tags = list(self.axonius_service.get_devices_with_condition({"tags.tagvalue.fieldname": "last_used_user"}))
+            assert len(tags) > 0
+
+        try_until_not_thrown(30, 5, has_ad_users_association_tag)
 
     def test_ad_execute_wmi_queries(self, execution_fixture):
         device = self.axonius_service.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]

@@ -158,6 +158,24 @@ class ActiveDirectoryAdapter(AdapterBase):
         """
         return client_data.get_device_list()
 
+    def _query_users_by_client(self, client_name, client_data):
+        """
+        Get a list of users from a specific DC.
+
+        :param client_name: The name of the client
+        :param client_data: The data of the client.
+        :return:
+        """
+
+        users_list = list(client_data.get_users_list())
+        # The format is a list of objects that look like {"sid": "S-1-5-...", "caption": "username@domain.name"}
+        # we gotta transfer that to the specific format requested by AdapterBase.clients()
+        users_list_in_specific_format = {}
+        for user in users_list:
+            users_list_in_specific_format[user['sid']] = {"raw": user}
+
+        return users_list_in_specific_format
+
     def _resolve_hosts_addr_thread(self):
         """ Thread for ip resolving of devices.
         This thread will try to resolve IP's of known devices.

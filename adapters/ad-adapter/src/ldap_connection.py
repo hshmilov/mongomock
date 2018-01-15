@@ -1,8 +1,7 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
 
-__author__ = "Ofir Yefet"
-
 import ldap3
+import struct
 from ad_exceptions import LdapException
 
 
@@ -99,4 +98,47 @@ class LdapConnection:
                 return []
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
+            raise LdapException(str(ldap_error))
+
+    def get_users_list(self):
+        """
+        returns a list of objects representing the users in this DC.
+        an object looks like {"sid": "S-1-5...", "caption": "username@domain.name"}
+
+        :returns: a list of objects representing the users in this DC.
+        :raises exceptions.LdapException: In case of error in the LDAP protocol
+        aaa
+        """
+
+        try:
+            # A paged search, to get only users of type person and class user. notice we also only get
+            # the attributes we need, to make the query as lightweight as possible.
+            # The user account control queries only for active users.
+            # taken from https://social.technet.microsoft.com/Forums/windowsserver/
+            # en-US/44048e98-b191-4d18-9839-d79ffad86f76/ldap-query-for-all-active-users?forum=winserverDS
+            entry_generator = self.ldap_connection.extend.standard.paged_search(
+                search_base=self.domain_name,
+                search_filter='(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
+                attributes=['sAMAccountName', 'objectSid'],
+                paged_size=self.ldap_page_size,
+                generator=True)
+
+            for i in entry_generator:
+                try:
+                    # fqdn is in the format of username@domain.domainsuffix.domainsuffix... etc.
+                    # so we assemble it. I'm going to assume self.domain_name does not consist "," in the domain itself,
+                    # as it is not a valid url. (it looks like DC=TestDomain,DC=test)
+                    # we do x[3:] to get rid of "DC=".
+
+                    fqdn = "{0}@{1}".format(i["attributes"]["sAMAccountName"],
+                                            ".".join([x[3:] for x in self.domain_name.strip().split(",")]))
+
+                    yield {"sid": i["attributes"]["objectSid"], "caption": f"{fqdn}"}
+                except KeyError:
+                    pass
+
+        except ldap3.core.exceptions.LDAPException as ldap_error:
+            # Avidor: sometimes there is a SIGPIPE here, which i don't really understand yet, and i can't reproduce it.
+            # so lets reconnect.
+            self._connect_to_server()
             raise LdapException(str(ldap_error))

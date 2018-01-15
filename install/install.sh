@@ -28,6 +28,7 @@ docker-compose -f plugins/static-correlator-plugin/docker-compose.yml -f plugins
 docker-compose -f plugins/execution-plugin/docker-compose.yml -f plugins/execution-plugin/docker-compose.prod.yml up -d
 docker-compose -f plugins/dns-conflicts-plugin/docker-compose.yml -f plugins/dns-conflicts-plugin/docker-compose.prod.yml up -d
 docker-compose -f plugins/careful-execution-correlator-plugin/docker-compose.yml -f plugins/careful-execution-correlator-plugin/docker-compose.prod.yml up -d
+docker-compose -f plugins/ad-users-associator-plugin/docker-compose.yml -f plugins/ad-users-associator-plugin/docker-compose.prod.yml up -d
 
 # Adapters
 docker-compose -f adapters/ad-adapter/docker-compose.yml -f adapters/ad-adapter/docker-compose.prod.yml up -d

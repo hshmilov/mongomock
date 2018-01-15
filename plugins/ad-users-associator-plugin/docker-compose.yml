@@ -1,0 +1,19 @@
+version: '3'
+services:
+  ad-users-associator-plugin:
+        build: .
+        image: axonius/ad-users-associator-plugin
+        container_name: "ad-users-associator-plugin"
+        ports:
+          - 5556:80
+        volumes:
+          - ../../logs/ad-users-associator-plugin:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius
