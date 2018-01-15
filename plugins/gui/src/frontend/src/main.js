@@ -4,6 +4,8 @@ import Vue from 'vue'
 import router from './router/index'
 import store from './store/index'
 import App from './containers/App.vue'
+import Array from './components/data/Array.vue'
+import ObjectSchema from './components/data/ObjectSchema.vue'
 
 import 'vue-svgicon/dist/polyfill'
 import * as svgicon from 'vue-svgicon'
@@ -15,6 +17,9 @@ Vue.use(mediaQueries)
 
 import TreeView from "vue-json-tree-view"
 Vue.use(TreeView)
+
+Vue.component('array', Array)
+Vue.component('object-schema', ObjectSchema)
 
 new Vue({
     el: '#app',

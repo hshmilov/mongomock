@@ -335,15 +335,19 @@ class BackendPlugin(PluginBase):
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
-    def _query_aggregator(self, resource, *args, **kwargs):
+    @requires_aggregator()
+    @filtered()
+    @add_rule_unauthenticated("devices/count", methods=['GET'])
+    def current_devices_count(self, mongo_filter):
         """
+        Count total number of devices answering given mongo_filter
 
-        :param resource:
-        :param args:
-        :param kwargs:
-        :return:
+        :param mongo_filter: Object defining a Mongo query
+        :return: Number of devices
         """
-        return self.request_remote_plugin(resource, self._aggregator_plugin_unique_name, *args, **kwargs).json()
+        with self._get_db_connection(False) as db_connection:
+            client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+            return str(client_collection.find(mongo_filter).count())
 
     @add_rule_unauthenticated("devices/<device_id>", methods=['POST', 'GET'])
     def current_device_by_id(self, device_id):
@@ -353,15 +357,16 @@ class BackendPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
+            device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+                {'internal_axon_id': device_id})
+            if device is None:
+                return return_error("Device ID wasn't found", 404)
+
             if request.method == 'GET':
-                return jsonify(db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
-                    {'internal_axon_id': device_id}))
+                return jsonify(device)
+
             elif request.method == 'POST':
                 device_to_update = self.get_request_data_as_object()
-                device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
-                    {'internal_axon_id': device_id})
-                if device is None:
-                    return return_error("Device ID wasn't found", 404)
                 return self._tag_request_from_aggregator(device, 'create', device_to_update['tags'])
 
     def _tag_request_from_aggregator(self, device, command, tag_list):
@@ -378,9 +383,13 @@ class BackendPlugin(PluginBase):
                 responses.append(self.request_remote_plugin(
                     'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data)))
 
-        any_bad_response = any(current_response.status_code != 200 for current_response in responses)
+        all_bad_responses = [current_response.json()
+                             for current_response in responses if current_response.status_code != 200]
 
-        return ('', 200) if any_bad_response == 0 else return_error('tagging failed')
+        if len(all_bad_responses):
+            self.logger.error(f"Tagging failed with response {all_bad_responses[0]}")
+            return_error('tagging failed', 400)
+        return ('', 200)
 
     @add_rule_unauthenticated("devices/<device_id>/tags", methods=['DELETE'])
     def remove_tags_from_device(self, device_id):

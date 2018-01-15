@@ -59,12 +59,12 @@ h1 {
 
 h2 {
   line-height: 36px;
-  font-size: 20px
+  font-size: 24px
 }
 
 h3 {
   line-height: 30px;
-  font-size: 21px
+  font-size: 20px
 }
 
 h4 {
@@ -150,6 +150,14 @@ Formatting
 
 .bold {
   font-weight: 500;
+}
+
+.link {
+  color: #649DE0;
+  cursor: pointer;
+  &:hover {
+    color: $color-theme-light;
+  }
 }
 
 

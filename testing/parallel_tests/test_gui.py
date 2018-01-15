@@ -5,6 +5,25 @@ from test_helpers.device_helper import get_device_dict, filter_by_plugin_name
 GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 
 
+def test_devices():
+    axonius_service = get_service()
+    gui_service = axonius_service.gui
+
+    for x in [4, 5, 6]:
+        axonius_service.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
+
+    gui_service.login_default_user()
+    devices_response = gui_service.get_devices()
+    assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
+                                                f"{devices_response.content}"
+    devices_count_expected = len(devices_response.json())
+    devices_count_response = gui_service.get_devices_count()
+    assert devices_count_response.status_code == 200, f"Error in response. Got: {str(devices_count_response)}, " \
+                                                      f"{devices_count_response.content}"
+    assert devices_count_expected == devices_count_response.json(), "Unexpected response. Original device count is " \
+                                                                    f" {devices_count_expected} but count returned {devices_count_response.json()}"
+
+
 def _count_num_of_tags(device):
     return len([current_tag['tagvalue'] for current_tag in device['tags'] if
                 current_tag.get('tagvalue', '') != ''])
@@ -131,7 +150,7 @@ def test_login():
     response = gui_service.get_devices()
     assert response.status_code == 401
 
-    response = gui_service.login_user(gui_service.default_user)
+    response = gui_service.login_default_user()
     assert response.status_code == 200
 
 

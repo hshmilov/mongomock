@@ -6,6 +6,7 @@
         </div>
         <div class="card-body">
             <slot name="cardContent"></slot>
+            <slot></slot>
         </div>
     </div>
 </template>

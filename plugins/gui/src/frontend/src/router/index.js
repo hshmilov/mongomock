@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import DashboardContainer from '../containers/dashboard/DashboardContainer.vue'
 import DevicesContainer from '../containers/device/DevicesContainer.vue'
+import DeviceConfigContainer from '../containers/device/DeviceConfigContainer.vue'
 import ExecutedQueriesContainer from '../containers/device/query/ExecutedQueriesContainer.vue'
 import SavedQueriesContainer from '../containers/device/query/SavedQueriesContainer.vue'
 import PluginsContainer from '../containers/plugin/PluginsContainer.vue'
@@ -31,6 +32,10 @@ export default new Router({
             name: 'Devices',
             component: DevicesContainer,
         },
+		{
+			path: '/device/:id',
+			component: DeviceConfigContainer,
+		},
 		{
 			path: '/device/query/saved',
 			name: 'Saved Queries',

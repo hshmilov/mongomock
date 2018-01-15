@@ -31,7 +31,7 @@
                 <a class="btn btn-adjoined" @click="executeQuery">go</a>
             </template>
         </card>
-        <card :title="`devices (${device.deviceList.data.length})`" class="devices-list">
+        <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
                 <!-- Dropdown for selecting \ creating tags for a currently selected devices --->
                 <dropdown-menu animateClass="scale-up right" menuClass="w-md">
@@ -51,10 +51,9 @@
             <div slot="cardContent" class="info-dialog-container">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                 :fields="deviceFields" :filter="query.currentQuery"
-                                 :actions="[{ handler: executeQuickView, triggerFont: 'icon-eye' }]">
+                                 :fields="deviceFields" :filter="query.currentQuery" :actions="deviceActions">
 
-                    <info-dialog v-if="deviceInfoDialog.open" :open="deviceInfoDialog.open" @close="closeQuickView"
+                    <!--info-dialog v-if="deviceInfoDialog.open" :open="deviceInfoDialog.open" @close="closeQuickView"
                                  :title="deviceInfoDialog.title">
                         <pulse-loader :loading="device.deviceDetails.fetching" color="#26dad2"></pulse-loader>
 
@@ -77,7 +76,7 @@
                                 </div>
                             </div>
                         </div>
-                    </info-dialog>
+                    </info-dialog-->
                 </paginated-table>
             </div>
         </card>
@@ -112,6 +111,7 @@
 	import {
 		FETCH_UNIQUE_FIELDS,
 		FETCH_DEVICES,
+        FETCH_DEVICES_COUNT,
         FETCH_DEVICE,
 		FETCH_TAGS,
 		CREATE_DEVICE_TAGS,
@@ -163,6 +163,10 @@
 					nameByType[adapterId] = adapterStaticData[adapterId].name
                 })
                 return nameByType
+            },
+            deviceActions() {
+				return [{ handler: this.executeQuickView, triggerFont: 'icon-eye' },
+                    {handler: this.configDevice, triggerIcon: 'action/edit'}]
             }
 		},
 		data () {
@@ -218,6 +222,7 @@
 			this.fetchAdapters()
 			this.fetchTags()
 			this.selectedQuery = this.query.currentQuery
+			this.fetchDevicesCount({ filter: this.selectedQuery })
 			this.selectedFields = this.totalFields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
@@ -231,6 +236,7 @@
 			...mapActions({
 				fetchFields: FETCH_UNIQUE_FIELDS,
 				fetchDevices: FETCH_DEVICES,
+                fetchDevicesCount: FETCH_DEVICES_COUNT,
                 fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
@@ -244,6 +250,7 @@
 			executeQuery () {
 				this.closeQuickView()
 				this.updateQuery(this.selectedQuery)
+                this.fetchDevicesCount({ filter: this.selectedQuery })
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {
@@ -286,6 +293,10 @@
             removePrefix(value) {
 				if (!value) { return '' }
 				return value.split('.').splice(1).join('.')
+            },
+            configDevice(deviceId) {
+				this.fetchDevice(deviceId)
+				this.$router.push({path: `device/${deviceId}`})
             }
 		}
 	}

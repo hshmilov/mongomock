@@ -15,6 +15,11 @@ class GuiService(PluginService):
     def __del__(self):
         self._session.close()
 
+    def wait_for_service(self, interval=0.25, num_intervals=4 * 60 * 2):
+        super().wait_for_service()
+        self.login_default_user()
+        self.logged_in = True
+
     def start_and_wait(self):
         super().start_and_wait()
         self.login_default_user()
@@ -28,6 +33,9 @@ class GuiService(PluginService):
 
     def get_devices(self, *vargs, **kwargs):
         return self.get('devices', session=self._session, *vargs, **kwargs)
+
+    def get_devices_count(self, *vargs, **kwargs):
+        return self.get('devices/count', session=self._session, *vargs, **kwargs)
 
     def get_device_by_id(self, id, *vargs, **kwargs):
         return self.get('devices/{0}'.format(id), session=self._session, *vargs, **kwargs)
@@ -54,6 +62,7 @@ class GuiService(PluginService):
     def login_default_user(self):
         resp = self.post('login', data=json.dumps(self.default_user), session=self._session)
         assert resp.status_code == 200
+        return resp
 
     def login_user(self, credentials):
         return self.post('login', data=json.dumps(credentials), session=self._session)

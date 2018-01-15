@@ -19,49 +19,49 @@ export const adapterStaticData = {
 		name: 'Amazon Elastic',
 		description: 'Amazon Elastic Compute Cloud (Amazon EC2) provides scalable computing capacity in the Amazon Web Services (AWS) cloud.'
 	},
-	'esx_adapter': {
-		name: 'ESX',
-		description: 'VMware ESXi is an entreprise-class, type-1 hypervisor developed by VMware for deploying and serving virtual computers.'
-	},
-	'sentinelone_adapter': {
-		name: 'SentinelOne',
-		description: 'SentinelOne is a next-generation endpoint protection software unifying prevention, detection, and response in a single platform.'
-	},
-	'symantec_adapter': {
-		name: 'Symantec',
-		description: 'Symantec Endpoint Protection Manager is a management server that manages events, policies, and client registration for the client computers that connect to your network.'
+	'jamf_adapter': {
+		name: 'Jamf Pro',
+		description: 'Jamf Pro is an enterprise mobility management (EMM) tool that provides unified endpoint management for Apple devices.'
 	},
 	'epo_adapter': {
-		name: 'McAfee',
+		name: 'McAfee ePO',
 		description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'
-	},
-	'splunk_symantec_adapter': {
-		name: 'Splunk Symantec',
-		description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
-	},
-	'splunk_nexpose_adapter': {
-		name: 'Splunk Nexpose',
-		description: 'Splunk captures, indexes, and correlates real-time data in a searchable repository from which it can generate graphs, reports, alerts, dashboards, and visualizations.'
-	},
-	'nexpose_adapter': {
-		name: 'Rapid7 Nexpose',
-		description: 'Rapid7 Nexpose is a vulnerability scanner which aims to support the entire vulnerability management lifecycle, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
-	},
-	'qualys_adapter': {
-		name: 'Qualys',
-		description: 'The Qualys Cloud Platform monitors customer\'s global security and compliance posture using sensors.'
-	},
-	'jamf_adapter': {
-		name: 'Jamf',
-		description: 'Jamf Pro simplifies the complexities associated with getting your people the Apple devices they need with everything they need on them.'
-	},
-	'nessus_adapter': {
-		name: 'Nessus',
-		description: 'Nessus is a vulnerability scanning platform for auditors and security analysts.'
 	},
 	'puppet_adapter': {
 		name: 'Puppet',
-		description: 'Puppet automates delivery and operation of software accross its lifecycle.'
+		description: 'Puppet is an open-source software configuration management tool.'
+	},
+	'qualys_adapter': {
+		name: 'Qualys Cloud Platform',
+		description: 'The Qualys Cloud Platform monitors customers\' global security and compliance posture using sensors.'
+	},
+	'nexpose_adapter': {
+		name: 'Rapid7 Nexpose',
+		description: 'Rapid7 Nexpose is a vulnerability management solution, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'
+	},
+	'sentinelone_adapter': {
+		name: 'SentinelOne',
+		description: 'SentinelOne is an endpoint protection software including prevention, detection, and response.'
+	},
+	'splunk_nexpose_adapter': {
+		name: 'Splunk <> Rapid7 Nexpose',
+		description: 'The Splunk adapter for Rapid7 Nexpose leverages data from Splunk instances that receive alerts from Rapid7 Nexpose.'
+	},
+	'splunk_symantec_adapter': {
+		name: 'Splunk <> Symantec Endpoint Protection Manager',
+		description: 'The Splunk adapter for Symantec Endpoint Protection Manager leverages data from Splunk instances that receive alerts from Symantec Endpoint Protection Manager.'
+	},
+	'symantec_adapter': {
+		name: 'Symantec Endpoint Protection Manager',
+		description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
+	},
+	'nessus_adapter': {
+		name: 'Nessus Tenable',
+		description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
+	},
+	'esx_adapter': {
+		name: 'ESX',
+		description: 'VMware ESXi is an entreprise-class, type-1 hypervisor for deploying and serving virtual computers. '
 	},
 	'stresstest_adapter': {
 		name: 'LOL',
