@@ -14,7 +14,7 @@ NEXPOSE_PORT = 'port'
 VERIFY_SSL = 'verify_ssl'
 
 
-class NexposePlugin(AdapterBase):
+class NexposeAdapter(AdapterBase):
     """
     Connects axonius to Rapid7's nexpose.
     """
@@ -123,7 +123,7 @@ class NexposePlugin(AdapterBase):
             return details
 
         devices = []
-        should_verify_ssl = client_data.pop(VERIFY_SSL)
+        should_verify_ssl = client_data.pop(VERIFY_SSL, False)
         with self._get_session(should_verify_ssl, client_data) as session:
             for asset in session.GetAssetSummaries():
                 devices.append(_parse_nexpose_asset_details_to_dict(session.GetAssetDetails(asset)))
