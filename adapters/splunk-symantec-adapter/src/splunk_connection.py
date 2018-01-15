@@ -42,8 +42,7 @@ class SplunkConnection(object):
         if earliest is not None:
             if not isinstance(earliest, str):
                 earliest = str(earliest)
-            search += ' earliest=' + earliest
-        job = self.conn.jobs.oneshot(search, count=0)
+        job = self.conn.jobs.oneshot(search, count=0, earliest_time=earliest)
         reader = ResultsReader(job)
         for result in reader:
             raw = result[b'_raw'].decode('utf-8')

@@ -5,7 +5,8 @@ from splunklib.results import ResultsReader
 
 
 class SplunkConnection(object):
-    def __init__(self, host, port, username, password):
+    def __init__(self, logger, host, port, username, password):
+        self.logger = logger
         self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password}
         self.conn = None
 
@@ -44,15 +45,18 @@ class SplunkConnection(object):
         if earliest is not None:
             if not isinstance(earliest, str):
                 earliest = str(earliest)
-            search += ' earliest=' + earliest
-        job = self.conn.jobs.oneshot(search, count=0)
+        job = self.conn.jobs.oneshot(search, count=0, earliest_time=earliest)
         reader = ResultsReader(job)
         for result in reader:
             raw = result[b'_raw'].decode('utf-8')
-            new_item = split_raw(raw)
-            if new_item is not None:
-                yield new_item
+            try:
+                new_item = split_raw(raw)
+                if new_item is not None:
+                    yield new_item
+            except Exception as err:
+                self.logger.exception("The data did not return as expected. we got {0}".format(repr(raw)))
+                break
 
-    def get_nexpose_devices(self):
+    def get_nexpose_devices(self, earliest=None):
         return self.fetch('search sourcetype="rapid7:nexpose:asset" site_id=* index=rapid7 | dedup asset_id | fields version asset_id ip hostname site_name version mac description installed_software services',
-                          lambda raw: dict([x.split('="', 1) for x in raw[:-1].split('", ')]))
+                          lambda raw: dict([x.split('="', 1) for x in raw[:-1].split('", ')]), earliest)

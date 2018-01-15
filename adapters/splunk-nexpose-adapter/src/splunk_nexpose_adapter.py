@@ -13,12 +13,18 @@ __author__ = "Asaf & Tal"
 
 class SplunkNexposeAdapter(AdapterBase):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        config = ConfigParser()
+        config.read(self.config_file_path)
+        self.max_log_history = int(config['DEFAULT']['max_log_history'])  # in days
+
     def _get_client_id(self, client_config):
         return '{}:{}'.format(client_config['host'], client_config['port'])
 
     def _connect_client(self, client_config):
         try:
-            connection = SplunkConnection(**client_config)
+            connection = SplunkConnection(self.logger, **client_config)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -37,7 +43,7 @@ class SplunkNexposeAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Splunk Server
         """
         with client_data:
-            return list(client_data.get_nexpose_devices())
+            return list(client_data.get_nexpose_devices(f'-{self.max_log_history}d'))
 
     def _clients_schema(self):
         """
