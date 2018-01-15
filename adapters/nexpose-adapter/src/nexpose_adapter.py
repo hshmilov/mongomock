@@ -2,8 +2,10 @@ import concurrent.futures
 import time
 from contextlib import contextmanager
 import ssl
+import dateutil.parser
 
 from axonius.adapter_base import AdapterBase
+from axonius.consts import adapter_consts
 from axonius.parsing_utils import figure_out_os
 
 import nexpose.nexpose as nexpose
@@ -95,16 +97,34 @@ class NexposeAdapter(AdapterBase):
                 interfaces.append(current_interface)
             return interfaces
 
+        # We do not use data with no timestamp.
+        no_timestamp_count = 0
         for device_raw_data in raw_data:
+            try:
+                last_seen = device_raw_data.get('last_scan_date')
+                if last_seen is None:
+                    # No data on the last timestamp of the device. Not inserting this device.
+                    no_timestamp_count += 1
+                    continue
+
+                # Parsing the timestamp and setting the tz to None.
+                last_seen = dateutil.parser.parse(last_seen)
+            except Exception as err:
+                self.logger.exception("An Exception was raised while getting and parsing the last_seen field.")
+
             device_raw_data['tag'] = str(device_raw_data.get('tag', ''))
             yield {
                 'OS': figure_out_os(device_raw_data.get('os_name')),
+                adapter_consts.LAST_SEEN_PARSED_FIELD: last_seen,
                 'id': str(device_raw_data['id']),
                 'network_interfaces': _create_network_interface(device_raw_data.get('addresses', ''),
                                                                 device_raw_data.get('mac_address', '')),
                 'hostname': device_raw_data['host_names'][0] if len(device_raw_data.get('host_names', [])) > 0 else '',
                 'raw': device_raw_data
             }
+
+        if no_timestamp_count != 0:
+            self.logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
 
     def _query_devices_by_client(self, client_name, client_data):
         should_verify_ssl = client_data.pop(VERIFY_SSL, False)

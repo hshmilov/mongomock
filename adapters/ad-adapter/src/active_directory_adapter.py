@@ -243,9 +243,6 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
                                   f"Got type {type(last_seen)} instead of datetime")
                 continue
-            # Replacing to non timezone (To fit our schema). We know this is not accurate. But since we use
-            # this value in days resolution it is fine
-            last_seen.replace(tzinfo=None)
 
             device_doc = {
                 'hostname': device_raw.get('dNSHostName', device_raw.get('name', '')),
