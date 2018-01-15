@@ -1,3 +1,4 @@
+import concurrent.futures
 import time
 from contextlib import contextmanager
 import ssl
@@ -28,6 +29,7 @@ class NexposeAdapter(AdapterBase):
 
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
+        self.num_of_simultaneous_requests = int(self.config["DEFAULT"]["num_of_simultaneous_requests"])
 
     def _wait_for_status(self, session, expected_status, message):
         self.logger.info(message)
@@ -52,7 +54,7 @@ class NexposeAdapter(AdapterBase):
         session.Open()
         try:
             yield session
-        except:
+        except Exception as err:
             self.logger.exception('An exception occurred while in session')
         finally:
             session.Close()
@@ -75,7 +77,6 @@ class NexposeAdapter(AdapterBase):
                 VERIFY_SSL: {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     "type": "bool"
                 }
-
             },
             "required": [
                 USER,
@@ -95,6 +96,7 @@ class NexposeAdapter(AdapterBase):
             return interfaces
 
         for device_raw_data in raw_data:
+            device_raw_data['tag'] = str(device_raw_data.get('tag', ''))
             yield {
                 'OS': figure_out_os(device_raw_data.get('os_name')),
                 'id': str(device_raw_data['id']),
@@ -105,30 +107,71 @@ class NexposeAdapter(AdapterBase):
             }
 
     def _query_devices_by_client(self, client_name, client_data):
-        def _parse_nexpose_asset_details_to_dict(asset_details):
-            """
-            Goes over the attibutes of nexpose's AssetDetails and creates a viable dict from them.
-            :param asset_details: The AssetDetails object to parse to dict.
-            :return: a dict.
-            """
-            details = dict()
-            # The reason for getting rid of 'unique_identifiers' is that it's a specialized class that I didn't see
-            # a reason to parse because there isn't new data here but just data we already got.
-            for current_detail in \
-                    [attribute for attribute in dir(asset_details) if not attribute.startswith('__') and
-                     not callable(getattr(asset_details,
-                                          attribute)) and
-                     attribute != 'unique_identifiers']:
-                details[current_detail] = getattr(asset_details, current_detail)
-            return details
-
-        devices = []
         should_verify_ssl = client_data.pop(VERIFY_SSL, False)
         with self._get_session(should_verify_ssl, client_data) as session:
-            for asset in session.GetAssetSummaries():
-                devices.append(_parse_nexpose_asset_details_to_dict(session.GetAssetDetails(asset)))
-
+            devices = self.get_all_devices(session)
         return devices
+
+    def _parse_nexpose_asset_details_to_dict(self, asset_details):
+        """
+        Goes over the attibutes of nexpose's AssetDetails and creates a viable dict from them.
+        :param asset_details: The AssetDetails object to parse to dict.
+        :return: a dict.
+        """
+        details = dict()
+        # The reason for getting rid of 'unique_identifiers' is that it's a specialized class that I didn't see
+        # a reason to parse because there isn't new data here but just data we already got.
+        for current_detail in \
+                [attribute for attribute in dir(asset_details) if not attribute.startswith('__') and
+                 not callable(getattr(asset_details,
+                                      attribute)) and
+                 attribute != 'unique_identifiers']:
+            details[current_detail] = getattr(asset_details, current_detail)
+        return details
+
+    def get_all_devices(self, session):
+        """
+        Pushing all the asset summaries to a queue and requesting details simultaneously
+        from predefined number of workers
+        :param session: The NexposeSession to use.
+        :return: A list of all devices (dicts).
+        """
+        def get_details_worker(device_summary):
+            device_details = {}
+            try:
+                device_details = session.GetAssetDetails(device_summary)
+                device_details = self._parse_nexpose_asset_details_to_dict(device_details)
+            except Exception as err:
+                self.logger.exception("An exception occured while getting and parsing device details from nexpose.")
+
+            # Writing progress to log every 100 devices.
+            if device_counter % 100 == 0:
+                self.logger.info("Got {0} devices.".format(device_counter))
+
+            return device_details
+
+        raw_detailed_devices = []
+
+        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_requests))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.num_of_simultaneous_requests) as executor:
+            device_counter = 0
+            future_to_device = []
+            # Creating a future for all the device summaries to be executed by the executors.
+            for device_summary in session.GetAssetSummaries():
+                future_to_device.append(executor.submit(get_details_worker, device_summary))
+                device_counter += 1
+
+            self.logger.info("Getting data for {0} devices.".format(device_counter))
+
+            for future in concurrent.futures.as_completed(future_to_device):
+                try:
+                    raw_detailed_devices.append(future.result())
+                except Exception as err:
+                    self.logger.exception("An exception was raised while trying to get a result.")
+
+        self.logger.info("Finished getting all device data.")
+
+        return raw_detailed_devices
 
     def _get_client_id(self, client_config):
         return client_config[NEXPOSE_HOST]
