@@ -93,7 +93,7 @@ class NexposeAdapter(AdapterBase):
         def _create_network_interface(addresses, mac_address):
             interfaces = []
             for current_address in addresses:
-                current_interface = {'IP': current_address, 'MAC': mac_address}
+                current_interface = {'IP': [current_address], 'MAC': mac_address}
                 interfaces.append(current_interface)
             return interfaces
 

@@ -14,16 +14,6 @@ echo "Building all..."
 docker logout
 )
 
-echo "Removing anything irrelevant.."
-(
-# tests
-rm -rf ./testing/tests/ ./testing/parallel_tests/ ./testing/reporting ./testing/.cache */*/tests
-# misc
-rm -rf .git* .idea* .cache* *.bat *.sh ./devops
-history -c
-history -w
-)
-
 echo "Running all..."
 (
 # System
@@ -52,6 +42,16 @@ docker-compose -f adapters/qualys-adapter/docker-compose.yml -f adapters/qualys-
 docker-compose -f adapters/splunk-symantec-adapter/docker-compose.yml -f adapters/splunk-symantec-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/splunk-nexpose-adapter/docker-compose.yml -f adapters/splunk-nexpose-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/symantec-adapter/docker-compose.yml -f adapters/symantec-adapter/docker-compose.prod.yml up -d
+)
+
+echo "Removing anything irrelevant.."
+(
+# tests
+rm -rf ./testing/tests/ ./testing/parallel_tests/ ./testing/reporting ./testing/.cache */*/tests
+# misc
+rm -rf .git* .idea* .cache* *.bat *.sh ./devops
+history -c
+history -w
 )
 
 echo "Done."
