@@ -60,8 +60,12 @@ export const adapterStaticData = {
 		description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
 	},
 	'esx_adapter': {
-		name: 'ESX',
+		name: 'VMware ESXi',
 		description: 'VMware ESXi is an entreprise-class, type-1 hypervisor for deploying and serving virtual computers. '
+	},
+	'cisco_adapter': {
+		name: 'Cisco CSR',
+		description: 'Cisco Cloud Services Router (CSR) provides routing, security, and network management with multitenancy.'
 	},
 	'stresstest_adapter': {
 		name: 'LOL',

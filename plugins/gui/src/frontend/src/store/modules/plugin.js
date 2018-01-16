@@ -22,6 +22,10 @@ export const pluginStaticData = {
 	'careful_execution_correlator_plugin': {
 		name: 'Execution Correlator',
 		description: 'The Execution Correlator plugin executes commands on different adapters and compares the output to identify unique devices.'
+	},
+	'ad-users-associator-plugin': {
+		name: 'Last Logged User',
+		description: 'The Last Logged User Plugin queries Active Directory and WMI to determine the last user that logged in to a device. The data provides additional analysis of users, e.g. correlating an Active Directory user with a device in the network.'
 	}
 }
 

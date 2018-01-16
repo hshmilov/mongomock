@@ -52,7 +52,7 @@ export const decomposeFieldPath = (data, fieldPath) => {
 export const findValues = (field, data) => {
 	let value = []
 	field.path.split(',').forEach((currentPath) => {
-		value = value.concat(decomposeFieldPath({ ...data }, currentPath))
+		value = value.concat(decomposeFieldPath({...data}, currentPath))
 	})
 	if ((!field.type || field.type.indexOf('list') === -1) && Array.isArray(value)) {
 		return (value.length > 0) ? value[0] : ''
@@ -64,7 +64,7 @@ export const findValues = (field, data) => {
 
 export const processDevice = (device, fields) => {
 	if (!device.adapters || !device.adapters.length) { return }
-	let processedDevice = { id: device['internal_axon_id']}
+	let processedDevice = {id: device['internal_axon_id']}
 	fields.common.forEach((field) => {
 		if (!field.selected) { return }
 		let value = findValues(field, device)
@@ -85,19 +85,19 @@ export const processDevice = (device, fields) => {
 		})
 	})
 	if (device['tags']) {
-	   device['tags'].filter((tag) => {
-		  return tag.tagname === 'FIELD'
-	   }).forEach((tag) => {
-		  processedDevice[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
-	   })
-	   processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
-		  return tag.tagname !== 'FIELD' && tag.tagvalue !== undefined && tag.tagvalue !== ''
-	   }).map((tag) => {
-		  return tag.tagname
-	   })
-	   processedDevice['tags.tagname'] = processedDevice['tags.tagname'].filter((tag, index, self) => {
-		  return self.indexOf(tag) === index
-	   })
+		device['tags'].filter((tag) => {
+			return tag.tagname === 'FIELD'
+		}).forEach((tag) => {
+			processedDevice[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
+		})
+		processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
+			return tag.tagname !== 'FIELD' && tag.tagvalue !== undefined && tag.tagvalue !== ''
+		}).map((tag) => {
+			return tag.tagname
+		})
+		processedDevice['tags.tagname'] = processedDevice['tags.tagname'].filter((tag, index, self) => {
+			return self.indexOf(tag) === index
+		})
 	}
 	return processedDevice
 }
@@ -114,100 +114,142 @@ export const device = {
 		deviceDetails: {fetching: false, data: {}, error: ''},
 
 		/* All fields parsed in the system - at least one adapter parses the field */
-		deviceFields: {fetching: false, data: {
-			"items": [
-				{
-					"title": "Axonius Name",
-					"name": "pretty_id",
-					"type": "string"
-				},
-				{
-					"title": "Device Name",
-					"name": "name",
-					"type": "string"
-				},
-				{
-					"title": "Host Name",
-					"format": "hostname",
-					"name": "hostname",
-					"type": "string"
-				},
-				{
-					"name": "OS",
-					"items": [
-						{
-							"title": "OS",
-							"enum": [
-								"Windows",
-								"Linux",
-								"OS X",
-								"iOS",
-								"Android"
-							],
-							"name": "type",
-							"type": "string"
-						},
-						{
-							"title": "OS Distribution",
-							"name": "distribution",
-							"type": "string"
-						},
-						{
-							"title": "OS Bitness",
-							"enum": [
-								32,
-								64
-							],
-							"name": "bitness",
-							"type": "number"
-						}
-					],
-					"type": "array"
-				},
-				{
-					"title": "Network Interfaces",
-					"items": {
-						"items": [
+		deviceFields: {
+			fetching: false, data: {
+				'items': [
+					{
+						'title': 'Axonius Name',
+						'name': 'pretty_id',
+						'type': 'string'
+					},
+					{
+						'title': 'ID',
+						'name': 'id',
+						'type': 'string'
+					},
+					{
+						'title': 'Device Name',
+						'name': 'name',
+						'type': 'string'
+					},
+					{
+						'title': 'Host Name',
+						'format': 'hostname',
+						'name': 'hostname',
+						'type': 'string'
+					},
+					{
+						'name': 'OS',
+						'items': [
 							{
-								"title": "MAC",
-								"name": "MAC",
-								"type": "string"
+								'title': 'OS',
+								'enum': [
+									'Windows',
+									'Linux',
+									'OS X',
+									'iOS',
+									'Android'
+								],
+								'name': 'type',
+								'type': 'string'
 							},
 							{
-								"title": "IPs",
-								"items": {
-									"type": "string"
-								},
-								"name": "IP",
-								"type": "array"
+								'title': 'OS Distribution',
+								'name': 'distribution',
+								'type': 'string'
 							},
 							{
-								"title": "Interface Type",
-								"name": "nic_type",
-								"type": "string"
+								'title': 'OS Bitness',
+								'enum': [
+									32,
+									64
+								],
+								'name': 'bitness',
+								'type': 'number'
+							},
+							{
+								'title': 'OS Major',
+								'name': 'major',
+								'type': 'string'
+							},
+							{
+								'title': 'OS Minor',
+								'name': 'minor',
+								'type': 'string'
 							}
 						],
-						"type": "array"
+						'type': 'array'
 					},
-					"name": "network_interfaces",
-					"type": "array"
-				},
-				{
-					"title": "VM Tools Status",
-					"name": "vmToolsStatus",
-					"type": "string"
-				}
-			],
-			"type": "array",
-			"required": ["pretty_id", "name", "hostname", "OS", "network_interfaces"]
-		}, error: ''},
+					{
+						'title': 'Network Interfaces',
+						'items': {
+							'items': [
+								{
+									'title': 'MAC',
+									'name': 'MAC',
+									'type': 'string'
+								},
+								{
+									'title': 'IPs',
+									'items': {
+										'type': 'string'
+									},
+									'name': 'IP',
+									'type': 'array'
+								},
+								{
+									'title': 'Interface Type',
+									'name': 'nic_type',
+									'type': 'string'
+								}
+							],
+							'type': 'array'
+						},
+						'name': 'network_interfaces',
+						'type': 'array'
+					},
+					{
+						'title': 'Last Seen',
+						'name': 'last_seen',
+						'type': 'string',
+						'format': 'data-time'
+					},
+					{
+						'title': 'VM Tools Status',
+						'name': 'vmToolsStatus',
+						'type': 'string'
+					},
+					{
+						'title': 'Resolve Status',
+						'name': 'RESOLVE_STATUS',
+						'type': 'string'
+					},
+					{
+						'title': 'Power State',
+						'name': 'powerState',
+						'type': 'string'
+					},
+					{
+						'title': 'Physical Path',
+						'name': 'physicalPath',
+						'type': 'string'
+					}
+				],
+				'type': 'array',
+				'required': ['pretty_id', 'name', 'hostname', 'OS', 'network_interfaces']
+			}, error: ''
+		},
 
 		/* Configurations specific for devices */
 		fields: {
 			common: [
 				{path: 'internal_axon_id', name: '', hidden: true, selected: true},
 				{
-					path: 'adapters.plugin_name', name: 'Adapters', selected: true, type: 'image-list', control: 'multiple-select',
+					path: 'adapters.plugin_name',
+					name: 'Adapters',
+					selected: true,
+					type: 'image-list',
+					control: 'multiple-select',
 					options: []
 				},
 				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: false, control: 'text'},
@@ -230,250 +272,821 @@ export const device = {
 				{path: 'adapters.data.OS.type', name: 'OS', selected: true, control: 'text'},
 				{path: 'adapters.data.OS.distribution', name: 'OS Version', selected: false, control: 'text'},
 				{path: 'adapters.data.OS.bitness', name: 'OS Bitness', selected: false, control: 'text'},
-				{path: 'tags.tagname', name: 'Tags', selected: true, type: 'tag-list', control: 'multiple-select', options: []},
+				{
+					path: 'tags.tagname',
+					name: 'Tags',
+					selected: true,
+					type: 'tag-list',
+					control: 'multiple-select',
+					options: []
+				},
 				{path: 'tags.tagvalue', selected: true, hidden: true},
 				{path: 'last_used_user', selected: false, name: 'Last User Logged'}
 			],
 			unique: {
 				'cisco_adapter': [
-					{path:"adapters.data.raw.ip_address",name:"Cisco.ip_address",control:"text"},
-					{path:"adapters.data.raw.mac_address",name:"Cisco.mac_address",control:"text"}
+					{path: 'adapters.data.raw.ip_address', name: 'Cisco.ip_address', control: 'text'},
+					{path: 'adapters.data.raw.mac_address', name: 'Cisco.mac_address', control: 'text'}
 				],
 				'ad_adapter': [
-					{path:"adapters.data.raw.AXON_DNS_ADDR",name:"Active Directory.AXON_DNS_ADDR",control:"text"},
-					{path:"adapters.data.raw.AXON_DOMAIN_NAME",name:"Active Directory.AXON_DOMAIN_NAME",control:"text"},
-					{path:"adapters.data.raw.accountExpires",name:"Active Directory.accountExpires",control:"text"},
-					{path:"adapters.data.raw.badPasswordTime",name:"Active Directory.badPasswordTime",control:"text"},
-					{path:"adapters.data.raw.badPwdCount",name:"Active Directory.badPwdCount",control:"number"},
-					{path:"adapters.data.raw.cn",name:"Active Directory.cn",control:"text"},
-					{path:"adapters.data.raw.codePage",name:"Active Directory.codePage",control:"number"},
-					{path:"adapters.data.raw.countryCode",name:"Active Directory.countryCode",control:"number"},
-					{path:"adapters.data.raw.dNSHostName",name:"Active Directory.dNSHostName",control:"text"},
-					{path:"adapters.data.raw.distinguishedName",name:"Active Directory.distinguishedName",control:"text"},
-					{path:"adapters.data.raw.instanceType",name:"Active Directory.instanceType",control:"number"},
-					{path:"adapters.data.raw.isCriticalSystemObject",name:"Active Directory.isCriticalSystemObject",control:"bool"},
-					{path:"adapters.data.raw.lastLogoff",name:"Active Directory.lastLogoff",control:"text"},
-					{path:"adapters.data.raw.lastLogon",name:"Active Directory.lastLogon",control:"text"},
-					{path:"adapters.data.raw.lastLogonTimestamp",name:"Active Directory.lastLogonTimestamp",control:"text"},
-					{path:"adapters.data.raw.localPolicyFlags",name:"Active Directory.localPolicyFlags",control:"number"},
-					{path:"adapters.data.raw.logonCount",name:"Active Directory.logonCount",control:"number"},
-					{path:"adapters.data.raw.msDS-SupportedEncryptionTypes",name:"Active Directory.msDS-SupportedEncryptionTypes",control:"number"},
-					{path:"adapters.data.raw.name",name:"Active Directory.name",control:"text"},
-					{path:"adapters.data.raw.objectCategory",name:"Active Directory.objectCategory",control:"text"},
-					{path:"adapters.data.raw.objectGUID",name:"Active Directory.objectGUID",control:"text"},
-					{path:"adapters.data.raw.objectSid",name:"Active Directory.objectSid",control:"text"},
-					{path:"adapters.data.raw.operatingSystem",name:"Active Directory.operatingSystem",control:"text"},
-					{path:"adapters.data.raw.operatingSystemVersion",name:"Active Directory.operatingSystemVersion",control:"text"},
-					{path:"adapters.data.raw.primaryGroupID",name:"Active Directory.primaryGroupID",control:"number"},
-					{path:"adapters.data.raw.pwdLastSet",name:"Active Directory.pwdLastSet",control:"text"},
-					{path:"adapters.data.raw.sAMAccountName",name:"Active Directory.sAMAccountName",control:"text"},
-					{path:"adapters.data.raw.sAMAccountType",name:"Active Directory.sAMAccountType",control:"number"},
-					{path:"adapters.data.raw.uSNChanged",name:"Active Directory.uSNChanged",control:"number"},
-					{path:"adapters.data.raw.uSNCreated",name:"Active Directory.uSNCreated",control:"number"},
-					{path:"adapters.data.raw.userAccountControl",name:"Active Directory.userAccountControl",control:"number"},
-					{path:"adapters.data.raw.whenChanged",name:"Active Directory.whenChanged",control:"text"},
-					{path:"adapters.data.raw.whenCreated",name:"Active Directory.whenCreated",conrtol:"text"}
+					{path: 'adapters.data.raw.AXON_DNS_ADDR', name: 'Active Directory.AXON_DNS_ADDR', control: 'text'},
+					{
+						path: 'adapters.data.raw.AXON_DOMAIN_NAME',
+						name: 'Active Directory.AXON_DOMAIN_NAME',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.accountExpires',
+						name: 'Active Directory.accountExpires',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.badPasswordTime',
+						name: 'Active Directory.badPasswordTime',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.badPwdCount', name: 'Active Directory.badPwdCount', control: 'number'},
+					{path: 'adapters.data.raw.cn', name: 'Active Directory.cn', control: 'text'},
+					{path: 'adapters.data.raw.codePage', name: 'Active Directory.codePage', control: 'number'},
+					{path: 'adapters.data.raw.countryCode', name: 'Active Directory.countryCode', control: 'number'},
+					{path: 'adapters.data.raw.dNSHostName', name: 'Active Directory.dNSHostName', control: 'text'},
+					{
+						path: 'adapters.data.raw.distinguishedName',
+						name: 'Active Directory.distinguishedName',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.instanceType', name: 'Active Directory.instanceType', control: 'number'},
+					{
+						path: 'adapters.data.raw.isCriticalSystemObject',
+						name: 'Active Directory.isCriticalSystemObject',
+						control: 'bool'
+					},
+					{path: 'adapters.data.raw.lastLogoff', name: 'Active Directory.lastLogoff', control: 'text'},
+					{path: 'adapters.data.raw.lastLogon', name: 'Active Directory.lastLogon', control: 'text'},
+					{
+						path: 'adapters.data.raw.lastLogonTimestamp',
+						name: 'Active Directory.lastLogonTimestamp',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.localPolicyFlags',
+						name: 'Active Directory.localPolicyFlags',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.logonCount', name: 'Active Directory.logonCount', control: 'number'},
+					{
+						path: 'adapters.data.raw.msDS-SupportedEncryptionTypes',
+						name: 'Active Directory.msDS-SupportedEncryptionTypes',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.name', name: 'Active Directory.name', control: 'text'},
+					{
+						path: 'adapters.data.raw.objectCategory',
+						name: 'Active Directory.objectCategory',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.objectGUID', name: 'Active Directory.objectGUID', control: 'text'},
+					{path: 'adapters.data.raw.objectSid', name: 'Active Directory.objectSid', control: 'text'},
+					{
+						path: 'adapters.data.raw.operatingSystem',
+						name: 'Active Directory.operatingSystem',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.operatingSystemVersion',
+						name: 'Active Directory.operatingSystemVersion',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.primaryGroupID',
+						name: 'Active Directory.primaryGroupID',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.pwdLastSet', name: 'Active Directory.pwdLastSet', control: 'text'},
+					{
+						path: 'adapters.data.raw.sAMAccountName',
+						name: 'Active Directory.sAMAccountName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.sAMAccountType',
+						name: 'Active Directory.sAMAccountType',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.uSNChanged', name: 'Active Directory.uSNChanged', control: 'number'},
+					{path: 'adapters.data.raw.uSNCreated', name: 'Active Directory.uSNCreated', control: 'number'},
+					{
+						path: 'adapters.data.raw.userAccountControl',
+						name: 'Active Directory.userAccountControl',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.whenChanged', name: 'Active Directory.whenChanged', control: 'text'},
+					{path: 'adapters.data.raw.whenCreated', name: 'Active Directory.whenCreated', conrtol: 'text'}
 				],
 				'aws_adapter': [
-					{path:"adapters.data.raw.AmiLaunchIndex",name:"Amazon Elastic.AmiLaunchIndex",control:"number"},
-					{path:"adapters.data.raw.Architecture",name:"Amazon Elastic.Architecture",control:"text"},
-					{path:"adapters.data.raw.ClientToken",name:"Amazon Elastic.ClientToken",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.Architecture",name:"Amazon Elastic.DescribedImage.Architecture",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.CreationDate",name:"Amazon Elastic.DescribedImage.CreationDate",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.Description",name:"Amazon Elastic.DescribedImage.Description",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.Hypervisor",name:"Amazon Elastic.DescribedImage.Hypervisor",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.ImageId",name:"Amazon Elastic.DescribedImage.ImageId",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.ImageLocation",name:"Amazon Elastic.DescribedImage.ImageLocation",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.ImageType",name:"Amazon Elastic.DescribedImage.ImageType",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.Name",name:"Amazon Elastic.DescribedImage.Name",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.OwnerId",name:"Amazon Elastic.DescribedImage.OwnerId",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.Public",name:"Amazon Elastic.DescribedImage.Public",control:"bool"},
-					{path:"adapters.data.raw.DescribedImage.RootDeviceName",name:"Amazon Elastic.DescribedImage.RootDeviceName",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.RootDeviceType",name:"Amazon Elastic.DescribedImage.RootDeviceType",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.State",name:"Amazon Elastic.DescribedImage.State",control:"text"},
-					{path:"adapters.data.raw.DescribedImage.VirtualizationType",name:"Amazon Elastic.DescribedImage.VirtualizationType",control:"text"},
-					{path:"adapters.data.raw.EbsOptimized",name:"Amazon Elastic.EbsOptimized",control:"bool"},
-					{path:"adapters.data.raw.Hypervisor",name:"Amazon Elastic.Hypervisor",control:"text"},
-					{path:"adapters.data.raw.ImageId",name:"Amazon Elastic.ImageId",control:"text"},
-					{path:"adapters.data.raw.InstanceId",name:"Amazon Elastic.InstanceId",control:"text"},
-					{path:"adapters.data.raw.InstanceType",name:"Amazon Elastic.InstanceType",control:"text"},
-					{path:"adapters.data.raw.KeyName",name:"Amazon Elastic.KeyName",control:"text"},
-					{path:"adapters.data.raw.LaunchTime",name:"Amazon Elastic.LaunchTime",control:"text"},
-					{path:"adapters.data.raw.Monitoring.State",name:"Amazon Elastic.Monitoring.State",control:"text"},
-					{path:"adapters.data.raw.Placement.AvailabilityZone",name:"Amazon Elastic.Placement.AvailabilityZone",control:"text"},
-					{path:"adapters.data.raw.Placement.GroupName",name:"Amazon Elastic.Placement.GroupName",control:"text"},
-					{path:"adapters.data.raw.Placement.Tenancy",name:"Amazon Elastic.Placement.Tenancy",control:"text"},
-					{path:"adapters.data.raw.PrivateDnsName",name:"Amazon Elastic.PrivateDnsName",control:"text"},
-					{path:"adapters.data.raw.PublicDnsName",name:"Amazon Elastic.PublicDnsName",control:"text"},
-					{path:"adapters.data.raw.RootDeviceName",name:"Amazon Elastic.RootDeviceName",control:"text"},
-					{path:"adapters.data.raw.RootDeviceType",name:"Amazon Elastic.RootDeviceType",control:"text"},
-					{path:"adapters.data.raw.State.Code",name:"Amazon Elastic.State.Code",control:"number"},
-					{path:"adapters.data.raw.State.Name",name:"Amazon Elastic.State.Name",control:"text"},
-					{path:"adapters.data.raw.StateReason.Code",name:"Amazon Elastic.StateReason.Code",control:"text"},
-					{path:"adapters.data.raw.StateReason.Message",name:"Amazon Elastic.StateReason.Message",control:"text"},
-					{path:"adapters.data.raw.StateTransitionReason",name:"Amazon Elastic.StateTransitionReason",control:"text"},
-					{path:"adapters.data.raw.VirtualizationType",name:"Amazon Elastic.VirtualizationType",control:"text"}
+					{
+						path: 'adapters.data.raw.AmiLaunchIndex',
+						name: 'Amazon Elastic.AmiLaunchIndex',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.Architecture', name: 'Amazon Elastic.Architecture', control: 'text'},
+					{path: 'adapters.data.raw.ClientToken', name: 'Amazon Elastic.ClientToken', control: 'text'},
+					{
+						path: 'adapters.data.raw.DescribedImage.Architecture',
+						name: 'Amazon Elastic.DescribedImage.Architecture',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.CreationDate',
+						name: 'Amazon Elastic.DescribedImage.CreationDate',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.Description',
+						name: 'Amazon Elastic.DescribedImage.Description',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.Hypervisor',
+						name: 'Amazon Elastic.DescribedImage.Hypervisor',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.ImageId',
+						name: 'Amazon Elastic.DescribedImage.ImageId',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.ImageLocation',
+						name: 'Amazon Elastic.DescribedImage.ImageLocation',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.ImageType',
+						name: 'Amazon Elastic.DescribedImage.ImageType',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.Name',
+						name: 'Amazon Elastic.DescribedImage.Name',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.OwnerId',
+						name: 'Amazon Elastic.DescribedImage.OwnerId',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.Public',
+						name: 'Amazon Elastic.DescribedImage.Public',
+						control: 'bool'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.RootDeviceName',
+						name: 'Amazon Elastic.DescribedImage.RootDeviceName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.RootDeviceType',
+						name: 'Amazon Elastic.DescribedImage.RootDeviceType',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.State',
+						name: 'Amazon Elastic.DescribedImage.State',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.DescribedImage.VirtualizationType',
+						name: 'Amazon Elastic.DescribedImage.VirtualizationType',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.EbsOptimized', name: 'Amazon Elastic.EbsOptimized', control: 'bool'},
+					{path: 'adapters.data.raw.Hypervisor', name: 'Amazon Elastic.Hypervisor', control: 'text'},
+					{path: 'adapters.data.raw.ImageId', name: 'Amazon Elastic.ImageId', control: 'text'},
+					{path: 'adapters.data.raw.InstanceId', name: 'Amazon Elastic.InstanceId', control: 'text'},
+					{path: 'adapters.data.raw.InstanceType', name: 'Amazon Elastic.InstanceType', control: 'text'},
+					{path: 'adapters.data.raw.KeyName', name: 'Amazon Elastic.KeyName', control: 'text'},
+					{path: 'adapters.data.raw.LaunchTime', name: 'Amazon Elastic.LaunchTime', control: 'text'},
+					{
+						path: 'adapters.data.raw.Monitoring.State',
+						name: 'Amazon Elastic.Monitoring.State',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.Placement.AvailabilityZone',
+						name: 'Amazon Elastic.Placement.AvailabilityZone',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.Placement.GroupName',
+						name: 'Amazon Elastic.Placement.GroupName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.Placement.Tenancy',
+						name: 'Amazon Elastic.Placement.Tenancy',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.PrivateDnsName', name: 'Amazon Elastic.PrivateDnsName', control: 'text'},
+					{path: 'adapters.data.raw.PublicDnsName', name: 'Amazon Elastic.PublicDnsName', control: 'text'},
+					{path: 'adapters.data.raw.RootDeviceName', name: 'Amazon Elastic.RootDeviceName', control: 'text'},
+					{path: 'adapters.data.raw.RootDeviceType', name: 'Amazon Elastic.RootDeviceType', control: 'text'},
+					{path: 'adapters.data.raw.State.Code', name: 'Amazon Elastic.State.Code', control: 'number'},
+					{path: 'adapters.data.raw.State.Name', name: 'Amazon Elastic.State.Name', control: 'text'},
+					{
+						path: 'adapters.data.raw.StateReason.Code',
+						name: 'Amazon Elastic.StateReason.Code',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.StateReason.Message',
+						name: 'Amazon Elastic.StateReason.Message',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.StateTransitionReason',
+						name: 'Amazon Elastic.StateTransitionReason',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.VirtualizationType',
+						name: 'Amazon Elastic.VirtualizationType',
+						control: 'text'
+					}
 				],
 				'esx_adapter': [
-					{path:"adapters.data.raw.config.annotation",name:"ESX.config.annotation",control:"text"},
-					{path:"adapters.data.raw.config.cpuReservation",name:"ESX.config.cpuReservation",control:"number"},
-					{path:"adapters.data.raw.config.guestFullName",name:"ESX.config.guestFullName",control:"text"},
-					{path:"adapters.data.raw.config.guestId",name:"ESX.config.guestId",control:"text"},
-					{path:"adapters.data.raw.config.installBootRequired",name:"ESX.config.installBootRequired",control:"bool"},
-					{path:"adapters.data.raw.config.instanceUuid",name:"ESX.config.instanceUuid",control:"text"},
-					{path:"adapters.data.raw.config.memoryReservation",name:"ESX.config.memoryReservation",control:"number"},
-					{path:"adapters.data.raw.config.memorySizeMB",name:"ESX.config.memorySizeMB",control:"number"},
-					{path:"adapters.data.raw.config.name",name:"ESX.config.name",control:"text"},
-					{path:"adapters.data.raw.config.numCpu",name:"ESX.config.numCpu",control:"number"},
-					{path:"adapters.data.raw.config.numEthernetCards",name:"ESX.config.numEthernetCards",control:"number"},
-					{path:"adapters.data.raw.config.numVirtualDisks",name:"ESX.config.numVirtualDisks",control:"number"},
-					{path:"adapters.data.raw.config.template",name:"ESX.config.template",control:"bool"},
-					{path:"adapters.data.raw.config.uuid",name:"ESX.config.uuid",control:"text"},
-					{path:"adapters.data.raw.config.vmPathName",name:"ESX.config.vmPathName",control:"text"},
-					{path:"adapters.data.raw.guest.toolsRunningStatus",name:"ESX.guest.toolsRunningStatus",control:"text"},
-					{path:"adapters.data.raw.guest.toolsStatus",name:"ESX.guest.toolsStatus",control:"text"},
-					{path:"adapters.data.raw.guest.toolsVersionStatus",name:"ESX.guest.toolsVersionStatus",control:"text"},
-					{path:"adapters.data.raw.quickStats.balloonedMemory",name:"ESX.quickStats.balloonedMemory",control:"number"},
-					{path:"adapters.data.raw.quickStats.compressedMemory",name:"ESX.quickStats.compressedMemory",control:"number"},
-					{path:"adapters.data.raw.quickStats.consumedOverheadMemory",name:"ESX.quickStats.consumedOverheadMemory",control:"number"},
-					{path:"adapters.data.raw.quickStats.distributedCpuEntitlement",name:"ESX.quickStats.distributedCpuEntitlement",control:"number"},
-					{path:"adapters.data.raw.quickStats.distributedMemoryEntitlement",name:"ESX.quickStats.distributedMemoryEntitlement",control:"number"},
-					{path:"adapters.data.raw.quickStats.ftLatencyStatus",name:"ESX.quickStats.ftLatencyStatus",control:"text"},
-					{path:"adapters.data.raw.quickStats.ftLogBandwidth",name:"ESX.quickStats.ftLogBandwidth",control:"number"},
-					{path:"adapters.data.raw.quickStats.ftSecondaryLatency",name:"ESX.quickStats.ftSecondaryLatency",control:"number"},
-					{path:"adapters.data.raw.quickStats.guestHeartbeatStatus",name:"ESX.quickStats.guestHeartbeatStatus",control:"text"},
-					{path:"adapters.data.raw.quickStats.guestMemoryUsage",name:"ESX.quickStats.guestMemoryUsage",control:"number"},
-					{path:"adapters.data.raw.quickStats.hostMemoryUsage",name:"ESX.quickStats.hostMemoryUsage",control:"number"},
-					{path:"adapters.data.raw.quickStats.overallCpuDemand",name:"ESX.quickStats.overallCpuDemand",control:"number"},
-					{path:"adapters.data.raw.quickStats.overallCpuUsage",name:"ESX.quickStats.overallCpuUsage",control:"number"},
-					{path:"adapters.data.raw.quickStats.privateMemory",name:"ESX.quickStats.privateMemory",control:"number"},
-					{path:"adapters.data.raw.quickStats.sharedMemory",name:"ESX.quickStats.sharedMemory",control:"number"},
-					{path:"adapters.data.raw.quickStats.staticCpuEntitlement",name:"ESX.quickStats.staticCpuEntitlement",control:"number"},
-					{path:"adapters.data.raw.quickStats.staticMemoryEntitlement",name:"ESX.quickStats.staticMemoryEntitlement",control:"number"},
-					{path:"adapters.data.raw.quickStats.swappedMemory",name:"ESX.quickStats.swappedMemory",control:"number"},
-					{path:"adapters.data.raw.quickStats.uptimeSeconds",name:"ESX.quickStats.uptimeSeconds",control:"number"},
-					{path:"adapters.data.raw.runtime.bootTime",name:"ESX.runtime.bootTime",control:"text"},
-					{path:"adapters.data.raw.runtime.connectionState",name:"ESX.runtime.connectionState",control:"text"},
-					{path:"adapters.data.raw.runtime.consolidationNeeded",name:"ESX.runtime.consolidationNeeded",control:"bool"},
-					{path:"adapters.data.raw.runtime.faultToleranceState",name:"ESX.runtime.faultToleranceState",control:"text"},
-					{path:"adapters.data.raw.runtime.maxCpuUsage",name:"ESX.runtime.maxCpuUsage",control:"number"},
-					{path:"adapters.data.raw.runtime.maxMemoryUsage",name:"ESX.runtime.maxMemoryUsage",control:"number"},
-					{path:"adapters.data.raw.runtime.numMksConnections",name:"ESX.runtime.numMksConnections",control:"number"},
-					{path:"adapters.data.raw.runtime.onlineStandby",name:"ESX.runtime.onlineStandby",control:"bool"},
-					{path:"adapters.data.raw.runtime.powerState",name:"ESX.runtime.powerState",control:"text"},
-					{path:"adapters.data.raw.runtime.recordReplayState",name:"ESX.runtime.recordReplayState",control:"text"},
-					{path:"adapters.data.raw.runtime.suspendInterval",name:"ESX.runtime.suspendInterval",control:"number"},
-					{path:"adapters.data.raw.runtime.toolsInstallerMounted",name:"ESX.runtime.toolsInstallerMounted",control:"bool"},
-					{path:"adapters.data.raw.storage.committed",name:"ESX.storage.committed",control:"number"},
-					{path:"adapters.data.raw.storage.timestamp",name:"ESX.storage.timestamp",control:"text"},
-					{path:"adapters.data.raw.storage.uncommitted",name:"ESX.storage.uncommitted",control:"number"},
-					{path:"adapters.data.raw.storage.unshared",name:"ESX.storage.unshared",control:"number"}
+					{path: 'adapters.data.raw.config.annotation', name: 'ESX.config.annotation', control: 'text'},
+					{
+						path: 'adapters.data.raw.config.cpuReservation',
+						name: 'ESX.config.cpuReservation',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.config.guestFullName', name: 'ESX.config.guestFullName', control: 'text'},
+					{path: 'adapters.data.raw.config.guestId', name: 'ESX.config.guestId', control: 'text'},
+					{
+						path: 'adapters.data.raw.config.installBootRequired',
+						name: 'ESX.config.installBootRequired',
+						control: 'bool'
+					},
+					{path: 'adapters.data.raw.config.instanceUuid', name: 'ESX.config.instanceUuid', control: 'text'},
+					{
+						path: 'adapters.data.raw.config.memoryReservation',
+						name: 'ESX.config.memoryReservation',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.config.memorySizeMB', name: 'ESX.config.memorySizeMB', control: 'number'},
+					{path: 'adapters.data.raw.config.name', name: 'ESX.config.name', control: 'text'},
+					{path: 'adapters.data.raw.config.numCpu', name: 'ESX.config.numCpu', control: 'number'},
+					{
+						path: 'adapters.data.raw.config.numEthernetCards',
+						name: 'ESX.config.numEthernetCards',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.config.numVirtualDisks',
+						name: 'ESX.config.numVirtualDisks',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.config.template', name: 'ESX.config.template', control: 'bool'},
+					{path: 'adapters.data.raw.config.uuid', name: 'ESX.config.uuid', control: 'text'},
+					{path: 'adapters.data.raw.config.vmPathName', name: 'ESX.config.vmPathName', control: 'text'},
+					{
+						path: 'adapters.data.raw.guest.toolsRunningStatus',
+						name: 'ESX.guest.toolsRunningStatus',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.guest.toolsStatus', name: 'ESX.guest.toolsStatus', control: 'text'},
+					{
+						path: 'adapters.data.raw.guest.toolsVersionStatus',
+						name: 'ESX.guest.toolsVersionStatus',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.balloonedMemory',
+						name: 'ESX.quickStats.balloonedMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.compressedMemory',
+						name: 'ESX.quickStats.compressedMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.consumedOverheadMemory',
+						name: 'ESX.quickStats.consumedOverheadMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.distributedCpuEntitlement',
+						name: 'ESX.quickStats.distributedCpuEntitlement',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.distributedMemoryEntitlement',
+						name: 'ESX.quickStats.distributedMemoryEntitlement',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.ftLatencyStatus',
+						name: 'ESX.quickStats.ftLatencyStatus',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.ftLogBandwidth',
+						name: 'ESX.quickStats.ftLogBandwidth',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.ftSecondaryLatency',
+						name: 'ESX.quickStats.ftSecondaryLatency',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.guestHeartbeatStatus',
+						name: 'ESX.quickStats.guestHeartbeatStatus',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.guestMemoryUsage',
+						name: 'ESX.quickStats.guestMemoryUsage',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.hostMemoryUsage',
+						name: 'ESX.quickStats.hostMemoryUsage',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.overallCpuDemand',
+						name: 'ESX.quickStats.overallCpuDemand',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.overallCpuUsage',
+						name: 'ESX.quickStats.overallCpuUsage',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.privateMemory',
+						name: 'ESX.quickStats.privateMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.sharedMemory',
+						name: 'ESX.quickStats.sharedMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.staticCpuEntitlement',
+						name: 'ESX.quickStats.staticCpuEntitlement',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.staticMemoryEntitlement',
+						name: 'ESX.quickStats.staticMemoryEntitlement',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.swappedMemory',
+						name: 'ESX.quickStats.swappedMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.quickStats.uptimeSeconds',
+						name: 'ESX.quickStats.uptimeSeconds',
+						control: 'number'
+					},
+					{path: 'adapters.data.raw.runtime.bootTime', name: 'ESX.runtime.bootTime', control: 'text'},
+					{
+						path: 'adapters.data.raw.runtime.connectionState',
+						name: 'ESX.runtime.connectionState',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.runtime.consolidationNeeded',
+						name: 'ESX.runtime.consolidationNeeded',
+						control: 'bool'
+					},
+					{
+						path: 'adapters.data.raw.runtime.faultToleranceState',
+						name: 'ESX.runtime.faultToleranceState',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.runtime.maxCpuUsage', name: 'ESX.runtime.maxCpuUsage', control: 'number'},
+					{
+						path: 'adapters.data.raw.runtime.maxMemoryUsage',
+						name: 'ESX.runtime.maxMemoryUsage',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.runtime.numMksConnections',
+						name: 'ESX.runtime.numMksConnections',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.runtime.onlineStandby',
+						name: 'ESX.runtime.onlineStandby',
+						control: 'bool'
+					},
+					{path: 'adapters.data.raw.runtime.powerState', name: 'ESX.runtime.powerState', control: 'text'},
+					{
+						path: 'adapters.data.raw.runtime.recordReplayState',
+						name: 'ESX.runtime.recordReplayState',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.runtime.suspendInterval',
+						name: 'ESX.runtime.suspendInterval',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.runtime.toolsInstallerMounted',
+						name: 'ESX.runtime.toolsInstallerMounted',
+						control: 'bool'
+					},
+					{path: 'adapters.data.raw.storage.committed', name: 'ESX.storage.committed', control: 'number'},
+					{path: 'adapters.data.raw.storage.timestamp', name: 'ESX.storage.timestamp', control: 'text'},
+					{path: 'adapters.data.raw.storage.uncommitted', name: 'ESX.storage.uncommitted', control: 'number'},
+					{path: 'adapters.data.raw.storage.unshared', name: 'ESX.storage.unshared', control: 'number'}
 				],
 				'jamf_adapter': [
-					{path:"adapters.data.raw.id",name:"Jamf.id",control:"text"},
-					{path:"adapters.data.raw.name",name:"Jamf.name",control:"text"},
-					{path:"adapters.data.raw.mac_address",name:"Jamf.mac_address",control:"text"},
-					{path:"adapters.data.raw.alt_mac_address",name:"Jamf.alt_mac_address",control:"text"},
-					{path:"adapters.data.raw.ip_address",name:"Jamf.ip_address",control:"text"},
-					{path:"adapters.data.raw.last_reported_ip",name:"Jamf.last_reported_ip",control:"text"},
-					{path:"adapters.data.raw.serial_number",name:"Jamf.serial_number",control:"text"},
-					{path:"adapters.data.raw.udid",name:"Jamf.udid",control:"text"},
-					{path:"adapters.data.raw.jamf_version",name:"Jamf.jamf_version",control:"text"},
-					{path:"adapters.data.raw.platform",name:"Jamf.platform",control:"text"},
-					{path:"adapters.data.raw.barcode_1",name:"Jamf.barcode_1",control:"text"},
-					{path:"adapters.data.raw.barcode_2",name:"Jamf.barcode_2",control:"text"},
-					{path:"adapters.data.raw.asset_tag",name:"Jamf.asset_tag",control:"text"},
-					{path:"adapters.data.raw.managed",name:"Jamf.managed",control:"text"},
-					{path:"adapters.data.raw.management_username",name:"Jamf.management_username",control:"text"},
-					{path:"adapters.data.raw.mdm_capable",name:"Jamf.mdm_capable",control:"text"},
-					{path:"adapters.data.raw.mdm_capable_user",name:"Jamf.mdm_capable_user",control:"text"},
-					{path:"adapters.data.raw.report_date",name:"Jamf.report_date",control:"text"},
-					{path:"adapters.data.raw.report_date_epoch",name:"Jamf.report_date_epoch",control:"text"},
-					{path:"adapters.data.raw.report_date_utc",name:"Jamf.report_date_utc",control:"text"},
-					{path:"adapters.data.raw.last_contact_time",name:"Jamf.last_contact_time",control:"text"},
-					{path:"adapters.data.raw.last_contact_time_epoch",name:"Jamf.last_contact_time_epoch",control:"text"},
-					{path:"adapters.data.raw.last_contact_time_utc",name:"Jamf.last_contact_time_utc",control:"text"},
-					{path:"adapters.data.raw.initial_entry_date",name:"Jamf.initial_entry_date",control:"text"},
-					{path:"adapters.data.raw.initial_entry_date_epoch",name:"Jamf.initial_entry_date_epoch",control:"text"},
-					{path:"adapters.data.raw.initial_entry_date_utc",name:"Jamf.initial_entry_date_utc",control:"text"},
-					{path:"adapters.data.raw.last_cloud_backup_date_epoch",name:"Jamf.last_cloud_backup_date_epoch",control:"text"},
-					{path:"adapters.data.raw.last_cloud_backup_date_utc",name:"Jamf.last_cloud_backup_date_utc",control:"text"},
-					{path:"adapters.data.raw.last_enrolled_date_epoch",name:"Jamf.last_enrolled_date_epoch",control:"text"},
-					{path:"adapters.data.raw.last_enrolled_date_utc",name:"Jamf.last_enrolled_date_utc",control:"text"},
-					{path:"adapters.data.raw.distribution_point",name:"Jamf.distribution_point",control:"text"},
-					{path:"adapters.data.raw.sus",name:"Jamf.sus",control:"text"},
-					{path:"adapters.data.raw.netboot_server",name:"Jamf.netboot_server",control:"text"},
-					{path:"adapters.data.raw.itunes_store_account_is_active",name:"Jamf.itunes_store_account_is_active",control:"text"}
+					{path: 'adapters.data.raw.id', name: 'Jamf.id', control: 'text'},
+					{path: 'adapters.data.raw.name', name: 'Jamf.name', control: 'text'},
+					{path: 'adapters.data.raw.mac_address', name: 'Jamf.mac_address', control: 'text'},
+					{path: 'adapters.data.raw.alt_mac_address', name: 'Jamf.alt_mac_address', control: 'text'},
+					{path: 'adapters.data.raw.ip_address', name: 'Jamf.ip_address', control: 'text'},
+					{path: 'adapters.data.raw.last_reported_ip', name: 'Jamf.last_reported_ip', control: 'text'},
+					{path: 'adapters.data.raw.serial_number', name: 'Jamf.serial_number', control: 'text'},
+					{path: 'adapters.data.raw.udid', name: 'Jamf.udid', control: 'text'},
+					{path: 'adapters.data.raw.jamf_version', name: 'Jamf.jamf_version', control: 'text'},
+					{path: 'adapters.data.raw.platform', name: 'Jamf.platform', control: 'text'},
+					{path: 'adapters.data.raw.barcode_1', name: 'Jamf.barcode_1', control: 'text'},
+					{path: 'adapters.data.raw.barcode_2', name: 'Jamf.barcode_2', control: 'text'},
+					{path: 'adapters.data.raw.asset_tag', name: 'Jamf.asset_tag', control: 'text'},
+					{path: 'adapters.data.raw.managed', name: 'Jamf.managed', control: 'text'},
+					{path: 'adapters.data.raw.management_username', name: 'Jamf.management_username', control: 'text'},
+					{path: 'adapters.data.raw.mdm_capable', name: 'Jamf.mdm_capable', control: 'text'},
+					{path: 'adapters.data.raw.mdm_capable_user', name: 'Jamf.mdm_capable_user', control: 'text'},
+					{path: 'adapters.data.raw.report_date', name: 'Jamf.report_date', control: 'text'},
+					{path: 'adapters.data.raw.report_date_epoch', name: 'Jamf.report_date_epoch', control: 'text'},
+					{path: 'adapters.data.raw.report_date_utc', name: 'Jamf.report_date_utc', control: 'text'},
+					{path: 'adapters.data.raw.last_contact_time', name: 'Jamf.last_contact_time', control: 'text'},
+					{
+						path: 'adapters.data.raw.last_contact_time_epoch',
+						name: 'Jamf.last_contact_time_epoch',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.last_contact_time_utc',
+						name: 'Jamf.last_contact_time_utc',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.initial_entry_date', name: 'Jamf.initial_entry_date', control: 'text'},
+					{
+						path: 'adapters.data.raw.initial_entry_date_epoch',
+						name: 'Jamf.initial_entry_date_epoch',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.initial_entry_date_utc',
+						name: 'Jamf.initial_entry_date_utc',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.last_cloud_backup_date_epoch',
+						name: 'Jamf.last_cloud_backup_date_epoch',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.last_cloud_backup_date_utc',
+						name: 'Jamf.last_cloud_backup_date_utc',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.last_enrolled_date_epoch',
+						name: 'Jamf.last_enrolled_date_epoch',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.last_enrolled_date_utc',
+						name: 'Jamf.last_enrolled_date_utc',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.distribution_point', name: 'Jamf.distribution_point', control: 'text'},
+					{path: 'adapters.data.raw.sus', name: 'Jamf.sus', control: 'text'},
+					{path: 'adapters.data.raw.netboot_server', name: 'Jamf.netboot_server', control: 'text'},
+					{
+						path: 'adapters.data.raw.itunes_store_account_is_active',
+						name: 'Jamf.itunes_store_account_is_active',
+						control: 'text'
+					}
 				],
 				'epo_adapter': [
-					{path:"adapters.data.raw.EPOBranchNode_DOT__DOT_NodeName",name:"Epo.EPOBranchNode_NodeName",control:"text"},
-					{path:"adapters.data.raw.EPOBranchNode_DOT__DOT_NodeTextPath",name:"Epo.EPOBranchNode_NodeTextPath",control:"text"},
-					{path:"adapters.data.raw.EPOBranchNode_DOT__DOT_NodeTextPath2",name:"Epo.EPOBranchNode_NodeTextPath2",control:"text"},
-					{path:"adapters.data.raw.EPOBranchNode_DOT__DOT_Notes",name:"Epo.EPOBranchNode_Notes",control:"text"},
-					{path:"adapters.data.raw.EPOComputerLdapProperties_DOT__DOT_LdapOrgUnit",name:"Epo.EPOComputerLdapProperties_LdapOrgUnit",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_CPUSerialNum",name:"Epo.EPOComputerProperties_CPUSerialNum",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_CPUSpeed",name:"Epo.EPOComputerProperties_CPUSpeed",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_CPUType",name:"Epo.EPOComputerProperties_CPUType",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_ComputerName",name:"Epo.EPOComputerProperties_ComputerName",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_DefaultLangID",name:"Epo.EPOComputerProperties_DefaultLangID",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_Description",name:"Epo.EPOComputerProperties_Description",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_DomainName",name:"Epo.EPOComputerProperties_DomainName",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_FreeDiskSpace",name:"Epo.EPOComputerProperties_FreeDiskSpace",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_FreeMemory",name:"Epo.EPOComputerProperties_FreeMemory",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IPHostName",name:"Epo.EPOComputerProperties_IPHostName",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IPSubnet",name:"Epo.EPOComputerProperties_IPSubnet",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IPSubnetMask",name:"Epo.EPOComputerProperties_IPSubnetMask",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IPV4x",name:"Epo.EPOComputerProperties_IPV4x",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IPV6",name:"Epo.EPOComputerProperties_IPV6",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IPXAddress",name:"Epo.EPOComputerProperties_IPXAddress",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_IsPortable",name:"Epo.EPOComputerProperties_IsPortable",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_ManagementType",name:"Epo.EPOComputerProperties_ManagementType",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_NetAddress",name:"Epo.EPOComputerProperties_NetAddress",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_NumOfCPU",name:"Epo.EPOComputerProperties_NumOfCPU",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_OSBitMode",name:"Epo.EPOComputerProperties_OSBitMode",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT__OSBuildNum",name:"Epo.EPOComputerProperties_OSBuildNum",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_OSOEMID",name:"Epo.EPOComputerProperties_OSOEMID",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_OSPlatform",name:"Epo.EPOComputerProperties_OSPlatform",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_OSServicePackVer",name:"Epo.EPOComputerProperties_OSServicePackVer",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_OSType",name:"Epo.EPOComputerProperties_OSType",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_OSVersion",name:"Epo.EPOComputerProperties_OSVersion",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_SubnetAddress",name:"Epo.EPOComputerProperties_SubnetAddress",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_SubnetMask",name:"Epo.EPOComputerProperties_SubnetMask",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_SystemDescription",name:"Epo.EPOComputerProperties_SystemDescription",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_SysvolFreeSpace",name:"Epo.EPOComputerProperties_SysvolFreeSpace",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_SysvolTotalSpace",name:"Epo.EPOComputerProperties_SysvolTotalSpace",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_TimeZone",name:"Epo.EPOComputerProperties_TimeZone",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_TotalDiskSpace",name:"Epo.EPOComputerProperties_TotalDiskSpace",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT__TotalPhysicalMemory",name:"Epo.EPOComputerProperties_TotalPhysicalMemory",control:"number"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_UserName",name:"Epo.EPOComputerProperties_UserName",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty1",name:"Epo.EPOComputerProperties_UserProperty1",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty2",name:"Epo.EPOComputerProperties_UserProperty2",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty3",name:"Epo.EPOComputerProperties_UserProperty3",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty4",name:"Epo.EPOComputerProperties_UserProperty4",control:"text"},
-					{path:"adapters.data.raw.EPOComputerProperties_DOT__DOT_Vdi",name:"Epo.EPOComputerProperties_Vdi",control:"number"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_AgentGUID",name:"Epo.EPOLeafNode_AgentGUID",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_AgentVersion",name:"Epo.EPOLeafNode_AgentVersion",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_ExcludedTags",name:"Epo.EPOLeafNode_ExcludedTags",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_LastCommSecure",name:"Epo.EPOLeafNode_LastCommSecure",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_LastUpdate",name:"Epo.EPOLeafNode_LastUpdate",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_ManagedState",name:"Epo.EPOLeafNode_ManagedState",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_NodeName",name:"Epo.EPOLeafNode_NodeName",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_ResortEnabled",name:"Epo.EPOLeafNode_ResortEnabled",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_SequenceErrorCount",name:"Epo.EPOLeafNode_SequenceErrorCount",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_SequenceErrorCountLastUpdate",name:"Epo.EPOLeafNode_SequenceErrorCountLastUpdate",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_ServerKeyHash",name:"Epo.EPOLeafNode_ServerKeyHash",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_Tags",name:"Epo.EPOLeafNode_Tags",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_TransferSiteListsID",name:"Epo.EPOLeafNode_TransferSiteListsID",control:"text"},
-					{path:"adapters.data.raw.EPOLeafNode_DOT__DOT_os",name:"Epo.EPOLeafNode_os",control:"text"},
-					{path:"adapters.data.raw.EPOProductPropertyProducts_DOT__DOT_Products",name:"Epo.EPOProductPropertyProducts_Products",control:"text"}
+					{
+						path: 'adapters.data.raw.EPOBranchNode_DOT__DOT_NodeName',
+						name: 'Epo.EPOBranchNode_NodeName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOBranchNode_DOT__DOT_NodeTextPath',
+						name: 'Epo.EPOBranchNode_NodeTextPath',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOBranchNode_DOT__DOT_NodeTextPath2',
+						name: 'Epo.EPOBranchNode_NodeTextPath2',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOBranchNode_DOT__DOT_Notes',
+						name: 'Epo.EPOBranchNode_Notes',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerLdapProperties_DOT__DOT_LdapOrgUnit',
+						name: 'Epo.EPOComputerLdapProperties_LdapOrgUnit',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_CPUSerialNum',
+						name: 'Epo.EPOComputerProperties_CPUSerialNum',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_CPUSpeed',
+						name: 'Epo.EPOComputerProperties_CPUSpeed',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_CPUType',
+						name: 'Epo.EPOComputerProperties_CPUType',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_ComputerName',
+						name: 'Epo.EPOComputerProperties_ComputerName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_DefaultLangID',
+						name: 'Epo.EPOComputerProperties_DefaultLangID',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_Description',
+						name: 'Epo.EPOComputerProperties_Description',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_DomainName',
+						name: 'Epo.EPOComputerProperties_DomainName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_FreeDiskSpace',
+						name: 'Epo.EPOComputerProperties_FreeDiskSpace',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_FreeMemory',
+						name: 'Epo.EPOComputerProperties_FreeMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IPHostName',
+						name: 'Epo.EPOComputerProperties_IPHostName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IPSubnet',
+						name: 'Epo.EPOComputerProperties_IPSubnet',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IPSubnetMask',
+						name: 'Epo.EPOComputerProperties_IPSubnetMask',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IPV4x',
+						name: 'Epo.EPOComputerProperties_IPV4x',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IPV6',
+						name: 'Epo.EPOComputerProperties_IPV6',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IPXAddress',
+						name: 'Epo.EPOComputerProperties_IPXAddress',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_IsPortable',
+						name: 'Epo.EPOComputerProperties_IsPortable',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_ManagementType',
+						name: 'Epo.EPOComputerProperties_ManagementType',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_NetAddress',
+						name: 'Epo.EPOComputerProperties_NetAddress',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_NumOfCPU',
+						name: 'Epo.EPOComputerProperties_NumOfCPU',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_OSBitMode',
+						name: 'Epo.EPOComputerProperties_OSBitMode',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT__OSBuildNum',
+						name: 'Epo.EPOComputerProperties_OSBuildNum',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_OSOEMID',
+						name: 'Epo.EPOComputerProperties_OSOEMID',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_OSPlatform',
+						name: 'Epo.EPOComputerProperties_OSPlatform',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_OSServicePackVer',
+						name: 'Epo.EPOComputerProperties_OSServicePackVer',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_OSType',
+						name: 'Epo.EPOComputerProperties_OSType',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_OSVersion',
+						name: 'Epo.EPOComputerProperties_OSVersion',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_SubnetAddress',
+						name: 'Epo.EPOComputerProperties_SubnetAddress',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_SubnetMask',
+						name: 'Epo.EPOComputerProperties_SubnetMask',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_SystemDescription',
+						name: 'Epo.EPOComputerProperties_SystemDescription',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_SysvolFreeSpace',
+						name: 'Epo.EPOComputerProperties_SysvolFreeSpace',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_SysvolTotalSpace',
+						name: 'Epo.EPOComputerProperties_SysvolTotalSpace',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_TimeZone',
+						name: 'Epo.EPOComputerProperties_TimeZone',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_TotalDiskSpace',
+						name: 'Epo.EPOComputerProperties_TotalDiskSpace',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT__TotalPhysicalMemory',
+						name: 'Epo.EPOComputerProperties_TotalPhysicalMemory',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_UserName',
+						name: 'Epo.EPOComputerProperties_UserName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty1',
+						name: 'Epo.EPOComputerProperties_UserProperty1',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty2',
+						name: 'Epo.EPOComputerProperties_UserProperty2',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty3',
+						name: 'Epo.EPOComputerProperties_UserProperty3',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_UserProperty4',
+						name: 'Epo.EPOComputerProperties_UserProperty4',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOComputerProperties_DOT__DOT_Vdi',
+						name: 'Epo.EPOComputerProperties_Vdi',
+						control: 'number'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_AgentGUID',
+						name: 'Epo.EPOLeafNode_AgentGUID',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_AgentVersion',
+						name: 'Epo.EPOLeafNode_AgentVersion',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_ExcludedTags',
+						name: 'Epo.EPOLeafNode_ExcludedTags',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_LastCommSecure',
+						name: 'Epo.EPOLeafNode_LastCommSecure',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_LastUpdate',
+						name: 'Epo.EPOLeafNode_LastUpdate',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_ManagedState',
+						name: 'Epo.EPOLeafNode_ManagedState',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_NodeName',
+						name: 'Epo.EPOLeafNode_NodeName',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_ResortEnabled',
+						name: 'Epo.EPOLeafNode_ResortEnabled',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_SequenceErrorCount',
+						name: 'Epo.EPOLeafNode_SequenceErrorCount',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_SequenceErrorCountLastUpdate',
+						name: 'Epo.EPOLeafNode_SequenceErrorCountLastUpdate',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_ServerKeyHash',
+						name: 'Epo.EPOLeafNode_ServerKeyHash',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_Tags',
+						name: 'Epo.EPOLeafNode_Tags',
+						control: 'text'
+					},
+					{
+						path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_TransferSiteListsID',
+						name: 'Epo.EPOLeafNode_TransferSiteListsID',
+						control: 'text'
+					},
+					{path: 'adapters.data.raw.EPOLeafNode_DOT__DOT_os', name: 'Epo.EPOLeafNode_os', control: 'text'},
+					{
+						path: 'adapters.data.raw.EPOProductPropertyProducts_DOT__DOT_Products',
+						name: 'Epo.EPOProductPropertyProducts_Products',
+						control: 'text'
+					}
 				],
 				'puppet_adapter': [
-					{path:"adapters.data.raw.hostname",name:"Epo.hostname",control:"text"},
-					{path:"adapters.data.raw.operatingsystem",name:"Epo.operatingsystem",control:"text"},
-					{path:"adapters.data.raw.architecture",name:"Epo.architecture",control:"text"},
-					{path:"adapters.data.raw.kernel",name:"Epo.kernel",control:"text"},
-					{path:"adapters.data.raw.certname",name:"Epo.certname",control:"text"},
-                ]
+					{path: 'adapters.data.raw.hostname', name: 'Epo.hostname', control: 'text'},
+					{path: 'adapters.data.raw.operatingsystem', name: 'Epo.operatingsystem', control: 'text'},
+					{path: 'adapters.data.raw.architecture', name: 'Epo.architecture', control: 'text'},
+					{path: 'adapters.data.raw.kernel', name: 'Epo.kernel', control: 'text'},
+					{path: 'adapters.data.raw.certname', name: 'Epo.certname', control: 'text'},
+				]
 			}
 		},
 		tagList: {fetching: false, data: [], error: ''}
@@ -539,23 +1152,23 @@ export const device = {
 			}
 		},
 		[ UPDATE_TAGS ] (state, payload) {
-            state.tagList.fetching = payload.fetching
-            state.tagList.error = payload.error
-            if (payload.data) {
-                state.tagList.data = payload.data.filter((tag) => {
-                    return tag !== 'FIELD' && tag !== ''
-                }).map(function (tag) {
-                    return {name: tag, path: tag}
-                })
-                state.fields.common.forEach(function (field) {
-                    if (field.path === 'tags.tagname') {
-                        field.options = state.tagList.data
-                    }
-                })
-            }
-        },
+			state.tagList.fetching = payload.fetching
+			state.tagList.error = payload.error
+			if (payload.data) {
+				state.tagList.data = payload.data.filter((tag) => {
+					return tag !== 'FIELD' && tag !== ''
+				}).map(function (tag) {
+					return {name: tag, path: tag}
+				})
+				state.fields.common.forEach(function (field) {
+					if (field.path === 'tags.tagname') {
+						field.options = state.tagList.data
+					}
+				})
+			}
+		},
 		[ ADD_DEVICE_TAGS ] (state, payload) {
-			state.deviceList.data = [ ...state.deviceList.data ]
+			state.deviceList.data = [...state.deviceList.data]
 			state.deviceList.data.forEach(function (device) {
 				if (payload.devices.indexOf(device['id']) > -1) {
 					if (!device['tags.tagname']) { device['tags.tagname'] = [] }
@@ -575,7 +1188,7 @@ export const device = {
 			})
 		},
 		[ REMOVE_DEVICE_TAGS ] (state, payload) {
-			state.deviceList.data = [ ...state.deviceList.data ]
+			state.deviceList.data = [...state.deviceList.data]
 			state.deviceList.data.forEach((device) => {
 				if (payload.devices.indexOf(device['id']) > -1) {
 					if (!device['tags.tagname']) { return }
@@ -584,7 +1197,8 @@ export const device = {
 					})
 				}
 			})
-			state.deviceDetails.data = { ...state.deviceDetails.data,
+			state.deviceDetails.data = {
+				...state.deviceDetails.data,
 				tags: state.deviceDetails.data.tags.filter((tag) => {
 					return !payload.tags.includes(tag.tagname)
 				})
