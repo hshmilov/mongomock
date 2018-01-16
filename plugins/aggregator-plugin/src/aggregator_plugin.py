@@ -163,24 +163,6 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 continue
             yield (client_name, devices.json())
 
-    @add_rule("online_devices")
-    def get_online_devices(self):
-        """ Exported function for returning all current known devices.
-
-        Accepts:
-            GET - for getting all devices
-        """
-        return jsonify(self.devices_db.find())
-
-    @add_rule("online_device/<device_id>")
-    def get_online_device(self, device_id):
-        """ Exported function for returning all current known devices.
-
-        Accepts:
-            GET - for getting all devices
-        """
-        return jsonify(self.devices_db.find_one({"internal_axon_id": device_id}))
-
     def _triggered(self, job_name, post_json, *args):
         current_adapters = requests.get(self.core_address + '/register')
 

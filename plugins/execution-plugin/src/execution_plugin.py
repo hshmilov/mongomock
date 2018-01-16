@@ -6,6 +6,7 @@ from flask import jsonify
 import threading
 import json
 from bson.objectid import ObjectId
+from bson import json_util
 from axonius.plugin_base import PluginBase, add_rule
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -79,33 +80,29 @@ class ExecutionPlugin(PluginBase):
 
         .. note:: We should still need to implement this function
         """
+        aggregator = self.get_plugin_by_name('aggregator')
+        if aggregator is None:
+            raise RuntimeError("Aggregator is unavailable")
 
-        try:
-            result = self.request_remote_plugin(
-                'online_device/{0}'.format(device_id), 'aggregator').json()
-        except Exception as e:
-            self.logger.error(
-                "Error querying for device {0}. error: {1}. Are you sure this device exists?".format(device_id, str(e)))
-            raise
+        aggregator_plugin_unique_name = aggregator[PLUGIN_UNIQUE_NAME]
+        with self._get_db_connection(True) as db_connection:
+            devices_db = db_connection[aggregator_plugin_unique_name]['devices_db']
 
-        if result is None:
-            self.logger.error(
-                "result is None in _find_adapters_for_action: could not get result about the device. Are you sure the device exists?")
-            raise ValueError(
-                "Error in _find_adapters_for_action: could not get results about the device from the aggregator.")
-
-        try:
-            for adapter_data in result['adapters']:
-                adapter_unique_name = adapter_data[PLUGIN_UNIQUE_NAME]
-                adapter_name = adapter_data[PLUGIN_NAME]
-                # Currently adding all of the adapters
-                # TODO: Create a smart logic here (next version)
-
-                if adapters_whitelist is None or adapter_name in adapters_whitelist:
-                    yield (adapter_unique_name, adapter_data)
-        except Exception as e:
-            self.logger.error("Error searching for adapters for device {0}. error: {1}".format(device_id, str(e)))
-            raise
+            result = devices_db.find_one({"internal_axon_id": device_id})
+            if result is None:
+                self.logger.error("could not find device. Are you sure the device exists?")
+                raise ValueError("could not find device. Are you sure the device exists?")
+            if any(tag['tagname'] == 'do_not_execute' and tag['tagvalue'] == True for tag in result['tags']):
+                self.logger.debug(f"Device {device_id} skipped from execution due to blacklist")
+                return
+            try:
+                for adapter_data in result['adapters']:
+                    adapter_name = adapter_data[PLUGIN_NAME]
+                    adapter_unique_name = adapter_data[PLUGIN_UNIQUE_NAME]
+                    if adapters_whitelist is None or adapter_name in adapters_whitelist:
+                        yield (adapter_unique_name, adapter_data)
+            except KeyError:
+                return
 
     def request_remote_plugin_thread(self, action_id, plugin_unique_name, method, data):
         """ Function for request action from other adapter
@@ -203,7 +200,7 @@ class ExecutionPlugin(PluginBase):
         to_request_params = {'action_id': action_id,
                              PLUGIN_UNIQUE_NAME: self._actions_db[action_id]['issuer_unique_name'],
                              'method': 'POST',
-                             'data': json.dumps(request_content)}
+                             'data': json.dumps(request_content, default=json_util.default)}
         threading.Thread(target=self.request_remote_plugin_thread,
                          kwargs=to_request_params).start()
 
@@ -348,7 +345,7 @@ class ExecutionPlugin(PluginBase):
         result = self.request_remote_plugin('action/' + action_type + '?action_id=' + action_id,
                                             plugin_unique_name=plugin_unique_name,
                                             method='POST',
-                                            data=json.dumps(data))
+                                            data=json.dumps(data, default=json_util.default))
 
         if not action_id:
             action_id = result.json()['action_id']
