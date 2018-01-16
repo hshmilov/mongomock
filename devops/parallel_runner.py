@@ -29,9 +29,11 @@ class ParallelRunner(object):
         try:
             for _ in range(0, times):
                 for name, proc in self.wait_list.copy().items():
+                    status = "Finished"
                     if proc.poll() is not None:
                         if proc.returncode != 0:
                             print(f'{name} failed')
+                            status = "Failed"
                             self.pump_std(name, proc)
                             ret_code = proc.returncode
 
@@ -39,7 +41,7 @@ class ParallelRunner(object):
                         del self.wait_list[name]
                         del self.start_times[name]
 
-                        print(f"Finished {name} in {seconds} seconds. Still waiting for {list(self.wait_list.keys())}")
+                        print(f"{status} {name} in {seconds} seconds. Still waiting for {list(self.wait_list.keys())}")
 
                 if bool(self.wait_list):
                     time.sleep(sleep_period)

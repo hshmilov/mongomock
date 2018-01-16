@@ -1,0 +1,19 @@
+version: '3'
+services:
+  cisco-adapter:
+        build: .
+        image: axonius/cisco-adapter
+        container_name: "cisco-adapter"
+        ports:
+            - 6001:80
+        volumes:
+          - ../../logs/cisco-adapter:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius
