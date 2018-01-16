@@ -2,6 +2,10 @@ import paramiko
 from axonius.adapter_exceptions import AdapterException
 from axonius.parsing_utils import format_mac
 
+import paramiko.util
+import logging
+
+paramiko.util.log_to_file('/home/axonius/logs/paramiko.log', logging.DEBUG)
 timeout_seconds = 45
 
 
