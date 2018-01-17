@@ -45,6 +45,13 @@ class UnsupportedOS(Exception):
     pass
 
 
+def is_scanner_device(adapters):
+    for device_info in adapters:
+        if device_info['data'].get('scanner'):
+            return True
+    return False
+
+
 def figure_actual_os(adapters):
     """
     Figures out the OS of the device according to the adapters.

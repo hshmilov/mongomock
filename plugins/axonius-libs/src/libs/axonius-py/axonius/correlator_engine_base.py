@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import itertools
 from funcy import pairwise
 
-from axonius.correlator_base import CorrelationResult, figure_actual_os, OSTypeInconsistency
+from axonius.correlator_base import CorrelationResult, figure_actual_os, OSTypeInconsistency, is_scanner_device
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
@@ -20,9 +20,12 @@ class CorrelatorEngineBase(ABC):
         """
         for device in devices:
             try:
-                os = figure_actual_os(device['adapters'])
-                if os is not None:
+                if is_scanner_device(device['adapters']):
                     yield device
+                else:
+                    os = figure_actual_os(device['adapters'])
+                    if os is not None:
+                        yield device
             except OSTypeInconsistency:
                 self.logger.exception("OS inconsistent over correlated devices", device['internal_axon_id'])
 

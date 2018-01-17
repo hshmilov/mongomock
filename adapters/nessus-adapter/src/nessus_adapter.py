@@ -8,6 +8,7 @@ from axonius.adapter_exceptions import AdapterException, ClientConnectionExcepti
 from nessus_connection import NessusConnection
 from nessus_exceptions import NessusException
 from axonius.parsing_utils import figure_out_os
+from axonius.consts.adapter_consts import SCANNER_FIELD
 
 HOST = 'host'
 PORT = 'port'
@@ -132,6 +133,7 @@ class NessusAdapter(AdapterBase):
                             'IP': device_raw.get('info', {}).get('host-ip', '')
                             }
                 ],
+                    SCANNER_FIELD: True,
                     'raw': device_raw}
         except NessusException as e:
             self.logger.exception('Error parsing devices.')

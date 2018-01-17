@@ -7,6 +7,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
 from axonius.parsing_utils import figure_out_os
 from splunk_connection import SplunkConnection
+from axonius.consts.adapter_consts import SCANNER_FIELD
 
 __author__ = "Asaf & Tal"
 
@@ -84,6 +85,7 @@ class SplunkNexposeAdapter(AdapterBase):
             device_parsed = dict()
             device_parsed['hostname'] = device_raw.get('hostname', None)
             device_parsed['OS'] = figure_out_os(device_raw.get('version', device_raw.get('os', None)))
+            device_parsed[SCANNER_FIELD] = True
             device_parsed['network_interfaces'] = [{'MAC': device_raw.get('mac', None),
                                                     'IP': device_raw.get('ip', None)}]
             device_parsed['id'] = device_raw['asset_id']

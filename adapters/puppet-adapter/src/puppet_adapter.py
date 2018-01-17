@@ -119,20 +119,19 @@ class PuppetAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             device_parsed = dict()
             device_parsed['name'] = device_raw['hostname']
-            device_parsed['os'] = figure_out_os(device_raw["operatingsystem"] +
+            device_parsed['OS'] = figure_out_os(device_raw["operatingsystem"] +
                                                 ' ' + device_raw["architecture"] +
                                                 ' ' + device_raw["kernel"])
-            device_parsed['os']['major'] = device_raw["os"]['release']['major']
+            device_parsed['OS']['major'] = device_raw['os']['release']['major']
             if 'minor' in device_raw['os']['release']:
-                device_parsed['os']['minor'] = device_raw["os"]['release']['minor']
+                device_parsed['OS']['minor'] = device_raw['os']['release']['minor']
             device_parsed['id'] = device_raw[u'certname']
 
             def parse_network(interfaces):
                 for inet in interfaces.values():
-                    res = {
-                        "IP": [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
-                              [x['address'] for x in inet.get('bindings6', []) if x.get('address')]
-                    }
+                    res = {'IP': [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
+                                 [x['address'] for x in inet.get('bindings6', []) if x.get('address')],
+                           'MAC': ''}
                     mac = inet.get('mac')
                     if mac:
                         res['MAC'] = mac

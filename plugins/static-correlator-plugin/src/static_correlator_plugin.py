@@ -4,6 +4,7 @@ CorrelatorPlugin.py: A Plugin for the devices correlation process
 from static_correlator_engine import StaticCorrelatorEngine
 from axonius.correlator_base import CorrelatorBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.adapter_consts import SCANNER_FIELD
 
 
 class StaticCorrelatorPlugin(CorrelatorBase):
@@ -66,6 +67,7 @@ class StaticCorrelatorPlugin(CorrelatorBase):
                                 'data': {
                                     'id': '$$adapter.data.id',
                                     'OS': '$$adapter.data.OS',
+                                    SCANNER_FIELD: f'$$adapter.data.{SCANNER_FIELD}',
                                     'hostname': '$$adapter.data.hostname',
                                     'network_interfaces': '$$adapter.data.network_interfaces'
                                 }

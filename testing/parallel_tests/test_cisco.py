@@ -24,3 +24,7 @@ class TestCiscoAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return cisco_creds['host']
+
+    @pytest.mark.skip
+    def test_fetch_devices(self):
+        pass

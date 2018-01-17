@@ -7,6 +7,7 @@ import dateutil.parser
 from axonius.adapter_base import AdapterBase
 from axonius.consts import adapter_consts
 from axonius.parsing_utils import figure_out_os
+from axonius.consts.adapter_consts import SCANNER_FIELD
 
 import nexpose.nexpose as nexpose
 
@@ -120,6 +121,7 @@ class NexposeAdapter(AdapterBase):
                 'network_interfaces': _create_network_interface(device_raw_data.get('addresses', ''),
                                                                 device_raw_data.get('mac_address', '')),
                 'hostname': device_raw_data['host_names'][0] if len(device_raw_data.get('host_names', [])) > 0 else '',
+                SCANNER_FIELD: True,
                 'raw': device_raw_data
             }
 

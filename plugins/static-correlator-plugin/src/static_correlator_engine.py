@@ -7,6 +7,7 @@ import itertools
 from axonius.correlator_base import CorrelationResult
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.adapter_consts import SCANNER_FIELD
 
 
 def _are_ips_compatible(first_list, second_list):
@@ -45,7 +46,7 @@ def _are_macs_compatible(first_list, second_list):
 def _correlate_mac_ip(all_adapter_devices):
     # Remove Nones
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
-                           if adapter_device['data']['OS']['type'] is not None]
+                           if adapter_device['data'].get('OS', {}).get('type') is not None]
     for x, y in itertools.combinations(all_adapter_devices, 2):
         if not _are_ips_compatible(x['data']['network_interfaces'], y['data']['network_interfaces']):
             continue
@@ -66,7 +67,7 @@ def _correlate_hostname_ip(all_adapter_devices):
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
                            if adapter_device['data'].get('hostname') is not None]
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
-                           if adapter_device['data']['OS']['type'] is not None]
+                           if adapter_device['data'].get('OS', {}).get('type') is not None]
     all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data']['hostname'].upper())
     all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data']['OS']['type'].upper())
 
@@ -87,6 +88,58 @@ def _correlate_hostname_ip(all_adapter_devices):
         if a['data']['hostname'].upper() != b['data']['hostname'].upper() or a['data']['OS']['type'].upper() != \
                 b['data']['OS']['type'].upper() \
                 or b['data']['hostname'] is None or b['data']['OS']['type'] is None:
+            yield from process_bucket(bucket)
+            bucket = []
+        bucket.append(b)
+    if len(bucket) > 1:
+        yield from process_bucket(bucket)
+
+
+def _correlate_scanner_mac_ip(all_adapter_devices):
+    # Remove Nones
+    all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
+                           if len(adapter_device['data']['network_interfaces']) > 0 and
+                           len([x.get('MAC') for x in adapter_device['data']['network_interfaces']
+                                if len(x.get('MAC', '')) > 0]) > 0]
+    for x, y in itertools.combinations(all_adapter_devices, 2):
+        if not (x['data'].get(SCANNER_FIELD, False) or y['data'].get(SCANNER_FIELD, False)):
+            continue
+        if not _are_ips_compatible(x['data']['network_interfaces'], y['data']['network_interfaces']):
+            continue
+        if not _are_macs_compatible(x['data']['network_interfaces'], y['data']['network_interfaces']):
+            continue
+        # If we reached here that means that we should join this two devices according to this rule.
+        yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
+                                                            (y['plugin_name'], y['data']['id'])],
+                                data={
+                                    'Reason': 'They have the same MAC and IPs'},
+                                reason='ScannerAnalysisMacIP')
+
+
+def _correlate_scanner_hostname_ip(all_adapter_devices):
+    # Remove Nones
+    all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
+                           if adapter_device['data'].get('hostname') is not None]
+    all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data']['hostname'].upper())
+
+    def process_bucket(bucket):
+        for x, y in itertools.combinations(bucket, 2):
+            if not (x['data'].get(SCANNER_FIELD, False) or y['data'].get(SCANNER_FIELD, False)):
+                continue
+            if _are_ips_compatible(x['data']['network_interfaces'], y['data']['network_interfaces']):
+                yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
+                                                                    (y['plugin_name'], y['data']['id'])],
+                                        data={
+                                            'Reason': 'They have the same hostname and IPs'},
+                                        reason='ScannerAnalysisMacIP')
+
+    if len(all_adapter_devices) < 2:
+        return
+
+    bucket = [all_adapter_devices[0]]
+    for a, b in pairwise(all_adapter_devices):
+        if a['data']['hostname'].upper() != b['data']['hostname'].upper() \
+                or b['data']['hostname'] is None:
             yield from process_bucket(bucket)
             bucket = []
         bucket.append(b)
@@ -134,11 +187,15 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         all_adapter_devices = [adapter for adapters in devices for adapter in adapters['adapters']]
 
-        # let's find devices by, hostname, os, and ip:
+        # lets find devices by, hostname, os, and ip:
         yield from _correlate_hostname_ip(all_adapter_devices)
 
-        # Now let's find devices by MAC, os, and IP
+        # Now lets find devices by MAC, os, and IP
         yield from _correlate_mac_ip(all_adapter_devices)
+
+        # Now lets correlate scanner devices
+        yield from _correlate_scanner_mac_ip(all_adapter_devices)
+        yield from _correlate_scanner_hostname_ip(all_adapter_devices)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         """

@@ -1,5 +1,6 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import AdapterException
+from axonius.consts.adapter_consts import SCANNER_FIELD
 from cisco_client import CiscoClient
 
 HOST = 'host'
@@ -53,6 +54,7 @@ class CiscoAdapter(AdapterBase):
             yield {
                 'id': entry["IP"],
                 'network_interfaces': [{'MAC': entry['MAC'], 'IP': [entry['IP']]}],
+                SCANNER_FIELD: True,
                 'raw': entry
             }
 
