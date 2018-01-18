@@ -4,11 +4,11 @@ from test_helpers.machines import FAKE_DNS_IP
 fakednsaddr = FAKE_DNS_IP
 
 ad_client1_details = {
-    "admin_password": "@vULuAZa5-MPxac6acw%ff-5H=bD)DQ;",
+    "admin_password": "Password1",
     "admin_user": "TestDomain\\Administrator",
     "dc_name": "10.0.229.30",
     "domain_name": "DC=TestDomain,DC=test",
-    "query_password": "@vULuAZa5-MPxac6acw%ff-5H=bD)DQ;",
+    "query_password": "Password1",
     "query_user": "TestDomain\\Administrator",
     "dns_server_address": fakednsaddr
 }
