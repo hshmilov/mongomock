@@ -13,7 +13,7 @@
 	import ScrollablePage from '../../components/ScrollablePage.vue'
 	import Card from '../../components/Card.vue'
     import PaginatedTable from '../../components/PaginatedTable.vue'
-    import InfoDialog from '../../components/InfoDialog.vue'
+    import InfoDialog from '../../components/popover/InfoDialog.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { RESTART_NOTIFICATIONS, FETCH_NOTIFICATIONS, FETCH_NOTIFICATION } from '../../store/modules/notifications'

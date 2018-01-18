@@ -1,19 +1,19 @@
 <template>
-    <dropdown-menu animateClass="scale-up right" class="multiple-select">
+    <triggerable-dropdown class="multiple-select">
         <object-list slot="dropdownTrigger" :type="type" :data="selectedItems" :limit="2"></object-list>
         <searchable-checklist slot="dropdownContent" :title="title" :items="items" v-model="selectedItems"
                               @input="updateSelected()"></searchable-checklist>
-    </dropdown-menu>
+    </triggerable-dropdown>
 </template>
 
 <script>
-    import DropdownMenu from './DropdownMenu.vue'
+    import TriggerableDropdown from './popover/TriggerableDropdown.vue'
     import SearchableChecklist from './SearchableChecklist.vue'
     import ObjectList from './ObjectList.vue'
 
     export default {
         name: 'multiple-select',
-        components: { DropdownMenu, SearchableChecklist, ObjectList },
+        components: { TriggerableDropdown, SearchableChecklist, ObjectList },
         props: [ 'title', 'type', 'iconPath', 'items', 'value' ],
         data() {
             return {

@@ -55,7 +55,7 @@
 
 	export default {
 		name: 'device-config-container',
-        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, Array},
+        components: {ScrollablePage, NamedSection, Card, Tabs, Tab},
         computed: {
             ...mapState(['device']),
             deviceId() {

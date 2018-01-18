@@ -225,10 +225,6 @@
     .dataTables_wrapper {
         overflow-x: hidden;
         padding: 12px;
-        .spinner-container {
-            border-bottom-left-radius: 4px;
-            border-bottom-right-radius: 4px;
-        }
         .dataTables_info {
             display: inline-block;
             font-size: 80%;

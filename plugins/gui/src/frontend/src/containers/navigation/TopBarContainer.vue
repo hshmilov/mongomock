@@ -14,7 +14,7 @@
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link">
-                            <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
+                            <triggerable-dropdown size="lg">
                                 <div slot="dropdownTrigger">
                                     <i class="icon-bell-o"></i>
                                     <span class="badge" v-if="notification.notificationUnseen.data.count"
@@ -36,7 +36,7 @@
                                         <router-link :to="{name: 'Notifications' }">View History</router-link>
                                     </div>
                                 </div>
-                            </dropdown-menu>
+                            </triggerable-dropdown>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -53,7 +53,7 @@
 </template>
 
 <script>
-	import DropdownMenu from '../../components/DropdownMenu.vue'
+	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import StatusIcon from '../../components/StatusIcon.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
@@ -66,7 +66,7 @@
 	import '../../components/icons/logo'
 
 	export default {
-		components: {DropdownMenu, StatusIcon},
+		components: {TriggerableDropdown, StatusIcon},
 		name: 'top-bar-container',
 		computed: mapState(['interaction', 'notification']),
 		methods: {

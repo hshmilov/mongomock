@@ -26,12 +26,12 @@
 			if (this.$el.querySelector("input")) {
 				this.$el.querySelector("input").focus()
             }
-        }
+        },
 	}
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
+    @import '../../scss/config';
 
     .modal-mask {
         position: fixed;

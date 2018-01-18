@@ -47,7 +47,7 @@
 	import DynamicTable from '../../components/DynamicTable.vue'
 	import GenericForm from '../../components/GenericForm.vue'
 	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
-	import Modal from '../../components/Modal.vue'
+	import Modal from '../../components/popover/Modal.vue'
 	import '../../components/icons/navigation'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'

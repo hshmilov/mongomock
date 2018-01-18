@@ -7,7 +7,6 @@
 </template>
 
 <script>
-    import Array from './Array.vue'
     import String from './String.vue'
     import Number from './Number.vue'
     import Boolean from './Boolean.vue'

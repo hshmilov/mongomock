@@ -157,7 +157,7 @@ Formatting
 }
 
 .link {
-  color: #649DE0;
+  color: $color-text-link;
   cursor: pointer;
   &:hover {
     color: $color-theme-light;
@@ -311,6 +311,32 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   overflow-x: hidden;
   position: relative;
   margin: -12px;
+}
+
+.dropdown-menu {
+  z-index: 10;
+  top: 96%;
+  width: 100%;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+  -webkit-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+  -moz-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+  border-color: $border-color;
+  padding: 12px;
+  &.w-xl {
+    width: 600px;
+  }
+  &.w-lg {
+    width: 480px;
+  }
+  &.w-md {
+    width: 360px;
+  }
+  &.w-sm {
+    width: 240px;
+  }
+  &.w-xs {
+    width: 120px;
+  }
 }
 
 /*******************

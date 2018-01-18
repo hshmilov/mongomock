@@ -349,7 +349,7 @@ class BackendPlugin(PluginBase):
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
             return str(client_collection.find(mongo_filter).count())
 
-    @add_rule_unauthenticated("devices/<device_id>", methods=['POST', 'GET'])
+    @add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
     def current_device_by_id(self, device_id):
         """
         Retrieve device by the given id, from current devices DB or update it
@@ -361,48 +361,7 @@ class BackendPlugin(PluginBase):
                 {'internal_axon_id': device_id})
             if device is None:
                 return return_error("Device ID wasn't found", 404)
-
-            if request.method == 'GET':
-                return jsonify(device)
-
-            elif request.method == 'POST':
-                device_to_update = self.get_request_data_as_object()
-                return self._tag_request_from_aggregator(device, 'create', device_to_update['tags'])
-
-    def _tag_request_from_aggregator(self, device, command, tag_list):
-        responses = []
-
-        for adapter in device['adapters']:
-            for current_tag in tag_list:
-                update_data = {'association_type': 'Tag',
-                               'associated_adapter_devices': {
-                                   adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id']
-                               },
-                               "tagname": current_tag,
-                               "tagvalue": current_tag if command == "create" else ''}
-                responses.append(self.request_remote_plugin(
-                    'plugin_push', self._aggregator_plugin_unique_name, 'post', data=json.dumps(update_data)))
-
-        all_bad_responses = [current_response.json()
-                             for current_response in responses if current_response.status_code != 200]
-
-        if len(all_bad_responses):
-            self.logger.error(f"Tagging failed with response {all_bad_responses[0]}")
-            return_error('tagging failed', 400)
-        return ('', 200)
-
-    @add_rule_unauthenticated("devices/<device_id>/tags", methods=['DELETE'])
-    def remove_tags_from_device(self, device_id):
-        """
-        Retrieve device by the given id, from current devices DB or update it
-        Currently, update works only for tags because that is the only edit operation user has
-        :return:
-        """
-        with self._get_db_connection(False) as db_connection:
-            tag_list = self.get_request_data_as_object()
-            device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
-                {'internal_axon_id': device_id})
-            return self._tag_request_from_aggregator(device, 'remove', tag_list['tags'])
+            return jsonify(device)
 
     @requires_aggregator()
     @add_rule_unauthenticated("devices/fields")
@@ -446,21 +405,52 @@ class BackendPlugin(PluginBase):
         return jsonify(all_fields)
 
     @requires_aggregator()
-    @add_rule_unauthenticated("devices/tags")
+    @add_rule_unauthenticated("devices/tags", methods=['GET', 'POST', 'DELETE'])
     def tags(self):
         """
-        Get all tags that currently belong to devices, to form a set of current tag values
+        GET Find all tags that currently belong to devices, to form a set of current tag values
+        POST Add new tags to the list of given devices
+        DELETE Remove old tags from the list of given devices
         :return:
         """
         all_tags = set()
         with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
-            for current_device in client_collection.find({"tags.tagvalue": {"$exists": True}}):
-                for current_tag in current_device['tags']:
-                    if current_tag['tagvalue'] is not '':
-                        all_tags.add(current_tag['tagname'])
+            if request.method == 'GET':
+                for current_device in client_collection.find({"tags.tagvalue": {"$exists": True}}):
+                    for current_tag in current_device['tags']:
+                        if current_tag['tagvalue'] is not '':
+                            all_tags.add(current_tag['tagname'])
+                return jsonify(all_tags)
 
-        return jsonify(all_tags)
+            devices_and_tags = self.get_request_data_as_object()
+            if not devices_and_tags.get('devices'):
+                return return_error("Cannot tag devices without list of devices.", 400)
+            if not devices_and_tags.get('tags'):
+                return return_error("Cannot tag devices without list of tags.", 400)
+
+            responses = []
+            for device_id in devices_and_tags['devices']:
+                device = client_collection.find_one({'internal_axon_id': device_id})
+
+                for adapter in device['adapters']:
+                    for tag in devices_and_tags['tags']:
+                        update_data = {'association_type': 'Tag',
+                                       'associated_adapter_devices': {
+                                           adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id']
+                                       },
+                                       "tagname": tag,
+                                       "tagvalue": tag if request.method == 'POST' else ''}
+                        responses.append(self.request_remote_plugin(
+                            'plugin_push', self._aggregator_plugin_unique_name, 'post',
+                            data=json.dumps(update_data)))
+            all_bad_responses = [current_response.json()
+                                 for current_response in responses if current_response.status_code != 200]
+
+            if len(all_bad_responses):
+                self.logger.error(f"Tagging did not complete. Reason: {all_bad_responses[0]}")
+                return_error(f'Tagging did not complete. Reason: {all_bad_responses[0]}', 400)
+            return ('', 200)
 
     @paginated()
     @filtered()

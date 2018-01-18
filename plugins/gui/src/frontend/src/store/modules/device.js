@@ -1199,6 +1199,14 @@ export const device = {
 					state.tagList.data.push({name: tag, path: tag})
 				}
 			})
+			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
+				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)) {
+				state.deviceList.data = { ...state.deviceDetails.data,
+					tags: Array.from(new Set([ ...state.deviceDetails.data.tags,
+						...payload.tags
+					]))
+				}
+			}
 		},
 		[ REMOVE_DEVICE_TAGS ] (state, payload) {
 			state.deviceList.data = [...state.deviceList.data]
@@ -1210,11 +1218,15 @@ export const device = {
 					})
 				}
 			})
-			state.deviceDetails.data = {
-				...state.deviceDetails.data,
-				tags: state.deviceDetails.data.tags.filter((tag) => {
-					return !payload.tags.includes(tag.tagname)
-				})
+			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
+				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)
+				&& state.deviceDetails.data.tags) {
+
+				state.deviceDetails.data = { ...state.deviceDetails.data,
+					tags: state.deviceDetails.data.tags.filter((tag) => {
+						return !payload.tags.includes(tag.tagname)
+					})
+				}
 			}
 		},
 		[ SELECT_FIELDS ] (state, payload) {
@@ -1297,27 +1309,21 @@ export const device = {
 			if (!payload || !payload.devices || !payload.devices.length || !payload.tags || !payload.tags.length) {
 				return
 			}
-			commit(ADD_DEVICE_TAGS, payload)
-			payload.devices.forEach(function (device) {
-				dispatch(REQUEST_API, {
-					rule: `/api/devices/${device}`,
-					method: 'POST',
-					data: {tags: payload.tags}
-				})
-			})
+			return dispatch(REQUEST_API, {
+				rule: `/api/devices/tags`,
+				method: 'POST',
+				data: payload
+			}).then(() => commit(ADD_DEVICE_TAGS, payload))
 		},
 		[ DELETE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
 			if (!payload || !payload.devices || !payload.devices.length || !payload.tags || !payload.tags.length) {
 				return
 			}
-			commit(REMOVE_DEVICE_TAGS, payload)
-			payload.devices.forEach(function (device) {
-				dispatch(REQUEST_API, {
-					rule: `/api/devices/${device}/tags`,
-					method: 'DELETE',
-					data: {tags: payload.tags}
-				})
-			})
+			return dispatch(REQUEST_API, {
+				rule: `/api/devices/tags`,
+				method: 'DELETE',
+				data: payload
+			}).then(() => commit(REMOVE_DEVICE_TAGS, payload))
 		}
 	}
 }

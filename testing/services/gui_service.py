@@ -26,12 +26,12 @@ class GuiService(PluginService):
     def get_all_tags(self, *vargs, **kwargs):
         return self.get('tags', session=self._session, *vargs, **kwargs)
 
-    def remove_tags_from_device(self, id, tag_list, *vargs, **kwargs):
-        return self.delete('devices/{0}/tags'.format(id), data=json.dumps(tag_list), session=self._session, *vargs,
+    def remove_tags_from_device(self, payload, *vargs, **kwargs):
+        return self.delete('devices/tags', data=json.dumps(payload), session=self._session, *vargs,
                            **kwargs)
 
-    def add_tags_to_device(self, id, tag_list, *vargs, **kwargs):
-        return self.post('devices/{0}'.format(id), data=json.dumps(tag_list), session=self._session, *vargs, **kwargs)
+    def add_tags_to_device(self, payload, *vargs, **kwargs):
+        return self.post('devices/tags'.format(id), data=json.dumps(payload), session=self._session, *vargs, **kwargs)
 
     def activate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/start', *vargs, **kwargs)

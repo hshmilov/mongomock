@@ -14,7 +14,7 @@
                 </div>
 
                 <!-- Dropdown component for selecting a query --->
-                <dropdown-menu animateClass="scale-up right">
+                <triggerable-dropdown>
                     <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
                     <div slot="dropdownTrigger" class="input-container">
                         <input class="form-control" v-model="selectedQuery" @keyup.enter.stop="executeQuery"
@@ -26,57 +26,26 @@
                     -->
                     <generic-form slot="dropdownContent" :schema="queryFields" v-model="queryDropdown.value"
                                   @input="extractValue" @submit="executeQuery" :condensed="true"></generic-form>
-                </dropdown-menu>
+                </triggerable-dropdown>
                 <!-- Button controlling the execution of currently filled query -->
                 <a class="btn btn-adjoined" @click="executeQuery">go</a>
             </template>
         </card>
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
-                <!-- Dropdown for selecting \ creating tags for a currently selected devices --->
-                <dropdown-menu animateClass="scale-up right" menuClass="w-md">
-                    <i slot="dropdownTrigger" class="icon-tag"></i>
-                    <searchable-checklist slot="dropdownContent" slot-scope="props" title="Tag as:"
-                                          :items="device.tagList.data" :hasSearch="true" :producesNew="true"
-                                          :value="selectedTags" v-on:save="saveTags" :explicitSave="true"
-                                          :onDone="props.onDone"></searchable-checklist>
-                </dropdown-menu>
+                <!-- Available actions for performing on currently selected group of devices --->
+                <devices-actions-container :devices="selectedDevices"></devices-actions-container>
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
-                <dropdown-menu animateClass="scale-up right" menuClass="w-lg">
-                    <svg-icon slot="dropdownTrigger" name="action/add_field" height="24" :original="true"></svg-icon>
+                <triggerable-dropdown size="lg">
+                    <div slot="dropdownTrigger" class="link">Add Columns</div>
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="visibleFields"
-                                          :hasSearch="true" v-model="selectedFields"></searchable-checklist>
-                </dropdown-menu>
+                                          :searchable="true" v-model="selectedFields"></searchable-checklist>
+                </triggerable-dropdown>
             </div>
             <div slot="cardContent" class="info-dialog-container">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
                                  :fields="deviceFields" :filter="query.currentQuery" @click-row="configDevice">
-
-                    <!--info-dialog v-if="deviceInfoDialog.open" :open="deviceInfoDialog.open" @close="closeQuickView"
-                                 :title="deviceInfoDialog.title">
-                        <pulse-loader :loading="device.deviceDetails.fetching" color="#26dad2"></pulse-loader>
-
-                        <div v-if="!device.deviceDetails.fetching && Object.keys(device.deviceDetails.data).length">
-                            <div class="section-container">
-                                <div class="section-header">Adapters</div>
-                                <object-list type="image-list" :vertical="true" :names="adapterNameByType"
-                                             :data="device.deviceDetails.data['adapters.plugin_name']"></object-list>
-                            </div>
-                            <div class="section-container">
-                                <div class="section-header">Tags</div>
-                                <object-list type="tag-list" :vertical="true"
-                                             :data="device.deviceDetails.data['tags.tagname']"></object-list>
-                            </div>
-                            <div class="section-container" v-for="adapter in device.deviceDetails.data['adapters.plugin_name']">
-                                <div class="section-header">{{ adapterNameByType[adapter] }} Fields</div>
-                                <div>
-                                    <tree-view :data="device.deviceDetails.data['adapters.data.raw'][adapter]"
-                                               :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
-                                </div>
-                            </div>
-                        </div>
-                    </info-dialog-->
                 </paginated-table>
             </div>
         </card>
@@ -94,16 +63,16 @@
 
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
-	import Modal from '../../components/Modal.vue'
+	import Modal from '../../components/popover/Modal.vue'
 	import Card from '../../components/Card.vue'
 	import ActionBar from '../../components/ActionBar.vue'
 	import GenericForm from '../../components/GenericForm.vue'
-	import DropdownMenu from '../../components/DropdownMenu.vue'
+	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
 	import PaginatedTable from '../../components/PaginatedTable.vue'
-	import InfoDialog from '../../components/InfoDialog.vue'
+	import InfoDialog from '../../components/popover/InfoDialog.vue'
 	import ObjectList from '../../components/ObjectList.vue'
-	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
+    import DevicesActionsContainer from './DevicesActionsContainer.vue'
 	import { mixin as clickaway } from 'vue-clickaway'
 	import '../../components/icons/action'
 
@@ -114,8 +83,6 @@
         FETCH_DEVICES_COUNT,
         FETCH_DEVICE,
 		FETCH_TAGS,
-		CREATE_DEVICE_TAGS,
-		DELETE_DEVICE_TAGS
 	} from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
@@ -124,7 +91,8 @@
 		name: 'devices-container',
 		components: {
 			ScrollablePage, Modal, Card, ActionBar, GenericForm, ObjectList,
-			DropdownMenu, SearchableChecklist, PaginatedTable, InfoDialog, PulseLoader
+			TriggerableDropdown, SearchableChecklist, PaginatedTable, InfoDialog,
+            DevicesActionsContainer
 		},
 		mixins: [clickaway],
 		computed: {
@@ -150,28 +118,10 @@
 				return this.deviceFields.filter((field) => {
 					return field.control !== undefined
 				})
-			},
-            deviceById() {
-				return this.device.deviceList.data.reduce(function(map, input) {
-					map[input.id] = input
-					return map
-				}, {})
-			},
-            adapterNameByType() {
-				let nameByType = {}
-				Object.keys(adapterStaticData).forEach((adapterId) => {
-					nameByType[adapterId] = adapterStaticData[adapterId].name
-                })
-                return nameByType
-            },
-            deviceActions() {
-				return [{ handler: this.executeQuickView, triggerFont: 'icon-eye' },
-                    {handler: this.configDevice, triggerIcon: 'action/edit'}]
-            }
+			}
 		},
 		data () {
 			return {
-				selectedTags: [],
 				selectedFields: [],
 				selectedDevices: [],
 				selectedQuery: "",
@@ -187,31 +137,6 @@
 					name: ''
 				},
                 openHelpTooltip: false
-			}
-		},
-		watch: {
-			selectedDevices: function(newDevices, oldDevices) {
-				if (newDevices.length === 0) { this.selectedTags = [] }
-				if (newDevices.length === 1 || !oldDevices.length) {
-					let currentDevice = this.deviceById[newDevices[0]]
-					if (!currentDevice || !currentDevice['tags.tagname'] || !currentDevice['tags.tagname'].length) {
-						return
-					}
-                    this.selectedTags = currentDevice['tags.tagname']
-				}
-				if (newDevices.length > 1) {
-					if (!this.selectedTags.length) { return }
-					newDevices.forEach((deviceId) => {
-						let currentDevice = this.deviceById[deviceId]
-                        if (!currentDevice || !currentDevice['tags.tagname'] || !currentDevice['tags.tagname'].length) {
-                            this.selectedTags = []
-                        } else {
-                            this.selectedTags = this.selectedTags.filter(function (tag) {
-                                return currentDevice['tags.tagname'].indexOf(tag) > -1
-                            })
-                        }
-					})
-				}
 			}
 		},
 		created () {
@@ -240,8 +165,6 @@
                 fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
-				addDeviceTags: CREATE_DEVICE_TAGS,
-                removeDeviceTags: DELETE_DEVICE_TAGS,
 				fetchAdapters: FETCH_ADAPTERS
 			}),
 			extractValue () {
@@ -267,33 +190,6 @@
 					this.saveQueryModal.open = false
                 })
 			},
-			saveTags (changes) {
-				if (!changes ||
-                    ((!changes.removed || !changes.removed.length) && (!changes.added || !changes.added.length))) {
-					return
-                }
-                this.addDeviceTags({ devices: this.selectedDevices, tags: changes.added })
-				this.removeDeviceTags({ devices: this.selectedDevices, tags: changes.removed })
-                this.selectedTags = this.selectedTags.filter((tag) => {
-					return changes.removed.indexOf(tag) === -1
-				}).concat(changes.added)
-			},
-			executeQuickView (deviceId) {
-				if (!deviceId) { return }
-				this.fetchDevice(deviceId)
-                this.deviceInfoDialog.title = this.deviceById[deviceId]['adapters.data.name']
-                if (!this.deviceInfoDialog.title) {
-					this.deviceInfoDialog.title = this.deviceById[deviceId]['adapters.data.hostname']
-                }
-				this.deviceInfoDialog.open = true
-			},
-            closeQuickView() {
-				this.deviceInfoDialog.open = false
-            },
-            removePrefix(value) {
-				if (!value) { return '' }
-				return value.split('.').splice(1).join('.')
-            },
             configDevice(deviceId) {
 				this.fetchDevice(deviceId)
 				this.$router.push({path: `device/${deviceId}`})
@@ -381,8 +277,15 @@
             }
         }
         .dropdown-toggle {
-            .svg-icon, i {
+            .svg-icon, i, .link {
                 margin-right: 30px;
+            }
+            .link {
+                vertical-align: middle;
+                line-height: 30px;
+                &:hover {
+                    color: $color-text-link;
+                }
             }
         }
     }

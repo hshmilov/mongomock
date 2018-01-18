@@ -8,7 +8,7 @@
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
 	import ScrollableTable from '../../components/ScrollableTable.vue'
-	import InfoDialog from '../../components/InfoDialog.vue'
+	import InfoDialog from '../../components/popover/InfoDialog.vue'
 
 	import { mapState, mapActions } from 'vuex'
 	import { FETCH_PLUGINS, FETCH_PLUGIN, START_PLUGIN, STOP_PLUGIN } from '../../store/modules/plugin'
