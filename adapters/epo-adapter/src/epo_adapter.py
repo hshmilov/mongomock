@@ -53,17 +53,22 @@ def parse_network(raw_data, logger):
     except:
         logger.info(f"Error reading IPv4 {raw_ipv4}")
 
-    raw_ipv6 = raw_data.get('EPOComputerProperties.IPV6').lower()
-    res[IP_ADDR].append(raw_ipv6)
+    raw_ipv6 = raw_data.get('EPOComputerProperties.IPV6')
+    if raw_ipv6 and isinstance(raw_ipv6, str):
+        res[IP_ADDR].append(raw_ipv6.lower())
 
-    ipv4mapped = ipaddress.IPv6Address(raw_ipv6).ipv4_mapped
-    if str(ipv4mapped) != parsed_ipv4:
-        logger.info(f"ipv4/6 mismatch: raw4={raw_ipv4} raw6={raw_ipv6} parsed4={parsed_ipv4} ip4-6mapped={ipv4mapped}")
-        if ipv4mapped:
-            # epo's ipv4 reporting is problematic.
-            # But we noticed that mapped ipv6 addresses tend to have the correct value
-            # In such a case we add the mapped ipv4 address
-            res[IP_ADDR].append(str(ipv4mapped))
+    try:
+        ipv4mapped = ipaddress.IPv6Address(raw_ipv6).ipv4_mapped
+        if str(ipv4mapped) != parsed_ipv4:
+            logger.info(
+                f"ipv4/6 mismatch: raw4={raw_ipv4} raw6={raw_ipv6} parsed4={parsed_ipv4} ip4-6mapped={ipv4mapped}")
+            if ipv4mapped:
+                # epo's ipv4 reporting is problematic.
+                # But we noticed that mapped ipv6 addresses tend to have the correct value
+                # In such a case we add the mapped ipv4 address
+                res[IP_ADDR].append(str(ipv4mapped))
+    except:
+        logger.warning(f"Failed to populate populate ipv4/6 address raw_ipv4={raw_ipv4} raw_ipv6={raw_ipv6}")
 
     raw_mac = raw_data.get('EPOComputerProperties.NetAddress')
     try:
@@ -164,8 +169,14 @@ class EpoAdapter(AdapterBase):
         try:
             raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
         except Exception as e:
-            self.logger.warn(f"Failed to query all linked tables - {e}")
-            raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables="EPOComputerProperties")
+            try:
+                self.logger.warning(f"Failed to query all linked tables - {e}")
+                raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
+                             joinTables="EPOComputerProperties, EPOProductPropertyProducts")
+            except Exception as e:
+                self.logger.warning(f"Failed to query EPOComputerProperties, EPOProductPropertyProducts - {e}. \
+                                        Will fetch only basic info from EPOComputerProperties")
+                raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables="EPOComputerProperties")
         return json.dumps(raw)
 
     def _get_client_id(self, client_config):

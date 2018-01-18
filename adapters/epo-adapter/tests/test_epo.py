@@ -89,7 +89,7 @@ def test_os():
     assert details['bitness'] == 64
 
 
-def test_parse_network():
+def test_parse_network_positive():
     parsed = epo_adapter.parse_network(raw_device_data, MagicMock())
     expected = [
         {
@@ -100,6 +100,24 @@ def test_parse_network():
     assert len(parsed) == len(expected)
     assert parsed[0]["MAC"] == expected[0]["MAC"]
     assert sorted(parsed[0]["IP"]) == sorted(expected[0]["IP"])
+
+
+def test_only_mac():
+    raw = {'EPOComputerProperties.NetAddress': '06f417360ed8'}
+    parsed = epo_adapter.parse_network(raw, MagicMock())
+    assert parsed[0]["MAC"] == "06:f4:17:36:0e:d8".upper()
+
+
+def test_parse_network_no_ipv6_no_mac():
+    raw = {'EPOComputerProperties.IPV4x': -1979646028}
+    parsed = epo_adapter.parse_network(raw, MagicMock())
+    assert parsed == [{'IP': ['10.0.255.180']}]
+
+
+def test_parse_network_no_ipv4_no_mac():
+    raw = {'EPOComputerProperties.IPV6': '0:0:0:0:0:FFFF:AC1F:154A'}
+    parsed = epo_adapter.parse_network(raw, MagicMock())
+    assert sorted(parsed[0]['IP']) == sorted(['172.31.21.74', '0:0:0:0:0:ffff:ac1f:154a'])
 
 
 def test_escape_dict():
