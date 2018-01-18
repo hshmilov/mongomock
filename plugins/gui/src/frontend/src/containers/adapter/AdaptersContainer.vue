@@ -1,7 +1,6 @@
 <template>
     <scrollable-page title="adapters" class="adapters">
-        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" :actions="[
-        	{triggerIcon: 'action/edit', handler: configAdapter}]"></scrollable-table>
+        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" @click-row="configAdapter"></scrollable-table>
     </scrollable-page>
 </template>
 
@@ -28,16 +27,13 @@
         },
         methods: {
             ...mapActions({ fetchAdapters: FETCH_ADAPTERS, fetchAdapter: FETCH_ADAPTER_SERVERS }),
-        	configAdapter(adapterId) {
+        	configAdapter(adapter) {
             	/*
             	    Fetch adapter requested to be configured asynchronously, before navigating to the
             	    configuration page, so it will return meanwhile
             	 */
-            	this.fetchAdapter(adapterId)
-                this.$router.push({path: `adapter/${adapterId}`})
-            },
-            quickViewAdapter(adapterId) {
-
+            	this.fetchAdapter(adapter['id'])
+                this.$router.push({path: `adapter/${adapter['id']}`})
             }
         },
         created() {

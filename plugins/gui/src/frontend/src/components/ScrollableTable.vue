@@ -8,12 +8,12 @@
             </tr>
             </thead>
             <tbody>
-            <tr v-for="record in data" class="table-row">
+            <tr v-for="record in data" class="table-row" @click="$emit('click-row', record)">
                 <generic-table-cell class="table-row-data" v-for="field in fields" v-if="!field.hidden" :key="field.path"
                                     :value="record[field.path]" :type="field.type" :wide="true"></generic-table-cell>
                 <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                     <template v-for="action in actions">
-                        <a  class="table-row-action" @click="action.handler(record['id'])"
+                        <a  class="table-row-action" @click.stop="action.handler(record['id'])"
                             v-if="!action.conditionField || record[action.conditionField]">
                             <i :class="action.triggerFont" v-if="action.triggerFont"></i>
                             <svg-icon :name="action.triggerIcon" height="24" width="24"

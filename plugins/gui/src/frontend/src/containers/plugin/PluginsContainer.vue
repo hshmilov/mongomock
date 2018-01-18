@@ -1,6 +1,6 @@
 <template>
     <scrollable-page title="plugins" class="plugins">
-        <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :actions="actions"></scrollable-table>
+        <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :actions="actions" @click-row="configPlugin"></scrollable-table>
     </scrollable-page>
 </template>
 
@@ -21,8 +21,7 @@
             actions () {
                 return [
                     { handler: this.startPlugin, triggerFont: 'icon-play2', conditionField: 'startable' },
-                    { handler: this.stopPlugin, triggerFont: 'icon-stop', conditionField: 'stoppable' },
-                    { handler: this.configPlugin, triggerIcon: 'action/edit', conditionField: 'configurable' }
+                    { handler: this.stopPlugin, triggerFont: 'icon-stop', conditionField: 'stoppable' }
                 ]
             }
 		},
@@ -34,9 +33,12 @@
 		methods: {
 			...mapActions({fetchPlugins: FETCH_PLUGINS, fetchPlugin: FETCH_PLUGIN,
                 startPlugin: START_PLUGIN, stopPlugin: STOP_PLUGIN}),
-			configPlugin (pluginId) {
-				this.fetchPlugin(pluginId)
-				this.$router.push({path: `plugin/${pluginId}`})
+			configPlugin (plugin) {
+				if (!plugin.configurable) {
+					return
+                }
+				this.fetchPlugin(plugin['id'])
+				this.$router.push({path: `plugin/${plugin['id']}`})
 			}
 		},
 		created () {
