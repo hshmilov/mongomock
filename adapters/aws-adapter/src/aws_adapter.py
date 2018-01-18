@@ -167,7 +167,7 @@ class AWSAdapter(AdapterBase):
                     "name": tags_dict.get('Name', ''),
                     'OS': figure_out_os(instance['DescribedImage'].get('Description', '')
                                         if instance['DescribedImage'] is not None
-                                        else None),
+                                        else instance.get('Platform')),
                     'id': instance['InstanceId'],
                     'network_interfaces': self._parse_network_interfaces(instance.get('NetworkInterfaces', [])),
                     'powerState': POWER_STATE_MAP.get(state, DeviceRunningState.Unknown),
@@ -180,7 +180,6 @@ class AWSAdapter(AdapterBase):
         :param interfaces: list
         :return: list of dict
         """
-        network_interfaces = []
         for interface in interfaces:
             assoc = interface.get("Association")
             if assoc is not None:
