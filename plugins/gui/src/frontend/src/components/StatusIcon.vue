@@ -10,7 +10,7 @@
 <script>
 	export default {
 		name: 'status-icon',
-        props: ['value']
+        props: {'value': {default: 'empty'}}
 	}
 </script>
 
@@ -21,7 +21,7 @@
         display: inline-block;
         color: $color-light;
         border-radius: 4px;
-        background-color: $background-color-disabled;
+        background-color: $background-color-hover;
         i {
             padding: 5px;
             vertical-align: middle;
