@@ -35,6 +35,10 @@ export const adapterStaticData = {
 		name: 'Qualys Cloud Platform',
 		description: 'The Qualys Cloud Platform monitors customers\' global security and compliance posture using sensors.'
 	},
+	'qualys_scans_adapter': {
+		name: 'Qualys Cloud Platform - Scanner',
+		description: 'The Qualys Cloud Platform monitors customers\' global security and compliance posture using sensors.'
+	},
 	'nexpose_adapter': {
 		name: 'Rapid7 Nexpose',
 		description: 'Rapid7 Nexpose is a vulnerability management solution, including discovery, detection, verification, risk classification, impact analysis, reporting and mitigation.'

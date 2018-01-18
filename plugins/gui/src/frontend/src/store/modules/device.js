@@ -1086,7 +1086,20 @@ export const device = {
 					{path: 'adapters.data.raw.architecture', name: 'Epo.architecture', control: 'text'},
 					{path: 'adapters.data.raw.kernel', name: 'Epo.kernel', control: 'text'},
 					{path: 'adapters.data.raw.certname', name: 'Epo.certname', control: 'text'},
-				]
+				],
+				"qualys_scans_adapter": [
+					{control: "text",path: "adapters.data.raw.DNS", name: "QualysScans.DNS"},
+					{control: "text",path: "adapters.data.raw.ID", name: "QualysScans.ID"},
+					{control: "text",path: "adapters.data.raw.IP", name: "QualysScans.IP"},
+					{control: "text",path: "adapters.data.raw.LAST_COMPLIANCE_SCAN_DATETIME", name: "QualysScans.LAST_COMPLIANCE_SCAN_DATETIME"},
+					{control: "text",path: "adapters.data.raw.LAST_VM_SCANNED_DATE", name: "QualysScans.LAST_VM_SCANNED_DATE"},
+					{control: "text",path: "adapters.data.raw.LAST_VM_SCANNED_DURATION", name: "QualysScans.LAST_VM_SCANNED_DURATION"},
+					{control: "text",path: "adapters.data.raw.LAST_VULN_SCAN_DATETIME", name: "QualysScans.LAST_VULN_SCAN_DATETIME"},
+					{control: "text",path: "adapters.data.raw.NETBIOS", name: "QualysScans.NETBIOS"},
+					{control: "text",path: "adapters.data.raw.OS", name: "QualysScans.OS"},
+					{control: "text",path: "adapters.data.raw.TAGS", name: "QualysScans.TAGS"},
+					{control: "text",path: "adapters.data.raw.TRACKING_METHOD", name: "QualysScans.TRACKING_METHOD"}
+    			]
 			}
 		},
 		tagList: {fetching: false, data: [], error: ''}

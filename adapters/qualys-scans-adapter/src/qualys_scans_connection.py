@@ -1,13 +1,14 @@
 import requests
-from qualys_exceptions import QualysConnectionError, QualysRequestException
+import xml.etree.cElementTree as ET
+from qualys_scans_exceptions import QualysScansConnectionError, QualysScansRequestException
 
 
-class QualysConnection(object):
+class QualysScansConnection(object):
     def __init__(self, logger, domain):
-        """ Initializes a connection to Qualys using its rest API
+        """ Initializes a connection to qualys scans using its rest API
 
         :param obj logger: Logger object of the system
-        :param str domain: domain address for Qualys
+        :param str domain: domain address for qualys scans
         """
         self.logger = logger
         url = domain
@@ -15,8 +16,8 @@ class QualysConnection(object):
             url = 'https://' + url
         if not url.endswith('/'):
             url += '/'
-        self.url = url + 'qps/rest/2.0/'
-        self.headers = {'Accept': 'application/json'}
+        self.url = url + 'api/2.0/fo/'
+        self.headers = {'X-Requested-With': 'Axonius Qualys Scans Adapter'}
         self.auth = (None, None)
 
     def set_credentials(self, username, password):
@@ -41,12 +42,14 @@ class QualysConnection(object):
         if self.auth[0] is None or self.auth[1] is None:
             self.logger.error(f"Username {0} or password {1} is None".format(
                 self.auth[0], self.auth[1]))
-            raise QualysConnectionError(f"Username {self.auth[0]} or password {self.auth[1]} is None")
-        response = self._post("count/am/hostasset/", auth=self.auth, headers=self.headers)
-
-        if "SUCCESS" != response['responseCode']:
-            self.logger.error("Failed to connect to qualys.", response["responseErrorDetails"])
-            raise QualysConnectionError(response["responseErrorDetails"])
+            raise QualysScansConnectionError(f"Username {self.auth[0]} or password {self.auth[1]} is None")
+        response = self.get("scan", auth=self.auth, headers=self.headers,
+                            params=[('action', 'list'), ('launched_after_datetime', '3999-12-31T23:12:00Z')])
+        response_tree = ET.fromstring(response.text)
+        if response_tree.find('RESPONSE') is None or response_tree.find('RESPONSE').find('DATETIME') is None \
+                or response_tree.find('RESPONSE').find('CODE') is not None:
+            self.logger.error("Failed to connect to qualys scans.", response.text)
+            raise QualysScansConnectionError(response.text)
 
     def __del__(self):
         self.logout()
@@ -58,33 +61,22 @@ class QualysConnection(object):
     def close(self):
         """ Closes the connection """
 
-    def _post(self, name, headers=None, cookies=None, auth=None, data=None):
-        """ Serves a POST request to Qualys API
+    def get(self, name, headers=None, auth=None, params=None):
+        """ Serves a POST request to QualysScans API
 
         :param str name: the name of the page to request
         :param dict headers: the headers for the post request
-        :param dict cookies: the cookies - future compatibility for API 2.0
+        :param list params: the params
         :param tuple auth: the username and password
-        :param str data: the body of the request
         :return: the service response or raises an exception if it's not 200
         """
-        response = requests.post(self._get_url_request(name), headers=headers, cookies=cookies, auth=auth, data=data)
+        response = requests.get(self._get_url_request(name), headers=headers, auth=auth, params=params)
         try:
             response.raise_for_status()
+            return response
         except requests.HTTPError as e:
-            self.logger.exception('Post request failed. {0}'.format(str(e)), name, headers, cookies, auth, data)
+            self.logger.exception('Post request failed. {0}'.format(str(e)), name, headers, auth, params)
             raise e
-        response = response.json()
-        return response['ServiceResponse']
-
-    def get_device_iterator(self, data=None):
-        """ Returns a list of all agents
-
-        :param str data: the body of the request
-        :return: the response
-        :rtype: dict
-        """
-        return self._post("search/am/hostasset/", auth=self.auth, headers=self.headers, data=data)
 
     def __enter__(self):
         self.connect()

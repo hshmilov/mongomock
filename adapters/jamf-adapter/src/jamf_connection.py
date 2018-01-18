@@ -4,7 +4,7 @@ from jamf_exceptions import JamfConnectionError, JamfRequestException
 from jamf_search import JamfAdvancedSearch
 import jamf_consts
 from json import JSONDecodeError
-from jamf_xml_parser import Xml2Json
+from axonius.utils.xml2json_parser import Xml2Json
 
 
 class JamfConnection(object):

@@ -29,18 +29,18 @@ PASSWORD = 'password'
 class QualysAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
-        return client_config['Qualys_Domain']
+        return client_config[QUALYS_DOMAIN]
 
     def _connect_client(self, client_config):
         try:
-            connection = qualys_connection.QualysConnection(logger=self.logger, domain=client_config["Qualys_Domain"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = qualys_connection.QualysConnection(logger=self.logger, domain=client_config[QUALYS_DOMAIN])
+            connection.set_credentials(username=client_config[USERNAME], password=client_config[PASSWORD])
             with connection:
                 pass
             return connection
         except qualys_exceptions.QualysException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Qualys_Domain'], str(e))
+                client_config[QUALYS_DOMAIN], str(e))
             self.logger.exception(message)
             raise axonius.adapter_exceptions.ClientConnectionException(message)
 
@@ -82,7 +82,7 @@ class QualysAdapter(AdapterBase):
                     "name": "Username"
                 },
                 PASSWORD: {
-                    "type": "password",
+                    "type": PASSWORD,
                     "name": "Password"
                 }
             },
