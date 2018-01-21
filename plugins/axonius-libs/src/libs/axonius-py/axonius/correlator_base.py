@@ -7,11 +7,11 @@ from apscheduler.triggers.interval import IntervalTrigger
 from namedlist import namedlist
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.plugin_base import PluginBase, return_error, add_rule
+from axonius.plugin_base import PluginBase
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from axonius.mixins.feature import Feature
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 
 # the reason for these data types is that it allows separation of the code that figures out correlations
 # and code that links devices (aggregator) or sends notifications.
@@ -170,7 +170,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
         :return:
         """
         with self._get_db_connection(True) as db:
-            aggregator_db = db[self.get_plugin_by_name('aggregator')[PLUGIN_UNIQUE_NAME]]
+            aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             if devices_ids is None:
                 return list(aggregator_db['devices_db'].find(self._devices_filter))
             else:
@@ -196,7 +196,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
 
             if isinstance(result, CorrelationResult):
                 self.logger.debug(f"Correlation: {result.data}, for {dict(result.associated_adapter_devices)}")
-                self.request_remote_plugin('plugin_push', 'aggregator', 'post', json={
+                self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
                     "plugin_type": "Plugin",
                     "data": result.data,
                     "associated_adapter_devices": dict(result.associated_adapter_devices),

@@ -1,5 +1,7 @@
 import random
 
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
+
 
 def test_aggregator_in_configs(axonius_fixture):
     aggregator = axonius_fixture.aggregator
@@ -7,7 +9,7 @@ def test_aggregator_in_configs(axonius_fixture):
     plugin_unique_name = aggregator.unique_name
     aggregator_config = axonius_fixture.db.get_unique_plugin_config(
         plugin_unique_name)
-    assert aggregator_config['plugin_name'] == 'aggregator'
+    assert aggregator_config['plugin_name'] == AGGREGATOR_PLUGIN_NAME
 
 
 def test_aggregator_registered(axonius_fixture):

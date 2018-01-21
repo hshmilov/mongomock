@@ -3,7 +3,7 @@ CorrelatorPlugin.py: A Plugin for the devices correlation process
 """
 from static_correlator_engine import StaticCorrelatorEngine
 from axonius.correlator_base import CorrelatorBase
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.consts.adapter_consts import SCANNER_FIELD
 
 
@@ -24,7 +24,7 @@ class StaticCorrelatorPlugin(CorrelatorBase):
         :return:
         """
         with self._get_db_connection(True) as db:
-            aggregator_db = db[self.get_plugin_by_name('aggregator', verify_single=True)[PLUGIN_UNIQUE_NAME]]
+            aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             if devices_ids is None:
                 match = {}
             else:

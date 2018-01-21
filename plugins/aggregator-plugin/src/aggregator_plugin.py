@@ -23,7 +23,7 @@ from axonius.parsing_utils import beautiful_adapter_device_name
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from aggregator_exceptions import AdapterOffline, ClientsUnavailable
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.threading_utils import MultiLockerLazy, run_in_executor_helper
 
 get_devices_job_name = "Get device job"
@@ -69,7 +69,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         """
         Check AdapterBase documentation for additional params and exception details.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
 
         # Lock object for the global device list
         self.device_db_lock = MultiLockerLazy()

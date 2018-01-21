@@ -19,7 +19,7 @@ from bson import SON, ObjectId
 import json
 import pql
 from datetime import datetime
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -247,29 +247,6 @@ def projectioned():
     return wrap
 
 
-# Caution! These decorators must come BEFORE @add_rule
-def requires_aggregator():
-    """
-    Decorator stating that the view requires an aggregator DB
-    """
-
-    def wrap(func):
-        def actual_wrapper(self, *args, **kwargs):
-            if self._aggregator_plugin_unique_name is None:
-                # Try to get aggregator again
-                aggregator = self.get_plugin_by_name('aggregator')
-                if aggregator is None:
-                    return return_error("Aggregator is missing, try again later", 500)
-                else:
-                    self._aggregator_plugin_unique_name = aggregator[PLUGIN_UNIQUE_NAME]
-
-            return func(self, *args, **kwargs)
-
-        return actual_wrapper
-
-    return wrap
-
-
 def beautify_db_entry(entry):
     """
     Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
@@ -297,11 +274,6 @@ class BackendPlugin(PluginBase):
         # AXONIUS_REST.static_url_path = 'static'
         self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
-        aggregator = self.get_plugin_by_name('aggregator')
-        if aggregator is None:
-            self._aggregator_plugin_unique_name = None
-        else:
-            self._aggregator_plugin_unique_name = aggregator[PLUGIN_UNIQUE_NAME]
         self._elk_addr = config['gui_specific']['elk_addr']
         self._elk_auth = config['gui_specific']['elk_auth']
         self.db_user = config['gui_specific']['db_user']
@@ -315,7 +287,6 @@ class BackendPlugin(PluginBase):
                                                                   },
                                                                  upsert=True)
 
-    @requires_aggregator()
     @paginated()
     @filtered()
     @projectioned()
@@ -325,7 +296,7 @@ class BackendPlugin(PluginBase):
         Get Axonius devices from the aggregator
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
             if mongo_filter and not skip:
@@ -335,7 +306,6 @@ class BackendPlugin(PluginBase):
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
-    @requires_aggregator()
     @filtered()
     @add_rule_unauthenticated("devices/count", methods=['GET'])
     def current_devices_count(self, mongo_filter):
@@ -346,7 +316,7 @@ class BackendPlugin(PluginBase):
         :return: Number of devices
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
             return str(client_collection.find(mongo_filter).count())
 
     @add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
@@ -357,13 +327,12 @@ class BackendPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            device = db_connection[self._aggregator_plugin_unique_name]['devices_db'].find_one(
+            device = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find_one(
                 {'internal_axon_id': device_id})
             if device is None:
                 return return_error("Device ID wasn't found", 404)
             return jsonify(device)
 
-    @requires_aggregator()
     @add_rule_unauthenticated("devices/fields")
     def unique_fields(self):
         """
@@ -396,7 +365,7 @@ class BackendPlugin(PluginBase):
         all_fields = {}
         with self._get_db_connection(False) as db_connection:
             all_devices = list(
-                db_connection[self._aggregator_plugin_unique_name]['devices_db'].find())
+                db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find())
             for current_device in all_devices:
                 for current_adapter in current_device['adapters']:
                     all_fields[current_adapter['plugin_name']] = _find_paths_to_strings(
@@ -404,7 +373,6 @@ class BackendPlugin(PluginBase):
 
         return jsonify(all_fields)
 
-    @requires_aggregator()
     @add_rule_unauthenticated("devices/tags", methods=['GET', 'POST', 'DELETE'])
     def tags(self):
         """
@@ -415,7 +383,7 @@ class BackendPlugin(PluginBase):
         """
         all_tags = set()
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[self._aggregator_plugin_unique_name]['devices_db']
+            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
             if request.method == 'GET':
                 for current_device in client_collection.find({"tags.tagvalue": {"$exists": True}}):
                     for current_tag in current_device['tags']:
@@ -443,7 +411,7 @@ class BackendPlugin(PluginBase):
                                        "tagname": tag,
                                        "tagvalue": tag if request.method == 'POST' else ''}
                         responses.append(self.request_remote_plugin(
-                            'plugin_push', self._aggregator_plugin_unique_name, 'post',
+                            'plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
                             data=json.dumps(update_data)))
             all_bad_responses = [current_response.json()
                                  for current_response in responses if current_response.status_code != 200]
@@ -569,18 +537,12 @@ class BackendPlugin(PluginBase):
                     # failed, return immediately
                     return response.text, response.status_code
 
-                # if we managed to add the client, trigger aggregator to aggregate right now
-                aggregator_name = self._aggregator_plugin_unique_name
-                if aggregator_name is None:
-                    # this is optional, so we don't have @requires_aggregator()
-                    # if we don't have aggregator, try to get aggregator again
-                    try:
-                        aggregator_name = self.get_plugin_by_name('aggregator')[PLUGIN_UNIQUE_NAME]
-                    except plugin_exceptions.PluginNotFoundException:
-                        pass
-                if aggregator_name is not None:
-                    # if there's no aggregator, that's fine
-                    self.request_remote_plugin(f"trigger/{adapter_unique_name}", aggregator_name, method='post')
+                # if there's no aggregator, that's fine
+                try:
+                    self.request_remote_plugin(f"trigger/{adapter_unique_name}", AGGREGATOR_PLUGIN_NAME, method='post')
+                except Exception:
+                    # if there's no aggregator, there's nothing we can do
+                    pass
                 return response.text, response.status_code
 
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
@@ -708,7 +670,7 @@ class BackendPlugin(PluginBase):
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in ["aggregator", "gui", "watch_service",
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME, "gui", "watch_service",
                                                                                   "execution"]:
                     continue
 
@@ -752,7 +714,7 @@ class BackendPlugin(PluginBase):
                 PLUGIN_UNIQUE_NAME: plugin_unique_name,
                 'state': state,
                 'results': [beautify_db_entry(device) for device in
-                            db_connection[self._aggregator_plugin_unique_name]['devices_db'].find(
+                            db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find(
                                 {'tags.tagname': "IP_CONFLICT"},
                                 projection={'adapters.data.pretty_id': 1, 'tags': 1, 'adapters.data.hostname': 1}).sort(
                                 [('_id', pymongo.ASCENDING)])]
@@ -970,14 +932,13 @@ class BackendPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            parsed_db = db_connection[self._aggregator_plugin_unique_name]['parsed']
+            parsed_db = db_connection[AGGREGATOR_PLUGIN_NAME]['parsed']
             device = parsed_db.find_one({'id': device_id}, sort=[
                 ('_id', pymongo.DESCENDING)])
             if device is None:
                 return return_error("Device not found", 404)
             return jsonify(beautify_db_entry(device))
 
-    @requires_aggregator()
     @paginated()
     @filtered()
     @projectioned()

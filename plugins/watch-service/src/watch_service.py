@@ -12,7 +12,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 
 
 class WatchService(PluginBase):
@@ -28,9 +28,6 @@ class WatchService(PluginBase):
         super().__init__(*args, **kwargs)
 
         self._scheduler = None
-        aggregator_data = self.get_plugin_by_name('aggregator')
-
-        self._device_collection_location = self.get_aggregator(aggregator_data)
 
         # Loading watch resources from db (If any exist).
         self._watched_queries = {
@@ -41,13 +38,6 @@ class WatchService(PluginBase):
 
         # Starts the watch manager thread.
         self._start_managing_thread()
-
-    def get_aggregator(self, aggregator_data):
-        if aggregator_data is None:
-            self.logger.error('No Aggregator found.')
-            return None
-        else:
-            return aggregator_data[PLUGIN_UNIQUE_NAME]
 
     @add_rule("trigger_watches", methods=['GET'])
     def run_jobs(self):
@@ -225,14 +215,7 @@ class WatchService(PluginBase):
         :param query: The query to use.
         :return: The results of the query.
         """
-        if self._device_collection_location is None:
-            aggregator_data = self.get_plugin_by_name('aggregator')
-            self._device_collection_location = self.get_aggregator(aggregator_data)
-
-        if self._device_collection_location is not None:
-            return list(self._get_collection('devices_db', db_name=self._device_collection_location).find(query))
-        else:
-            return None
+        return list(self._get_collection('devices_db', db_name=AGGREGATOR_PLUGIN_NAME).find(query))
 
     def _start_managing_thread(self):
         """

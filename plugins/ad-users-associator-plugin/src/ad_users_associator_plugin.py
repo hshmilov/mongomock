@@ -1,13 +1,11 @@
 import time
-import json
-import sys
 import threading
 import functools
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.plugin_base import PluginBase, add_rule
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_exception_string
@@ -104,7 +102,6 @@ class AdUsersAssociatorPlugin(PluginBase, Activatable, Triggerable):
             3. Set up a relevant tag.
             """
             ad_adapters = self.get_plugin_by_name('ad_adapter', verify_single=False)
-            aggregator = self.get_plugin_by_name('aggregator')
 
             for ad_adapter in ad_adapters:
                 ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
@@ -112,7 +109,7 @@ class AdUsersAssociatorPlugin(PluginBase, Activatable, Triggerable):
                 list_of_users_per_ad_adapter = self.request_remote_plugin("users", ad_adapter_unique_name).json()
 
                 hosts = self._get_collection("devices_db",
-                                             db_name=aggregator[PLUGIN_UNIQUE_NAME])\
+                                             db_name=AGGREGATOR_PLUGIN_NAME)\
                     .find(
                     {"adapters.plugin_unique_name": ad_adapter_unique_name},
                     projection={'internal_axon_id': True,

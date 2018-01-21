@@ -27,7 +27,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.mixins.feature import Feature
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
 from axonius.logging.logger import create_logger
 
 # Starting the Flask application
@@ -162,7 +162,7 @@ class PluginBase(Feature):
 
     """
 
-    def __init__(self, core_data=None, *args, **kwargs):
+    def __init__(self, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -208,6 +208,9 @@ class PluginBase(Feature):
                 self.port = 443  # We listen on https.
                 # This should be dns resolved.
                 self.core_address = "http://core/api"
+
+        if requested_unique_plugin_name is not None:
+            self.plugin_unique_name = requested_unique_plugin_name
 
         try:
             self.plugin_unique_name = temp_config['registration'][PLUGIN_UNIQUE_NAME]
@@ -680,7 +683,7 @@ class PluginBase(Feature):
                     },
                     "tagname": tagname,
                     "tagvalue": tagvalue}
-        response = self.request_remote_plugin('plugin_push', "aggregator", 'post', data=json.dumps(tag_data))
+        response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', data=json.dumps(tag_data))
         if response.status_code != 200:
             self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError()

@@ -8,7 +8,7 @@ import json
 from bson.objectid import ObjectId
 from bson import json_util
 from axonius.plugin_base import PluginBase, add_rule
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
 PLUGIN_TYPE = 'execution_controller'
@@ -80,13 +80,8 @@ class ExecutionPlugin(PluginBase):
 
         .. note:: We should still need to implement this function
         """
-        aggregator = self.get_plugin_by_name('aggregator')
-        if aggregator is None:
-            raise RuntimeError("Aggregator is unavailable")
-
-        aggregator_plugin_unique_name = aggregator[PLUGIN_UNIQUE_NAME]
         with self._get_db_connection(True) as db_connection:
-            devices_db = db_connection[aggregator_plugin_unique_name]['devices_db']
+            devices_db = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
 
             result = devices_db.find_one({"internal_axon_id": device_id})
             if result is None:
