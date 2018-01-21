@@ -45,7 +45,8 @@
             <div slot="cardContent" class="info-dialog-container">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                 :fields="deviceFields" :filter="query.currentQuery" @click-row="configDevice">
+                                 :fields="deviceFields" :filter="query.currentQuery" @click-row="configDevice"
+                                 :selected-page="device.deviceSelectedPage" @change-page="selectPage">
                 </paginated-table>
             </div>
         </card>
@@ -83,6 +84,7 @@
         FETCH_DEVICES_COUNT,
         FETCH_DEVICE,
 		FETCH_TAGS,
+        SELECT_DEVICE_PAGE
 	} from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
@@ -156,7 +158,8 @@
 		},
 		methods: {
 			...mapMutations({
-				updateQuery: UPDATE_QUERY
+				updateQuery: UPDATE_QUERY,
+                selectPage: SELECT_DEVICE_PAGE
 			}),
 			...mapActions({
 				fetchFields: FETCH_UNIQUE_FIELDS,

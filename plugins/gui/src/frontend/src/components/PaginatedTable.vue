@@ -71,7 +71,7 @@
 		components: { Checkbox, GenericTableCell, PulseLoader },
 		props: {
 			'fetching': {}, 'data': {}, 'error': {}, 'fetchData': {}, 'filter': {}, 'value': {},
-            'actions': {}, 'fields': {}, 'idField': {default: 'id'}
+            'actions': {}, 'fields': {}, 'idField': {default: 'id'}, 'selectedPage': {}
 		},
 		computed: {
 			firstPage () {
@@ -173,21 +173,12 @@
 			},
 			prevPage () {
 				if (this.firstPage) { return }
-				this.currentPage--
-				if (this.currentPage < parseInt(this.linkedPageCount / 2) + 1 + this.linkedPageStart
-					&& this.linkedPageStart > 0) {
-					this.linkedPageStart--
-				}
-
+				this.selectPage(this.currentPage - 1)
 			},
 			nextPage () {
 				/* If there are no more pages to show, return */
 				if (this.lastPage) { return }
-				this.currentPage++
-				if (this.currentPage === parseInt(this.linkedPageCount / 2) + 1 + this.linkedPageStart
-					&& (this.linkedPageStart + this.linkedPageCount <= this.maxPages || this.maxPages === 0)) {
-					this.linkedPageStart++
-				}
+				this.selectPage(this.currentPage + 1)
 			},
             restartPagination() {
 				/*
@@ -200,6 +191,7 @@
             },
 			selectPage (page) {
 				this.currentPage = page
+                this.$emit('change-page', page)
 				this.restartPagination()
 			},
             handleRowClick(id) {
@@ -210,6 +202,7 @@
             }
 		},
 		mounted () {
+			this.currentPage = this.selectedPage
 			/* Get initial data for first page of the table */
 			if (!this.data || !this.data.length) {
 				this.addData()

@@ -12,6 +12,7 @@ export const FETCH_UNIQUE_FIELDS = 'FETCH_UNIQUE_FIELDS'
 export const UPDATE_UNIQUE_FIELDS = 'UPDATE_UNIQUE_FIELDS'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
+export const SELECT_DEVICE_PAGE = 'SELECT_DEVICE_PAGE'
 
 export const FETCH_TAGS = 'FETCH_TAGS'
 export const UPDATE_TAGS = 'UPDATE_TAGS'
@@ -106,6 +107,8 @@ export const device = {
 	state: {
 		/* Devices according to current filter performed by user, updating by request */
 		deviceList: {fetching: false, data: [], error: ''},
+
+		deviceSelectedPage: 0,
 
 		/* Number of devices according to current filter performed by user */
 		deviceCount: {fetching: false, data: 0, error: ''},
@@ -1292,6 +1295,9 @@ export const device = {
 					used.add(adapter.plugin_name)
 				})
 			})
+		},
+		[ SELECT_DEVICE_PAGE ] (state, pageNumber) {
+			state.deviceSelectedPage = pageNumber
 		}
 	},
 	actions: {
