@@ -86,7 +86,7 @@
 		FETCH_TAGS,
         SELECT_DEVICE_PAGE
 	} from '../../store/modules/device'
-	import { UPDATE_QUERY, SAVE_QUERY, queryToStr, strToQuery } from '../../store/modules/query'
+	import { UPDATE_QUERY, SAVE_QUERY, queryToStr } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
 
 	export default {

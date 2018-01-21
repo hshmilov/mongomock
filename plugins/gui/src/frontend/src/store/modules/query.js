@@ -30,40 +30,6 @@ export const matchToVal = (match) => {
 	return parseInt(match)
 }
 
-export const strToQuery = (str) => {
-	/*
-		DEPRECATED
-		Given str is expected in a format representing a DB query,
-		e.g. '<field1>="<value1>" AND <field2>=<value2> AND
-		(<field3>=<value3.1> OR <field3>=<value3.2>)'
-
-		The str is parsed in two levels - the AND parts and their inner OR parts.
-	 */
-	let query = {}
-	if (!str || str === '*') { return query }
-	let andParts = str.split(' AND ')
-	andParts.forEach(function (andPart) {
-		let matchObject = andPart.match(/\(.*\)/)
-		let orParts = andPart.split(' OR ')
-		if (orParts.length < 1) { return }
-		let matchValues = orParts[0].match(/\(?(.*)(=)([^\)]*)\)?/)
-		if (matchValues === undefined || matchValues.length < 4) { return }
-		if (matchObject === undefined || matchObject === null) {
-			/* AND expression has just one part */
-			query[matchValues[1]] = matchToVal(matchValues[3])
-		} else {
-			/* AND expression has more than one part, separated by OR */
-			query[matchValues[1]] = [ matchToVal(matchValues[3]) ]
-			orParts.splice(1).forEach(function(orPart) {
-				matchValues = orPart.match(/\(?(.*)(=)([^\)]*)\)?/)
-				if (matchValues === undefined || matchValues.length < 4) { return }
-				query[matchValues[1]].push(matchToVal(matchValues[3]))
-			})
-		}
-	})
-	return query
-}
-
 export const queryToStr = (query) => {
 	/*
 		Given query is expected to be an object where values are either primitives or an array of primitives,
@@ -72,35 +38,35 @@ export const queryToStr = (query) => {
 			'field3': [ value3.1, value3.2 ]
 		}
 	 */
-	let andParts = []
+	let fieldParts = []
 	Object.keys(query).forEach(function (andKey) {
 		if (query[andKey] === undefined) { return }
 		if (typeof query[andKey] === 'object') {
 			/* Items of array are separated as OR between value of the key field */
-			let orParts = []
+			let valueParts = []
 			query[andKey].forEach(function(orKey) {
 				if (typeof orKey === 'string') {
-					orParts.push(`${andKey}=="${orKey}"`)
+					valueParts.push(`${andKey}=="${orKey}"`)
 				} else {
-					orParts.push(`${andKey}==${orKey}`)
+					valueParts.push(`${andKey}==${orKey}`)
 				}
 			})
-			if (!orParts.length) { return }
-			if (orParts.length === 1) {
-				andParts.push(orParts[0])
+			if (!valueParts.length) { return }
+			if (valueParts.length === 1) {
+				fieldParts.push(valueParts[0])
 			} else {
-				andParts.push(`(${orParts.join(' or ')})`)
+				fieldParts.push(`(${valueParts.join(' and ')})`)
 			}
 		} else if (typeof query[andKey] === 'string') {
-			andParts.push(`${andKey}=="${query[andKey]}"`)
+			fieldParts.push(`${andKey}=="${query[andKey]}"`)
 		} else {
-			andParts.push(`${andKey}==${query[andKey]}`)
+			fieldParts.push(`${andKey}==${query[andKey]}`)
 		}
 	})
-	if (!andParts.length) {
+	if (!fieldParts.length) {
 		return ''
 	}
-	return andParts.join(' and ')
+	return fieldParts.join(' and ')
 }
 
 const updateQueries = (currentQueries, payload) => {
