@@ -112,8 +112,9 @@ class NexposeAdapter(AdapterBase):
                 last_seen = dateutil.parser.parse(last_seen)
             except Exception as err:
                 self.logger.exception("An Exception was raised while getting and parsing the last_seen field.")
+                continue
 
-            device_raw_data['tag'] = str(device_raw_data.get('tag', ''))
+            device_raw_data['tags'] = str(device_raw_data.get('tags', ''))
             yield {
                 'OS': figure_out_os(device_raw_data.get('os_name')),
                 adapter_consts.LAST_SEEN_PARSED_FIELD: last_seen,
@@ -158,7 +159,7 @@ class NexposeAdapter(AdapterBase):
         :param session: The NexposeSession to use.
         :return: A list of all devices (dicts).
         """
-        def get_details_worker(device_summary):
+        def get_details_worker(device_summary, device_number):
             device_details = {}
             try:
                 device_details = session.GetAssetDetails(device_summary)
@@ -167,8 +168,8 @@ class NexposeAdapter(AdapterBase):
                 self.logger.exception("An exception occured while getting and parsing device details from nexpose.")
 
             # Writing progress to log every 100 devices.
-            if device_counter % 100 == 0:
-                self.logger.info("Got {0} devices.".format(device_counter))
+            if device_number % 100 == 0:
+                self.logger.info("Got {0} devices.".format(device_number))
 
             return device_details
 
@@ -180,8 +181,8 @@ class NexposeAdapter(AdapterBase):
             future_to_device = []
             # Creating a future for all the device summaries to be executed by the executors.
             for device_summary in session.GetAssetSummaries():
-                future_to_device.append(executor.submit(get_details_worker, device_summary))
                 device_counter += 1
+                future_to_device.append(executor.submit(get_details_worker, device_summary, device_counter))
 
             self.logger.info("Getting data for {0} devices.".format(device_counter))
 
