@@ -1,5 +1,8 @@
 import epo_adapter
 import pytest
+
+from axonius.device import Device
+from axonius.parsing_utils import figure_out_os
 from axonius.utils.mongo_escaping import escape_dict
 from unittest.mock import MagicMock
 
@@ -82,42 +85,44 @@ def test_get_all_linked_tables():
 
 
 def test_os():
-    details = epo_adapter.parse_os_details(raw_device_data)
+    details = figure_out_os(raw_device_data.get('EPOLeafNode.os', ''))
     print(details)
     assert details['type'] == 'Windows'
     assert details['distribution'] == '10'
-    assert details['bitness'] == 64
 
 
 def test_parse_network_positive():
-    parsed = epo_adapter.parse_network(raw_device_data, MagicMock())
-    expected = [
-        {
-            "MAC": "06:f4:17:36:0e:d8".upper(),
-            "IP": sorted(["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a", '172.31.21.74'])
-        }
-    ]
-    assert len(parsed) == len(expected)
-    assert parsed[0]["MAC"] == expected[0]["MAC"]
-    assert sorted(parsed[0]["IP"]) == sorted(expected[0]["IP"])
+    device = Device(set(), set())
+    device.network_interfaces = []
+    epo_adapter.parse_network(raw_device_data, device, MagicMock())
+    assert len(device.network_interfaces) == 1
+    assert device.network_interfaces[0].mac == "06:f4:17:36:0e:d8".upper()
+    assert sorted(device.network_interfaces[0].ip) == sorted(["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a",
+                                                              '172.31.21.74'])
 
 
 def test_only_mac():
     raw = {'EPOComputerProperties.NetAddress': '06f417360ed8'}
-    parsed = epo_adapter.parse_network(raw, MagicMock())
-    assert parsed[0]["MAC"] == "06:f4:17:36:0e:d8".upper()
+    device = Device(set(), set())
+    device.network_interfaces = []
+    epo_adapter.parse_network(raw, device, MagicMock())
+    assert device.network_interfaces[0].mac == "06:f4:17:36:0e:d8".upper()
 
 
 def test_parse_network_no_ipv6_no_mac():
     raw = {'EPOComputerProperties.IPV4x': -1979646028}
-    parsed = epo_adapter.parse_network(raw, MagicMock())
-    assert parsed == [{'IP': ['10.0.255.180']}]
+    device = Device(set(), set())
+    device.network_interfaces = []
+    epo_adapter.parse_network(raw, device, MagicMock())
+    assert device.network_interfaces[0].ip == ['10.0.255.180']
 
 
 def test_parse_network_no_ipv4_no_mac():
     raw = {'EPOComputerProperties.IPV6': '0:0:0:0:0:FFFF:AC1F:154A'}
-    parsed = epo_adapter.parse_network(raw, MagicMock())
-    assert sorted(parsed[0]['IP']) == sorted(['172.31.21.74', '0:0:0:0:0:ffff:ac1f:154a'])
+    device = Device(set(), set())
+    device.network_interfaces = []
+    epo_adapter.parse_network(raw, device, MagicMock())
+    assert sorted(device.network_interfaces[0].ip) == sorted(['172.31.21.74', '0:0:0:0:0:ffff:ac1f:154a'])
 
 
 def test_escape_dict():

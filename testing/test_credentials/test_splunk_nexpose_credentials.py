@@ -1,7 +1,7 @@
 from test_credentials.test_splunk_credentials import *
 
 FETCHED_DEVICE_EXAMPLE = {
-    "OS": {
+    'os': {
         "bitness": None,
         "distribution": "Ubuntu",
                         "type": "Linux"
@@ -10,8 +10,8 @@ FETCHED_DEVICE_EXAMPLE = {
     "id": "11",
     "network_interfaces": [
         {
-            "IP": "192.168.20.10",
-            "MAC": "00:50:56:91:00:66"
+            "ip": "192.168.20.10",
+            "mac": "00:50:56:91:00:66"
         }
     ],
     "raw": {

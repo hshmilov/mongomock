@@ -61,7 +61,7 @@ def figure_actual_os(adapters):
     """
 
     def get_os_type(adapter):
-        os = adapter.get('OS')
+        os = adapter.get('os')
         if os is not None:
             return os.get('type')
 

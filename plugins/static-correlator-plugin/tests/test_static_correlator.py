@@ -1,3 +1,4 @@
+from axonius.device import SCANNER_FIELD_NAME
 from static_correlator_engine import StaticCorrelatorEngine, _correlate_scanner_hostname_ip, _correlate_scanner_mac_ip
 
 import logging
@@ -5,7 +6,6 @@ import sys
 
 from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.consts.adapter_consts import SCANNER_FIELD
 
 
 correlator_logger = logging.getLogger()
@@ -45,15 +45,15 @@ def test_no_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.2'
                             ]
                         }
@@ -70,15 +70,15 @@ def test_no_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad2',
                     'data': {
                         'id': "idad2",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -95,15 +95,15 @@ def test_no_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad3',
                     'data': {
                         'id': "idad3",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'NotLinux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.3'
                             ]
                         }
@@ -120,15 +120,15 @@ def test_no_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad4',
                     'data': {
                         'id': "idad4",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'NotLinux'
                         },
                         'hostname': "nothostname",
                         'network_interfaces': [{
-                            'MAC': 'mymac1',
-                            'IP': [
+                            'mac': 'mymac1',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -156,15 +156,15 @@ def test_rule1_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -180,15 +180,15 @@ def test_rule1_correlation():
                     PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -227,15 +227,15 @@ def test_rule1_os_contradiction():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -253,15 +253,15 @@ def test_rule1_os_contradiction():
                     PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'NotLinux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -272,15 +272,15 @@ def test_rule1_os_contradiction():
                     PLUGIN_UNIQUE_NAME: 'aws1',
                     'data': {
                         'id': "idaws1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'mymac',
-                            'IP': [
+                            'mac': 'mymac',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -309,15 +309,15 @@ def test_rule2_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'MAC': 'AA-BB-CC-11-22-33',
-                            'IP': [
+                            'mac': 'AA-BB-CC-11-22-33',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -333,14 +333,14 @@ def test_rule2_correlation():
                     PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'network_interfaces': [{
-                            'MAC': 'AA:bb-CC-11-22-33',
-                            'IP': [
+                            'mac': 'AA:bb-CC-11-22-33',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -378,15 +378,15 @@ def test_rule1_scanner_correlation():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': '',
                             'distribution': '',
                             'type': ''
                         },
-                        SCANNER_FIELD: True,
+                        SCANNER_FIELD_NAME: True,
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'IP': [
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -402,15 +402,15 @@ def test_rule1_scanner_correlation():
                     PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'aa:bb:cc:dd:ee:ff',
-                            'IP': [
+                            'mac': 'aa:bb:cc:dd:ee:ff',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -449,14 +449,14 @@ def test_rule1_scanner_correlation_fails_no_scanner_field():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': '',
                             'distribution': '',
                             'type': ''
                         },
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'IP': [
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -472,15 +472,15 @@ def test_rule1_scanner_correlation_fails_no_scanner_field():
                     PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
-                            'MAC': 'aa:bb:cc:dd:ee:ff',
-                            'IP': [
+                            'mac': 'aa:bb:cc:dd:ee:ff',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -516,10 +516,10 @@ def test_rule2_scanner_correlation():
                         "id": "10.0.2.229",
                         "network_interfaces": [
                             {
-                                "IP": [
+                                "ip": [
                                     "10.0.2.229"
                                 ],
-                                "MAC": "06:2D:ED:0F:2D:E4"
+                                "mac": "06:2D:ED:0F:2D:E4"
                             }
                         ],
                         "raw": {
@@ -550,20 +550,20 @@ def test_rule2_scanner_correlation():
                         "name": "puppet",
                         "network_interfaces": [
                             {
-                                "IP": [
+                                "ip": [
                                     "127.0.0.1",
                                     "::1"
                                 ]
                             },
                             {
-                                "IP": [
+                                "ip": [
                                     "10.0.2.229",
                                     "fe80::42d:edff:fe0f:2de4"
                                 ],
-                                "MAC": "06:2d:ed:0f:2d:e4"
+                                "mac": "06:2d:ed:0f:2d:e4"
                             }
                         ],
-                        "OS": {
+                        "os": {
                             "bitness": 64,
                             "distribution": "Ubuntu",
                             "major": "16.04",
@@ -1160,15 +1160,15 @@ def test_rule2_scanner_correlation_fails_no_scanner_field():
                     PLUGIN_UNIQUE_NAME: 'ad1',
                     'data': {
                         'id': "idad1",
-                        'OS': {
+                        'os': {
                             'bitness': '',
                             'distribution': '',
                             'type': ''
                         },
                         'hostname': "",
                         'network_interfaces': [{
-                            'MAC': 'AA-BB-CC-11-22-33',
-                            'IP': [
+                            'mac': 'AA-BB-CC-11-22-33',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }
@@ -1184,15 +1184,15 @@ def test_rule2_scanner_correlation_fails_no_scanner_field():
                     PLUGIN_UNIQUE_NAME: 'esx1',
                     'data': {
                         'id': "idesx1",
-                        'OS': {
+                        'os': {
                             'bitness': 32,
                             'distribution': 'Ubuntu',
                             'type': 'Linux'
                         },
                         'hostname': "asfasfsaf",
                         'network_interfaces': [{
-                            'MAC': 'AA:bb-CC-11-22-33',
-                            'IP': [
+                            'mac': 'AA:bb-CC-11-22-33',
+                            'ip': [
                                 '1.1.1.1'
                             ]
                         }

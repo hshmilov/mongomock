@@ -3,8 +3,8 @@
 
 __author__ = "Ofri Shur"
 
+from axonius.device import Device
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
 from axonius.adapter_exceptions import ClientConnectionException
 import exceptions
 from puppetserverconnection import PuppetServerConnection
@@ -17,15 +17,8 @@ class PuppetAdapter(AdapterBase):
 
     """
 
-    # Functions
-    def __init__(self, **kwargs):
-        """Class initialization.
-
-        Check AdapterBase documentation for additional params and exception details.
-        """
-
-        # Initialize the base plugin (will initialize http server)
-        super().__init__(**kwargs)
+    class MyDevice(Device):
+        pass
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
         self.logger.error("_parse_correlation_results is not implemented for puppet adapter")
@@ -117,31 +110,20 @@ class PuppetAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device_parsed = dict()
-            device_parsed['name'] = device_raw['hostname']
-            device_parsed['OS'] = figure_out_os(device_raw["operatingsystem"] +
-                                                ' ' + device_raw["architecture"] +
-                                                ' ' + device_raw["kernel"])
-            device_parsed['OS']['major'] = device_raw['os']['release']['major']
+            device = self._new_device()
+            device.name = device_raw['hostname']
+            device.figure_os(' '.join([device_raw["operatingsystem"],
+                                       device_raw["architecture"],
+                                       device_raw["kernel"]]))
+            device.os.major = device_raw["os"]['release']['major']
             if 'minor' in device_raw['os']['release']:
-                device_parsed['OS']['minor'] = device_raw['os']['release']['minor']
-            device_parsed['id'] = device_raw[u'certname']
-
-            def parse_network(interfaces):
-                for inet in interfaces.values():
-                    res = {'IP': [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
-                                 [x['address'] for x in inet.get('bindings6', []) if x.get('address')],
-                           'MAC': ''}
-                    mac = inet.get('mac')
-                    if mac:
-                        res['MAC'] = mac
-                    yield res
-
-            raw_networking = device_raw.get('networking')
-            if raw_networking:
-                device_parsed['network_interfaces'] = parse_network(raw_networking.get('interfaces', {}))
-            device_parsed['raw'] = device_raw
-
-            yield device_parsed
+                device.os.minor = device_raw["os"]['release']['minor']
+            device.id = device_raw[u'certname']
+            for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
+                device.add_nic(inet.get('mac', ''),
+                               [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
+                               [x['address'] for x in inet.get('bindings6', []) if x.get('address')])
+            device.set_raw(device_raw)
+            yield device
 
     # Exported API functions - None for now

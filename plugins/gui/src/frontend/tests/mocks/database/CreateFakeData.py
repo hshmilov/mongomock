@@ -35,8 +35,8 @@ adapter_schema = {"client_used": "WIN-0HI4F5QHV2T",
                   "accurate_for_datetime": "{date_adapter}",
                   "data": {}}
 
-general_adapter = {"OS": "{OS}",
-                   "IP": "{IP}",
+general_adapter = {"os": "{OS}",
+                   "ip": "{IP}",
                    "name": "{name}",
                    "pretty_id": "{pretty_name}",
                    "raw": "relevant?"}
@@ -70,13 +70,13 @@ def generate_adapter_basic(adapter_name, adapter_before=None, os_list=[]):
     else:
         adapter_before_data = adapter_before['data']
 
-    g['OS'] = adapter_before_data.get(
-        'OS', {'type': os_list[random.randint(0, len(os_list) - 1)]})
+    g['os'] = adapter_before_data.get(
+        'os', {'type': os_list[random.randint(0, len(os_list) - 1)]})
 
     g['name'] = adapter_before_data.get('name', names.get_first_name() + "-PC")
 
-    g['IP'] = adapter_before_data.get(
-        'IP', "10.0." + str(random.randint(0, 255)) + "." + str(random.randint(0, 255)))
+    g['ip'] = adapter_before_data.get(
+        'ip', "10.0." + str(random.randint(0, 255)) + "." + str(random.randint(0, 255)))
 
     g['pretty_id'] = codenamize.codenamize(
         f"{adapter_name}->{uuid.uuid4().hex}", adjectives=1, max_item_chars=6)
@@ -166,7 +166,7 @@ for i in range(1, blocked_qcore_num):
 
     del g_general['adapters']['qcore_adapter']['data']['name']
     del g_general['adapters']['checkpoint_adapter']['data']['name']
-    del g_general['adapters']['checkpoint_adapter']['data']['OS']
+    del g_general['adapters']['checkpoint_adapter']['data']['os']
 
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)
 

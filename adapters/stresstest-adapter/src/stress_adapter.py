@@ -10,7 +10,8 @@ import uuid
 import time
 import random
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
+from axonius.device import Device
+from axonius.fields import Field
 
 OPERATION_SYSTEMS_EXAMPLES = [
     "Windows XP", "Windows 7", "Windows 8", "Windows 10",
@@ -22,6 +23,10 @@ OPERATION_SYSTEMS_EXAMPLES = [
 
 
 class StressAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        vm_tools_status = Field(str, 'VM Tools Status')
+
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -165,31 +170,20 @@ class StressAdapter(AdapterBase):
             "type": "object"
         }
 
-    def _parse_raw_data(self, raw_data):
-        for x in raw_data:
-            yield {
-                'id': f"{x['sa_name']}-{x['index']}",
-                'name': f"avigdor no# {x['index']}",
-                'OS': figure_out_os(x['config']['guestFullName']),
-                'network_interfaces': self._parse_network_device(x.get('networking', [])),
-                'hostname': x['guest'].get('hostName'),
-                'vmToolsStatus': x['guest'].get('toolsStatus'),
-                'raw': x,
-            }
-
-    def _parse_network_device(self, raw_networks):
-        """
-        Parse a network device as received from vCenterAPI
-        :param raw_network: raw networks from ESX
-        :return: iter(dict)
-        """
-        for raw_network in raw_networks:
-            ip_to_return = [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])]
-            if len(ip_to_return) != 0:  # Return only if has an IP address
-                yield {
-                    "MAC": raw_network.get('macAddress'),
-                    "IP": ip_to_return
-                }
+    def _parse_raw_data(self, devices_raw_data):
+        for device_raw in devices_raw_data:
+            device = self._new_device()
+            device.id = f"{device_raw['sa_name']}-{device_raw['index']}"
+            device.name = f"avigdor no# {device_raw['index']}"
+            device.figure_os(device_raw['config']['guestFullName'])
+            for iface in device_raw.get('networking', []):
+                ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
+                if ips:
+                    device.add_nic(iface.get('macAddress'), ips)
+            device.hostname = device_raw['guest'].get('hostName')
+            device.vm_tools_status = device_raw['guest'].get('toolsStatus')
+            device.set_raw(device_raw)
+            yield device
 
     def _get_client_id(self, client_config):
         return client_config['name']

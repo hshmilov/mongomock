@@ -1,8 +1,7 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.device import Device
 from axonius.parsing_utils import format_mac, parse_date
-from axonius.parsing_utils import figure_out_os
-from axonius.consts import adapter_consts
 import json
 import ipaddress
 import mcafee
@@ -15,7 +14,6 @@ QUERY_PASS = 'query_password'
 QUERY_USER = 'query_user'
 
 LEAF_NODE_TABLE = 'EPOLeafNode'
-IP_ADDR = 'IP'
 
 
 def get_all_linked_tables(table):
@@ -29,33 +27,23 @@ def get_all_linked_tables(table):
     return all_linked_tables
 
 
-def parse_os_details(device_raw_data):
-    """
-    :param device_raw_data: device raw data as retrieved by query
-    :return: parsed os details struct
-    """
-    details = figure_out_os(device_raw_data.get('EPOLeafNode.os', ''))
-    details['bitness'] = 64 if device_raw_data.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
-    return details
+def parse_network(device_raw, device, logger):
+    mac = ''
+    ip_list = set()
 
-
-def parse_network(raw_data, logger):
-    res = dict()
-    res[IP_ADDR] = []
-
-    raw_ipv4 = raw_data.get('EPOComputerProperties.IPV4x')
+    raw_ipv4 = device_raw.get('EPOComputerProperties.IPV4x')
     parsed_ipv4 = None
     try:
         # epo is a motherfucker? Seems like he flips the msb of the binary repr of ip addr...
         ipv4 = (raw_ipv4 & 0xffffffff) ^ 0x80000000
         parsed_ipv4 = str(ipaddress.IPv4Address(ipv4))
-        res[IP_ADDR].append(parsed_ipv4)
+        ip_list.add(parsed_ipv4)
     except:
         logger.info(f"Error reading IPv4 {raw_ipv4}")
 
-    raw_ipv6 = raw_data.get('EPOComputerProperties.IPV6')
+    raw_ipv6 = device_raw.get('EPOComputerProperties.IPV6')
     if raw_ipv6 and isinstance(raw_ipv6, str):
-        res[IP_ADDR].append(raw_ipv6.lower())
+        ip_list.add(raw_ipv6.lower())
 
     try:
         ipv4mapped = ipaddress.IPv6Address(raw_ipv6).ipv4_mapped
@@ -66,26 +54,26 @@ def parse_network(raw_data, logger):
                 # epo's ipv4 reporting is problematic.
                 # But we noticed that mapped ipv6 addresses tend to have the correct value
                 # In such a case we add the mapped ipv4 address
-                res[IP_ADDR].append(str(ipv4mapped))
+                ip_list.add(str(ipv4mapped))
     except:
         logger.warning(f"Failed to populate populate ipv4/6 address raw_ipv4={raw_ipv4} raw_ipv6={raw_ipv6}")
 
-    raw_mac = raw_data.get('EPOComputerProperties.NetAddress')
+    raw_mac = device_raw.get('EPOComputerProperties.NetAddress')
     try:
         mac = format_mac(raw_mac)
-        res['MAC'] = mac
     except:
         logger.info(f"Failed formatting {raw_mac}")
 
-    # unique
-    res[IP_ADDR] = list(set(res[IP_ADDR]))
-    return [res]
+    device.add_nic(mac, list(ip_list))
 
 
 class EpoAdapter(AdapterBase):
     """
     Connects axonius to mcafee epo
     """
+
+    class MyDevice(Device):
+        pass
 
     def __init__(self, **kwargs):
         """Class initialization.
@@ -130,33 +118,32 @@ class EpoAdapter(AdapterBase):
             "type": "object"
         }
 
-    def _parse_raw_data(self, raw_data):
-        raw_data = json.loads(raw_data)
-        for device_raw_data in raw_data:
-            epo_id = device_raw_data.get('EPOLeafNode.AgentGUID')
+    def _parse_raw_data(self, devices_raw_data):
+        for device_raw in json.loads(devices_raw_data):
+            hostname = device_raw.get('EPOComputerProperties.IPHostName',
+                                      device_raw.get('EPOComputerProperties.ComputerName', ''))
 
-            if epo_id is None:
-                self.logger.error(f"Got epo device without EPOLeafNode.AgentGUID {device_raw_data}")
-
-            parsed = {
-                'hostname': device_raw_data.get('EPOComputerProperties.IPHostName',
-                                                device_raw_data.get('EPOComputerProperties.ComputerName', '')),
-                'OS': parse_os_details(device_raw_data),
-                'id': epo_id,
-                'network_interfaces': parse_network(device_raw_data, self.logger),
-                'raw': device_raw_data}
-
-            try:
-                last_seen = parse_date(device_raw_data['EPOLeafNode.LastUpdate'])
-            except KeyError:
+            if 'EPOLeafNode.LastUpdate' not in device_raw:
                 # No date for this device, we don't want to enter devices with no date so continuing.
-                self.logger.warning(f"Found device with no date. Not inserting to db. "
-                                    f"device name: {parsed['hostname']}")
+                self.logger.warning(f"Found device with no date. Not inserting to db. device name: {hostname}")
                 continue
-            if last_seen:
-                parsed[adapter_consts.LAST_SEEN_PARSED_FIELD] = last_seen
 
-            yield parsed
+            epo_id = device_raw.get('EPOLeafNode.AgentGUID')
+            if epo_id is None:
+                self.logger.error(f"Got epo device without EPOLeafNode.AgentGUID {device_raw}")
+
+            device = self._new_device()
+            device.hostname = hostname
+            device.figure_os(device_raw.get('EPOLeafNode.os', ''))
+            device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
+            device.id = epo_id
+            parse_network(device_raw, device, self.logger)
+            last_seen = parse_date(device_raw['EPOLeafNode.LastUpdate'])
+            if last_seen:
+                device.last_seen = last_seen
+
+            device.set_raw(device_raw)
+            yield device
 
     def _query_devices_by_client(self, client_name, client_data):
         mc = mcafee.client(client_data[EPO_HOST], client_data[EPO_PORT],
@@ -165,7 +152,6 @@ class EpoAdapter(AdapterBase):
 
         all_linked_tables = get_all_linked_tables(table)
 
-        raw = dict()
         try:
             raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
         except Exception as e:

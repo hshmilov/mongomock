@@ -4,14 +4,17 @@ symantec_adapter.py: An adapter for Symantec Dashboard.
 
 __author__ = "Asaf & Tal"
 
+from axonius.device import Device
 import axonius.adapter_exceptions
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
 import symantec_connection
 import symantec_exceptions
 
 
 class SymantecAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
 
     def _get_client_id(self, client_config):
         return client_config['SEPM_Address']
@@ -88,24 +91,23 @@ class SymantecAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             if 0 == device_raw['onlineStatus']:
                 continue
-            device_parsed = dict()
+            device = self._new_device()
             if device_raw.get('domainOrWorkgroup', '') == 'WORKGROUP' or device_raw.get('domainOrWorkgroup', '') == '':
                 # Special case for workgroup
-                device_parsed['hostname'] = device_raw.get('computerName', '')
+                device.hostname = device_raw.get('computerName', '')
             else:
-                device_parsed['hostname'] = device_raw.get(
-                    'computerName', '') + '.' + device_raw.get('domainOrWorkgroup', '')
-            device_parsed['OS'] = figure_out_os(' '.join([device_raw.get("operatingSystem", ''),
-                                                          str(device_raw.get("osbitness", '')),
-                                                          str(device_raw.get("osversion", '')),
-                                                          str(device_raw.get("osmajor", '')),
-                                                          str(device_raw.get("osminor", ''))]))
-            device_parsed['network_interfaces'] = [{"MAC": mac, "IP": [IP]}
-                                                   for mac, IP in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', '')))]
+                device.hostname = device_raw.get('computerName', '') + '.' + device_raw.get('domainOrWorkgroup', '')
+            device.figure_os(' '.join([device_raw.get("operatingSystem", ''),
+                                       str(device_raw.get("osbitness", '')),
+                                       str(device_raw.get("osversion", '')),
+                                       str(device_raw.get("osmajor", '')),
+                                       str(device_raw.get("osminor", ''))]))
+            for mac, ip in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', ''))):
+                device.add_nic(mac, ip)
 
-            device_parsed['id'] = device_raw['agentId']
-            device_parsed['raw'] = device_raw
-            yield device_parsed
+            device.id = device_raw['agentId']
+            device.set_raw(device_raw)
+            yield device
 
     def _correlation_cmds(self):
         """

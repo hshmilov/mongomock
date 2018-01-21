@@ -5,14 +5,16 @@ from configparser import ConfigParser
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
+from axonius.device import Device
 from splunk_connection import SplunkConnection
-from axonius.consts.adapter_consts import SCANNER_FIELD
 
 __author__ = "Asaf & Tal"
 
 
 class SplunkNexposeAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -82,12 +84,11 @@ class SplunkNexposeAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device_parsed = dict()
-            device_parsed['hostname'] = device_raw.get('hostname', None)
-            device_parsed['OS'] = figure_out_os(device_raw.get('version', device_raw.get('os', None)))
-            device_parsed[SCANNER_FIELD] = True
-            device_parsed['network_interfaces'] = [{'MAC': device_raw.get('mac', None),
-                                                    'IP': device_raw.get('ip', None)}]
-            device_parsed['id'] = device_raw['asset_id']
-            device_parsed['raw'] = device_raw
-            yield device_parsed
+            device = self._new_device()
+            device.hostname = device_raw.get('hostname', '')
+            device.figure_os(device_raw.get('version', device_raw.get('os')))
+            device.add_nic(device_raw.get('mac'), [device_raw.get('ip')])
+            device.id = device_raw['asset_id']
+            device.scanner = True
+            device.set_raw(device_raw)
+            yield device

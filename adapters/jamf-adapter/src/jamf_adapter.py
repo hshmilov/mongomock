@@ -3,15 +3,18 @@ JamfAdapter.py: An adapter for Jamf Dashboard.
 """
 __author__ = "Asaf & Tal"
 
+from axonius.device import Device
 import axonius.adapter_exceptions
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
 import jamf_connection
 import jamf_exceptions
 import jamf_consts
 
 
 class JamfAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
 
     def _get_client_id(self, client_config):
         return client_config['Jamf_Domain']
@@ -70,27 +73,21 @@ class JamfAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device_parsed = dict()
-            device_parsed['hostname'] = device_raw.get('name', '')
-            device_parsed['id'] = device_raw.get('udid', '')
+            device = self._new_device()
+            device.hostname = device_raw.get('name', '')
+            device.id = device_raw.get('udid', '')
             if 'Operating_System' in device_raw:
-                device_parsed['OS'] = figure_out_os(' '.join([device_raw.get('Operating_System', ''),
-                                                              device_raw.get('Architecture_Type', '')
-                                                              ]))
+                device.figure_os(' '.join([device_raw.get('Operating_System', ''),
+                                           device_raw.get('Architecture_Type', '')]))
                 # TODO: For CapitalOne Demo!
-                # device_parsed['network_interfaces'] = [{'MAC': device_raw.get('MAC_Address', ''),
-                #                                         'IP': [device_raw.get('IP_Address', '')]}]
+                # device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('IP_Address', '')])
                 if device_raw['Last_Reported_IP_Address'] != '':
-                    device_parsed['network_interfaces'].append({'MAC': device_raw.get('MAC_Address'),
-                                                                'IP': [device_raw.get('Last_Reported_IP_Address', '')]})
+                    device.add_nic(device_raw.get('MAC_Address'), [device_raw.get('Last_Reported_IP_Address', '')])
             else:
-                device_parsed['OS'] = figure_out_os(' '.join([device_raw.get('Model_Identifier', ''),
-                                                              device_raw.get('iOS_Version', '')
-                                                              ]))
-                device_parsed['network_interfaces'] = [{'MAC': device_raw.get('Wi_Fi_MAC_Address'),
-                                                        'IP': [device_raw.get('IP_Address')]}]
-            device_parsed['raw'] = device_raw
-            yield device_parsed
+                device.figure_os(' '.join([device_raw.get('Model_Identifier', ''), device_raw.get('iOS_Version', '')]))
+                device.add_nic(device_raw.get('Wi_Fi_MAC_Address'), [device_raw.get('IP_Address')])
+            device.set_raw(device_raw)
+            yield device
 
     def _correlation_cmds(self):
         """

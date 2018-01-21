@@ -255,7 +255,7 @@ class Core(PluginBase):
                 if plugin_unique_name in self.online_plugins:
                     duplicated = self.online_plugins[plugin_unique_name]
                     if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
-                        self.logger.warn("Pluging {} restrated".format(plugin_unique_name))
+                        self.logger.warn("Pluging {} restarted".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
                     else:
                         self.logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")

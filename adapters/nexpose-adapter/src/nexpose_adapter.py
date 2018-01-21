@@ -4,12 +4,11 @@ from contextlib import contextmanager
 import ssl
 import dateutil.parser
 
-from axonius.adapter_base import AdapterBase
-from axonius.consts import adapter_consts
-from axonius.parsing_utils import figure_out_os
-from axonius.consts.adapter_consts import SCANNER_FIELD
 
 import nexpose.nexpose as nexpose
+
+from axonius.adapter_base import AdapterBase
+from axonius.device import Device
 
 PASSWORD = 'password'
 USER = 'username'
@@ -22,6 +21,9 @@ class NexposeAdapter(AdapterBase):
     """
     Connects axonius to Rapid7's nexpose.
     """
+
+    class MyDevice(Device):
+        pass
 
     def __init__(self, **kwargs):
         """Class initialization.
@@ -90,19 +92,12 @@ class NexposeAdapter(AdapterBase):
             "type": "object"
         }
 
-    def _parse_raw_data(self, raw_data):
-        def _create_network_interface(addresses, mac_address):
-            interfaces = []
-            for current_address in addresses:
-                current_interface = {'IP': [current_address], 'MAC': mac_address}
-                interfaces.append(current_interface)
-            return interfaces
-
+    def _parse_raw_data(self, devices_raw_data):
         # We do not use data with no timestamp.
         no_timestamp_count = 0
-        for device_raw_data in raw_data:
+        for device_raw in devices_raw_data:
             try:
-                last_seen = device_raw_data.get('last_scan_date')
+                last_seen = device_raw.get('last_scan_date')
                 if last_seen is None:
                     # No data on the last timestamp of the device. Not inserting this device.
                     no_timestamp_count += 1
@@ -114,17 +109,17 @@ class NexposeAdapter(AdapterBase):
                 self.logger.exception("An Exception was raised while getting and parsing the last_seen field.")
                 continue
 
-            device_raw_data['tags'] = str(device_raw_data.get('tags', ''))
-            yield {
-                'OS': figure_out_os(device_raw_data.get('os_name')),
-                adapter_consts.LAST_SEEN_PARSED_FIELD: last_seen,
-                'id': str(device_raw_data['id']),
-                'network_interfaces': _create_network_interface(device_raw_data.get('addresses', ''),
-                                                                device_raw_data.get('mac_address', '')),
-                'hostname': device_raw_data['host_names'][0] if len(device_raw_data.get('host_names', [])) > 0 else '',
-                SCANNER_FIELD: True,
-                'raw': device_raw_data
-            }
+            device_raw['tags'] = str(device_raw.get('tags', ''))
+
+            device = self._new_device()
+            device.figure_os(device_raw.get('os_name'))
+            device.last_seen = last_seen
+            device.id = str(device_raw['id'])
+            device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []))
+            device.hostname = device_raw['host_names'][0] if len(device_raw.get('host_names', [])) > 0 else ''
+            device.scanner = True
+            device.set_raw(device_raw)
+            yield device
 
         if no_timestamp_count != 0:
             self.logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")

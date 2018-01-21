@@ -4,9 +4,9 @@ SentinelOneAdapter.py: An adapter for SentinelOne Dashboard.
 
 __author__ = "Asaf & Tal"
 
+from axonius.device import Device
 import axonius.adapter_exceptions
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
 import sentinelone_connection
 import sentinelone_exceptions
 import re
@@ -30,6 +30,9 @@ sentinelone_ID_Matcher = {
 
 
 class SentinelOneAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
 
     def _get_client_id(self, client_config):
         return client_config['SentinelOne_Domain']
@@ -104,30 +107,16 @@ class SentinelOneAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             if not device_raw['is_active']:
                 continue
-            software_information = device_raw['software_information']
-            network_information = device_raw['network_information']
-            device_parsed = dict()
-            device_parsed['hostname'] = network_information['computer_name'] + '.' + network_information['domain']
-            device_parsed['OS'] = figure_out_os(' '.join([software_information["os_name"],
-                                                          software_information["os_arch"],
-                                                          software_information["os_revision"]]))
-            device_parsed['network_interfaces'] = [self._parse_network_interface(interface)
-                                                   for interface in network_information['interfaces']]
-
-            device_parsed['id'] = device_raw['id']
-            device_parsed['raw'] = device_raw
-            yield device_parsed
-
-    def _parse_network_interface(self, interface):
-        """
-        private method to convert SentinelOne's format for a network interface to Axoniuses format
-        :param interface: dict
-        :return: dict
-        """
-        return {
-            "MAC": interface["physical"],
-            "IP": interface['inet6'] + interface['inet']
-        }
+            soft_info = device_raw['software_information']
+            net_info = device_raw['network_information']
+            device = self._new_device()
+            device.hostname = net_info['computer_name'] + '.' + net_info['domain']
+            device.figure_os(' '.join([soft_info['os_name'], soft_info['os_arch'], soft_info['os_revision']]))
+            for interface in net_info['interfaces']:
+                device.add_nic(interface['physical'], interface['inet6'] + interface['inet'])
+            device.id = device_raw['id']
+            device.set_raw(device_raw)
+            yield device
 
     def _correlation_cmds(self):
         """

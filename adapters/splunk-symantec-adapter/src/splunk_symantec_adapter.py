@@ -4,7 +4,7 @@ splunk_symantec_adapter.py: An adapter for Splunk Dashboard.
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
+from axonius.device import Device
 from splunk_connection import SplunkConnection
 
 __author__ = "Asaf & Tal"
@@ -17,6 +17,10 @@ SPLUNK_ONLINE_HOURS = 'online_hours'
 
 
 class SplunkSymantecAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
+
     def __init__(self, **kwargs):
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
@@ -131,24 +135,20 @@ class SplunkSymantecAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             host = device_raw.get('host', '')
-            device_parsed = dict()
-            device_parsed['hostname'] = host.get('name', '')
+            device = self._new_device()
+            device.hostname = host.get('name', '')
             if host.get('type', '') == 'symantec_mac':
-                device_parsed['OS'] = figure_out_os('OS X')
-                device_parsed['network_interfaces'] = []
+                device.figure_os('OS X')
                 if host.get('local mac', '') != '000000000000':
-                    device_parsed['network_interfaces'].append({'MAC': host.get('local mac', ''),
-                                                                'IP': host.get('local ips', '').split(' ')})
+                    device.add_nic(':'.join([host.get('local mac', '')[index:index + 2] for index in range(0, 12, 2)]),
+                                   host.get('local ips', '').split(' '))
                 if host.get('remote mac', '') != '000000000000':
-                    device_parsed['network_interfaces'].append({'MAC': ':'.join([host.get('remote mac', '')[
-                                                                                 index:index + 2]
-                                                                                 for index in range(0, 12, 2)]),
-                                                                'IP': host['remote ips'].split(' ')})
+                    device.add_nic(':'.join([host.get('remote mac', '')[index:index + 2] for index in range(0, 12, 2)]),
+                                   host['remote ips'].split(' '))
             else:
-                device_parsed['OS'] = figure_out_os(host.get('os', ''))
-                device_parsed['network_interfaces'] = [{'MAC': iface.get('mac', ''),
-                                                        'IP': iface.get('ip', '').split(' ')} for iface in
-                                                       host.get('network', [{}])]
-            device_parsed['id'] = host['name']
-            device_parsed['raw'] = device_raw
-            yield device_parsed
+                device.figure_os(host.get('os', ''))
+                for iface in host.get('network', []):
+                    device.add_nic(iface.get('mac', ''), iface.get('ip', '').split(' '))
+            device.id = host['name']
+            device.set_raw(device_raw)
+            yield device

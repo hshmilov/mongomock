@@ -6,14 +6,13 @@ __author__ = "Asaf & Tal"
 
 import dateutil.parser
 
+from axonius.device import Device
 import axonius.adapter_exceptions
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
 import qualys_scans_connection
 import qualys_scans_exceptions
-from axonius.consts import adapter_consts
 from axonius.utils.xml2json_parser import Xml2Json
-from axonius.consts.adapter_consts import SCANNER_FIELD
+
 
 QUALYS_SCANS_ITERATOR_FORMAT = """
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -39,6 +38,9 @@ VM_HOST_OUTPUT = 'HOST_LIST_VM_DETECTION_OUTPUT'
 
 
 class QualysScansAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
 
     def _get_client_id(self, client_config):
         return client_config[QUALYS_SCANS_DOMAIN]
@@ -122,18 +124,17 @@ class QualysScansAdapter(AdapterBase):
             "type": "object"
         }
 
-    def _parse_raw_data(self, raw_devices):
+    def _parse_raw_data(self, devices_raw_data):
         no_timestamp_count = 0
         no_hostname_count = 0
-        for raw_device_data in raw_devices:
-            hostname = raw_device_data.get('DNS', raw_device_data.get('NETBIOS', ''))
+        for device_raw in devices_raw_data:
+            hostname = device_raw.get('DNS', device_raw.get('NETBIOS', ''))
             if hostname == '':
                 no_hostname_count += 1
                 continue
             else:
                 try:
-                    last_seen = raw_device_data.get('LAST_VM_SCANNED_DATE',
-                                                    raw_device_data.get('LAST_VULN_SCAN_DATETIME'))
+                    last_seen = device_raw.get('LAST_VM_SCANNED_DATE', device_raw.get('LAST_VULN_SCAN_DATETIME'))
                     if last_seen is None:
                         # No data on the last timestamp of the device. Not inserting this device.
                         no_timestamp_count += 1
@@ -143,17 +144,17 @@ class QualysScansAdapter(AdapterBase):
                     last_seen = dateutil.parser.parse(last_seen)
                 except Exception:
                     self.logger.exception("An Exception was raised while getting and parsing the last_seen field.")
+                    continue
 
-                yield {
-                    'hostname': hostname,
-                    'OS': figure_out_os(raw_device_data.get('OS', '')),
-                    adapter_consts.LAST_SEEN_PARSED_FIELD: last_seen,
-                    'network_interfaces': [{'IP': [raw_device_data.get('IP', '')],
-                                            'MAC': ''}],
-                    'id': raw_device_data.get('ID'),
-                    SCANNER_FIELD: True,
-                    'raw': raw_device_data
-                }
+                device = self._new_device()
+                device.hostname = hostname
+                device.figure_os(device_raw.get('OS', ''))
+                device.last_seen = last_seen
+                device.add_nic('', [device_raw.get('IP', '')])
+                device.id = device_raw.get('ID')
+                device.scanner = True
+                device.set_raw(device_raw)
+                yield device
 
         if no_timestamp_count != 0:
             self.logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")

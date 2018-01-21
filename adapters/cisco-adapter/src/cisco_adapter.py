@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.consts.adapter_consts import SCANNER_FIELD
+from axonius.device import Device
 from cisco_client import CiscoClient
 
 HOST = 'host'
@@ -9,6 +9,10 @@ PASSWORD = 'password'
 
 
 class CiscoAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
+
     def _connect_client(self, client_config):
         # tries to connect and throws adapter Exception on failure
         client = CiscoClient(self.logger, host=client_config[HOST], username=client_config[USERNAME],
@@ -52,14 +56,14 @@ class CiscoAdapter(AdapterBase):
             "type": "object"
         }
 
-    def _parse_raw_data(self, raw_data):
-        for entry in raw_data:
-            yield {
-                'id': entry["IP"],
-                'network_interfaces': [{'MAC': entry['MAC'], 'IP': [entry['IP']]}],
-                SCANNER_FIELD: True,
-                'raw': entry
-            }
+    def _parse_raw_data(self, devices_raw_data):
+        for device_raw in devices_raw_data:
+            device = self._new_device()
+            device.id = device_raw['ip']
+            device.add_nic(device_raw['mac'], [device_raw['ip']])
+            device.scanner = True
+            device.set_raw(device_raw)
+            yield device
 
     def _get_client_id(self, client_config):
         return client_config[HOST]

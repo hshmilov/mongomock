@@ -4,6 +4,7 @@ CarefulExecutionCorrelatorEngine.py: A Plugin for the devices correlation proces
 import itertools
 
 from axonius.correlator_base import figure_actual_os
+from axonius.device import NETWORK_INTERFACES_FIELD_NAME
 from axonius.execution_correlator_engine_base import ExecutionCorrelatorEngineBase
 
 
@@ -28,12 +29,12 @@ class CarefulExecutionCorrelatorEngine(ExecutionCorrelatorEngineBase):
             if network_ifs is None:
                 return
             for network_if in network_ifs:
-                for ip in network_if.get('IP', []):
+                for ip in network_if.get('ip', []):
                     yield ip
 
         def extract_all_ips_from_axonius_device(device) -> set:
             return set(itertools.chain(
-                *(extract_all_ips_from_network_interfaces(x['data'].get('network_interfaces'))
+                *(extract_all_ips_from_network_interfaces(x['data'].get(NETWORK_INTERFACES_FIELD_NAME))
                   for x in
                   device['adapters'])))
 

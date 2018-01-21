@@ -4,9 +4,9 @@ QualysAdapter.py: An adapter for Qualys Dashboard.
 
 __author__ = "Asaf & Tal"
 
+from axonius.device import Device
 import axonius.adapter_exceptions
 from axonius.adapter_base import AdapterBase
-from axonius.parsing_utils import figure_out_os
 import qualys_connection
 import qualys_exceptions
 from itertools import groupby
@@ -27,6 +27,9 @@ PASSWORD = 'password'
 
 
 class QualysAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
 
     def _get_client_id(self, client_config):
         return client_config[QUALYS_DOMAIN]
@@ -97,21 +100,17 @@ class QualysAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device_raw = device_raw.get('HostAsset', '')
-            if 'STATUS_ACTIVE' != device_raw.get('agentInfo', {}).get('status', ''):
+            if device_raw.get('agentInfo', {}).get('status', '') != 'STATUS_ACTIVE':
                 continue
-            device_parsed = dict()
-            device_parsed['hostname'] = device_raw.get('name', '')
-            device_parsed['OS'] = figure_out_os(device_raw.get('os', ''))
+            device = self._new_device()
+            device.hostname = device_raw.get('name', '')
+            device.figure_os(device_raw.get('os', ''))
             ifaces = device_raw.get('networkInterface', {}).get('list')
-            iface_dict = []
             for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
-                iface_dict.append({'MAC': mac, 'IP': [ip_iface['HostAssetInterface']['address']
-                                                      for ip_iface in ip_ifaces]})
-
-            device_parsed['network_interfaces'] = iface_dict
-            device_parsed['id'] = device_raw['agentInfo']['agentId']
-            device_parsed['raw'] = device_raw
-            yield device_parsed
+                device.add_nic(mac, [ip_iface['HostAssetInterface']['address'] for ip_iface in ip_ifaces])
+            device.id = device_raw['agentInfo']['agentId']
+            device.set_raw(device_raw)
+            yield device
 
     def _correlation_cmds(self):
         """

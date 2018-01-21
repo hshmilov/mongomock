@@ -68,7 +68,7 @@ def test_no_pass():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad1"
@@ -84,7 +84,7 @@ def test_no_pass():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad2"
@@ -100,7 +100,7 @@ def test_no_pass():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "esx1"
@@ -116,7 +116,7 @@ def test_no_pass():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad1"
@@ -138,13 +138,13 @@ def test_os_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -159,13 +159,13 @@ def test_os_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad2",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -180,13 +180,13 @@ def test_os_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "addd",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -201,13 +201,13 @@ def test_os_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -226,7 +226,7 @@ def test_os_error():
                     "id": "ad1",
                     "network_interfaces": [
                         {
-                            "IP": ["1.1.1.1"],
+                            'ip': ["1.1.1.1"],
                         }
                     ]
                 }
@@ -240,13 +240,13 @@ def test_os_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -255,13 +255,13 @@ def test_os_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_2",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "NotWindows"
                         },
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -281,13 +281,13 @@ def test_network_error():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
-                        "OS": {
+                        "os": {
                             "type": "Windows"
                         },
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                "IP": ["1.1.1.1"],
+                                'ip': ["1.1.1.1"],
                             }
                         ]
                     }
@@ -306,7 +306,7 @@ def test_network_error():
                     "id": "ad1",
                     "network_interfaces": [
                         {
-                            "IP": ["1.1.1.2"],
+                            'ip': ["1.1.1.2"],
                         }
                     ]
                 }

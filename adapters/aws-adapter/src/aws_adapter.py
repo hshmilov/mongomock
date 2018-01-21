@@ -5,8 +5,9 @@ Currently, allows you to view AWS EC2 instances you possess.
 
 __author__ = "Mark Segal"
 
+from axonius.fields import Field
+from axonius.device import Device
 from axonius.adapter_base import AdapterBase, DeviceRunningState
-from axonius.parsing_utils import figure_out_os
 import axonius.adapter_exceptions
 import boto3
 import re
@@ -52,6 +53,10 @@ def _describe_images_from_client_by_id(client, amis):
 
 
 class AWSAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        power_state = Field(str, 'Power state')
+
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -156,43 +161,28 @@ class AWSAdapter(AdapterBase):
             "type": "object"
         }
 
-    def _parse_raw_data(self, raw_data):
-        for reservation in raw_data.get('Reservations', []):
-            for instance in reservation.get('Instances', []):
-                # TODO: Weiss - This is a bit of a weird dict comprehension.
-                state = instance.get('State', {}).get('Name')
-                tags_dict = {i['Key']: i['Value']
-                             for i in instance.get('Tags', {})}
-                yield {
-                    "name": tags_dict.get('Name', ''),
-                    'OS': figure_out_os(instance['DescribedImage'].get('Description', '')
-                                        if instance['DescribedImage'] is not None
-                                        else instance.get('Platform')),
-                    'id': instance['InstanceId'],
-                    'network_interfaces': self._parse_network_interfaces(instance.get('NetworkInterfaces', [])),
-                    'powerState': POWER_STATE_MAP.get(state, DeviceRunningState.Unknown),
-                    'raw': instance
-                }
-
-    def _parse_network_interfaces(self, interfaces):
-        """
-        private method to convert AWS's format for a network interface to Axoniuses format
-        :param interfaces: list
-        :return: list of dict
-        """
-        for interface in interfaces:
-            assoc = interface.get("Association")
-            if assoc is not None:
-                public_ip = assoc.get('PublicIp')
-                if public_ip is not None:
-                    yield {
-                        "MAC": interface.get("MacAddress"),
-                        "IP": [public_ip]
-                    }
-            yield {
-                "MAC": interface.get("MacAddress"),
-                "IP": [addr.get('PrivateIpAddress') for addr in interface.get("PrivateIpAddresses", [])],
-            }
+    def _parse_raw_data(self, devices_raw_data):
+        for reservation in devices_raw_data.get('Reservations', []):
+            for device_raw in reservation.get('Instances', []):
+                tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
+                device = self._new_device()
+                device.name = tags_dict.get('Name', '')
+                device.figure_os(device_raw['DescribedImage'].get('Description', '')
+                                 if device_raw['DescribedImage'] is not None
+                                 else device_raw.get('Platform'))
+                device.id = device_raw['InstanceId']
+                for iface in device_raw.get('NetworkInterfaces', []):
+                    assoc = iface.get("Association")
+                    if assoc is not None:
+                        public_ip = assoc.get('PublicIp')
+                        if public_ip is not None:
+                            device.add_nic(iface.get("MacAddress"), [public_ip])
+                    device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
+                                                             for addr in iface.get("PrivateIpAddresses", [])])
+                device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
+                                                         DeviceRunningState.Unknown.value)
+                device.set_raw(device_raw)
+                yield device
 
     def _correlation_cmds(self):
         """

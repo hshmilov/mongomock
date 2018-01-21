@@ -10,7 +10,7 @@ client_details = {
 SOME_DEVICE_ID = '9AE9A131-6801-5659-A1AE-C9B38F1EA4C4'
 
 FETCHED_DEVICE_EXAMPLE = {
-    "OS": {
+    'os': {
         "bitness": 64,
         "distribution": "10.12.6",
         "type": "OS X"
@@ -19,16 +19,16 @@ FETCHED_DEVICE_EXAMPLE = {
     "id": "9AE9A131-6801-5659-A1AE-C9B38F1EA4C4",
     "network_interfaces": [
         {
-            "IP": [
+            "ip": [
                 "141.226.237.21"
             ],
-            "MAC": "A8:60:B6:3C:79:FE"
+            "mac": "A8:60:B6:3C:79:FE"
         },
         {
-            "IP": [
+            "ip": [
                 "192.168.11.14"
             ],
-            "MAC": "A8:60:B6:3C:79:FE"
+            "mac": "A8:60:B6:3C:79:FE"
         }
     ],
     "raw": {

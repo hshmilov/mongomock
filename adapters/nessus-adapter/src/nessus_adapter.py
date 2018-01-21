@@ -3,12 +3,11 @@ symantec_adapter.py: An adapter for Tenable's Nessus Vulnerability scanning plat
 """
 __author__ = 'Shira Gold'
 
+from axonius.device import Device
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from nessus_connection import NessusConnection
 from nessus_exceptions import NessusException
-from axonius.parsing_utils import figure_out_os
-from axonius.consts.adapter_consts import SCANNER_FIELD
 
 HOST = 'host'
 PORT = 'port'
@@ -17,6 +16,10 @@ PASSWORD = 'password'
 
 
 class NessusAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        pass
+
     def _get_client_id(self, client_config):
         """
         A unique value, from a predefined field, representing given client
@@ -116,25 +119,20 @@ class NessusAdapter(AdapterBase):
             'type': 'object'
         }
 
-    def _parse_raw_data(self, raw_data):
+    def _parse_raw_data(self, devices_raw_data):
         """
         Generator creating parsed version of each device
 
-        :param raw_data: Data as originally retrieved from Nessus
+        :param devices_raw_data: Data as originally retrieved from Nessus
         :return: Data structured as expected by adapters
         """
-        try:
-            for device_raw in raw_data:
-                yield {'id': device_raw['id'],
-                       'hostname': '',
-                       'OS': figure_out_os(device_raw.get('info', {}).get('operating-system', '')),
-                       'network_interfaces': [
-                           {'MAC': device_raw.get('info', {}).get('mac-address', ''),
-                            'IP': [device_raw.get('info', {}).get('host-ip', '')]
-                            }
-                ],
-                    SCANNER_FIELD: True,
-                    'raw': device_raw}
-        except NessusException as e:
-            self.logger.exception('Error parsing devices.')
-            raise AdapterException('Nessus Adapter failed parsing devices')
+        for device_raw in devices_raw_data:
+            device = self._new_device()
+            device.id = device_raw['id']
+            device.hostname = ''
+            device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
+            device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
+                           [device_raw.get('info', {}).get('host-ip', '')])
+            device.scanner = True
+            device.set_raw(device_raw)
+            yield device

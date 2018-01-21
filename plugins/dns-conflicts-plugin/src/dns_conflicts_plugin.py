@@ -8,6 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.dns_utils import query_dns, NoIpFoundError
 from axonius.mixins.activatable import Activatable
@@ -60,14 +61,14 @@ class DnsConflictsPlugin(PluginBase, Activatable):
             for ad_adapter in ad_adapters:
                 ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
                 self.logger.info(f"looking for ip conflicts from ad_adapter {ad_adapter_unique_name}")
-                hosts = self._get_collection("devices_data",
-                                             db_name=ad_adapter_unique_name).find({'RESOLVE_STATUS': 'RESOLVED'},
-                                                                                  projection={'_id': True,
-                                                                                              'id': True,
-                                                                                              'raw.AXON_DNS_ADDR': True,
-                                                                                              'raw.AXON_DOMAIN_NAME': True,
-                                                                                              'raw.AXON_DC_ADDR': True,
-                                                                                              'hostname': True})
+                hosts = self._get_collection(DEVICES_DATA, db_name=ad_adapter_unique_name).\
+                    find({DNS_RESOLVE_STATUS: 'RESOLVED'},
+                         projection={'_id': True,
+                                     'id': True,
+                                     'raw.AXON_DNS_ADDR': True,
+                                     'raw.AXON_DOMAIN_NAME': True,
+                                     'raw.AXON_DC_ADDR': True,
+                                     'hostname': True})
                 self.logger.info(
                     f"Starting to search for dns conflicts for {hosts.count()} devices from {ad_adapter_unique_name}")
 

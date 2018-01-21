@@ -5,11 +5,12 @@ Currently, allows you to view ESX instances you possess.
 
 __author__ = "Mark Segal"
 
-from vcenter_api import vCenterApi, rawify_vcenter_data
+from axonius.fields import Field
+from axonius.device import Device
 from axonius.adapter_base import AdapterBase, DeviceRunningState
-from axonius.parsing_utils import figure_out_os
 from axonius import adapter_exceptions
 from pyVmomi import vim
+from vcenter_api import vCenterApi, rawify_vcenter_data
 
 # translation table between ESX values to parsed values
 POWER_STATE_MAP = {
@@ -20,6 +21,12 @@ POWER_STATE_MAP = {
 
 
 class ESXAdapter(AdapterBase):
+
+    class MyDevice(Device):
+        vm_tools_status = Field(str, 'VM Tools Status')
+        vm_physical_path = Field(str, 'VM physical path')
+        power_state = Field(str, 'Power state')
+
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -90,44 +97,27 @@ class ESXAdapter(AdapterBase):
         if node.get('Type', '') == 'Machine':
             details = node.get('Details', {})
             guest = details.get('guest', {})
-            alternative_network_interfaces = []
-            if 'ipAddress' in guest:
+            device = self._new_device()
+            device.name = node.get('Name', '')
+            device.figure_os(details.get('config', {}).get('guestFullName', ''))
+            device.id = details.get('config', {})['instanceUuid']
+            device.network_interfaces = []
+            for iface in details.get('networking', []):
+                ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
+                if ips:
+                    device.add_nic(iface.get('macAddress'), ips)
+            if not device.network_interfaces and 'ipAddress' in guest:
                 # if nothing is found in raw.networking this will be used
-                alternative_network_interfaces = [{
-                    "IP": [guest.get('ipAddress')]
-                }]
-            yield {
-                "name": node.get('Name', ''),
-                'OS': figure_out_os(details.get('config', {}).get('guestFullName', '')),
-                'id': details.get('config', {})['instanceUuid'],
-                'network_interfaces': list(self._parse_network_device(
-                    details.get('networking', []))) or alternative_network_interfaces,
-                'hostname': guest.get('hostName', ''),
-                'vmToolsStatus': guest.get('toolsStatus', ''),
-                'physicalPath': _curr_path + "/" + node.get('Name', ''),
-                'powerState': POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
-                                                  DeviceRunningState.Unknown),
-                'raw': details
-            }
+                device.add_nic(mac='', ip=[guest.get('ipAddress')])
+            device.hostname = guest.get('hostName', '')
+            device.vm_tools_status = guest.get('toolsStatus', '')
+            device.vm_physical_path = _curr_path + "/" + node.get('Name', '')
+            device.power_state = POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
+                                                     DeviceRunningState.Unknown.value)
+            device.set_raw(details)
+            yield device
         elif node.get('Type', '') in ("Datacenter", "Folder", "Root"):
             for child in node.get('Children', [{}]):
                 yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
         else:
-            raise RuntimeError(
-                "Found weird type of node: {}".format(node['Type']))
-
-    def _parse_network_device(self, raw_networks):
-        """
-        Parse a network device as received from vCenterAPI
-        :param raw_networks: raw networks from ESX
-        :return: iter(dict)
-        """
-        for raw_network in raw_networks:
-            ip_to_return = [addr['ipAddress'] for addr in raw_network.get('ipAddresses', [])]
-            if len(ip_to_return) == 0:
-                continue
-            # Return only if has an IP address
-            yield {
-                "MAC": raw_network.get('macAddress', ''),
-                "IP": ip_to_return
-            }
+            raise RuntimeError("Found weird type of node: {}".format(node['Type']))

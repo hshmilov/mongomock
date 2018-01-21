@@ -2,13 +2,13 @@
 AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
+from typing import Iterable
 
 from axonius import adapter_exceptions
+from axonius.device import Device, LAST_SEEN_FIELD_NAME
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import get_exception_string
-from axonius.utils.mongo_escaping import escape_dict
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.consts.adapter_consts import LAST_SEEN_PARSED_FIELD
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
@@ -63,6 +63,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         "Available Device" - A device that the adapter source knows and reports its existence.
                              Doesn't necessary means that the device is turned on or connected.
     """
+    MyDevice = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -83,9 +84,44 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
 
+        self._fields_set = set()  # contains an Adapter specific list of field names.
+        self._raw_fields_set = set()  # contains an Adapter specific list of raw-fields names.
+        self._last_fields_count = (0, 0)  # count of _fields_set and _raw_fields_set when performed the last save to DB
+        self._first_fields_change = True
+        self._fields_db_lock = RLock()
+
     @classmethod
     def specific_supported_features(cls) -> list:
         return ["Adapter"]
+
+    def _save_field_names_to_db(self):
+        """ Saves fields_set and raw_fields_set to the Adapter's DB """
+        with self._fields_db_lock:
+            last_fields_count, last_raw_fields_count = self._last_fields_count
+            if len(self._fields_set) == last_fields_count and len(self._raw_fields_set) == last_raw_fields_count:
+                return  # Optimization
+
+            fields = list(self._fields_set)  # copy
+            raw_fields = list(self._raw_fields_set)  # copy
+
+            # Upsert new fields
+            fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['fields']
+            fields_collection.update({'name': 'fields'}, {'$addToSet': {'specific': {'$each': fields}}}, upsert=True)
+            fields_collection.update({'name': 'fields'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
+            if self._first_fields_change:
+                fields_collection.update({'name': self.plugin_name},
+                                         {'name': self.plugin_name, 'schema': self.MyDevice.get_fields_info()},
+                                         upsert=True)
+                self._first_fields_change = False
+
+            # Save last update count
+            self._last_fields_count = len(fields), len(raw_fields)
+
+    def _new_device(self) -> Device:
+        """ Returns a new empty device associated with this adapter. """
+        if self.MyDevice is None:
+            raise ValueError('class MyDevice(Device) class was not declared inside this Adapter class')
+        return self.MyDevice(self._fields_set, self._raw_fields_set)
 
     def _send_reset_to_ec(self):
         """ Function for notifying the EC that this Adapted has been reset.
@@ -461,12 +497,12 @@ class AdapterBase(PluginBase, Feature, ABC):
         if interfaces:
             assert isinstance(interfaces, list) or isinstance(interfaces, types.GeneratorType), "should be list"
             for interface in interfaces:
-                mac = interface.get('MAC')
+                mac = interface.get('mac')
                 if mac:
-                    interface['MAC'] = format_mac(mac)
-                ips = interface.get('IP')
+                    interface['mac'] = format_mac(mac)
+                ips = interface.get('ip')
                 if ips:
-                    interface['IP'] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
+                    interface['ip'] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
 
     def parse_raw_data_hook(self, raw_devices):
         """
@@ -478,12 +514,11 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         skipped_count = 0
         for parsed_device in self._parse_raw_data(raw_devices):
-            parsed_device['raw'] = escape_dict(parsed_device['raw'])
-
+            assert isinstance(parsed_device, Device)
+            parsed_device = parsed_device.to_dict()
             self.validate_network_interfaces(parsed_device)
-
-            if LAST_SEEN_PARSED_FIELD in parsed_device:
-                device_time = parsed_device[LAST_SEEN_PARSED_FIELD]
+            if LAST_SEEN_FIELD_NAME in parsed_device:
+                device_time = parsed_device[LAST_SEEN_FIELD_NAME]
                 # Getting the time zone from the original device
                 now = datetime.now(tz=device_time.tzinfo)
 
@@ -494,6 +529,8 @@ class AdapterBase(PluginBase, Feature, ABC):
                 continue
 
             yield parsed_device
+
+        self._save_field_names_to_db()
 
         if skipped_count > 0:
             self.logger.info(f"Skipped {skipped_count} old devices")
@@ -597,33 +634,13 @@ class AdapterBase(PluginBase, Feature, ABC):
         pass
 
     @abstractmethod
-    def _parse_raw_data(self, raw_data):
+    def _parse_raw_data(self, devices_raw_data) -> Iterable[Device]:
         """
         To be implemented by inheritors
-        Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed'
-        Data that has to adhere to certain restrictions, namely to have (at least) the following schema:
-        {
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "os": {
-              "type": "string"
-            },
-            "id": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "name",
-            "os",
-            "id"
-          ],
-          "type": "object"
-        }
+        Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed' 
 
-        :param raw_data: raw data as received by /devices/client, i.e. without the client->data association
-        :return: parsed data
+        :param devices_raw_data: raw data as received by /devices/client, i.e. without the client->data association
+        :return: parsed data as iterable Device collection
         """
         pass
 

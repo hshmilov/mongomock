@@ -48,7 +48,7 @@ class CiscoClient(object):
                 if not line.startswith('internet'):
                     continue
                 line = line.split()
-                yield {'IP': line[1], 'MAC': format_mac(line[3]), 'Interface': line[5]}
+                yield {'ip': line[1], 'mac': format_mac(line[3]), 'Interface': line[5]}
         except Exception:
             self.logger.exception("Running shell arp command failed")
             raise AdapterException()

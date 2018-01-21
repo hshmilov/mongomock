@@ -252,13 +252,13 @@ def start_qcore_plugin():
             for device in all_devices:
                 if 'qcore_adapter' in device['adapters']:
                     last_time = device['adapters']['qcore_adapter']['accurate_for_datetime']
-                    current_ip = device['adapters']['qcore_adapter']['data']['IP']
+                    current_ip = device['adapters']['qcore_adapter']['data']['ip']
                     current_id = device['adapters']['qcore_adapter']['data']['pretty_id']
                     last_connected = datetime.strptime(
                         last_time, '%Y-%m-%d %H:%M:%S.%f')
                 elif 'splunk_adapter' in device['adapters']:
                     last_time = device['adapters']['splunk_adapter']['accurate_for_datetime']
-                    current_ip = device['adapters']['splunk_adapter']['data']['IP']
+                    current_ip = device['adapters']['splunk_adapter']['data']['ip']
                     current_id = device['adapters']['splunk_adapter']['data']['pretty_id']
                     last_connected = datetime.strptime(
                         last_time, '%Y-%m-%d %H:%M:%S.%f')
@@ -279,7 +279,7 @@ def start_qcore_plugin():
                                            'unique_plugin_name': 'checkpoint_adapter_1',
                                            'accurate_for_datetime': str(datetime.now()),
                                            '_id': uuid.uuid4().hex}
-                        checkpoint_data['data'] = {'IP': current_ip,
+                        checkpoint_data['data'] = {'ip': current_ip,
                                                    'pretty_id': current_id}
                         checkpoint_data['data']['raw'] = {'status': 'Blocked'}
 

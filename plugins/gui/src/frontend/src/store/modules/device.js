@@ -142,7 +142,7 @@ export const device = {
 						'type': 'string'
 					},
 					{
-						'name': 'OS',
+						'name': 'os',
 						'items': [
 							{
 								'title': 'OS',
@@ -189,7 +189,7 @@ export const device = {
 							'items': [
 								{
 									'title': 'MAC',
-									'name': 'MAC',
+									'name': 'mac',
 									'type': 'string'
 								},
 								{
@@ -197,13 +197,8 @@ export const device = {
 									'items': {
 										'type': 'string'
 									},
-									'name': 'IP',
+									'name': 'ip',
 									'type': 'array'
-								},
-								{
-									'title': 'Interface Type',
-									'name': 'nic_type',
-									'type': 'string'
 								}
 							],
 							'type': 'array'
@@ -219,22 +214,22 @@ export const device = {
 					},
 					{
 						'title': 'VM Tools Status',
-						'name': 'vmToolsStatus',
+						'name': 'vm_tools_status',
 						'type': 'string'
 					},
 					{
 						'title': 'Resolve Status',
-						'name': 'RESOLVE_STATUS',
+						'name': 'dns_resolve_status',
 						'type': 'string'
 					},
 					{
 						'title': 'Power State',
-						'name': 'powerState',
+						'name': 'power_state',
 						'type': 'string'
 					},
 					{
 						'title': 'Physical Path',
-						'name': 'physicalPath',
+						'name': 'vm_physical_path',
 						'type': 'string'
 					},
 					{
@@ -269,7 +264,7 @@ export const device = {
 					}
 				],
 				'type': 'array',
-				'required': ['pretty_id', 'name', 'hostname', 'OS', 'network_interfaces']
+				'required': ['pretty_id', 'name', 'hostname', 'os', 'network_interfaces']
 			}, error: ''
 		},
 
@@ -289,22 +284,22 @@ export const device = {
 				{path: 'adapters.data.hostname', name: 'Host Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
 				{
-					path: 'adapters.data.network_interfaces.IP',
+					path: 'adapters.data.network_interfaces.ip',
 					name: 'IPs',
 					selected: true,
 					type: 'list',
 					control: 'text'
 				},
 				{
-					path: 'adapters.data.network_interfaces.MAC',
+					path: 'adapters.data.network_interfaces.mac',
 					name: 'MACs',
 					selected: false,
 					type: 'list',
 					control: 'text'
 				},
-				{path: 'adapters.data.OS.type', name: 'OS', selected: true, control: 'text'},
-				{path: 'adapters.data.OS.distribution', name: 'OS Version', selected: false, control: 'text'},
-				{path: 'adapters.data.OS.bitness', name: 'OS Bitness', selected: false, control: 'text'},
+				{path: 'adapters.data.os.type', name: 'OS', selected: true, control: 'text'},
+				{path: 'adapters.data.os.distribution', name: 'OS Version', selected: false, control: 'text'},
+				{path: 'adapters.data.os.bitness', name: 'OS Bitness', selected: false, control: 'text'},
 				{
 					path: 'tags.tagname',
 					name: 'Tags',

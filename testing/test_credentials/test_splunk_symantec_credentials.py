@@ -2,7 +2,7 @@ from test_credentials.test_splunk_credentials import *
 splunk_details['online_hours'] = '24'
 
 FETCHED_DEVICE_EXAMPLE = {
-    "OS": {
+    'os': {
         "bitness": None,
         "distribution": "10",
                         "type": "Windows"
@@ -11,22 +11,22 @@ FETCHED_DEVICE_EXAMPLE = {
     "id": "Axonius-Ofri",
     "network_interfaces": [
         {
-            "IP": [
+            "ip": [
                 "192.168.6.1"
             ],
-            "MAC": "00-50-56-c0-00-01"
+            "mac": "00-50-56-c0-00-01"
         },
         {
-            "IP": [
+            "ip": [
                 "192.168.19.1"
             ],
-            "MAC": "00-50-56-c0-00-08"
+            "mac": "00-50-56-c0-00-08"
         },
         {
-            "IP": [
+            "ip": [
                 "169.254.19.108"
             ],
-            "MAC": "f8-59-71-94-58-09"
+            "mac": "f8-59-71-94-58-09"
         }
     ],
     "raw": {
