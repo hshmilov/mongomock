@@ -1,9 +1,13 @@
+import logging
 import paramiko
+import paramiko.util
+from paramiko import ChannelException
+import time
+import random
+
 from axonius.adapter_exceptions import AdapterException
 from axonius.parsing_utils import format_mac
 
-import paramiko.util
-import logging
 
 paramiko.util.log_to_file('/home/axonius/logs/paramiko.log', logging.DEBUG)
 timeout_seconds = 45
@@ -18,21 +22,25 @@ class CiscoClient(object):
         self.password = password
         self.port = port
         self.client = None
-        self.connect()
 
     def connect(self):
-        try:
-            self.client = paramiko.SSHClient()
-            self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
-            self.client.connect(hostname=self.host, port=self.port, username=self.username, password=self.password,
-                                allow_agent=False, look_for_keys=False, timeout=timeout_seconds)
-        except Exception:
-            self.logger.exception("Failed connecting to cisco")
-            raise AdapterException()
+        self.client = paramiko.SSHClient()
+        self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
+        self.client.connect(hostname=self.host, port=self.port, username=self.username, password=self.password,
+                            allow_agent=False, look_for_keys=False, timeout=timeout_seconds)
 
-    def get_parsed_arp(self):
+    def get_parsed_arp(self, retry_count=5):
+        assert isinstance(retry_count, int) and retry_count > 0
         try:
-            (stdin, stdout, stderr) = self.client.exec_command("show arp", timeout=timeout_seconds)
+            stdout = None
+            for retry_index in range(retry_count):
+                try:
+                    (stdin, stdout, stderr) = self.client.exec_command("show arp", timeout=timeout_seconds)
+                except ChannelException as e:
+                    if (retry_index == retry_count - 1) or (e.code != 4):
+                        raise
+                    # handling 'Resource shortage'
+                    time.sleep(1 + random.randint(1, 5))
             lines = stdout.readlines()
 
             for line in lines:
@@ -47,6 +55,8 @@ class CiscoClient(object):
 
     def close(self):
         """ Closes the connection """
+        if self.client is None:
+            return
         self.client.close()
         self.client = None
 
