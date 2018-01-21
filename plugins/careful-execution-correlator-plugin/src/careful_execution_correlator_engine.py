@@ -44,10 +44,6 @@ class CarefulExecutionCorrelatorEngine(ExecutionCorrelatorEngineBase):
                 # We currently want to work only on ad, aws on execution
                 # TODO: Remove on next version (AX-325)
                 continue
-            if 'ad_adapter' not in plugins_connected and 'aws_adapter' not in plugins_connected:
-                continue  # We currently want to work only on ad, aws on execution  TODO: Think about other adapters
-            if 'ad_adapter' in plugins_connected and 'aws_adapter' in plugins_connected:
-                continue  # Don't run on already correlated device  TODO: Remove on next version (AX-325)
             device1_ips = extract_all_ips_from_axonius_device(axon_device1)
             for axon_device2 in devices:
                 if axon_device1['internal_axon_id'] == axon_device2['internal_axon_id']:
