@@ -4,17 +4,15 @@ from axonius.consts.adapter_consts import SCANNER_FIELD
 from cisco_client import CiscoClient
 
 HOST = 'host'
-PORT = 'port'
 USERNAME = 'username'
 PASSWORD = 'password'
-VERIFY_SSL = 'verify_ssl'
 
 
 class CiscoAdapter(AdapterBase):
     def _connect_client(self, client_config):
         # tries to connect and throws adapter Exception on failure
         return CiscoClient(self.logger, host=client_config[HOST], username=client_config[USERNAME],
-                           password=client_config[PASSWORD], port=client_config.get(PORT, 22))
+                           password=client_config[PASSWORD], port=22)
 
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, CiscoClient)
@@ -27,10 +25,6 @@ class CiscoAdapter(AdapterBase):
                 HOST: {
                     "type": "string",
                     "name": "Host"
-                },
-                PORT: {
-                    "type": "integer",
-                    "name": "Port"
                 },
                 USERNAME: {
                     "type": "string",
@@ -59,4 +53,4 @@ class CiscoAdapter(AdapterBase):
             }
 
     def _get_client_id(self, client_config):
-        return f"{client_config[HOST]}:{client_config.get(PORT, 22)}"
+        return client_config[HOST]

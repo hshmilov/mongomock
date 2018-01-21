@@ -60,7 +60,7 @@ export const adapterStaticData = {
 		description: 'Symantec Endpoint Protection Manager manages events, policies, and registration for the client computers that connect to customer networks.'
 	},
 	'nessus_adapter': {
-		name: 'Nessus Tenable',
+		name: 'Tenable Nessus',
 		description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
 	},
 	'esx_adapter': {

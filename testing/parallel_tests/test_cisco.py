@@ -15,7 +15,7 @@ class TestCiscoAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return f"{cisco_creds['host']}:{cisco_creds.get('port', 22)}"
+        return cisco_creds['host']
 
     @property
     def some_client_details(self):
@@ -25,6 +25,5 @@ class TestCiscoAdapter(AdapterTestBase):
     def some_device_id(self):
         return cisco_creds['host']
 
-    @pytest.mark.skip
     def test_fetch_devices(self):
         pass

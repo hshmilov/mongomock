@@ -20,6 +20,9 @@ from axonius.mixins.feature import Feature
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum, auto
+import types
+from axonius.parsing_utils import format_mac
+import ipaddress
 
 
 class DeviceRunningState(Enum):
@@ -443,6 +446,28 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         pass
 
+    def is_valid_ip(self, ip):
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except:
+            return False
+
+    def validate_network_interfaces(self, parsed_device):
+        """
+        Validates that the network interfaces are adhering to the schema
+        """
+        interfaces = parsed_device.get('network_interfaces')
+        if interfaces:
+            assert isinstance(interfaces, list) or isinstance(interfaces, types.GeneratorType), "should be list"
+            for interface in interfaces:
+                mac = interface.get('MAC')
+                if mac:
+                    interface['MAC'] = format_mac(mac)
+                ips = interface.get('IP')
+                if ips:
+                    interface['IP'] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
+
     def parse_raw_data_hook(self, raw_devices):
         """
         :param raw_devices: raw devices as fetched by adapter
@@ -454,6 +479,8 @@ class AdapterBase(PluginBase, Feature, ABC):
         skipped_count = 0
         for parsed_device in self._parse_raw_data(raw_devices):
             parsed_device['raw'] = escape_dict(parsed_device['raw'])
+
+            self.validate_network_interfaces(parsed_device)
 
             if LAST_SEEN_PARSED_FIELD in parsed_device:
                 device_time = parsed_device[LAST_SEEN_PARSED_FIELD]
@@ -573,7 +600,7 @@ class AdapterBase(PluginBase, Feature, ABC):
     def _parse_raw_data(self, raw_data):
         """
         To be implemented by inheritors
-        Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed' 
+        Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed'
         Data that has to adhere to certain restrictions, namely to have (at least) the following schema:
         {
           "properties": {

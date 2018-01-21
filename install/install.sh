@@ -44,6 +44,7 @@ docker-compose -f adapters/splunk-nexpose-adapter/docker-compose.yml -f adapters
 docker-compose -f adapters/sentinelone-adapter/docker-compose.yml -f adapters/sentinelone-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/symantec-adapter/docker-compose.yml -f adapters/symantec-adapter/docker-compose.prod.yml up -d
 docker-compose -f adapters/cisco-adapter/docker-compose.yml -f adapters/cisco-adapter/docker-compose.prod.yml up -d
+docker-compose -f adapters/qualys-scans-adapter/docker-compose.yml -f adapters/qualys-scans-adapter/docker-compose.prod.yml up -d
 )
 
 echo "Removing anything irrelevant.."

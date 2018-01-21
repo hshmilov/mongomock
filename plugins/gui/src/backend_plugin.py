@@ -423,6 +423,7 @@ class BackendPlugin(PluginBase):
                             all_tags.add(current_tag['tagname'])
                 return jsonify(all_tags)
 
+            # Now handling POST and DELETE - they determine if the tag is an added or removed one
             devices_and_tags = self.get_request_data_as_object()
             if not devices_and_tags.get('devices'):
                 return return_error("Cannot tag devices without list of devices.", 400)

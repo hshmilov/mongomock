@@ -1,22 +1,31 @@
 <template>
     <div>
-        <triggerable-dropdown size="sm">
+        <triggerable-dropdown size="sm" align="right">
             <div slot="dropdownTrigger" class="link">Actions</div>
             <nested-menu slot="dropdownContent">
                 <nested-menu-item title="Tag..." @click="tag.isActive = true"></nested-menu-item>
                 <nested-menu-item title="Add to Black List" @click="blacklist.isActive = true"></nested-menu-item>
-                <nested-menu-item title="Block" @click="block.isActive = true"></nested-menu-item>
+                <nested-menu-item title="Block" @click="block.isActive = true">
+                    <dynamic-popover size="xs" left="236">
+                        <nested-menu>
+                            <nested-menu-item v-for="blocker in block.blockers" :title="blocker"
+                                              @click="block.selected = blocker"></nested-menu-item>
+                        </nested-menu>
+                    </dynamic-popover>
+                </nested-menu-item>
                 <nested-menu-item title="Scan with" @click="scan.isActive = true">
                     <dynamic-popover size="xs" left="236">
                         <nested-menu>
-                            <nested-menu-item v-for="scanner in scan.scanners" :title="scanner"></nested-menu-item>
+                            <nested-menu-item v-for="scanner in scan.scanners" :title="scanner"
+                                              @click="scan.selected = scanner"></nested-menu-item>
                         </nested-menu>
                     </dynamic-popover>
                 </nested-menu-item>
                 <nested-menu-item title="Deploy" @click="deploy.isActive = true">
                     <dynamic-popover size="xs" left="236">
                         <nested-menu>
-                            <nested-menu-item v-for="deployment in deploy.deployments" :title="deployment"></nested-menu-item>
+                            <nested-menu-item v-for="deployment in deploy.deployments" :title="deployment"
+                                              @click="deploy.selected = deployment"></nested-menu-item>
                         </nested-menu>
                     </dynamic-popover>
                 </nested-menu-item>
@@ -31,7 +40,7 @@
             <div>These devices will be prevented from executing code on.</div>
         </feedback-modal>
         <feedback-modal v-model="block.isActive" :handleSave="saveBlock" message="Block saved">
-            <div>Block {{devices.length}} devices in your firewall?</div>
+            <div>Block {{devices.length}} devices by {{block.selected}}?</div>
         </feedback-modal>
         <feedback-modal v-model="scan.isActive" :handleSave="saveScan" message="Scan saved">
             <div>Scan {{devices.length}} devices with {{scan.selected}} scanner?</div>
@@ -104,7 +113,9 @@
 					isActive: false
                 },
                 block: {
-					isActive: false
+					isActive: false,
+                    blockers: ['Cisco'],
+                    selected: ''
                 },
                 scan: {
 					isActive: false,
@@ -113,7 +124,7 @@
                 },
                 deploy: {
 					isActive: false,
-				    deployments: ['EPO', 'Symantec', 'Qualys'],
+				    deployments: ['ePO (WIN 5.3.2)', 'ePO (OSX 4.8.1938)', 'Qualys (LIN 1.6.1.26)', 'Qualys (WIN 1.6.0.246)'],
                     selected: ''
                 },
 			}

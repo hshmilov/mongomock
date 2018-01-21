@@ -11,6 +11,12 @@
                                :data="deviceData.data" :required="deviceFields.required"></array>
                     </card>
                 </named-section>
+                <named-section title="Plugin Fields" iconName="action/add_field"
+                               v-if="deviceData.fieldTags && Object.keys(deviceData.fieldTags).length">
+                    <card>
+                        <array :items="deviceFields.items" :data="deviceData.fieldTags"></array>
+                    </card>
+                </named-section>
                 <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" fontClass="icon-tag">
                     <card>
                         <div v-for="tag in deviceData.tags" class="d-flex tag-content">

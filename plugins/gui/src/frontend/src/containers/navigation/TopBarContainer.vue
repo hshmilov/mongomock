@@ -14,7 +14,7 @@
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link">
-                            <triggerable-dropdown size="lg">
+                            <triggerable-dropdown size="lg" align="right">
                                 <div slot="dropdownTrigger">
                                     <i class="icon-bell-o"></i>
                                     <span class="badge" v-if="notification.notificationUnseen.data.count"

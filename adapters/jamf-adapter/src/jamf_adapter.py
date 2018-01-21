@@ -77,8 +77,9 @@ class JamfAdapter(AdapterBase):
                 device_parsed['OS'] = figure_out_os(' '.join([device_raw.get('Operating_System', ''),
                                                               device_raw.get('Architecture_Type', '')
                                                               ]))
-                device_parsed['network_interfaces'] = [{'MAC': device_raw.get('MAC_Address', ''),
-                                                        'IP': [device_raw.get('IP_Address', '')]}]
+                # TODO: For CapitalOne Demo!
+                # device_parsed['network_interfaces'] = [{'MAC': device_raw.get('MAC_Address', ''),
+                #                                         'IP': [device_raw.get('IP_Address', '')]}]
                 if device_raw['Last_Reported_IP_Address'] != '':
                     device_parsed['network_interfaces'].append({'MAC': device_raw.get('MAC_Address'),
                                                                 'IP': [device_raw.get('Last_Reported_IP_Address', '')]})

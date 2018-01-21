@@ -22,6 +22,9 @@
         color: $color-light;
         border-radius: 4px;
         background-color: $background-color-hover;
+        &.empty-fill {
+            background-color: transparent;
+        }
         i {
             padding: 5px;
             vertical-align: middle;

@@ -28,7 +28,7 @@
                        class="config-server" @close="toggleServerModal" approveText="save" @confirm="saveServer">
                     <div slot="body">
                         <!-- Container for configuration of a single selected / added server -->
-                        <status-icon-logo-text :logoValue="adapterPluginName"
+                        <status-icon-logo-text :logoValue="adapterPluginName" statusIconValue="empty"
                                                :textValue="serverModal.serverData['name']"></status-icon-logo-text>
                         <div class="mt-4 ml-5">
                             <div>Basic System Credentials</div>

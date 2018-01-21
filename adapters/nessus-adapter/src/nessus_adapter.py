@@ -130,7 +130,7 @@ class NessusAdapter(AdapterBase):
                        'OS': figure_out_os(device_raw.get('info', {}).get('operating-system', '')),
                        'network_interfaces': [
                            {'MAC': device_raw.get('info', {}).get('mac-address', ''),
-                            'IP': device_raw.get('info', {}).get('host-ip', '')
+                            'IP': [device_raw.get('info', {}).get('host-ip', '')]
                             }
                 ],
                     SCANNER_FIELD: True,

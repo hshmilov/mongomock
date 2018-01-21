@@ -99,8 +99,9 @@ def _correlate_scanner_mac_ip(all_adapter_devices):
     # Remove Nones
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
                            if len(adapter_device['data']['network_interfaces']) > 0 and
-                           len([x.get('MAC') for x in adapter_device['data']['network_interfaces']
-                                if len(x.get('MAC', '')) > 0]) > 0]
+                           len([nic.get('MAC', 'something') for nic in adapter_device['data']['network_interfaces']
+                                if (nic.get('MAC'))]) > 0]
+
     for x, y in itertools.combinations(all_adapter_devices, 2):
         if not (x['data'].get(SCANNER_FIELD, False) or y['data'].get(SCANNER_FIELD, False)):
             continue

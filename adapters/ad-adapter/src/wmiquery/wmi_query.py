@@ -157,7 +157,7 @@ if __name__ == '__main__':
                     return unicode(input)
                 except UnicodeDecodeError:
                     # Its probably utf-16
-                    return input.decode("utf-16")
+                    return input.decode("utf-16", errors="ignore")
             else:
                 return input
 

@@ -4,7 +4,7 @@
             @click="isActive = !isActive">
             <slot name="dropdownTrigger"></slot>
         </div>
-        <div :class="`dropdown-menu right w-${size}`">
+        <div :class="`dropdown-menu ${align} w-${size}`">
             <slot name="dropdownContent"></slot>
         </div>
     </div>
@@ -16,7 +16,7 @@
     export default {
         name: 'triggerable-dropdown',
         mixins: [ clickaway ],
-        props: {'size': {default: 'md'}, 'active': {default: false}},
+        props: {'size': {default: ''}, 'active': {default: false}, 'align': {default: ''}},
         data() {
             return {
                 isActive: false

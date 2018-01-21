@@ -86,12 +86,12 @@ export const processDevice = (device, fields) => {
 	})
 	if (device['tags']) {
 		device['tags'].filter((tag) => {
-			return tag.tagname === 'FIELD'
+			return tag.tagname.includes('FIELD')
 		}).forEach((tag) => {
 			processedDevice[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
 		})
 		processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
-			return tag.tagname !== 'FIELD' && tag.tagvalue !== undefined && tag.tagvalue !== ''
+			return !tag.tagname.includes('FIELD') && tag.tagvalue !== undefined && tag.tagvalue !== ''
 		}).map((tag) => {
 			return tag.tagname
 		})
@@ -233,6 +233,36 @@ export const device = {
 						'title': 'Physical Path',
 						'name': 'physicalPath',
 						'type': 'string'
+					},
+					{
+						'title': 'Last Used User',
+						'name': 'last_used_user',
+						'type': 'string'
+					},
+					{
+						'title': 'Installed Software',
+						'name': 'installed_softwares',
+						'type': 'array',
+						'items': {
+							'type': 'array',
+							'items': [
+								{
+									'title': 'Vendor',
+									'name': 'vendor',
+									'type': 'string'
+								},
+								{
+									'title': 'Name',
+									'name': 'name',
+									'type': 'string'
+								},
+								{
+									'title': 'Version',
+									'name': 'version',
+									'type': 'string'
+								}
+							]
+						}
 					}
 				],
 				'type': 'array',
@@ -1143,8 +1173,15 @@ export const device = {
 					...payload.data,
 					data: merge.all(adapterDatas),
 					tags: payload.data.tags.filter((tag) => {
-						return tag.tagname !== 'FIELD' && tag.tagvalue !== undefined && tag.tagvalue !== ''
-					})
+						return !tag.tagname.includes('FIELD') && tag.tagvalue !== undefined && tag.tagvalue !== ''
+					}),
+					fieldTags: payload.data.tags.filter((tag) => {
+						return tag.tagname.includes('FIELD') && tag.tagvalue !== undefined && tag.tagvalue !== ''
+					}).reduce(function(map, tag) {
+						if (!tag.tagvalue) { return map }
+						map[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
+						return map
+					}, {})
 				}
 			}
 		},
@@ -1169,7 +1206,7 @@ export const device = {
 			state.tagList.error = payload.error
 			if (payload.data) {
 				state.tagList.data = payload.data.filter((tag) => {
-					return tag !== 'FIELD' && tag !== ''
+					return !tag.includes('FIELD') && tag !== ''
 				}).map(function (tag) {
 					return {name: tag, path: tag}
 				})

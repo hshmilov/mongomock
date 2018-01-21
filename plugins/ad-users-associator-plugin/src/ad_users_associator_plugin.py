@@ -172,6 +172,19 @@ class AdUsersAssociatorPlugin(PluginBase, Activatable, Triggerable):
                                             adapter_unique_id,
                                             internal_axon_id))
 
+        q = self.request_action("execute_wmi_queries", internal_axon_id,
+                                {"wmi_queries": [
+                                    "select * from Win32_Product"
+                                ]})
+        q.then(did_fulfill=functools.partial(self._handle_product_success,
+                                             adapter_unique_name,
+                                             adapter_unique_id,
+                                             internal_axon_id),
+               did_reject=functools.partial(self._handle_product_failure,
+                                            adapter_unique_name,
+                                            adapter_unique_id,
+                                            internal_axon_id))
+
     def _handle_wmi_execution_success(self, adapter_unique_name, adapter_unique_id, internal_axon_id,
                                       client_used, list_of_users_per_ad_adapter, data):
         try:
@@ -269,6 +282,39 @@ class AdUsersAssociatorPlugin(PluginBase, Activatable, Triggerable):
 
     def _handle_wmi_execution_failure(self, adapter_unique_name, adapter_unique_id, internal_axon_id, exc):
         self.logger.error("Could not update last user logon of {0} of adapter {1}, with adapter unique id {2}, "
+                          "error: {3}"
+                          .format(internal_axon_id, adapter_unique_name, adapter_unique_id, str(exc)))
+
+    def _handle_product_success(self, adapter_unique_name, adapter_unique_id, internal_axon_id, data):
+        try:
+            self.logger.info("successfully got software installed for {0} of adapter {1} with adapter unique id {2}."
+                             .format(internal_axon_id, adapter_unique_name, adapter_unique_id))
+
+            data = data["output"]["product"]
+            installed_softwares_answer = data[0]
+            installed_softwares = []
+
+            # Lets build an installed softwares array.
+            for software_answer in installed_softwares_answer:
+                software = {}
+                if int(software_answer['InstallState']['value']) == 5:
+                    # 5 == installed
+                    software['vendor'] = software_answer['Vendor']['value']
+                    software['name'] = software_answer['Name']['value']
+                    software['version'] = software_answer['Version']['value']
+                    installed_softwares.append(software)
+
+            self._tag_device(adapter_unique_id,
+                             tagname="FIELD2",
+                             tagvalue={"fieldname": "installed_softwares", "fieldvalue": installed_softwares},
+                             adapter_unique_name=adapter_unique_name)
+
+        except Exception as e:
+            self.logger.exception("An error occured while processing wmi result: {0}, {1}"
+                                  .format(str(e), get_exception_string()))
+
+    def _handle_product_failure(self, adapter_unique_name, adapter_unique_id, internal_axon_id, exc):
+        self.logger.error("Could not get product of {0} of adapter {1}, with adapter unique id {2}, "
                           "error: {3}"
                           .format(internal_axon_id, adapter_unique_name, adapter_unique_id, str(exc)))
 

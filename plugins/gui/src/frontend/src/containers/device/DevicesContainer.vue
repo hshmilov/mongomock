@@ -34,9 +34,9 @@
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
                 <!-- Available actions for performing on currently selected group of devices --->
-                <devices-actions-container :devices="selectedDevices"></devices-actions-container>
+                <devices-actions-container v-if="selectedDevices && selectedDevices.length" :devices="selectedDevices"></devices-actions-container>
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
-                <triggerable-dropdown size="lg">
+                <triggerable-dropdown size="lg" align="right">
                     <div slot="dropdownTrigger" class="link">Add Columns</div>
                     <searchable-checklist slot="dropdownContent" title="Display fields:" :items="visibleFields"
                                           :searchable="true" v-model="selectedFields"></searchable-checklist>
@@ -171,7 +171,6 @@
 				this.selectedQuery = queryToStr(this.queryDropdown.value)
 			},
 			executeQuery () {
-				this.closeQuickView()
 				this.updateQuery(this.selectedQuery)
                 this.fetchDevicesCount({ filter: this.selectedQuery })
 				this.$parent.$el.click()

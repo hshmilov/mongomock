@@ -148,7 +148,8 @@ class QualysScansAdapter(AdapterBase):
                     'hostname': hostname,
                     'OS': figure_out_os(raw_device_data.get('OS', '')),
                     adapter_consts.LAST_SEEN_PARSED_FIELD: last_seen,
-                    'network_interfaces': {'IP': [raw_device_data.get('IP', '')]},
+                    'network_interfaces': [{'IP': [raw_device_data.get('IP', '')],
+                                            'MAC': ''}],
                     'id': raw_device_data.get('ID'),
                     SCANNER_FIELD: True,
                     'raw': raw_device_data
