@@ -100,8 +100,8 @@ class ESXAdapter(AdapterBase):
                 "name": node.get('Name', ''),
                 'OS': figure_out_os(details.get('config', {}).get('guestFullName', '')),
                 'id': details.get('config', {})['instanceUuid'],
-                'network_interfaces': self._parse_network_device(
-                    details.get('networking', [])) or alternative_network_interfaces,
+                'network_interfaces': list(self._parse_network_device(
+                    details.get('networking', []))) or alternative_network_interfaces,
                 'hostname': guest.get('hostName', ''),
                 'vmToolsStatus': guest.get('toolsStatus', ''),
                 'physicalPath': _curr_path + "/" + node.get('Name', ''),
@@ -119,7 +119,7 @@ class ESXAdapter(AdapterBase):
     def _parse_network_device(self, raw_networks):
         """
         Parse a network device as received from vCenterAPI
-        :param raw_network: raw networks from ESX
+        :param raw_networks: raw networks from ESX
         :return: iter(dict)
         """
         for raw_network in raw_networks:
