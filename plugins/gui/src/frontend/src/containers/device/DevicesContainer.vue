@@ -113,7 +113,7 @@
 			},
 			deviceFields () {
 				return this.totalFields.filter((field) => {
-					return this.selectedFields.indexOf(field.path) > -1
+					return this.selectedFields.includes(field.path)
 				})
 			},
 			queryFields () {
@@ -141,7 +141,7 @@
                 openHelpTooltip: false
 			}
 		},
-		created () {
+		mounted () {
 			// TODO Improve backend operation, before returning this to life
 			//if (!Object.keys(this.device.fields.unique).length) {
 			//	this.fetchFields()

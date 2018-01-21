@@ -44,7 +44,7 @@
                 searchValue: '',
                 searchValueSelected: false,
                 itemSelection: this.value.reduce(function(map, input) {
-                    map[input] = true
+                    map[input] = false
                     return map
                 }, {}),
                 createdItems: []

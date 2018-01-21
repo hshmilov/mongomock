@@ -5,17 +5,18 @@
                 <div class="form-group">
                     <label v-if="input.name" class="form-label">{{ input.name }}</label>
                     <template v-if="input.control === 'select'">
-                        <select class="form-control" v-model="model[input.path]" @input="$emit('input', model)" :ref="'fields'">
+                        <select class="form-control" v-model="model[input.path]"
+                                @input="convertValue(input.path, input.control)" :ref="'fields'">
                             <option v-for="option in input.options">{{ option.text }}</option>
                         </select>
                     </template>
                     <template v-else-if="input.control === 'multiple-select'">
                         <multiple-select :title="`Select ${input.name}:`" :items="input.options" :type="input.type"
-                                         v-model="model[input.path]" @input="$emit('input', model)">
+                                         v-model="model[input.path]" @input="convertValue(input.path, input.control)">
                         </multiple-select>
                     </template>
                     <template v-else-if="input.control === 'bool'">
-                        <checkbox v-model="model[input.path]" @change="$emit('input', model)"></checkbox>
+                        <checkbox v-model="model[input.path]" @change="convertValue(input.path, input.control)"></checkbox>
                     </template>
                     <template v-else-if="input.control === 'array'">
                         <input type="file" @change="uploadFile" :name="input.path">
