@@ -190,6 +190,9 @@
                 })
 			},
             configDevice(deviceId) {
+				if (this.selectedDevices && this.selectedDevices.length) {
+					return
+                }
 				this.fetchDevice(deviceId)
 				this.$router.push({path: `device/${deviceId}`})
             }
