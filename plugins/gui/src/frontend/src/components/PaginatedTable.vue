@@ -18,7 +18,7 @@
                         This id is used for passing to action methods or marking the row as active -->
                     <tr class="table-row" v-bind:class="{ active: recordSelection[record[idField]] }"
                         v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
-                        @click="$emit('click-row', record[idField])">
+                        @click="handleRowClick(record[idField])">
                         <td class="table-row-data">
                             <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]"
                                       @change="updateSelected()"></checkbox>
@@ -201,7 +201,13 @@
 			selectPage (page) {
 				this.currentPage = page
 				this.restartPagination()
-			}
+			},
+            handleRowClick(id) {
+				if (!document.getSelection().isCollapsed) {
+					return
+                }
+				this.$emit('click-row', id)
+            }
 		},
 		mounted () {
 			/* Get initial data for first page of the table */
