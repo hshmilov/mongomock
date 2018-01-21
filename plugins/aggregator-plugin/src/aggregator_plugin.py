@@ -8,19 +8,20 @@ import pymongo
 from datetime import datetime, timedelta
 import uuid
 from itertools import chain
+from dateutil.parser import parse as dateparse
 
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from concurrent.futures import ThreadPoolExecutor
+
 from promise import Promise
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
+from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE, LAST_SEEN_PARSED_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import beautiful_adapter_device_name
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
-from flask import jsonify
 from aggregator_exceptions import AdapterOffline, ClientsUnavailable
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.threading_utils import MultiLockerLazy, run_in_executor_helper
@@ -411,6 +412,13 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
             Insert a device into the DB in a locked way
             :return:
             """
+            if LAST_SEEN_PARSED_FIELD in parsed_to_insert['data']:
+                try:
+                    parsed_to_insert['data'][LAST_SEEN_PARSED_FIELD] = dateparse(
+                        parsed_to_insert['data'][LAST_SEEN_PARSED_FIELD])
+                except ValueError:
+                    pass  # failed :( ? unchanged
+
             with self.device_db_lock.get_lock([get_unique_name_from_device(parsed_to_insert)]):
                 modified_count = self.devices_db.update_one({
                     'adapters': {
