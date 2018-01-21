@@ -74,7 +74,7 @@
             	if (!this.deviceData.data) {
             		return ''
                 }
-            	return this.deviceData.data.hostname
+            	return this.deviceData.data.hostname || this.deviceData.data.pretty_id
             },
             deviceFields() {
             	return this.device.deviceFields.data

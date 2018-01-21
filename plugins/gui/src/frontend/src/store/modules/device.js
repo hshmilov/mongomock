@@ -131,7 +131,7 @@ export const device = {
 						'type': 'string'
 					},
 					{
-						'title': 'Device Name',
+						'title': 'Asset Name',
 						'name': 'name',
 						'type': 'string'
 					},
