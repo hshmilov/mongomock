@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import names
 import codenamize
 
+from axonius.device import IPS_FIELD, OS_FIELD
+
 """
 blocked_qcore_num = 40
 regular_qcore_num = 4978
@@ -70,13 +72,13 @@ def generate_adapter_basic(adapter_name, adapter_before=None, os_list=[]):
     else:
         adapter_before_data = adapter_before['data']
 
-    g['os'] = adapter_before_data.get(
-        'os', {'type': os_list[random.randint(0, len(os_list) - 1)]})
+    g[OS_FIELD] = adapter_before_data.get(
+        OS_FIELD, {'type': os_list[random.randint(0, len(os_list) - 1)]})
 
     g['name'] = adapter_before_data.get('name', names.get_first_name() + "-PC")
 
-    g['ip'] = adapter_before_data.get(
-        'ip', "10.0." + str(random.randint(0, 255)) + "." + str(random.randint(0, 255)))
+    g[IPS_FIELD] = adapter_before_data.get(
+        IPS_FIELD, "10.0." + str(random.randint(0, 255)) + "." + str(random.randint(0, 255)))
 
     g['pretty_id'] = codenamize.codenamize(
         f"{adapter_name}->{uuid.uuid4().hex}", adjectives=1, max_item_chars=6)

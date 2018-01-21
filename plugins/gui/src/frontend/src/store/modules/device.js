@@ -197,7 +197,7 @@ export const device = {
 									'items': {
 										'type': 'string'
 									},
-									'name': 'ip',
+									'name': 'ips',
 									'type': 'array'
 								}
 							],

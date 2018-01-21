@@ -7,6 +7,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from namedlist import namedlist
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.device import OS_FIELD
 from axonius.plugin_base import PluginBase
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
@@ -61,7 +62,7 @@ def figure_actual_os(adapters):
     """
 
     def get_os_type(adapter):
-        os = adapter.get('os')
+        os = adapter.get(OS_FIELD)
         if os is not None:
             return os.get('type')
 

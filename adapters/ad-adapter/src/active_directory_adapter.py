@@ -3,7 +3,7 @@
 __author__ = "Ofir Yefet"
 
 from axonius.consts.adapter_consts import DNSResolvableDevice, DEVICES_DATA, DNS_RESOLVE_STATUS
-from axonius.device import Device, NETWORK_INTERFACES_FIELD_NAME
+from axonius.device import Device, NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import add_rule
@@ -198,18 +198,18 @@ class ActiveDirectoryAdapter(AdapterBase):
                 dc_name = host['raw'].get('AXON_DC_ADDR')
                 try:
                     ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "dc_name": dc_name})
-                    network_interfaces = [{'mac': None, 'ip': [ip]}]
+                    network_interfaces = [{MAC_FIELD: None, IPS_FIELD: [ip]}]
 
                     self._get_collection(DEVICES_DATA).update_one({"_id": host["_id"]},
                                                                   {'$set':
-                                                                   {NETWORK_INTERFACES_FIELD_NAME:
+                                                                   {NETWORK_INTERFACES_FIELD:
                                                                     network_interfaces,
                                                                     DNS_RESOLVE_STATUS: "RESOLVED"}})
                     did_one_resolved = True
                 except Exception as e:
                     self.logger.debug(f"Error resolving host ip from dc. Err: {str(e)}")
                     self._get_collection(DEVICES_DATA).update_one({"_id": host["_id"]},
-                                                                  {'$set': {NETWORK_INTERFACES_FIELD_NAME: [],
+                                                                  {'$set': {NETWORK_INTERFACES_FIELD: [],
                                                                             DNS_RESOLVE_STATUS: "FAILED"}})
                 finally:
                     resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
@@ -243,9 +243,9 @@ class ActiveDirectoryAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         devices_collection = self._get_collection(DEVICES_DATA)
         all_devices = devices_collection.find({}, projection={'_id': False, 'id': True,
-                                                              NETWORK_INTERFACES_FIELD_NAME: True,
+                                                              NETWORK_INTERFACES_FIELD: True,
                                                               DNS_RESOLVE_STATUS: True})
-        all_devices_ids = {device['id']: {NETWORK_INTERFACES_FIELD_NAME: device[NETWORK_INTERFACES_FIELD_NAME],
+        all_devices_ids = {device['id']: {NETWORK_INTERFACES_FIELD: device[NETWORK_INTERFACES_FIELD],
                                           DNS_RESOLVE_STATUS: device[DNS_RESOLVE_STATUS]}
                            for device in all_devices}
         to_insert = []
@@ -287,7 +287,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
             device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])
             if device_interfaces is not None:
-                device.network_interfaces = device_interfaces[NETWORK_INTERFACES_FIELD_NAME]
+                device.network_interfaces = device_interfaces[NETWORK_INTERFACES_FIELD]
                 device.dns_resolve_status = device_interfaces[DNS_RESOLVE_STATUS]
             else:
                 to_insert.append(device.to_dict())

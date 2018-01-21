@@ -5,7 +5,7 @@ It implements API calls that are expected to be present in all adapters.
 from typing import Iterable
 
 from axonius import adapter_exceptions
-from axonius.device import Device, LAST_SEEN_FIELD_NAME
+from axonius.device import Device, LAST_SEEN_FIELD, IPS_FIELD, MAC_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import get_exception_string
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -497,12 +497,12 @@ class AdapterBase(PluginBase, Feature, ABC):
         if interfaces:
             assert isinstance(interfaces, list) or isinstance(interfaces, types.GeneratorType), "should be list"
             for interface in interfaces:
-                mac = interface.get('mac')
+                mac = interface.get(MAC_FIELD)
                 if mac:
-                    interface['mac'] = format_mac(mac)
-                ips = interface.get('ip')
+                    interface[MAC_FIELD] = format_mac(mac)
+                ips = interface.get(IPS_FIELD)
                 if ips:
-                    interface['ip'] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
+                    interface[IPS_FIELD] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
 
     def parse_raw_data_hook(self, raw_devices):
         """
@@ -517,8 +517,8 @@ class AdapterBase(PluginBase, Feature, ABC):
             assert isinstance(parsed_device, Device)
             parsed_device = parsed_device.to_dict()
             self.validate_network_interfaces(parsed_device)
-            if LAST_SEEN_FIELD_NAME in parsed_device:
-                device_time = parsed_device[LAST_SEEN_FIELD_NAME]
+            if LAST_SEEN_FIELD in parsed_device:
+                device_time = parsed_device[LAST_SEEN_FIELD]
                 # Getting the time zone from the original device
                 now = datetime.now(tz=device_time.tzinfo)
 

@@ -1,7 +1,7 @@
 """
 CorrelatorPlugin.py: A Plugin for the devices correlation process
 """
-from axonius.device import NETWORK_INTERFACES_FIELD_NAME, SCANNER_FIELD_NAME
+from axonius.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, OS_FIELD
 from static_correlator_engine import StaticCorrelatorEngine
 from axonius.correlator_base import CorrelatorBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
@@ -66,10 +66,10 @@ class StaticCorrelatorPlugin(CorrelatorBase):
                                 PLUGIN_UNIQUE_NAME: '$$adapter.plugin_unique_name',
                                 'data': {
                                     'id': '$$adapter.data.id',
-                                    'os': '$$adapter.data.os',
-                                    SCANNER_FIELD_NAME: f'$$adapter.data.{SCANNER_FIELD_NAME}',
+                                    OS_FIELD: '$$adapter.data.os',
+                                    SCANNER_FIELD: f'$$adapter.data.{SCANNER_FIELD}',
                                     'hostname': '$$adapter.data.hostname',
-                                    NETWORK_INTERFACES_FIELD_NAME: '$$adapter.data.network_interfaces'
+                                    NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces'
                                 }
                             }
                         }

@@ -19,7 +19,7 @@ FETCHED_DEVICE_EXAMPLE = {
     "id": 11,
     "network_interfaces": [
         {
-            "ip": "192.168.20.10",
+            "ips": "192.168.20.10",
             "mac": "00:50:56:91:00:66"
         }
     ],

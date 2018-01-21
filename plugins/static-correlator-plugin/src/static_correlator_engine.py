@@ -7,7 +7,7 @@ import itertools
 from axonius.correlator_base import CorrelationResult
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.device import NETWORK_INTERFACES_FIELD_NAME, SCANNER_FIELD_NAME
+from axonius.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 
 
 def _are_ips_compatible(first_list, second_list):
@@ -15,7 +15,7 @@ def _are_ips_compatible(first_list, second_list):
         if network_ifs is None:
             return
         for network_if in network_ifs:
-            for ip in network_if.get('ip', []):
+            for ip in network_if.get(IPS_FIELD, []):
                 yield ip
 
     first_set = set(extract_all_ips(first_list))
@@ -31,7 +31,7 @@ def _are_macs_compatible(first_list, second_list):
         if network_ifs is None:
             return
         for network_if in network_ifs:
-            current_mac = network_if.get('mac', '')
+            current_mac = network_if.get(MAC_FIELD, '')
             if current_mac != '' and current_mac is not None:
                 yield current_mac.upper().replace('-', '').replace(':', '')
 
@@ -46,13 +46,13 @@ def _are_macs_compatible(first_list, second_list):
 def _correlate_mac_ip(all_adapter_devices):
     # Remove Nones
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
-                           if adapter_device['data'].get('os', {}).get('type') is not None]
+                           if adapter_device['data'].get(OS_FIELD, {}).get('type') is not None]
     for x, y in itertools.combinations(all_adapter_devices, 2):
-        if not _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD_NAME], y['data'][NETWORK_INTERFACES_FIELD_NAME]):
+        if not _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD], y['data'][NETWORK_INTERFACES_FIELD]):
             continue
-        if not _are_macs_compatible(x['data'][NETWORK_INTERFACES_FIELD_NAME], y['data'][NETWORK_INTERFACES_FIELD_NAME]):
+        if not _are_macs_compatible(x['data'][NETWORK_INTERFACES_FIELD], y['data'][NETWORK_INTERFACES_FIELD]):
             continue
-        if x['data']['os']['type'].upper() != y['data']['os']['type'].upper():
+        if x['data'][OS_FIELD]['type'].upper() != y['data'][OS_FIELD]['type'].upper():
             continue
         # If we reached here that means that we should join this two devices according to this rule.
         yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
@@ -67,13 +67,13 @@ def _correlate_hostname_ip(all_adapter_devices):
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
                            if adapter_device['data'].get('hostname') is not None]
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
-                           if adapter_device['data'].get('os', {}).get('type') is not None]
+                           if adapter_device['data'].get(OS_FIELD, {}).get('type') is not None]
     all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data']['hostname'].upper())
-    all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data']['os']['type'].upper())
+    all_adapter_devices.sort(key=lambda adapter_device: adapter_device['data'][OS_FIELD]['type'].upper())
 
     def process_bucket(bucket):
         for x, y in itertools.combinations(bucket, 2):
-            if _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD_NAME], y['data'][NETWORK_INTERFACES_FIELD_NAME]):
+            if _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD], y['data'][NETWORK_INTERFACES_FIELD]):
                 yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
                                                                     (y['plugin_name'], y['data']['id'])],
                                         data={
@@ -85,9 +85,9 @@ def _correlate_hostname_ip(all_adapter_devices):
 
     bucket = [all_adapter_devices[0]]
     for a, b in pairwise(all_adapter_devices):
-        if a['data']['hostname'].upper() != b['data']['hostname'].upper() or a['data']['os']['type'].upper() != \
-                b['data']['os']['type'].upper() \
-                or b['data']['hostname'] is None or b['data']['os']['type'] is None:
+        if a['data']['hostname'].upper() != b['data']['hostname'].upper() or a['data'][OS_FIELD]['type'].upper() != \
+                b['data'][OS_FIELD]['type'].upper() \
+                or b['data']['hostname'] is None or b['data'][OS_FIELD]['type'] is None:
             yield from process_bucket(bucket)
             bucket = []
         bucket.append(b)
@@ -98,15 +98,15 @@ def _correlate_hostname_ip(all_adapter_devices):
 def _correlate_scanner_mac_ip(all_adapter_devices):
     # Remove Nones
     all_adapter_devices = [adapter_device for adapter_device in all_adapter_devices
-                           if len(adapter_device['data'][NETWORK_INTERFACES_FIELD_NAME]) > 0 and
-                           len([nic.get('mac') for nic in adapter_device['data'][NETWORK_INTERFACES_FIELD_NAME]
-                                if nic.get('mac')]) > 0]
+                           if len(adapter_device['data'][NETWORK_INTERFACES_FIELD]) > 0 and
+                           len([nic.get(MAC_FIELD) for nic in adapter_device['data'][NETWORK_INTERFACES_FIELD]
+                                if nic.get(MAC_FIELD)]) > 0]
     for x, y in itertools.combinations(all_adapter_devices, 2):
-        if not (x['data'].get(SCANNER_FIELD_NAME, False) or y['data'].get(SCANNER_FIELD_NAME, False)):
+        if not (x['data'].get(SCANNER_FIELD, False) or y['data'].get(SCANNER_FIELD, False)):
             continue
-        if not _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD_NAME], y['data'][NETWORK_INTERFACES_FIELD_NAME]):
+        if not _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD], y['data'][NETWORK_INTERFACES_FIELD]):
             continue
-        if not _are_macs_compatible(x['data'][NETWORK_INTERFACES_FIELD_NAME], y['data'][NETWORK_INTERFACES_FIELD_NAME]):
+        if not _are_macs_compatible(x['data'][NETWORK_INTERFACES_FIELD], y['data'][NETWORK_INTERFACES_FIELD]):
             continue
         # If we reached here that means that we should join this two devices according to this rule.
         yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
@@ -124,9 +124,9 @@ def _correlate_scanner_hostname_ip(all_adapter_devices):
 
     def process_bucket(bucket):
         for x, y in itertools.combinations(bucket, 2):
-            if not (x['data'].get(SCANNER_FIELD_NAME, False) or y['data'].get(SCANNER_FIELD_NAME, False)):
+            if not (x['data'].get(SCANNER_FIELD, False) or y['data'].get(SCANNER_FIELD, False)):
                 continue
-            if _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD_NAME], y['data'][NETWORK_INTERFACES_FIELD_NAME]):
+            if _are_ips_compatible(x['data'][NETWORK_INTERFACES_FIELD], y['data'][NETWORK_INTERFACES_FIELD]):
                 yield CorrelationResult(associated_adapter_devices=[(x[PLUGIN_UNIQUE_NAME], x['data']['id']),
                                                                     (y['plugin_name'], y['data']['id'])],
                                         data={

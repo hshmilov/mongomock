@@ -97,8 +97,8 @@ def test_parse_network_positive():
     epo_adapter.parse_network(raw_device_data, device, MagicMock())
     assert len(device.network_interfaces) == 1
     assert device.network_interfaces[0].mac == "06:f4:17:36:0e:d8".upper()
-    assert sorted(device.network_interfaces[0].ip) == sorted(["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a",
-                                                              '172.31.21.74'])
+    assert sorted(device.network_interfaces[0].ips) == sorted(["10.0.255.180", "0:0:0:0:0:ffff:ac1f:154a",
+                                                               '172.31.21.74'])
 
 
 def test_only_mac():
@@ -114,7 +114,7 @@ def test_parse_network_no_ipv6_no_mac():
     device = Device(set(), set())
     device.network_interfaces = []
     epo_adapter.parse_network(raw, device, MagicMock())
-    assert device.network_interfaces[0].ip == ['10.0.255.180']
+    assert device.network_interfaces[0].ips == ['10.0.255.180']
 
 
 def test_parse_network_no_ipv4_no_mac():
@@ -122,7 +122,7 @@ def test_parse_network_no_ipv4_no_mac():
     device = Device(set(), set())
     device.network_interfaces = []
     epo_adapter.parse_network(raw, device, MagicMock())
-    assert sorted(device.network_interfaces[0].ip) == sorted(['172.31.21.74', '0:0:0:0:0:ffff:ac1f:154a'])
+    assert sorted(device.network_interfaces[0].ips) == sorted(['172.31.21.74', '0:0:0:0:0:ffff:ac1f:154a'])
 
 
 def test_escape_dict():

@@ -18,7 +18,7 @@ from promise import Promise
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
-from axonius.device import LAST_SEEN_FIELD_NAME
+from axonius.device import LAST_SEEN_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import beautiful_adapter_device_name
 from axonius.mixins.activatable import Activatable
@@ -413,10 +413,10 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
             Insert a device into the DB in a locked way
             :return:
             """
-            if LAST_SEEN_FIELD_NAME in parsed_to_insert['data']:
+            if LAST_SEEN_FIELD in parsed_to_insert['data']:
                 try:
-                    parsed_to_insert['data'][LAST_SEEN_FIELD_NAME] = dateparse(
-                        parsed_to_insert['data'][LAST_SEEN_FIELD_NAME])
+                    parsed_to_insert['data'][LAST_SEEN_FIELD] = dateparse(
+                        parsed_to_insert['data'][LAST_SEEN_FIELD])
                 except ValueError:
                     pass  # failed :( ? unchanged
 

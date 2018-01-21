@@ -25,7 +25,7 @@ class DeviceOS(SmartJsonClass):
 class NetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     mac = Field(str, 'Mac')
-    ip = ListField(str, 'IPs')
+    ips = ListField(str, 'IPs')
 
 
 class Device(SmartJsonClass):
@@ -66,13 +66,13 @@ class Device(SmartJsonClass):
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
 
-    def add_nic(self, mac=None, ip=None):
+    def add_nic(self, mac=None, ips=None):
         """
         Add a new network interface card to this device.
         :param mac: the mac
-        :param ip: an IP list
+        :param ips: an IP list
         """
-        self.network_interfaces.append(NetworkInterface(mac=mac, ip=ip))
+        self.network_interfaces.append(NetworkInterface(mac=mac, ips=ips))
 
     def figure_os(self, os_string):
         os_dict = figure_out_os(os_string)
@@ -81,6 +81,10 @@ class Device(SmartJsonClass):
         self.os = DeviceOS(**os_dict)
 
 
-NETWORK_INTERFACES_FIELD_NAME = Device.network_interfaces.name
-SCANNER_FIELD_NAME = Device.scanner.name
-LAST_SEEN_FIELD_NAME = Device.last_seen.name
+NETWORK_INTERFACES_FIELD = Device.network_interfaces.name
+SCANNER_FIELD = Device.scanner.name
+LAST_SEEN_FIELD = Device.last_seen.name
+OS_FIELD = Device.os.name
+
+MAC_FIELD = NetworkInterface.mac.name
+IPS_FIELD = NetworkInterface.ips.name

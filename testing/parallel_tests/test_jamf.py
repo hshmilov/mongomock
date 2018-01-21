@@ -1,6 +1,6 @@
 import pytest
 
-from axonius.device import NETWORK_INTERFACES_FIELD_NAME
+from axonius.device import NETWORK_INTERFACES_FIELD, OS_FIELD
 from services.adapters.jamf_service import JamfService, jamf_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_jamf_credentials import *
@@ -37,5 +37,5 @@ class TestJamfAdapter(AdapterTestBase):
         devices_list = devices_as_dict[self.some_client_id]['parsed']
         jamf_device = list(filter(lambda device: device['hostname'] ==
                                   FETCHED_DEVICE_EXAMPLE['hostname'], devices_list))
-        assert jamf_device[0]['os'] == FETCHED_DEVICE_EXAMPLE['os']
-        assert jamf_device[0][NETWORK_INTERFACES_FIELD_NAME] == FETCHED_DEVICE_EXAMPLE[NETWORK_INTERFACES_FIELD_NAME]
+        assert jamf_device[0][OS_FIELD] == FETCHED_DEVICE_EXAMPLE[OS_FIELD]
+        assert jamf_device[0][NETWORK_INTERFACES_FIELD] == FETCHED_DEVICE_EXAMPLE[NETWORK_INTERFACES_FIELD]

@@ -4,7 +4,7 @@ splunk_symantec_adapter.py: An adapter for Splunk Dashboard.
 
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
-from axonius.device import Device
+from axonius.device import Device, IPS_FIELD, MAC_FIELD
 from splunk_connection import SplunkConnection
 
 __author__ = "Asaf & Tal"
@@ -148,7 +148,7 @@ class SplunkSymantecAdapter(AdapterBase):
             else:
                 device.figure_os(host.get('os', ''))
                 for iface in host.get('network', []):
-                    device.add_nic(iface.get('mac', ''), iface.get('ip', '').split(' '))
+                    device.add_nic(iface.get(MAC_FIELD, ''), iface.get(IPS_FIELD, '').split(' '))
             device.id = host['name']
             device.set_raw(device_raw)
             yield device

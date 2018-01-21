@@ -1,4 +1,4 @@
-from axonius.device import SCANNER_FIELD_NAME
+from axonius.device import SCANNER_FIELD
 from static_correlator_engine import StaticCorrelatorEngine, _correlate_scanner_hostname_ip, _correlate_scanner_mac_ip
 
 import logging
@@ -53,7 +53,7 @@ def test_no_correlation():
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.2'
                             ]
                         }
@@ -78,7 +78,7 @@ def test_no_correlation():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -103,7 +103,7 @@ def test_no_correlation():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.3'
                             ]
                         }
@@ -128,7 +128,7 @@ def test_no_correlation():
                         'hostname': "nothostname",
                         'network_interfaces': [{
                             'mac': 'mymac1',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -164,7 +164,7 @@ def test_rule1_correlation():
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -188,7 +188,7 @@ def test_rule1_correlation():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -235,7 +235,7 @@ def test_rule1_os_contradiction():
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -261,7 +261,7 @@ def test_rule1_os_contradiction():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -280,7 +280,7 @@ def test_rule1_os_contradiction():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'mymac',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -317,7 +317,7 @@ def test_rule2_correlation():
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
                             'mac': 'AA-BB-CC-11-22-33',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -340,7 +340,7 @@ def test_rule2_correlation():
                         },
                         'network_interfaces': [{
                             'mac': 'AA:bb-CC-11-22-33',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -383,10 +383,10 @@ def test_rule1_scanner_correlation():
                             'distribution': '',
                             'type': ''
                         },
-                        SCANNER_FIELD_NAME: True,
+                        SCANNER_FIELD: True,
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -410,7 +410,7 @@ def test_rule1_scanner_correlation():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'aa:bb:cc:dd:ee:ff',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -456,7 +456,7 @@ def test_rule1_scanner_correlation_fails_no_scanner_field():
                         },
                         'hostname': "ubuntuLolol",  # Capital letter in in purpose
                         'network_interfaces': [{
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -480,7 +480,7 @@ def test_rule1_scanner_correlation_fails_no_scanner_field():
                         'hostname': "ubuntulolol",
                         'network_interfaces': [{
                             'mac': 'aa:bb:cc:dd:ee:ff',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -516,7 +516,7 @@ def test_rule2_scanner_correlation():
                         "id": "10.0.2.229",
                         "network_interfaces": [
                             {
-                                "ip": [
+                                "ips": [
                                     "10.0.2.229"
                                 ],
                                 "mac": "06:2D:ED:0F:2D:E4"
@@ -550,13 +550,13 @@ def test_rule2_scanner_correlation():
                         "name": "puppet",
                         "network_interfaces": [
                             {
-                                "ip": [
+                                "ips": [
                                     "127.0.0.1",
                                     "::1"
                                 ]
                             },
                             {
-                                "ip": [
+                                "ips": [
                                     "10.0.2.229",
                                     "fe80::42d:edff:fe0f:2de4"
                                 ],
@@ -1168,7 +1168,7 @@ def test_rule2_scanner_correlation_fails_no_scanner_field():
                         'hostname': "",
                         'network_interfaces': [{
                             'mac': 'AA-BB-CC-11-22-33',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }
@@ -1192,7 +1192,7 @@ def test_rule2_scanner_correlation_fails_no_scanner_field():
                         'hostname': "asfasfsaf",
                         'network_interfaces': [{
                             'mac': 'AA:bb-CC-11-22-33',
-                            'ip': [
+                            'ips': [
                                 '1.1.1.1'
                             ]
                         }

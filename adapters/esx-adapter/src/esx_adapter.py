@@ -108,7 +108,7 @@ class ESXAdapter(AdapterBase):
                     device.add_nic(iface.get('macAddress'), ips)
             if not device.network_interfaces and 'ipAddress' in guest:
                 # if nothing is found in raw.networking this will be used
-                device.add_nic(mac='', ip=[guest.get('ipAddress')])
+                device.add_nic(mac='', ips=[guest.get('ipAddress')])
             device.hostname = guest.get('hostName', '')
             device.vm_tools_status = guest.get('toolsStatus', '')
             device.vm_physical_path = _curr_path + "/" + node.get('Name', '')

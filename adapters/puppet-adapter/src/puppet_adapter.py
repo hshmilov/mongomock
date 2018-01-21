@@ -3,7 +3,7 @@
 
 __author__ = "Ofri Shur"
 
-from axonius.device import Device
+from axonius.device import Device, MAC_FIELD
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 import exceptions
@@ -120,7 +120,7 @@ class PuppetAdapter(AdapterBase):
                 device.os.minor = device_raw["os"]['release']['minor']
             device.id = device_raw[u'certname']
             for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
-                device.add_nic(inet.get('mac', ''),
+                device.add_nic(inet.get(MAC_FIELD, ''),
                                [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
                                [x['address'] for x in inet.get('bindings6', []) if x.get('address')])
             device.set_raw(device_raw)

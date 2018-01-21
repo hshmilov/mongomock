@@ -144,7 +144,7 @@ def test_os_error():
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -165,7 +165,7 @@ def test_os_error():
                         "id": "ad2",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -186,7 +186,7 @@ def test_os_error():
                         "id": "addd",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -207,7 +207,7 @@ def test_os_error():
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -226,7 +226,7 @@ def test_os_error():
                     "id": "ad1",
                     "network_interfaces": [
                         {
-                            'ip': ["1.1.1.1"],
+                            "ips": ["1.1.1.1"],
                         }
                     ]
                 }
@@ -246,7 +246,7 @@ def test_os_error():
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -261,7 +261,7 @@ def test_os_error():
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -287,7 +287,7 @@ def test_network_error():
                         "id": "ad1",
                         "network_interfaces": [
                             {
-                                'ip': ["1.1.1.1"],
+                                "ips": ["1.1.1.1"],
                             }
                         ]
                     }
@@ -306,7 +306,7 @@ def test_network_error():
                     "id": "ad1",
                     "network_interfaces": [
                         {
-                            'ip': ["1.1.1.2"],
+                            "ips": ["1.1.1.2"],
                         }
                     ]
                 }

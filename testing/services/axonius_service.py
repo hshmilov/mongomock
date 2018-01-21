@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, timedelta
 
-from axonius.device import NETWORK_INTERFACES_FIELD_NAME
+from axonius.device import NETWORK_INTERFACES_FIELD
 from test_helpers.utils import try_until_not_thrown
 from services.aggregator_service import AggregatorService
 from services.core_service import CoreService
@@ -60,7 +60,7 @@ class AxoniusService(object):
         device = self.get_device_by_id(adapter_name, device_id)
         adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if
                               adapter_device[PLUGIN_UNIQUE_NAME] == adapter_name)
-        return adapter_device['data'][NETWORK_INTERFACES_FIELD_NAME]
+        return adapter_device['data'][NETWORK_INTERFACES_FIELD]
 
     def assert_device_aggregated(self, adapter, client_id, some_device_id, max_tries=30):
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
