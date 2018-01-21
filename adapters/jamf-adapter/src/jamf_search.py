@@ -30,15 +30,14 @@ class JamfAdvancedSearch(object):
             self.jamf_connection.logger.exception(error_message)
             raise JamfRequestException(error_message + str(e))
 
-    def _create_query(self):
-        self._request_for_query(requests.post, "/id/0", "Search creation returned an error")
-
     def _update_query(self, data):
         try:
+            self._request_for_query(requests.delete, "/name/Axonius-Adapter-Inventory", data,
+                                    "Search update returned an error")
             self._request_for_query(requests.put, "/name/Axonius-Adapter-Inventory", data,
                                     "Search update returned an error")
         except JamfRequestException:
-            self._create_query(data)
+            self._request_for_query(requests.post, "/id/0", data, "Search creation returned an error")
 
     def _get_query_results(self):
         try:
