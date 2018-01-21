@@ -1152,7 +1152,7 @@ export const device = {
 		[ UPDATE_DEVICES_COUNT ] (state, payload) {
 			state.deviceCount.fetching = payload.fetching
 			state.deviceCount.error = payload.error
-			if (payload.data) {
+			if (payload.data !== undefined) {
 				state.deviceCount.data = payload.data
 			}
 		},
