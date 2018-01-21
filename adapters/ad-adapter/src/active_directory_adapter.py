@@ -251,7 +251,14 @@ class ActiveDirectoryAdapter(AdapterBase):
                 self.logger.error(f"Device name {device_raw.get('dNSHostName', device_raw.get('name', ''))} "
                                   f"is to big for insertion. size is {sys.getsizeof(device_raw)} Bytes")
                 continue
-            last_seen = device_raw.get('lastLogon', device_raw.get('lastLogonTimestamp'))
+
+            last_logon = device_raw.get('lastLogon')
+            last_logon_timestamp = device_raw.get('lastLogonTimestamp')
+
+            last_seen = max(last_logon, last_logon_timestamp) \
+                if last_logon is not None and last_logon_timestamp is not None \
+                else last_logon or last_logon_timestamp
+
             if last_seen is None:
                 # No data on the last timestamp of the device. Not inserting this device.
                 no_timestamp_count += 1
@@ -553,7 +560,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         except subprocess.CalledProcessError as e:
             result = 'Failure'
-            product = "stdout: {0}, stderr: {1}, exception: {2}"\
+            product = "stdout: {0}, stderr: {1}, exception: {2}" \
                 .format(str(command_result.stdout), str(command_result.stderr), str(e))
         except Exception as e:
             raise e
