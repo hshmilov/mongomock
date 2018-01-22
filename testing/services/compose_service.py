@@ -46,7 +46,7 @@ class ComposeService(AxonService):
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         # killing the container is faster than down. Then we issue down to reverse any effects up had
-        subprocess.call(['docker-compose', 'kill', '-S', 'SIGKILL'], cwd=self.workdir,
+        subprocess.call(['docker-compose', 'kill', '-s', 'SIGKILL'], cwd=self.workdir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         subprocess.call(['docker-compose', 'down'], cwd=self.workdir)
 
