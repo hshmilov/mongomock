@@ -67,7 +67,7 @@ class ParallelRunner(object):
 
     def clean(self):
         for procname in self.wait_list.keys():
-            print("Killing timed out process")
+            print(f"Killing timed out process {procname}")
             self.try_kill(procname)
 
     def try_kill(self, procname):

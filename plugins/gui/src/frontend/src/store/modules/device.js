@@ -312,6 +312,26 @@ export const device = {
 				{path: 'last_used_user', selected: false, name: 'Last User Logged'}
 			],
 			unique: {
+				'traiana_lab_machines_adapter': [
+					{path: 'adapters.data.raw.owner', name: 'Traiana Lab Machines.owner', control: 'text'},
+					{path: 'adapters.data.raw.termination', name: 'Traiana Lab Machines.termination', control: 'text'},
+					{path: 'adapters.data.raw.comments', name: 'Traiana Lab Machines.comments', control: 'text'},
+					{path: 'adapters.data.raw.os', name: 'Traiana Lab Machines.os', control: 'text'},
+					{path: 'adapters.data.raw.ownerFull', name: 'Traiana Lab Machines.ownerFull', control: 'text'},
+					{path: 'adapters.data.raw.purpose', name: 'Traiana Lab Machines.purpose', control: 'text'},
+					{path: 'adapters.data.raw.usage', name: 'Traiana Lab Machines.usage', control: 'text'},
+					{path: 'adapters.data.raw.ip', name: 'Traiana Lab Machines.ip', control: 'text'},
+					{path: 'adapters.data.raw.updateUser', name: 'Traiana Lab Machines.updateUser', control: 'text'},
+					{path: 'adapters.data.raw.team', name: 'Traiana Lab Machines.team', control: 'text'},
+					{path: 'adapters.data.raw.ilo', name: 'Traiana Lab Machines.ilo', control: 'text'},
+					{path: 'adapters.data.raw.delete', name: 'Traiana Lab Machines.delete', control: 'text'},
+					{path: 'adapters.data.raw.nameLink', name: 'Traiana Lab Machines.nameLink', control: 'text'},
+					{path: 'adapters.data.raw.name', name: 'Traiana Lab Machines.name', control: 'text'},
+					{path: 'adapters.data.raw.location', name: 'Traiana Lab Machines.location', control: 'text'},
+					{path: 'adapters.data.raw.model', name: 'Traiana Lab Machines.model', control: 'text'},
+					{path: 'adapters.data.raw.id', name: 'Traiana Lab Machines.id', control: 'text'},
+					{path: 'adapters.data.raw.creation', name: 'Traiana Lab Machines.creation', control: 'text'}
+				],
 				'cisco_adapter': [
 					{path: 'adapters.data.raw.ip_address', name: 'Cisco.ip_address', control: 'text'},
 					{path: 'adapters.data.raw.mac_address', name: 'Cisco.mac_address', control: 'text'}

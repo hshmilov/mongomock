@@ -74,6 +74,10 @@ export const adapterStaticData = {
 	'stresstest_adapter': {
 		name: 'LOL',
 		description: 'i am the king of devices'
+	},
+	'traiana_lab_machines_adapter': {
+		name: 'Traiana Lab Machines',
+		description: 'Traiana Lab Machines is a propriatery adapter for Traiana, which queries for new devices from the lab machines inventory.'
 	}
 }
 
