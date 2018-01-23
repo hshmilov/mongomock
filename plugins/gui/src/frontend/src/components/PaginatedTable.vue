@@ -1,8 +1,8 @@
 <template>
-    <div class="paginated-table dataTables_wrapper"> 
+    <div class="paginated-table">
         <pulse-loader :loading="fetching && (!data || !data.length)" color="#26dad2"></pulse-loader>
-        <div class="table table-responsive">
-            <table class="table">
+        <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
+            <table class="table table-responsive">
                 <thead>
                     <tr>
                         <th class="table-head checkbox-container" v-if="value">
@@ -42,19 +42,15 @@
                     </tr>
                 </tbody>
             </table>
-            <div class="clearfix"></div>
-        </div>
-        <div v-if="error" class="dataTables_info alert-error">Problem occured while fetching data: {{ error }}</div>
-        <div class="dataTables_paginate paging_simple_numbers">
-            <a @click="prevPage" class="paginate_button squash_button"
-               :class="{ 'disabled': firstPage}">Previous</a>
-            <span class="squash_button">
-                <a v-for="n in linkedPageCount"
-                   v-on:click="selectPage(n - 1 + linkedPageStart)" class="paginate_button"
-                   :class="{ 'active': currentPage === n - 1 + linkedPageStart }">{{ n + linkedPageStart }}</a>
-            </span>
-            <a @click="nextPage" class="paginate_button"
-               :class="{ 'disabled': lastPage}">Next</a>
+        </vue-scrollbar>
+        <div v-if="error" class="info alert-error">Problem occured while fetching data: {{ error }}</div>
+        <div class="pagination">
+            <a @click="firstPage" class="btn" :class="{ 'disabled': isFirstPage}">&lt;&lt;</a>
+            <a @click="prevPage" class="btn" :class="{ 'disabled': isFirstPage}">&lt;</a>
+            <a v-for="n in linkedPageCount" v-on:click="selectPage(n - 1 + linkedPageStart)" class="btn"
+               :class="{ 'active': currentPage === n - 1 + linkedPageStart }">{{ n + linkedPageStart }}</a>
+            <a @click="nextPage" class="btn" :class="{ 'disabled': isLastPage}">&gt;</a>
+            <a @click="lastPage" class="btn" :class="{ 'disabled': isLastPage}">&gt;&gt;</a>
         </div>
         <slot></slot>
     </div>
@@ -65,19 +61,20 @@
     import GenericTableCell from './GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
     import './icons'
+	import VueScrollbar from 'vue2-scrollbar'
 
 	export default {
 		name: 'paginated-table',
-		components: { Checkbox, GenericTableCell, PulseLoader },
+		components: { Checkbox, GenericTableCell, PulseLoader, VueScrollbar },
 		props: {
 			'fetching': {}, 'data': {}, 'error': {}, 'fetchData': {}, 'filter': {}, 'value': {},
             'actions': {}, 'fields': {}, 'idField': {default: 'id'}, 'selectedPage': {}
 		},
 		computed: {
-			firstPage () {
+			isFirstPage () {
 				return this.currentPage === 0
 			},
-			lastPage () {
+			isLastPage () {
 				return this.currentPage === this.maxPages
 			},
 			filterFields () {
@@ -171,15 +168,23 @@
 					filter: this.filter
 				})
 			},
+            firstPage() {
+				if (this.isFirstPage) { return }
+				this.selectPage(0)
+            },
 			prevPage () {
-				if (this.firstPage) { return }
+				if (this.isFirstPage) { return }
 				this.selectPage(this.currentPage - 1)
 			},
 			nextPage () {
 				/* If there are no more pages to show, return */
-				if (this.lastPage) { return }
+				if (this.isLastPage) { return }
 				this.selectPage(this.currentPage + 1)
 			},
+            lastPage() {
+				if (this.isLastPage) { return }
+				this.selectPage(this.maxPages)
+            },
             restartPagination() {
 				/*
 				    Find first link to specific page, according to currently selected page.
@@ -223,31 +228,119 @@
 <style lang="scss">
     @import '../scss/config';
 
-    .dataTables_wrapper {
-        overflow-x: hidden;
-        padding: 12px;
-        .dataTables_info {
+    .paginated-table {
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            /*overflow-x: auto;*/
+            font-size: 14px;
+            .table-head {
+                border: 0;
+                text-transform: capitalize;
+                padding: 8px;
+                font-weight: 400;
+                color: $color-text-main;
+                vertical-align: middle;
+                &.checkbox-container {
+                    padding-left: 9px;
+                }
+            }
+            .table-row {
+                cursor: pointer;
+                &:hover, &.active {
+                    .table-row-data {
+                        background-color: $background-color-hover;
+                    }
+                    .table-row-actions a {
+                        visibility: visible;
+                        .svg-stroke {  stroke: $color-text-title;  }
+                        .svg-fill {  fill: $color-text-title;  }
+                    }
+                }
+                &:first-of-type .table-row-data {
+                    border-top: 1px solid $border-color;
+                }
+                .table-row-data {
+                    padding: 8px;
+                    max-width: 120px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    border-top: 0;
+                    border-bottom: 1px solid $border-color;
+                    &:first-of-type {
+                        border-left: 1px solid $border-color;
+                    }
+                    &:last-of-type {
+                        border-right: 1px solid $border-color;
+                    }
+                }
+                .table-row-actions {
+                    text-align: right;
+                    vertical-align: middle;
+                    .table-row-action {
+                        visibility: hidden;
+                        padding-right: 20px;
+                        &:hover {
+                            color: $color-theme-light;
+                            .svg-stroke {  stroke: $color-theme-light;  }
+                            .svg-fill {  fill: $color-theme-light;  }
+                        }
+                        i {
+                            vertical-align: middle;
+                            font-size: 120%;
+                        }
+                    }
+                }
+                &.pad {
+                    background-color: $background-color-light;
+                    border: 0;
+                    line-height: 28px;
+                    .table-row-data {
+                        border: 0;
+                    }
+                    &:hover, &.active {
+                        .table-row-data {
+                            background-color: $background-color-light;
+                            border: 0;
+                        }
+                    }
+                }
+            }
+            .table-row:last-of-type:not(:hover):not(.active) .table-row-data {
+                border-bottom: 1px solid $border-color;
+            }
+        }
+        .info {
             display: inline-block;
             font-size: 80%;
         }
-        .dataTables_paginate {
-            float: right;
-            text-align: right;
-            .paginate_button {
+        .pagination {
+            justify-content: flex-end;
+            margin-top: 8px;
+            .btn {
                 box-sizing: border-box;
                 display: inline-block;
-                min-width: 1.5em;
+                width: auto;
                 text-align: center;
                 text-decoration: none;
                 cursor: pointer;
                 *cursor: hand;
                 border: 1px solid $border-color;
+                background-color: $background-color-light;
                 text-transform: uppercase;
                 font-size: 80%;
                 padding: 8px 12px;
+                height: auto;
+                line-height: initial;
+                &:not([href]):not([tabindex]) {
+                    color: $color-text-main;
+                }
                 &.active,
                 &:hover {
-                    color: $color-light;
+                    &:not([href]):not([tabindex]) {
+                        color: $color-light;
+                    }
                     border: 1px solid $color-theme-light;
                     background-color: $color-theme-light;
                 }
@@ -260,91 +353,6 @@
                     box-shadow: none;
                 }
             }
-            .squash_button {
-                margin-right: -5px;
-            }
-        }
-    }
-
-    .paginated-table .table {
-        border-collapse: separate;
-        border-spacing: 0;
-        overflow-x: auto;
-        font-size: 14px;
-        .table-head {
-            border: 0;
-            text-transform: capitalize;
-            padding: 8px;
-            font-weight: 400;
-            color: $color-text-main;
-            vertical-align: middle;
-            &.checkbox-container {
-                padding-left: 9px;
-            }
-        }
-        .table-row {
-            cursor: pointer;
-            &:hover, &.active {
-                .table-row-data {
-                    background-color: $background-color-hover;
-                }
-                .table-row-actions a {
-                    visibility: visible;
-                    .svg-stroke {  stroke: $color-text-title;  }
-                    .svg-fill {  fill: $color-text-title;  }
-                }
-            }
-            &:first-of-type .table-row-data {
-                border-top: 1px solid $border-color;
-            }
-            .table-row-data {
-                padding: 8px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                border-top: 0;
-                border-bottom: 1px solid $border-color;
-                &:first-of-type {
-                    border-left: 1px solid $border-color;
-                }
-                &:last-of-type {
-                    border-right: 1px solid $border-color;
-                }
-            }
-            .table-row-actions {
-                text-align: right;
-                vertical-align: middle;
-                .table-row-action {
-                    visibility: hidden;
-                    padding-right: 20px;
-                    &:hover {
-                        color: $color-theme-light;
-                        .svg-stroke {  stroke: $color-theme-light;  }
-                        .svg-fill {  fill: $color-theme-light;  }
-                    }
-                    i {
-                        vertical-align: middle;
-                        font-size: 120%;
-                    }
-                }
-            }
-            &.pad {
-                background-color: $background-color-light;
-                border: 0;
-                line-height: 28px;
-                .table-row-data {
-                    border: 0;
-                }
-                &:hover, &.active {
-                    .table-row-data {
-                        background-color: $background-color-light;
-                        border: 0;
-                    }
-                }
-            }
-        }
-        .table-row:last-of-type:not(:hover):not(.active) .table-row-data {
-            border-bottom: 1px solid $border-color;
         }
     }
 

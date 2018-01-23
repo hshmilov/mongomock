@@ -42,7 +42,7 @@
                                           :searchable="true" v-model="selectedFields"></searchable-checklist>
                 </triggerable-dropdown>
             </div>
-            <div slot="cardContent" class="info-dialog-container">
+            <div slot="cardContent">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
                                  :fields="deviceFields" :filter="query.currentQuery" @click-row="configDevice"
