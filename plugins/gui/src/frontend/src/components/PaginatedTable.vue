@@ -5,7 +5,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th class="table-head checkbox-container">
+                        <th class="table-head checkbox-container" v-if="value">
                             <checkbox v-if="value !== undefined" v-model="selectAllRecords"
                                       @change="updateSelectedAll()"></checkbox>
                         </th>
@@ -19,9 +19,9 @@
                     <tr class="table-row" v-bind:class="{ active: recordSelection[record[idField]] }"
                         v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
                         @click="handleRowClick(record[idField])">
-                        <td class="table-row-data">
+                        <td class="table-row-data" v-if="value">
                             <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]"
-                                      @change="updateSelected()"></checkbox>
+                                      @change="updateSelected"></checkbox>
                         </td>
                         <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
                                             v-if="!field.hidden" :type="field.type" :value="record[field.path]">
@@ -36,7 +36,7 @@
                     </tr>
                     <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
                         v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
-                        <td class="table-row-data">&nbsp</td>
+                        <td class="table-row-data" v-if="value">&nbsp</td>
                         <td v-for="field in viewFields" class="table-row-data">&nbsp</td>
                         <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
                     </tr>
@@ -202,7 +202,9 @@
             }
 		},
 		mounted () {
-			this.currentPage = this.selectedPage
+			if (this.selectedPage) {
+			    this.currentPage = this.selectedPage
+            }
 			/* Get initial data for first page of the table */
 			if (!this.data || !this.data.length) {
 				this.addData()
@@ -297,7 +299,6 @@
             }
             .table-row-data {
                 padding: 8px;
-                max-width: 120px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;

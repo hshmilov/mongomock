@@ -135,7 +135,7 @@ export const query = {
 			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
 			state.savedQueries.data = [ { ...payload,
 				query_name: payload.name,
-				filter: queryToStr(payload.filter),
+				filter: payload.filter,
 				'timestamp': new Date().getTime()
 			}, ...state.savedQueries.data ]
 		},
