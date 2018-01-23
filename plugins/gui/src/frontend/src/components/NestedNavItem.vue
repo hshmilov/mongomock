@@ -2,7 +2,7 @@
     <router-link tag="li" :to="!disabled? { name: routeName, path: routerPath }: {}" class="nav-item"
                  :active-class="(!disabled && !exact)? 'active': ''"
                  :exact-active-class="(!disabled && exact)? 'active': ''">
-        <a class="nav-link" v-bind:class="{ 'has-arrow': hasSlot }">
+        <a class="nav-link" v-bind:class="{ 'has-arrow': hasSlot }" :title="routeName">
             <svg-icon v-if="iconName" :name="`navigation/${iconName}`" height="24" width="24" :original="true"></svg-icon>
             <span>{{ routeName }}</span>
         </a>
