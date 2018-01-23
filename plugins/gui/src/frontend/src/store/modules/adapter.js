@@ -221,7 +221,7 @@ export const adapter = {
 				rule: `/api/adapters/${payload.adapterId}/clients/${payload.serverId}`,
 				method: 'DELETE'
 			}).then((response) => {
-				if (response !== '') {
+				if (response.data !== '') {
 					return
 				}
 				commit(REMOVE_SERVER, payload.serverId)
