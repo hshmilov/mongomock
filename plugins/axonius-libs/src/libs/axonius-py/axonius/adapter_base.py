@@ -505,6 +505,21 @@ class AdapterBase(PluginBase, Feature, ABC):
                 if ips:
                     interface[IPS_FIELD] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
 
+    def is_old_device(self, parsed_device):
+        """ Checking if a device has not seen for a long time
+
+        :param parsed_device: A parsed data of the device
+        :return: True if device was not seen for the wanted period of time
+        """
+        if LAST_SEEN_FIELD in parsed_device:
+            device_time = parsed_device[LAST_SEEN_FIELD]
+            # Getting the time zone from the original device
+            now = datetime.now(tz=device_time.tzinfo)
+
+            return self.last_seen_timedelta.days != -1 and now - device_time > self.last_seen_timedelta
+        else:
+            return False
+
     def _remove_big_keys(self, key_to_check, device_id):
         """ Function for removing big elements in data chanks.
 
@@ -538,23 +553,15 @@ class AdapterBase(PluginBase, Feature, ABC):
         :param raw_devices: raw devices as fetched by adapter
         :return: iterator of processed raw device entries
         """
-
         skipped_count = 0
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, Device)
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device['id'])
             self.validate_network_interfaces(parsed_device)
-            if LAST_SEEN_FIELD in parsed_device:
-                device_time = parsed_device[LAST_SEEN_FIELD]
-                # Getting the time zone from the original device
-                now = datetime.now(tz=device_time.tzinfo)
-
-                if self.last_seen_timedelta.days != -1 and now - device_time > self.last_seen_timedelta:
-                    # skip the device is wasn't seen for too long ...
-                    # We are not printing logs here since it will blow the log up
-                    skipped_count += 1
-                    continue
+            if self.is_old_device(parsed_device):
+                skipped_count += 1
+                continue
 
             yield parsed_device
 
