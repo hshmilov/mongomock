@@ -1,7 +1,7 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
 
 import ldap3
-import struct
+import sys
 from ad_exceptions import LdapException
 
 
@@ -86,6 +86,9 @@ class LdapConnection:
                     # searchResEntry is not a wanted object
                     continue
                 device_dict = dict(one_device['attributes'])
+                if 'userCertificate' in device_dict:
+                    # Special case where we want to remove 'userCertificate' key (Special case for Amdocs)
+                    del device_dict['userCertificate']
                 device_dict['AXON_DNS_ADDR'] = self.dns_server if self.dns_server else self.server_addr
                 device_dict['AXON_DC_ADDR'] = self.server_addr
                 device_dict['AXON_DOMAIN_NAME'] = self.domain_name

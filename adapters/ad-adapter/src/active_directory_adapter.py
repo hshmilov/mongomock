@@ -18,7 +18,6 @@ import ad_exceptions
 import configparser
 import subprocess
 import os
-import sys
 import tempfile
 import threading
 import time
@@ -251,14 +250,6 @@ class ActiveDirectoryAdapter(AdapterBase):
         to_insert = []
         no_timestamp_count = 0
         for device_raw in devices_raw_data:
-            if 'userCertificate' in device_raw:
-                # Special case where we want to remove 'userCertificate' key
-                del device_raw['userCertificate']
-            if sys.getsizeof(device_raw) > 1e5:  # Device bigger than ~100kb
-                self.logger.error(f"Device name {device_raw.get('dNSHostName', device_raw.get('name', ''))} "
-                                  f"is to big for insertion. size is {sys.getsizeof(device_raw)} Bytes")
-                continue
-
             last_logon = device_raw.get('lastLogon')
             last_logon_timestamp = device_raw.get('lastLogonTimestamp')
 

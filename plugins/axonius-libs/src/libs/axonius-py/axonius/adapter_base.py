@@ -21,6 +21,7 @@ from datetime import datetime
 from datetime import timedelta
 from enum import Enum, auto
 import types
+import sys
 from axonius.parsing_utils import format_mac
 import ipaddress
 
@@ -504,29 +505,56 @@ class AdapterBase(PluginBase, Feature, ABC):
                 if ips:
                     interface[IPS_FIELD] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
 
+    def _remove_big_keys(self, key_to_check, device_id):
+        """ Function for removing big elements in data chanks.
+
+        Function will recursively pass over known data types and remove big values
+
+        :param key_to_check: A key to check size for
+        :return: A key with no big data fields
+        """
+        if sys.getsizeof(key_to_check) < 1e5:  # Key smaller than ~100kb
+            # Return small devices immediately
+            return key_to_check
+
+        # If we reached here it means that the key is too big, trying to clean known data types
+        if type(key_to_check) == dict:
+            key_to_check = {key: self._remove_big_keys(value, device_id) for key, value in key_to_check.items()}
+
+        if type(key_to_check) == list:
+            key_to_check = [self._remove_big_keys(val, device_id) for val in key_to_check]
+
+        # Checking if the key is small enough after the filtering big sub-keys
+        if sys.getsizeof(key_to_check) < 1e5:  # Key smaller than ~100kb
+            # Key is smaller now, we can return it
+            return key_to_check
+        else:
+            # Data type not recognized or can't filter key, deleting the too big key
+            self.logger.warning(f"Found too big key on device {device_id}. Deleting")
+            return {'AXON_TOO_BIG_VALUE': sys.getsizeof(key_to_check)}
+
     def parse_raw_data_hook(self, raw_devices):
         """
         :param raw_devices: raw devices as fetched by adapter
         :return: iterator of processed raw device entries
         """
 
-        now = datetime.now()
-
         skipped_count = 0
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, Device)
             parsed_device = parsed_device.to_dict()
+            parsed_device = self._remove_big_keys(parsed_device, parsed_device['id'])
             self.validate_network_interfaces(parsed_device)
             if LAST_SEEN_FIELD in parsed_device:
                 device_time = parsed_device[LAST_SEEN_FIELD]
                 # Getting the time zone from the original device
                 now = datetime.now(tz=device_time.tzinfo)
 
-            if self.last_seen_timedelta.days != -1 and now - device_time > self.last_seen_timedelta:
-                # skip the device is wasn't seen for too long ...
-                # We are not printing logs here since it will blow the log up
-                skipped_count += 1
-                continue
+                if self.last_seen_timedelta.days != -1 and now - device_time > self.last_seen_timedelta:
+                    # skip the device is wasn't seen for too long ...
+                    # We are not printing logs here since it will blow the log up
+                    skipped_count += 1
+                    continue
 
             yield parsed_device
 
