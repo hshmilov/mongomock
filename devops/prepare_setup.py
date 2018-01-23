@@ -1,9 +1,8 @@
-import time
 import glob
-import subprocess
 import os
 import sys
 from parallel_runner import ParallelRunner
+import time
 
 
 class ParallelDockerBuilder(ParallelRunner):
@@ -11,6 +10,7 @@ class ParallelDockerBuilder(ParallelRunner):
     def append_docker_pattern(self, pattern, tag_prefix, **kwargs):
         for some_dir in glob.glob(pattern):
             container_name = os.path.basename(some_dir)
+            time.sleep(3)  # We are getting resource busy. I suspect this is due parallel build storm
             command = "docker build ../{1}/{0} -t axonius/{0}".format(container_name, tag_prefix)
             self.append_single(container_name, command, **kwargs)
 
