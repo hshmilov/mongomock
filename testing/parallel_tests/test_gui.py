@@ -16,17 +16,16 @@ def test_devices():
     devices_response = gui_service.get_devices()
     assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
                                                 f"{devices_response.content}"
-    devices_count_expected = len(devices_response.json())
+
     devices_count_response = gui_service.get_devices_count()
     assert devices_count_response.status_code == 200, f"Error in response. Got: {str(devices_count_response)}, " \
                                                       f"{devices_count_response.content}"
-    assert devices_count_expected == devices_count_response.json(), "Unexpected response. Original device count is " \
-                                                                    f" {devices_count_expected} but count returned {devices_count_response.json()}"
+    assert isinstance(devices_count_response.json(), int), f"Unexpected response type: {devices_count_response.json()}"
 
 
 def _count_num_of_tags(device):
-    return len([current_tag['tagvalue'] for current_tag in device['tags'] if
-                current_tag.get('tagvalue', '') != ''])
+    return len([current_tag['tagname'] for current_tag in device['tags'] if
+                current_tag.get('tagvalue', False)])
 
 
 def test_tags_via_gui():
@@ -57,7 +56,7 @@ def test_tags_via_gui():
                                               f"{str(result.status_code)}, {str(result.content)}"
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 1
-            assert fresh_device['tags'][-1]['tagvalue'] == test_tag_value
+            assert fresh_device['tags'][-1]['tagname'] == test_tag_value
             gui_service.remove_tags_from_device(
                 {'devices': [tag_test_device['internal_axon_id']], 'tags': [test_tag_value]})
 
@@ -68,13 +67,13 @@ def test_tags_via_gui():
             gui_service.add_tags_to_device({'devices': [tag_test_device['internal_axon_id']], 'tags': [test_tag_value]})
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 1
-            assert fresh_device['tags'][-1]['tagvalue'] == test_tag_value
+            assert fresh_device['tags'][-1]['tagname'] == test_tag_value
             response = gui_service.add_tags_to_device(
                 {'devices': [tag_test_device['internal_axon_id']], 'tags': [test_tag_value]})
             assert response.status_code == 200
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 1
-            assert fresh_device['tags'][-1]['tagvalue'] == test_tag_value
+            assert fresh_device['tags'][-1]['tagname'] == test_tag_value
             gui_service.remove_tags_from_device(
                 {'devices': [tag_test_device['internal_axon_id']], 'tags': [test_tag_value]})
 
@@ -85,7 +84,7 @@ def test_tags_via_gui():
             gui_service.add_tags_to_device({'devices': [tag_test_device['internal_axon_id']], 'tags': test_tags})
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
             assert _count_num_of_tags(fresh_device) == starting_num_of_tags_on_device + 2
-            assert set([current_tag['tagvalue'] for current_tag in fresh_device['tags'][-2:]]) == set(test_tags)
+            assert set([current_tag['tagname'] for current_tag in fresh_device['tags'][-2:]]) == set(test_tags)
             gui_service.remove_tags_from_device({'devices': [tag_test_device['internal_axon_id']], 'tags': test_tags})
 
         create_one_tag()
@@ -103,8 +102,8 @@ def test_tags_via_gui():
             gui_service.remove_tags_from_device(
                 {'devices': [tag_test_device['internal_axon_id']], 'tags': [test_tag_value]})
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
-            assert len([current_tag['tagvalue'] for current_tag in fresh_device['tags'] if
-                        current_tag['tagvalue'] != '']) == starting_num_of_tags_on_device
+            assert len([current_tag['tagname'] for current_tag in fresh_device['tags'] if
+                        current_tag['tagvalue']]) == starting_num_of_tags_on_device
 
         def remove_non_existing_tag():
             tag_test_device = get_gui_test_devices()[1]
@@ -116,8 +115,8 @@ def test_tags_via_gui():
             gui_service.remove_tags_from_device(
                 {'devices': [tag_test_device['internal_axon_id']], 'tags': ['blah_tag']})
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
-            assert len([current_tag['tagvalue'] for current_tag in fresh_device['tags'] if
-                        current_tag['tagvalue'] != '']) == starting_num_of_tags_on_device + 1
+            assert len([current_tag['tagname'] for current_tag in fresh_device['tags'] if
+                        current_tag['tagvalue']]) == starting_num_of_tags_on_device + 1
 
         def remove_multiple_tags():
             tag_test_device = get_gui_test_devices()[2]
@@ -129,8 +128,8 @@ def test_tags_via_gui():
             gui_service.remove_tags_from_device(
                 {'devices': [tag_test_device['internal_axon_id']], 'tags': test_tag_value})
             fresh_device = gui_service.get_device_by_id(tag_test_device['internal_axon_id']).json()
-            assert len([current_tag['tagvalue'] for current_tag in fresh_device['tags'] if
-                        current_tag['tagvalue'] != '']) == starting_num_of_tags_on_device
+            assert len([current_tag['tagname'] for current_tag in fresh_device['tags'] if
+                        current_tag['tagvalue']]) == starting_num_of_tags_on_device
 
         remove_one_tag()
         remove_non_existing_tag()

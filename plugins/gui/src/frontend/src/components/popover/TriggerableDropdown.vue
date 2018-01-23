@@ -16,7 +16,7 @@
     export default {
         name: 'triggerable-dropdown',
         mixins: [ clickaway ],
-        props: {'size': {default: ''}, 'active': {default: false}, 'align': {default: ''}},
+        props: {'size': {default: ''}, 'align': {default: ''}},
         data() {
             return {
                 isActive: false

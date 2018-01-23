@@ -409,7 +409,7 @@ class BackendPlugin(PluginBase):
                                            adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id']
                                        },
                                        "tagname": tag,
-                                       "tagvalue": tag if request.method == 'POST' else ''}
+                                       "tagvalue": True if request.method == 'POST' else False}
                         responses.append(self.request_remote_plugin(
                             'plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
                             data=json.dumps(update_data)))

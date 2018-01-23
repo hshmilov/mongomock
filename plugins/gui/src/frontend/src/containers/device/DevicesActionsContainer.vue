@@ -3,9 +3,9 @@
         <triggerable-dropdown size="sm" align="right">
             <div slot="dropdownTrigger" class="link">Actions</div>
             <nested-menu slot="dropdownContent">
-                <nested-menu-item title="Tag..." @click="tag.isActive = true"></nested-menu-item>
-                <nested-menu-item title="Add to Black List" @click="blacklist.isActive = true"></nested-menu-item>
-                <nested-menu-item title="Block" @click="block.isActive = true">
+                <nested-menu-item title="Tag..." @click="activate(tag)"></nested-menu-item>
+                <nested-menu-item title="Add to Black List" @click="activate(blacklist)"></nested-menu-item>
+                <nested-menu-item title="Block" @click="activate(block)">
                     <dynamic-popover size="xs" left="236">
                         <nested-menu>
                             <nested-menu-item v-for="blocker in block.blockers" :title="blocker"
@@ -13,7 +13,7 @@
                         </nested-menu>
                     </dynamic-popover>
                 </nested-menu-item>
-                <nested-menu-item title="Scan with" @click="scan.isActive = true">
+                <nested-menu-item title="Scan with" @click="activate(scan)">
                     <dynamic-popover size="xs" left="236">
                         <nested-menu>
                             <nested-menu-item v-for="scanner in scan.scanners" :title="scanner"
@@ -21,7 +21,7 @@
                         </nested-menu>
                     </dynamic-popover>
                 </nested-menu-item>
-                <nested-menu-item title="Deploy" @click="deploy.isActive = true">
+                <nested-menu-item title="Deploy" @click="activate(deploy)">
                     <dynamic-popover size="xs" left="236">
                         <nested-menu>
                             <nested-menu-item v-for="deployment in deploy.deployments" :title="deployment"
@@ -134,6 +134,11 @@
 				addDeviceTags: CREATE_DEVICE_TAGS,
 				removeDeviceTags: DELETE_DEVICE_TAGS
 			}),
+            activate(module) {
+				module.isActive = true
+                // Close the actions dropdown
+                this.$el.click()
+            },
 			saveTags () {
 				/* Separate added and removed tags and create an uber promise returning after both are updated */
 
@@ -148,9 +153,11 @@
 
 			},
 			saveBlacklist () {
-                return new Promise((resolve, reject) => {
-                	resolve()
-                })
+				/*
+				Blacklist is currently implemented by checking for a designated tag,
+				Therefore, adding this tag to selected devices
+				 */
+                return this.addDeviceTags({devices: this.devices, tags: ['do_not_execute']})
 			},
 			saveBlock () {
 				return new Promise((resolve, reject) => {
@@ -167,7 +174,10 @@
 					resolve()
 				})
 			}
-		}
+		},
+        mounted() {
+			this.tag.selected = this.currentTags
+        }
 	}
 </script>
 

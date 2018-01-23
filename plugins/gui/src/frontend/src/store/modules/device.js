@@ -92,7 +92,7 @@ export const processDevice = (device, fields) => {
 			processedDevice[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
 		})
 		processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
-			return !tag.tagname.includes('FIELD') && tag.tagvalue !== undefined && tag.tagvalue !== ''
+			return !tag.tagname.includes('FIELD') && tag.tagvalue && tag.tagvalue !== ''
 		}).map((tag) => {
 			return tag.tagname
 		})
@@ -1191,10 +1191,10 @@ export const device = {
 					...payload.data,
 					data: merge.all(adapterDatas),
 					tags: payload.data.tags.filter((tag) => {
-						return !tag.tagname.includes('FIELD') && tag.tagvalue !== undefined && tag.tagvalue !== ''
+						return !tag.tagname.includes('FIELD') && tag.tagvalue && tag.tagvalue !== ''
 					}),
 					fieldTags: payload.data.tags.filter((tag) => {
-						return tag.tagname.includes('FIELD') && tag.tagvalue !== undefined && tag.tagvalue !== ''
+						return tag.tagname.includes('FIELD') && tag.tagvalue && tag.tagvalue !== ''
 					}).reduce(function(map, tag) {
 						if (!tag.tagvalue) { return map }
 						map[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
