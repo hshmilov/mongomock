@@ -13,6 +13,7 @@ class PluginService(ComposeService):
     def __init__(self, service_dir, mode='', **kwargs):
         if mode == '':
             mode = 'override'
+        self.service_dir = service_dir
         compose_file_path = service_dir + '/docker-compose.yml'
         override_compose_file_path = service_dir + f'/docker-compose.{mode}.yml'
         super().__init__(compose_file_path, override_compose_file_path=override_compose_file_path, **kwargs)
@@ -137,6 +138,7 @@ class AdapterService(PluginService):
                                     headers={API_KEY_HEADER: self.api_key},
                                     json=client_data)
         assert response.status_code == 200, str(response)
+        return response.json()
 
     def action(self, action_type):
         raise NotImplementedError("TBD!")
