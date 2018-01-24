@@ -47,7 +47,7 @@ class DeviceRunningState(Enum):
     """
     Suspended = auto()
     """
-    Plugin is in the process of shutting down
+    Device is in the process of shutting down
     """
     ShuttingDown = auto()
     """
@@ -483,28 +483,6 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         pass
 
-    def is_valid_ip(self, ip):
-        try:
-            ipaddress.ip_address(ip)
-            return True
-        except:
-            return False
-
-    def validate_network_interfaces(self, parsed_device):
-        """
-        Validates that the network interfaces are adhering to the schema
-        """
-        interfaces = parsed_device.get('network_interfaces')
-        if interfaces:
-            assert isinstance(interfaces, list) or isinstance(interfaces, types.GeneratorType), "should be list"
-            for interface in interfaces:
-                mac = interface.get(MAC_FIELD)
-                if mac:
-                    interface[MAC_FIELD] = format_mac(mac)
-                ips = interface.get(IPS_FIELD)
-                if ips:
-                    interface[IPS_FIELD] = [str(ipaddress.ip_address(ip)) for ip in ips if self.is_valid_ip(ip)]
-
     def is_old_device(self, parsed_device):
         """ Checking if a device has not seen for a long time
 
@@ -558,7 +536,6 @@ class AdapterBase(PluginBase, Feature, ABC):
             assert isinstance(parsed_device, Device)
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device['id'])
-            self.validate_network_interfaces(parsed_device)
             if self.is_old_device(parsed_device):
                 skipped_count += 1
                 continue

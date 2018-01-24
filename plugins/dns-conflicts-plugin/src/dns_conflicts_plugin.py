@@ -10,6 +10,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns, NoIpFoundError
 from axonius.mixins.activatable import Activatable
 from axonius.plugin_base import PluginBase, add_rule
@@ -62,7 +63,7 @@ class DnsConflictsPlugin(PluginBase, Activatable):
                 ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
                 self.logger.info(f"looking for ip conflicts from ad_adapter {ad_adapter_unique_name}")
                 hosts = self._get_collection(DEVICES_DATA, db_name=ad_adapter_unique_name).\
-                    find({DNS_RESOLVE_STATUS: 'RESOLVED'},
+                    find({DNS_RESOLVE_STATUS: DNSResolveStatus.Resolved.name},
                          projection={'_id': True,
                                      'id': True,
                                      'raw.AXON_DNS_ADDR': True,

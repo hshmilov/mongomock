@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from enum import Enum
 
 from axonius.fields import Field, ListField
 
@@ -95,6 +96,8 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                         item = item.to_dict()
                     new_list.append(item)
                 new_dict[key] = new_list
+            elif isinstance(new_dict[key], Enum):
+                new_dict[key] = new_dict[key].name
         return new_dict
 
     @classmethod
@@ -131,6 +134,9 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                 if field.pattern is not None:
                     item['pattern'] = field.pattern
                 if field.enum is not None:
-                    item['enum'] = field.enum
+                    enum_values = field.enum
+                    if isinstance(enum_values, type) and issubclass(enum_values, Enum):
+                        enum_values = [value.name for value in enum_values]
+                    item['enum'] = enum_values
             item['type'] = field_type
             yield item

@@ -26,12 +26,12 @@ aws_ec2_id_matcher = re.compile('i-[0-9a-fA-F]{17}')
 
 # translation table between AWS values to parsed values
 POWER_STATE_MAP = {
-    'terminated': DeviceRunningState.TurnedOff.value,
-    'stopped': DeviceRunningState.TurnedOff.value,
-    'running': DeviceRunningState.TurnedOn.value,
-    'pending': DeviceRunningState.TurnedOff.value,
-    'shutting-down': DeviceRunningState.ShuttingDown.value,
-    'stopping': DeviceRunningState.ShuttingDown.value,
+    'terminated': DeviceRunningState.TurnedOff,
+    'stopped': DeviceRunningState.TurnedOff,
+    'running': DeviceRunningState.TurnedOn,
+    'pending': DeviceRunningState.TurnedOff,
+    'shutting-down': DeviceRunningState.ShuttingDown,
+    'stopping': DeviceRunningState.ShuttingDown,
 }
 
 
@@ -55,7 +55,7 @@ def _describe_images_from_client_by_id(client, amis):
 class AWSAdapter(AdapterBase):
 
     class MyDevice(Device):
-        power_state = Field(str, 'Power state')
+        power_state = Field(DeviceRunningState, 'Power state')
 
     def __init__(self, *args, **kwargs):
         """
@@ -180,7 +180,7 @@ class AWSAdapter(AdapterBase):
                     device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
                                                              for addr in iface.get("PrivateIpAddresses", [])])
                 device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
-                                                         DeviceRunningState.Unknown.value)
+                                                         DeviceRunningState.Unknown)
                 device.set_raw(device_raw)
                 yield device
 

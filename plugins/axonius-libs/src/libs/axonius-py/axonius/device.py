@@ -2,7 +2,7 @@ import datetime
 import typing
 
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.parsing_utils import figure_out_os
+from axonius.parsing_utils import figure_out_os, format_mac, format_ip
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
 
@@ -24,8 +24,8 @@ class DeviceOS(SmartJsonClass):
 
 class NetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
-    mac = Field(str, 'Mac')
-    ips = ListField(str, 'IPs')
+    mac = Field(str, 'Mac', converter=format_mac)
+    ips = ListField(str, 'IPs', converter=format_ip)
 
 
 class Device(SmartJsonClass):

@@ -5,6 +5,7 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 __author__ = "Mark Segal"
 
 import codenamize
+import ipaddress
 import re
 import sys
 import os
@@ -134,6 +135,13 @@ def format_mac(mac: str) -> str:
     # convert mac in canonical form (eg. 00:80:41:ae:fd:7e)
     mac = ":".join(["%s" % (mac[i:i + 2]) for i in range(0, 12, 2)])
     return mac.upper()
+
+
+def format_ip(value):
+    try:
+        return str(ipaddress.ip_address(value))
+    except:
+        raise ValueError(f'Invalid IP address: {value}')
 
 
 def parse_date(datetime_as_string):

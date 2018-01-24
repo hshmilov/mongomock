@@ -14,9 +14,9 @@ from vcenter_api import vCenterApi, rawify_vcenter_data
 
 # translation table between ESX values to parsed values
 POWER_STATE_MAP = {
-    'poweredOff': DeviceRunningState.TurnedOff.value,
-    'poweredOn': DeviceRunningState.TurnedOn.value,
-    'suspended': DeviceRunningState.Suspended.value,
+    'poweredOff': DeviceRunningState.TurnedOff,
+    'poweredOn': DeviceRunningState.TurnedOn,
+    'suspended': DeviceRunningState.Suspended,
 }
 
 
@@ -25,7 +25,7 @@ class ESXAdapter(AdapterBase):
     class MyDevice(Device):
         vm_tools_status = Field(str, 'VM Tools Status')
         vm_physical_path = Field(str, 'VM physical path')
-        power_state = Field(str, 'Power state')
+        power_state = Field(DeviceRunningState, 'Power state')
 
     def __init__(self, *args, **kwargs):
         """
@@ -113,7 +113,7 @@ class ESXAdapter(AdapterBase):
             device.vm_tools_status = guest.get('toolsStatus', '')
             device.vm_physical_path = _curr_path + "/" + node.get('Name', '')
             device.power_state = POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
-                                                     DeviceRunningState.Unknown.value)
+                                                     DeviceRunningState.Unknown)
             device.set_raw(details)
             yield device
         elif node.get('Type', '') in ("Datacenter", "Folder", "Root"):

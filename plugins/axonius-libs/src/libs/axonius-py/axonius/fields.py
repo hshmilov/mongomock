@@ -27,11 +27,12 @@ class JsonStringFormat(Enum):
 class Field(object):
     """ A single field class, holds information regarding python type checking and json-serialization """
 
-    def __init__(self, field_type, description=None, json_format: JsonStringFormat=None, min_value=None, max_value=None,
-                 pattern=None, enum=None):
+    def __init__(self, field_type, description=None, converter=None, json_format: JsonStringFormat=None, min_value=None,
+                 max_value=None, pattern=None, enum=None):
         """
         :param field_type: The python type of the field, must be provided.
         :param description: The description of the field (would be displayed in the GUI)
+        :param converter: if provided, will be used to convert the function supplied to a standard form
         :param json_format: if provided, will be returned as format json-field
         :param min_value: if provided, will be returned as format json-field
         :param max_value: if provided, will be returned as format json-field
@@ -40,6 +41,9 @@ class Field(object):
         """
         self._type = field_type
         self._description = description
+        if converter is not None:
+            assert callable(converter)
+        self._converter = converter
         self._name = None
         if json_format is not None:
             assert isinstance(json_format, JsonStringFormat)
@@ -54,7 +58,9 @@ class Field(object):
             assert isinstance(pattern, str)
         self._pattern = pattern
         if enum is not None:
-            assert isinstance(enum, list)
+            assert isinstance(enum, list) or issubclass(enum, Enum)
+        elif issubclass(field_type, Enum):
+            enum = field_type
         self._enum = enum
 
     @property
@@ -64,6 +70,10 @@ class Field(object):
     @property
     def description(self):
         return self._description
+
+    @property
+    def converter(self):
+        return self._converter
 
     @property
     def type(self):
@@ -149,6 +159,9 @@ class Field(object):
                     raise ValueError(f'Got {value} more then defined maximum {field_instance.max}')
             elif name not in self._dict:
                 return
+
+            if field_instance.converter:
+                value = field_instance.converter(value)
             self._dict[name] = value
             self._extend_names(name, value)  # add our name to the SmartJsonClass instance
 
@@ -169,6 +182,7 @@ class ListField(Field):
         from axonius.smart_json_class import SmartJsonClass
         self._set_name(name)
         field_type = self._type
+        field_instance = self
         is_smart_field = issubclass(field_type, SmartJsonClass)
 
         # define a new specific type-checking list class
@@ -178,6 +192,8 @@ class ListField(Field):
                     pass
                 elif not isinstance(obj, field_type):
                     raise TypeError(f'{name} expected to be {field_type}, got {obj} of {type(obj)} instead')
+                if field_instance.converter:
+                    obj = field_instance.converter(obj)
                 super(_List, self).append(obj)
 
         def getter(self: SmartJsonClass):
@@ -208,6 +224,12 @@ class ListField(Field):
                         raise TypeError(f'{name} expected to be {field_type}, got {item} of {type(item)} instead')
             elif name not in self._dict:
                 return
+
+            if field_instance.converter:
+                new_list = []
+                for item in value:
+                    new_list.append(field_instance.converter(item))
+                value = new_list
             self._dict[name] = _List(value)  # set new (type-checked-list) value inside the dict of SmartJsonClass
             self._extend_names(name, value)  # add our name to the SmartJsonClass instance
 
