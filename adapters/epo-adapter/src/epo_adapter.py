@@ -120,17 +120,19 @@ class EpoAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in json.loads(devices_raw_data):
-            hostname = device_raw.get('EPOComputerProperties.IPHostName',
-                                      device_raw.get('EPOComputerProperties.ComputerName', ''))
+            epo_id = device_raw.get('EPOLeafNode.AgentGUID')
+            if epo_id is None:
+                # skipping devices without Agent-ID
+                continue
+
+            hostname = device_raw.get('EPOComputerProperties.IPHostName')
+            if hostname is None or hostname == '':
+                hostname = device_raw.get('EPOComputerProperties.ComputerName')
 
             if 'EPOLeafNode.LastUpdate' not in device_raw:
                 # No date for this device, we don't want to enter devices with no date so continuing.
                 self.logger.warning(f"Found device with no date. Not inserting to db. device name: {hostname}")
                 continue
-
-            epo_id = device_raw.get('EPOLeafNode.AgentGUID')
-            if epo_id is None:
-                self.logger.error(f"Got epo device without EPOLeafNode.AgentGUID {device_raw}")
 
             device = self._new_device()
             device.hostname = hostname
