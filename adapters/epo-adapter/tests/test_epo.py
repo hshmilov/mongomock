@@ -124,6 +124,14 @@ def test_parse_network_no_ipv4_no_mac():
     assert sorted(device.network_interfaces[0].ips) == sorted(['172.31.21.74', '::ffff:ac1f:154a'])
 
 
+def test_ip_of_zeroes():
+    raw = {'EPOComputerProperties.IPV4x': -2147483648,
+           'EPOComputerProperties.IPV6': 'FE80:0:0:0:ECC1:22FF:FED6:AAD4'}
+    device = Device(set(), set())
+    epo_adapter.parse_network(raw, device, MagicMock())
+    assert sorted(device.network_interfaces[0].ips) == sorted(['fe80::ecc1:22ff:fed6:aad4', '0.0.0.0'])
+
+
 def test_escape_dict():
     for key in escape_dict(raw_device_data.copy()):
         assert '.' not in key

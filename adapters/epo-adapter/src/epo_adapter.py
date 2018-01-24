@@ -1,7 +1,7 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.device import Device
-from axonius.parsing_utils import format_mac, parse_date
+from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
 import json
 import ipaddress
 import mcafee
@@ -42,12 +42,12 @@ def parse_network(device_raw, device, logger):
         logger.info(f"Error reading IPv4 {raw_ipv4}")
 
     raw_ipv6 = device_raw.get('EPOComputerProperties.IPV6')
-    if raw_ipv6 and isinstance(raw_ipv6, str):
+    if is_valid_ip(raw_ipv6) and raw_ipv6 is not None:
         ip_list.add(raw_ipv6.lower())
 
     try:
-        ipv4mapped = ipaddress.IPv6Address(raw_ipv6).ipv4_mapped
-        if str(ipv4mapped) != parsed_ipv4:
+        ipv4mapped = ipaddress.IPv6Address(raw_ipv6).ipv4_mapped if is_valid_ip(raw_ipv6) else None
+        if ipv4mapped and str(ipv4mapped) != parsed_ipv4:
             logger.info(
                 f"ipv4/6 mismatch: raw4={raw_ipv4} raw6={raw_ipv6} parsed4={parsed_ipv4} ip4-6mapped={ipv4mapped}")
             if ipv4mapped:

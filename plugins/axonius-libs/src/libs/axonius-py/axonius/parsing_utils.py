@@ -10,6 +10,7 @@ import re
 import sys
 import os
 import dateutil.parser
+import ipaddress
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
@@ -129,7 +130,17 @@ def beautiful_adapter_device_name(adapter_plugin_name: str, adapter_device_id: s
     return codenamize.codenamize(f"{adapter_plugin_name}->{adapter_device_id}", adjectives=3, max_item_chars=10)
 
 
-def format_mac(mac: str) -> str:
+def is_valid_ip(ip):
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except:
+        return False
+
+
+def format_mac(mac: str):
+    if mac is None or mac == '':
+        return None
     mac = re.sub('[.:-]', '', mac).lower()  # remove delimiters and convert to lower case
     mac = ''.join(mac.split())  # remove whitespaces
     # convert mac in canonical form (eg. 00:80:41:ae:fd:7e)
