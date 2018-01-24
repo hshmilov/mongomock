@@ -69,6 +69,11 @@
 		components: {TriggerableDropdown, StatusIcon},
 		name: 'top-bar-container',
 		computed: mapState(['interaction', 'notification']),
+        data() {
+			return {
+				interval: null
+			}
+        },
 		methods: {
 			...mapMutations({toggleSidebar: TOGGLE_SIDEBAR}),
 			...mapActions({
@@ -89,13 +94,22 @@
 					return 'Yesterday'
 				}
 				return date.toLocaleDateString()
-			}
+			},
+            loadNotifications() {
+                this.fetchNotificationsUnseenCount({})
+                this.fetchNotificationsUnseen({
+                    skip: 0, limit: 5
+                })
+            }
 		},
-		mounted () {
-			this.fetchNotificationsUnseenCount({})
-			this.fetchNotificationsUnseen({
-				skip: 0, limit: 5
-			})
+		mounted() {
+            this.loadNotifications()
+            this.interval = setInterval(function () {
+                this.loadNotifications()
+            }.bind(this), 60000);
+		},
+		beforeDestroy() {
+			clearInterval(this.interval);
 		}
 	}
 </script>
