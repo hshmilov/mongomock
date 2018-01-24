@@ -171,7 +171,7 @@ export const plugin = {
 				rule: `/api/plugins/${pluginId}/start`,
 				method: 'POST'
 			}).then((response) => {
-				if (response !== '') {
+				if (response.data !== '') {
 					return
 				}
 				commit(UPDATE_PLUGIN_START, pluginId)
@@ -186,7 +186,7 @@ export const plugin = {
 				rule: `/api/plugins/${pluginId}/stop`,
 				method: 'POST'
 			}).then((response) => {
-				if (response !== '') {
+				if (response.data !== '') {
 					return
 				}
 				commit(UPDATE_PLUGIN_STOP, pluginId)

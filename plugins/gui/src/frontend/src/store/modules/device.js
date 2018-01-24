@@ -1326,7 +1326,7 @@ export const device = {
 				commit(SELECT_FIELDS, payload.fields)
 				param += `&fields=${payload.fields}`
 			}
-			if (payload.filter && Object.keys(payload.filter).length) {
+			if (payload.filter && payload.filter.length) {
 				param += `&filter=${payload.filter}`
 			}
 			dispatch(REQUEST_API, {

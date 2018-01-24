@@ -161,6 +161,7 @@
 				this.updateSelected()
 			},
 			addData () {
+				if (this.fetching) { return }
 				this.fetchData({
 					skip: this.fetchedPages * this.pageSize * 50,
 					limit: this.pageSize * 50,
