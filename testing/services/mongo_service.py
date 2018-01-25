@@ -7,10 +7,13 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class MongoService(ComposeService):
-    def __init__(self, endpoint=('localhost', 27018), **kwargs):
-        super().__init__('../infrastructures/database/docker-compose.yml', **kwargs)
+    def __init__(self, **kwargs):
+        self.service_dir = '../infrastructures/database'
+        compose_file_path = self.service_dir + '/docker-compose.yml'
+        super().__init__(compose_file_path, **kwargs)
+        port = self.parsed_compose_file.exposed_port
         self.client = None
-        self.endpoint = endpoint
+        self.endpoint = ('localhost', port)
         self.connect()
 
     def is_mongo_alive(self):

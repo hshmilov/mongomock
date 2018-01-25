@@ -18,8 +18,8 @@ metadata:
     name: mongo
 spec:
   ports:
-  - port: 27018
-    targetPort: 27018
+  - port: 27017
+    targetPort: 27017
   clusterIP: None
   selector:
     role: mongo
@@ -55,7 +55,7 @@ spec:
             - name: MONGO_INITDB_DATABASE
               value: core
           ports:
-            - containerPort: 27018
+            - containerPort: 27017
           volumeMounts:
             - name: axonius-data
               mountPath: /data/db
