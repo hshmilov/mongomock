@@ -1,3 +1,5 @@
+from typing import List, NewType
+from types import FunctionType
 from abc import ABC, abstractmethod
 
 import itertools
@@ -5,6 +7,10 @@ from funcy import pairwise
 
 from axonius.correlator_base import CorrelationResult, figure_actual_os, OSTypeInconsistency, is_scanner_device
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+
+adapter_device = NewType('adapter_device', dict)
+pair_comparator = NewType('lambda x,y -> bool', FunctionType)
+parameter_function = NewType('lambda x -> paramter of x', FunctionType)
 
 
 class CorrelatorEngineBase(ABC):
@@ -28,6 +34,71 @@ class CorrelatorEngineBase(ABC):
                         yield device
             except OSTypeInconsistency:
                 self.logger.exception("OS inconsistent over correlated devices", device['internal_axon_id'])
+
+    def _process_combinations(self, bucket: List[adapter_device], comparators: List[pair_comparator],
+                              data_dict: dict, reason: str):
+        """
+        goes over the bucket comparing every device with every other device
+        :param list[adapter_devices]|bucket: the list of devices to compare to one another
+        :param lambda x,y -> bool|comparators: the list of comparators to check the pairs of devices against
+        :param dict|data_dict: the data to pass with the correlation
+        :param str|reason: the reason for the correlation being made
+        :return: yields a correlation if a pair of devices goes through all the comparators successfully
+        """
+        pair_number = 0
+        num_of_pairs = len(bucket)
+        num_of_pairs = (num_of_pairs * (num_of_pairs - 1)) / 2
+        for device1, device2 in itertools.combinations(bucket, 2):
+            pair_number += 1
+            if pair_number % 100000 == 0:
+                self.logger.info(f"Correlating outer bucket of #pair: {pair_number} out of {num_of_pairs}")
+            if all(compare(device1, device2) for compare in comparators):
+                # If we reached here that means that we should join this two devices according to this rule.
+                yield CorrelationResult(associated_adapter_devices=[(device1[PLUGIN_UNIQUE_NAME], device1['data']['id']),
+                                                                    (device2['plugin_name'], device2['data']['id'])],
+                                        data=data_dict,  # not copying as they all have the same data
+                                        reason=reason)
+
+    def _correlate(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
+                   bucket_insertion_comparators: List[pair_comparator],
+                   inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: str):
+        """
+        Performs an initial sort and pairwise comparison in order to minimize the buckets.
+            Buckets are filled with adapter_devices which pass the bucket_insertion_comparators.
+            When a device misses the bucket, we pass the bucket for further inspection to see if any correlations occur.
+            If you can - for performance purposes use sort order and bucket_insertion_comparators as to lower the amount
+            of combinations as much as possible
+        for further details also see _process_combinations docs
+        :param adapters_to_correlate: a list of the adapters to correlate
+        :param sort_order: a list of sorting lambdas in order of the wanted sort
+        :param bucket_insertion_comparators: a list of comparators of type lambda x,y -> bool
+                for which an adapter_device would enter the bucket
+        :param inner_bucket_comparators: full bucket comparisons to further inspect the bucket
+        :param dict|data_dict: the data to pass with the correlation
+        :param str|reason: the reason for the correlation being made
+        :return: yields a correlation if a pair of devices goes through all the comparators successfully
+        """
+
+        if len(adapters_to_correlate) < 2:
+            return
+
+        for func in sort_order:
+            adapters_to_correlate.sort(key=func)
+
+        bucket = [adapters_to_correlate[0]]
+        pair_number = 1
+        num_of_pairs = len(adapters_to_correlate)
+        for a, b in pairwise(adapters_to_correlate):
+            if pair_number % 100000 == 0:
+                self.logger.info(f"Correlating outer bucket of #pair: {pair_number} out of {num_of_pairs}")
+            if all(compare(a, b) for compare in bucket_insertion_comparators):
+                pair_number += 1
+                bucket.append(b)
+            else:
+                yield from self._process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
+                bucket = []
+        if len(bucket) > 1:
+            yield from self._process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
 
     def _preprocess_devices(self, devices):
         """
