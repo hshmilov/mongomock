@@ -98,7 +98,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                     # finding the api key
                     api_key = self.api_key
                     if api_key != request.headers.get('x-api-key'):
-                        raise RuntimeError(f"Bad api key. Expected {api_key}, got {request.headers.get('x-api-key')}")
+                        raise RuntimeError(f"Bad api key. got {request.headers.get('x-api-key')}")
                 return func(self, *args, **kwargs)
             except Exception as err:
                 try:
