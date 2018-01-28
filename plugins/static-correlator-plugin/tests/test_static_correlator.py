@@ -371,6 +371,182 @@ def test_rule_ip_mac_scanner_correlation_fails_no_scanner_field():
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC and IPs', 0)
 
 
+def test_rule_ip_hostname_os_succeeds_even_with_domain():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local.axonius",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same OS, hostname and IPs', 1)
+
+
+def test_rule_ip_hostname_os_fails_on_domains_not_default():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local.axonius",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol.9",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same OS, hostname and IPs', 0)
+
+
+def test_rule_ip_hostname_os_fails_hostname_even_after_domain():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local.axonius",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol3.",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same OS, hostname and IPs', 0)
+
+
+def test_rule_ip_hostname_os_fails_hostname_with_dot():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local.axonius",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntu.lolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same OS, hostname and IPs', 0)
+
+
+def test_rule_ip_hostname_os_suceeds_with_default_and_nondefault_domain():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol.axonius",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same OS, hostname and IPs', 1)
+
+
+def test_rule_ip_hostname_os_suceeds_with_default_domains():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'myma324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntulolol.workgroup",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mymac',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same OS, hostname and IPs', 1)
+
+
+def test_rule_one_is_ad_and_full_hostname():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mym234a324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntuLolol.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'my234mac',
+                                                  IPS_FIELD: ['1.31.1.1']}])
+    device1['adapters'][0]['plugin_name'] = 'ad_adapter'
+    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
+    device2['adapters'][0]['plugin_name'] = 'ad_adapter'
+    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 1)
+
+
+def test_rule_one_is_ad_and_full_hostname_fail_on_hostname_even_with_default_domain():
+    """
+    Test a very simple correlation that should happen
+    because IP+hostname+os
+    :return:
+    """
+    device1 = get_raw_device(hostname="ubuntuLolol.local",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'mym234a324c',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(hostname="ubuntuLolol",
+                             os={'bitness': 32,
+                                 'distribution': 'Ubuntu',
+                                 'type': 'Linux'},
+                             network_interfaces=[{MAC_FIELD: 'my234mac',
+                                                  IPS_FIELD: ['1.31.1.1']}])
+    device1['adapters'][0]['plugin_name'] = 'ad_adapter'
+    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
+    device2['adapters'][0]['plugin_name'] = 'ad_adapter'
+    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 0)
+
+
 if __name__ == '__main__':
     import pytest
     pytest.main([__file__])

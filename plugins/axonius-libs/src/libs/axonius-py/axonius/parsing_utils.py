@@ -160,3 +160,20 @@ def parse_date(datetime_as_string):
         return dateutil.parser.parse(datetime_as_string, ignoretz=True)
     except (TypeError, ValueError):
         return None
+
+
+def does_list_startswith(list1, list2):
+    """
+     by slicing list1 the size of list2 and comparing to list2 we can check if list1 starts with list2
+    :param list1: the list to test
+    :param list2: the list we want list1 to begin with
+    :return: returns True if list1 starts with list2
+    """
+    return list1[:len(list2)] == list2
+
+
+def remove_trailing(string, trailing):
+    the_len = len(trailing)
+    if string[-the_len:] == trailing:
+        return string[:-the_len]
+    return string

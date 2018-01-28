@@ -1,12 +1,25 @@
 """
 CorrelatorPlugin.py: A Plugin for the devices correlation process
 """
+from axonius.parsing_utils import does_list_startswith, remove_trailing
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 
-
-NORMALIZED_IPS = 'NORMALIZED_IPS'
-NORMALIZED_MACS = 'NORMALIZED_MACS'
+# NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.
+# Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
+# them each time.
+NORMALIZED_IPS = 'normalized_ips'
+NORMALIZED_MACS = 'normalized_macs'
+# Unfortunately there's no normalized way to return a hostname - currently many adapters return hostname.domain.
+# However in non-windows systems, the hostname itself can contain "." which means there's no way to tell which part is
+# the hostname when splitting.
+# The problem starts as some adapters yield a hostname with a default domain added to it even when a domain exists, and
+# some don't return a domain at all.
+# In order to ignore that and allow proper hostname comparison we want to remove the default domains.
+# Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
+# Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
+NORMALIZED_HOSTNAME = 'normalized_hostname'
+DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP']
 
 
 def _extract_all_ips(network_ifs):
@@ -65,6 +78,22 @@ def _compare_hostname(adapter_device1, adapter_device2):
     return False
 
 
+def _compare_normalized_hostname(adapter_device1, adapter_device2):
+    """
+    As mentioned above in the documentation near the definition of NORMALIZED_HOSTNAME we want to compare hostnames not
+    based on the domain as some adapters don't return one or return a default one even when one exists. After we
+    split each host name on "." if one list starts with the other - one hostname is the beginning of the other not
+    including the domain - which means in our view - they are the same - for example:
+    1. ubuntuLolol.local == ubuntulolol.workgroup  --- because both have a default domain
+    2. ubuntuLolol.local == ubuntulolol.axonius  --- because one has a default domain and the other has a normal one
+        when normalizing this would become ['ubuntuLolol'], ['ubuntulolol','axonius'] and list2 starts with list1
+    3. ubuntuLolol.local.axonius != ubuntulolol.9 as when normalizing they'd become
+        ['ubuntuLolol', 'local', 'axonius'], ['ubuntulolol', '9'] and no list is the beginning of the other.
+    """
+    return does_list_startswith(adapter_device1[NORMALIZED_HOSTNAME], adapter_device2[NORMALIZED_HOSTNAME]) or \
+        does_list_startswith(adapter_device2[NORMALIZED_HOSTNAME], adapter_device1[NORMALIZED_HOSTNAME])
+
+
 def is_one_a_scanner(adapter_device1, adapter_device2):
     """
     checks if one of the adapters is the result of a scanner device
@@ -79,6 +108,11 @@ def is_one_a_scanner(adapter_device1, adapter_device2):
 
 def is_different_plugin(adapter_device1, adapter_device2):
     return adapter_device1['plugin_name'] != adapter_device2['plugin_name']
+
+
+def is_one_from_ad(adapter_device1, adapter_device2):
+    return adapter_device1['plugin_name'] == 'ad_adapter' or \
+        adapter_device2['plugin_name'] == 'ad_adapter'
 
 
 def _get_normalized_mac(adapter_device):
@@ -120,7 +154,6 @@ def _normalize_adapter_devices(devices):
     :param devices: all of the devices to be correlated
     :return: a normalized list of the adapter_devices
     """
-    adapters_to_correlate = []
     for device in devices:
         for adapter_device in device['adapters']:
             adapter_data = adapter_device['data']
@@ -129,12 +162,18 @@ def _normalize_adapter_devices(devices):
                 macs = set(_extract_all_macs(adapter_data[NETWORK_INTERFACES_FIELD]))
                 adapter_device[NORMALIZED_IPS] = ips if len(ips) > 0 else None
                 adapter_device[NORMALIZED_MACS] = macs if len(macs) > 0 else None
-            if adapter_data.get('hostname') is not None:
-                adapter_data['hostname'] = adapter_data['hostname'].upper()
-            if adapter_data.get(OS_FIELD, None) is not None and adapter_data.get(OS_FIELD, {}).get('type', '') != '':
+            hostname = adapter_data.get('hostname')
+            if hostname is not None:
+                final_hostname = hostname.upper()
+                adapter_data['hostname'] = final_hostname
+                for extension in DEFAULT_DOMAIN_EXTENSIONS:
+                    final_hostname = remove_trailing(final_hostname, extension)
+                # Save the normalized hostname so we can later easily compare.
+                # See further doc near definition of NORMALIZED_HOSTNAME.
+                adapter_device[NORMALIZED_HOSTNAME] = final_hostname.split('.')
+            if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type', '') != '':
                 adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
-            adapters_to_correlate.append(adapter_device)
-    return adapters_to_correlate
+            yield adapter_device
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -192,49 +231,65 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 descriptive as possible please
 
         6. 'StaticAnalysis' - the analysis used to discover the correlation
-        :param adapters_to_correlate:
-        :return:
         """
+        self.logger.info("Starting to correlate on MAC-IP-OS")
         filtered_adapters_list = filter(_get_normalized_mac,
                                         filter(_get_normalized_ip,
                                                filter(_get_os_type, adapters_to_correlate)))
-        yield from self._correlate(list(filtered_adapters_list),
-                                   [_get_os_type],
-                                   [_compare_os_type],
-                                   [is_different_plugin, _compare_macs, _compare_ips],
-                                   {'Reason': 'They have the same OS, MAC and IPs'},
-                                   'StaticAnalysis')
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [_get_os_type],
+                                      [_compare_os_type],
+                                      [is_different_plugin, _compare_macs, _compare_ips],
+                                      {'Reason': 'They have the same OS, MAC and IPs'},
+                                      'StaticAnalysis')
 
     def _correlate_scanner_mac_ip(self, adapters_to_correlate):
+        self.logger.info("Starting to correlate on MAC-IP-Scanner")
         filtered_adapters_list = filter(_get_normalized_mac,
                                         filter(_get_normalized_ip, adapters_to_correlate))
-        yield from self._correlate(list(filtered_adapters_list),
-                                   [],
-                                   [],
-                                   [is_different_plugin, _compare_macs, _compare_ips],
-                                   {'Reason': 'They have the same MAC and IPs'},
-                                   'ScannerAnalysis')
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [],
+                                      [],
+                                      [is_different_plugin, _compare_macs, _compare_ips],
+                                      {'Reason': 'They have the same MAC and IPs'},
+                                      'ScannerAnalysis')
 
     def _correlate_hostname_ip_os(self, adapters_to_correlate):
+        self.logger.info("Starting to correlate on Hostname-IP-OS")
         filtered_adapters_list = filter(_get_hostname,
                                         filter(_get_normalized_ip,
                                                filter(_get_os_type, adapters_to_correlate)))
-        yield from self._correlate(list(filtered_adapters_list),
-                                   [_get_hostname, _get_normalized_ip, _get_os_type],
-                                   [_compare_hostname, _compare_os_type],
-                                   [is_different_plugin, _compare_ips],
-                                   {'Reason': 'They have the same OS, hostname and IPs'},
-                                   'StaticAnalysis')
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [_get_hostname, _get_normalized_ip, _get_os_type],
+                                      [_compare_normalized_hostname, _compare_os_type],
+                                      [is_different_plugin, _compare_ips],
+                                      {'Reason': 'They have the same OS, hostname and IPs'},
+                                      'StaticAnalysis')
 
     def _correlate_scanner_hostname_ip(self, adapters_to_correlate):
+        self.logger.info("Starting to correlate on Hostname-IP-Scanner")
         filtered_adapters_list = filter(_get_hostname,
                                         filter(_get_normalized_ip, adapters_to_correlate))
-        yield from self._correlate(list(filtered_adapters_list),
-                                   [_get_hostname],
-                                   [_compare_hostname],
-                                   [is_different_plugin, is_one_a_scanner, _compare_ips],
-                                   {'Reason': 'They have the same hostname and IPs'},
-                                   'ScannerAnalysis')
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [_get_hostname],
+                                      [_compare_normalized_hostname],
+                                      [is_different_plugin, is_one_a_scanner, _compare_ips],
+                                      {'Reason': 'They have the same hostname and IPs'},
+                                      'ScannerAnalysis')
+
+    def _correlate_with_ad(self, adapters_to_correlate):
+        """
+        AD correlation is a little more loose - we allow correlation based on hostname alone.
+        In order to lower the false positive rate we don't use the normalized hostname but rather the full one
+        """
+        self.logger.info("Starting to correlate on Hostname-AD")
+        filtered_adapters_list = filter(_get_hostname, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [_get_hostname],
+                                      [_compare_hostname],
+                                      [is_one_from_ad],
+                                      {'Reason': 'They have the same hostname and one is AD'},
+                                      'ScannerAnalysis')
 
     def _raw_correlate(self, devices):
         """
@@ -247,14 +302,16 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # 1. adding 2 fields to the root - NORMALIZED_IPS and NORMALIZED_MACS to allow easy access to the ips and macs
         #    of all the NICs
         # 2. uppering every field we might sort by - currently hostname and os type
-        adapters_to_correlate = _normalize_adapter_devices(devices)
+        # 3. splitting the hostname into a list in order to be able to compare hostnames without depending on the domain
+        adapters_to_correlate = list(_normalize_adapter_devices(devices))
 
         # let's find devices by, hostname, os, and ip:
         yield from self._correlate_hostname_ip_os(adapters_to_correlate)
 
         # Now let's find devices by MAC, os, and IP
         yield from self._correlate_mac_ip_os(adapters_to_correlate)
-
+        # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
+        yield from self._correlate_with_ad(adapters_to_correlate)
         # Now let's correlate scanner devices
         yield from self._correlate_scanner_mac_ip(adapters_to_correlate)
 
