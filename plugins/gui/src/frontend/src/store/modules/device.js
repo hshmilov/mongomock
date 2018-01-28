@@ -1223,12 +1223,10 @@ export const device = {
 			state.tagList.fetching = payload.fetching
 			state.tagList.error = payload.error
 			if (payload.data) {
-				state.tagList.data = payload.data.filter((tag) => {
-					return !tag.includes('FIELD') && tag !== ''
-				}).map(function (tag) {
+				state.tagList.data = payload.data.map((tag) => {
 					return {name: tag, path: tag}
 				})
-				state.fields.common.forEach(function (field) {
+				state.fields.common.forEach((field) => {
 					if (field.path === 'tags.tagname') {
 						field.options = state.tagList.data
 					}
@@ -1249,9 +1247,14 @@ export const device = {
 			let tags = state.tagList.data.map((tag) => {
 				return tag.path
 			})
-			payload.tags.forEach(function (tag) {
+			payload.tags.forEach((tag) => {
 				if (tags.indexOf(tag) === -1) {
 					state.tagList.data.push({name: tag, path: tag})
+				}
+			})
+			state.fields.common.forEach((field) => {
+				if (field.path === 'tags.tagname') {
+					field.options = state.tagList.data
 				}
 			})
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
@@ -1271,6 +1274,25 @@ export const device = {
 					device['tags.tagname'] = device['tags.tagname'].filter((tag) => {
 						return payload.tags.indexOf(tag) === -1
 					})
+				}
+			})
+			state.tagList.data = state.tagList.data.filter((tag) => {
+				if (!payload.tags.includes(tag.path)) { return true }
+				let exists = false
+				state.deviceList.data.forEach((device) => {
+					if (!device['tags.tagname']) { return }
+					device['tags.tagname'].forEach((deviceTag) => {
+						if (deviceTag === tag.path) {
+							exists = true
+						}
+					})
+				})
+				return exists
+
+			})
+			state.fields.common.forEach((field) => {
+				if (field.path === 'tags.tagname') {
+					field.options = state.tagList.data
 				}
 			})
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id

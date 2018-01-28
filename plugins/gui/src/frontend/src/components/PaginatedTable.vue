@@ -105,20 +105,10 @@
 		watch: {
 			filterFields: function (newFields, oldFields) {
 				if (newFields.length <= oldFields.length) { return }
-				this.maxPages = 0
-				this.fetchedPages = 0
-				this.currentPage = 0
-				this.linkedPageCount = 1
-				this.linkedPageStart = 0
-				this.addData()
+				this.restartData()
 			},
 			filter: function (newFilter) {
-				this.maxPages = 0
-				this.fetchedPages = 0
-				this.currentPage = 0
-				this.linkedPageCount = 1
-				this.linkedPageStart = 0
-				this.addData()
+				this.restartData()
 			},
 			fetching: function (newFetching) {
 				if (newFetching) {
@@ -143,17 +133,15 @@
 		},
 		methods: {
 			updateSelected () {
-				let _this = this
-				let selectedRecords = Object.keys(this.recordSelection).filter(function (id) {
-					return _this.recordSelection[id]
+				let selectedRecords = Object.keys(this.recordSelection).filter((id) => {
+					return this.recordSelection[id]
 				})
 				this.$emit('input', selectedRecords)
 			},
 			updateSelectedAll () {
 				if (this.selectAllRecords) {
-					let _this = this
-					this.data.forEach(function (record) {
-						_this.recordSelection[record['id']] = true
+					this.data.forEach((record) => {
+						this.recordSelection[record['id']] = true
 					})
 				} else {
 					this.recordSelection = {}
@@ -185,6 +173,15 @@
             lastPage() {
 				if (this.isLastPage) { return }
 				this.selectPage(this.maxPages)
+            },
+            restartData() {
+				this.maxPages = 0
+				this.fetchedPages = 0
+				this.currentPage = 0
+				this.linkedPageCount = 1
+				this.linkedPageStart = 0
+				this.recordSelection = {}
+				this.addData()
             },
             restartPagination() {
 				/*

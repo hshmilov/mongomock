@@ -387,7 +387,7 @@ class BackendPlugin(PluginBase):
             if request.method == 'GET':
                 for current_device in client_collection.find({"tags.tagvalue": {"$exists": True}}):
                     for current_tag in current_device['tags']:
-                        if current_tag['tagvalue'] is not '':
+                        if not current_tag['tagname'].startswith('FIELD') and current_tag['tagvalue']:
                             all_tags.add(current_tag['tagname'])
                 return jsonify(all_tags)
 

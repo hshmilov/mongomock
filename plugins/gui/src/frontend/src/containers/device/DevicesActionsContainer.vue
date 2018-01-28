@@ -5,30 +5,30 @@
             <nested-menu slot="dropdownContent">
                 <nested-menu-item title="Tag..." @click="activate(tag)"></nested-menu-item>
                 <nested-menu-item title="Add to Black List" @click="activate(blacklist)"></nested-menu-item>
-                <nested-menu-item title="Block" @click="activate(block)">
-                    <dynamic-popover size="xs" left="236">
-                        <nested-menu>
-                            <nested-menu-item v-for="blocker in block.blockers" :title="blocker"
-                                              @click="block.selected = blocker"></nested-menu-item>
-                        </nested-menu>
-                    </dynamic-popover>
-                </nested-menu-item>
-                <nested-menu-item title="Scan with" @click="activate(scan)">
-                    <dynamic-popover size="xs" left="236">
-                        <nested-menu>
-                            <nested-menu-item v-for="scanner in scan.scanners" :title="scanner"
-                                              @click="scan.selected = scanner"></nested-menu-item>
-                        </nested-menu>
-                    </dynamic-popover>
-                </nested-menu-item>
-                <nested-menu-item title="Deploy" @click="activate(deploy)">
-                    <dynamic-popover size="xs" left="236">
-                        <nested-menu>
-                            <nested-menu-item v-for="deployment in deploy.deployments" :title="deployment"
-                                              @click="deploy.selected = deployment"></nested-menu-item>
-                        </nested-menu>
-                    </dynamic-popover>
-                </nested-menu-item>
+                <!--<nested-menu-item title="Block" @click="activate(block)">-->
+                    <!--<dynamic-popover size="xs" left="236">-->
+                        <!--<nested-menu>-->
+                            <!--<nested-menu-item v-for="blocker in block.blockers" :title="blocker"-->
+                                              <!--@click="block.selected = blocker"></nested-menu-item>-->
+                        <!--</nested-menu>-->
+                    <!--</dynamic-popover>-->
+                <!--</nested-menu-item>-->
+                <!--<nested-menu-item title="Scan with" @click="activate(scan)">-->
+                    <!--<dynamic-popover size="xs" left="236">-->
+                        <!--<nested-menu>-->
+                            <!--<nested-menu-item v-for="scanner in scan.scanners" :title="scanner"-->
+                                              <!--@click="scan.selected = scanner"></nested-menu-item>-->
+                        <!--</nested-menu>-->
+                    <!--</dynamic-popover>-->
+                <!--</nested-menu-item>-->
+                <!--<nested-menu-item title="Deploy" @click="activate(deploy)">-->
+                    <!--<dynamic-popover size="xs" left="236">-->
+                        <!--<nested-menu>-->
+                            <!--<nested-menu-item v-for="deployment in deploy.deployments" :title="deployment"-->
+                                              <!--@click="deploy.selected = deployment"></nested-menu-item>-->
+                        <!--</nested-menu>-->
+                    <!--</dynamic-popover>-->
+                <!--</nested-menu-item>-->
             </nested-menu>
         </triggerable-dropdown>
         <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
@@ -83,7 +83,7 @@
 				}, {})
 			},
 			currentTags () {
-				if (!this.devices || !this.devices.length) { return [] }
+				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
 				let tags = this.deviceById[this.devices[0]]['tags.tagname']
                 if (this.devices.length === 1) { return tags }
 				this.devices.forEach((device) => {

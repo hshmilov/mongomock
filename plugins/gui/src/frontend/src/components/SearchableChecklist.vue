@@ -43,10 +43,7 @@
             return {
                 searchValue: '',
                 searchValueSelected: false,
-                itemSelection: this.value.reduce(function(map, input) {
-                    map[input] = false
-                    return map
-                }, {}),
+                itemSelection: {},
                 createdItems: []
             }
         },
@@ -89,6 +86,13 @@
 				}
 				this.updateSelected()
             }
+        },
+        created() {
+        	if (!this.value) { return }
+			this.itemSelection = this.value.reduce(function(map, input) {
+				map[input] = true
+				return map
+			}, {})
         }
     }
 </script>
