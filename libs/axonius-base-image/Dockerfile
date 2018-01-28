@@ -10,12 +10,15 @@ RUN apt-get update && \
     supervisor software-properties-common python-software-properties && \
     add-apt-repository ppa:jonathonf/python-3.6 && \
     apt-get update && \
-    apt-get install -y python3.6 python3.6-dev python3.6-venv ipython && \
+    apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \
     ln -s /usr/bin/python3.6 /usr/local/bin/python3
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
+
+COPY requirements2.txt .
+RUN pip2 install -r requirements2.txt
 
 # Install more gui dependencies.
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \

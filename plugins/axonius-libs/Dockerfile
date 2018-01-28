@@ -4,10 +4,6 @@ FROM axonius/axonius-base-image
 WORKDIR /home/axonius
 ENV HOME /home/axonius
 
-# Just copy configuration.
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
-
 # The following changes a lot, we want less build-time so its a different RUN command.
 RUN mkdir /home/axonius/logs
 
@@ -26,9 +22,6 @@ COPY src/config/nginx-ssl /etc/nginx/snippets/
 COPY src/libs /home/axonius/libs
 COPY src/hacks /home/axonius/hacks
 RUN pip3 install -e /home/axonius/libs/axonius-py
-
-# Make port 80 available to the world outside this container
-EXPOSE 80
 
 # Notice that supervisord runs a couple of processes (look at supervisord.conf).
 # We need both uwsgi and nginx in the same docker environment, and we need them 'operational',
