@@ -1,6 +1,5 @@
 import pytest
-from services.axonius_service import get_service
-from services.adapters.traiana_lab_machines_service import TraianaLabMacinesService, traiana_lab_machines_service
+from services.adapters.traiana_lab_machines_service import TraianaLabMachinesService, traiana_lab_machines_service
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_traiana_lab_machines_credentials import *
 
@@ -10,7 +9,7 @@ DEVICE_ID_FOR_CLIENT = '420'
 class TestTraianaLabMachinesAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return TraianaLabMacinesService()
+        return TraianaLabMachinesService()
 
     @property
     def adapter_name(self):

@@ -1,14 +1,13 @@
-import json
 import pytest
-
-import services.plugin_service as plugin_service
-from services.simple_fixture import initialize_fixture
 from bson.objectid import ObjectId
 
+from services.plugin_service import PluginService
+from services.simple_fixture import initialize_fixture
 
-class ExecutionService(plugin_service.PluginService):
+
+class ExecutionService(PluginService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../plugins/execution-plugin', **kwargs)
+        super().__init__('execution', service_dir='../plugins/execution-plugin', **kwargs)
 
     def make_action(self, action_type, axon_id, data, adapters_to_whitelist=None):
         """

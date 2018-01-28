@@ -3,22 +3,24 @@ import json
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
-from services.compose_service import ComposeService
+from services.docker_service import DockerService
+from services.ports import DOCKER_PORTS
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
 
 
-class PluginService(ComposeService):
-    def __init__(self, service_dir, mode='', **kwargs):
+class PluginService(DockerService):
+    def __init__(self, container_name, service_dir, mode=''):
         if mode == '':
             mode = 'override'
         self.service_dir = service_dir
         compose_file_path = service_dir + '/docker-compose.yml'
         override_compose_file_path = service_dir + f'/docker-compose.{mode}.yml'
-        super().__init__(compose_file_path, override_compose_file_path=override_compose_file_path, **kwargs)
-        port = self.parsed_compose_file.exposed_port
-        self.endpoint = ('localhost', port)
+        super().__init__(container_name, compose_file_path, override_compose_file_path=override_compose_file_path)
+        if self.container_name not in DOCKER_PORTS:
+            raise ValueError(f'Container {self.container_name} missing external port in DOCKER_PORTS')
+        self.endpoint = ('localhost', DOCKER_PORTS[self.container_name])
         self.req_url = "http://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
         self.config_file_path = service_dir + '/src/plugin_config.ini'
         self.last_vol_conf = None
@@ -112,6 +114,10 @@ class PluginService(ComposeService):
 
 
 class AdapterService(PluginService):
+
+    def __init__(self, name, **kwargs):
+        super().__init__(f'{name}-adapter', f'../adapters/{name}-adapter', **kwargs)
+        self.adapter_name = name
 
     def add_client(self, client_details):
         self.clients(client_details)

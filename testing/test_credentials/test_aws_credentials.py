@@ -1,5 +1,5 @@
-
 from test_helpers.machines import PROXY_IP, PROXY_PORT
+
 
 client_details = {
     "aws_access_key_id": "AKIAJOCJ5PGEAR6LNIFQ",

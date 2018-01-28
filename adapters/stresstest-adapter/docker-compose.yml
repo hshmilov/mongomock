@@ -5,7 +5,7 @@ services:
         image: axonius/stresstest-adapter
         container_name: "stresstest-adapter"
         ports:
-            - 5113:80
+            - 5114:80
         volumes:
           - ../../logs/stresstest-adapter:/home/axonius/logs
           - data:/home/axonius

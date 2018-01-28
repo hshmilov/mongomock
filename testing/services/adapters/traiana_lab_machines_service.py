@@ -4,13 +4,13 @@ from services.plugin_service import AdapterService
 from services.simple_fixture import initialize_fixture
 
 
-class TraianaLabMacinesService(AdapterService):
+class TraianaLabMachinesService(AdapterService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../adapters/traiana-lab-machines-adapter', **kwargs)
+        super().__init__('traiana-lab-machines', **kwargs)
 
 
 @pytest.fixture(scope="module", autouse=True)
 def traiana_lab_machines_service(request):
-    service = TraianaLabMacinesService()
+    service = TraianaLabMachinesService()
     initialize_fixture(request, service)
     return service

@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 class SplunkSymantecService(AdapterService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../adapters/splunk-symantec-adapter', **kwargs)
+        super().__init__('splunk-symantec', **kwargs)
 
 
 @pytest.fixture(scope="module", autouse=True)

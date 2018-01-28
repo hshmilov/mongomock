@@ -7,7 +7,7 @@ import requests
 
 class AggregatorService(PluginService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../plugins/aggregator-plugin', **kwargs)
+        super().__init__('aggregator', service_dir='../plugins/aggregator-plugin', **kwargs)
 
     @retry(wait_fixed=3000,
            stop_max_delay=60 * 3 * 1000)

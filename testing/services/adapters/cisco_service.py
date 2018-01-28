@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 class CiscoService(AdapterService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../adapters/cisco-adapter', **kwargs)
+        super().__init__('cisco', **kwargs)
 
 
 @pytest.fixture(scope="module", autouse=True)

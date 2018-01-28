@@ -1,0 +1,35 @@
+DOCKER_PORTS = {
+    'core': 5050,
+    'mongodb': 27017,
+
+    'ad-adapter': 5001,
+    'aws-adapter': 5112,
+    'cisco-adapter': 6001,
+    'csv-adapter': 5013,
+    'epo-adapter': 5003,
+    'esx-adapter': 5111,
+    'jamf-adapter': 5004,
+    'nessus-adapter': 5555,
+    'nexpose-adapter': 5012,
+    'puppet-adapter': 5222,
+    'qualys-adapter': 5677,
+    'qualys-scans-adapter': 5777,
+    'sentinelone-adapter': 5678,
+    'splunk-nexpose-adapter': 5681,
+    'splunk-symantec-adapter': 5679,
+    'stresstest-adapter': 5114,
+    'symantec-adapter': 5676,
+    'traiana-lab-machines-adapter': 5113,
+
+    'ad-users-associator-plugin': 5556,
+    'aggregator': 5000,
+    'careful-execution-correlator': 5039,
+    'dns-conflicts-plugin': 5011,
+    'correlator': 5009,
+    'execution': 4999,
+    'gui': 80,
+    'static-correlator': 5010,
+    'watch-service': 5002,
+}
+
+assert len(set(DOCKER_PORTS.values())) == len(DOCKER_PORTS)

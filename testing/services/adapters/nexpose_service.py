@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 class NexposeService(AdapterService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../adapters/nexpose-adapter', **kwargs)
+        super().__init__('nexpose', **kwargs)
 
 
 @pytest.fixture(scope="module", autouse=True)

@@ -7,7 +7,7 @@ from test_credentials.test_gui_credentials import *
 
 class GuiService(PluginService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../plugins/gui', **kwargs)
+        super().__init__('gui', service_dir='../plugins/gui', **kwargs)
         self._session = requests.Session()
         self.default_user = DEFAULT_USER
 

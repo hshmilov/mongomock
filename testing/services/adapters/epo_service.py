@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 class EpoService(AdapterService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../adapters/epo-adapter', **kwargs)
+        super().__init__('epo', **kwargs)
 
 
 @pytest.fixture(scope="module", autouse=True)

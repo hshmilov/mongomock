@@ -2,17 +2,15 @@ import subprocess
 import os
 from abc import abstractmethod
 from services.axon_service import AxonService
-from services.compose_parser import ServiceYmlParser
 from test_helpers.exceptions import ComposeException
 
 
-class ComposeService(AxonService):
-    def __init__(self, compose_file_path, override_compose_file_path=None, **kwargs):
-        super().__init__(**kwargs)
+class DockerService(AxonService):
+    def __init__(self, container_name, compose_file_path, override_compose_file_path=None):
+        super().__init__()
         self._compose_file_path = compose_file_path
         self._override_compose_file_path = override_compose_file_path
-        self.parsed_compose_file = ServiceYmlParser(compose_file_path)
-        self.container_name = self.parsed_compose_file.container_name
+        self.container_name = container_name
         self.workdir = os.path.abspath(os.path.dirname(self._compose_file_path))
         self.log_dir = os.path.abspath(os.path.join("..", "logs", self.container_name))
         self._process_owner = False

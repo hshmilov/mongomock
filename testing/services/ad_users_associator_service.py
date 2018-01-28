@@ -7,7 +7,7 @@ from services.activateable_service import ActivateableService
 
 class AdUsersAssociatorService(PluginService, ActivateableService):
     def __init__(self, **kwargs):
-        super().__init__(service_dir='../plugins/ad-users-associator-plugin', **kwargs)
+        super().__init__('ad-users-associator-plugin', service_dir='../plugins/ad-users-associator-plugin', **kwargs)
 
     def associate(self):
         result = self.post('associate')
