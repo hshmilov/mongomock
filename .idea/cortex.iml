@@ -30,6 +30,9 @@
       <sourceFolder url="file://$MODULE_DIR$/adapters/stresstest-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/qualys-scans-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/cisco-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/csv-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/traiana-lab-machines-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/ad-users-associator-plugin/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/plugins/gui/src/frontend" />
     </content>
     <orderEntry type="jdk" jdkName="cortex-venv" jdkType="Python SDK" />
