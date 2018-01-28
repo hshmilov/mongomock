@@ -87,7 +87,7 @@ class SplunkNexposeAdapter(AdapterBase):
             device = self._new_device()
             device.hostname = device_raw.get('hostname', '')
             device.figure_os(device_raw.get('version', device_raw.get('os')))
-            device.add_nic(device_raw.get('mac'), [device_raw.get('ip')])
+            device.add_nic(device_raw.get('mac'), [device_raw.get('ip')], self.logger)
             device.id = device_raw['asset_id']
             device.scanner = True
             device.set_raw(device_raw)

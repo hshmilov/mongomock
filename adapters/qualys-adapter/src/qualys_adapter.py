@@ -107,7 +107,7 @@ class QualysAdapter(AdapterBase):
             device.figure_os(device_raw.get('os', ''))
             ifaces = device_raw.get('networkInterface', {}).get('list')
             for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
-                device.add_nic(mac, [ip_iface['HostAssetInterface']['address'] for ip_iface in ip_ifaces])
+                device.add_nic(mac, [ip_iface['HostAssetInterface']['address'] for ip_iface in ip_ifaces], self.logger)
             device.id = device_raw['agentInfo']['agentId']
             device.set_raw(device_raw)
             yield device

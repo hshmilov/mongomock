@@ -122,7 +122,7 @@ class PuppetAdapter(AdapterBase):
             for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
                 device.add_nic(inet.get(MAC_FIELD, ''),
                                [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
-                               [x['address'] for x in inet.get('bindings6', []) if x.get('address')])
+                               [x['address'] for x in inet.get('bindings6', []) if x.get('address')], self.logger)
             device.set_raw(device_raw)
             yield device
 

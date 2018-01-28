@@ -66,13 +66,37 @@ class Device(SmartJsonClass):
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
 
-    def add_nic(self, mac=None, ips=None):
+    def add_nic(self, mac=None, ips=None, logger=None):
         """
         Add a new network interface card to this device.
         :param mac: the mac
         :param ips: an IP list
+        :param logger: a python logger, if provided will record and suppress all parsing exceptions
         """
-        self.network_interfaces.append(NetworkInterface(mac=mac, ips=ips))
+        nic = NetworkInterface()
+        if mac is not None:
+            try:
+                nic.mac = mac
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid mac: {repr(mac)}')
+        if ips is not None:
+            try:
+                ips_iter = iter(ips)
+            except TypeError:
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid ips: {repr(ips)}')
+            else:
+                for ip in ips_iter:
+                    try:
+                        nic.ips.append(ip)
+                    except (ValueError, TypeError):
+                        if logger is None:
+                            raise
+                        logger.exception(f'Invalid ip: {repr(ip)}')
+        self.network_interfaces.append(nic)
 
     def figure_os(self, os_string):
         os_dict = figure_out_os(os_string)

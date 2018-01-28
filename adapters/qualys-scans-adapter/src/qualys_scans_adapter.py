@@ -154,7 +154,8 @@ class QualysScansAdapter(AdapterBase):
                 device.hostname = hostname
                 device.figure_os(device_raw.get('OS', ''))
                 device.last_seen = last_seen
-                device.add_nic('', [device_raw.get('IP', '')])
+                if 'IP' in device_raw:
+                    device.add_nic('', [device_raw['IP']], self.logger)
                 device.id = device_raw.get('ID')
                 device.scanner = True
                 device.set_raw(device_raw)

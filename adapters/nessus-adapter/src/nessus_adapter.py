@@ -132,7 +132,7 @@ class NessusAdapter(AdapterBase):
             device.hostname = ''
             device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
-                           [device_raw.get('info', {}).get('host-ip', '')])
+                           [device_raw.get('info', {}).get('host-ip', '')], self.logger)
             device.scanner = True
             device.set_raw(device_raw)
             yield device

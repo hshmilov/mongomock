@@ -102,8 +102,8 @@ class SymantecAdapter(AdapterBase):
                                        str(device_raw.get("osversion", '')),
                                        str(device_raw.get("osmajor", '')),
                                        str(device_raw.get("osminor", ''))]))
-            for mac, ip in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', ''))):
-                device.add_nic(mac, ip)
+            for mac, ips in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', ''))):
+                device.add_nic(mac, ips, self.logger)
 
             device.id = device_raw['agentId']
             device.set_raw(device_raw)

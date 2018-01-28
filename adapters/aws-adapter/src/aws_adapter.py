@@ -176,9 +176,10 @@ class AWSAdapter(AdapterBase):
                     if assoc is not None:
                         public_ip = assoc.get('PublicIp')
                         if public_ip is not None:
-                            device.add_nic(iface.get("MacAddress"), [public_ip])
+                            device.add_nic(iface.get("MacAddress"), [public_ip], self.logger)
                     device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
-                                                             for addr in iface.get("PrivateIpAddresses", [])])
+                                                             for addr in iface.get("PrivateIpAddresses", [])],
+                                   self.logger)
                 device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                          DeviceRunningState.Unknown)
                 device.set_raw(device_raw)

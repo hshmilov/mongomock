@@ -115,7 +115,7 @@ class NexposeAdapter(AdapterBase):
             device.figure_os(device_raw.get('os_name'))
             device.last_seen = last_seen
             device.id = str(device_raw['id'])
-            device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []))
+            device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []), self.logger)
             device.hostname = device_raw['host_names'][0] if len(device_raw.get('host_names', [])) > 0 else ''
             device.scanner = True
             device.set_raw(device_raw)

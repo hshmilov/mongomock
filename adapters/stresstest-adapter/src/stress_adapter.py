@@ -179,7 +179,7 @@ class StressAdapter(AdapterBase):
             for iface in device_raw.get('networking', []):
                 ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
                 if ips:
-                    device.add_nic(iface.get('macAddress'), ips)
+                    device.add_nic(iface.get('macAddress'), ips, self.logger)
             device.hostname = device_raw['guest'].get('hostName')
             device.vm_tools_status = device_raw['guest'].get('toolsStatus')
             device.set_raw(device_raw)

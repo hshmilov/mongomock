@@ -141,14 +141,14 @@ class SplunkSymantecAdapter(AdapterBase):
                 device.figure_os('OS X')
                 if host.get('local mac', '') != '000000000000':
                     device.add_nic(':'.join([host.get('local mac', '')[index:index + 2] for index in range(0, 12, 2)]),
-                                   host.get('local ips', '').split(' '))
+                                   host.get('local ips', '').split(' '), self.logger)
                 if host.get('remote mac', '') != '000000000000':
                     device.add_nic(':'.join([host.get('remote mac', '')[index:index + 2] for index in range(0, 12, 2)]),
-                                   host['remote ips'].split(' '))
+                                   host['remote ips'].split(' '), self.logger)
             else:
                 device.figure_os(host.get('os', ''))
                 for iface in host.get('network', []):
-                    device.add_nic(iface.get(MAC_FIELD, ''), iface.get(IPS_FIELD, '').split(' '))
+                    device.add_nic(iface.get(MAC_FIELD, ''), iface.get(IPS_FIELD, '').split(' '), self.logger)
             device.id = host['name']
             device.set_raw(device_raw)
             yield device

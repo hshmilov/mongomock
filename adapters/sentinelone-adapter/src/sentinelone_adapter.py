@@ -113,7 +113,7 @@ class SentinelOneAdapter(AdapterBase):
             device.hostname = net_info['computer_name'] + '.' + net_info['domain']
             device.figure_os(' '.join([soft_info['os_name'], soft_info['os_arch'], soft_info['os_revision']]))
             for interface in net_info['interfaces']:
-                device.add_nic(interface['physical'], interface['inet6'] + interface['inet'])
+                device.add_nic(interface['physical'], interface['inet6'] + interface['inet'], self.logger)
             device.id = device_raw['id']
             device.set_raw(device_raw)
             yield device

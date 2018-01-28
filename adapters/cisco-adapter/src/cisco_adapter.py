@@ -60,7 +60,7 @@ class CiscoAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             device = self._new_device()
             device.id = device_raw['ip']
-            device.add_nic(device_raw['mac'], [device_raw['ip']])
+            device.add_nic(device_raw['mac'], [device_raw['ip']], self.logger)
             device.scanner = True
             device.set_raw(device_raw)
             yield device

@@ -64,7 +64,7 @@ def parse_network(device_raw, device, logger):
     except:
         logger.info(f"Failed formatting {raw_mac}")
 
-    device.add_nic(mac, list(ip_list))
+    device.add_nic(mac, list(ip_list), logger)
 
 
 class EpoAdapter(AdapterBase):
