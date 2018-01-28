@@ -31,8 +31,8 @@ class TestSplunkSymantecAdapter(AdapterTestBase):
         assert len(devices_as_dict[self.some_client_id]['parsed']) == 0
 
         # we test that the cache database of splunk symantec has devices from all times
-        axonius_service = get_service()
-        fetched_machine = axonius_service.db.client[self.adapter_service.unique_name]['symantec_queries']\
+        axonius_system = get_service()
+        fetched_machine = axonius_system.db.client[self.adapter_service.unique_name]['symantec_queries']\
             .find({'name': FETCHED_DEVICE_EXAMPLE['hostname']}).next()
         assert fetched_machine['host']['os'] == FETCHED_DEVICE_EXAMPLE['raw']['host']['os']
         assert fetched_machine['host']['network'][2]['mac'] == FETCHED_DEVICE_EXAMPLE[

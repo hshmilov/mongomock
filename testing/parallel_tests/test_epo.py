@@ -39,7 +39,7 @@ class TestEpoAdapter(AdapterTestBase):
             current_client = adapter_db['clients'].find_one()
             assert current_client['status'] == status
 
-        adapter_db = self.axonius_service.db.client[self.adapter_service.unique_name]
+        adapter_db = self.axonius_system.db.client[self.adapter_service.unique_name]
 
         # Add client to adapter, using name given defined in host translation
         self.adapter_service.add_client(self.some_client_details)

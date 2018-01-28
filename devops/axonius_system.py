@@ -1,48 +1,14 @@
-import services.mongo_service as db
-import services.core_service as core
-import services.aggregator_service as aggregator
-import services.gui_service as gui
-
 import argparse
 import sys
-import importlib
+
+from services.axonius_service import get_service
 
 
-def start():
-    services = [db.MongoService(), core.CoreService(), aggregator.AggregatorService(), gui.GuiService()]
-    for service in services:
-        service.take_process_ownership()
-        service.start_and_wait()
-
-
-def stop():
-    services = [db.MongoService(), core.CoreService(), aggregator.AggregatorService(), gui.GuiService()]
-    for service in services[::-1]:
-        service.take_process_ownership()
-        service.stop(should_delete=False)
-
-
-def start_plugin(plugin_name):
-    plugin = invoke_plugin_by_name(plugin_name)
-    plugin.start_and_wait()
-
-
-def stop_plugin(plugin_name):
-    plugin = invoke_plugin_by_name(plugin_name)
-    plugin.stop(should_delete=False)
-
-
-def invoke_plugin_by_name(plugin_name):
-    plugin_service = importlib.import_module("services.{}_service".format(plugin_name.lower()))
-    plugin_service = getattr(plugin_service, plugin_name + "Service")()
-    return plugin_service
-
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Axonius system startup')
     parser.add_argument('system', choices=['up', 'down'])
-    parser.add_argument('--plugins', metavar='N', type=str, nargs='*', help='Plugins to activate')
-    parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Plugins to activate')
+    parser.add_argument('--plugins', metavar='N', type=str, nargs='*', help='Plugins to activate', default=[])
+    parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Plugins to activate', default=[])
 
     try:
         args = parser.parse_args()
@@ -50,19 +16,15 @@ if __name__ == '__main__':
         print(parser.usage())
         sys.exit(1)
 
+    axonius_system = get_service()
+    axonius_system.take_process_ownership()
     if args.system == 'up':
-        start()
-        if args.plugins:
-            for plugin in args.plugins:
-                start_plugin(plugin)
-        if args.adapters:
-            for adapter in args.adapters:
-                start_plugin(adapter)
+        axonius_system.start_and_wait()
+        axonius_system.start_plugins(args.plugins + args.adapters)
     else:
-        if args.adapters:
-            for adapter in args.adapters:
-                stop_plugin(adapter)
-        if args.plugins:
-            for plugin in args.plugins:
-                stop_plugin(plugin)
-        stop()
+        axonius_system.stop_plugins(args.adapters + args.plugins, should_delete=False)
+        axonius_system.stop(should_delete=False)
+
+
+if __name__ == '__main__':
+    main()

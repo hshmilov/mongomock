@@ -6,7 +6,7 @@ from services.execution_service import execution_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
 from test_credentials.test_ad_credentials import *
-import time
+
 
 CLIENT_ID_1_ADMIN_SID = "S-1-5-21-4050441107-50035988-2732102988-500"
 CLIENT_ID_1_ADMIN_CAPTION = "Administrator@TestDomain.test"
@@ -54,23 +54,23 @@ class TestAdAdapter(AdapterTestBase):
 
         # Adding second client
         # client_id_2 = ad_client2_details['dc_name']
-        # self.axonius_service.add_client_to_adapter(self.adapter_service, ad_client2_details)
+        # self.axonius_system.add_client_to_adapter(self.adapter_service, ad_client2_details)
 
         # Checking that we have devices from both clients
-        self.axonius_service.assert_device_aggregated(self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
+        self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
         # Testing the ability to filter old devices
-        devices_list = self.axonius_service.get_devices_with_condition({"adapters.hostname": "nonExistance"})
+        devices_list = self.axonius_system.get_devices_with_condition({"adapters.hostname": "nonExistance"})
         assert len(devices_list) == 0, "Found device that should have been filtered"
-        # self.axonius_service.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
+        # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()
-        self.axonius_service.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
+        self.axonius_system.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
 
         def assert_ip_resolved():
-            self.axonius_service.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
-            interfaces = self.axonius_service.get_device_network_interfaces(self.adapter_service.unique_name,
-                                                                            DEVICE_ID_FOR_CLIENT_1)
+            self.axonius_system.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
+            interfaces = self.axonius_system.get_device_network_interfaces(self.adapter_service.unique_name,
+                                                                           DEVICE_ID_FOR_CLIENT_1)
             assert len(interfaces) > 0
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
@@ -81,7 +81,7 @@ class TestAdAdapter(AdapterTestBase):
 
         def has_ip_conflict_tag():
             dns_conflicts_fixture.find_conflicts()
-            assert len(self.axonius_service.get_devices_with_condition({"tags.tagname": "IP_CONFLICT"})) > 0
+            assert len(self.axonius_system.get_devices_with_condition({"tags.tagname": "IP_CONFLICT"})) > 0
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
 
@@ -91,13 +91,13 @@ class TestAdAdapter(AdapterTestBase):
 
         def has_ad_users_association_tag():
             #  ad_users_associator_fixture.associate()
-            tags = list(self.axonius_service.get_devices_with_condition({"tags.tagvalue.fieldname": "last_used_user"}))
+            tags = list(self.axonius_system.get_devices_with_condition({"tags.tagvalue.fieldname": "last_used_user"}))
             assert len(tags) > 0
 
         try_until_not_thrown(30, 5, has_ad_users_association_tag)
 
     def test_ad_execute_wmi_queries(self, execution_fixture):
-        device = self.axonius_service.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
+        device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
         action_id = execution_fixture.make_action("execute_wmi_queries",
@@ -108,7 +108,7 @@ class TestAdAdapter(AdapterTestBase):
 
         def check_execute_wmi_queries_results():
             # Get the first action from the action list ([0])
-            action_data = execution_fixture.get_action_data(self.axonius_service.db, action_id)[0]
+            action_data = execution_fixture.get_action_data(self.axonius_system.db, action_id)[0]
             assert action_data["result"] == "Success"
             assert action_data["status"] == "finished"
             assert len(action_data["product"]) == 2  # We queried for 2 queries, assert we have 2 answers.
@@ -126,7 +126,7 @@ class TestAdAdapter(AdapterTestBase):
         try_until_not_thrown(15, 5, check_execute_wmi_queries_results)
 
     def test_ad_execute_shell(self, execution_fixture):
-        device = self.axonius_service.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
+        device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
         action_id = execution_fixture.make_action("execute_shell",
@@ -136,7 +136,7 @@ class TestAdAdapter(AdapterTestBase):
                                                   adapters_to_whitelist=["ad_adapter"])
 
         def check_execute_shell_results():
-            action_data = execution_fixture.get_action_data(self.axonius_service.db, action_id)[0]
+            action_data = execution_fixture.get_action_data(self.axonius_system.db, action_id)[0]
             assert action_data["result"] == "Success"
             assert action_data["status"] == "finished"
 

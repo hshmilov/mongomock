@@ -1,14 +1,14 @@
-import time
 from datetime import datetime, timedelta
-
-from axonius.device import NETWORK_INTERFACES_FIELD
-from test_helpers.utils import try_until_not_thrown
-from services.aggregator_service import AggregatorService
-from services.core_service import CoreService
-from services.mongo_service import MongoService
-from services.gui_service import GuiService
+import importlib
+import time
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.device import NETWORK_INTERFACES_FIELD
+from services.aggregator_service import AggregatorService
+from services.core_service import CoreService
+from services.gui_service import GuiService
+from services.mongo_service import MongoService
+from test_helpers.utils import try_until_not_thrown
 
 
 def get_service():
@@ -32,6 +32,10 @@ class AxoniusService(object):
         # Not critical but lets stop in reverse order
         for service in self.axonius_services[::-1]:
             service.stop(should_delete)
+
+    def take_process_ownership(self):
+        for service in self.axonius_services:
+            service.take_process_ownership()
 
     def start_and_wait(self):
         # Start in parallel
@@ -104,3 +108,27 @@ class AxoniusService(object):
             assert self.aggregator.is_plugin_registered(self.core)
 
         try_until_not_thrown(30, 1, assert_aggregator_registered)
+
+    @staticmethod
+    def get_plugin(name):
+        plugin_service = importlib.import_module(f"services.{name.lower()}_service")
+        plugin_service = getattr(plugin_service, name + "Service")()
+        return plugin_service
+
+    def start_plugins(self, names):
+        plugins = []
+        for name in names:
+            plugin = self.get_plugin(name)
+            plugin.start()
+            plugins.append(plugin)
+        for plugin in plugins:
+            plugin.wait_for_service()
+
+    def stop_plugins(self, names, should_delete):
+        plugins = []
+        for name in names:
+            plugin = self.get_plugin(name)
+            plugin.stop(should_delete=should_delete)
+            plugins.append(plugin)
+        for plugin in plugins:
+            plugin.wait_for_service()

@@ -6,12 +6,12 @@ GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 
 
 def test_devices():
-    axonius_service = get_service()
-    gui_service = axonius_service.gui
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
     gui_service.login_default_user()
 
     for x in [4, 5, 6]:
-        axonius_service.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
+        axonius_system.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
 
     devices_response = gui_service.get_devices()
     assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
@@ -29,12 +29,12 @@ def _count_num_of_tags(device):
 
 
 def test_tags_via_gui():
-    axonius_service = get_service()
-    gui_service = axonius_service.gui
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
     gui_service.login_default_user()
 
     for x in [1, 2, 3]:
-        axonius_service.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
+        axonius_system.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
 
     def get_gui_test_devices():
         devices_response = gui_service.get_devices()
@@ -140,8 +140,8 @@ def test_tags_via_gui():
 
 
 def test_login():
-    axonius_service = get_service()
-    gui_service = axonius_service.gui
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
 
     bad_credentials_1 = {**gui_service.default_user, 'user_name': 'admin1'}
     bad_credentials_2 = {**gui_service.default_user, 'password': 'admin1'}

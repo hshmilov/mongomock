@@ -4,20 +4,14 @@ from services.axonius_service import get_service
 
 @pytest.fixture(scope="session", autouse=True)
 def axonius_fixture(request):
-    system = get_service()
+    axonius_system = get_service()
 
-    for service in system.axonius_services:
-        # we start the process so we own it
-        service.take_process_ownership()
+    axonius_system.take_process_ownership()  # we start the process so we own it
 
-        # good cleanup before the test run
-        service.stop(should_delete=True)
+    axonius_system.stop(should_delete=True)  # good cleanup before the test run
 
-        # spawn docker in parallel for all
-        service.start()
+    axonius_system.start_and_wait()  # spawn docker in parallel for all
 
-    for service in system.axonius_services:
-        service.wait_for_service()
-        request.addfinalizer(lambda: service.stop(should_delete=True))
+    request.addfinalizer(lambda: axonius_system.stop(should_delete=True))
 
-    return system
+    return axonius_system

@@ -1,8 +1,6 @@
-import pytest
 import glob
 import os
 import sys
-import time
 
 from devops.parallel_runner import ParallelRunner
 from services.axonius_service import get_service
@@ -19,23 +17,17 @@ class ParallelTestsRunner(ParallelRunner):
 
 def main():
     # we start axonius system twice during CI test run. One time for 'regular' tests and the second for a parallel run
-    axonius = get_service()
+    axonius_system = get_service()
     try:
-
-        # taking ownership of process
-        axonius.db.take_process_ownership()
-        axonius.core.take_process_ownership()
-        axonius.aggregator.take_process_ownership()
-        axonius.gui.take_process_ownership()
-
-        axonius.start_and_wait()
+        axonius_system.take_process_ownership()
+        axonius_system.start_and_wait()
         runner = ParallelTestsRunner()
         pattern = sys.argv[1]
         print(f"Running in parallel for pattern {pattern}")
         runner.append_test_pattern(pattern)
         return runner.wait_for_all(500, 1)
     finally:
-        axonius.stop(should_delete=True)
+        axonius_system.stop(should_delete=True)
 
 
 if __name__ == '__main__':
