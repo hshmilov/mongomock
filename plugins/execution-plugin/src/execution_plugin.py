@@ -159,6 +159,9 @@ class ExecutionPlugin(PluginBase):
             action_data['product'] = request_content['output'].get('product', '')
             action_data['result'] = request_content['output'].get('result', '')
 
+        self.logger.info(f"Got action update on action {action_id}. status is {action_data['status']},"
+                         f"action result is {action_data.get('result')}")
+
         self._save_action_data(action_data, action_id)
 
         if request_content['status'] == 'failed':
