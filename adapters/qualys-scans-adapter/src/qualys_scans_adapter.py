@@ -53,6 +53,10 @@ class QualysScansAdapter(AdapterBase):
             with connection:
                 pass
             return connection
+        except qualys_scans_exceptions. QualysScansAPILimitException as e:
+            self.create_notification(f"Qualys API limit reached, devices will not be collected at this time, "
+                                     f"please try again in {e.seconds_to_wait} seconds")
+            raise e
         except qualys_scans_exceptions.QualysScansException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config[QUALYS_SCANS_DOMAIN], str(e))

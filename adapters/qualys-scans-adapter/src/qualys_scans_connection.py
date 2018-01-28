@@ -1,6 +1,14 @@
 import requests
 import xml.etree.cElementTree as ET
-from qualys_scans_exceptions import QualysScansConnectionError, QualysScansRequestException
+from qualys_scans_exceptions import QualysScansConnectionError, QualysScansAPILimitException
+import time
+from axonius.utils.xml2json_parser import Xml2Json
+
+"""
+In this connection we target the VM module (and probably PC later on).
+These modules have a rate limit - by default of 2 connections through api v2.0 or 300 api requests an hour.
+For the sake of the user - if the next api request is allowed within the next 30 seconds we wait and try again.
+"""
 
 
 class QualysScansConnection(object):
@@ -61,6 +69,28 @@ class QualysScansConnection(object):
     def close(self):
         """ Closes the connection """
 
+    def _qualys_api_request(self, request_func, url, retries=1, max_seconds=1, **kwargs):
+        seconds_waited = 0
+        for i in range(retries):
+            try:
+                response = request_func(url, **kwargs)
+                response.raise_for_status()
+                return response
+            except requests.HTTPError as e:
+                if response.status_code == 409:  # conflict for url - reached the API limit
+                    self.logger.warn('Qualys API limit reached. {0}'.format(str(e)), response.text, **kwargs)
+                    error = Xml2Json(response.text).result
+                    seconds_to_wait = int(error['SIMPLE_RETURN']['RESPONSE']['ITEM_LIST']['ITEM']['VALUE'])
+                    if seconds_to_wait + seconds_waited < max_seconds:
+                        seconds_waited += seconds_to_wait
+                        time.sleep(seconds_to_wait)
+                        continue
+                    raise QualysScansAPILimitException(seconds_to_wait, f'Qualys API limit reached. {0}'.format(str(e)),
+                                                       response.text, str(kwargs))
+                else:
+                    self.logger.exception('Qualys request exception. {0}'.format(str(e)), response.text, **kwargs)
+                raise e
+
     def get(self, name, headers=None, auth=None, params=None):
         """ Serves a POST request to QualysScans API
 
@@ -70,13 +100,8 @@ class QualysScansConnection(object):
         :param tuple auth: the username and password
         :return: the service response or raises an exception if it's not 200
         """
-        response = requests.get(self._get_url_request(name), headers=headers, auth=auth, params=params)
-        try:
-            response.raise_for_status()
-            return response
-        except requests.HTTPError as e:
-            self.logger.exception('Post request failed. {0}'.format(str(e)), name, headers, auth, params)
-            raise e
+        return self._qualys_api_request(requests.get, self._get_url_request(name), retries=3, max_seconds=30,
+                                        headers=headers, auth=auth, params=params)
 
     def __enter__(self):
         self.connect()

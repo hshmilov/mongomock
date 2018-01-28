@@ -1,6 +1,12 @@
 import requests
 from qualys_exceptions import QualysConnectionError, QualysRequestException
 
+"""
+In this connection we target the Asset Management module of Qualys.
+This module doesn't currently (28/1/2018) have a rate limit as oppose to the VM and PC modules.
+Which is obviously why there's no regard to rate limiting
+"""
+
 
 class QualysConnection(object):
     def __init__(self, logger, domain):
