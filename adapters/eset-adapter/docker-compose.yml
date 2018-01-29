@@ -1,0 +1,19 @@
+version: '3'
+services:
+  eset-adapter:
+        build: .
+        image: axonius/eset-adapter
+        container_name: "eset-adapter"
+        ports:
+            - 5682:80
+        volumes:
+          - ../../logs/eset-adapter:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

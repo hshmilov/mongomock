@@ -71,6 +71,10 @@ export const adapterStaticData = {
 		name: 'Cisco CSR',
 		description: 'Cisco Cloud Services Router (CSR) provides routing, security, and network management with multitenancy.'
 	},
+	'eset_adapter': {
+		name: 'ESET Endpoint Security',
+		description: 'ESET Endpoint Security is an anti-malware suite for Windows with web filter, firewall, and USB drive and botnet protection.'
+	},
 	'stresstest_adapter': {
 		name: 'LOL',
 		description: 'i am the king of devices'

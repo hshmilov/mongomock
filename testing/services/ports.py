@@ -7,6 +7,7 @@ DOCKER_PORTS = {
     'cisco-adapter': 6001,
     'csv-adapter': 5013,
     'epo-adapter': 5003,
+    'eset-adapter': 5682,
     'esx-adapter': 5111,
     'jamf-adapter': 5004,
     'nessus-adapter': 5555,
