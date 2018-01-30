@@ -27,3 +27,4 @@ bcrypt==3.1.4
 pql==0.4.3
 deepdiff==3.3.0
 netstruct==1.1.2
+construct==2.9.25
