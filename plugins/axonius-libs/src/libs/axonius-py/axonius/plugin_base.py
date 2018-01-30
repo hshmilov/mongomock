@@ -668,22 +668,36 @@ class PluginBase(Feature):
     def plugin_type(self):
         return "Plugin"
 
-    def _tag_device(self, adapter_id, tagname, tagvalue, adapter_unique_name=None):
+    def _tag_device(self, adapter_id, tagname, tagvalue, adapter_unique_name, tagtype='label'):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param adapter_id: The device id given by the current adapter
+        :param tagname: the name of the tag
+        :param tagvalue: the value of the tag
         :param adapter_unique_name: on behalf of which adapter we are tagging
+        :param tagtype: the type of the tag. "label" for a regular tag, "data" for a data tag.
         :return:
         """
-        if adapter_unique_name is None:
-            adapter_unique_name = self.plugin_unique_name
         tag_data = {'association_type': 'Tag',
                     'associated_adapter_devices': {
                         adapter_unique_name: adapter_id
                     },
                     "tagname": tagname,
-                    "tagvalue": tagvalue}
+                    "tagvalue": tagvalue,
+                    "tagtype": tagtype}
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', data=json.dumps(tag_data))
         if response.status_code != 200:
             self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError()
+
+    def add_data_to_device(self, adapter_id, dataname, datavalue, adapter_unique_name):
+        """ Add custom plugin-data to device, not as part of an adapter. This actually uses
+        the tagging mechanism to add this kind of data.
+        This function will tag a wanted device. The tag will be related only to this adapter
+        :param adapter_id: The device id given by the current adapter
+        :param dataname: the name of the data block
+        :param datavalue: the data to add.
+        :param adapter_unique_name: on behalf of which adapter we are tagging
+        :return:
+        """
+        return self._tag_device(adapter_id, dataname, datavalue, adapter_unique_name, "data")

@@ -541,10 +541,12 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         :param axonius_device: axonius device from db
         :return: None
         """
-        if any(x['tagname'] == tag['tagname'] for x in axonius_device['tags']):
+        if any((x['tagname'] == tag['tagname'] and x['plugin_unique_name'] == tag['plugin_unique_name'])
+               for x in axonius_device['tags']):
             self.devices_db.update_one({
                 "internal_axon_id": axonius_device['internal_axon_id'],
-                "tags.tagname": tag['tagname']
+                "tags.tagname": tag['tagname'],
+                "tags.plugin_unique_name": tag['plugin_unique_name']
             }, {
                 "$set": {
                     "tags.$": tag
