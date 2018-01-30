@@ -28,6 +28,9 @@ if __name__ == '__main__':
     # venv
     runner.append_single("venv", "../create_venv.sh")
 
+    # mongo
+    runner.append_single("mongo", "docker-compose pull", cwd="../infrastructures/database")
+
     # badly named plugins :(
     runner.append_single("core", "docker build ../plugins/core -t axonius/core")
     runner.append_single("gui", "docker build ../plugins/gui -t axonius/gui")
