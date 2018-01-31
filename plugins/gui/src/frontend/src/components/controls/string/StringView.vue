@@ -4,18 +4,22 @@
 
 <script>
 	export default {
-		name: 'string',
-        props: ['format', 'data'],
+		name: 'x-string-view',
+        props: ['schema', 'value'],
+        data() {
+			return {
+				data: this.value
+            }
+        },
         computed: {
 			formattedData() {
-				if (this.format === 'date-time') {
+				if (this.schema.format === 'date-time') {
                     let dateTime = new Date(this.data)
                     return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
                 }
                 return this.data
             }
         }
-
 	}
 </script>
 

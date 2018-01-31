@@ -49,26 +49,30 @@ class JamfAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                jamf_consts.JAMF_DOMAIN: {
-                    "type": "string",
-                    "name": "Jamf Domain"
+            "items": [
+                {
+                    "name": jamf_consts.JAMF_DOMAIN,
+                    "title": "Jamf Domain",
+                    "type": "string"
                 },
-                jamf_consts.USERNAME: {
-                    "type": "string",
-                    "name": "Username"
+                {
+                    "name": jamf_consts.USERNAME,
+                    "title": "User Name",
+                    "type": "string"
                 },
-                jamf_consts.PASSWORD: {
-                    "type": "password",
-                    "name": "Password"
+                {
+                    "name": jamf_consts.PASSWORD,
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 jamf_consts.JAMF_DOMAIN,
                 jamf_consts.USERNAME,
                 jamf_consts.PASSWORD
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

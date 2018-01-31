@@ -14,7 +14,7 @@
 	import Card from '../../../components/Card.vue'
 	import ActionBar from '../../../components/ActionBar.vue'
 	import GenericForm from '../../../components/GenericForm.vue'
-	import PaginatedTable from '../../../components/PaginatedTable.vue'
+	import PaginatedTable from '../../../components/tables/PaginatedTable.vue'
 	import SearchInput from '../../../components/SearchInput.vue'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'

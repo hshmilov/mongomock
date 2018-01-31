@@ -15,7 +15,7 @@ Vue.use(Vuex)
 export default new Vuex.Store({
     state: {
         /*
-            General data that the system uses throughout pages
+            General controls that the system uses throughout pages
          */
         configuration: {
             language: 'en'
@@ -30,8 +30,8 @@ export default new Vuex.Store({
     actions: { [REQUEST_API]: requestApi },
     modules: {
         /*
-            System's data resource, relevant for each component.
-            Module stores data and manages the way of obtaining it.
+            System's controls resource, relevant for each component.
+            Module stores controls and manages the way of obtaining it.
          */
         device,
         query,

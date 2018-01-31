@@ -49,11 +49,11 @@ export const adapterStaticData = {
 	},
 	'splunk_nexpose_adapter': {
 		name: 'Splunk <> Rapid7 Nexpose',
-		description: 'The Splunk adapter for Rapid7 Nexpose leverages data from Splunk instances that receive alerts from Rapid7 Nexpose.'
+		description: 'The Splunk adapter for Rapid7 Nexpose leverages controls from Splunk instances that receive alerts from Rapid7 Nexpose.'
 	},
 	'splunk_symantec_adapter': {
 		name: 'Splunk <> Symantec Endpoint Protection Manager',
-		description: 'The Splunk adapter for Symantec Endpoint Protection Manager leverages data from Splunk instances that receive alerts from Symantec Endpoint Protection Manager.'
+		description: 'The Splunk adapter for Symantec Endpoint Protection Manager leverages controls from Splunk instances that receive alerts from Symantec Endpoint Protection Manager.'
 	},
 	'symantec_adapter': {
 		name: 'Symantec Endpoint Protection Manager',
@@ -110,7 +110,7 @@ export const adapter = {
 		[ UPDATE_ADAPTERS ] (state, payload) {
 			/*
 				Called first before API request for adapters, in order to update state to fetching
-				Called again after API call returns with either error or result data, that is added to adapters list
+				Called again after API call returns with either error or result controls, that is added to adapters list
 			 */
 			state.adapterList.fetching = payload.fetching
 			if (payload.data) {
@@ -141,7 +141,7 @@ export const adapter = {
 		[ SET_ADAPTER_SERVERS ] (state, payload) {
 			/*
 				Called first before API request for a specific adapter, in order to update state to fetching
-				Called again after API call returns with either error or data which is assigned to current adapter
+				Called again after API call returns with either error or controls which is assigned to current adapter
 			 */
 			state.currentAdapter.fetching = payload.fetching
 			state.currentAdapter.error = payload.error
@@ -203,8 +203,8 @@ export const adapter = {
 		},
 		[ SAVE_ADAPTER_SERVER ] ({dispatch}, payload) {
 			/*
-				Call API to save given server data to adapter by the given adapter id,
-				either adding a new server or updating and existing one, if id is provided with the data
+				Call API to save given server controls to adapter by the given adapter id,
+				either adding a new server or updating and existing one, if id is provided with the controls
 			 */
 			if (!payload || !payload.adapterId || !payload.serverData) { return }
 			let rule = `/api/adapters/${payload.adapterId}/clients`

@@ -155,19 +155,23 @@ class StressAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "properties": {
-                "device_count": {
+            "items": [
+                {
+                    "name": "device_count",
+                    "title": "Device Count",
                     "type": "number"
                 },
-                "name": {
+                {
+                    "name": "name",
+                    "title": "Server Name",
                     "type": "string"
                 }
-            },
+            ],
             "required": [
                 "device_count",
                 "name"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

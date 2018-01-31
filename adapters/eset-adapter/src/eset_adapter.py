@@ -71,26 +71,35 @@ class EsetAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "properties": {
-                ESET_HOST: {
+            "items": [
+                {
+                    "name": ESET_HOST,
+                    "title": "Host Name",
                     "type": "string"
                 },
-                ESET_PORT: {
+                {
+                    "name": ESET_PORT,
+                    "title": "Port",
                     "type": "integer"
                 },
-                USER: {
+                {
+                    "name": USER,
+                    "title": "User Name",
                     "type": "string"
                 },
-                PASSWORD: {
-                    "type": "password"
+                {
+                    "name": PASSWORD,
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 USER,
                 PASSWORD,
                 ESET_HOST,
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, raw_data):

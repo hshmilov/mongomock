@@ -6,13 +6,13 @@ import { INIT_USER, SET_USER } from './modules/user'
 /*
     A generic wrapper for requests to server.
     Before request, performs given mutation to initialize error and indicate fetching in process,
-    After request, performs given mutation with data received or error thrown, accordingly
+    After request, performs given mutation with controls received or error thrown, accordingly
 
     @param {commit} - Vue action mechanism provides this
     @param payload - An object containing: {
         method: HTTP method for the request [defaulted GET]
         rule: Entry in the API to call, including request parameters, if needed
-        data: Object with data, for HTTP methods that allow sending it, if needed,
+        controls: Object with controls, for HTTP methods that allow sending it, if needed,
         type: Mutation type to call
     }
  */

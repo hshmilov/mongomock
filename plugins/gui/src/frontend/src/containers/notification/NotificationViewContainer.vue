@@ -40,7 +40,7 @@
 		},
 		mounted () {
 			/*
-			    Refresh or navigation directly to the url, will cause missing or incorrect notification data.
+			    Refresh or navigation directly to the url, will cause missing or incorrect notification controls.
 			    This condition should identify the situation and re-fetch the notification
 			 */
 			if (!this.notificationData || !this.notificationData.uuid

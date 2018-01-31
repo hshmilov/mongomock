@@ -97,26 +97,31 @@ class NessusAdapter(AdapterBase):
         :return: JSON schema defining the credential properties
         """
         return {
-            'properties': {
-                HOST: {
+            'items': [
+                {
+                    'name': HOST,
+                    'title': 'Host Address',
+                    'type': 'string'
+                },
+                {
+                    'name': PORT,
+                    'title': 'Port',
+                    'type': 'integer',
+                },
+                {
+                    'name': USERNAME,
+                    'title': 'Username',
+                    'type': 'string'
+                },
+                {
+                    'name': PASSWORD,
+                    'title': 'Password',
                     'type': 'string',
-                    'name': 'Host Address'
-                },
-                PORT: {
-                    'type': 'number',
-                    'name': 'Port'
-                },
-                USERNAME: {
-                    'type': 'string',
-                    'name': 'Username'
-                },
-                PASSWORD: {
-                    'type': 'password',
-                    'name': 'Password'
+                    'format': 'password'
                 }
-            },
+            ],
             'required': [HOST, USERNAME, PASSWORD],
-            'type': 'object'
+            'type': 'array'
         }
 
     def _parse_raw_data(self, devices_raw_data):

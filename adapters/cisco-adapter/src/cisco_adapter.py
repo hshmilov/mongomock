@@ -34,26 +34,30 @@ class CiscoAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "properties": {
-                HOST: {
-                    "type": "string",
-                    "name": "Host"
+            "items": [
+                {
+                    "name": HOST,
+                    "title": "Host Name",
+                    "type": "string"
                 },
-                USERNAME: {
-                    "type": "string",
-                    "name": "Username"
+                {
+                    "name": USERNAME,
+                    "title": "User Name",
+                    "type": "string"
                 },
-                PASSWORD: {
-                    "type": "password",
-                    "name": "Password"
+                {
+                    "name": PASSWORD,
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 "host",
                 "username",
                 "password"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

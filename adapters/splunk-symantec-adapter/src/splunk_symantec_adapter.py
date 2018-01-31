@@ -101,35 +101,42 @@ class SplunkSymantecAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                SPLUNK_HOST: {
+            "items": [
+                {
+                    "name": SPLUNK_HOST,
+                    "title": "Host Name",
                     "type": "string",
-                    "name": "Host"
                 },
-                SPLUNK_PORT: {
-                    "type": "integer",
-                    "name": "Port"
+                {
+                    "name": SPLUNK_PORT,
+                    "title": "Port",
+                    "type": "number"
                 },
-                SPLUNK_USER: {
+                {
+                    "name": SPLUNK_USER,
+                    "title": "User Name",
+                    "type": "string"
+                },
+                {
+                    "name": SPLUNK_PASSWORD,
+                    "title": "Password",
                     "type": "string",
-                    "name": "Username"
+                    "format": "password"
                 },
-                SPLUNK_PASSWORD: {
-                    "type": "password",
-                    "name": "Password"
-                },
-                SPLUNK_ONLINE_HOURS: {
-                    "type": "integer",
-                    "name": "Hours within device is considered online (default is 24)"
+                {
+                    "name": SPLUNK_ONLINE_HOURS,
+                    "title": "Online Hours Threshold",
+                    "description": "Hours for device to be considered online (default = 24)",
+                    "type": "number"
                 }
-            },
+            ],
             "required": [
                 SPLUNK_HOST,
                 SPLUNK_PORT,
                 SPLUNK_USER,
                 SPLUNK_PASSWORD
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

@@ -12,7 +12,7 @@
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
 	import Card from '../../components/Card.vue'
-    import PaginatedTable from '../../components/PaginatedTable.vue'
+    import PaginatedTable from '../../components/tables/PaginatedTable.vue'
     import InfoDialog from '../../components/popover/InfoDialog.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'

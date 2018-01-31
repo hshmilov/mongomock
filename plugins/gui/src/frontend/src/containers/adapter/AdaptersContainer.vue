@@ -8,7 +8,7 @@
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
     import Card from '../../components/Card.vue'
-	import ScrollableTable from '../../components/ScrollableTable.vue'
+	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
 	import SearchInput from '../../components/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'

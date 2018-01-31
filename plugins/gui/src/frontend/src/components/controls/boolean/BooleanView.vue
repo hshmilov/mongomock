@@ -1,19 +1,22 @@
 <template>
-    <div>
-        <div v-if="value">
-            <div class="checkmark"></div>
-        </div>
-        <div class="d-flex flex-column" v-else>
-            <div class="cross top"></div>
-            <div class="cross bottom"></div>
-        </div>
+    <div v-if="value">
+        <div class="checkmark"></div>
+    </div>
+    <div class="d-flex flex-column" v-else>
+        <div class="cross top"></div>
+        <div class="cross bottom"></div>
     </div>
 </template>
 
 <script>
 	export default {
-		name: 'boolean',
-        props: ['data']
+		name: 'x-bool-view',
+        props: ['schema', 'value'],
+        data() {
+			return {
+				data: this.value
+            }
+        }
 	}
 </script>
 

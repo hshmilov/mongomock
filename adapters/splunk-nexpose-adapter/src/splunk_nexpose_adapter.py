@@ -55,31 +55,36 @@ class SplunkNexposeAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                "host": {
+            "items": [
+                {
+                    "name": "host",
+                    "title": "Host Name",
+                    "type": "string"
+                },
+                {
+                    "name": "port",
+                    "title": "Port",
+                    "type": "number"
+                },
+                {
+                    "name": "username",
+                    "title": "User Name",
+                    "type": "string"
+                },
+                {
+                    "name": "password",
+                    "title": "Password",
                     "type": "string",
-                    "name": "Host"
-                },
-                "port": {
-                    "type": "integer",
-                    "name": "Port"
-                },
-                "username": {
-                    "type": "string",
-                    "name": "Username"
-                },
-                "password": {
-                    "type": "password",
-                    "name": "Password"
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 "host",
                 "port",
                 "username",
                 "password"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

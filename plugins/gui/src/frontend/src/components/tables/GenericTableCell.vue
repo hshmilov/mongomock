@@ -1,7 +1,7 @@
 <template>
     <td>
         <!--
-            Presents given data according to given type in a cell
+            Presents given controls according to given type in a cell
             Types are: status icon with color, type icon containing icon and text, list of objects or simple text
         -->
         <template v-if="type === 'timestamp'">
@@ -21,8 +21,8 @@
         <template v-else-if="type && type.indexOf('list') > -1">
             <object-list v-if="value && value.length" :type="type" :data="value" :limit="2"></object-list>
         </template>
-        <template v-else-if="type === 'bytes'">
-            <span :title="value">{{ value.length }} bytes</span>
+        <template v-else-if="type === 'file'">
+            <span :title="value">{{ value.length }} Bytes</span>
         </template>
         <template v-else>
             <span v-bind:class="{wide: wide}" :title="value">{{ value }}</span>
@@ -31,10 +31,10 @@
 </template>
 
 <script>
-	import ObjectList from './ObjectList.vue'
-	import StatusIcon from './StatusIcon.vue'
-    import StatusIconLogoText from './StatusIconLogoText.vue'
-	import TypeIcon from './TypeIcon.vue'
+	import ObjectList from '../ObjectList.vue'
+	import StatusIcon from '../StatusIcon.vue'
+    import StatusIconLogoText from '../StatusIconLogoText.vue'
+	import TypeIcon from '../TypeIcon.vue'
 
 	export default {
 		name: 'generic-table-cell',

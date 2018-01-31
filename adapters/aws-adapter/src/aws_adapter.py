@@ -139,26 +139,35 @@ class AWSAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                REGION_NAME: {
+            "items": [
+                {
+                    "name": REGION_NAME,
+                    "title": "Region Name",
                     "type": "string"
                 },
-                AWS_ACCESS_KEY_ID: {
+                {
+                    "name": AWS_ACCESS_KEY_ID,
+                    "title": "AWS Access Key ID",
                     "type": "string"
                 },
-                AWS_SECRET_ACCESS_KEY: {
-                    "type": "password"
+                {
+                    "name": AWS_SECRET_ACCESS_KEY,
+                    "title": "AWS Access Key Secret",
+                    "type": "string",
+                    "format": "password"
                 },
-                PROXY: {
+                {
+                    "name": PROXY,
+                    "title": "Proxy",
                     "type": "string"
                 }
-            },
+            ],
             "required": [
                 REGION_NAME,
                 AWS_ACCESS_KEY_ID,
                 AWS_SECRET_ACCESS_KEY
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

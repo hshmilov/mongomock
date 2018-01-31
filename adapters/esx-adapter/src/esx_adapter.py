@@ -60,27 +60,36 @@ class ESXAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                "host": {
+            "items": [
+                {
+                    "name": "host",
+                    "title": "Host",
                     "type": "string"
                 },
-                "user": {
+                {
+                    "name": "user",
+                    "title": "User",
                     "type": "string"
                 },
-                "password": {
-                    "type": "password"
+                {
+                    "name": "password",
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 },
-                "verify_ssl": {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
+                {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
                     "type": "bool"
                 }
-            },
+            ],
             "required": [
                 "host",
                 "user",
                 "password",
                 "verify_ssl"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _query_devices_by_client(self, client_name, client_data):

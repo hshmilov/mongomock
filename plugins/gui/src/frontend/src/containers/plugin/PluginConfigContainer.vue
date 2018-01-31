@@ -78,7 +78,7 @@
 
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
-	import PaginatedTable from '../../components/ScrollableTable.vue'
+	import PaginatedTable from '../../components/tables/ScrollableTable.vue'
 	import InfoDialog from '../../components/popover/InfoDialog.vue'
 	import ToggleButton from 'vue-js-toggle-button'
 	import VueCharts from 'vue-charts'

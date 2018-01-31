@@ -70,7 +70,7 @@
 	import GenericForm from '../../components/GenericForm.vue'
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
-	import PaginatedTable from '../../components/PaginatedTable.vue'
+	import PaginatedTable from '../../components/tables/PaginatedTable.vue'
 	import InfoDialog from '../../components/popover/InfoDialog.vue'
 	import ObjectList from '../../components/ObjectList.vue'
     import DevicesActionsContainer from './DevicesActionsContainer.vue'

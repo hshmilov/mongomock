@@ -29,9 +29,9 @@
 </template>
 
 <script>
-	import StatusIconLogoText from './StatusIconLogoText.vue'
-	import GenericTableCell from './GenericTableCell.vue'
-	import './icons'
+	import StatusIconLogoText from '../StatusIconLogoText.vue'
+	import GenericTableCell from '../tables/GenericTableCell.vue'
+	import '../icons'
 
 	export default {
 		name: 'scrollable-table',
@@ -44,7 +44,7 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
+    @import '../../scss/config';
 
     .scrollable-table {
         border-collapse: separate;

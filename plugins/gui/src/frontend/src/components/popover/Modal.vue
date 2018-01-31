@@ -2,15 +2,17 @@
     <transition name="modal">
         <div class="modal-mask" @click.stop="$emit('close')">
             <div class="modal-wrapper">
-                <div class="modal-container" @click.stop="$emit('open')">
+                <div class="modal-container" @click.stop="">
                     <div class="modal-body">
                         <slot name="body" @submit="$emit('confirm')">
                             Are you sure?
                         </slot>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-inverse" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
-                        <button class="btn" @click="$emit('confirm')">{{approveText || 'OK'}}</button>
+                        <slot name="footer">
+                            <button class="btn btn-inverse" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
+                            <button class="btn" @click="$emit('confirm')">{{approveText || 'OK'}}</button>
+                        </slot>
                     </div>
                 </div>
             </div>
@@ -63,6 +65,7 @@
                 }
                 .modal-footer {
                     border: 0;
+                    padding: .5rem;
                 }
             }
         }

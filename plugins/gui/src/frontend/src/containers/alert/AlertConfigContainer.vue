@@ -204,8 +204,8 @@
         },
         created() {
 			/*
-			    If no alert from data source, try and fetch it.
-			    Otherwise, if alert from data source has correct id, update local alert data with its values
+			    If no alert from controls source, try and fetch it.
+			    Otherwise, if alert from controls source has correct id, update local alert controls with its values
 			 */
             if (!this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
                 this.setAlert(this.$route.params.id)

@@ -8,7 +8,7 @@
                 <!--<nested-menu-item title="Block" @click="activate(block)">-->
                     <!--<dynamic-popover size="xs" left="236">-->
                         <!--<nested-menu>-->
-                            <!--<nested-menu-item v-for="blocker in block.blockers" :title="blocker"-->
+                            <!--<nested-menu-item v-for="blocker, index in block.blockers" :key="index" :title="blocker"-->
                                               <!--@click="block.selected = blocker"></nested-menu-item>-->
                         <!--</nested-menu>-->
                     <!--</dynamic-popover>-->
@@ -16,7 +16,7 @@
                 <!--<nested-menu-item title="Scan with" @click="activate(scan)">-->
                     <!--<dynamic-popover size="xs" left="236">-->
                         <!--<nested-menu>-->
-                            <!--<nested-menu-item v-for="scanner in scan.scanners" :title="scanner"-->
+                            <!--<nested-menu-item v-for="scanner, index in scan.scanners" :key="index" :title="scanner"-->
                                               <!--@click="scan.selected = scanner"></nested-menu-item>-->
                         <!--</nested-menu>-->
                     <!--</dynamic-popover>-->
@@ -24,7 +24,7 @@
                 <!--<nested-menu-item title="Deploy" @click="activate(deploy)">-->
                     <!--<dynamic-popover size="xs" left="236">-->
                         <!--<nested-menu>-->
-                            <!--<nested-menu-item v-for="deployment in deploy.deployments" :title="deployment"-->
+                            <!--<nested-menu-item v-for="deployment, index in deploy.deployments" :key="index" :title="deployment"-->
                                               <!--@click="deploy.selected = deployment"></nested-menu-item>-->
                         <!--</nested-menu>-->
                     <!--</dynamic-popover>-->

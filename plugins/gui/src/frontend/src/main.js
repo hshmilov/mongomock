@@ -18,11 +18,6 @@ Vue.use(mediaQueries)
 import TreeView from 'vue-json-tree-view'
 Vue.use(TreeView)
 
-import Array from './components/data/Array.vue'
-Vue.component('array', Array)
-import ObjectSchema from './components/data/ObjectSchema.vue'
-Vue.component('object-schema', ObjectSchema)
-
 new Vue({
 	el: '#app',
 	template: '<App />',

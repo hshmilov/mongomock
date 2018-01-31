@@ -61,30 +61,36 @@ class SymantecAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                "SEPM_Address": {
-                    "type": "string",
-                    "name": "Symantec Endpoint Management Address"
+            "items": [
+                {
+                    "name": "SEPM_Address",
+                    "title": "Symantec Endpoint Management Address",
+                    "type": "string"
                 },
-                "SEPM_Port": {
-                    "type": "string",
-                    "name": "Symantec Endpoint Management Port (Default is 8446)"
+                {
+                    "name": "SEPM_Port",
+                    "title": "Port",
+                    "description": "Symantec Endpoint Management Port (Default is 8446)",
+                    "type": "number"
                 },
-                "username": {
-                    "type": "string",
-                    "name": "Username"
+                {
+                    "name": "username",
+                    "title": "User Name",
+                    "type": "string"
                 },
-                "password": {
-                    "type": "password",
-                    "name": "Password"
+                {
+                    "name": "password",
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 "SEPM_Address",
                 "username",
                 "password"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

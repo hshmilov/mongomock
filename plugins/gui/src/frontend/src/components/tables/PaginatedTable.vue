@@ -57,10 +57,10 @@
 </template>
 
 <script>
-	import Checkbox from './Checkbox.vue'
-    import GenericTableCell from './GenericTableCell.vue'
+	import Checkbox from '../Checkbox.vue'
+    import GenericTableCell from '../tables/GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
-    import './icons'
+    import '../icons'
 	import VueScrollbar from 'vue2-scrollbar'
 
 	export default {
@@ -104,7 +104,7 @@
 		},
 		watch: {
 			filterFields: function (newFields, oldFields) {
-				if (newFields.length <= oldFields.length) { return }
+				if (!oldFields.length || newFields.length <= oldFields.length) { return }
 				this.restartData()
 			},
 			filter: function (newFilter) {
@@ -208,11 +208,11 @@
 			if (this.selectedPage) {
 			    this.currentPage = this.selectedPage
             }
-			/* Get initial data for first page of the table */
+			/* Get initial controls for first page of the table */
 			if (!this.data || !this.data.length) {
 				this.addData()
 			} else {
-				/* Recalculating the pagination parameters, according to data */
+				/* Recalculating the pagination parameters, according to controls */
 				/* Max is zero-index (so needs to be rounded down) */
 				this.maxPages = parseInt(this.data.length / this.pageSize)
                 this.fetchedPages = this.maxPages
@@ -224,7 +224,7 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
+    @import '../../scss/config';
 
     .paginated-table {
         .table {

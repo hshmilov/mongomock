@@ -81,26 +81,30 @@ class SentinelOneAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                "SentinelOne_Domain": {
-                    "type": "string",
-                    "name": "Sentinel One Domain"
+            "items": [
+                {
+                    "name": "SentinelOne_Domain",
+                    "title": "Sentinel One Domain",
+                    "type": "string"
                 },
-                "username": {
-                    "type": "string",
-                    "name": "Username"
+                {
+                    "name": "username",
+                    "title": "User Name",
+                    "type": "string"
                 },
-                "password": {
-                    "type": "password",
-                    "name": "Password"
+                {
+                    "name": "password",
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 "SentinelOne_Domain",
                 "username",
                 "password"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

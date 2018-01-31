@@ -53,8 +53,8 @@ export const alert = {
 			/*
 				Called once before AJAX call is made, just to update that fetching has started.
 				Called again either with error, if call threw an error or with response, if was returned from call.
-				The data is expected to be a list of alerts to be added to current list
-				(called for each page, until all data is collected)
+				The controls is expected to be a list of alerts to be added to current list
+				(called for each page, until all controls is collected)
 				If there is need to re-fetch, list should be restarted first
 			 */
 			state.alertList.fetching = payload.fetching
@@ -91,7 +91,7 @@ export const alert = {
 		},
 		[ SET_ALERT ] (state, alertId) {
 			/*
-				The data is expected to be fields and values of a specific alert and is stored for use in the
+				The controls is expected to be fields and values of a specific alert and is stored for use in the
 				alert configuration page
 			 */
 			if (!alertId) { return }
@@ -145,7 +145,7 @@ export const alert = {
 		[ FETCH_ALERTS ] ({dispatch, commit}, payload) {
 			/*
 				Call to api for getting all alerts, according to skip, limit and filter
-				The mutation UPDATE_ALERTS is called with the returned data or error, to fill it in the state
+				The mutation UPDATE_ALERTS is called with the returned controls or error, to fill it in the state
 			*/
 			if (!payload.skip) {
 				commit(RESTART_ALERTS)
@@ -180,9 +180,9 @@ export const alert = {
 		[ UPDATE_ALERT ] ({dispatch, commit}, payload) {
 			/*
 				Call to api to add \ update an alert. If given an id, the matching alert will be updated with the
-				new data. Otherwise a new alert will be added to the collection.
+				new controls. Otherwise a new alert will be added to the collection.
 				If completed successfully, id of added \ updated alert should be returned and together with the
-				data, they are added to the alertList (instead of re-fetching), using a call to the mutation ADD_ALERT
+				controls, they are added to the alertList (instead of re-fetching), using a call to the mutation ADD_ALERT
 			 */
 			if (!payload || !payload.id) { return }
 			let rule = 'api/alerts'

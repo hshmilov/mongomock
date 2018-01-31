@@ -7,7 +7,7 @@
 
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
-	import ScrollableTable from '../../components/ScrollableTable.vue'
+	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
 	import InfoDialog from '../../components/popover/InfoDialog.vue'
 
 	import { mapState, mapActions } from 'vuex'

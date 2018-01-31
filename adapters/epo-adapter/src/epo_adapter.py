@@ -87,26 +87,40 @@ class EpoAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "properties": {
-                ADMIN_PASS: {
-                    "type": "password"
-                },
-                ADMIN_USER: {
+            "items": [
+                {
+                    "name": EPO_HOST,
+                    "title": "Host",
                     "type": "string"
                 },
-                EPO_HOST: {
+                {
+                    "name": ADMIN_USER,
+                    "title": "Admin User",
                     "type": "string"
                 },
-                EPO_PORT: {
-                    "type": "integer"
+                {
+                    "name": ADMIN_PASS,
+                    "title": "Admin Password",
+                    "type": "string",
+                    "format": "password"
                 },
-                QUERY_USER: {
+                {
+                    "name": EPO_PORT,
+                    "title": "Port",
+                    "type": "number"
+                },
+                {
+                    "name": QUERY_USER,
+                    "title": "Query User",
                     "type": "string"
                 },
-                QUERY_PASS: {
-                    "type": "password"
+                {
+                    "name": QUERY_PASS,
+                    "title": "Query Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 ADMIN_USER,
                 ADMIN_USER,
@@ -115,7 +129,7 @@ class EpoAdapter(AdapterBase):
                 QUERY_PASS,
                 QUERY_USER
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

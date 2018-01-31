@@ -66,30 +66,41 @@ class NexposeAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "properties": {
-                PASSWORD: {
-                    "type": "password"
-                },
-                USER: {
+            "items": [
+                {
+                    "name": NEXPOSE_HOST,
+                    "title": "Host Name",
                     "type": "string"
                 },
-                NEXPOSE_HOST: {
+                {
+                    "name": NEXPOSE_PORT,
+                    "title": "Port",
+                    "type": "number"
+                },
+                {
+                    "name": USER,
+                    "title": "User Name",
                     "type": "string"
                 },
-                NEXPOSE_PORT: {
-                    "type": "integer"
+                {
+                    "name": PASSWORD,
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 },
-                VERIFY_SSL: {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
+                {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
+                    "name": VERIFY_SSL,
+                    "title": "Verify SSL",
                     "type": "bool"
                 }
-            },
+            ],
             "required": [
                 USER,
                 PASSWORD,
                 NEXPOSE_PORT,
                 NEXPOSE_HOST,
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

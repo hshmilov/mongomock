@@ -69,15 +69,17 @@ class TraianaLabMachinesAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                "api_url": {
+            "items": [
+                {
+                    "name": "api_url",
+                    "title": "API URL",
                     "type": "string"
                 }
-            },
+            ],
             "required": [
                 "api_url"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, raw_data):

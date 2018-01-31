@@ -18,7 +18,7 @@
     import Card from '../../components/Card.vue'
     import GenericForm from '../../components/GenericForm.vue'
 	import ActionBar from '../../components/ActionBar.vue'
-    import PaginatedTable from '../../components/PaginatedTable.vue'
+    import PaginatedTable from '../../components/tables/PaginatedTable.vue'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { FETCH_ALERTS, SET_ALERT, ARCHIVE_ALERT, RESTART_ALERT } from '../../store/modules/alert'
@@ -49,8 +49,8 @@
 			...mapActions({ fetchAlerts: FETCH_ALERTS, archiveAlert: ARCHIVE_ALERT }),
             executeFilter(filterData) {
 				/*
-				    Upon submission of the filter form, updating the data of the filter that is passed as props to the
-				    paginated table, and so it is re-rendered after fetching the data with consideration to the new filter
+				    Upon submission of the filter form, updating the controls of the filter that is passed as props to the
+				    paginated table, and so it is re-rendered after fetching the controls with consideration to the new filter
 				 */
                 this.alertFilter = filterData
             },

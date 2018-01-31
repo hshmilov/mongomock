@@ -12,27 +12,29 @@
                             <svg-icon name="navigation/device" width="24" height="24" :original="true"></svg-icon>
                             <span class="form-group-title">Add / update Servers</span>
                         </div>
-                        <dynamic-table v-if="schemaFields" class="ml-4 mt-5" :data="adapterClients"
-                                       :fields="tableFields"
-                                       addNewDataLabel="Add a server" @select="configServer" @delete="deleteServer">
+                        <dynamic-table v-if="schemaFields" :data="adapterClients" :fields="tableFields" class="mt-3"
+                                       add-new-data-label="Add a server" @select="configServer" @delete="deleteServer">
                         </dynamic-table>
                     </div>
                 </div>
                 <div class="row">
                     <div class="form-group place-right">
-                        <a class="btn btn-inverse" @click="returnToAdapters">cancel</a>
-                        <a class="btn" @click="saveAdapter">save</a>
+                        <a class="btn btn-inverse" @click="returnToAdapters">back</a>
                     </div>
                 </div>
                 <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
-                       class="config-server" @close="toggleServerModal" approveText="save" @confirm="saveServer">
+                       class="config-server" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
                     <div slot="body">
                         <!-- Container for configuration of a single selected / added server -->
-                        <status-icon-logo-text :logoValue="adapterPluginName" statusIconValue="empty"
-                                               :textValue="serverModal.serverData['name']"></status-icon-logo-text>
-                        <div class="mt-4 ml-5">
-                            <div>Basic System Credentials</div>
-                            <generic-form :schema="schemaFields" v-model="serverModal.serverData"></generic-form>
+                        <status-icon-logo-text :logoValue="adapterPluginName" status-icon-value="empty"
+                                               :textValue="serverModal.serverName"></status-icon-logo-text>
+                        <div class="mt-3">
+                            <div class="mb-2">Basic system credentials</div>
+                            <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
+                                           @submit="saveServer" @validate="updateValidity"></x-schema-form>
+                            <div v-if="serverModal.invalid.length"
+                                 class="error-text">Complete "{{serverModal.invalid[0]}}" to save server</div>
+                            <div v-else>&nbsp;</div>
                         </div>
                     </div>
                 </modal>
@@ -44,10 +46,11 @@
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
 	import Card from '../../components/Card.vue'
-	import DynamicTable from '../../components/DynamicTable.vue'
+	import DynamicTable from '../../components/tables/DynamicTable.vue'
 	import GenericForm from '../../components/GenericForm.vue'
 	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
 	import Modal from '../../components/popover/Modal.vue'
+    import xSchemaForm from '../../components/data/SchemaForm.vue'
 	import '../../components/icons/navigation'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
@@ -57,7 +60,7 @@
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, StatusIconLogoText, GenericForm, ScrollablePage, Card, DynamicTable},
+		components: {Modal, StatusIconLogoText, GenericForm, ScrollablePage, Card, DynamicTable, xSchemaForm},
 		computed: {
 			...mapState(['adapter']),
 			adapterUniquePluginName () {
@@ -67,6 +70,7 @@
 				return this.adapterUniquePluginName.match(/(.*_adapter)_\d*/)[1]
 			},
 			adapterName () {
+				if (!adapterStaticData[this.adapterPluginName]) { return this.adapterPluginName }
 				return adapterStaticData[this.adapterPluginName].name
 			},
 			adapterData () {
@@ -81,26 +85,26 @@
                     }
                 })
             },
+            adapterSchema () {
+				return this.adapterData.schema
+            },
 			schemaFields () {
-				let fields = []
-				if (!this.adapterData.schema) { return }
-				Object.keys(this.adapterData.schema.properties).forEach((fieldKey) => {
+				if (!this.adapterSchema) { return }
+				return this.adapterSchema.items.map((schemaField) => {
 					let field = {
-						path: fieldKey, name: fieldKey, control: this.adapterData.schema.properties[fieldKey].type,
-						required: this.adapterData.schema.required.indexOf(fieldKey) > -1
+						path: schemaField.name, name: schemaField.title || schemaField.name, control: schemaField.type,
+						type: schemaField.type
 					}
-					if (field.control === 'password') {
+					if (schemaField.format && schemaField.format === 'password') {
 						field.hidden = true
 					} else if (field.control === 'string') {
 						field.control = 'text'
                         field.type = 'text'
 					} else if (field.control === 'array') {
-						field.type = 'bytes'
+						field.type = 'file'
                     }
-
-					fields.push(field)
+                    return field
 				})
-				return fields
 			},
             tableFields () {
 				return [
@@ -114,7 +118,9 @@
 				serverModal: {
 					open: false,
 					serverData: {},
+                    serverName: 'New Server',
                     uuid: null,
+                    invalid: []
 				}
 			}
 		},
@@ -135,13 +141,16 @@
 				this.returnToAdapters()
 			},
 			configServer (serverId) {
+				this.serverModal.invalid = []
 				if (serverId === 'new') {
 					this.serverModal.serverData = {}
+					this.serverModal.serverName = 'New Server'
 					this.serverModal.uuid = serverId
 				} else {
 					this.adapterData.clients.forEach((server, index) => {
 						if (server.uuid === serverId) {
 							this.serverModal.serverData = { ...server['client_config'] }
+							this.serverModal.serverName = server['client_id']
                             this.serverModal.uuid = server.uuid
 						}
 					})
@@ -155,6 +164,9 @@
                 })
 			},
 			saveServer () {
+				if (this.serverModal.invalid.length > 0) {
+					return
+                }
 				this.updateAdapterServer({
 					adapterId: this.adapterUniquePluginName,
 					serverData: this.serverModal.serverData,
@@ -162,13 +174,22 @@
 				})
 				this.toggleServerModal()
 			},
+            updateValidity(field) {
+				let invalidFields = new Set(this.serverModal.invalid)
+                if (field.valid) {
+                	invalidFields.delete(field.title)
+                } else {
+					invalidFields.add(field.title)
+                }
+                this.serverModal.invalid = Array.from(invalidFields)
+            },
 			toggleServerModal () {
 				this.serverModal.open = !this.serverModal.open
 			}
 		},
 		created () {
 			/*
-                If no adapter mapped data source, or has wrong id for current adapter selection,
+                If no adapter mapped controls source, or has wrong id for current adapter selection,
                 try and fetch it (happens after refresh) and update local adapter
              */
 			if (!this.adapterData || !this.adapterData.schema) {

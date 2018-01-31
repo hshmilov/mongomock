@@ -116,29 +116,45 @@ class ActiveDirectoryAdapter(AdapterBase):
         :return: json schema
         """
         return {
-            "properties": {
-                "admin_password": {
-                    "type": "password"
-                },
-                "admin_user": {
+            "items": [
+                {
+                    "name": "dc_name",
+                    "title": "DC Name",
                     "type": "string"
                 },
-                "dc_name": {
+                {
+                    "name": "domain_name",
+                    "title": "Domain Name",
                     "type": "string"
                 },
-                "domain_name": {
+                {
+                    "name": "admin_user",
+                    "title": "Admin User",
                     "type": "string"
                 },
-                "query_password": {
-                    "type": "password"
+                {
+                    "name": "admin_password",
+                    "title": "Admin Password",
+                    "type": "string",
+                    "format": "password"
                 },
-                "query_user": {
+                {
+                    "name": "query_user",
+                    "title": "Query User",
                     "type": "string"
                 },
-                "dns_server_address": {
+                {
+                    "name": "query_password",
+                    "title": "Query Password",
+                    "type": "string",
+                    "format": "password"
+                },
+                {
+                    "name": "dns_server_address",
+                    "title": "DNS Server Address",
                     "type": "string"
                 }
-            },
+            ],
             "required": [
                 "dc_name",
                 "query_user",
@@ -147,7 +163,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 "domain_name",
                 "admin_password"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _query_devices_by_client(self, client_name, client_data):

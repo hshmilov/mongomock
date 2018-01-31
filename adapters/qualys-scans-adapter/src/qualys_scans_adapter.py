@@ -106,26 +106,30 @@ class QualysScansAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                QUALYS_SCANS_DOMAIN: {
-                    "type": "string",
-                    "name": "QualysScans Domain"
+            "items": [
+                {
+                    "name": QUALYS_SCANS_DOMAIN,
+                    "title": "Qualys Scanner Domain",
+                    "type": "string"
                 },
-                USERNAME: {
-                    "type": "string",
-                    "name": USERNAME
+                {
+                    "name": USERNAME,
+                    "title": "User Name",
+                    "type": "string"
                 },
-                PASSWORD: {
-                    "type": "password",
-                    "name": PASSWORD
+                {
+                    "name": PASSWORD,
+                    "title": "Password",
+                    "type": "string",
+                    "format": "password"
                 }
-            },
+            ],
             "required": [
                 QUALYS_SCANS_DOMAIN,
                 USERNAME,
                 PASSWORD
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

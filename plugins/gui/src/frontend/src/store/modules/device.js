@@ -24,7 +24,7 @@ export const SELECT_FIELDS = 'SELECT_FIELDS'
 
 export const decomposeFieldPath = (data, fieldPath) => {
 	/*
-		Find ultimate value of data, matching given field path, by recursively drilling into the dictionary,
+		Find ultimate value of controls, matching given field path, by recursively drilling into the dictionary,
 		until path exhausted or reached undefined.
 		Arrays along the way will be traversed so that final value is the list of all found values
 	 */
@@ -210,7 +210,7 @@ export const device = {
 						'title': 'Last Seen',
 						'name': 'last_seen',
 						'type': 'string',
-						'format': 'data-time'
+						'format': 'date-time'
 					},
 					{
 						'title': 'VM Tools Status',
@@ -284,7 +284,7 @@ export const device = {
 				{path: 'adapters.data.hostname', name: 'Host Name', selected: true, control: 'text'},
 				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
 				{
-					path: 'adapters.data.network_interfaces.ip',
+					path: 'adapters.data.network_interfaces.ips',
 					name: 'IPs',
 					selected: true,
 					type: 'list',

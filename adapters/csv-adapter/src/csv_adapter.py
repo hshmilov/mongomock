@@ -28,25 +28,29 @@ class CSVAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "properties": {
-                "user_id": {
+            "items": [
+                {
+                    "name": "user_id",
+                    "title": "User ID",
                     "type": "string"
                 },
-                "csv": {
+                {
+                    "name": "csv",
+                    "title": "CSV File",
+                    "description": "The binary contents of the csv",
+                    "format": "bytes",
                     "type": "array",
-                    "title": "The binary contents of the csv",
-                    "description": "bytes",
                     "items": {
                         "type": "integer",
                         "default": 0,
                     }
                 },
-            },
+            ],
             "required": [
                 "user_id",
                 "csv",
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, raw_data):

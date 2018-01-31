@@ -31,6 +31,7 @@ a {
     color: $color-theme-light;
   }
 }
+
 a.link {
   color: $color-text-main;
 }
@@ -164,6 +165,9 @@ Formatting
   }
 }
 
+.invalid {
+  border: 1px solid $background-color-error;
+}
 
 /*******************
 Components
@@ -264,6 +268,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   position: absolute;
   padding: 4px;
   text-align: center;
+  letter-spacing: 0;
   top: 0;
   left: 0;
 }
@@ -275,14 +280,17 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   .form-group {
     padding: 12px 24px;
     margin-bottom: 0;
+    width: 100%;
     .form-group-header {
       color: $color-theme-light;
       &.disabled-text {
         color: $color-disabled;
       }
-      .svg-stroke { stroke: $color-theme-light
+      .svg-stroke {
+        stroke: $color-theme-light
       }
-      .svg-fill { fill: $color-theme-light
+      .svg-fill {
+        fill: $color-theme-light
       }
       font-size: 20px;
       .form-group-title {

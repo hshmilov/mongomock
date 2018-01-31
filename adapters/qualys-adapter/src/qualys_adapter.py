@@ -75,26 +75,30 @@ class QualysAdapter(AdapterBase):
         :return: JSON scheme
         """
         return {
-            "properties": {
-                QUALYS_DOMAIN: {
-                    "type": "string",
-                    "name": "Qualys Domain"
+            "items": [
+                {
+                    "name": QUALYS_DOMAIN,
+                    "title": "Qualys Domain",
+                    "type": "string"
                 },
-                USERNAME: {
+                {
+                    "name": USERNAME,
+                    "title": "Username",
                     "type": "string",
-                    "name": "Username"
                 },
-                PASSWORD: {
-                    "type": PASSWORD,
-                    "name": "Password"
+                {
+                    "name": PASSWORD,
+                    "title": "Password",
+                    "type": "string",
+                    "format": PASSWORD
                 }
-            },
+            ],
             "required": [
                 QUALYS_DOMAIN,
                 USERNAME,
                 PASSWORD
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):

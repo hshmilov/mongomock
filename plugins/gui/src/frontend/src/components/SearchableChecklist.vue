@@ -102,7 +102,7 @@
 
     .checklist {
         .scrollbar-container {
-            max-height: 240px;
+            max-height: 480px;
             .checklist-list {
                 height: 100%;
             }

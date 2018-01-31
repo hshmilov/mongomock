@@ -56,45 +56,53 @@ class PuppetAdapter(AdapterBase):
                  For example [("puppet_server_name", "str"), ("password", "str")]
         """
         return {
-            "properties": {
-                "puppet_server_name": {
+            "items": [
+                {
+                    "name": "puppet_server_name",
+                    "title": "Server Name",
                     "type": "string"
                 },
-                "ca_file": {
+                {
+                    "name": "ca_file",
+                    "title": "CA File",
+                    "description": "The binary contents of the ca_file",
                     "type": "array",
-                    "title": "The binary contents of the ca_file",
-                    "description": "bytes",
+                    "format": "bytes",
                     "items": {
                         "type": "integer",
                         "default": 0,
                     }
                 },
-                "cert_file": {
+                {
+                    "name": "cert_file",
+                    "title": "Certificate File",
+                    "description": "The binary contents of the cert_file",
                     "type": "array",
-                    "title": "The binary contents of the cert_file",
-                    "description": "bytes",
+                    "format": "bytes",
                     "items": {
                         "type": "integer",
                         "default": 0,
                     }
                 },
-                "private_key": {
+                {
+                    "name": "private_key",
+                    "title": "Private Key File",
+                    "description": "The binary contents of the private_key",
                     "type": "array",
-                    "title": "The binary contents of the private_key",
-                    "description": "bytes",
+                    "format": "bytes",
                     "items": {
                         "type": "integer",
-                        "default": 0,
+                        "default": 0
                     }
                 }
-            },
+            ],
             "required": [
                 "puppet_server_name",
                 "ca_file",
                 "cert_file",
                 "private_key"
             ],
-            "type": "object"
+            "type": "array"
         }
 
     def _query_devices_by_client(self, client_name, client_data):

@@ -5,19 +5,17 @@
     ]">
         <div class="row">
             <div class="col-4">
-                <named-section title="Device Generic Fields" iconName="action/add_field">
+                <named-section title="Device Generic Fields" icon-name="action/add_field" v-if="deviceData.data">
                     <card>
-                        <array :items="deviceFields.items" v-if="deviceData.data"
-                               :data="deviceData.data" :required="deviceFields.required"></array>
+                        <x-schema-list :data="deviceData.data" :schema="deviceFields" :limit="true"></x-schema-list>
                     </card>
                 </named-section>
-                <named-section title="Plugin Fields" iconName="action/add_field"
-                               v-if="deviceData.fieldTags && Object.keys(deviceData.fieldTags).length">
+                <named-section title="Plugin Fields" icon-name="action/add_field" v-if="hasFieldTags">
                     <card>
-                        <array :items="deviceFields.items" :data="deviceData.fieldTags"></array>
+                        <x-schema-list :data="deviceData.fieldTags" :schema="deviceFields"></x-schema-list>
                     </card>
                 </named-section>
-                <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" fontClass="icon-tag">
+                <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" font-class="icon-tag">
                     <card>
                         <div v-for="tag in deviceData.tags" class="d-flex tag-content">
                             <div>{{tag.tagname}}</div>
@@ -27,17 +25,17 @@
                 </named-section>
             </div>
             <div class="col-8">
-                <named-section title="Adapter Specific Fields" iconName="action/add_field">
+                <named-section title="Adapter Specific Fields" icon-name="action/add_field">
                     <tabs>
                         <tab v-for="device, index in deviceData.adapters" :title="getAdapterName(device.plugin_name)"
-                             :id="device.plugin_name" :selected="index === 0">
+                             :id="device.plugin_name" :selected="index === 0" :key="device.plugin_name">
                             <div class="d-flex tab-header">
                                 <div>Data From: {{ device.client_used }}</div>
-                                <div v-if="viewDataBasic" @click="viewDataBasic=false" class="link">View advanced</div>
-                                <div v-if="!viewDataBasic" @click="viewDataBasic=true" class="link">View basic</div>
+                                <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
+                                <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                             </div>
-                            <array v-if="viewDataBasic" :items="deviceFields.items" :data="device.data"></array>
-                            <div v-if="!viewDataBasic">
+                            <x-schema-list v-if="viewBasic" :schema="deviceFields" :data="device.data"></x-schema-list>
+                            <div v-if="!viewBasic">
                                 <tree-view :data="device.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
                             </div>
                         </tab>
@@ -54,14 +52,14 @@
     import Card from '../../components/Card.vue'
     import Tabs from '../../components/tabs/Tabs.vue'
     import Tab from '../../components/tabs/Tab.vue'
-    import Array from '../../components/data/Array.vue'
+    import xSchemaList from '../../components/data/SchemaList.vue'
     import { FETCH_DEVICE, DELETE_DEVICE_TAGS } from '../../store/modules/device.js'
     import { adapterStaticData } from '../../store/modules/adapter.js'
     import { mapState, mapActions } from 'vuex'
 
 	export default {
 		name: 'device-config-container',
-        components: {ScrollablePage, NamedSection, Card, Tabs, Tab},
+        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList},
         computed: {
             ...mapState(['device']),
             deviceId() {
@@ -78,11 +76,14 @@
             },
             deviceFields() {
             	return this.device.deviceFields.data
+            },
+            hasFieldTags() {
+            	return this.deviceData.fieldTags && Object.keys(this.deviceData.fieldTags).length
             }
         },
         data() {
 			return {
-				viewDataBasic: true
+				viewBasic: true
             }
         },
         methods: {

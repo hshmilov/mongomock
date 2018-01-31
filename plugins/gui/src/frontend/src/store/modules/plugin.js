@@ -13,7 +13,7 @@ export const UPDATE_PLUGIN_STOP = 'UPDATE_PLUGIN_STOP'
 export const pluginStaticData = {
 	'dns_conflicts_plugin': {
 		name: 'Conflicting IP',
-		description: 'The Conflicting IP plugin uses data from Active Directory and other DNS servers to compare the hostnames of devices to identify conflicting IP addresses.'
+		description: 'The Conflicting IP plugin uses controls from Active Directory and other DNS servers to compare the hostnames of devices to identify conflicting IP addresses.'
 	},
 	'static_correlator': {
 		name: 'Static Correlator',
@@ -25,7 +25,7 @@ export const pluginStaticData = {
 	},
 	'ad-users-associator-plugin': {
 		name: 'Last Logged User',
-		description: 'The Last Logged User Plugin queries Active Directory and WMI to determine the last user that logged in to a device. The data provides additional analysis of users, e.g. correlating an Active Directory user with a device in the network.'
+		description: 'The Last Logged User Plugin queries Active Directory and WMI to determine the last user that logged in to a device. The controls provides additional analysis of users, e.g. correlating an Active Directory user with a device in the network.'
 	}
 }
 
@@ -47,9 +47,9 @@ export const plugin = {
 		[ UPDATE_PLUGINS ] (state, payload) {
 			/*
 				Called once before request to server for getting plugins, to notify that it is being fetched
-				Called next after request either fails or succeeds and updates error or data accordingly.
-				The data is modified to include the name and description, if found in the pluginStaticData.
-				(Will be removed when plugins will return their own static data)
+				Called next after request either fails or succeeds and updates error or controls accordingly.
+				The controls is modified to include the name and description, if found in the pluginStaticData.
+				(Will be removed when plugins will return their own static controls)
 			 */
 			state.pluginList.fetching = payload.fetching
 			state.pluginList.error = payload.error
@@ -80,7 +80,7 @@ export const plugin = {
 		[ UPDATE_PLUGIN ] (state, payload) {
 			/*
 				Called once before request to server for getting plugins, to notify that it is being fetched
-				Called next after request either fails or succeeds and updates error or data accordingly
+				Called next after request either fails or succeeds and updates error or controls accordingly
 			 */
 			state.pluginList.fetching = payload.fetching
 			state.pluginList.error = payload.error
@@ -154,7 +154,7 @@ export const plugin = {
 		},
 		[ FETCH_PLUGIN ] ({dispatch}, pluginId) {
 			/*
-				Fetching plugin data according to given id - unique_plugin_name value
+				Fetching plugin controls according to given id - unique_plugin_name value
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
