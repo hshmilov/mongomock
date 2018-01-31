@@ -47,10 +47,15 @@ class UnsupportedOS(Exception):
 
 
 def is_scanner_device(adapters):
-    for device_info in adapters:
-        if device_info['data'].get('scanner'):
-            return True
-    return False
+    return does_device_have_field(adapters, 'scanner')
+
+
+def does_device_have_field(adapters, field):
+    return any(field in device_info['data'] for device_info in adapters)
+
+
+def has_hostname(adapters):
+    return does_device_have_field(adapters, 'hostname')
 
 
 def figure_actual_os(adapters):
@@ -196,11 +201,11 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
                 self.create_notification(result.title, result.content, result.notification_type)
 
             if isinstance(result, CorrelationResult):
-                self.logger.debug(f"Correlation: {result.data}, for {dict(result.associated_adapter_devices)}")
+                self.logger.debug(f"Correlation: {result.data}, for {result.associated_adapter_devices}")
                 self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
                     "plugin_type": "Plugin",
                     "data": result.data,
-                    "associated_adapter_devices": dict(result.associated_adapter_devices),
+                    "associated_adapter_devices": result.associated_adapter_devices,
                     "association_type": "Link"
                 })
 

@@ -679,9 +679,9 @@ class PluginBase(Feature):
         :return:
         """
         tag_data = {'association_type': 'Tag',
-                    'associated_adapter_devices': {
-                        device_identity_by_adapter[0]: device_identity_by_adapter[1]
-                    },
+                    'associated_adapter_devices': [
+                        (device_identity_by_adapter[0], device_identity_by_adapter[1])
+                    ],
                     "tagname": tagname,
                     "tagvalue": tagvalue,
                     "tagtype": tagtype}

@@ -250,7 +250,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [],
                                       [],
-                                      [is_different_plugin, _compare_macs, _compare_ips],
+                                      [is_different_plugin, is_one_a_scanner, _compare_macs, _compare_ips],
                                       {'Reason': 'They have the same MAC and IPs'},
                                       'ScannerAnalysis')
 

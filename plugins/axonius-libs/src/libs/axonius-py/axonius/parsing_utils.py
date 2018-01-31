@@ -177,3 +177,14 @@ def remove_trailing(string, trailing):
     if string[-the_len:] == trailing:
         return string[:-the_len]
     return string
+
+
+def get_device_id_for_plugin_name(associated_adapter_devices, plugin_name_key):
+    """
+    iterates over associated_adapter_devices and returns the device_id of the device info returned from
+        plugin_name_key or None if plugin_name_key is not one of the adapters which returned info on the device
+    :param associated_adapter_devices: the adapters containing all the info of the device
+    :param plugin_name_key: the plugin_unique_name for which to seek the device id
+    """
+    return next((device_id for plugin_unique_name, device_id in associated_adapter_devices
+                 if plugin_name_key == plugin_unique_name), None)

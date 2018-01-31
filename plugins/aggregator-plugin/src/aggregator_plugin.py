@@ -20,7 +20,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
 from axonius.device import LAST_SEEN_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.parsing_utils import beautiful_adapter_device_name
+from axonius.parsing_utils import beautiful_adapter_device_name, get_device_id_for_plugin_name
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from aggregator_exceptions import AdapterOffline, ClientsUnavailable
@@ -28,28 +28,6 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_N
 from axonius.threading_utils import MultiLockerLazy, run_in_executor_helper
 
 get_devices_job_name = "Get device job"
-
-
-def parsed_devices_match(first, second):
-    """
-    Whether or not two adapter devices (i.e. a single device as viewed by an adapter) match
-    :param first: first adapter device to check
-    :param second: second adapter device to check
-    :return: bool
-    """
-    return first[PLUGIN_UNIQUE_NAME] == second[PLUGIN_UNIQUE_NAME] and \
-        first['data']['id'] == second['data']['id']
-
-
-def parsed_device_match_plugin(plugin_data, parsed_device):
-    """
-    Whether or not a plugin is referring a specific adapter device
-    :param plugin_data: the plugin data
-    :param parsed_device: a adapter device
-    :return: bool
-    """
-    return plugin_data['associated_adapter_devices']. \
-        get(parsed_device[PLUGIN_UNIQUE_NAME]) == parsed_device['data']['id']
 
 
 def get_unique_name_from_plugin_unique_name_and_id(unique_plugin_name, _id):
@@ -248,8 +226,8 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
         if association_type not in ['Tag', 'Link', 'Unlink']:
             return return_error("Acceptable values for association_type are: 'Tag', 'Link', 'Unlink'", 400)
-        if not isinstance(associated_adapter_devices, dict):
-            return return_error("associated_adapter_devices must be a dict", 400)
+        if not isinstance(associated_adapter_devices, list):
+            return return_error("associated_adapter_devices must be a list", 400)
 
         if association_type == 'Tag':
             if len(associated_adapter_devices) != 1:
@@ -266,7 +244,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
         with self.device_db_lock.get_lock(
                 [get_unique_name_from_plugin_unique_name_and_id(name, associated_id) for name, associated_id in
-                 associated_adapter_devices.items()]):
+                 associated_adapter_devices]):
             # now let's update our db
 
             # figure out all axonius devices that at least one of its adapter_device are in the
@@ -280,7 +258,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                         }
                     }
                 }
-                for associated_plugin_unique_name, associated_id in associated_adapter_devices.items()
+                for associated_plugin_unique_name, associated_id in associated_adapter_devices
             ]}))
             if association_type == 'Tag':
                 if len(axonius_device_candidates) != 1:
@@ -303,17 +281,6 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 collected_adapter_devices = [axonius_device['adapters'] for axonius_device in axonius_device_candidates]
 
-                all_plugin_unique_names = [v[PLUGIN_UNIQUE_NAME] for d in collected_adapter_devices for v in d]
-
-                if len(set(all_plugin_unique_names)) != len(all_plugin_unique_names):
-                    # this means we have a duplicate plugin_unique_name
-                    # we strongly enforce the rule that there can't be two plugin_unique_name on the same
-                    # AxoniusDevice
-                    self.logger.critical(f"Contradiction detected, sent_plugin: \n{sent_plugin}")
-                    return return_error("Contradiction detected. Please resync and check yourself.", 500)
-
-                # now we can assume now that all all_plugin_unique_names are in fact unique
-                # we merge all dictionaries!
                 all_unique_adapter_devices_data = [v for d in collected_adapter_devices for v in d]
 
                 # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
@@ -372,14 +339,14 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 }
 
                 for adapter_device in axonius_device_to_split['adapters']:
-                    candidate = associated_adapter_devices.get(adapter_device[PLUGIN_UNIQUE_NAME])
+                    candidate = get_device_id_for_plugin_name(associated_adapter_devices,
+                                                              adapter_device[PLUGIN_UNIQUE_NAME])
                     if candidate is not None and candidate == adapter_device['data']['id']:
                         new_axonius_device['adapters'].append(adapter_device)
 
                 for tag in axonius_device_to_split['tags']:
-                    (tag_plugin_unique_name, tag_adapter_id), = tag['associated_adapter_devices'].items()
-
-                    candidate = associated_adapter_devices.get(tag_plugin_unique_name)
+                    (tag_plugin_unique_name, tag_adapter_id), = tag['associated_adapter_devices']
+                    candidate = get_device_id_for_plugin_name(associated_adapter_devices, tag_plugin_unique_name)
                     if candidate is not None and candidate == tag_adapter_id:
                         new_axonius_device['tags'].append(tag)
 
@@ -398,7 +365,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 for tag_to_remove_from_old in new_axonius_device['tags']:
                     (tag_plugin_unique_name,
-                     tag_adapter_id), = tag_to_remove_from_old['associated_adapter_devices'].items()
+                     tag_adapter_id), = tag_to_remove_from_old['associated_adapter_devices']
                     self.devices_db.update_many({'internal_axon_id': axonius_device_to_split['internal_axon_id']},
                                                 {
                                                     "$pull": {

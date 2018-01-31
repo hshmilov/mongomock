@@ -42,10 +42,10 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
         x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id']
         for x in axonius_fixture.get_devices_with_condition({})), "Tagging esx failed"
 
-    axonius_fixture.aggregator.link({
-        first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME]: first_ad_device['adapters'][0]['data']['id'],
-        first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME]: first_esx_device['adapters'][0]['data']['id'],
-    })
+    axonius_fixture.aggregator.link([
+        (first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_ad_device['adapters'][0]['data']['id']),
+        (first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_esx_device['adapters'][0]['data']['id']),
+    ])
 
     devices_response = axonius_fixture.get_devices_with_condition({})
     assert not any(
@@ -72,3 +72,17 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
 
     assert any(x['tagname'] == 'esx_taggy' for x in linked_device['tags']), "ESX tag is gone"
     assert any(x['tagname'] == 'ad_taggy' for x in linked_device['tags']), "AD tag is gone"
+    axonius_fixture.aggregator.unlink([
+        (first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_ad_device['adapters'][0]['data']['id'])
+    ])
+    devices_response = axonius_fixture.get_devices_with_condition({})
+    assert not any(
+        len(x['adapters']) == 2
+        for x in devices_response), "Unlink didn't remove linked instance or 'old' device"
+
+    assert any(
+        (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
+         x['adapters'][0]['data']['id'] == first_ad_device['adapters'][0]['data']['id']) for x in devices_response)
+    assert any(
+        (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
+         x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id']) for x in devices_response)

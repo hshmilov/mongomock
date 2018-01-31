@@ -76,22 +76,22 @@ def test_no_correlation():
     assert len(results) == 0
 
 
-def plugin_name(device):
-    return device['adapters'][0][PLUGIN_UNIQUE_NAME]
+def plugin_name(adapter):
+    return adapter[PLUGIN_UNIQUE_NAME]
 
 
-def device_id(device):
-    return device['adapters'][0]['data']['id']
+def device_id(adapter):
+    return adapter['data']['id']
 
 
-def assert_correlation(result, device1, device2):
+def assert_correlation(result, adapter1, adapter2):
     assert isinstance(result, CorrelationResult)
     assert len(result.associated_adapter_devices) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
-    assert ((plugin_name(device1) == first_name and plugin_name(device2) == second_name) or
-            (plugin_name(device1) == second_name and plugin_name(device2) == first_name))
-    assert ((device_id(device1) == first_id and device_id(device2) == second_id) or
-            (device_id(device1) == second_id and device_id(device2) == first_id))
+    assert ((plugin_name(adapter1) == first_name and plugin_name(adapter2) == second_name) or
+            (plugin_name(adapter1) == second_name and plugin_name(adapter2) == first_name))
+    assert ((device_id(adapter1) == first_id and device_id(adapter2) == second_id) or
+            (device_id(adapter1) == second_id and device_id(adapter2) == first_id))
 
 
 def assert_success(results, device_list, reason, intended):
@@ -100,7 +100,8 @@ def assert_success(results, device_list, reason, intended):
         if result.data['Reason'] == reason:
             intended_correlations += 1
             correlation_success = False
-            for device1, device2 in itertools.combinations(device_list, 2):
+            adapters = [adapter for device in device_list for adapter in device['adapters']]
+            for device1, device2 in itertools.combinations(adapters, 2):
                 try:
                     assert_correlation(result, device1, device2)
                     correlation_success = True

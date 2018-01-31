@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 import itertools
 from funcy import pairwise
 
-from axonius.correlator_base import CorrelationResult, figure_actual_os, OSTypeInconsistency, is_scanner_device
+from axonius.correlator_base import CorrelationResult, \
+    figure_actual_os, OSTypeInconsistency, is_scanner_device, has_hostname
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 adapter_device = NewType('adapter_device', dict)
@@ -43,14 +44,14 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: device to pass the device to _correlate
         """
+        # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
+        # way to correlate the devices and so it won't be added to adapters_to_correlate
+        correlation_preconditions = [is_scanner_device, has_hostname, figure_actual_os]
         for device in devices:
             try:
-                if is_scanner_device(device['adapters']):
+                adapters = device['adapters']
+                if any(correlation_precondition(adapters) for correlation_precondition in correlation_preconditions):
                     yield device
-                else:
-                    os = figure_actual_os(device['adapters'])
-                    if os is not None:
-                        yield device
             except OSTypeInconsistency:
                 self.logger.exception("OS inconsistent over correlated devices", device['internal_axon_id'])
 
@@ -91,7 +92,7 @@ class CorrelatorEngineBase(ABC):
                 bucket.append(b)
             else:
                 yield from _process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
-                bucket = []
+                bucket = [b]
             pair_number += 1
         if len(bucket) > 1:
             yield from _process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
@@ -165,9 +166,9 @@ class CorrelatorEngineBase(ABC):
         """
         devices = list(self._prefilter_device(devices))
         all_adapter_devices = [adapter for adapters in devices for adapter in adapters['adapters']]
-        correlations_done_already = []
+        correlations_done_already = list()
 
-        correlations_with_unavailable_devices = []
+        correlations_with_unavailable_devices = list()
 
         self.logger.info(f"Correlating {len(devices)} devices")
         for result in itertools.chain(self._preprocess_devices(devices), self._raw_correlate(devices)):
@@ -219,14 +220,15 @@ class CorrelatorEngineBase(ABC):
                     continue
 
                 second_name = correlated_adapter_device_from_db[PLUGIN_UNIQUE_NAME]
-                result.associated_adapter_devices = ((first_name, first_id), (second_name, second_id))
-
-            if result.associated_adapter_devices in correlations_done_already:
+                result.associated_adapter_devices = [(first_name, first_id), (second_name, second_id)]
+            sorted_associated_adapter_devices = sorted(result.associated_adapter_devices)
+            if sorted_associated_adapter_devices in correlations_done_already:
+                self.logger.debug(f"result is the same as old one : {result}")
                 # skip correlations done twice
                 continue
 
             else:
-                correlations_done_already.append(result.associated_adapter_devices)
+                correlations_done_already.append(sorted_associated_adapter_devices)
                 yield result
 
         # sort all correlations src->dst ("src" - device used for correlation and "dst" - device found by

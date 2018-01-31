@@ -405,9 +405,9 @@ class BackendPlugin(PluginBase):
                 for adapter in device['adapters']:
                     for tag in devices_and_tags['tags']:
                         update_data = {'association_type': 'Tag',
-                                       'associated_adapter_devices': {
-                                           adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id']
-                                       },
+                                       'associated_adapter_devices': [
+                                           (adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id'])
+                                       ],
                                        "tagname": tag,
                                        "tagvalue": True if request.method == 'POST' else False}
                         responses.append(self.request_remote_plugin(
