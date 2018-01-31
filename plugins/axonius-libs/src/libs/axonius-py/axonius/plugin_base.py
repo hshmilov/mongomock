@@ -668,19 +668,19 @@ class PluginBase(Feature):
     def plugin_type(self):
         return "Plugin"
 
-    def _tag_device(self, adapter_id, tagname, tagvalue, adapter_unique_name, tagtype='label'):
+    def __tag_device(self, device_identity_by_adapter, tagname, tagvalue, tagtype):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
-        :param adapter_id: The device id given by the current adapter
-        :param tagname: the name of the tag
-        :param tagvalue: the value of the tag
-        :param adapter_unique_name: on behalf of which adapter we are tagging
+        :param device_identity_by_adapter: a tuple of (adapter_unique_name, device_unique_id).
+                                           e.g. ("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")
+        :param tagname: the name of the tag. should be a string.
+        :param tagvalue: the value of the tag. could be any object.
         :param tagtype: the type of the tag. "label" for a regular tag, "data" for a data tag.
         :return:
         """
         tag_data = {'association_type': 'Tag',
                     'associated_adapter_devices': {
-                        adapter_unique_name: adapter_id
+                        device_identity_by_adapter[0]: device_identity_by_adapter[1]
                     },
                     "tagname": tagname,
                     "tagvalue": tagvalue,
@@ -690,14 +690,14 @@ class PluginBase(Feature):
             self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError()
 
-    def add_data_to_device(self, adapter_id, dataname, datavalue, adapter_unique_name):
-        """ Add custom plugin-data to device, not as part of an adapter. This actually uses
-        the tagging mechanism to add this kind of data.
-        This function will tag a wanted device. The tag will be related only to this adapter
-        :param adapter_id: The device id given by the current adapter
-        :param dataname: the name of the data block
-        :param datavalue: the data to add.
-        :param adapter_unique_name: on behalf of which adapter we are tagging
-        :return:
-        """
-        return self._tag_device(adapter_id, dataname, datavalue, adapter_unique_name, "data")
+    def add_label_to_device(self, device_identity_by_adapter, label, is_enabled=True):
+        """ A shortcut to _tag_device with tagtype "label" . if is_enabled = False, the label is grayed out."""
+        return self.__tag_device(device_identity_by_adapter, label, is_enabled, "label")
+
+    def add_data_to_device(self, device_identity_by_adapter, name, value):
+        """ A shortcut to _tag_device with tagtype "data" """
+        return self.__tag_device(device_identity_by_adapter, name, value, "data")
+
+    def add_adapterdata_to_device(self, device_identity_by_adapter, name, value):
+        """ A shortcut to _tag_device with tagtype "adapterdata" """
+        return self.__tag_device(device_identity_by_adapter, name, value, "adapterdata")

@@ -262,10 +262,9 @@ class AdUsersAssociatorPlugin(PluginBase, Activatable, Triggerable):
             if len(last_used_time_arr) > 0:
                 last_used_user = sids_to_users.get(last_used_time_arr[0]["sid"], "Unknown user")
 
-                self._tag_device(adapter_unique_id,
-                                 tagname="FIELD",
-                                 tagvalue={"fieldname": "last_used_user", "fieldvalue": last_used_user},
-                                 adapter_unique_name=adapter_unique_name)
+                self.add_data_to_device((adapter_unique_name, adapter_unique_id),
+                                        "FIELD",
+                                        {"fieldname": "last_used_user", "fieldvalue": last_used_user})
 
                 self.logger.info("Found last used user for axon_id {0}. sid: {0}, caption: {1}, lastusedtime: {2}"
                                  .format(internal_axon_id,

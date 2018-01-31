@@ -7,7 +7,7 @@ import threading
 import pymongo
 from datetime import datetime, timedelta
 import uuid
-from itertools import chain
+from itertools import chain, groupby
 from dateutil.parser import parse as dateparse
 
 from apscheduler.triggers.interval import IntervalTrigger
@@ -316,13 +316,28 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 # we merge all dictionaries!
                 all_unique_adapter_devices_data = [v for d in collected_adapter_devices for v in d]
 
+                # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
+                # a tag is the same tag, if it has the same plugin_unique_name and tagname.
+                def keyfunc(tag): return (tag['plugin_unique_name'], tag['tagname'])
+
+                # first, lets get all tags and have them sorted. This will make the same tags be consecutive.
+                all_tags = sorted((t for dc in axonius_device_candidates for t in dc['tags']), key=keyfunc)
+
+                # now we have the same tags ordered consecutively. so we want to group them, so that we
+                # would have duplicates of the same tag in their identity key.
+                all_tags = groupby(all_tags, keyfunc)
+
+                # now we have them groupedby, lets select only the one which is the newest.
+                tags_for_new_device = {tag_key: max(duplicated_tags, key=lambda tag: tag['accurate_for_datetime'])
+                                       for tag_key, duplicated_tags
+                                       in all_tags}
+
                 internal_axon_id = uuid.uuid4().hex
                 self.devices_db.insert_one({
                     "internal_axon_id": internal_axon_id,
                     "accurate_for_datetime": datetime.now(),
                     "adapters": all_unique_adapter_devices_data,
-                    "tags": list(chain(*(axonius_device['tags'] for axonius_device in
-                                         axonius_device_candidates)))
+                    "tags": list(tags_for_new_device.values())  # Turn it to a list
                 })
 
                 # now, let us delete all other AxoniusDevices
