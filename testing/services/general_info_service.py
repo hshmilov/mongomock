@@ -5,18 +5,18 @@ from services.simple_fixture import initialize_fixture
 from services.activateable_service import ActivateableService
 
 
-class AdUsersAssociatorService(PluginService, ActivateableService):
+class GeneralInfoService(PluginService, ActivateableService):
     def __init__(self, **kwargs):
-        super().__init__('ad-users-associator-plugin', service_dir='../plugins/ad-users-associator-plugin', **kwargs)
+        super().__init__('general-info-plugin', service_dir='../plugins/general-info-plugin', **kwargs)
 
-    def associate(self):
-        result = self.post('associate')
+    def run(self):
+        result = self.post('run')
         assert result.status_code == 200
         return result
 
 
 @pytest.fixture(scope="module")
-def ad_users_associator_fixture(request):
-    service = AdUsersAssociatorService()
+def general_info_fixture(request):
+    service = GeneralInfoService()
     initialize_fixture(request, service)
     return service

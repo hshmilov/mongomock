@@ -58,7 +58,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
         # Open connection to the adapters db
         self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
-        self.devices_db = self.devices_db_connection['devices_db']
+        self.devices_db_actual_collection = self.devices_db_connection['devices_db']
 
         # Scheduler for querying core for online adapters and querying the adapters themselves
         self._online_adapters_scheduler = None
@@ -68,6 +68,15 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
         # Starting the managing thread
         self.start_activatable()
+
+    @property
+    def devices_db(self):
+        """
+        We override devices_db of pluginbase to be more efficient.
+        :return: A mongodb collection.
+        """
+
+        return self.devices_db_actual_collection
 
     def _start_activatable(self):
         assert self._online_adapters_scheduler is None, "Aggregator thinks we're already running but still got a " \

@@ -1,4 +1,4 @@
 version: "3"
 services:
-  ad-users-associator-plugin:
+  general-info-plugin:
     restart: always

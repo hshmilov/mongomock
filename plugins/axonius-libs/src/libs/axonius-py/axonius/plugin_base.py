@@ -668,6 +668,17 @@ class PluginBase(Feature):
     def plugin_type(self):
         return "Plugin"
 
+    @property
+    def devices_db(self):
+        """
+        Simply returns the collection of the devices db.
+        :return: A mongodb collection.
+        """
+
+        # This would throw an exception if we haven't found it, or found multiple aggregators for some reason.
+        aggregator = self.get_plugin_by_name('aggregator')
+        return self._get_collection("devices_db", db_name=aggregator[PLUGIN_UNIQUE_NAME])
+
     def __tag_device(self, device_identity_by_adapter, tagname, tagvalue, tagtype):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter

@@ -1,7 +1,7 @@
 import pytest
 from services.adapters.ad_service import AdService, ad_fixture
 from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fixture
-from services.ad_users_associator_service import ad_users_associator_fixture
+from services.general_info_service import general_info_fixture
 from services.execution_service import execution_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
@@ -85,13 +85,13 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
 
-    def test_ad_users_association(self, execution_fixture, ad_users_associator_fixture):
-        ad_users_associator_fixture.activateable_start()
-        ad_users_associator_fixture.associate()
+    def test_ad_users_association(self, execution_fixture, general_info_fixture):
+        general_info_fixture.activateable_start()
+        general_info_fixture.run()
 
         def has_ad_users_association_tag():
             #  ad_users_associator_fixture.associate()
-            tags = list(self.axonius_system.get_devices_with_condition({"tags.tagvalue.fieldname": "last_used_user"}))
+            tags = list(self.axonius_system.get_devices_with_condition({"tags.tagname": "Last User Logon"}))
             assert len(tags) > 0
 
         try_until_not_thrown(30, 5, has_ad_users_association_tag)

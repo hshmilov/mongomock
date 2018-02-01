@@ -1,0 +1,19 @@
+version: '3'
+services:
+  general-info-plugin:
+        build: .
+        image: axonius/general-info-plugin
+        container_name: "general-info-plugin"
+        ports:
+          - 5556:80
+        volumes:
+          - ../../logs/general-info-plugin:/home/axonius/logs
+          - data:/home/axonius
+
+volumes:
+  data:
+
+networks:
+  default:
+    external:
+      name: axonius

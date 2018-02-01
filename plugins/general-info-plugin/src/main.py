@@ -1,15 +1,15 @@
 """
 main.py
 """
-from ad_users_associator_plugin import AdUsersAssociatorPlugin
+from general_info_plugin import GeneralInfoPlugin
 from axonius.server_utils import init_wsgi
 
 
 if __name__ == '__main__':
     # Initialize
-    plugin = AdUsersAssociatorPlugin()
+    plugin = GeneralinfoPlugin()
     # Run (Blocking)
     plugin.start_serve()
 
 # Init wsgi if in it.
-wsgi_app = init_wsgi(AdUsersAssociatorPlugin)
+wsgi_app = init_wsgi(GeneralInfoPlugin)

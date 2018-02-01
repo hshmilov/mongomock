@@ -7,7 +7,7 @@ docker rmi $(docker images -q --filter=reference='axonius/*')
 
 echo "Logging to docker hub and pulling axonius-base-image"
 source testing/test_credentials/docker_login.sh
-docker pull axonius/axonius-base-image
+time docker pull axonius/axonius-base-image
 
 echo "Building all images"
 python3.6 devops/prepare_setup.py

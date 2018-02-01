@@ -22,7 +22,7 @@ DOCKER_PORTS = {
     'symantec-adapter': 5676,
     'traiana-lab-machines-adapter': 5113,
 
-    'ad-users-associator-plugin': 5556,
+    'general-info-plugin': 5556,
     'aggregator': 5000,
     'careful-execution-correlator': 5039,
     'dns-conflicts-plugin': 5011,
