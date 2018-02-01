@@ -13,6 +13,7 @@ export const UPDATE_UNIQUE_FIELDS = 'UPDATE_UNIQUE_FIELDS'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 export const SELECT_DEVICE_PAGE = 'SELECT_DEVICE_PAGE'
+export const UPDATE_DEVICE_FILTER = 'UPDATE_DEVICE_FILTER'
 
 export const FETCH_TAGS = 'FETCH_TAGS'
 export const UPDATE_TAGS = 'UPDATE_TAGS'
@@ -21,6 +22,7 @@ export const ADD_DEVICE_TAGS = 'ADD_DEVICE_TAGS'
 export const DELETE_DEVICE_TAGS = 'DELETE_DEVICE_TAGS'
 export const REMOVE_DEVICE_TAGS = 'REMOVE_DEVICE_TAGS'
 export const SELECT_FIELDS = 'SELECT_FIELDS'
+
 
 export const decomposeFieldPath = (data, fieldPath) => {
 	/*
@@ -1150,7 +1152,10 @@ export const device = {
     			]
 			}
 		},
-		tagList: {fetching: false, data: [], error: ''}
+
+		tagList: {fetching: false, data: [], error: ''},
+
+		deviceFilter: ''
 	},
 	getters: {},
 	mutations: {
@@ -1335,6 +1340,9 @@ export const device = {
 		},
 		[ SELECT_DEVICE_PAGE ] (state, pageNumber) {
 			state.deviceSelectedPage = pageNumber
+		},
+		[ UPDATE_DEVICE_FILTER ] (state, newFilter) {
+			state.deviceFilter = newFilter
 		}
 	},
 	actions: {

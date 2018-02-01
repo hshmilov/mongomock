@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="menu">
         <slot></slot>
     </div>
 </template>
@@ -11,5 +11,7 @@
 </script>
 
 <style lang="scss">
-
+    .menu {
+        margin: 0 -12px;
+    }
 </style>

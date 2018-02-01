@@ -36,7 +36,7 @@
         cursor: pointer;
         padding-right: 12px;
         padding-left: 12px;
-        margin: 4px -12px;
+        margin: 4px 0px;
         position: relative;
         &:hover {
             background-color: $border-color;

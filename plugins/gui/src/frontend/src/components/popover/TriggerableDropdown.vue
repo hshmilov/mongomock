@@ -1,7 +1,7 @@
 <template>
-    <div class="dropdown" v-bind:class="{ 'show': isActive }" v-on-clickaway="closeDropdown">
-        <div class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="`${isActive}`"
-            @click="isActive = !isActive">
+    <div class="dropdown" v-bind:class="{ 'show': isActive }" v-on-clickaway="close">
+        <div class="dropdown-toggle" :class="{'arrow': arrow}" @click="isActive = !isActive"
+             data-toggle="dropdown" aria-haspopup="true" :aria-expanded="`${isActive}`">
             <slot name="dropdownTrigger"></slot>
         </div>
         <div :class="`dropdown-menu ${align} w-${size}`">
@@ -16,19 +16,16 @@
     export default {
         name: 'triggerable-dropdown',
         mixins: [ clickaway ],
-        props: {'size': {default: ''}, 'align': {default: ''}},
+        props: {'size': {default: ''}, 'align': {default: ''}, arrow: {default: true}},
         data() {
             return {
                 isActive: false
             }
         },
         methods: {
-            closeDropdown() {
-                this.isActive = false
+        	close() {
+        		this.isActive = false
             }
-        },
-        created() {
-        	this.isActive = this.active
         }
     }
 </script>
@@ -63,6 +60,9 @@
                 line-height: 28px;
             }
             &:after {
+                display: none;
+            }
+            &.arrow:after {
                 position: absolute;
                 margin: 6px 12px;
                 top: 0;
