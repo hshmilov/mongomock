@@ -82,9 +82,9 @@ class DockerService(AxonService):
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
-            os.system(f"cd {self.service_dir}; start cmd docker logs -f >> {logsfile} 2>&1")
+            os.system(f"cd {self.service_dir}; start cmd docker logs -f {self.container_name} >> {logsfile} 2>&1")
         else:  # good stuff
-            os.system(f"cd {self.service_dir}; docker logs -f >> {logsfile} 2>&1 &")
+            os.system(f"cd {self.service_dir}; docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
 
     def build(self):
         subprocess.call(['docker', 'build', '.', '--tag', f'axonius/{self.container_name}'], cwd=self.service_dir)
