@@ -131,7 +131,7 @@ def service_entry_point(target, args):
         axonius_system.stop_plugins(adapters, plugins, should_delete=False)
     else:
         assert not args.restart
-        axonius_system.build(False, args.adapters, args.plugins, args.rebuild)
+        axonius_system.build(False, adapters, plugins, args.rebuild)
 
 
 def str2bool(v):
