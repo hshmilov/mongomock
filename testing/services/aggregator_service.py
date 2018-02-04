@@ -1,4 +1,3 @@
-import pytest
 from retrying import retry
 
 from services.plugin_service import API_KEY_HEADER, PluginService
@@ -6,8 +5,8 @@ import requests
 
 
 class AggregatorService(PluginService):
-    def __init__(self, **kwargs):
-        super().__init__('aggregator', service_dir='../plugins/aggregator-plugin', **kwargs)
+    def __init__(self):
+        super().__init__('aggregator', service_dir='../plugins/aggregator-plugin')
 
     @retry(wait_fixed=3000,
            stop_max_delay=60 * 3 * 1000)

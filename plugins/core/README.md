@@ -30,7 +30,4 @@ If you didn't already create a container network do so like this:
 $ docker network create axonius
 ```
 
-Now, all you have to do is run the docker using the provided docker-compose instructions in the core directory:
-```sh
-$ docker-compose -d up
-```
+Now, all you have to do is run the docker using the provided instructions in the README.md under cortex

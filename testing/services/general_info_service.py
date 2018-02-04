@@ -6,8 +6,8 @@ from services.activateable_service import ActivateableService
 
 
 class GeneralInfoService(PluginService, ActivateableService):
-    def __init__(self, **kwargs):
-        super().__init__('general-info-plugin', service_dir='../plugins/general-info-plugin', **kwargs)
+    def __init__(self):
+        super().__init__('general-info', service_dir='../plugins/general-info-plugin')
 
     def run(self):
         result = self.post('run')

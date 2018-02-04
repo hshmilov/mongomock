@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -11,19 +12,21 @@ UNIQUE_KEY_PARAM = "unique_name"
 
 
 class PluginService(DockerService):
-    def __init__(self, container_name, service_dir, mode=''):
-        if mode == '':
-            mode = 'override'
-        self.service_dir = service_dir
-        compose_file_path = service_dir + '/docker-compose.yml'
-        override_compose_file_path = service_dir + f'/docker-compose.{mode}.yml'
-        super().__init__(container_name, compose_file_path, override_compose_file_path=override_compose_file_path)
+    def __init__(self, container_name, service_dir):
+        super().__init__(container_name, service_dir)
         if self.container_name not in DOCKER_PORTS:
             raise ValueError(f'Container {self.container_name} missing external port in DOCKER_PORTS')
         self.endpoint = ('localhost', DOCKER_PORTS[self.container_name])
         self.req_url = "http://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
-        self.config_file_path = service_dir + '/src/plugin_config.ini'
+        self.config_file_path = self.service_dir + '/src/plugin_config.ini'
         self.last_vol_conf = None
+
+    @property
+    def volumes_override(self):
+        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
+                                            'axonius-libs', 'src', 'libs'))
+        return ['{0}:/home/axonius/app:ro'.format(os.path.join(self.service_dir, 'src')),
+                f'{libs}:/home/axonius/libs:ro']
 
     def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
         if headers is None:
@@ -115,23 +118,21 @@ class PluginService(DockerService):
 
 class AdapterService(PluginService):
 
-    def __init__(self, name, **kwargs):
-        super().__init__(f'{name}-adapter', f'../adapters/{name}-adapter', **kwargs)
+    def __init__(self, name):
+        super().__init__(f'{name}-adapter', f'../adapters/{name}-adapter')
         self.adapter_name = name
 
     def add_client(self, client_details):
         self.clients(client_details)
 
     def users(self):
-        response = requests.get(self.req_url + "/users",
-                                headers={API_KEY_HEADER: self.api_key})
+        response = requests.get(self.req_url + "/users", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
         return response.json()
 
     def devices(self):
-        response = requests.get(self.req_url + "/devices",
-                                headers={API_KEY_HEADER: self.api_key})
+        response = requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
         return dict(json.loads(response.content))
@@ -140,8 +141,7 @@ class AdapterService(PluginService):
         if not client_data:
             response = requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
         else:
-            response = requests.put(self.req_url + "/clients",
-                                    headers={API_KEY_HEADER: self.api_key},
+            response = requests.put(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key},
                                     json=client_data)
         assert response.status_code == 200, str(response)
         return response.json()

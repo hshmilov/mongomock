@@ -1,6 +1,0 @@
-version: '3'
-services:
-  correlator:
-    volumes:
-          - ./src:/home/axonius/app:ro
-          - ../axonius-libs/src/libs:/home/axonius/libs:ro

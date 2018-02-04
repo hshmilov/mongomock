@@ -1,20 +1,35 @@
-import pytest
+import os
 import pymongo
 
 from services.docker_service import DockerService
-from services.ports import DOCKER_PORTS
-from services.simple_fixture import initialize_fixture
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
 class MongoService(DockerService):
-    def __init__(self, **kwargs):
-        self.service_dir = '../infrastructures/database'
-        compose_file_path = self.service_dir + '/docker-compose.yml'
-        super().__init__('mongodb', compose_file_path, **kwargs)
+    def __init__(self):
+        super().__init__('mongo', '../infrastructures/database')
         self.client = None
-        self.endpoint = ('localhost', DOCKER_PORTS[self.container_name])
+        self.endpoint = ('localhost', self.exposed_port)
         self.connect()
+
+    @property
+    def inner_port(self):
+        return 27017
+
+    @property
+    def image(self):
+        return 'mongo:3.6'
+
+    @property
+    def volumes(self):
+        return [f'{self.container_name}_data:/data/db',
+                '{0}:/docker-entrypoint-initdb.d'.format(os.path.join(self.service_dir, 'docker-entrypoint-initdb.d'))]
+
+    @property
+    def environment(self):
+        return ['MONGO_INITDB_ROOT_USERNAME=ax_user',
+                'MONGO_INITDB_ROOT_PASSWORD=ax_pass',
+                'MONGO_INITDB_DATABASE=core']
 
     def is_mongo_alive(self):
         try:

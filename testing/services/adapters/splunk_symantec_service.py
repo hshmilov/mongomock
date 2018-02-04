@@ -5,8 +5,8 @@ from services.simple_fixture import initialize_fixture
 
 
 class SplunkSymantecService(AdapterService):
-    def __init__(self, **kwargs):
-        super().__init__('splunk-symantec', **kwargs)
+    def __init__(self):
+        super().__init__('splunk-symantec')
 
 
 @pytest.fixture(scope="module", autouse=True)

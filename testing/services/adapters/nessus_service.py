@@ -5,8 +5,8 @@ from services.simple_fixture import initialize_fixture
 
 
 class NessusService(AdapterService):
-    def __init__(self, **kwargs):
-        super().__init__('nessus', **kwargs)
+    def __init__(self):
+        super().__init__('nessus')
 
 
 @pytest.fixture(scope="module", autouse=True)

@@ -5,8 +5,8 @@ from services.simple_fixture import initialize_fixture
 
 
 class NexposeService(AdapterService):
-    def __init__(self, **kwargs):
-        super().__init__('nexpose', **kwargs)
+    def __init__(self):
+        super().__init__('nexpose')
 
 
 @pytest.fixture(scope="module", autouse=True)

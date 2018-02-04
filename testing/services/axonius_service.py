@@ -8,25 +8,22 @@ from services.aggregator_service import AggregatorService
 from services.core_service import CoreService
 from services.gui_service import GuiService
 from services.mongo_service import MongoService
+from services.plugin_service import AdapterService, PluginService
 from test_helpers.utils import try_until_not_thrown
 
 
 def get_service():
-    mongo = MongoService()
-    core = CoreService()
-    aggregator = AggregatorService()
-    gui = GuiService()
-    return AxoniusService(mongo, core, aggregator, gui)
+    return AxoniusService()
 
 
 class AxoniusService(object):
-    def __init__(self, db, core, aggregator, gui):
-        self.db = db
-        self.core = core
-        self.aggregator = aggregator
-        self.gui = gui
+    def __init__(self):
+        self.db = MongoService()
+        self.core = CoreService()
+        self.aggregator = AggregatorService()
+        self.gui = GuiService()
 
-        self.axonius_services = [db, core, aggregator, gui]
+        self.axonius_services = [self.db, self.core, self.aggregator, self.gui]
 
     def stop(self, should_delete):
         # Not critical but lets stop in reverse order
@@ -37,10 +34,14 @@ class AxoniusService(object):
         for service in self.axonius_services:
             service.take_process_ownership()
 
-    def start_and_wait(self):
+    def start_and_wait(self, mode='', allow_restart=False):
+        if allow_restart:
+            for service in self.axonius_services:
+                service.remove_container()
+
         # Start in parallel
         for service in self.axonius_services:
-            service.start()
+            service.start(mode=mode, allow_restart=allow_restart)
 
         # wait for all
         for service in self.axonius_services:
@@ -111,24 +112,41 @@ class AxoniusService(object):
 
     @staticmethod
     def get_plugin(name):
-        plugin_service = importlib.import_module(f"services.{name.lower()}_service")
-        plugin_service = getattr(plugin_service, name + "Service")()
-        return plugin_service
+        module = importlib.import_module(f"services.{name.lower()}_service")
+        for variable_name in dir(module):
+            variable = getattr(module, variable_name)
+            if isinstance(variable, type) and ((issubclass(variable, PluginService) and variable != PluginService) or
+                                               (issubclass(variable, MongoService))):
+                return variable()
+        raise ValueError('Plugin not found')
 
-    def start_plugins(self, names):
-        plugins = []
-        for name in names:
-            plugin = self.get_plugin(name)
-            plugin.start()
-            plugins.append(plugin)
+    @staticmethod
+    def get_adapter(name):
+        module = importlib.import_module(f"services.adapters.{name.lower()}_service")
+        for variable_name in dir(module):
+            variable = getattr(module, variable_name)
+            if isinstance(variable, type) and issubclass(variable, AdapterService) and variable != AdapterService:
+                return variable()
+        raise ValueError('Adapter not found')
+
+    def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False):
+        plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+        if allow_restart:
+            for plugin in plugins:
+                plugin.remove_container()
+        for plugin in plugins:
+            plugin.take_process_ownership()
+            plugin.start(mode, allow_restart=allow_restart)
         for plugin in plugins:
             plugin.wait_for_service()
 
-    def stop_plugins(self, names, should_delete):
-        plugins = []
-        for name in names:
-            plugin = self.get_plugin(name)
+    def stop_plugins(self, adapter_names, plugin_names, should_delete):
+        plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+        for plugin in plugins:
+            plugin.take_process_ownership()
             plugin.stop(should_delete=should_delete)
-            plugins.append(plugin)
+
+    def remove_plugin_containers(self, adapter_names, plugin_names):
+        plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         for plugin in plugins:
-            plugin.wait_for_service()
+            plugin.remove_container()

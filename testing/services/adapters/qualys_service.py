@@ -5,8 +5,8 @@ from services.simple_fixture import initialize_fixture
 
 
 class QualysService(AdapterService):
-    def __init__(self, **kwargs):
-        super().__init__('qualys', **kwargs)
+    def __init__(self):
+        super().__init__('qualys')
 
 
 @pytest.fixture(scope="module", autouse=True)

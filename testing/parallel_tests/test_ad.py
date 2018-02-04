@@ -90,7 +90,7 @@ class TestAdAdapter(AdapterTestBase):
         general_info_fixture.run()
 
         def has_ad_users_association_tag():
-            #  ad_users_associator_fixture.associate()
+            #  general_info_fixture.associate()
             tags = list(self.axonius_system.get_devices_with_condition({"tags.tagname": "Last User Logon"}))
             assert len(tags) > 0
 

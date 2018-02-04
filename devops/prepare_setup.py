@@ -29,12 +29,12 @@ if __name__ == '__main__':
     runner.append_single("venv", "../create_venv.sh")
 
     # mongo
-    runner.append_single("mongo", "docker-compose pull", cwd="../infrastructures/database")
+    runner.append_single("mongo", "docker pull mongo:3.6", cwd="../infrastructures/database")
 
     # badly named plugins :(
     runner.append_single("core", "docker build ../plugins/core -t axonius/core")
     runner.append_single("gui", "docker build ../plugins/gui -t axonius/gui")
-    runner.append_single("watch-service", "docker build ../plugins/watch-service -t axonius/watch-service")
+    runner.append_single("watch", "docker build ../plugins/watch-service -t axonius/watch")
 
     # plugins
     runner.append_docker_pattern('../plugins/*-plugin', 'plugins')

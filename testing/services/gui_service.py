@@ -1,15 +1,22 @@
-import pytest
 import requests
 import json
+import os
+
 from services.plugin_service import PluginService
 from test_credentials.test_gui_credentials import *
 
 
 class GuiService(PluginService):
-    def __init__(self, **kwargs):
-        super().__init__('gui', service_dir='../plugins/gui', **kwargs)
+    def __init__(self):
+        super().__init__('gui', service_dir='../plugins/gui')
         self._session = requests.Session()
         self.default_user = DEFAULT_USER
+
+    @property
+    def volumes_override(self):
+        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
+                                            'axonius-libs', 'src', 'libs'))
+        return [f'{libs}:/home/axonius/libs:ro']
 
     def __del__(self):
         self._session.close()

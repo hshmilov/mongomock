@@ -5,8 +5,8 @@ from services.simple_fixture import initialize_fixture
 
 
 class TraianaLabMachinesService(AdapterService):
-    def __init__(self, **kwargs):
-        super().__init__('traiana-lab-machines', **kwargs)
+    def __init__(self):
+        super().__init__('traiana-lab-machines')
 
 
 @pytest.fixture(scope="module", autouse=True)

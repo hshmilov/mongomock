@@ -1,6 +1,6 @@
 DOCKER_PORTS = {
     'core': 5050,
-    'mongodb': 27017,
+    'mongo': 27017,
 
     'ad-adapter': 5001,
     'aws-adapter': 5112,
@@ -22,15 +22,15 @@ DOCKER_PORTS = {
     'symantec-adapter': 5676,
     'traiana-lab-machines-adapter': 5113,
 
-    'general-info-plugin': 5556,
+    'general-info': 5556,
     'aggregator': 5000,
     'careful-execution-correlator': 5039,
-    'dns-conflicts-plugin': 5011,
+    'dns-conflicts': 5011,
     'correlator': 5009,
     'execution': 4999,
     'gui': 80,
     'static-correlator': 5010,
-    'watch-service': 5002,
+    'watch': 5002,
 }
 
 assert len(set(DOCKER_PORTS.values())) == len(DOCKER_PORTS)

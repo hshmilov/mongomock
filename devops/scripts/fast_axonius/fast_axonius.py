@@ -63,6 +63,9 @@ def fast_axonius():
                 # Create a set_client with credentials function for that adapter's name
                 def get_func(name):
                     def set_client():
+                        if not service[name].get_is_container_up():
+                            print(f'Container {name} not running')
+                            return
                         if services[name].clients():
                             print('A Client Already exists')
                         services[name].add_client(services[name].test.some_client_details)

@@ -5,8 +5,8 @@ from services.simple_fixture import initialize_fixture
 
 
 class CsvService(AdapterService):
-    def __init__(self, **kwargs):
-        super().__init__('csv', **kwargs)
+    def __init__(self):
+        super().__init__('csv')
 
 
 @pytest.fixture(scope="module", autouse=True)
