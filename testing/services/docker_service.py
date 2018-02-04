@@ -175,6 +175,5 @@ class DockerService(AxonService):
                         print('Mount failed - please check host sharing settings')
                 except:
                     pass
-                raise
             timeout -= 5
         super().wait_for_service(timeout=timeout)
