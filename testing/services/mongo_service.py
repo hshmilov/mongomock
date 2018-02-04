@@ -1,5 +1,6 @@
 import os
 import pymongo
+import subprocess
 
 from services.docker_service import DockerService
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
@@ -30,6 +31,21 @@ class MongoService(DockerService):
         return ['MONGO_INITDB_ROOT_USERNAME=ax_user',
                 'MONGO_INITDB_ROOT_PASSWORD=ax_pass',
                 'MONGO_INITDB_DATABASE=core']
+
+    @property
+    def dockerfile(self):
+        return None
+
+    def build(self, runner=None):
+        docker_pull = ['docker', 'pull', self.image]
+        if runner is None:
+            print(' '.join(docker_pull))
+            subprocess.check_output(docker_pull, cwd=self.service_dir)
+        else:
+            runner.append_single(self.container_name, docker_pull, cwd=self.service_dir)
+
+    def remove_image(self):
+        pass  # We never want to remove this static image...
 
     def is_mongo_alive(self):
         try:

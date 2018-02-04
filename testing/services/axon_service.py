@@ -2,7 +2,7 @@ import time
 from abc import ABC, abstractmethod
 
 
-class TimeoutExpception(Exception):
+class TimeoutException(Exception):
     pass
 
 
@@ -34,4 +34,4 @@ class AxonService(ABC):
                 time.sleep(0.25)
 
         if not success:
-            raise TimeoutExpception("Service failed to start")
+            raise TimeoutException("Service failed to start")

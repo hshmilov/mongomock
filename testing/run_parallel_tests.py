@@ -2,7 +2,7 @@ import glob
 import os
 import sys
 
-from devops.parallel_runner import ParallelRunner
+from test_helpers.parallel_runner import ParallelRunner
 from services.axonius_service import get_service
 
 
@@ -11,8 +11,8 @@ class ParallelTestsRunner(ParallelRunner):
     def append_test_pattern(self, pattern, **kwargs):
         for file in sorted(glob.glob(pattern)):
             test_case = os.path.basename(file).split(".")[0]
-            command = f"pytest -x -s -v --showlocals --durations=0 --junitxml=reporting/{test_case}.xml {file}"
-            self.append_single(test_case, command, **kwargs)
+            args = f"pytest -x -s -v --showlocals --durations=0 --junitxml=reporting/{test_case}.xml {file}".split(' ')
+            self.append_single(test_case, args, **kwargs)
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
         pattern = sys.argv[1]
         print(f"Running in parallel for pattern {pattern}")
         runner.append_test_pattern(pattern)
-        return runner.wait_for_all(500, 1)
+        return runner.wait_for_all(10 * 60)
     finally:
         axonius_system.stop(should_delete=True)
 

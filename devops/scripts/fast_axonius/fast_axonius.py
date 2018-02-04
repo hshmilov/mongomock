@@ -11,32 +11,23 @@ import os
 
 def fast_axonius():
     import services.adapters as adapters
-    from services.plugin_service import AdapterService
 
     adapters_folder = os.path.dirname(inspect.getfile(adapters))
     testing_folder = os.path.normpath(os.path.join(adapters_folder, '..', '..'))
     os.chdir(testing_folder)
 
     from test_helpers.adapter_test_base import AdapterTestBase
-    adapter_regex = os.path.join(adapters_folder, '*.py')
+    from services.axonius_service import get_service
     services = {}
 
-    # Load each (service) module under the adapters_folder
-    for adapter_path in glob.glob(adapter_regex):
-        module_name = os.path.basename(adapter_path)[:-3]
-        if module_name == '__init__':
-            continue
-        module = importlib.import_module(f'services.adapters.{module_name}')
-        # Iterate variables and look for the service
-        for variable_name in dir(module):
-            variable = getattr(module, variable_name)
-            if isinstance(variable, type) and issubclass(variable, AdapterService) and variable != AdapterService:
-                # Initialize it
-                service = variable()
-                name = os.path.basename(service.service_dir)
-                assert name.endswith('-adapter')
-                name = name[:-len('-adapter')].replace('-', '_')
-                services[name] = service
+    axonius_system = get_service()
+    for ad_name, variable in axonius_system.get_all_adapters():
+        # Initialize it
+        service = variable()
+        name = os.path.basename(service.service_dir)
+        assert name.endswith('-adapter')
+        name = name[:-len('-adapter')].replace('-', '_')
+        services[name] = service
 
     parallel_tests = os.path.join(testing_folder, 'parallel_tests')
     adapter_tests_regex = os.path.join(parallel_tests, '*.py')
@@ -63,7 +54,7 @@ def fast_axonius():
                 # Create a set_client with credentials function for that adapter's name
                 def get_func(name):
                     def set_client():
-                        if not service[name].get_is_container_up():
+                        if not services[name].get_is_container_up():
                             print(f'Container {name} not running')
                             return
                         if services[name].clients():
@@ -80,6 +71,12 @@ def fast_axonius():
 
         def __repr__(self):
             return 'use variable \'ax\''
+
+        def set_all_clients(self):
+            for service in self._services:
+                if service.get_is_container_up():
+                    continue
+                service.set_client()
 
     ax = AxTests()
     for name, service in services.items():

@@ -2,7 +2,7 @@ import subprocess
 import os
 from abc import abstractmethod
 
-from services.axon_service import AxonService, TimeoutExpception
+from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import ComposeException
 
@@ -45,7 +45,19 @@ class DockerService(AxonService):
     def environment(self):
         return []
 
-    def start(self, mode='', allow_restart=False):
+    @property
+    def dockerfile(self):
+        return """
+FROM axonius/axonius-libs
+
+# Set the working directory to /app
+WORKDIR /home/axonius/app
+
+# Copy the current directory contents into the container at /app
+COPY src/ ./
+"""[1:]
+
+    def start(self, mode='', allow_restart=False, rebuild=False):
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
@@ -73,7 +85,11 @@ class DockerService(AxonService):
             else:
                 print(f'Container {self.container_name} already created - consider removing it and running again')
         if self.get_image_exists():
-            print(f'Container {self.container_name} already built - skipping build step')
+            if rebuild:
+                self.remove_image()
+                self.build()
+            else:
+                print(f'Container {self.container_name} already built - skipping build step')
         else:
             self.build()
 
@@ -86,8 +102,28 @@ class DockerService(AxonService):
         else:  # good stuff
             os.system(f"cd {self.service_dir}; docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
 
-    def build(self):
-        subprocess.call(['docker', 'build', '.', '--tag', f'axonius/{self.container_name}'], cwd=self.service_dir)
+    def build(self, runner=None):
+        docker_build = ['docker', 'build']
+        dockerfile = None
+
+        # If Dockerfile exists, use it, else use the provided Dockerfile test from self.dockerfile
+        if not os.path.isfile(os.path.join(self.service_dir, 'Dockerfile')):
+            dockerfile = self.dockerfile
+            assert dockerfile is not None
+            docker_build.extend(['-f', '-'])
+        docker_build.extend(['.', '--tag', self.image])
+        if runner is None:  # runner is passed as a ParallelRunner
+            print(' '.join(docker_build))
+            output = subprocess.check_output(docker_build, cwd=self.service_dir, input=dockerfile.encode('UTF-8'))
+            error_string = 'Error response from daemon: driver failed programming external connectivity on endpoint'
+            if error_string in output.decode('utf-8'):
+                print('Common problem with docker service, please restart using: docker-machine restart')
+        else:
+            process = runner.append_single(self.container_name, docker_build, cwd=self.service_dir,
+                                           stdin=subprocess.PIPE)
+            if dockerfile is not None:
+                process.stdin.write(dockerfile.encode('UTF-8'))
+                process.stdin.close()
 
     def get_is_container_up(self, include_not_running=False):
         docker_cmd = ['docker', 'ps', '--filter', f'name={self.container_name}']
@@ -96,20 +132,26 @@ class DockerService(AxonService):
         return self.container_name in subprocess.check_output(docker_cmd).decode('utf-8')
 
     def get_image_exists(self):
-        output = subprocess.check_output(['docker', 'images', f'axonius/{self.container_name}']).decode('utf-8')
+        output = subprocess.check_output(['docker', 'images', self.image]).decode('utf-8')
         return self.container_name in output
 
     def remove_image(self):
-        subprocess.call(['docker', 'rmi', f'axonius/{self.container_name}', '--force'], cwd=self.service_dir,
+        subprocess.call(['docker', 'rmi', self.image, '--force'], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def stop(self, should_delete=False):
+        for _ in self.stop_async(should_delete=should_delete):
+            pass
+
+    def stop_async(self, should_delete=False):
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
         # to the disk, so we give it a second.
-        subprocess.call(['docker', 'stop', '--time', '3', self.container_name], cwd=self.service_dir,
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.Popen(['docker', 'stop', '--time', '3', self.container_name], cwd=self.service_dir,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        yield process
+        process.wait()
         self.remove_container(remove_volumes=should_delete)
 
     def remove_container(self, remove_volumes=False):
@@ -120,12 +162,12 @@ class DockerService(AxonService):
         subprocess.call(['docker', 'volume', 'rm', f"{self.container_name}_data"], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    def start_and_wait(self, mode='', allow_restart=False):
+    def start_and_wait(self, mode='', allow_restart=False, rebuild=False):
         """
         Take notice that the constructor already calls 'start' method. So use this function only
         after manual stop
         """
-        self.start(mode=mode, allow_restart=allow_restart)
+        self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild)
         self.wait_for_service()
 
     def get_file_contents_from_container(self, file_path):
@@ -165,15 +207,15 @@ class DockerService(AxonService):
         pass
 
     def wait_for_service(self, timeout=30):
-        if timeout > 5:
+        if timeout > 3:
             try:
-                super().wait_for_service(timeout=5)
-            except TimeoutExpception:
+                super().wait_for_service(timeout=3)
+            except TimeoutException:
                 try:
                     if subprocess.check_output(['docker', 'exec', '-it',
                                                 self.container_name, '/bin/ls']).decode('utf-8') == '':
                         print('Mount failed - please check host sharing settings')
                 except:
                     pass
-            timeout -= 5
+            timeout -= 3
         super().wait_for_service(timeout=timeout)

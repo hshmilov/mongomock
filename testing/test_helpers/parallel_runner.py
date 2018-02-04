@@ -7,7 +7,7 @@ class ParallelRunner(object):
     def __init__(self):
         self.wait_list = {}
         self.start_times = {}
-        self.logs_dir = "../logs/build_log/"
+        self.logs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs', 'build_log'))
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
 
@@ -17,17 +17,22 @@ class ParallelRunner(object):
     def err_file(self, task_name):
         return f"{self.logs_dir}task_{task_name}_err.log"
 
-    def append_single(self, task_name, command, **kwargs):
+    def append_single(self, task_name, args, **kwargs):
+        command = ' '.join(args)
         print(f"Running <{command}>")
         stdout = open(self.std_file(task_name), "wb")
         stderr = open(self.err_file(task_name), "wb")
-        self.wait_list[task_name] = subprocess.Popen(command.split(), stdout=stdout, stderr=stderr, **kwargs)
+        process = subprocess.Popen(args, stdout=stdout, stderr=stderr, **kwargs)
+        self.wait_list[task_name] = process
         self.start_times[task_name] = time.time()
+        return process
 
-    def wait_for_all(self, times=500, sleep_period=5):
+    def wait_for_all(self, timeout=45 * 60):
         ret_code = 0
+        start = time.time()
+        first = True
         try:
-            for _ in range(0, times):
+            while start + timeout > time.time():
                 for name, proc in self.wait_list.copy().items():
                     status = "Finished"
                     if proc.poll() is not None:
@@ -35,16 +40,20 @@ class ParallelRunner(object):
                             print(f'{name} failed')
                             status = "Failed"
                             self.pump_std(name, proc)
-                            ret_code = proc.returncode
+                            if proc.returncode != 0:
+                                ret_code = proc.returncode
 
                         seconds = int(time.time() - self.start_times[name])
                         del self.wait_list[name]
                         del self.start_times[name]
 
-                        print(f"{status} {name} in {seconds} seconds. Still waiting for {list(self.wait_list.keys())}")
+                        or_less = ' or less' if first else ''
+
+                        print(f"{status} {name} in {seconds} seconds{or_less}. Still waiting for {list(self.wait_list.keys())}")
 
                 if bool(self.wait_list):
-                    time.sleep(sleep_period)
+                    time.sleep(0.5)
+                    first = False
                 else:
                     break
 

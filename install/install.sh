@@ -21,8 +21,10 @@ axonius system up --all --prod
 
 echo "Removing anything irrelevant.."
 (
-# tests
-rm -rf ./testing/tests/ ./testing/parallel_tests/ ./testing/reporting ./testing/.cache */*/tests
+# find all directories in testing, filter 'services' and 'test_helpers', and remove them.
+find testing/* -type d | grep -v "services|test_helpers" | xargs rm -rf
+# find recursively all directories named "tests" and remove them.
+find . -name "tests" -type d | xargs rm -rf
 # misc
 rm -rf .git* .idea* .cache* *.bat *.sh ./devops
 history -c
