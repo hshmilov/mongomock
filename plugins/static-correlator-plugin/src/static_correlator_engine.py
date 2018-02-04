@@ -94,14 +94,12 @@ def _compare_normalized_hostname(adapter_device1, adapter_device2):
         does_list_startswith(adapter_device2[NORMALIZED_HOSTNAME], adapter_device1[NORMALIZED_HOSTNAME])
 
 
-def is_one_a_scanner(adapter_device1, adapter_device2):
+def is_a_scanner(adapter_device):
     """
-    checks if one of the adapters is the result of a scanner device
-    :param adapter_device1: an adapter device to check
-    :param adapter_device2: an adapter device to check
-    :return: True if one of the devices is the result of a scanner device, False otherwise
+    checks if the adapters is the result of a scanner device
+    :param adapter_device: an adapter device to check
     """
-    if adapter_device1['data'].get(SCANNER_FIELD, False) or adapter_device2['data'].get(SCANNER_FIELD, False):
+    if adapter_device['data'].get(SCANNER_FIELD, False):
         return True
     return False
 
@@ -110,9 +108,8 @@ def is_different_plugin(adapter_device1, adapter_device2):
     return adapter_device1['plugin_name'] != adapter_device2['plugin_name']
 
 
-def is_one_from_ad(adapter_device1, adapter_device2):
-    return adapter_device1['plugin_name'] == 'ad_adapter' or \
-        adapter_device2['plugin_name'] == 'ad_adapter'
+def is_from_ad(adapter_device):
+    return adapter_device['plugin_name'] == 'ad_adapter'
 
 
 def _get_normalized_mac(adapter_device):
@@ -171,7 +168,7 @@ def _normalize_adapter_devices(devices):
                 # Save the normalized hostname so we can later easily compare.
                 # See further doc near definition of NORMALIZED_HOSTNAME.
                 adapter_device[NORMALIZED_HOSTNAME] = final_hostname.split('.')
-            if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type', '') != '':
+            if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
                 adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
             yield adapter_device
 
@@ -239,6 +236,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [_get_os_type],
                                       [_compare_os_type],
+                                      [],
                                       [is_different_plugin, _compare_macs, _compare_ips],
                                       {'Reason': 'They have the same OS, MAC and IPs'},
                                       'StaticAnalysis')
@@ -250,7 +248,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [],
                                       [],
-                                      [is_different_plugin, is_one_a_scanner, _compare_macs, _compare_ips],
+                                      [is_a_scanner],
+                                      [is_different_plugin, _compare_macs, _compare_ips],
                                       {'Reason': 'They have the same MAC and IPs'},
                                       'ScannerAnalysis')
 
@@ -262,6 +261,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [_get_hostname, _get_normalized_ip, _get_os_type],
                                       [_compare_normalized_hostname, _compare_os_type],
+                                      [],
                                       [is_different_plugin, _compare_ips],
                                       {'Reason': 'They have the same OS, hostname and IPs'},
                                       'StaticAnalysis')
@@ -273,7 +273,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [_get_hostname],
                                       [_compare_normalized_hostname],
-                                      [is_different_plugin, is_one_a_scanner, _compare_ips],
+                                      [is_a_scanner],
+                                      [is_different_plugin, _compare_ips],
                                       {'Reason': 'They have the same hostname and IPs'},
                                       'ScannerAnalysis')
 
@@ -287,7 +288,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [_get_hostname],
                                       [_compare_hostname],
-                                      [is_one_from_ad],
+                                      [is_from_ad],
+                                      [],
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       'ScannerAnalysis')
 

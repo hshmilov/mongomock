@@ -1,4 +1,4 @@
-from typing import List, NewType
+from typing import List, NewType, Tuple, Iterable
 from types import FunctionType
 from abc import ABC, abstractmethod
 
@@ -12,25 +12,78 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 adapter_device = NewType('adapter_device', dict)
 pair_comparator = NewType('lambda x,y -> bool', FunctionType)
 parameter_function = NewType('lambda x -> paramter of x', FunctionType)
+device_pair = NewType('DevicePair', Tuple)
 
 
-def _process_combinations(bucket: List[adapter_device], comparators: List[pair_comparator],
-                          data_dict: dict, reason: str):
+def _compare_devices(devices_iterator: Iterable[device_pair], comparators: List[pair_comparator], data_dict: dict,
+                     reason: str):
     """
-    goes over the bucket comparing every device with every other device
-    :param list[adapter_devices]|bucket: the list of devices to compare to one another
-    :param lambda x,y -> bool|comparators: the list of comparators to check the pairs of devices against
+    goes over the devices_iterator and compares each pair using all the comparators, if a pair has passed all the
+        comparators a correlation is yielded
+    :param Iterable[device_pair]|devices_iterator: the devices pairs to compare
+    :param List[pair_comparator]|comparators: the comparators to use
     :param dict|data_dict: the data to pass with the correlation
     :param str|reason: the reason for the correlation being made
     :return: yields a correlation if a pair of devices goes through all the comparators successfully
     """
-    for device1, device2 in itertools.combinations(bucket, 2):
+    for device1, device2 in devices_iterator:
+
         if all(compare(device1, device2) for compare in comparators):
             # If we reached here that means that we should join this two devices according to this rule.
             yield CorrelationResult(associated_adapter_devices=[(device1[PLUGIN_UNIQUE_NAME], device1['data']['id']),
                                                                 (device2['plugin_name'], device2['data']['id'])],
                                     data=data_dict,  # not copying as they all have the same data
                                     reason=reason)
+
+
+def _process_product(bucket1: List[adapter_device], bucket2: List[adapter_device], comparators: List[pair_comparator],
+                     data_dict: dict, reason: str):
+    """
+    process the product of bucket1 and bucket2, this means that no inner bucket compares are made just in between
+        buckets
+    See doc for _compare_devices for elaboration
+    """
+    return _compare_devices(itertools.product(bucket1, bucket2), comparators, data_dict, reason)
+
+
+def _process_combinations(bucket: List[adapter_device], comparators: List[pair_comparator],
+                          data_dict: dict, reason: str):
+    """
+    process the combinations of bucket, this means that each device in the bucket is compared to all others.
+    See doc for _compare_devices for elaboration
+    """
+    return _compare_devices(itertools.combinations(bucket, 2), comparators, data_dict, reason)
+
+
+def _process_preconditioned_bucket(bucket: List[adapter_device],
+                                   pair_correlation_preconditions: List[parameter_function],
+                                   inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: str):
+    """
+    separates the bucket into 2 -
+        1. containing the devices with the precondition for a correlation
+        2. all the rest
+        This way, we minimize the combinations we compare - i.e. only pairs where one is satisfies the preconditions are
+        compared.
+        for example if we want to correlate a scanner - there's no reason to go over pairs where no device is a scanner
+        same goes for ad.
+    :param bucket: the bucket of devices to potentially correlate
+    :param pair_correlation_preconditions: the precondition at least one of the correlated pair should hold
+    :param inner_bucket_comparators: the comparators for the pair once at least one satisfies the preconditions
+    :param dict|data_dict: the data to pass with the correlation
+    :param str|reason: the reason for the correlation being made
+    :return: yields a correlation if a pair of devices goes through all the comparators successfully
+    """
+    preconditioned_bucket = list()
+    rest_of_devices = list()
+    for adapter_device in bucket:
+        if any(precondition(adapter_device) for precondition in pair_correlation_preconditions):
+            preconditioned_bucket.append(adapter_device)
+        else:
+            rest_of_devices.append(adapter_device)
+    # processes the product of the two buckets
+    yield from _process_product(preconditioned_bucket, rest_of_devices, inner_bucket_comparators, data_dict, reason)
+    # process possible correlations where both devices satisfy the precondition
+    yield from _process_combinations(preconditioned_bucket, inner_bucket_comparators, data_dict, reason)
 
 
 class CorrelatorEngineBase(ABC):
@@ -55,9 +108,8 @@ class CorrelatorEngineBase(ABC):
             except OSTypeInconsistency:
                 self.logger.exception("OS inconsistent over correlated devices", device['internal_axon_id'])
 
-    def _bucket_correlate(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
-                          bucket_insertion_comparators: List[pair_comparator],
-                          inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: str):
+    def _bucket_creator(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
+                        bucket_insertion_comparators: List[pair_comparator]):
         """
         Performs an initial sort and pairwise comparison in order to minimize the buckets.
             Buckets are filled with adapter_devices which pass the bucket_insertion_comparators.
@@ -69,10 +121,6 @@ class CorrelatorEngineBase(ABC):
         :param sort_order: a list of sorting lambdas in order of the wanted sort
         :param bucket_insertion_comparators: a list of comparators of type lambda x,y -> bool
                 for which an adapter_device would enter the bucket
-        :param inner_bucket_comparators: full bucket comparisons to further inspect the bucket
-        :param dict|data_dict: the data to pass with the correlation
-        :param str|reason: the reason for the correlation being made
-        :return: yields a correlation if a pair of devices goes through all the comparators successfully
         """
 
         if len(adapters_to_correlate) < 2:
@@ -91,11 +139,35 @@ class CorrelatorEngineBase(ABC):
             if all(compare(a, b) for compare in bucket_insertion_comparators):
                 bucket.append(b)
             else:
-                yield from _process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
+                if len(bucket) > 1:
+                    yield bucket
                 bucket = [b]
             pair_number += 1
         if len(bucket) > 1:
-            yield from _process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
+            yield bucket
+
+    def _bucket_correlate(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
+                          bucket_insertion_comparators: List[pair_comparator],
+                          pair_correlation_preconditions: List[parameter_function],
+                          inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: str):
+        """
+        see docs for _bucket_creator and _process_preconditioned_bucket
+        :param adapters_to_correlate: a list of the adapters to correlate
+        :param sort_order: a list of sorting lambdas in order of the wanted sort
+        :param bucket_insertion_comparators: a list of comparators of type lambda x,y -> bool
+                for which an adapter_device would enter the bucket
+        :param pair_correlation_preconditions: the precondition at least one of the correlated pair should hold
+        :param inner_bucket_comparators: the comparators for the pair once at least one satisfies the preconditions
+        :param dict|data_dict: the data to pass with the correlation
+        :param str|reason: the reason for the correlation being made
+        :return: yields a correlation if a pair of devices goes through all the comparators successfully
+        """
+        for bucket in self._bucket_creator(adapters_to_correlate, sort_order, bucket_insertion_comparators):
+            if pair_correlation_preconditions:
+                yield from _process_preconditioned_bucket(bucket, pair_correlation_preconditions,
+                                                          inner_bucket_comparators, data_dict, reason)
+            else:
+                yield from _process_combinations(bucket, inner_bucket_comparators, data_dict, reason)
 
     def _preprocess_devices(self, devices):
         """
