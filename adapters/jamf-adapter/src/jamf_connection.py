@@ -117,6 +117,7 @@ class JamfConnection(object):
         """
         non_json_headers = self.headers.copy()
         non_json_headers.pop("Accept")
+        # Getting all devices at once so no progress is logged
         computers = self._get_jamf_devices(url=jamf_consts.ADVANCED_COMPUTER_SEARCH_URL,
                                            data=jamf_consts.ADVANCED_COMPUTER_SEARCH,
                                            xml_name=jamf_consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,

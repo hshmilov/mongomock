@@ -60,7 +60,10 @@ class QualysAdapter(AdapterBase):
             last_id = 0
             has_more_records = 'true'
             client_list = []
+            devices_count = 0
             while has_more_records == 'true':
+                self.logger.info(f"Got {devices_count*1000} devices so far")
+                devices_count += 1
                 current_iterator_data = QUALYS_ITERATOR_FORMAT.format(last_id, 1000)
                 current_clients_page = client_data.get_device_iterator(data=current_iterator_data)
                 client_list.extend(current_clients_page['data'])

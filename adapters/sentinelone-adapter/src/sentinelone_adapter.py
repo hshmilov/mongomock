@@ -65,10 +65,13 @@ class SentinelOneAdapter(AdapterBase):
         :return: A json with all the attributes returned from the SentinelOne Server
         """
         with client_data:
+            devices_count = 0
             current_clients_page = client_data.get_device_iterator(limit='200')
             client_list = current_clients_page['data']
             last_id = current_clients_page['last_id']
             while last_id is not None:
+                devices_count += 1
+                self.logger.info(f"Got {devices_count*200} devices so far")
                 current_clients_page = client_data.get_device_iterator(limit='200', last_id=last_id)
                 client_list.extend(current_clients_page['data'])
                 last_id = current_clients_page['last_id']

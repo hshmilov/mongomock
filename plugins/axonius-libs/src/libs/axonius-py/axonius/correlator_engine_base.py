@@ -132,7 +132,7 @@ class CorrelatorEngineBase(ABC):
         bucket = [adapters_to_correlate[0]]
         pair_number = 0
         num_of_pairs = len(adapters_to_correlate)
-        print_count = max(int(float(len(adapters_to_correlate)) / 100), 100)
+        print_count = max(int(float(num_of_pairs) / 100), 100)
         for a, b in pairwise(adapters_to_correlate):
             if pair_number % print_count == 0:
                 self.logger.info(f"Correlating outer bucket of #pair: {pair_number} out of {num_of_pairs}")

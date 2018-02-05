@@ -36,7 +36,7 @@ class SplunkSymantecAdapter(AdapterBase):
             # copying as otherwise we would pop it from the client saved in the gui
             client_con = client_config.copy()
             client_con.pop(SPLUNK_ONLINE_HOURS)
-            connection = SplunkConnection(**client_con)
+            connection = SplunkConnection(**client_con, logger=self.logger)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

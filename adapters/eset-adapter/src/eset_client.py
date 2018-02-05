@@ -81,6 +81,7 @@ class EsetClient(object):
             return json.loads(response).get('Era.ServerApi.ReportCSVResponse', {}).get('reportCSV', '').split('\n')
 
         # Getting the raw data in the session first (to release the lock faster).
+        # Getting all the data at once so no progress is logged
         with self._get_session() as session:
             # Get the basic data (IP, Hostname, OS, Last connected) raw
             most_data_raw = self._send_message_to_server(session, eset_consts.GENERATE_REPORT_FROM_TEMPLATE.format(

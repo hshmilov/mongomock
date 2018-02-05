@@ -52,6 +52,7 @@ class SymantecAdapter(AdapterBase):
                 client_list.extend(current_clients_page['content'])
                 last_page = current_clients_page['lastPage']
                 page_num += 1
+                self.logger.info(f"Got {page_num*1000} devices so far")
             return client_list
 
     def _clients_schema(self):

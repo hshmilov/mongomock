@@ -52,6 +52,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
         """
 
         try:
+            # Getting all devices at once so no progress is logged
             resp = requests.get(client_data)
             if resp.status_code != 200:
                 raise ValueError("Status code from query devices on {0} should be 200, but its {1}".format(

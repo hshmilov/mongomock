@@ -47,7 +47,11 @@ class SplunkConnection(object):
                 earliest = str(earliest)
         job = self.conn.jobs.oneshot(search, count=0, earliest_time=earliest)
         reader = ResultsReader(job)
+        devices_count = 1
         for result in reader:
+            devices_count += 1
+            if devices_count % 1000 == 0:
+                self.logger.info(f"Got {devices_count} devices so far")
             raw = result[b'_raw'].decode('utf-8')
             try:
                 new_item = split_raw(raw)

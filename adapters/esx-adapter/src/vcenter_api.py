@@ -67,6 +67,7 @@ class vCenterApi():
         self._user = user
         self._password = password
         self._connect()
+        self.devices_count = None
 
     def _connect(self):
         if self._verify_ssl:
@@ -99,6 +100,9 @@ class vCenterApi():
         Print information for a particular virtual machine or recurse into a folder
         or vApp with depth protection
         """
+        self.devices_count += 1
+        if self.devices_count % 1000 == 0:
+            self.logger.info(f"Got {self.devices_count} vms so far")
         maxdepth = 100
         if depth > maxdepth:
             return
@@ -134,6 +138,7 @@ class vCenterApi():
 
         :return vCenterNode:
         """
+        self.devices_count = 1
         try:
             children = [self._parse_vm(x)
                         for x in

@@ -66,7 +66,10 @@ class QualysScansAdapter(AdapterBase):
     def _get_qualys_scan_results(self, client_data, url, params, output_key):
         with client_data:
             client_list = []
+            devices_count = 0
             while params:
+                self.logger.info(f"Got {devices_count*1000} devices so far")
+                devices_count += 1
                 response = client_data.get(url + '?' + params, auth=client_data.auth, headers=client_data.headers)
                 current_clients_page = Xml2Json(response.text).result
                 try:
@@ -88,10 +91,11 @@ class QualysScansAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the QualysScans Server
         """
-
+        self.logger.info(f"Getting all qualys scannable hosts")
         all_hosts = {device['ID']: device for device in self._get_qualys_scan_results(client_data, url=ALL_HOSTS_URL,
                                                                                       params=ALL_HOSTS_PARAMS,
                                                                                       output_key=ALL_HOSTS_OUTPUT)}
+        self.logger.info(f"Getting all vulnerable hosts")
         vm_hosts = self._get_qualys_scan_results(client_data, url=VM_HOST_URL,
                                                  params=VM_HOST_PARAMS, output_key=VM_HOST_OUTPUT)
 

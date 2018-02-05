@@ -6,9 +6,10 @@ from splunklib.results import ResultsReader
 
 
 class SplunkConnection(object):
-    def __init__(self, host, port, username, password):
+    def __init__(self, host, port, username, password, logger):
         self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password}
         self.conn = None
+        self.logger = logger
 
     @property
     def is_connected(self):
@@ -44,7 +45,11 @@ class SplunkConnection(object):
                 earliest = str(earliest)
         job = self.conn.jobs.oneshot(search, count=0, earliest_time=earliest)
         reader = ResultsReader(job)
+        devices_count = 1
         for result in reader:
+            devices_count += 1
+            if devices_count % 1000 == 0:
+                self.logger.info(f"Got {devices_count} devices so far")
             raw = result[b'_raw'].decode('utf-8')
             new_item = split_raw(raw)
             if new_item is not None:

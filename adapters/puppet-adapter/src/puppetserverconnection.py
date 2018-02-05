@@ -62,9 +62,13 @@ class PuppetServerConnection:
             raise
 
         parsed_query_nodes_json = _parse_json_request(query_response)
-
+        devices_count = 0
+        num_of_devices = len(parsed_query_nodes_json)
         for json_node in parsed_query_nodes_json:
             try:
+                devices_count += 1
+                if devices_count % 1000 == 0:
+                    self.logger.info(f"Got {devices_count} devices out of {num_of_devices}")
                 yield self._query_fact_device(json_node)
             except exceptions.PuppetException as err:
                 self.logger.exception(f"Error in getting information about node:{str(json_node)}. Error:{str(err)}")

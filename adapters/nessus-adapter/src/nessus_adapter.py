@@ -61,6 +61,7 @@ class NessusAdapter(AdapterBase):
         try:
             with client_data:
                 device_dict = {}
+                devices_count = 0
                 # Get all scans for client
                 for scan in client_data.get_scans():
                     if scan.get('id') is None:
@@ -69,6 +70,9 @@ class NessusAdapter(AdapterBase):
                     for host in client_data.get_hosts(scan['id']):
                         if host.get('host_id') is None or host.get('hostname') is None:
                             continue
+                        devices_count += 1
+                        if devices_count % 1000 == 0:
+                            self.logger.info(f"Got {devices_count} hosts requests so far")
                         # Get specific details of the host
                         host_details = client_data.get_host_details(scan['id'], host['host_id'])
                         if not host_details:

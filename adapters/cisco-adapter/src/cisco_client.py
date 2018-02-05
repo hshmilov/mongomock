@@ -30,6 +30,7 @@ class CiscoClient(object):
                             allow_agent=False, look_for_keys=False, timeout=timeout_seconds)
 
     def get_parsed_arp(self, retry_count=5):
+        devices_count = 1
         assert isinstance(retry_count, int) and retry_count > 0
         try:
             stdout = None
@@ -41,6 +42,9 @@ class CiscoClient(object):
                         raise
                     # handling 'Resource shortage'
                     time.sleep(1 + random.randint(1, 5))
+            devices_count += 1
+            if devices_count % 1000 == 0:
+                self.logger.info(f"Got {devices_count} devices so far")
             lines = stdout.readlines()
 
             for line in lines:

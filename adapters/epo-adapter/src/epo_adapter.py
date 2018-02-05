@@ -169,6 +169,7 @@ class EpoAdapter(AdapterBase):
         all_linked_tables = get_all_linked_tables(table)
 
         try:
+            # all devices are fetched at once so no progress is logged
             raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
         except Exception as e:
             try:

@@ -46,6 +46,7 @@ def _describe_images_from_client_by_id(client, amis):
 
     # the reason I use "Filters->image-id" and not ImageIds is because if I'd use ImageIds
     # would've raise an exception if an image is not found
+    # all images are returned at once so no progress is logged
     described_images = client.describe_images(Filters=[{"Name": "image-id", "Values": list(amis)}])
 
     # make a dictionary from ami key to the value
@@ -111,6 +112,7 @@ class AWSAdapter(AdapterBase):
         """
         try:
             amis = set()
+            # all devices are returned at once so no progress is logged
             instances = client_data.describe_instances()
 
             # get all image-ids
