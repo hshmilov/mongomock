@@ -4,6 +4,11 @@ Since we usually use python3, it is intended to be run as a subprocess.
 
 Note! We only support username & password right now. Hashes, nopass, kerberos auth, aes-key or rpc-auth level
 were ommited. To see how to use them, see "wmiexec.py" or "wmiquery.py" in impacket/examples.
+
+The following also have three advantages:
+1. It can execute multiple queries/methods on the same connection.
+2. It minimizes the size by reducing not important info we get from impacket.
+3. It handles failing commands to return the rest of the commands if we have multiple(1).
 """
 
 __author__ = "Avidor Bartov"
@@ -24,7 +29,7 @@ from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_AUTHN_
 
 class WMIRunner(object):
     """
-    Runs WMI queries on a given host.
+    Runs WMI queries and methods on a given host.
     """
 
     def __init__(self, address, username, password, domain='', dc_ip=None, lmhash='', nthash='', aes_key=None,
@@ -74,9 +79,32 @@ class WMIRunner(object):
     def __del__(self):
         self.close()
 
-    def query(self, query):
+    def execmethod(self, object_name, method_name, *args):
         """
-        Runs a query.
+        Executes a wmi method with the given args and returns the result.
+        e.g. rv = o.execmethod("Win32_Process", "Create", "notepad.exe", "c:\\", None)
+        print(rv['ProcessId']['value'])
+
+        :param object_name: the wmi object.
+        :param method_name: the method.
+        :param args: a list of args to give the method.
+        :return: an object that represents the answer.
+        """
+
+        object, _ = self.iWbemServices.GetObject(object_name)
+        method = getattr(object, method_name)
+        handle = method(*args)
+        result = handle.getProperties()
+
+        # If its not a list, return it as a list, to be in the same standard as execquery.
+        if not isinstance(result, list):
+            return [result]
+        else:
+            return result
+
+    def execquery(self, query):
+        """
+        Executes a query.
         :param query: a wql string representing the query.
         :return: a list of objects representing the results of the query.
         """
@@ -135,34 +163,75 @@ class WMIRunner(object):
             pass
 
 
-if __name__ == '__main__':
+def minimize_and_convert(result):
+    # the object returned by w.query is an object that contains some strings. some of them are regular,
+    # and some of them are utf-16. if we try to json.dumps a utf-16 string without mentioning encoding="utf-16",
+    # an exception will be thrown. on the other side if we mention encoding="utf-16" and have an str("abc")
+    # an exception will be thrown as well, because str("abc") is not a utf-16 encoded string, unicode("abc") is.
+    # to cut the long story short - we have multiple encodings in our object, we gotta transform everything possible
+    # to unicode(s) or s.decode("utf-16")
+    def convert(input):
+        if isinstance(input, dict):
+            return {convert(key): convert(value) for key, value in input.iteritems()}
+        elif isinstance(input, list):
+            return [convert(element) for element in input]
+        elif isinstance(input, str):
+            try:
+                return unicode(input)
+            except UnicodeDecodeError:
+                # Its probably utf-16
+                return input.decode("utf-16", errors="ignore")
+        else:
+            return input
 
-    _, domain, username, password, address, command = sys.argv
+    # Also, We have a lot of "garbage" returned by impacket. we only need the "name", "value" combination,
+    # so lets reduce so very large amount of data.
+    minified_result = []
+
+    # For each result of a command -> for each line in the result -> for each column in a line -> get the value.
+    for command_result in result:
+        minified_command_result = []
+        for line in command_result:
+            new_line = {}
+            for column_name, column_value in line.items():
+                new_line[column_name] = column_value.get("value")
+
+            minified_command_result.append(new_line)
+
+        minified_result.append(minified_command_result)
+
+    return convert(minified_result)
+
+
+if __name__ == '__main__':
+    _, domain, username, password, address, commands = sys.argv
+
+    # Commands is a json formatted list of commands.
+    commands = json.loads(commands)
+    final_result_array = []
 
     with WMIRunner(address, username, password, domain=domain) as w:
 
-        # the object returned by w.query is an object that contains some strings. some of them are regular,
-        # and some of them are utf-16. if we try to json.dumps a utf-16 string without mentioning encoding="utf-16",
-        # an exception will be thrown. on the other side if we mention encoding="utf-16" and have an str("abc")
-        # an exception will be thrown as well, because str("abc") is not a utf-16 encoded string, unicode("abc") is.
-        # to cut the long story short - we have multiple encodings in our object, we gotta transform everything possible
-        # to unicode(s) or s.decode("utf-16")
-        def convert(input):
-            if isinstance(input, dict):
-                return {convert(key): convert(value) for key, value in input.iteritems()}
-            elif isinstance(input, list):
-                return [convert(element) for element in input]
-            elif isinstance(input, str):
-                try:
-                    return unicode(input)
-                except UnicodeDecodeError:
-                    # Its probably utf-16
-                    return input.decode("utf-16", errors="ignore")
-            else:
-                return input
+        for command in commands:
+            command_type, command_args = (command['type'], command['args'])
 
-        # To see it normally, change to(json.dumps("", indent=4)
-        print json.dumps(convert(w.query(command)), encoding="utf-16")
-        sys.stdout.flush()
+            # command args is a list we send to the func.
+            try:
+                if command_type == "query":
+                    result = w.execquery(*command_args)
+
+                elif command_type == "method":
+                    result = w.execmethod(*command_args)
+
+                else:
+                    raise ValueError("command type {0} does not exist".filter(command_type))
+            except Exception as e:
+                result = [{"Exception": {"value": repr(e)}}]
+
+            final_result_array.append(result)
+
+    # To see it normally, change to(json.dumps("", indent=4)
+    print json.dumps(minimize_and_convert(final_result_array), encoding="utf-16")
+    sys.stdout.flush()
 
     sys.exit(0)

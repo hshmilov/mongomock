@@ -96,17 +96,19 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(30, 5, has_ad_users_association_tag)
 
-    def test_ad_execute_wmi_queries(self, execution_fixture):
+    def test_ad_execute_wmi(self, execution_fixture):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
-        action_id = execution_fixture.make_action("execute_wmi_queries",
+        action_id = execution_fixture.make_action("execute_wmi",
                                                   internal_axon_id,
-                                                  {"wmi_queries": ["select SID from Win32_UserProfile",
-                                                                   "select SID from Win32_UserAccount"]},
+                                                  {"wmi_commands": [
+                                                      {"type": "query", "args": ["select SID from Win32_UserProfile"]},
+                                                      {"type": "query", "args": ["select SID from Win32_UserAccount"]}
+                                                  ]},
                                                   adapters_to_whitelist=["ad_adapter"])
 
-        def check_execute_wmi_queries_results():
+        def check_execute_wmi_results():
             # Get the first action from the action list ([0])
             action_data = execution_fixture.get_action_data(self.axonius_system.db, action_id)[0]
             assert action_data["result"] == "Success"
@@ -116,14 +118,14 @@ class TestAdAdapter(AdapterTestBase):
             sids = []
             # [0] is for getting the answer for the first wmi query
             for user in action_data["product"][0]:
-                sids.append(user["SID"]["value"])
+                sids.append(user["SID"])
 
             # Lets validate we have the special SID's...
             assert "S-1-5-18" in sids   # Local System
             assert "S-1-5-19" in sids   # NT Authority - Local Service
             assert "S-1-5-20" in sids   # NT Authority - Network Service
 
-        try_until_not_thrown(15, 5, check_execute_wmi_queries_results)
+        try_until_not_thrown(15, 5, check_execute_wmi_results)
 
     def test_ad_execute_shell(self, execution_fixture):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]

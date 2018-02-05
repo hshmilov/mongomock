@@ -415,7 +415,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         request_data = self.get_request_data_as_object()
         device_data = request_data.pop('device_data')
 
-        if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'execute_wmi_queries',
+        if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'execute_wmi',
                                'delete_file']:
             return return_error("Invalid action type", 400)
 
@@ -439,7 +439,7 @@ class AdapterBase(PluginBase, Feature, ABC):
     def execute_shell(self, device_data, shell_command):
         raise RuntimeError("Not implemented yet")
 
-    def execute_wmi_queries(self, device_data, wmi_queries):
+    def execute_wmi(self, device_data, wmi_commands=None):
         raise RuntimeError("Not implemented yet")
 
     def delete_file(self, device_data, file_path):

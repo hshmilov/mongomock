@@ -1,25 +1,21 @@
 import time
 import threading
-import re
 import functools
-import sys
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.plugin_base import PluginBase, add_rule
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_exception_string
 from subplugins.last_user_logon import GetLastUserLogon
+from subplugins.installed_softwares import GetInstalledSoftwares
+from subplugins.basic_computer_info import GetBasicComputerInfo
 from datetime import datetime
 
 
 MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 20
 SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
-
-WMI_QUERIES_CHUNK_SIZE = 10  # we are going to send 10 wmi queries each time.
-WMI_QUERY_SLEEP_BETWEEN_CHUNKS = 10  # 10 seconds of sleep between each chunk.
 
 
 class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
@@ -115,7 +111,7 @@ class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
             self.logger.debug("acquired work lock")
 
             # Reinitialize all subplugins. We do that in each run, to refresh cached data.
-            self.subplugins = [GetLastUserLogon(self)]
+            self.subplugins = [GetLastUserLogon(self), GetInstalledSoftwares(self), GetBasicComputerInfo(self)]
 
             """
             1. Get a list of windows devices
@@ -157,13 +153,13 @@ class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
                     self.logger.debug(f"Going to request action on {internal_axon_id}")
 
                     # Get all wmi queries from all subadapters.
-                    wmi_queries = []
+                    wmi_commands = []
                     for subplugin in self.subplugins:
-                        wmi_queries.extend(subplugin.get_wmi_queries())
+                        wmi_commands.extend(subplugin.get_wmi_commands())
 
                     # Now run all queries you have got on that device.
-                    p = self.request_action("execute_wmi_queries", internal_axon_id,
-                                            {"wmi_queries": wmi_queries})
+                    p = self.request_action("execute_wmi", internal_axon_id,
+                                            {"wmi_commands": wmi_commands})
 
                     p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
                            did_reject=functools.partial(self._handle_wmi_execution_failure, device))
@@ -185,7 +181,7 @@ class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
             queries_response_index = 0
 
             for subplugin in self.subplugins:
-                subplugin_num_queries = len(subplugin.get_wmi_queries())
+                subplugin_num_queries = len(subplugin.get_wmi_commands())
                 subplugin_result = queries_response[queries_response_index:
                                                     queries_response_index + subplugin_num_queries]
                 subplugin.handle_result(device, executer_info, subplugin_result)
@@ -199,8 +195,8 @@ class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
 
     def _handle_wmi_execution_failure(self, device, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
-        self.logger.error("Failed running wmi query on device {0}! error: {1}"
-                          .format(device["internal_axon_id"], str(exc)))
+        self.logger.info("Failed running wmi query on device {0}! error: {1}"
+                         .format(device["internal_axon_id"], str(exc)))
 
     @add_rule('run', methods=['POST'], should_authenticate=False)
     def run_now(self):

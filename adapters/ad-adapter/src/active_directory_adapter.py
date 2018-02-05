@@ -368,7 +368,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         raise ad_exceptions.IpResolveError(err)
 
-    def _get_basic_wmiquery_command(self, device_data):
+    def _get_basic_wmi_command(self, device_data):
         """ Function for formatting the base wmiqery command.
 
         :param dict device_data: The device_data used to create this command
@@ -511,42 +511,39 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         return {"result": result, "product": product}
 
-    def execute_wmi_queries(self, device_data, wmi_queries):
-        # Creating a file from the buffer (to pass it on to PSEXEC)
-        # Adding separator to the commands list
-        queries = wmi_queries
-        if queries is None:
-            return {"result": 'Failure', "product": 'No WMI Queries list command supplied'}
+    def execute_wmi(self, device_data, wmi_commands):
+        """
+        execute wql or wmi methods.
+        :param device_data: the device data.
+        :param wmi_commands: a list of dicts, each list in the format of wmirunner.py.
+                            e.g. [{"type": "query", "args": "select * from Win32_Account"}]
+        :return: axonius-execution result.
+        """
 
-        # Getting the base command (same for all actions)
-        command = self._get_basic_wmiquery_command(device_data)
-        product = []
-        for single_query in queries:
-            single_command = command + [single_query]
+        if wmi_commands is None:
+            return {"result": 'Failure', "product": 'No WMI queries/commands list supplied'}
 
-            self.logger.info("running query {0}".format(single_query))
+        single_command = self._get_basic_wmi_command(device_data) + [json.dumps(wmi_commands)]
+        self.logger.debug("running wmi {0}".format(single_command))
 
-            # Running the command
-            command_result = subprocess.run(
-                single_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Running the command
+        command_result = subprocess.run(single_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            # Checking if return code is zero, if not, it will raise an exception
-            try:
-                command_result.check_returncode()
-            except subprocess.CalledProcessError as e:
-                raise ValueError("single_query: {0}, stdout: {1}, stderr: {2}, exception: {3}"
-                                 .format(single_query,
-                                         str(command_result.stdout),
-                                         str(command_result.stderr),
-                                         str(e)))
+        # Checking if return code is zero, if not, it will raise an exception
+        try:
+            command_result.check_returncode()
+        except subprocess.CalledProcessError as e:
+            raise ValueError("command: {0}, stdout: {1}, stderr: {2}, exception: {3}"
+                             .format(single_command,
+                                     str(command_result.stdout),
+                                     str(command_result.stderr),
+                                     str(e)))
 
-            product.append(json.loads(command_result.stdout.strip()))
-            self.logger.info("query returned with return code 0 (successfully).")
+        product = json.loads(command_result.stdout.strip())
+        self.logger.debug("command returned with return code 0 (successfully).")
 
         # If we got here that means the the command executed successfuly
-        result = 'Success'
-
-        return {"result": result, "product": product}
+        return {"result": 'Success', "product": product}
 
     def execute_shell(self, device_data, shell_command):
         # Creating a file from the buffer (to pass it on to PSEXEC)
