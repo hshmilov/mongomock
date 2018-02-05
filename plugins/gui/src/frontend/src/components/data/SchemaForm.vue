@@ -45,7 +45,7 @@
             justify-content: space-between;
             .object {
                 width: 240px;
-                input {
+                input, select {
                     width: 100%;
                 }
             }
