@@ -164,10 +164,20 @@ def configuration(object_id=None):
 def get_install_script():
     branch = request.args.get("branch")
     if branch is None:
-        branch = "master"
+        branch = "develop"
 
     return "# how to use: curl -k https://builds.axonius.lan/install[?branch=develop] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/axonius/cortex {0}\n" \
         "history -c\nhistory -w\ncd install\nchmod 777 *\n./install.sh\nexit\n".format(branch)
+
+
+@app.route("/install_demo", methods=['GET'])
+def get_install_demo_script():
+    branch = request.args.get("branch")
+    if branch is None:
+        branch = "develop"
+
+    return "# how to use: curl -k https://builds.axonius.lan/install_demo[?branch=develop] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/axonius/cortex {0}\n" \
+        "history -c\nhistory -w\ncd install\nchmod 777 *\n./install_demo.sh\nexit\n".format(branch)
 
 
 @app.after_request
