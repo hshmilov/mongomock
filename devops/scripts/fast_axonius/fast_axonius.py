@@ -59,7 +59,11 @@ def fast_axonius():
                             return
                         if services[name].clients():
                             print('A Client Already exists')
-                        services[name].add_client(services[name].test.some_client_details)
+                        if isinstance(services[name].test.some_client_details, list):
+                            for client in services[name].test.some_client_details:
+                                services[name].add_client(client[0])
+                        else:
+                            services[name].add_client(services[name].test.some_client_details)
 
                     return set_client
 

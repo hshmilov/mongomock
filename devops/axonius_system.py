@@ -73,8 +73,9 @@ def system_entry_point(args):
                 args.plugins.extend(['watch', 'static_correlator', 'execution', 'dns_conflicts',
                                      'careful_execution_correlator', 'general_info'])
             if not args.adapters:
-                args.adapters.extend(['ad', 'aws', 'cisco', 'epo', 'esx', 'jamf', 'nessus', 'nexpose', 'puppet',
-                                      'qualys', 'qualys_scans', 'sentinelone', 'splunk_nexpose', 'symantec'])
+                args.adapters.extend(['ad', 'aws', 'cisco', 'csv', 'epo', 'eset', 'fortigate' 'esx', 'jamf', 'nessus',
+                                      'nexpose', 'puppet', 'qualys', 'qualys_scans', 'sentinelone', 'splunk_nexpose',
+                                      'symantec'])
 
     axonius_system.take_process_ownership()
     if args.mode == 'up':

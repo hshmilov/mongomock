@@ -1,7 +1,7 @@
 
 # this is our aws SEP manager and its name is Windows-Sep-Server
 client_details = {
-    "Symantec_Domain": "10.0.2.171",
+    "SEPM_Address": "10.0.2.171",
     "username": "admin",
     "password": "7ldUJKtYG8oe1243fds"
 }
