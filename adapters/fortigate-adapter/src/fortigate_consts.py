@@ -1,0 +1,9 @@
+PASSWORD = 'password'
+USER = 'username'
+FORTIGATE_HOST = 'host'
+FORTIGATE_PORT = 'port'
+DEFAULT_FORTIGATE_PORT = 443
+VERIFY_SSL = 'verify_ssl'
+VDOM = 'vdom'
+DHCP_LEASE_TIME = 'dhcp_lease_time'  # In Seconds
+DEFAULT_DHCP_LEASE_TIME = 604800

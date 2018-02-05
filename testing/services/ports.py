@@ -21,6 +21,7 @@ DOCKER_PORTS = {
     'stresstest-adapter': 5114,
     'symantec-adapter': 5676,
     'traiana-lab-machines-adapter': 5113,
+    'fortigate-adapter': 5689,
 
     'general-info': 5556,
     'aggregator': 5000,

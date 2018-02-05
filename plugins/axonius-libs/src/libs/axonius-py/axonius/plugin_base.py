@@ -11,6 +11,7 @@ import configparser
 import os
 import logging
 import socket
+import urllib3
 
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
@@ -38,6 +39,9 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 
 # Can wait up to 5 minutes if core didnt answer yet
 TIME_WAIT_FOR_REGISTER = 60 * 5
+
+# Removing ssl_verify false warnings from appearing in the logs on all the plugins.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 @AXONIUS_REST.after_request

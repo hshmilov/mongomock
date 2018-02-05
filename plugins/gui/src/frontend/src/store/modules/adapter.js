@@ -82,6 +82,10 @@ export const adapterStaticData = {
 	'traiana_lab_machines_adapter': {
 		name: 'Traiana Lab Machines',
 		description: 'Traiana Lab Machines is a propriatery adapter for Traiana, which queries for new devices from the lab machines inventory.'
+	},
+	'fortigate_adapter': {
+		name: 'Fortinet FortiGate',
+		description: 'FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network.'
 	}
 }
 
