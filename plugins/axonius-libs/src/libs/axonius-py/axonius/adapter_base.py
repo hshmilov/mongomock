@@ -5,7 +5,7 @@ It implements API calls that are expected to be present in all adapters.
 from typing import Iterable
 
 from axonius import adapter_exceptions
-from axonius.device import Device, LAST_SEEN_FIELD, IPS_FIELD, MAC_FIELD
+from axonius.device import Device, LAST_SEEN_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import get_exception_string
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -20,10 +20,16 @@ from axonius.mixins.feature import Feature
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum, auto
-import types
 import sys
-from axonius.parsing_utils import format_mac
-import ipaddress
+
+
+def is_plugin_adapter(plugin_type: str) -> bool:
+    """
+    Whether or not a plugin is an adapter, according to the plugin_type
+    :param plugin_type:
+    :return:
+    """
+    return plugin_type in (adapter_consts.ADAPTER_PLUGIN_TYPE, adapter_consts.SCANNER_ADAPTER_PLUGIN_TYPE)
 
 
 class DeviceRunningState(Enum):
@@ -535,7 +541,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, Device)
             parsed_device = parsed_device.to_dict()
-            parsed_device = self._remove_big_keys(parsed_device, parsed_device['id'])
+            parsed_device = self._remove_big_keys(parsed_device, parsed_device.get('id', 'unidentified device'))
             if self.is_old_device(parsed_device):
                 skipped_count += 1
                 continue
@@ -702,7 +708,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
     @property
     def plugin_type(self):
-        return "Adapter"
+        return adapter_consts.SCANNER_ADAPTER_PLUGIN_TYPE
 
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)

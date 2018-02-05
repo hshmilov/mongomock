@@ -1,4 +1,5 @@
 """app.py: This is the core process of Axonius system"""
+from axonius.adapter_base import is_plugin_adapter
 from axonius.background_scheduler import LoggedBackgroundScheduler
 
 __author__ = "Ofir Yefet"
@@ -295,7 +296,7 @@ class Core(PluginBase):
                     'status': 'ok',
                 }
 
-                if plugin_type == adapter_consts.ADAPTER_PLUGIN_TYPE:
+                if is_plugin_adapter(plugin_type):
                     doc[adapter_consts.DEVICE_SAMPLE_RATE] = int(data[adapter_consts.DEFAULT_SAMPLE_RATE])
 
             else:
@@ -347,7 +348,7 @@ class Core(PluginBase):
                                            PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
                                            'plugin_name': plugin['plugin_name']}
 
-            if plugin['plugin_type'] == adapter_consts.ADAPTER_PLUGIN_TYPE:
+            if is_plugin_adapter(plugin['plugin_type']):
                 online_devices[plugin_name][adapter_consts.DEVICE_SAMPLE_RATE] = int(
                     plugin[adapter_consts.DEVICE_SAMPLE_RATE])
 

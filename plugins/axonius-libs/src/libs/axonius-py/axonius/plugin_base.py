@@ -251,9 +251,14 @@ class PluginBase(Feature):
         for routed in ROUTED_FUNCTIONS:
             (wanted_function, rule, wanted_methods) = routed
 
-            AXONIUS_REST.add_url_rule('/' + rule, rule,
-                                      getattr(self, wanted_function.__name__),
-                                      methods=wanted_methods)
+            # this condition is here to force only rules that are relevant to the current class
+            local_function = getattr(self, wanted_function.__name__, None)
+            if local_function:
+                AXONIUS_REST.add_url_rule('/' + rule, rule,
+                                          local_function,
+                                          methods=wanted_methods)
+            else:
+                self.logger.info(f"Skipped rule {rule}, {wanted_function.__qualname__}, {wanted_methods}")
 
         # Adding "keepalive" thread
         if self.plugin_unique_name != "core":

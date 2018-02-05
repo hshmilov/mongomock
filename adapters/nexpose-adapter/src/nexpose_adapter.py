@@ -2,13 +2,15 @@ import concurrent.futures
 import time
 from contextlib import contextmanager
 import ssl
+from typing import Tuple
+
 import dateutil.parser
 
-
 import nexpose.nexpose as nexpose
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
-from axonius.adapter_base import AdapterBase
 from axonius.device import Device
+from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
 
 PASSWORD = 'password'
 USER = 'username'
@@ -17,7 +19,24 @@ NEXPOSE_PORT = 'port'
 VERIFY_SSL = 'verify_ssl'
 
 
-class NexposeAdapter(AdapterBase):
+class NexposeScannerCorrelatorBase(ScannerCorrelatorBase):
+    def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
+        """
+        check only first part of the hostname
+        :param parsed_device:
+        :return:
+        """
+        hostname = parsed_device.get('hostname').strip()
+        if not hostname:
+            return
+        for adapter_device in self._all_adapter_devices:
+            remote_hostname = adapter_device['data'].get('hostname')
+            if isinstance(remote_hostname, str):
+                if remote_hostname.split('.')[0].upper() == hostname.split('.')[0].upper():
+                    return adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id']
+
+
+class NexposeAdapter(ScannerAdapterBase):
     """
     Connects axonius to Rapid7's nexpose.
     """
@@ -125,7 +144,6 @@ class NexposeAdapter(AdapterBase):
             device = self._new_device()
             device.figure_os(device_raw.get('os_name'))
             device.last_seen = last_seen
-            device.id = str(device_raw['id'])
             device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []), self.logger)
             device.hostname = device_raw['host_names'][0] if len(device_raw.get('host_names', [])) > 0 else ''
             device.scanner = True
@@ -165,6 +183,7 @@ class NexposeAdapter(AdapterBase):
         :param session: The NexposeSession to use.
         :return: A list of all devices (dicts).
         """
+
         def get_details_worker(device_summary, device_number):
             device_details = {}
             try:
@@ -207,3 +226,7 @@ class NexposeAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         return client_config
+
+    @property
+    def _get_scanner_correlator(self):
+        return NexposeScannerCorrelatorBase

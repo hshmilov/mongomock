@@ -16,8 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from promise import Promise
 
+from axonius.adapter_base import is_plugin_adapter
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE
+from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE, IGNORE_DEVICE
 from axonius.device import LAST_SEEN_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import beautiful_adapter_device_name, get_device_id_for_plugin_name
@@ -163,7 +164,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                         if adapter[PLUGIN_UNIQUE_NAME] == job_name), None)
         if adapter is None:
             raise RuntimeError(f"Can't find plugin named {job_name}")
-        self._save_devices_from_adapter(adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME])
+        self._save_devices_from_adapter(adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME], adapter['plugin_type'])
 
     def _adapters_thread_manager(self):
         """ Function for monitoring other threads activity.
@@ -188,7 +189,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 # let's add jobs for all adapters
                 for adapter_name, adapter in current_adapters.items():
-                    if adapter['plugin_type'] != "Adapter":
+                    if is_plugin_adapter(adapter['plugin_type']):
                         # This is not an adapter, not running
                         continue
 
@@ -202,7 +203,8 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                                                             trigger=IntervalTrigger(seconds=sample_rate),
                                                             next_run_time=datetime.now(),
                                                             kwargs={PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
-                                                                    'plugin_name': adapter['plugin_name']},
+                                                                    'plugin_name': adapter['plugin_name'],
+                                                                    'plugin_type': adapter['plugin_type']},
                                                             name=get_devices_job_name,
                                                             id=adapter_name,
                                                             max_instances=1)
@@ -294,7 +296,8 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
                 # a tag is the same tag, if it has the same plugin_unique_name and tagname.
-                def keyfunc(tag): return (tag['plugin_unique_name'], tag['tagname'])
+                def keyfunc(tag):
+                    return (tag['plugin_unique_name'], tag['tagname'])
 
                 # first, lets get all tags and have them sorted. This will make the same tags be consecutive.
                 all_tags = sorted((t for dc in axonius_device_candidates for t in dc['tags']), key=keyfunc)
@@ -389,7 +392,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
         return ""
 
-    def _save_devices_from_adapter(self, plugin_name, plugin_unique_name):
+    def _save_devices_from_adapter(self, plugin_name, plugin_unique_name, plugin_type):
         """ Function for getting all devices from specific adapter periodically.
 
         This function should be called in a different thread. It will run forever and periodically get all devices
@@ -411,7 +414,21 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 except ValueError:
                     pass  # failed :( ? unchanged
 
-            with self.device_db_lock.get_lock([get_unique_name_from_device(parsed_to_insert)]):
+            # if `device_to_update` has a `correlates` field
+            # then it's similar to a correlation, so we need to lock both devices
+            lock_indexes = [get_unique_name_from_device(parsed_to_insert)]
+            correlates = parsed_to_insert['data'].get('correlates')
+            if correlates == IGNORE_DEVICE:
+                # special case: this is a device we shouldn't handle
+                self._save_parsed_in_db(parsed_to_insert, db_type='ignored_scanner_devices')
+                return
+
+            if correlates:
+                # this is to support case B: see `find_correlation` in `scanner_adapter_base.py`
+                lock_indexes.append(get_unique_name_from_plugin_unique_name_and_id(*correlates))
+
+            with self.device_db_lock.get_lock(lock_indexes):
+                # trying to update the device if it is already in the DB
                 modified_count = self.devices_db.update_one({
                     'adapters': {
                         '$elemMatch': {
@@ -422,12 +439,36 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 }, {"$set": device_to_update}).modified_count
 
                 if modified_count == 0:
-                    self.devices_db.insert_one({
-                        "internal_axon_id": uuid.uuid4().hex,
-                        "accurate_for_datetime": datetime.now(),
-                        "adapters": [parsed_to_insert],
-                        "tags": []
-                    })
+                    # if it's not in the db then,
+
+                    if correlates:
+                        # for scanner adapters this is case B - see "scanner_adapter_base.py"
+                        # we need to add this device to the list of adapters in another device
+                        correlate_plugin_unique_name, correlated_id = correlates
+                        modified_count = self.devices_db.update_one({
+                            'adapters': {
+                                '$elemMatch': {
+                                    PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
+                                    'data.id': correlated_id
+                                }
+                            }},
+                            {
+                                "$addToSet": {
+                                    "adapters": parsed_to_insert
+                                }
+                        })
+                        if modified_count == 0:
+                            self.logger.error("No devices update for case B for scanner device "
+                                              f"{parsed_to_insert['data']['id']} from "
+                                              f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
+                    else:
+                        # this is regular first-seen device, make its own value
+                        self.devices_db.insert_one({
+                            "internal_axon_id": uuid.uuid4().hex,
+                            "accurate_for_datetime": datetime.now(),
+                            "adapters": [parsed_to_insert],
+                            "tags": []
+                        })
 
         self.logger.info("Starting to fetch device for {} {}".format(plugin_name, plugin_unique_name))
         promises = []
@@ -440,7 +481,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                     self._save_data_in_history(devices_per_client['raw'],
                                                plugin_name,
                                                plugin_unique_name,
-                                               "Adapter")
+                                               plugin_type)
                 except pymongo.errors.DocumentTooLarge:
                     # wanna see my "something too large"?
                     self.logger.warn(f"Got DocumentTooLarge for {plugin_unique_name} with client {client_name}.")
@@ -450,7 +491,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                     device['pretty_id'] = beautiful_adapter_device_name(plugin_name, device['id'])
                     parsed_to_insert = {
                         'client_used': client_name,
-                        'plugin_type': 'Adapter',
+                        'plugin_type': plugin_type,
                         'plugin_name': plugin_name,
                         PLUGIN_UNIQUE_NAME: plugin_unique_name,
                         'accurate_for_datetime': datetime.now(),
