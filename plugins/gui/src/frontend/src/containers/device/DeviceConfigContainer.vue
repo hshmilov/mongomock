@@ -27,8 +27,11 @@
             <div class="col-8">
                 <named-section title="Adapter Specific Fields" icon-name="action/add_field">
                     <tabs>
-                        <tab v-for="device, index in deviceData.adapters" :title="getAdapterName(device.plugin_name)"
-                             :id="device.plugin_name" :selected="index === 0" :key="device.plugin_name">
+                        <tab v-for="device, index in sortedAdapters" :title="getAdapterName(device.plugin_name)"
+                             :id="device.plugin_name+device.data.last_seen" :selected="index === 0"
+                             :outdated="device.outdated" :plugin-name="device.plugin_name"
+                             :key="device.plugin_name+device.data.last_seen">
+                            
                             <div class="d-flex tab-header">
                                 <div>Data From: {{ device.client_used }}</div>
                                 <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
@@ -67,6 +70,26 @@
             },
             deviceData() {
             	return this.device.deviceDetails.data
+            },
+            sortedAdapters() {
+                if (!this.deviceData || !this.deviceData.adapters) return []
+                this.deviceData.adapters.sort((first, second) => {
+                	// Adapters with no last_seen field go first
+                    if(!second.data.last_seen) return 1
+                    if(!first.data.last_seen) return -1
+
+                    // Turn strings into dates and subtract them to get a negative, positive, or zero value.
+                    return new Date(second.data.last_seen) - new Date(first.data.last_seen)
+                })
+                let lastSeen = new Set()
+                this.deviceData.adapters.forEach((adapter) => {
+                    if (lastSeen.has(adapter.plugin_name)) {
+                    	adapter.outdated = true
+                        return
+					}
+                    lastSeen.add(adapter.plugin_name)
+                })
+                return this.deviceData.adapters
             },
             deviceName() {
             	if (!this.deviceData.data) {

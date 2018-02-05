@@ -7,15 +7,18 @@
 <script>
 	export default {
 		name: 'tab',
-        props: {'id': {required: true}, 'title': {required: true}, 'image': {}, 'selected': {default: false}},
-        data() {
+		props: {
+			'id': {required: true}, 'title': {required: true}, 'selected': {default: false},
+			'pluginName': {required: true}, 'outdated': {default: false}
+		},
+		data () {
 			return {
 				isActive: false
-            }
-        },
-        created() {
+			}
+		},
+		created () {
 			this.isActive = this.selected
-        }
+		}
 	}
 </script>
 
