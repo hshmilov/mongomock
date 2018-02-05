@@ -1,7 +1,7 @@
 
 client_details = {
-    "host": "192.168.20.21",
-    "username": "nessus",
+    "host": "10.0.2.188",
+    "username": "Nessus",
     "password": "NessusRocks"
 }
 

@@ -12,10 +12,10 @@ class ParallelRunner(object):
             os.makedirs(self.logs_dir)
 
     def std_file(self, task_name):
-        return f"{self.logs_dir}task_{task_name}_std.log"
+        return os.path.join(f"{self.logs_dir}", f"task_{task_name}_std.log")
 
     def err_file(self, task_name):
-        return f"{self.logs_dir}task_{task_name}_err.log"
+        return os.path.join(f"{self.logs_dir}", f"task_{task_name}_err.log")
 
     def append_single(self, task_name, args, **kwargs):
         command = ' '.join(args)
