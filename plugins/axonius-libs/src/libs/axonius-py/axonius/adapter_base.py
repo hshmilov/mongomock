@@ -708,7 +708,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
     @property
     def plugin_type(self):
-        return adapter_consts.SCANNER_ADAPTER_PLUGIN_TYPE
+        return adapter_consts.ADAPTER_PLUGIN_TYPE
 
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)

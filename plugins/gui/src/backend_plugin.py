@@ -485,7 +485,8 @@ class BackendPlugin(PluginBase):
         """
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'}).sort(
+            adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
+                                                                              {'plugin_type': 'ScannerAdapter'}]}).sort(
                 [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:

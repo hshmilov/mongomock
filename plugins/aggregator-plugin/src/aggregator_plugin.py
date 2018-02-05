@@ -189,14 +189,13 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 # let's add jobs for all adapters
                 for adapter_name, adapter in current_adapters.items():
-                    if is_plugin_adapter(adapter['plugin_type']):
+                    if not is_plugin_adapter(adapter['plugin_type']):
                         # This is not an adapter, not running
                         continue
 
                     if self._online_adapters_scheduler.get_job(adapter_name):
                         # We already have a running thread for this adapter
                         continue
-
                     sample_rate = int(adapter[DEVICE_SAMPLE_RATE])
 
                     self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
@@ -215,8 +214,8 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                         job.remove()
 
         except Exception as e:
-            self.logger.critical('Managing thread got exception, '
-                                 'must restart aggregator manually. Exception: {0}'.format(str(e)))
+            self.logger.exception('Managing thread got exception, '
+                                  'must restart aggregator manually.')
 
     @add_rule("plugin_push", methods=["POST"])
     def save_data_from_plugin(self):

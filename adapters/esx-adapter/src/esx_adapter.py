@@ -109,7 +109,13 @@ class ESXAdapter(AdapterBase):
             device = self._new_device()
             device.name = node.get('Name', '')
             device.figure_os(details.get('config', {}).get('guestFullName', ''))
-            device.id = details.get('config', {})['instanceUuid']
+            try:
+                device.id = details['config']['instanceUuid']
+            except KeyError:
+                self.logger.error(f"Got unrecognized device {details}")
+                # This is not a device
+                return
+
             device.network_interfaces = []
             for iface in details.get('networking', []):
                 ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]

@@ -25,6 +25,7 @@ class TestNessusAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @pytest.mark.skip("Nessus server is down")
     def test_fetch_devices(self):
         super().test_fetch_devices()
         devices_as_dict = self.adapter_service.devices()
