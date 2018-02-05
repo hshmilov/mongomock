@@ -25,13 +25,21 @@ class TestNexposeAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip("Until Itay Fixes me.")
     def test_fetch_devices(self):
-        super().test_fetch_devices()
+        """
+        test fetch devices is different because no permanent ID on scanners.
+        """
+        self.adapter_service.add_client(self.some_client_details)
+
+        self.axonius_system.aggregator.query_devices(
+            adapter_id=self.adapter_service.unique_name)  # send trigger to agg to refresh devices
+        devices_as_dict = self.adapter_service.devices()
+
+        assert self.some_client_id in devices_as_dict
         devices_as_dict = self.adapter_service.devices()
 
         # check the device is read by adapter
         devices_list = devices_as_dict[self.some_client_id]['parsed']
         nexpose_device = list(filter(lambda device: device['hostname'] == FETCHED_DEVICE_EXAMPLE['hostname'],
                                      devices_list))
-        assert nexpose_device[0]['raw']['mac_address'] == FETCHED_DEVICE_EXAMPLE['raw']['mac_address']
+        assert nexpose_device[0]['raw']['mac'] == FETCHED_DEVICE_EXAMPLE['raw']['mac']

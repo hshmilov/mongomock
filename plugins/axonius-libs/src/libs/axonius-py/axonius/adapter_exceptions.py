@@ -1,5 +1,5 @@
 """
-AdapterExceptions.py: Exceptions common for all adapters, those should be respected by other parts of the system
+AdapterExceptions.py: Exceptions common for all adapters, those should be respected by other parts of the system.
 """
 
 
@@ -13,20 +13,32 @@ class CredentialErrorException(AdapterException):
 
 class ClientConnectionException(AdapterException):
     """
-    Exception to be thrown from specific adapter when they are unable to connect to a client, according to given config
+    Exception to be thrown from specific adapter when they are unable to connect to a client, according to given config.
     """
     pass
 
 
 class ClientSaveException(AdapterException):
     """
-    Exception to be thrown if there was a problem with saving the client to the adapters DB
+    Exception to be thrown if there was a problem with saving the client to the adapters DB.
     """
 
 
 class TagDeviceError(AdapterException):
     """
-    Exception to be thrown if tagging a device failed
+    Exception to be thrown if tagging a device failed.
+    """
+
+
+class GetDevicesError(AdapterException):
+    """
+    Exception to be thrown if getting devices failed.
+    """
+
+
+class ParseDevicesError(AdapterException):
+    """
+    Exception to be thrown if getting devices failed.
     """
 
 
