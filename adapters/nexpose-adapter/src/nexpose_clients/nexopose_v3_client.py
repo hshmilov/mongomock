@@ -81,7 +81,7 @@ class NexposeV3Client(nexpose_base_client.NexposeClient):
         device.last_seen = last_seen
         device.id = str(device_raw['id'])
         for address in device_raw.get('addresses', []):
-            device.add_nic(address.get('mac'), address.get('ip'), logger)
+            device.add_nic(address.get('mac'), [address.get('ip')] if 'ip' in address else [], logger)
         device.hostname = device_raw.get('hostName', '')
         device.scanner = True
         device.set_raw(device_raw)

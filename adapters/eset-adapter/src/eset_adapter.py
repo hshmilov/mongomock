@@ -31,6 +31,9 @@ class EsetAdapter(AdapterBase):
         Check AdapterBase documentation for additional params and exception details.
 
         """
+        # This lock will be passed to client connections to make sure only one client is in session at a time.
+        self.eset_session_lock = threading.RLock()
+
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
 
@@ -38,9 +41,6 @@ class EsetAdapter(AdapterBase):
         # The responsibility for unloading the library is on the python interpreter garbage collection
         # as recommended by the ctypes documentation.
         self._load_eset_connection_library()
-
-        # This lock will be passed to client connections to make sure only one client is in session at a time.
-        self.eset_session_lock = threading.RLock()
 
     def _load_eset_connection_library(self):
         """Shared library loading and setting up.
