@@ -704,6 +704,7 @@ class PluginBase(Feature):
                     ],
                     "tagname": tagname,
                     "tagvalue": tagvalue,
+                    "data": tagvalue,       # passing twice, its stage 1 before we do a full refactor.
                     "tagtype": tagtype}
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', data=json.dumps(tag_data))
         if response.status_code != 200:

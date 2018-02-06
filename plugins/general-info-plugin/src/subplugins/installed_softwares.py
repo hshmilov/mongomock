@@ -22,4 +22,19 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         return [{"type": "query", "args": ["select Vendor, Name, Version, InstallState from Win32_Product"]}]
 
     def handle_result(self, device, executer_info, result):
-        pass
+
+        installed_softwares = []
+        for i in result[0]:
+            if i["InstallState"] == 5:
+                # 5 means it's installed
+                installed_softwares.append(
+                    {
+                        "Vendor": i['Vendor'],
+                        "Name": i['Name'],
+                        "Version": i['Version']
+                    }
+                )
+
+        self.plugin_base.add_data_to_device(
+            (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+            "Installed Softwares", installed_softwares)

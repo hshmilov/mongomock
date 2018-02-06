@@ -2,24 +2,8 @@
 Using wmi queries, determines who is the last user that logged into the machine.
 """
 import requests
-import re
+from .wmi_utils import wmi_date_to_datetime
 from .general_info_subplugin import GeneralInfoSubplugin
-from datetime import tzinfo, datetime, timedelta
-
-# A help class for dealing with CIMTYPE_DateTime (returning from wmi...)
-
-
-class MinutesFromUTC(tzinfo):
-    """Fixed offset in minutes from UTC."""
-
-    def __init__(self, offset):
-        self.__offset = timedelta(minutes=offset)
-
-    def utcoffset(self, dt):
-        return self.__offset
-
-    def dst(self, dt):
-        return timedelta(0)
 
 
 class GetLastUserLogon(GeneralInfoSubplugin):
@@ -131,22 +115,9 @@ class GetLastUserLogon(GeneralInfoSubplugin):
                 continue
 
             # This is a string in a special format, we need to parse it.
-            lastusetime = profile['LastUseTime']
-
-            # Parse the date. this is how the str format defined here:
-            # https://msdn.microsoft.com/en-us/library/system.management.cimtype(v=vs.110).aspx
-            date_pattern = re.compile(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.(\d{6})([+|-])(\d{3})')
-            s = date_pattern.search(lastusetime)
-            if s is not None:
-                g = s.groups()
-                offset = int(g[8])
-                if g[7] == '-':
-                    offset = -offset
-                dt = datetime(int(g[0]), int(g[1]),
-                              int(g[2]), int(g[3]),
-                              int(g[4]), int(g[5]),
-                              int(g[6]), MinutesFromUTC(offset))
-                last_used_time_arr.append({"sid": sid, "lastusetime": dt})
+            last_use_time = wmi_date_to_datetime(profile['LastUseTime'])
+            if last_use_time is not None:
+                last_used_time_arr.append({"sid": sid, "lastusetime": last_use_time})
 
         # Now sort the array.
         last_used_time_arr = sorted(last_used_time_arr, key=lambda k: k["lastusetime"], reverse=True)

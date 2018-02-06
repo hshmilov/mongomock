@@ -78,7 +78,7 @@ class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
         self.subplugins = []  # All of our subplugins.
-        self.start_activatable()     # We want all plugins to be activatable from the beginning?
+        # self.start_activatable()     # debug
 
     @property
     def number_of_active_execution_requests(self):
