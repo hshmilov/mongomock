@@ -2,16 +2,16 @@
     <div class="array">
         <label v-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
         <div v-for="item in schemaItems" class="item">
-            <x-object :schema="item">
+            <x-type-wrap :schema="item">
                 <component :is="`x-${item.type}-edit`" :schema="item" v-model="data[item.name]"
                            @input="$emit('input', data)" :validator="validator"></component>
-            </x-object>
+            </x-type-wrap>
         </div>
     </div>
 </template>
 
 <script>
-	import xObject from '../Object.vue'
+	import xTypeWrap from './TypeWrap.vue'
 	import xStringEdit from '../string/StringEdit.vue'
 	import xNumberEdit from '../numerical/NumberEdit.vue'
 	import xIntegerEdit from '../numerical/IntegerEdit.vue'
@@ -24,7 +24,7 @@
 		name: 'x-array-edit',
         mixins: [ArrayMixin],
 		components: {
-			xObject,
+			xTypeWrap,
 			xStringEdit,
 			xNumberEdit,
 			xIntegerEdit,

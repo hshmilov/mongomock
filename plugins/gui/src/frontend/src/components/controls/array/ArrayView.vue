@@ -3,16 +3,16 @@
         <label v-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
         <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
             <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
-            <x-object :schema="item">
+            <x-type-wrap :schema="item">
                 <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]"
                            @input="$emit('input', data)"></component>
-            </x-object>
+            </x-type-wrap>
         </div>
     </div>
 </template>
 
 <script>
-	import xObject from '../Object.vue'
+	import xTypeWrap from './TypeWrap.vue'
 	import xStringView from '../string/StringView.vue'
 	import xNumberView from '../numerical/NumberView.vue'
 	import xIntegerView from '../numerical/IntegerView.vue'
@@ -25,7 +25,7 @@
 		name: 'x-array-view',
 		mixins: [ArrayMixin],
 		components: {
-			xObject,
+			xTypeWrap,
 			xStringView,
 			xNumberView,
 			xIntegerView,

@@ -105,6 +105,13 @@
             max-height: 480px;
             .checklist-list {
                 height: 100%;
+                .checkbox {
+                    margin-top: 8px;
+                    width: 100%;
+                    &:first-of-type {
+                        margin-top: 0;
+                    }
+                }
             }
             .vue-scrollbar__scrollbar-vertical {
                 left: auto;

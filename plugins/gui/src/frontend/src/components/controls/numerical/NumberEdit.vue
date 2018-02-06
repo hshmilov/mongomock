@@ -1,5 +1,6 @@
 <template>
-    <input :id="schema.name" type="number" v-model="data" @focusout.stop="handleData" :class="{'invalid': !valid}"/>
+    <input :id="schema.name" type="number" v-model="data" :class="{'invalid': !valid}"
+           @focusout.stop="validate" @input="input"/>
 </template>
 
 <script>

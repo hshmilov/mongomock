@@ -1,5 +1,5 @@
 <template>
-    <form class="schema-form" @keyup.enter.stop="$emit('submit')" @focusout="eventBus.$emit('focusout')">
+    <form class="schema-form" @keyup.enter.stop="emitFocus(); $emit('submit')" @focusout="emitFocus">
         <x-array-edit v-model="data" :schema="schema" :validator="eventBus" @input="$emit('input', data)"></x-array-edit>
     </form>
 </template>
@@ -23,6 +23,11 @@
 			return {
                 data: { ...this.value },
                 eventBus: new Vue()
+            }
+        },
+        methods: {
+			emitFocus() {
+				this.eventBus.$emit('focusout')
             }
         },
         created() {

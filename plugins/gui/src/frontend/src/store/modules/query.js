@@ -100,10 +100,11 @@ const fetchQueries = (dispatch, payload, queryType) => {
 	if (!payload.skip) { payload.skip = 0 }
 	if (!payload.limit) {payload.limit = 2000 }
 	let param = `?limit=${payload.limit}&skip=${payload.skip}`
-	param += `&filter=query_type == '${queryType}'`
+	let filter = `query_type == '${queryType}'`
 	if (payload.filter) {
-		param += ` and (${payload.filter})`
+		filter = `${filter} and (${payload.filter})`
 	}
+	param += '&filter=' + encodeURI(filter)
 	dispatch(REQUEST_API, {
 		rule: `/api/queries${param}`,
 		type: payload.type
@@ -133,7 +134,10 @@ export const query = {
 			savedQueries: {fetching: false, data: [], error: ''}
 		},
 		queryDetails: { fetching: false, data: {}, error: ''},
-		newQuery: {}
+		newQuery: {
+			filter: '',
+			filterExpressions: []
+		}
 
 	},
 	getters: {

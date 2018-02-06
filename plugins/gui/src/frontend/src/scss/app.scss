@@ -169,6 +169,10 @@ Formatting
   border: 1px solid $background-color-error;
 }
 
+.fill {
+  width: 100%;
+}
+
 /*******************
 Components
 *******************/
@@ -331,7 +335,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   border-color: $border-color;
   padding: 12px;
   &.w-xl {
-    width: 600px;
+    width: 720px;
   }
   &.w-lg {
     width: 480px;

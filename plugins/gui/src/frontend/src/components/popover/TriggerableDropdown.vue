@@ -39,13 +39,6 @@
                 right: 0;
                 left: auto;
             }
-            .checkbox {
-                margin-top: 8px;
-                width: 100%;
-                &:first-of-type {
-                    margin-top: 0;
-                }
-            }
         }
         .dropdown-toggle {
             cursor: pointer;
@@ -63,6 +56,7 @@
                 display: none;
             }
             &.arrow:after {
+                display: inline-block;
                 position: absolute;
                 margin: 6px 12px;
                 top: 0;

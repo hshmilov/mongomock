@@ -2,7 +2,7 @@
     <scrollable-page title="devices">
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
-            <devices-filter-container slot="cardContent" v-model="deviceFilter"
+            <devices-filter-container slot="cardContent" :schema="deviceSchema" v-model="deviceFilter"
                                       @submit="executeQuery"></devices-filter-container>
         </card>
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
@@ -95,6 +95,42 @@
                 },
                 set(newFilter) {
                     this.updateFilter(newFilter)
+                }
+            },
+            deviceSchema () {
+				return {
+					type: 'array',
+                    items: [
+                        {
+                        	name: 'adapters',
+                            type: 'array',
+                            items: [
+                                {
+                                	name: 'plugin_name',
+                                    title: 'Adapter Name',
+                                    type: 'string',
+                                    enum: Object.keys(adapterStaticData).map((name) => {
+                                		return { name, title: adapterStaticData[name].name}
+                                    })
+                                },
+                                this.device.deviceFields.data
+                            ]
+                        },
+                        {
+                        	name: 'tags',
+                            type: 'array',
+                            items: {
+                        		type: 'array',
+                                items: [
+                                    {
+                                    	name: 'tagname',
+                                        title: 'Tag',
+                                        type: 'string'
+                                    }
+                                ]
+                            }
+                        }
+                    ]
                 }
             }
 		},

@@ -1,5 +1,5 @@
 <template>
-    <checkbox v-model="data" @focusout.stop="handleData" :class="{'invalid': !valid}"></checkbox>
+    <checkbox v-model="data" @focusout.stop="validate" @change="input" :class="{'invalid': !valid}"></checkbox>
 </template>
 
 <script>
@@ -18,7 +18,8 @@
         created() {
 			if (!this.data) {
 				this.data = false
-                this.handleData()
+                this.input()
+                this.validate()
             }
         }
 	}

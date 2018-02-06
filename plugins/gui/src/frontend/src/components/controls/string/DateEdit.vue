@@ -35,5 +35,89 @@
 </script>
 
 <style lang="scss">
+    @import '../../../scss/config';
 
+    .cov-vue-date {
+        width: 100%;
+        position: relative;
+        .datepicker-overlay {
+            position: relative !important;
+            overflow: visible !important;
+            .cov-date-body {
+                position: absolute;
+                -webkit-transform: none;
+                -moz-transform: none;
+                -ms-transform: none;
+                -o-transform: none;
+                transform: none;
+                top: 0;
+                left: 0;
+                .cov-date-monthly, .cov-date-box, .button-box {
+                    font-family: Poppins, sans-serif;
+                    .hour-box, .min-box {
+                        .hour-item, .min-item {
+                            font-size: 20px !important;
+                            &.active {
+                                background-color: $color-theme-light;
+                            }
+                        }
+                    }
+                }
+                .cov-date-monthly {
+                    height: 48px;
+                    padding: 4px;
+                    .cov-date-caption {
+                        padding: 0 !important;
+                        height: 40px;
+                        line-height: 40px;
+                        vertical-align: middle;
+                        direction: rtl;
+                        width: 80%;
+                        br { display: none; }
+                    }
+                    .cov-date-previous, .cov-date-next {
+                        height: 40px;
+                        width: 10% !important;
+                        &::before, &::after {
+                            width: 10px;
+                        }
+                        &::after {
+                            margin-top: 0;
+                        }
+                    }
+                }
+                .cov-date-box {
+                    height: 200px;
+                    .cov-picker-box {
+                        padding: 0;
+                        height: 200px;
+                        overflow: hidden;
+                        .week {
+                            background-color: $color-theme-dark !important;
+                            ul li {
+                                color: $color-theme-light !important;
+                                font-weight: 200 !important;
+                            }
+                        }
+                        .day.checked {
+                            background-color: $color-theme-light !important;
+                        }
+                    }
+                }
+                .button-box {
+                    padding: 0;
+                    display: flex;
+                    height: 40px;
+                    span {
+                        flex: 50%;
+                        line-height: 20px;
+                        text-align: center;
+                        &:hover {
+                            background-color: #E3E3E3;
+                        }
+                    }
+                }
+            }
+        }
+    }
 </style>

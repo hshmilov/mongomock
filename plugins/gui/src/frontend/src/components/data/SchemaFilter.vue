@@ -1,0 +1,179 @@
+<template>
+    <div class="filter">
+        <div class="mb-4">Show only Devices:</div>
+        <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
+                             v-model="expressions[i]" :fields="fields" :comp-ops="compOps"
+                             @change="compileFilter(i, $event)" @remove="removeExpression(i)"></x-schema-expression>
+        <div @click="addExpression" class="btn-light">+</div>
+        <div v-if="error" class="error-text">{{ error }}</div>
+    </div>
+</template>
+
+<script>
+	import xSchemaExpression from './SchemaExpression.vue'
+
+	import { mapState, mapMutations, mapActions } from 'vuex'
+
+	export default {
+		name: 'x-schema-filter',
+		components: {xSchemaExpression},
+		props: {'schema': {required: true}, 'value': {}},
+		computed: {
+			expression () {
+				return {
+					logicOp: '',
+					not: false,
+					leftBracket: false,
+					field: '',
+					compOp: '',
+					value: null,
+					rightBracket: false
+				}
+			},
+			fields () {
+				return this.spreadSchema(this.schema)
+			},
+			compOps () {
+				return {
+					'string': [
+						{name: 'contains', pattern: '== regex("{val}", "i")'},
+						{name: 'starts', pattern: '== regex("^{val}", "i")'},
+						{name: 'ends', pattern: '== regex("{val}$", "i")'},
+						{name: 'equals', pattern: '== "{val}"'},
+					],
+					'date-time': [
+                        {name: 'to', pattern: '< date("{val}")'},
+                        {name: 'from', pattern: '>= date("{val}")'}
+                    ],
+					'numerical': [
+                        {name: '==', pattern: '== {val}'},
+                        {name: '<=', pattern: '<= {val}'},
+                        {name: '>=', pattern: '>= {val}'},
+                        {name: '>', pattern: '> {val}'},
+                        {name: '<', pattern: '< {val}'}
+                    ],
+                    'bool': [
+                        {name: 'is', pattern: '== {val}'}
+                    ]
+				}
+			}
+		},
+		data () {
+			return {
+				expressions: [...this.value],
+				filters: [],
+                bracketWeights: [],
+                error: ''
+			}
+		},
+		watch: {
+			value (newValue) {
+				if (newValue.length === this.expressions.length) return
+				this.expressions = [ ...newValue ]
+            },
+			expressions (newExpressions) {
+				this.$emit('input', newExpressions)
+			}
+		},
+		methods: {
+			spreadSchema (schema, prefix='') {
+				/*
+				    Recursing over schema to extract a flat map from field path to its schema
+				 */
+				if (schema.name) {
+					prefix = prefix? `${prefix}.${schema.name}` : schema.name
+				}
+				if (schema.type === 'array' && schema.items) {
+					if (!Array.isArray(schema.items)) {
+						return this.spreadSchema(this.fixTitle({ ...schema.items}, schema), prefix)
+					}
+					let fields = []
+					schema.items.forEach((item) => {
+						fields = fields.concat(this.spreadSchema(this.fixTitle({ ...item }, schema), prefix))
+					})
+					return fields
+				}
+				if (schema.type === 'object' && schema.properties) {
+					let fields = []
+					Object.keys(schema.properties).forEach((key) => {
+						fields = fields.concat(this.spreadSchema({...schema.properties[key], name: key}, prefix))
+					})
+				}
+				return [{ ...schema, name: prefix}]
+			},
+            fixTitle(child, parent) {
+				if (!child.title) {
+					child.title = ''
+				}
+				if (parent.title) {
+					child.title = `${parent.title} ${child.title}`
+				}
+				return child
+            },
+			compileFilter (index, payload) {
+				this.filters[index] = payload.filter
+                this.bracketWeights[index] = payload.bracketWeight
+                let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
+                if (totalBrackets !== 0) {
+					this.error = (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket'
+                    return
+                }
+                // No compilation error - propagating
+                this.error = ''
+				this.$emit('change', this.filters.join(' '))
+			},
+			addExpression () {
+				this.expressions.push({ ...this.expression, i: this.expressions.length })
+				this.$emit('input', this.expressions)
+			},
+            removeExpression(index) {
+				if (index >= this.expressions.length) return
+				this.expressions.splice(index, 1)
+				this.filters.splice(index, 1)
+                if (!index) {
+					this.expressions[index].logicOp = ''
+                    this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
+				}
+				this.$emit('change', this.filters.join(' '))
+            }
+		},
+        created() {
+			if (!this.expressions.length) {
+				this.addExpression()
+                this.addExpression()
+            }
+        }
+	}
+</script>
+
+<style lang="scss">
+    @import '../../scss/config';
+
+    .filter {
+
+        .btn-light {
+            cursor: pointer;
+            background-color: $border-color;
+            border-radius: 4px;
+            -webkit-transition: 0.2s ease-in;
+            -o-transition: 0.2s ease-in;
+            transition: 0.2s ease-in;
+            text-align: center;
+            width: 30px;
+            line-height: 30px;
+            height: 30px;
+            &:hover {
+                -webkit-box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
+                box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
+            }
+        }
+        .expression-container {
+            display: grid;
+            grid-template-columns: auto 20px;
+            grid-column-gap: 4px;
+            .link {
+                text-align: center;
+            }
+        }
+    }
+</style>

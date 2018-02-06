@@ -121,6 +121,7 @@ export const device = {
 		/* All fields parsed in the system - at least one adapter parses the field */
 		deviceFields: {
 			fetching: false, data: {
+				'name': 'data',
 				'items': [
 					{
 						'title': 'Axonius Name',
@@ -144,10 +145,11 @@ export const device = {
 						'type': 'string'
 					},
 					{
+						'title': 'OS',
 						'name': 'os',
 						'items': [
 							{
-								'title': 'OS',
+								'title': 'Type',
 								'enum': [
 									'Windows',
 									'Linux',
@@ -159,12 +161,12 @@ export const device = {
 								'type': 'string'
 							},
 							{
-								'title': 'OS Distribution',
+								'title': 'Distribution',
 								'name': 'distribution',
 								'type': 'string'
 							},
 							{
-								'title': 'OS Bitness',
+								'title': 'Bitness',
 								'enum': [
 									32,
 									64
@@ -173,12 +175,12 @@ export const device = {
 								'type': 'number'
 							},
 							{
-								'title': 'OS Major',
+								'title': 'Major',
 								'name': 'major',
 								'type': 'string'
 							},
 							{
-								'title': 'OS Minor',
+								'title': 'Minor',
 								'name': 'minor',
 								'type': 'string'
 							}
@@ -186,7 +188,6 @@ export const device = {
 						'type': 'array'
 					},
 					{
-						'title': 'Network Interfaces',
 						'items': {
 							'items': [
 								{
@@ -195,7 +196,7 @@ export const device = {
 									'type': 'string'
 								},
 								{
-									'title': 'IPs',
+									'title': 'IP',
 									'items': {
 										'type': 'string'
 									},
@@ -1349,6 +1350,7 @@ export const device = {
 		[ FETCH_DEVICES ] ({dispatch, commit}, payload) {
 			/* Fetch list of devices for requested page and filtering */
 			if (!payload.skip) { payload.skip = 0 }
+			if (!payload.limit) { payload.limit = 0 }
 			/* Getting first page - empty table */
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`

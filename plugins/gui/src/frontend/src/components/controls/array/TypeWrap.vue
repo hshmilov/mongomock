@@ -7,7 +7,7 @@
 
 <script>
 	export default {
-		name: 'x-object',
+		name: 'x-type-wrap',
         props: ['schema'],
         computed: {
 			label() {

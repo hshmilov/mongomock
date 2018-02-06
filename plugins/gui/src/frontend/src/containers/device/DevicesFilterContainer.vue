@@ -3,8 +3,9 @@
         <!-- Dropdown component for selecting a query --->
         <triggerable-dropdown :arrow="false">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
-            <input slot="dropdownTrigger" class="form-control" v-model="searchValue" @input="searchQuery"
-                   @keyup.enter.stop="$emit('submit')" ref="greatInput">
+            <input slot="dropdownTrigger" class="form-control" v-model="searchValue" ref="greatInput"
+                   @input="searchQuery" @keyup.enter.stop="$emit('submit')"
+                   placeholder="Insert your query or start typing to filter recent Queries">
             <!--
             Content is a list composed of 3 sections:
             1. Saved queries, filtered to whose names contain the value 'deviceFilter'
@@ -12,35 +13,38 @@
             3. Option to search for 'deviceFilter' everywhere in devices (compares to every text field)
             -->
             <div slot="dropdownContent">
-                <nested-menu v-if="saved">
+                <nested-menu v-if="saved && saved.length">
                     <div class="title">Saved Queries</div>
                     <nested-menu-item v-for="query, index in saved" :key="index" :title="query.name"
                                       @click="selectQuery(query.filter)"></nested-menu-item>
                 </nested-menu>
-                <nested-menu v-if="executed">
+                <nested-menu v-if="executed && executed.length">
                     <div class="title">History</div>
                     <nested-menu-item v-for="query, index in executed" :key="index" :title="query.filter"
                                       @click="selectQuery(query.filter)"></nested-menu-item>
                 </nested-menu>
-                <nested-menu v-if="searchValue">
+                <nested-menu v-if="this.searchValue && !complexSearch">
                     <nested-menu-item :title="`Search everywhere for: ${searchValue}`"></nested-menu-item>
                 </nested-menu>
+                <div v-if="noResults">No results</div>
             </div>
             <!--generic-form slot="dropdownContent" :schema="queryFields" v-model="queryDropdown.value"
                           @input="extractValue" @submit="executeQuery" :condensed="true"></generic-form-->
         </triggerable-dropdown>
+        <triggerable-dropdown class="form-control" align="right" size="xl">
+            <div slot="dropdownTrigger" class="link">Query</div>
+            <div slot="dropdownContent">
+                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery"></x-schema-filter>
+                <div class="row">
+                    <div class="form-group place-right">
+                        <a class="btn btn-inverse" @click="filterExpressions = []; searchValue = ''">Clear</a>
+                        <a class="btn" @click="$emit('submit')">Search</a>
+                    </div>
+                </div>
+            </div>
+        </triggerable-dropdown>
         <!-- Button controlling the execution of currently filled query -->
         <a class="btn btn-adjoined" @click="$emit('submit')">go</a>
-
-        <!--i class="icon-help trigger-help" @click="helpTooltip.open = !helpTooltip.open"></i>
-        <div v-show="helpTooltip.open" class="help">
-            <div>An advanced query is a recursive expression defined as:</div>
-            <div>EXPR: [ not ] &lt;field path&gt; COMP &lt;required value&gt; [ LOGIC EXPR ]</div>
-            <div>COMP:  == | != | > | < | >= | <= | in</div>
-            <div>LOGIC: and | or</div>
-            <div>The value can be a primitive, like a string or a number, or a function like:</div>
-            <div>regex(&lt;regular expression&gt;)</div>
-        </div-->
     </div>
 </template>
 
@@ -48,6 +52,7 @@
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
     import NestedMenu from '../../components/menus/NestedMenu.vue'
     import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
+    import xSchemaFilter from '../../components/data/SchemaFilter.vue'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import {
@@ -60,8 +65,8 @@
 
 	export default {
 		name: 'devices-filter-container',
-		components: {TriggerableDropdown, NestedMenu, NestedMenuItem},
-		props: ['value'],
+		components: {TriggerableDropdown, NestedMenu, NestedMenuItem, xSchemaFilter},
+		props: ['value', 'schema'],
 		computed: {
 			...mapState(['query']),
 			saved () {
@@ -74,26 +79,44 @@
                     used.add(query.filter)
                     return !existed
                 })
-			}
+			},
+            filterExpressions: {
+				get() {
+					return this.query.newQuery.filterExpressions
+                },
+                set(filterExpressions) {
+					this.updateNewQuery({ filterExpressions })
+                }
+            },
+            complexSearch() {
+				if (!this.searchValue) return false
+                let simpleMatch = this.searchValue.match('[a-zA-Z0-9 ]*')
+                return !simpleMatch || simpleMatch.length !== 1 || simpleMatch[0] !== this.searchValue
+            },
+            noResults() {
+				return (!this.searchValue || this.complexSearch) && (!this.saved || !this.saved.length)
+                    && (!this.executed || !this.executed.length)
+            }
 		},
 		data () {
 			return {
-				searchValue: this.value,
-				helpTooltip: {
-					open: false
-				}
+				searchValue: this.value
 			}
 		},
 		methods: {
+            ...mapMutations({ updateNewQuery: UPDATE_NEW_QUERY }),
 			...mapActions({
 				fetchSavedQueries: FETCH_SAVED_QUERIES,
 				fetchExecutedQueries: FETCH_EXECUTED_QUERIES
 			}),
 			selectQuery (filter) {
-				this.searchValue = filter
-				this.$emit('input', this.searchValue)
+				this.updateQuery(filter)
 				this.$refs.greatInput.focus()
 			},
+            updateQuery (filter) {
+				this.searchValue = filter
+				this.$emit('input', this.searchValue)
+            },
 			filterSavedQueries () {
 				return this.fetchSavedQueries({
 					type: UPDATE_QUICK_SAVED,
@@ -109,10 +132,10 @@
 				})
 			},
 			searchQuery () {
-				Promise.all([this.filterSavedQueries(), this.filterExecutedQueries()])
-                    .then((response) => console.log("Got them all"))
-                    .catch((error) => console.log(error))
                 this.$emit('input', this.searchValue)
+            	if (this.complexSearch) return
+				Promise.all([this.filterSavedQueries(), this.filterExecutedQueries()])
+                    .catch((error) => console.log(error))
 			}
 		},
         created() {
@@ -130,9 +153,17 @@
             flex: auto;
             .dropdown-toggle {
                 padding: 0;
+                line-height: 20px;
                 .form-control {
                     border-radius: 0;
+                    border-right: 0;
                 }
+            }
+            &.form-control {
+                border-radius: 0;
+                border-left: 0;
+                flex: 0;
+                padding-right: 36px;
             }
             .menu {
                 border-bottom: 1px solid #EEE;
@@ -153,7 +184,7 @@
                 }
             }
         }
-        .btn {
+        .btn.btn-adjoined {
             vertical-align: middle;
             line-height: 30px;
         }

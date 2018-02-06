@@ -28,17 +28,19 @@ export default {
 		}
 	},
 	methods: {
-		handleData() {
+		validate() {
+			if (!this.validator) { return }
+			this.valid = this.checkData() && (!this.schema.required || !this.isEmpty())
+			this.validator.$emit('validate', { title: this.schema.title, valid: this.valid })
+		},
+		input() {
 			this.data = this.formatData()
 			this.$emit('input', this.data)
-			if (!this.validator) { return }
-			this.valid = this.validateData() && (!this.schema.required || !this.isEmpty())
-			this.validator.$emit('validate', { title: this.schema.title, valid: this.valid })
 		},
 		formatData() {
 			return this.data
 		},
-		validateData() {
+		checkData() {
 			return true
 		},
 		isEmpty() {
@@ -46,6 +48,8 @@ export default {
 		}
 	},
 	created() {
-		this.validator.$on('focusout', this.handleData)
+		if (this.validator) {
+			this.validator.$on('focusout', this.validate)
+		}
 	}
 }
