@@ -246,7 +246,7 @@ class AxoniusService(object):
                     break
         return adapters_list
 
-    def build(self, system, adapter_names, plugin_names, rebuild=False, async=True):
+    def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, async=True):
         to_build = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         if system:
             to_build = self.axonius_services + to_build
@@ -258,9 +258,9 @@ class AxoniusService(object):
             for service in to_build:
                 if service.get_image_exists():
                     continue
-                service.build(runner)
+                service.build(mode, runner)
                 time.sleep(1)  # We are getting resource busy. we suspect this is due parallel build storm
             assert runner.wait_for_all() == 0
         else:
             for service in to_build:
-                service.build()
+                service.build(mode)

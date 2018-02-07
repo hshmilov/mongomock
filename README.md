@@ -22,8 +22,8 @@ Examples:
 # Start basic configuration:
 ./axonius.sh system up --all
 
-# Start basic configuration in production:
-./axonius.sh system up --all --prod
+# Start basic configuration in debug:
+./axonius.sh system up --all --debug
 
 # Start basic configuration with ad-adpter and aws-adapter and watch plugin 
 ./axonius.sh system up --plugins watch --adapters ad aws
@@ -34,8 +34,10 @@ Examples:
 # All system commands start and stop the system [mongo, core, aggregator, gui] plus any other specified containers
 
 # In order to start and stop a specific *container*:
-./axonius.sh adapter up [--prod] ad
-./axonius.sh adapter down [--prod] ad
-./axonius.sh plugin up [--prod] watch
-./axonius.sh plugin down [--prod] watch
+./axonius.sh adapter up [--debug] ad
+./axonius.sh adapter down [--debug] ad
+./axonius.sh plugin up [--debug] watch
+./axonius.sh plugin down [--debug] watch
+
+./axonius.sh ls
 ```

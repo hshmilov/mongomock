@@ -29,6 +29,14 @@ def fast_axonius():
         name = name[:-len('-adapter')].replace('-', '_')
         services[name] = service
 
+    plugins = {}
+    for plugin in axonius_system.axonius_services:
+        plugins[plugin.container_name] = plugin
+    for plugin_name, variable in axonius_system.get_all_plugins():
+        # Initialize it
+        plugin = variable()
+        plugins[plugin_name] = plugin
+
     parallel_tests = os.path.join(testing_folder, 'parallel_tests')
     adapter_tests_regex = os.path.join(parallel_tests, '*.py')
 
@@ -70,19 +78,22 @@ def fast_axonius():
                 services[name].set_client = get_func(name)
 
     class AxTests(object):
-        def __init__(self, services=services):
+        def __init__(self, services=services, plugins=plugins):
             self._services = services
+            self._plugins = plugins
 
         def __repr__(self):
             return 'use variable \'ax\''
 
         def set_all_clients(self):
-            for service in self._services:
-                if service.get_is_container_up():
+            for service in self._services.values():
+                if not service.get_is_container_up():
                     continue
                 service.set_client()
 
     ax = AxTests()
     for name, service in services.items():
+        setattr(ax, name, service)
+    for name, service in plugins.items():
         setattr(ax, name, service)
     return ax

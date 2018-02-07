@@ -22,9 +22,9 @@ except (ModuleNotFoundError, ImportError):
 def main():
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} [-h] {system,adapter,plugin} [<args>]
-       {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--skip]
+       {name} system [-h] {up,down,build} [--all] [--debug] [--restart] [--rebuild] [--skip]
                                 [--plugins [N [N ...]]] [--adapters [N [N ...]]]
-       {name} {adapter,plugin} [-h] {up,down,build} name [--prod] [--restart] [--rebuild]
+       {name} {adapter,plugin} [-h] {up,down,build} name [--debug] [--restart] [--rebuild]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
     parser.add_argument('target', choices=['system', 'adapter', 'plugin', 'ls'])
@@ -54,12 +54,12 @@ def main():
 
 def system_entry_point(args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--skip]
+{name} system [-h] {up,down,build} [--all] [--debug] [--restart] [--rebuild] [--skip]
                                 [--plugins [N [N ...]]] [--adapters [N [N ...]]]"""[1:].replace(
         '{name}', os.path.basename(__file__)))
     parser.add_argument('mode', choices=['up', 'down', 'build'])
     parser.add_argument('--all', type=str2bool, nargs='?', const=True, default=False, help='All adapters and plugins')
-    parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Production Mode')
+    parser.add_argument('--debug', type=str2bool, nargs='?', const=True, default=False, help='Debug Mode')
     parser.add_argument('--restart', '-r', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
@@ -94,29 +94,32 @@ def system_entry_point(args):
     axonius_system.take_process_ownership()
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.plugins}')
-        mode = 'prod' if args.prod else ''
+        mode = 'debug' if args.debug else ''
         if args.restart:
             # clear old containers if exists...
             axonius_system.remove_plugin_containers(args.adapters, args.plugins)
-        axonius_system.build(True, args.adapters, args.plugins, args.rebuild)  # Optimization - async build first
+
+        # Optimization - async build first
+        axonius_system.build(True, args.adapters, args.plugins, 'debug' if args.debug else '', args.rebuild)
+
         axonius_system.start_and_wait(mode, args.restart, skip=args.skip)
         axonius_system.start_plugins(args.adapters, args.plugins, mode, args.restart, skip=args.skip)
     elif args.mode == 'down':
-        assert not args.restart and not args.rebuild and not args.skip
+        assert not args.restart and not args.rebuild and not args.skip and not args.debug
         print(f'Stopping system and {args.adapters + args.plugins}')
         axonius_system.stop_plugins(args.adapters, args.plugins, should_delete=False)
         axonius_system.stop(should_delete=False)
     else:
         assert not args.restart and not args.skip
-        axonius_system.build(True, args.adapters, args.plugins, args.rebuild)
+        axonius_system.build(True, args.adapters, args.plugins, 'debug' if args.debug else '', args.rebuild)
 
 
 def service_entry_point(target, args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} {target} [-h] {up,down,build} name [--prod] [--restart] [--rebuild]
+{name} {target} [-h] {up,down,build} name [--debug] [--restart] [--rebuild]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('mode', choices=['up', 'down', 'build'])
-    parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Production Mode')
+    parser.add_argument('--debug', type=str2bool, nargs='?', const=True, default=False, help='Debug Mode')
     parser.add_argument('--restart', '-r', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
@@ -139,14 +142,14 @@ def service_entry_point(target, args):
     axonius_system = get_service()
     if args.mode == 'up':
         print(f'Starting {args.name}')
-        axonius_system.start_plugins(adapters, plugins, 'prod' if args.prod else '', args.restart, args.rebuild)
+        axonius_system.start_plugins(adapters, plugins, 'debug' if args.debug else '', args.restart, args.rebuild)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
         axonius_system.stop_plugins(adapters, plugins, should_delete=False)
     else:
         assert not args.restart
-        axonius_system.build(False, adapters, plugins, args.rebuild)
+        axonius_system.build(False, adapters, plugins, 'debug' if args.debug else '', args.rebuild)
 
 
 def str2bool(v):

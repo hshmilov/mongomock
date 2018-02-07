@@ -45,8 +45,7 @@ class DockerService(AxonService):
     def environment(self):
         return []
 
-    @property
-    def dockerfile(self):
+    def get_dockerfile(self, mode=''):
         return """
 FROM axonius/axonius-libs
 
@@ -58,7 +57,7 @@ COPY src/ ./
 """[1:]
 
     def start(self, mode='', allow_restart=False, rebuild=False):
-        assert mode in ('prod', '')
+        assert mode in ('debug', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
@@ -67,10 +66,10 @@ COPY src/ ./
                      f'{self.exposed_port}:{self.inner_port}', '--detach']
         volumes = self.volumes
 
-        if mode == 'prod':
-            docker_up.extend(['--restart', 'always'])
-        else:
+        if mode == 'debug':
             volumes.extend(self.volumes_override)
+        else:
+            docker_up.extend(['--restart', 'always'])
 
         for volume in volumes:
             docker_up.extend(['--volume', volume])
@@ -87,11 +86,11 @@ COPY src/ ./
         if self.get_image_exists():
             if rebuild:
                 self.remove_image()
-                self.build()
+                self.build(mode)
             else:
                 print(f'Container {self.container_name} already built - skipping build step')
         else:
-            self.build()
+            self.build(mode)
 
         print(' '.join(docker_up))
         subprocess.check_call(docker_up, cwd=self.service_dir)
@@ -102,13 +101,13 @@ COPY src/ ./
         else:  # good stuff
             os.system(f"cd {self.service_dir}; docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
 
-    def build(self, runner=None):
+    def build(self, mode='', runner=None):
         docker_build = ['docker', 'build']
         dockerfile = None
 
-        # If Dockerfile exists, use it, else use the provided Dockerfile test from self.dockerfile
+        # If Dockerfile exists, use it, else use the provided Dockerfile test from self.get_dockerfile
         if not os.path.isfile(os.path.join(self.service_dir, 'Dockerfile')):
-            dockerfile = self.dockerfile
+            dockerfile = self.get_dockerfile(mode)
             assert dockerfile is not None
             docker_build.extend(['-f', '-'])
         docker_build.extend(['.', '--tag', self.image])

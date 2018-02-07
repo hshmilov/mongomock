@@ -1,6 +1,5 @@
 import requests
 import json
-import os
 
 from services.plugin_service import PluginService
 from test_credentials.test_gui_credentials import *
@@ -12,11 +11,23 @@ class GuiService(PluginService):
         self._session = requests.Session()
         self.default_user = DEFAULT_USER
 
-    @property
-    def volumes_override(self):
-        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
-                                            'axonius-libs', 'src', 'libs'))
-        return [f'{libs}:/home/axonius/libs:ro']
+    def get_dockerfile(self, mode=''):
+        dev = 'dev-' if mode == 'debug' else ''
+        return f"""
+FROM axonius/axonius-libs
+
+# Set the working directory to /app
+WORKDIR /home/axonius/app
+
+# Copy the current directory contents into the container at /app
+COPY src/ ./
+COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
+
+# Removing folders generated from build, so that next command will build properly
+RUN cd ./frontend && rm -rf dist node_modules
+
+# Compile npm. we assume we have it from axonius-libs
+RUN cd ./frontend && npm set progress=false && npm install && npm run {dev}build"""[1:]
 
     def __del__(self):
         self._session.close()

@@ -32,11 +32,10 @@ class MongoService(DockerService):
                 'MONGO_INITDB_ROOT_PASSWORD=ax_pass',
                 'MONGO_INITDB_DATABASE=core']
 
-    @property
-    def dockerfile(self):
+    def get_dockerfile(self, mode=''):
         return None
 
-    def build(self, runner=None):
+    def build(self, mode='', runner=None):
         docker_pull = ['docker', 'pull', self.image]
         if runner is None:
             print(' '.join(docker_pull))
