@@ -14,12 +14,17 @@
             <option v-for="field in fields" :key="field.name" :value="field.name">{{ field.title }}</option>
         </select>
         <template v-if="fieldSchema.type">
-            <select v-model="expression.compOp" @input="compileExpression">
+            <select v-model="expression.compOp" @change="compileExpression">
                 <option value="" disabled hidden>OP</option>
                 <option v-for="op, i in compOpsList" :key="i" :value="op.pattern">{{ op.name }}</option>
             </select>
             <component :is="`x-${fieldSchema.type}-edit`" class="fill" :schema="fieldSchema"
                        v-model="expression.value" @input="compileExpression"></component>
+        </template>
+        <template v-else-if="fieldSchema.name && fieldSchema.name === 'predefined'">
+            <select v-model="expression.value" @change="compileExpression" class="grid-span-2">
+                <option v-for="item in fieldSchema.enum" :value="item.name">{{ item.title }}</option>
+            </select>
         </template>
         <template v-else><select></select><input disabled></template>
         <label class="btn-light checkbox-label" :class="{'active': expression.rightBracket}">
@@ -78,10 +83,23 @@
 		methods: {
 			compileExpression () {
 				this.$emit('input', this.expression)
-                if (!this.first && !this.expression.logicOp) return
-                if (!this.expression.field || !this.expression.compOp || !this.expression.value) return
+                let error = ''
+                if (!this.first && !this.expression.logicOp) {
+					error = 'Logical operator is needed to add expression to the filter'
+				} else if (!this.expression.field) {
+					error = 'A field to check is needed to add expression to the filter'
+                } else if (!this.expression.compOp && this.expression.field !== 'predefined') {
+					error = 'Comparison operator is needed to add expression to the filter'
+                } else if (!this.expression.value) {
+					error = 'A value to compare is needed to add expression to the filter'
+                }
+                if (error) {
+					this.$emit('change', {error})
+                    return
+                }
 
-                let filter = `${this.expression.field} ${this.expression.compOp.replace('{val}', this.expression.value)}`
+                let filter = (this.expression.field === 'predefined')? this.expression.value:
+                    `${this.expression.field} ${this.expression.compOp.replace('{val}', this.expression.value)}`
                 let bracketWeight = 0
                 if (this.expression.leftBracket) {
 					filter = `(${filter}`
@@ -116,6 +134,9 @@
         margin-bottom: 20px;
         .fill {
             width: 100%;
+        }
+        .grid-span-2 {
+            grid-column-end: span 2;
         }
         select, input:not([type=checkbox]) {
             height: 30px;

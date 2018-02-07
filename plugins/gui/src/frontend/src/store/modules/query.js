@@ -194,14 +194,14 @@ export const query = {
 	},
 	actions: {
 		[ FETCH_SAVED_QUERIES ] ({dispatch}, payload) {
-			if (!payload) { return }
+			if (!payload) { payload = {} }
 			if (!payload.type) {
 				payload.type = UPDATE_SAVED_QUERIES
 			}
 			fetchQueries(dispatch, payload, 'saved')
 		},
 		[ FETCH_EXECUTED_QUERIES ] ({dispatch}, payload) {
-			if (!payload) { return }
+			if (!payload) { payload = {} }
 			if (!payload.type) {
 				payload.type = UPDATE_EXECUTED_QUERIES
 			}

@@ -4,8 +4,10 @@
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
                              v-model="expressions[i]" :fields="fields" :comp-ops="compOps"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"></x-schema-expression>
-        <div @click="addExpression" class="btn-light">+</div>
-        <div v-if="error" class="error-text">{{ error }}</div>
+        <div class="footer">
+            <div @click="addExpression" class="btn-light">+</div>
+            <div v-if="error" class="error-text">{{ error }}</div>
+        </div>
     </div>
 </template>
 
@@ -42,8 +44,8 @@
 						{name: 'equals', pattern: '== "{val}"'},
 					],
 					'date-time': [
-                        {name: 'to', pattern: '< date("{val}")'},
-                        {name: 'from', pattern: '>= date("{val}")'}
+                        {name: '<', pattern: '< date("{val}")'},
+                        {name: '>=', pattern: '>= date("{val}")'}
                     ],
 					'numerical': [
                         {name: '==', pattern: '== {val}'},
@@ -111,6 +113,11 @@
 				return child
             },
 			compileFilter (index, payload) {
+				if (payload.error) {
+					this.error = payload.error
+                    this.$emit('error')
+                    return
+                }
 				this.filters[index] = payload.filter
                 this.bracketWeights[index] = payload.bracketWeight
                 let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
@@ -150,7 +157,6 @@
     @import '../../scss/config';
 
     .filter {
-
         .btn-light {
             cursor: pointer;
             background-color: $border-color;
@@ -174,6 +180,10 @@
             .link {
                 text-align: center;
             }
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
         }
     }
 </style>

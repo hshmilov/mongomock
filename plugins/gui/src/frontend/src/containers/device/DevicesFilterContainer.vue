@@ -34,11 +34,12 @@
         <triggerable-dropdown class="form-control" align="right" size="xl">
             <div slot="dropdownTrigger" class="link">Query</div>
             <div slot="dropdownContent">
-                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery"></x-schema-filter>
+                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery"
+                                 @error="filterValid = false"></x-schema-filter>
                 <div class="row">
                     <div class="form-group place-right">
                         <a class="btn btn-inverse" @click="filterExpressions = []; searchValue = ''">Clear</a>
-                        <a class="btn" @click="$emit('submit')">Search</a>
+                        <a class="btn" @click="submitFilter">Search</a>
                     </div>
                 </div>
             </div>
@@ -100,7 +101,8 @@
 		},
 		data () {
 			return {
-				searchValue: this.value
+				searchValue: this.value,
+                filterValid: true
 			}
 		},
 		methods: {
@@ -116,6 +118,7 @@
             updateQuery (filter) {
 				this.searchValue = filter
 				this.$emit('input', this.searchValue)
+                this.filterValid = true
             },
 			filterSavedQueries () {
 				return this.fetchSavedQueries({
@@ -136,7 +139,12 @@
             	if (this.complexSearch) return
 				Promise.all([this.filterSavedQueries(), this.filterExecutedQueries()])
                     .catch((error) => console.log(error))
-			}
+			},
+            submitFilter() {
+            	if (!this.filterValid) return
+
+                this.$emit('submit')
+            }
 		},
         created() {
 			this.searchQuery()

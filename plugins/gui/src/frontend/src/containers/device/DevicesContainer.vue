@@ -38,7 +38,6 @@
     </scrollable-page>
 </template>
 
-
 <script>
 	import ScrollablePage from '../../components/ScrollablePage.vue'
 	import Modal from '../../components/popover/Modal.vue'
@@ -61,7 +60,7 @@
         SELECT_DEVICE_PAGE,
         UPDATE_DEVICE_FILTER
 	} from '../../store/modules/device'
-	import { UPDATE_QUERY, SAVE_QUERY } from '../../store/modules/query'
+	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
 
 	export default {
@@ -101,6 +100,13 @@
 				return {
 					type: 'array',
                     items: [
+                        {
+                        	name: 'predefined',
+                            title: 'Saved Query',
+                            enum: this.query.savedQueries.data.map((query) => {
+                        		return {name: query.filter, title: query.name}
+                            })
+                        },
                         {
                         	name: 'adapters',
                             type: 'array',
@@ -150,6 +156,7 @@
 			//if (!Object.keys(this.device.fields.unique).length) {
 			//	this.fetchFields()
 			//}
+            this.fetchSavedQueries()
 			this.fetchAdapters()
 			this.fetchTags()
 			this.selectedQuery = this.query.currentQuery
@@ -173,7 +180,8 @@
                 fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
-				fetchAdapters: FETCH_ADAPTERS
+				fetchAdapters: FETCH_ADAPTERS,
+                fetchSavedQueries: FETCH_SAVED_QUERIES
 			}),
 			executeQuery () {
 				this.updateQuery(this.deviceFilter)
