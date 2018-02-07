@@ -110,10 +110,11 @@ COPY src/ ./
             dockerfile = self.get_dockerfile(mode)
             assert dockerfile is not None
             docker_build.extend(['-f', '-'])
+            dockerfile = dockerfile.encode('UTF-8')
         docker_build.extend(['.', '--tag', self.image])
         if runner is None:  # runner is passed as a ParallelRunner
             print(' '.join(docker_build))
-            output = subprocess.check_output(docker_build, cwd=self.service_dir, input=dockerfile.encode('UTF-8'))
+            output = subprocess.check_output(docker_build, cwd=self.service_dir, input=dockerfile)
             error_string = 'Error response from daemon: driver failed programming external connectivity on endpoint'
             if error_string in output.decode('utf-8'):
                 print('Common problem with docker service, please restart using: docker-machine restart')
@@ -121,7 +122,7 @@ COPY src/ ./
             process = runner.append_single(self.container_name, docker_build, cwd=self.service_dir,
                                            stdin=subprocess.PIPE)
             if dockerfile is not None:
-                process.stdin.write(dockerfile.encode('UTF-8'))
+                process.stdin.write(dockerfile)
                 process.stdin.close()
 
     def get_is_container_up(self, include_not_running=False):

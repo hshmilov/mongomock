@@ -111,6 +111,7 @@ def system_entry_point(args):
         axonius_system.stop(should_delete=False)
     else:
         assert not args.restart and not args.skip
+        print(f'Building system and {args.adapters + args.plugins}')
         axonius_system.build(True, args.adapters, args.plugins, 'debug' if args.debug else '', args.rebuild)
 
 
@@ -149,6 +150,7 @@ def service_entry_point(target, args):
         axonius_system.stop_plugins(adapters, plugins, should_delete=False)
     else:
         assert not args.restart
+        print(f'Building {args.name}')
         axonius_system.build(False, adapters, plugins, 'debug' if args.debug else '', args.rebuild)
 
 
@@ -161,5 +163,21 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
+class AutoFlush(object):
+    def __init__(self):
+        self._write = sys.stdout.write
+
+    def write(self, text):
+        self._write(text)
+        sys.stdout.flush()
+
+    def __enter__(self):
+        sys.stdout.write = self.write
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.write = self._write
+
+
 if __name__ == '__main__':
-    main()
+    with AutoFlush():
+        main()
