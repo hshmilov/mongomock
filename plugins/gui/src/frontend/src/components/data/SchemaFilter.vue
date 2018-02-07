@@ -130,7 +130,7 @@
 				if (index >= this.expressions.length) return
 				this.expressions.splice(index, 1)
 				this.filters.splice(index, 1)
-                if (!index) {
+                if (!index && this.expressions.length) {
 					this.expressions[index].logicOp = ''
                     this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
 				}

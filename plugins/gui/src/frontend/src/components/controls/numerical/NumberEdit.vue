@@ -1,14 +1,10 @@
-<template>
-    <input :id="schema.name" type="number" v-model="data" :class="{'invalid': !valid}"
-           @focusout.stop="validate" @input="input"/>
-</template>
-
 <script>
 	import PrimitiveMixin from '../primitive.js'
+    import NumericalMixin from './numerical'
 
 	export default {
 		name: 'x-number-edit',
-        mixins: [PrimitiveMixin],
+        mixins: [PrimitiveMixin, NumericalMixin],
         methods: {
 			formatData() {
 				return parseFloat(this.data)
