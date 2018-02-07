@@ -68,6 +68,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         self.thread_manager_lock = threading.RLock()
 
         # Starting the managing thread
+        # No need to start if needed. We always start it.
         self.start_activatable()
 
     @property

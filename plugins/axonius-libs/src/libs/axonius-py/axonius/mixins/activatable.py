@@ -60,6 +60,34 @@ class Activatable(Feature, ABC):
         self.__shutdown_startup_state = ActiveStates.Disabled
         self.__last_error = ""
 
+    def activatable_start_if_needed(self):
+        state = self.__activatable_state_in_db
+        self.logger.info(f"Activatable state in db: {state}")
+        if state is True:
+            self.start_activatable()
+
+    @property
+    def __activatable_state_in_db(self):
+        """
+        Gets the state in the db. If, for some reason, the plugin gets restarted, we will start from this state.
+        :return:
+        """
+
+        # We assume that this class already inherits from PluginBase (Its a mixin..)
+        doc = self._get_collection("config").find_one({"activatable_auto_start": {"$exists": 1}})
+        return bool(doc['activatable_auto_start']) if doc is not None else False
+
+    @__activatable_state_in_db.setter
+    def __activatable_state_in_db(self, value):
+        """
+        Sets the state in the db. If, for some reason, the plugin gets restarted, we will start from this state.
+        :return:
+        """
+        self._get_collection("config").update({"activatable_auto_start": {"$exists": 1}},
+                                              {"activatable_auto_start": bool(value)},
+                                              upsert=True)
+        return bool(value)
+
     @classmethod
     def specific_supported_features(cls) -> list:
         return ["Activatable"]
@@ -114,6 +142,7 @@ class Activatable(Feature, ABC):
             self.__shutdown_startup_state = new_state
 
     def start_activatable(self):
+        self.__activatable_state_in_db = True
         with self.__activation_lock:
             # test of anomalies
             if self.__shutdown_startup_state == ActiveStates.StartingUp:
@@ -150,6 +179,7 @@ class Activatable(Feature, ABC):
             return ""
 
     def stop_activatable(self):
+        self.__activatable_state_in_db = False
         with self.__activation_lock:
             # test of anomalies
             if self.__shutdown_startup_state == ActiveStates.StartingUp:

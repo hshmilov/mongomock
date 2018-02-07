@@ -26,6 +26,8 @@ class ExecutionCorrelatorPlugin(CorrelatorBase):
                                                              parse_correlation_results,
                                                              logger=self.logger)
 
+        self.activatable_start_if_needed()
+
     def _correlate(self, devices: list):
         """
         Correlate across the given devices

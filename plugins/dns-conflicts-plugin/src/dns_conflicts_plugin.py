@@ -50,6 +50,8 @@ class DnsConflictsPlugin(PluginBase, Activatable):
         self.scheduler.start()
         self.scheduler.pause()
 
+        self.activatable_start_if_needed()
+
     def _find_dns_conflicts_thread(self):
         """ Thread for finding dns conflicts.
         This thread will try to find ip contradiction between different dns servers. If it finds such contradiction,
