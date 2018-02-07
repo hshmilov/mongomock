@@ -15,7 +15,7 @@
 	export default {
 		name: 'x-schema-list',
         components: { xArrayView },
-        props: {'data': {required: true}, 'schema': {required: true}, 'limit': {default: false}}
+        props: {data: {required: true}, schema: {required: true}, limit: {default: false}}
 	}
 </script>
 

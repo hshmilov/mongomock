@@ -10,11 +10,6 @@
                         <x-schema-list :data="deviceData.data" :schema="deviceFields" :limit="true"></x-schema-list>
                     </card>
                 </named-section>
-                <named-section title="Plugin Fields" icon-name="action/add_field" v-if="hasFieldTags">
-                    <card>
-                        <x-schema-list :data="deviceData.fieldTags" :schema="deviceFields"></x-schema-list>
-                    </card>
-                </named-section>
                 <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" font-class="icon-tag">
                     <card>
                         <div v-for="tag in deviceData.tags" class="d-flex tag-content">
@@ -27,20 +22,25 @@
             <div class="col-8">
                 <named-section title="Adapter Specific Fields" icon-name="action/add_field">
                     <tabs>
-                        <tab v-for="device, index in sortedAdapters" :title="getAdapterName(device.plugin_name)"
-                             :id="device.plugin_name+device.data.last_seen" :selected="index === 0"
-                             :outdated="device.outdated" :plugin-name="device.plugin_name"
-                             :key="device.plugin_name+device.data.last_seen">
-                            
+                        <tab v-for="adapter, i in sortedAdapters" :id="adapter.data.id" :key="adapter.data.id"
+                             :selected="!i" :title="getAdapterName(adapter.plugin_name)"
+                             :logo="adapter.plugin_name" :outdated="adapter.outdated">
                             <div class="d-flex tab-header">
-                                <div>Data From: {{ device.client_used }}</div>
+                                <div>Data From: {{ adapter.client_used }}</div>
                                 <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
                                 <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                             </div>
-                            <x-schema-list v-if="viewBasic" :schema="deviceFields" :data="device.data"></x-schema-list>
+                            <x-schema-list v-if="viewBasic" :schema="deviceFields" :data="adapter.data"></x-schema-list>
                             <div v-if="!viewBasic">
                                 <tree-view :data="device.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
                             </div>
+                        </tab>
+                    </tabs>
+                </named-section>
+                <named-section title="Plugin Data" icon-name="action/add_field" v-if="hasFieldTags">
+                    <tabs>
+                        <tab v-for="tag, i in deviceData.dataTags" :title="tag.tagname" :id="i" :key="i" :selected="!i">
+                            <x-custom-data :data="tag.tagvalue"></x-custom-data>
                         </tab>
                     </tabs>
                 </named-section>
@@ -56,13 +56,14 @@
     import Tabs from '../../components/tabs/Tabs.vue'
     import Tab from '../../components/tabs/Tab.vue'
     import xSchemaList from '../../components/data/SchemaList.vue'
+    import xCustomData from '../../components/data/CustomData.vue'
     import { FETCH_DEVICE, DELETE_DEVICE_TAGS } from '../../store/modules/device.js'
     import { adapterStaticData } from '../../store/modules/adapter.js'
     import { mapState, mapActions } from 'vuex'
 
 	export default {
 		name: 'device-config-container',
-        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList},
+        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData},
         computed: {
             ...mapState(['device']),
             deviceId() {
@@ -101,7 +102,7 @@
             	return this.device.deviceFields.data
             },
             hasFieldTags() {
-            	return this.deviceData.fieldTags && Object.keys(this.deviceData.fieldTags).length
+            	return this.deviceData.dataTags && Object.keys(this.deviceData.dataTags).length
             }
         },
         data() {

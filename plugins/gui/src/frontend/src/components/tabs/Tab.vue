@@ -9,7 +9,7 @@
 		name: 'tab',
 		props: {
 			'id': {required: true}, 'title': {required: true}, 'selected': {default: false},
-			'pluginName': {required: true}, 'outdated': {default: false}
+			'logo': {}, 'outdated': {default: false}
 		},
 		data () {
 			return {

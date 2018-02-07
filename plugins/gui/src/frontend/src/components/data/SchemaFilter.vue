@@ -89,7 +89,7 @@
 					}
 					let fields = []
 					schema.items.forEach((item) => {
-						fields = fields.concat(this.spreadSchema(this.fixTitle({ ...item }, schema), prefix))
+						fields = fields.concat(this.spreadSchema({ ...item }, prefix))
 					})
 					return fields
 				}

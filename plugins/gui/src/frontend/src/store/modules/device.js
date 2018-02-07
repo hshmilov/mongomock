@@ -94,7 +94,7 @@ export const processDevice = (device, fields) => {
 			processedDevice[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
 		})
 		processedDevice['tags.tagname'] = device['tags'].filter((tag) => {
-			return !tag.tagname.includes('FIELD') && tag.tagvalue && tag.tagvalue !== ''
+			return tag.tagtype === 'label' && tag.tagvalue
 		}).map((tag) => {
 			return tag.tagname
 		})
@@ -145,11 +145,10 @@ export const device = {
 						'type': 'string'
 					},
 					{
-						'title': 'OS',
 						'name': 'os',
 						'items': [
 							{
-								'title': 'Type',
+								'title': 'OS Type',
 								'enum': [
 									'Windows',
 									'Linux',
@@ -161,12 +160,12 @@ export const device = {
 								'type': 'string'
 							},
 							{
-								'title': 'Distribution',
+								'title': 'OS Distribution',
 								'name': 'distribution',
 								'type': 'string'
 							},
 							{
-								'title': 'Bitness',
+								'title': 'OS Bitness',
 								'enum': [
 									32,
 									64
@@ -175,12 +174,12 @@ export const device = {
 								'type': 'number'
 							},
 							{
-								'title': 'Major',
+								'title': 'OS Major',
 								'name': 'major',
 								'type': 'string'
 							},
 							{
-								'title': 'Minor',
+								'title': 'OS Minor',
 								'name': 'minor',
 								'type': 'string'
 							}
@@ -207,6 +206,7 @@ export const device = {
 							'type': 'array'
 						},
 						'name': 'network_interfaces',
+						'title': 'Network Interface',
 						'type': 'array'
 					},
 					{
@@ -234,36 +234,6 @@ export const device = {
 						'title': 'Physical Path',
 						'name': 'vm_physical_path',
 						'type': 'string'
-					},
-					{
-						'title': 'Last Used User',
-						'name': 'last_used_user',
-						'type': 'string'
-					},
-					{
-						'title': 'Installed Software',
-						'name': 'installed_softwares',
-						'type': 'array',
-						'items': {
-							'type': 'array',
-							'items': [
-								{
-									'title': 'Vendor',
-									'name': 'vendor',
-									'type': 'string'
-								},
-								{
-									'title': 'Name',
-									'name': 'name',
-									'type': 'string'
-								},
-								{
-									'title': 'Version',
-									'name': 'version',
-									'type': 'string'
-								}
-							]
-						}
 					}
 				],
 				'type': 'array',
@@ -1197,15 +1167,11 @@ export const device = {
 					...payload.data,
 					data: merge.all(adapterDatas),
 					tags: payload.data.tags.filter((tag) => {
-						return !tag.tagname.includes('FIELD') && tag.tagvalue && tag.tagvalue !== ''
+						return tag.tagtype === 'label' && tag.tagvalue
 					}),
-					fieldTags: payload.data.tags.filter((tag) => {
-						return tag.tagname.includes('FIELD') && tag.tagvalue && tag.tagvalue !== ''
-					}).reduce(function(map, tag) {
-						if (!tag.tagvalue) { return map }
-						map[tag.tagvalue.fieldname] = tag.tagvalue.fieldvalue
-						return map
-					}, {})
+					dataTags: payload.data.tags.filter((tag) => {
+						return tag.tagtype === 'data' && tag.tagvalue
+					})
 				}
 			}
 		},
