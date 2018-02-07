@@ -2,7 +2,21 @@ import argparse
 import os
 import sys
 
-from services.axonius_service import get_service
+
+try:
+    import axonius
+except (ModuleNotFoundError, ImportError):
+    # if not in path...
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'plugins', 'axonius-libs', 'src', 'libs',
+                                 'axonius-py'))
+
+
+try:
+    from services.axonius_service import get_service
+except (ModuleNotFoundError, ImportError):
+    # if not in path...
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'testing'))
+    from services.axonius_service import get_service
 
 
 def main():

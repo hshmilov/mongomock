@@ -9,6 +9,16 @@ except (ModuleNotFoundError, ImportError):
     from test_helpers.parallel_runner import ParallelRunner
 
 
+def safe_run_bash(args):
+    assert args[0].endswith('.sh')
+    if sys.platform.startswith('win'):
+        name = args[0]
+        if name.startswith('./'):
+            name = name[2:]
+        args = [r'C:\Program Files\Git\git-bash.exe'] + name + args[1:]
+    return args
+
+
 if __name__ == '__main__':
     os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -20,8 +30,8 @@ if __name__ == '__main__':
     assert runner.wait_for_all() == 0
 
     # venv
-    runner.append_single('venv', ['./create_venv.sh'])
+    runner.append_single('venv', safe_run_bash(['./create_venv.sh']))
     assert runner.wait_for_all() == 0
 
-    runner.append_single('system', ['./axonius.sh', 'system', 'build', '--all'])
+    runner.append_single('system', safe_run_bash(['./axonius.sh', 'system', 'build', '--all']))
     assert runner.wait_for_all() == 0
