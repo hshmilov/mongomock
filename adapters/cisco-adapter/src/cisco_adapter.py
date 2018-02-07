@@ -9,7 +9,6 @@ PASSWORD = 'password'
 
 
 class CiscoAdapter(AdapterBase):
-
     class MyDevice(Device):
         pass
 
@@ -18,19 +17,16 @@ class CiscoAdapter(AdapterBase):
         client = CiscoClient(self.logger, host=client_config[HOST], username=client_config[USERNAME],
                              password=client_config[PASSWORD], port=22)
         try:
-            client.connect()
+            client.get_parsed_arp()
         except Exception as e:
             message = "Error connecting to client with {0}: {1}".format(self._get_client_id(client_config), str(e))
             self.logger.exception(message)
             raise ClientConnectionException(message)
-        finally:
-            client.close()
         return client
 
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, CiscoClient)
-        with client_data:
-            return list(client_data.get_parsed_arp())
+        return list(client_data.get_parsed_arp())
 
     def _clients_schema(self):
         return {
