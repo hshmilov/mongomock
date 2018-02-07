@@ -14,7 +14,7 @@ from subplugins.basic_computer_info import GetBasicComputerInfo
 from datetime import datetime
 
 
-MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 20
+MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 30
 SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 

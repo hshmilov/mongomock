@@ -13,18 +13,15 @@ The following also have three advantages:
 
 __author__ = "Avidor Bartov"
 
-import argparse
 import sys
-import os
 import json
 
-from impacket.examples import logger
-from impacket import version
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.dcom import wmi
 from impacket.dcerpc.v5.dcomrt import DCOMConnection
 from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_AUTHN_LEVEL_PKT_INTEGRITY, \
     RPC_C_AUTHN_LEVEL_NONE
+from multiprocessing.pool import ThreadPool
 
 
 class WMIRunner(object):
@@ -203,32 +200,41 @@ def minimize_and_convert(result):
     return convert(minified_result)
 
 
+def run_command(w, command_type, command_args):
+    try:
+        if command_type == "query":
+            result = w.execquery(*command_args)
+
+        elif command_type == "method":
+            result = w.execmethod(*command_args)
+
+        else:
+            raise ValueError("command type {0} does not exist".filter(command_type))
+    except Exception as e:
+        result = [{"Exception": {"value": repr(e)}}]
+
+    return result
+
+
 if __name__ == '__main__':
     _, domain, username, password, address, commands = sys.argv
-
+    tp = ThreadPool(processes=30)
     # Commands is a json formatted list of commands.
     commands = json.loads(commands)
     final_result_array = []
 
-    with WMIRunner(address, username, password, domain=domain) as w:
+    w = WMIRunner(address, username, password, domain=domain)
+    w.connect()
 
-        for command in commands:
-            command_type, command_args = (command['type'], command['args'])
+    for command in commands:
+        command_type, command_args = (command['type'], command['args'])
+        final_result_array.append(tp.apply_async(run_command, (w, command_type, command_args)))
 
-            # command args is a list we send to the func.
-            try:
-                if command_type == "query":
-                    result = w.execquery(*command_args)
+    # Now wait for all of them to finish.
+    for i in range(len(final_result_array)):
+        final_result_array[i] = final_result_array[i].get()
 
-                elif command_type == "method":
-                    result = w.execmethod(*command_args)
-
-                else:
-                    raise ValueError("command type {0} does not exist".filter(command_type))
-            except Exception as e:
-                result = [{"Exception": {"value": repr(e)}}]
-
-            final_result_array.append(result)
+    w.close()
 
     # To see it normally, change to(json.dumps("", indent=4)
     print json.dumps(minimize_and_convert(final_result_array), encoding="utf-16")
