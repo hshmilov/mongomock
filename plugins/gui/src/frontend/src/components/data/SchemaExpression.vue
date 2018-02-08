@@ -39,13 +39,15 @@
 	import xNumberEdit from '../controls/numerical/NumberEdit.vue'
 	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
 	import xBoolEdit from '../controls/boolean/BooleanEdit.vue'
+    import xArrayEdit from '../controls/array/ArrayFilter.vue'
 
 	export default {
 		components: {
 			Checkbox, xStringEdit,
 			xNumberEdit,
 			xIntegerEdit,
-			xBoolEdit
+			xBoolEdit,
+            xArrayEdit
 		},
 		name: 'x-schema-expression',
 		props: {value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false}},

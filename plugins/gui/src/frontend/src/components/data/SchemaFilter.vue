@@ -37,26 +37,29 @@
 			},
 			compOps () {
 				return {
+					'date-time': [
+						{name: '<', pattern: '< date("{val}")'},
+						{name: '>=', pattern: '>= date("{val}")'}
+					],
+                    'array': [
+                        {name: 'size', pattern: '== size({val})'}
+                    ],
 					'string': [
 						{name: 'contains', pattern: '== regex("{val}", "i")'},
 						{name: 'starts', pattern: '== regex("^{val}", "i")'},
 						{name: 'ends', pattern: '== regex("{val}$", "i")'},
-						{name: 'equals', pattern: '== "{val}"'},
+						{name: 'equals', pattern: '== "{val}"'}
 					],
-					'date-time': [
-                        {name: '<', pattern: '< date("{val}")'},
-                        {name: '>=', pattern: '>= date("{val}")'}
-                    ],
-					'numerical': [
-                        {name: '==', pattern: '== {val}'},
-                        {name: '<=', pattern: '<= {val}'},
-                        {name: '>=', pattern: '>= {val}'},
-                        {name: '>', pattern: '> {val}'},
-                        {name: '<', pattern: '< {val}'}
-                    ],
                     'bool': [
                         {name: 'is', pattern: '== {val}'}
-                    ]
+                    ],
+					'numerical': [
+						{name: '==', pattern: '== {val}'},
+						{name: '<=', pattern: '<= {val}'},
+						{name: '>=', pattern: '>= {val}'},
+						{name: '>', pattern: '> {val}'},
+						{name: '<', pattern: '< {val}'}
+					]
 				}
 			}
 		},
@@ -78,30 +81,34 @@
 			}
 		},
 		methods: {
-			spreadSchema (schema, prefix='') {
+			spreadSchema (schema, name='') {
 				/*
 				    Recursing over schema to extract a flat map from field path to its schema
 				 */
 				if (schema.name) {
-					prefix = prefix? `${prefix}.${schema.name}` : schema.name
+					name = name? `${name}.${schema.name}` : schema.name
 				}
 				if (schema.type === 'array' && schema.items) {
 					if (!Array.isArray(schema.items)) {
-						return this.spreadSchema(this.fixTitle({ ...schema.items}, schema), prefix)
+						let children = this.spreadSchema(this.fixTitle({ ...schema.items}, schema), name)
+						if (schema.items.type !== 'array') {
+							return children
+                        }
+						return [ {...schema, name}, ...children ]
 					}
 					let fields = []
 					schema.items.forEach((item) => {
-						fields = fields.concat(this.spreadSchema({ ...item }, prefix))
+						fields = fields.concat(this.spreadSchema({ ...item }, name))
 					})
 					return fields
 				}
 				if (schema.type === 'object' && schema.properties) {
 					let fields = []
 					Object.keys(schema.properties).forEach((key) => {
-						fields = fields.concat(this.spreadSchema({...schema.properties[key], name: key}, prefix))
+						fields = fields.concat(this.spreadSchema({...schema.properties[key], name: key}, name))
 					})
 				}
-				return [{ ...schema, name: prefix}]
+				return [{ ...schema, name}]
 			},
             fixTitle(child, parent) {
 				if (!child.title) {

@@ -109,8 +109,11 @@
                         },
                         {
                         	name: 'adapters',
+                            title: 'Adapters',
                             type: 'array',
-                            items: [
+                            items: {
+                        		type: 'array',
+                        		items: [
                                 {
                                 	name: 'plugin_name',
                                     title: 'Adapter Name',
@@ -120,17 +123,18 @@
                                     })
                                 },
                                 this.device.deviceFields.data
-                            ]
+                            ]}
                         },
                         {
                         	name: 'tags',
-                            type: 'array',
+							title: 'Tags',
+							type: 'array',
                             items: {
                         		type: 'array',
                                 items: [
                                     {
                                     	name: 'tagname',
-                                        title: 'Tag',
+                                        title: 'Tag Name',
                                         type: 'string'
                                     }
                                 ]
