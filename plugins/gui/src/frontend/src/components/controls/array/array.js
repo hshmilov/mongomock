@@ -13,11 +13,6 @@ export default {
 	props: {
 		'schema': {required: true}, 'value': {required: true}, 'limit': {default: false}
 	},
-	data () {
-		return {
-			data: {...this.value}
-		}
-	},
 	computed: {
 		schemaItems () {
 			let schemaItems = []
@@ -46,6 +41,16 @@ export default {
 				}
 			})
 			return schemaItems
+		}
+	},
+	data () {
+		return {
+			data: {...this.value}
+		}
+	},
+	watch: {
+		value(newValue) {
+			this.data = {...newValue}
 		}
 	},
 	methods: {

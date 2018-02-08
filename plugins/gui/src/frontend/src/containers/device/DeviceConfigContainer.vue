@@ -57,9 +57,9 @@
     import Tab from '../../components/tabs/Tab.vue'
     import xSchemaList from '../../components/data/SchemaList.vue'
     import xCustomData from '../../components/data/CustomData.vue'
-    import { FETCH_DEVICE, DELETE_DEVICE_TAGS } from '../../store/modules/device.js'
+    import { FETCH_DEVICE, DELETE_DEVICE_TAGS, UPDATE_DEVICE } from '../../store/modules/device.js'
     import { adapterStaticData } from '../../store/modules/adapter.js'
-    import { mapState, mapActions } from 'vuex'
+    import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
 		name: 'device-config-container',
@@ -96,7 +96,7 @@
             	if (!this.deviceData.data) {
             		return ''
                 }
-            	return this.deviceData.data.hostname || this.deviceData.data.pretty_id
+            	return this.deviceData.data.hostname || this.deviceData.data.name || this.deviceData.data.pretty_id
             },
             deviceFields() {
             	return this.device.deviceFields.data
@@ -111,6 +111,7 @@
             }
         },
         methods: {
+            ...mapMutations({ updateDevice: UPDATE_DEVICE }),
             ...mapActions({ fetchDevice: FETCH_DEVICE, deleteDeviceTags: DELETE_DEVICE_TAGS }),
             getAdapterName(pluginName) {
             	if (!adapterStaticData[pluginName]) {
@@ -124,6 +125,9 @@
         },
         created() {
 			if (!this.deviceData || this.deviceData.internal_axon_id !== this.deviceId) {
+				this.updateDevice({ fetching: false, error: '', data: {
+					internal_axon_id: this.deviceId, adapters: [], tags: [], data: {}
+                }})
 				this.fetchDevice(this.deviceId)
 			}
         }
