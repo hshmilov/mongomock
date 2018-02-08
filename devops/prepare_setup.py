@@ -15,7 +15,7 @@ def safe_run_bash(args):
         name = args[0]
         if name.startswith('./'):
             name = name[2:]
-        args = [r'C:\Program Files\Git\git-bash.exe'] + name + args[1:]
+        args = [r'C:\Program Files\Git\git-bash.exe', name] + args[1:]
     return args
 
 

@@ -83,14 +83,13 @@ class JamfAdapter(AdapterBase):
             if 'Operating_System' in device_raw:
                 device.figure_os(' '.join([device_raw.get('Operating_System', ''),
                                            device_raw.get('Architecture_Type', '')]))
-                # TODO: For CapitalOne Demo!
-                # device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
+                device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
                 if device_raw['Last_Reported_IP_Address'] != '':
-                    device.add_nic(device_raw.get('MAC_Address'), [device_raw.get('Last_Reported_IP_Address', '')],
+                    device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('Last_Reported_IP_Address', '')],
                                    self.logger)
             else:
                 device.figure_os(' '.join([device_raw.get('Model_Identifier', ''), device_raw.get('iOS_Version', '')]))
-                device.add_nic(device_raw.get('Wi_Fi_MAC_Address'), [device_raw.get('IP_Address')], self.logger)
+                device.add_nic(device_raw.get('Wi_Fi_MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
             device.set_raw(device_raw)
             yield device
 

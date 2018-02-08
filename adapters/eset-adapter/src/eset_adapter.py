@@ -34,13 +34,13 @@ class EsetAdapter(AdapterBase):
         # This lock will be passed to client connections to make sure only one client is in session at a time.
         self.eset_session_lock = threading.RLock()
 
-        # Initialize the base plugin (will initialize http server)
-        super().__init__(**kwargs)
-
         # Loading and setting up eset_connection shared library.
         # The responsibility for unloading the library is on the python interpreter garbage collection
         # as recommended by the ctypes documentation.
         self._load_eset_connection_library()
+
+        # Initialize the base plugin (will initialize http server)
+        super().__init__(**kwargs)
 
     def _load_eset_connection_library(self):
         """Shared library loading and setting up.
@@ -61,7 +61,6 @@ class EsetAdapter(AdapterBase):
             if load_state != b"Ready":
                 raise RuntimeError("The eset_connection.so failed to init. The state was: {0}.".format(load_state))
         except Exception:
-            self.logger.exception("Failed to load eset_connection shared library.")
             raise axonius.adapter_exceptions.AdapterException("Failed to load eset_connection shared library.")
 
         # Setting up the arg and return types of the functions

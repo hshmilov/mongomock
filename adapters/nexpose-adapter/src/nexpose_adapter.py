@@ -44,9 +44,9 @@ class NexposeAdapter(ScannerAdapterBase):
         Check AdapterBase documentation for additional params and exception details.
 
         """
-
         # Initialize the base plugin (will initialize http server)
         super().__init__(**kwargs)
+
         self.num_of_simultaneous_devices = int(self.config["DEFAULT"]["num_of_simultaneous_devices"])
 
     def _clients_schema(self):
