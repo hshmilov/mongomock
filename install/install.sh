@@ -26,7 +26,7 @@ find testing/* -type d | grep -v "services|test_helpers" | xargs rm -rf
 # find recursively all directories named "tests" and remove them.
 find . -name "tests" -type d | xargs rm -rf
 # misc
-rm -rf .git* .idea* .cache* *.bat *.sh ./devops
+rm -rf .git* .idea* .cache* *.bat
 history -c
 history -w
 )

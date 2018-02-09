@@ -118,7 +118,7 @@ class Core(PluginBase):
                     delete_candidate = self.online_plugins.get(delete_key)
                     if delete_candidate is delete_value:
                         self.logger.info("Plugin {0} didnt answer, deleting "
-                                         "from online plugins list".format(plugin_unique_name))
+                                         "from online plugins list".format(delete_candidate))
                         del self.online_plugins[delete_key]
 
         except Exception as e:
