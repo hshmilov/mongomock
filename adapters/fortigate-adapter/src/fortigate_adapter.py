@@ -75,8 +75,9 @@ class FortigateAdapter(AdapterBase):
 
     def _parse_raw_data(self, raw_data):
         dhcp_lease_time = raw_data.get(fortigate_consts.DHCP_LEASE_TIME, fortigate_consts.DEFAULT_DHCP_LEASE_TIME)
-        for currnet_interface in raw_data.get('results', []):
-            for raw_device in currnet_interface.get('list', []):
+        for current_interface in raw_data.get('results', []):
+            for raw_device in current_interface.get('list', [current_interface]):  # If current interface does'nt hold
+                # list, than its a device itself
                 device = self._new_device()
                 device.hostname = raw_device.get('hostname', '')
                 mac_address = format_mac(raw_device.get('mac', ''))
