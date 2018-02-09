@@ -32,7 +32,7 @@
                             </div>
                             <x-schema-list v-if="viewBasic" :schema="deviceFields" :data="adapter.data"></x-schema-list>
                             <div v-if="!viewBasic">
-                                <tree-view :data="device.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
+                                <tree-view :data="adapter.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
                             </div>
                         </tab>
                     </tabs>
