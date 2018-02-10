@@ -22,7 +22,7 @@ echo "Running all..."
 echo "Removing anything irrelevant.."
 (
 # find all directories in testing, filter 'services' and 'test_helpers', and remove them.
-find testing/* -type d | grep -v "services|test_helpers" | xargs rm -rf
+find testing/* -type d | grep -v "services" | grep -v "test_helpers" | xargs rm -rf
 # find recursively all directories named "tests" and remove them.
 find . -name "tests" -type d | xargs rm -rf
 # misc
