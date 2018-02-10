@@ -2,14 +2,12 @@ import requests
 import json
 
 from services.plugin_service import PluginService
-from test_credentials.test_gui_credentials import *
 
 
 class GuiService(PluginService):
     def __init__(self):
         super().__init__('gui', service_dir='../plugins/gui')
         self._session = requests.Session()
-        self.default_user = DEFAULT_USER
 
     def get_dockerfile(self, mode=''):
         dev = 'dev-' if mode == 'debug' else ''
@@ -59,11 +57,6 @@ RUN cd ./frontend && npm set progress=false && npm install && npm run {dev}build
 
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)
-
-    def login_default_user(self):
-        resp = self.post('login', data=json.dumps(self.default_user), session=self._session)
-        assert resp.status_code == 200
-        return resp
 
     def login_user(self, credentials):
         return self.post('login', data=json.dumps(credentials), session=self._session)

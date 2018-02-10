@@ -60,7 +60,7 @@ def system_entry_point(args):
     parser.add_argument('mode', choices=['up', 'down', 'build'])
     parser.add_argument('--all', type=str2bool, nargs='?', const=True, default=False, help='All adapters and plugins')
     parser.add_argument('--debug', type=str2bool, nargs='?', const=True, default=False, help='Debug Mode')
-    parser.add_argument('--restart', '-r', type=str2bool, nargs='?', const=True, default=False,
+    parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
     parser.add_argument('--skip', type=str2bool, nargs='?', const=True, default=False,
@@ -121,7 +121,7 @@ def service_entry_point(target, args):
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('mode', choices=['up', 'down', 'build'])
     parser.add_argument('--debug', type=str2bool, nargs='?', const=True, default=False, help='Debug Mode')
-    parser.add_argument('--restart', '-r', type=str2bool, nargs='?', const=True, default=False,
+    parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
     parser.add_argument('name')

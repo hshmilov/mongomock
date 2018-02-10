@@ -1,5 +1,6 @@
 import pytest
 from services.axonius_service import get_service
+from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.device_helper import get_device_dict, filter_by_plugin_name
 
 GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
@@ -8,7 +9,7 @@ GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 def test_devices():
     axonius_system = get_service()
     gui_service = axonius_system.gui
-    gui_service.login_default_user()
+    gui_service.login_user(DEFAULT_USER)
 
     for x in [4, 5, 6]:
         axonius_system.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
@@ -31,7 +32,7 @@ def _count_num_of_tags(device):
 def test_tags_via_gui():
     axonius_system = get_service()
     gui_service = axonius_system.gui
-    gui_service.login_default_user()
+    gui_service.login_user(DEFAULT_USER)
 
     for x in [1, 2, 3]:
         axonius_system.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_1"))
@@ -143,8 +144,8 @@ def test_login():
     axonius_system = get_service()
     gui_service = axonius_system.gui
 
-    bad_credentials_1 = {**gui_service.default_user, 'user_name': 'admin1'}
-    bad_credentials_2 = {**gui_service.default_user, 'password': 'admin1'}
+    bad_credentials_1 = {**DEFAULT_USER, 'user_name': 'admin1'}
+    bad_credentials_2 = {**DEFAULT_USER, 'password': 'admin1'}
 
     response = gui_service.login_user(bad_credentials_1)
     assert response.status_code == 401
@@ -155,7 +156,7 @@ def test_login():
     response = gui_service.get_devices()
     assert response.status_code == 401
 
-    response = gui_service.login_default_user()
+    response = gui_service.login_user(DEFAULT_USER)
     assert response.status_code == 200
 
 
