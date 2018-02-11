@@ -2,8 +2,8 @@
 client_details = [
     ({
         "host": "vcenter.axonius.lan",
-        "user": "administrator@vsphere.local",
-        "password": "Br!ng0rder",
+        "user": "readonly@vsphere.local",
+        "password": "a$Xvje99a$Xvje99",
         "verify_ssl": False
     }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'),
     # This vcenter is currently not active!!! we should return it as soon as it becomes active again
