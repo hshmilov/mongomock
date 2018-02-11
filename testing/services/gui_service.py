@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 
 from services.plugin_service import PluginService
 
@@ -8,6 +9,13 @@ class GuiService(PluginService):
     def __init__(self):
         super().__init__('gui', service_dir='../plugins/gui')
         self._session = requests.Session()
+
+    @property
+    def volumes_override(self):
+        # GUI currently doesn't support debug, to use, please remove this entire property (and build your local npm...)
+        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
+                                            'axonius-libs', 'src', 'libs'))
+        return [f'{libs}:/home/axonius/libs:ro']
 
     def get_dockerfile(self, mode=''):
         dev = 'dev-' if mode == 'debug' else ''
