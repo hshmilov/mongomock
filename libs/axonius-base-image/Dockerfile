@@ -7,7 +7,7 @@ ENV HOME /home/axonius
 # Install dependencies and configure the rest of the things we need.
 RUN apt-get update && \
     apt-get install -y ssh git \
-    supervisor software-properties-common python-software-properties && \
+    supervisor software-properties-common python-software-properties unixodbc unixodbc-dev && \
     add-apt-repository ppa:jonathonf/python-3.6 && \
     apt-get update && \
     apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
