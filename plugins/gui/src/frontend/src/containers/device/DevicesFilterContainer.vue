@@ -24,12 +24,10 @@
                                       @click="selectQuery(query.filter)"></nested-menu-item>
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
-                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`"></nested-menu-item>
+                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"></nested-menu-item>
                 </nested-menu>
                 <div v-if="noResults">No results</div>
             </div>
-            <!--generic-form slot="dropdownContent" :schema="queryFields" v-model="queryDropdown.value"
-                          @input="extractValue" @submit="executeQuery" :condensed="true"></generic-form-->
         </triggerable-dropdown>
         <triggerable-dropdown class="form-control" align="right" size="xl">
             <div slot="dropdownTrigger" class="link">Query</div>
@@ -97,6 +95,9 @@
             noResults() {
 				return (!this.searchValue || this.complexSearch) && (!this.saved || !this.saved.length)
                     && (!this.executed || !this.executed.length)
+            },
+            textSearchPattern() {
+                return this.spreadSchemaTextFilter(this.schema)
             }
 		},
 		data () {
@@ -140,6 +141,37 @@
 				Promise.all([this.filterSavedQueries(), this.filterExecutedQueries()])
                     .catch((error) => console.log(error))
 			},
+            searchText() {
+                this.searchValue = this.textSearchPattern.replace(/{val}/g, this.searchValue)
+				this.$emit('input', this.searchValue)
+				this.$emit('submit')
+            },
+            spreadSchemaTextFilter(schema, name='') {
+				if (schema.name) {
+					name = name? `${name}.${schema.name}` : schema.name
+				}
+				if (schema.type === 'array' && schema.items) {
+					if (!Array.isArray(schema.items)) {
+						return this.spreadSchemaTextFilter({ ...schema.items}, name)
+					}
+					return schema.items.map((item) => {
+                        return this.spreadSchemaTextFilter({ ...item }, name)
+					}).filter((item) => {
+						return item !== undefined && item !== ''
+					}).join(' or ')
+				}
+				if (schema.type === 'object' && schema.properties) {
+					return Object.keys(schema.properties).map((key) => {
+						return this.spreadSchemaTextFilter({...schema.properties[key], name: key}, name)
+					}).filter((item) => {
+						return item !== undefined && item !== ''
+					}).join(' or ')
+				}
+				if (schema.type === 'string' && !schema.format && schema.name !== 'id') {
+					return name + ' == regex("{val}", "i")'
+				}
+                return ''
+            },
             submitFilter() {
             	if (!this.filterValid) return
 

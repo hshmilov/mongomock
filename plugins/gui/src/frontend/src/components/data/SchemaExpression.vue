@@ -21,8 +21,14 @@
                 <option value="" disabled hidden>FUNC...</option>
                 <option v-for="op, i in fieldOpsList" :key="i" :value="op">{{ op }}</option>
             </select>
-            <component :is="`x-${fieldSchema.type}-edit`" class="fill" :schema="fieldSchema" v-model="expression.value"
-                       @input="compileExpression" :class="{'grid-span-2': !fieldOpsList.length}"></component>
+            <template v-if="!isBoolOp">
+                <component :is="`x-${fieldSchema.type}-edit`" class="fill" :class="{'grid-span-2': !fieldOpsList.length}"
+                           :schema="fieldSchema" v-model="expression.value" @input="compileExpression"></component>
+            </template>
+            <template v-else>
+                <!-- No need for value, since function is boolean, not comparison -->
+                <div></div>
+            </template>
         </template>
         <template v-else><select></select><input disabled></template>
         <!-- Option to add ')' and to remove the expression -->
@@ -80,6 +86,10 @@
             },
             fieldOpsList () {
 				return Object.keys(this.fieldOps)
+            },
+            isBoolOp() {
+				return this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
+                    && !this.fieldOps[this.expression.compOp].pattern.includes('{val}')
             }
 		},
 		data () {
@@ -95,7 +105,7 @@
 					return 'A field to check is needed to add expression to the filter'
 				} else if (!this.expression.compOp && this.fieldOpsList.length) {
 					return 'Comparison operator is needed to add expression to the filter'
-				} else if (!this.expression.value) {
+				} else if (!this.isBoolOp && !this.expression.value) {
 					return 'A value to compare is needed to add expression to the filter'
 				}
             },

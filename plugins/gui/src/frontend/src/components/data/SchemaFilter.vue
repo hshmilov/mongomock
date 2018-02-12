@@ -43,19 +43,24 @@
                     },
                     'ip': {
 						'subnet': {pattern: '({field}_raw >= {val} and {field}_raw <= {val})'},
-						'contains': {pattern: '{field} == regex("{val}")'}
+						'contains': {pattern: '{field} == regex("{val}")'},
+                        'isIPv4': {pattern: '{field} == regex("\.")'},
+						'isIPv6': {pattern: '{field} == regex(":")'}
                     },
                     'array': {
-						'size': {pattern: '{field} == size({val})'}
+						'size': {pattern: '{field} == size({val})'},
+                        'exists': {pattern: '{field} == exists(true) and {field} > []'}
 					},
 					'string': {
 						'contains': {pattern: '{field} == regex("{val}", "i")'},
 						'starts': {pattern: '{field} == regex("^{val}", "i")'},
 						'ends': {pattern: '{field} == regex("{val}$", "i")'},
-						'equals': {pattern: '{field} == "{val}"'}
+						'equals': {pattern: '{field} == "{val}"'},
+                        'exists': {pattern: '{field} == exists(true) and {field} != ""'}
 					},
                     'bool': {
-						'is': {pattern: '{field} == {val}'}
+						'true': {pattern: '{field} == true'},
+                        'false': {pattern: '{field} == false'}
 					},
 					'numerical': {
 						'==': {pattern: '{field} == {val}'},
@@ -87,7 +92,7 @@
 		methods: {
 			spreadSchema (schema, name='') {
 				/*
-				    Recursing over schema to extract a flat map from field path to its schema
+				    Recursion over schema to extract a flat map from field path to its schema
 				 */
 				if (schema.name) {
 					name = name? `${name}.${schema.name}` : schema.name
@@ -111,6 +116,7 @@
 					Object.keys(schema.properties).forEach((key) => {
 						fields = fields.concat(this.spreadSchema({...schema.properties[key], name: key}, name))
 					})
+                    return fields
 				}
 				return [{ ...schema, name}]
 			},
@@ -150,7 +156,9 @@
 				this.filters.splice(index, 1)
                 if (!index && this.expressions.length) {
 					this.expressions[index].logicOp = ''
-                    this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
+                    if (this.filters.length) {
+                        this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
+                    }
 				}
 				this.$emit('change', this.filters.join(' '))
             }

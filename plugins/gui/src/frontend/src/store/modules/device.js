@@ -139,7 +139,6 @@ export const device = {
 					},
 					{
 						'title': 'Host Name',
-						'format': 'hostname',
 						'name': 'hostname',
 						'type': 'string'
 					},
@@ -170,7 +169,7 @@ export const device = {
 									64
 								],
 								'name': 'bitness',
-								'type': 'number'
+								'type': 'integer'
 							},
 							{
 								'title': 'OS Major',
