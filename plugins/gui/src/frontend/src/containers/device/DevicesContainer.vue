@@ -52,13 +52,11 @@
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import {
-		FETCH_UNIQUE_FIELDS,
 		FETCH_DEVICES,
         FETCH_DEVICES_COUNT,
         FETCH_DEVICE,
 		FETCH_TAGS,
-        SELECT_DEVICE_PAGE,
-        UPDATE_DEVICE_FILTER
+        SELECT_DEVICE_PAGE
 	} from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
@@ -175,7 +173,6 @@
                 selectPage: SELECT_DEVICE_PAGE
 			}),
 			...mapActions({
-				fetchFields: FETCH_UNIQUE_FIELDS,
 				fetchDevices: FETCH_DEVICES,
                 fetchDevicesCount: FETCH_DEVICES_COUNT,
                 fetchDevice: FETCH_DEVICE,
