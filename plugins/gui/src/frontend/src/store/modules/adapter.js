@@ -86,6 +86,10 @@ export const adapterStaticData = {
 	'fortigate_adapter': {
 		name: 'Fortinet FortiGate',
 		description: 'FortiGate Next-Generation firewall provides high performance, multilayered validated security and visibility for end-to-end protection across the entire enterprise network.'
+	},
+	'qcore_adapter': {
+		name: 'Qcore adapter',
+		description: 'Qcore medical pumps adapter (Saphire+ 14.5)'
 	}
 }
 

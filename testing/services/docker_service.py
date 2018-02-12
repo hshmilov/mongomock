@@ -22,12 +22,11 @@ class DockerService(AxonService):
         self._process_owner = True
 
     @property
-    def inner_port(self):
-        return 80
-
-    @property
-    def exposed_port(self):
-        return DOCKER_PORTS[self.container_name]
+    def exposed_ports(self):
+        """
+        :return: list of pairs (exposed_port, inner_port)
+        """
+        return [(DOCKER_PORTS[self.container_name], 80)]
 
     @property
     def image(self):
@@ -62,8 +61,11 @@ COPY src/ ./
 
         logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
 
-        docker_up = ['docker', 'run', '--name', self.container_name, '--network=axonius', '--publish',
-                     f'{self.exposed_port}:{self.inner_port}', '--detach']
+        docker_up = ['docker', 'run', '--name', self.container_name, '--network=axonius', '--detach']
+
+        for exposed in self.exposed_ports:
+            docker_up.extend(['--publish', f'{exposed[0]}:{exposed[1]}'])
+
         volumes = self.volumes
 
         if mode == 'debug':
@@ -75,6 +77,7 @@ COPY src/ ./
             docker_up.extend(['--volume', volume])
         for env in self.environment:
             docker_up.extend(['--env', env])
+        docker_up.extend(['--env', "DOCKER=true"])
 
         docker_up.append(self.image)
 
@@ -118,6 +121,7 @@ COPY src/ ./
             error_string = 'Error response from daemon: driver failed programming external connectivity on endpoint'
             if error_string in output.decode('utf-8'):
                 print('Common problem with docker service, please restart using: docker-machine restart')
+            print(output)
         else:
             process = runner.append_single(self.container_name, docker_build, cwd=self.service_dir,
                                            stdin=subprocess.PIPE)

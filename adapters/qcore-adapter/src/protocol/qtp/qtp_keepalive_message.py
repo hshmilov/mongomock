@@ -1,0 +1,2 @@
+class QtpKeepAliveMessage(object):
+    pass

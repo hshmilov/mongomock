@@ -22,6 +22,8 @@ DOCKER_PORTS = {
     'symantec-adapter': 5676,
     'traiana-lab-machines-adapter': 5113,
     'fortigate-adapter': 5689,
+    'qcore-adapter': 5015,
+    'qcore-mediator': 5016,
 
     'general-info': 5556,
     'aggregator': 5000,

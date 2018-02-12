@@ -4,18 +4,23 @@ import subprocess
 
 from services.docker_service import DockerService
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from services.ports import DOCKER_PORTS
 
 
 class MongoService(DockerService):
     def __init__(self):
         super().__init__('mongo', '../infrastructures/database')
         self.client = None
-        self.endpoint = ('localhost', self.exposed_port)
+        exposed = self.exposed_ports[0]
+        self.endpoint = ('localhost', exposed[0])
         self.connect()
 
     @property
-    def inner_port(self):
-        return 27017
+    def exposed_ports(self):
+        """
+        :return: list of pairs (exposed_port, inner_port)
+        """
+        return [(DOCKER_PORTS[self.container_name], 27017)]
 
     @property
     def image(self):
