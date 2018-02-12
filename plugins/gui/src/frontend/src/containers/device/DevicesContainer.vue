@@ -2,7 +2,7 @@
     <scrollable-page title="devices">
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
-            <devices-filter-container slot="cardContent" :schema="deviceSchema" v-model="queryFilter"
+            <devices-filter-container slot="cardContent" :schema="deviceFlatSchema" v-model="queryFilter"
                                       @submit="executeQuery"></devices-filter-container>
         </card>
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
@@ -72,11 +72,7 @@
 		computed: {
 			...mapState(['device', 'query']),
 			totalFields () {
-				let fields = [...this.device.fields.common]
-				Object.values(this.device.fields.unique).forEach((currentFields) => {
-					fields = fields.concat(currentFields)
-				})
-				return fields
+				return [...this.device.fields.common]
 			},
 			visibleFields () {
 				return this.totalFields.filter((field) => {
@@ -144,6 +140,9 @@
                         }
                     ]
                 }
+            },
+            deviceFlatSchema() {
+                return this.flattenSchema(this.deviceSchema)
             }
 		},
 		data () {
@@ -158,10 +157,6 @@
 			}
 		},
 		mounted () {
-			// TODO Improve backend operation, before returning this to life
-			//if (!Object.keys(this.device.fields.unique).length) {
-			//	this.fetchFields()
-			//}
             if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
                 this.fetchSavedQueries()
             }
@@ -216,7 +211,41 @@
                 }
 				this.fetchDevice(deviceId)
 				this.$router.push({path: `device/${deviceId}`})
-            }
+            },
+			flattenSchema (schema, name='') {
+				/*
+				    Recursion over schema to extract a flat map from field path to its schema
+				 */
+				if (schema.name) {
+					name = name? `${name}.${schema.name}` : schema.name
+				}
+				if (schema.type === 'array' && schema.items) {
+					if (!Array.isArray(schema.items)) {
+						let childSchema = { ...schema.items}
+						if (schema.title) {
+							childSchema.title = childSchema.title? `${schema.title} ${childSchema.title}`: schema.title
+						}
+						let children = this.flattenSchema(childSchema, name)
+						if (schema.items.type !== 'array') {
+							return children
+						}
+						return [ {...schema, name}, ...children ]
+					}
+					let children = []
+					schema.items.forEach((item) => {
+						children = children.concat(this.flattenSchema({ ...item }, name))
+					})
+					return children
+				}
+				if (schema.type === 'object' && schema.properties) {
+					let children = []
+					Object.keys(schema.properties).forEach((key) => {
+						children = children.concat(this.flattenSchema({...schema.properties[key], name: key}, name))
+					})
+					return children
+				}
+				return [{ ...schema, name}]
+			}
 		}
 	}
 </script>

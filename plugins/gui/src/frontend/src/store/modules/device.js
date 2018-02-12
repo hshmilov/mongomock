@@ -1119,7 +1119,7 @@ export const device = {
 					{control: "text",path: "adapters.data.raw.OS", name: "QualysScans.OS"},
 					{control: "text",path: "adapters.data.raw.TAGS", name: "QualysScans.TAGS"},
 					{control: "text",path: "adapters.data.raw.TRACKING_METHOD", name: "QualysScans.TRACKING_METHOD"}
-    			]
+				]
 			}
 		},
 

@@ -97,7 +97,13 @@
                     && (!this.executed || !this.executed.length)
             },
             textSearchPattern() {
-                return this.spreadSchemaTextFilter(this.schema)
+				let patternParts = []
+                this.schema.forEach((field) => {
+					if (field.type === 'string' && !field.format && field.name !== 'id') {
+						patternParts.push(field.name + ' == regex("{val}", "i")')
+					}
+                })
+                return patternParts.join(' or ')
             }
 		},
 		data () {

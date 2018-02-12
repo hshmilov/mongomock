@@ -2,7 +2,7 @@
     <div class="filter">
         <div class="mb-4">Show only Devices:</div>
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
-                             v-model="expressions[i]" :fields="fields" :comp-ops="compOps"
+                             v-model="expressions[i]" :fields="schema" :comp-ops="compOps"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"></x-schema-expression>
         <div class="footer">
             <div @click="addExpression" class="btn-light">+</div>
@@ -31,9 +31,6 @@
 					value: null,
 					rightBracket: false
 				}
-			},
-			fields () {
-				return this.spreadSchema(this.schema)
 			},
 			compOps () {
 				return {
@@ -101,45 +98,6 @@
 			}
 		},
 		methods: {
-			spreadSchema (schema, name='') {
-				/*
-				    Recursion over schema to extract a flat map from field path to its schema
-				 */
-				if (schema.name) {
-					name = name? `${name}.${schema.name}` : schema.name
-				}
-				if (schema.type === 'array' && schema.items) {
-					if (!Array.isArray(schema.items)) {
-						let children = this.spreadSchema(this.fixTitle({ ...schema.items}, schema), name)
-						if (schema.items.type !== 'array') {
-							return children
-                        }
-						return [ {...schema, name}, ...children ]
-					}
-					let fields = []
-					schema.items.forEach((item) => {
-						fields = fields.concat(this.spreadSchema({ ...item }, name))
-					})
-					return fields
-				}
-				if (schema.type === 'object' && schema.properties) {
-					let fields = []
-					Object.keys(schema.properties).forEach((key) => {
-						fields = fields.concat(this.spreadSchema({...schema.properties[key], name: key}, name))
-					})
-                    return fields
-				}
-				return [{ ...schema, name}]
-			},
-            fixTitle(child, parent) {
-				if (!child.title) {
-					child.title = ''
-				}
-				if (parent.title) {
-					child.title = `${parent.title} ${child.title}`
-				}
-				return child
-            },
 			compileFilter (index, payload) {
 				if (payload.error) {
 					this.error = payload.error

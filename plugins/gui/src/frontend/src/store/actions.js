@@ -46,13 +46,17 @@ export const requestApi = ({dispatch, commit}, payload) => {
             resolve(response)
         })
         .catch((error) => {
-			let errorMessage = error.response.data.message
-			if (error.response.status === 401) {
-				commit(INIT_USER, { fetching: false, error: errorMessage })
-				return
-			}
-            if (error.response.status >= 500) {
-                errorMessage = "Verify all services are up and registered"
+			let errorMessage = error.message
+            if (error && error.response) {
+                if (error.response.status === 401) {
+                    commit(INIT_USER, { fetching: false, error: errorMessage })
+                    return
+                }
+                if (error.response.status >= 500) {
+                    errorMessage = "Verify all services are up and registered"
+                } else if (error.response.data && error.response.data.message) {
+                    errorMessage = error.response.data.message
+                }
             }
             if (payload.type) {
                 commit(payload.type, {
