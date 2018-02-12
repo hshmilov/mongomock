@@ -228,7 +228,7 @@ export const query = {
 				rule: `/api/queries/${queryId}`,
 				method: 'DELETE'
 			}).then((response) => {
-				if (response !== '') {
+				if (response.data !== '') {
 					return
 				}
 				commit(REMOVE_SAVED_QUERY, queryId)

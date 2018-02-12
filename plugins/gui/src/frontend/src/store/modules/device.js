@@ -1159,7 +1159,9 @@ export const device = {
 				let adapterDatas = payload.data.adapters.map((adapter) => {
 					let requiredData = {}
 					state.deviceFields.data.required.forEach((field) => {
-						requiredData[field] = adapter.data[field]
+						if (adapter.data[field]) {
+							requiredData[field] = adapter.data[field]
+						}
 					})
 					return requiredData
 				})

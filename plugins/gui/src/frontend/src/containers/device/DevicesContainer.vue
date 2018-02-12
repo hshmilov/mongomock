@@ -160,7 +160,9 @@
 			//if (!Object.keys(this.device.fields.unique).length) {
 			//	this.fetchFields()
 			//}
-            this.fetchSavedQueries()
+            if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
+                this.fetchSavedQueries()
+            }
 			this.fetchAdapters()
 			this.fetchTags()
 			this.selectedQuery = this.query.currentQuery
