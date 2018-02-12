@@ -38,36 +38,47 @@
 			compOps () {
 				return {
 					'date-time': {
-						'<': {pattern: '{field} < date("{val}")'},
-						'>=': {pattern: '{field} >= date("{val}")'}
+						'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
+						'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' }
                     },
                     'ip': {
-						'subnet': {pattern: '({field}_raw >= {val} and {field}_raw <= {val})'},
-						'contains': {pattern: '{field} == regex("{val}")'},
-                        'isIPv4': {pattern: '{field} == regex("\.")'},
-						'isIPv6': {pattern: '{field} == regex(":")'}
+						'subnet': {
+							pattern: '({field}_raw >= {val} and {field}_raw <= {val})',
+                            notPattern: '({field}_raw < {val} or {field}_raw > {val})'
+                        },
+						'contains': { pattern: '{field} == regex("{val}")',
+                            notPattern: '{field} == regex("^(?!.*{val})")' },
+                        'isIPv4': { pattern: '{field} == regex("\.")',
+                            notPattern: '{field} == regex("^(?!.*\.)")' },
+						'isIPv6': { pattern: '{field} == regex(":")',
+                            notPattern: '{field} == regex("^(?!.*:)")' }
                     },
                     'array': {
-						'size': {pattern: '{field} == size({val})'},
-                        'exists': {pattern: '{field} == exists(true) and {field} > []'}
+						'size': { pattern: '{field} == size({val})',
+                            notPattern: 'not {field} == size({val})' },
+                        'exists': { pattern: '{field} == exists(true) and {field} > []',
+                            notPattern: '{field} == exists(false) or {field} == []' }
 					},
 					'string': {
-						'contains': {pattern: '{field} == regex("{val}", "i")'},
-						'starts': {pattern: '{field} == regex("^{val}", "i")'},
-						'ends': {pattern: '{field} == regex("{val}$", "i")'},
-						'equals': {pattern: '{field} == "{val}"'},
-                        'exists': {pattern: '{field} == exists(true) and {field} != ""'}
+						'contains': { pattern: '{field} == regex("{val}", "i")',
+                            notPattern: '{field} == regex("^(?!.*{val})", "i")' },
+						'starts': { pattern: '{field} == regex("^{val}", "i")',
+                            notPattern: '{field} == regex("^^(?!{val})", "i")' },
+						'ends': { pattern: '{field} == regex("{val}$", "i")',
+                            notPattern: '{field} == regex("^(?!{val})$", "i")' },
+						'equals': { pattern: '{field} == "{val}"',
+                            notPattern: '{field} != "{val}"' },
+                        'exists': { pattern: '{field} == exists(true) and {field} != ""',
+                            notPattern: '{field} == exists(false) or {field} == ""' }
 					},
                     'bool': {
-						'true': {pattern: '{field} == true'},
-                        'false': {pattern: '{field} == false'}
+						'true': {pattern: '{field} == true', notPattern: '{field} == false'},
+						'false': {pattern: '{field} == false', notPattern: '{field} == true'}
 					},
 					'numerical': {
-						'==': {pattern: '{field} == {val}'},
-						'<=': {pattern: '{field} <= {val}'},
-						'>=': {pattern: '{field} >= {val}'},
-						'>': {pattern: '{field} > {val}'},
-						'<': {pattern: '{field} < {val}'}
+						'==': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
+						'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
+						'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
 					}
 				}
 			}

@@ -232,7 +232,7 @@ export const device = {
 					{
 						'title': 'Physical Path',
 						'name': 'vm_physical_path',
-						'type': 'string'
+						'type': 'bool'
 					}
 				],
 				'type': 'array',

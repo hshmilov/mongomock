@@ -7,10 +7,10 @@
         </select>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
-        <label class="btn-light checkbox-label" :class="{'active': expression.not}">
-            <input type="checkbox" v-model="expression.not" @change="compileExpression">NOT</label>
         <label class="btn-light checkbox-label" :class="{'active': expression.leftBracket}">
             <input type="checkbox" v-model="expression.leftBracket" @change="compileExpression">(</label>
+        <label class="btn-light checkbox-label" :class="{'active': expression.not}">
+            <input type="checkbox" v-model="expression.not" @change="compileExpression">NOT</label>
         <select v-model="expression.field" @change="compileExpression">
             <option value="" disabled hidden>FIELD...</option>
             <option v-for="field in fields" :key="field.name" :value="field.name">{{ field.title }}</option>
@@ -21,7 +21,7 @@
                 <option value="" disabled hidden>FUNC...</option>
                 <option v-for="op, i in fieldOpsList" :key="i" :value="op">{{ op }}</option>
             </select>
-            <template v-if="!isBoolOp">
+            <template v-if="showValue">
                 <component :is="`x-${fieldSchema.type}-edit`" class="fill" :class="{'grid-span-2': !fieldOpsList.length}"
                            :schema="fieldSchema" v-model="expression.value" @input="compileExpression"></component>
             </template>
@@ -87,9 +87,9 @@
             fieldOpsList () {
 				return Object.keys(this.fieldOps)
             },
-            isBoolOp() {
+            showValue() {
 				return this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
-                    && !this.fieldOps[this.expression.compOp].pattern.includes('{val}')
+                    && this.fieldOps[this.expression.compOp].pattern.includes('{val}')
             }
 		},
 		data () {
@@ -105,7 +105,7 @@
 					return 'A field to check is needed to add expression to the filter'
 				} else if (!this.expression.compOp && this.fieldOpsList.length) {
 					return 'Comparison operator is needed to add expression to the filter'
-				} else if (!this.isBoolOp && !this.expression.value) {
+				} else if (this.showValue && !this.expression.value) {
 					return 'A value to compare is needed to add expression to the filter'
 				}
             },
@@ -118,17 +118,27 @@
                     let subnetInfo = IP.cidrSubnet(val)
                     this.expression.value = [ IP.toLong(subnetInfo.firstAddress), IP.toLong(subnetInfo.lastAddress) ]
                 }
+				if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.expression.value) {
+                    let exists = this.fieldSchema.enum.filter((item) => {
+                    	return (item.name)? (item.name === this.expression.value) : item === this.expression.value
+                    })
+                    if (!exists || !exists.length) this.expression.value = ''
+				}
                 return ''
 			},
             composeCondition() {
 				let cond = '{val}'
                 let selectedOp = this.fieldOps[this.expression.compOp]
-				if (selectedOp && selectedOp.pattern) {
-					cond = selectedOp.pattern.replace(/{field}/g, this.expression.field)
-				}
+				if (selectedOp && selectedOp.pattern && selectedOp.notPattern) {
+                    cond = (this.expression.not) ? selectedOp.notPattern : selectedOp.pattern
+					cond = cond.replace(/{field}/g, this.expression.field)
+				} else if (this.fieldOpsList.length) {
+					this.expression.compOp = ''
+                    return ''
+                }
 
                 let iVal = Array.isArray(this.expression.value)? -1: undefined
-                let val = this.expression.value
+				let val = this.expression.value
 				return cond.replace(/{val}/g, () => {
 					if (iVal === undefined) return val
                     iVal = (iVal + 1) % val.length
