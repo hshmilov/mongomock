@@ -4,10 +4,10 @@ GUIPlugin.py: Backend services for the web app
 
 __author__ = "Mark Segal"
 
-from axonius import plugin_exceptions
 from axonius.plugin_base import PluginBase, add_rule, return_error
 import tarfile
 import io
+import os
 from datetime import date
 from flask import jsonify, request, session, after_this_request
 from passlib.hash import bcrypt
@@ -286,6 +286,7 @@ class BackendPlugin(PluginBase):
                                                                   'password': bcrypt.hash('bestadminpassword'),
                                                                   },
                                                                  upsert=True)
+        self.add_default_queries()
 
     @paginated()
     @filtered()
@@ -433,9 +434,9 @@ class BackendPlugin(PluginBase):
         :param skip: start index for pagination
         :return:
         """
-        queries_collection = self._get_collection('queries', limited_user=False)
         if request.method == 'GET':
             mongo_filter['archived'] = False
+            queries_collection = self._get_collection('queries', limited_user=False)
             return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
                            .sort([('_id', pymongo.DESCENDING)])
                            .skip(skip).limit(limit))
@@ -443,12 +444,38 @@ class BackendPlugin(PluginBase):
             query_to_add = request.get_json(silent=True)
             if query_to_add is None:
                 return return_error("Invalid query", 400)
-            query_data, query_name = query_to_add.get(
-                'filter'), query_to_add.get('name')
-            result = queries_collection.insert_one(
-                {'filter': query_data, 'name': query_name, 'query_type': 'saved',
-                 'timestamp': datetime.now(), 'archived': False})
-            return str(result.inserted_id), 200
+            inserted_id = self._insert_query(query_to_add.get('name'), query_to_add.get('filter'))
+            return str(inserted_id), 200
+
+    def _insert_query(self, name, query_filter):
+        queries_collection = self._get_collection('queries', limited_user=False)
+        existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
+        if existed_query is not None:
+            self.logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
+            return existed_query['_id']
+        result = queries_collection.update({'name': name}, {'$set': {'filter': query_filter, 'name': name,
+                                                                     'query_type': 'saved', 'timestamp': datetime.now(),
+                                                                     'archived': False}}, upsert=True)
+        self.logger.info(f'Added query {name} id: {result.inserted_id}')
+        return result.inserted_id
+
+    def add_default_queries(self):
+        # Load default queries and save them to the DB
+        try:
+            config = configparser.ConfigParser()
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), 'default_queries.ini')))
+
+            # Save default queries
+            for name, query in config.items():
+                if name == 'DEFAULT':
+                    # ConfigParser always has a fake DEFAULT key, skip it
+                    continue
+                try:
+                    self._insert_query(name, query['query'])
+                except:
+                    self.logger.exception(f'Error adding default query {name}')
+        except:
+            self.logger.exception(f'Error adding default queries')
 
     @add_rule_unauthenticated("queries/<query_id>", methods=['DELETE'])
     def delete_query(self, query_id):

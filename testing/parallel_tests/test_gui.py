@@ -24,6 +24,21 @@ def test_devices():
     assert isinstance(devices_count_response.json(), int), f"Unexpected response type: {devices_count_response.json()}"
 
 
+def test_default_queries():
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
+
+    assert gui_service.is_up()  # default queries are inserted when the GUI service is starting, make sure it is up...
+    queries = axonius_system.db.get_collection(gui_service.unique_name, 'queries')
+
+    # A sample Default Query as set in default_queries.ini under gui/src
+    name = 'Active Directory'
+    query_filter = 'adapters.plugin_name=="ad_adapter"'
+
+    existed_query = queries.find_one({'filter': query_filter, 'name': name})
+    assert existed_query is not None
+
+
 def _count_num_of_tags(device):
     return len([current_tag['tagname'] for current_tag in device['tags'] if
                 current_tag.get('tagvalue', False)])
