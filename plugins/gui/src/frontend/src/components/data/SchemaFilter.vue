@@ -37,29 +37,33 @@
 			},
 			compOps () {
 				return {
-					'date-time': [
-						{name: '<', pattern: '< date("{val}")'},
-						{name: '>=', pattern: '>= date("{val}")'}
-					],
-                    'array': [
-                        {name: 'size', pattern: '== size({val})'}
-                    ],
-					'string': [
-						{name: 'contains', pattern: '== regex("{val}", "i")'},
-						{name: 'starts', pattern: '== regex("^{val}", "i")'},
-						{name: 'ends', pattern: '== regex("{val}$", "i")'},
-						{name: 'equals', pattern: '== "{val}"'}
-					],
-                    'bool': [
-                        {name: 'is', pattern: '== {val}'}
-                    ],
-					'numerical': [
-						{name: '==', pattern: '== {val}'},
-						{name: '<=', pattern: '<= {val}'},
-						{name: '>=', pattern: '>= {val}'},
-						{name: '>', pattern: '> {val}'},
-						{name: '<', pattern: '< {val}'}
-					]
+					'date-time': {
+						'<': {pattern: '{field} < date("{val}")'},
+						'>=': {pattern: '{field} >= date("{val}")'}
+                    },
+                    'ip': {
+						'subnet': {pattern: '({field}_raw >= {val} and {field}_raw <= {val})'},
+						'contains': {pattern: '{field} == regex("{val}")'}
+                    },
+                    'array': {
+						'size': {pattern: '{field} == size({val})'}
+					},
+					'string': {
+						'contains': {pattern: '{field} == regex("{val}", "i")'},
+						'starts': {pattern: '{field} == regex("^{val}", "i")'},
+						'ends': {pattern: '{field} == regex("{val}$", "i")'},
+						'equals': {pattern: '{field} == "{val}"'}
+					},
+                    'bool': {
+						'is': {pattern: '{field} == {val}'}
+					},
+					'numerical': {
+						'==': {pattern: '{field} == {val}'},
+						'<=': {pattern: '{field} <= {val}'},
+						'>=': {pattern: '{field} >= {val}'},
+						'>': {pattern: '{field} > {val}'},
+						'<': {pattern: '{field} < {val}'}
+					}
 				}
 			}
 		},

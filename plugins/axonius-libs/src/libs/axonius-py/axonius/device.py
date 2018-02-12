@@ -2,10 +2,9 @@ import datetime
 import typing
 
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.parsing_utils import figure_out_os, format_mac, format_ip
+from axonius.parsing_utils import figure_out_os, format_mac, format_ip, format_ip_raw
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
-
 
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
@@ -26,6 +25,8 @@ class NetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     mac = Field(str, 'Mac', converter=format_mac)
     ips = ListField(str, 'IPs', converter=format_ip)
+    ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
+                        converter=format_ip_raw)
 
 
 class Device(SmartJsonClass):
@@ -92,6 +93,7 @@ class Device(SmartJsonClass):
                 for ip in ips_iter:
                     try:
                         nic.ips.append(ip)
+                        nic.ips_raw.append(ip)
                     except (ValueError, TypeError):
                         if logger is None:
                             raise

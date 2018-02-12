@@ -2,7 +2,7 @@
     <scrollable-page title="devices">
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
-            <devices-filter-container slot="cardContent" :schema="deviceSchema" v-model="deviceFilter"
+            <devices-filter-container slot="cardContent" :schema="deviceSchema" v-model="queryFilter"
                                       @submit="executeQuery"></devices-filter-container>
         </card>
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
@@ -22,7 +22,7 @@
             <div slot="cardContent">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                 :fields="deviceFields" :filter="query.currentQuery" @click-row="configDevice"
+                                 :fields="deviceFields" :filter="selectedFilter" @click-row="configDevice"
                                  :selected-page="device.deviceSelectedPage" @change-page="selectPage">
                 </paginated-table>
             </div>
@@ -88,12 +88,12 @@
 					return this.selectedFields.includes(field.path)
 				})
 			},
-            deviceFilter: {
+            queryFilter: {
 				get() {
-					return this.device.deviceFilter
+					return this.query.newQuery.filter
                 },
                 set(newFilter) {
-                    this.updateFilter(newFilter)
+                    this.updateQuery(newFilter)
                 }
             },
             deviceSchema () {
@@ -101,8 +101,10 @@
 					type: 'array',
                     items: [
                         {
-                        	name: 'predefined',
+                        	name: 'saved_query',
                             title: 'Saved Query',
+                            type: 'string',
+                            format: 'predefined',
                             enum: this.query.savedQueries.data.map((query) => {
                         		return {name: query.filter, title: query.name}
                             })
@@ -146,9 +148,9 @@
 		},
 		data () {
 			return {
+				selectedFilter: this.queryFilter,
 				selectedFields: [],
 				selectedDevices: [],
-				selectedQuery: "",
 				saveQueryModal: {
 					open: false,
 					name: ''
@@ -165,8 +167,7 @@
             }
 			this.fetchAdapters()
 			this.fetchTags()
-			this.selectedQuery = this.query.currentQuery
-			this.fetchDevicesCount({ filter: this.selectedQuery })
+			this.fetchDevicesCount({ filter: this.queryFilter })
 			this.selectedFields = this.totalFields.filter(function (field) {
 				return field.selected
 			}).map(function (field) {
@@ -176,8 +177,7 @@
 		methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY,
-                selectPage: SELECT_DEVICE_PAGE,
-                updateFilter: UPDATE_DEVICE_FILTER
+                selectPage: SELECT_DEVICE_PAGE
 			}),
 			...mapActions({
 				fetchFields: FETCH_UNIQUE_FIELDS,
@@ -190,9 +190,10 @@
                 fetchSavedQueries: FETCH_SAVED_QUERIES
 			}),
 			executeQuery () {
-				this.updateQuery(this.deviceFilter)
-                this.fetchDevicesCount({ filter: this.deviceFilter })
-                this.fetchDevices({ filter: this.deviceFilter, skip: 0})
+				this.selectedFilter = this.queryFilter
+				this.updateQuery(this.queryFilter)
+                this.fetchDevicesCount({ filter: this.queryFilter })
+                this.fetchDevices({ filter: this.queryFilter, skip: 0})
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {
@@ -203,7 +204,7 @@
 					return
 				}
 				this.saveQuery({
-					filter: this.deviceFilter,
+					filter: this.queryFilter,
 					name: this.saveQueryModal.name
 				}).then(() => {
 					this.saveQueryModal.open = false

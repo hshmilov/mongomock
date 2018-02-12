@@ -5,12 +5,13 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 __author__ = "Mark Segal"
 
 import codenamize
-import ipaddress
 import re
 import sys
 import os
 import dateutil.parser
 import ipaddress
+from bson.decimal128 import Decimal128
+from decimal import Decimal
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
@@ -153,6 +154,16 @@ def format_ip(value):
         return str(ipaddress.ip_address(value))
     except:
         raise ValueError(f'Invalid IP address: {value}')
+
+
+def format_ip_raw(value):
+    try:
+        address = ipaddress.ip_address(value)
+        if isinstance(address, ipaddress.IPv4Address):
+            return address._ip
+        return Decimal128(address._ip)
+    except:
+        raise ValueError(f'Invalid raw IP address: {value}')
 
 
 def parse_date(datetime_as_string):

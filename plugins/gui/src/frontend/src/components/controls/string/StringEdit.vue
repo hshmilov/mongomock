@@ -8,7 +8,7 @@
     <div v-else-if="schema.enum">
         <!-- Select from enum values -->
         <select :class="{'invalid': !valid}" v-model="data" @change="input" @focusout.stop="validate">
-            <option value="" disabled hidden>VALUE</option>
+            <option value="" disabled hidden>VALUE...</option>
             <template v-for="item in schema.enum">
                 <option v-if="item.name" :value="item.name">{{item.title || item.name}}</option>
                 <option :value="item" v-else>{{item}}</option>

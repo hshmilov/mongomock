@@ -13,7 +13,6 @@ export const UPDATE_UNIQUE_FIELDS = 'UPDATE_UNIQUE_FIELDS'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 export const SELECT_DEVICE_PAGE = 'SELECT_DEVICE_PAGE'
-export const UPDATE_DEVICE_FILTER = 'UPDATE_DEVICE_FILTER'
 
 export const FETCH_TAGS = 'FETCH_TAGS'
 export const UPDATE_TAGS = 'UPDATE_TAGS'
@@ -197,7 +196,8 @@ export const device = {
 								{
 									'title': 'IP',
 									'items': {
-										'type': 'string'
+										'type': 'string',
+										'format': 'ip'
 									},
 									'name': 'ips',
 									'type': 'array'
@@ -1125,8 +1125,6 @@ export const device = {
 		},
 
 		tagList: {fetching: false, data: [], error: ''},
-
-		deviceFilter: ''
 	},
 	getters: {},
 	mutations: {
@@ -1309,9 +1307,6 @@ export const device = {
 		},
 		[ SELECT_DEVICE_PAGE ] (state, pageNumber) {
 			state.deviceSelectedPage = pageNumber
-		},
-		[ UPDATE_DEVICE_FILTER ] (state, newFilter) {
-			state.deviceFilter = newFilter
 		}
 	},
 	actions: {

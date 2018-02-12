@@ -12,6 +12,7 @@
   "dependencies": {
     "axios": "^0.16.2",
     "deepmerge": "^2.0.1",
+    "ip": "^1.1.5",
     "promise": "^8.0.1",
     "vue": "^2.4.4",
     "vue-charts": "^0.2.1",

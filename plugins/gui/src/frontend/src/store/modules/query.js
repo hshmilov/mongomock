@@ -113,7 +113,6 @@ const fetchQueries = (dispatch, payload, queryType) => {
 
 export const query = {
 	state: {
-		currentQuery: "",
 		executedQueries: {fetching: false, data: [], error: ''},
 		savedQueries: {fetching: false, data: [], error: ''},
 
@@ -166,7 +165,7 @@ export const query = {
 			})
 		},
 		[UPDATE_QUERY] (state, payload) {
-			state.currentQuery = payload
+			state.newQuery.filter = payload
 			state.executedQueries.data = []
 		},
 		[ UPDATE_SAVED_QUERIES ] (state, payload) {
@@ -185,7 +184,7 @@ export const query = {
 			let requestedQuery = state.savedQueries.data.filter(function(savedQuery) {
 				return savedQuery.id === payload
 			})
-			state.currentQuery = requestedQuery[0].filter
+			state.newQuery.filter = requestedQuery[0].filter
 			state.executedQueries.data = []
 		},
 		[ UPDATE_NEW_QUERY ] (state, payload) {
