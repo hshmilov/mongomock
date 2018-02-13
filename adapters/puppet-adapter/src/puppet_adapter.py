@@ -119,7 +119,7 @@ class PuppetAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device = self._new_device()
-            device.name = device_raw['hostname']
+            device.hostname = device_raw['hostname']
             device.figure_os(' '.join([device_raw["operatingsystem"],
                                        device_raw["architecture"],
                                        device_raw["kernel"]]))
