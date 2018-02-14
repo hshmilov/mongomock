@@ -11,7 +11,7 @@ class QcoreMongo(object):
     def __init__(self):
 
         # hack that allows me to deal with proper mongo creds propagation later
-        if os.environ['DOCKER'] == 'true':
+        if os.environ.get('DOCKER') == 'true':
             host = 'mongo'
         else:
             host = 'localhost'
