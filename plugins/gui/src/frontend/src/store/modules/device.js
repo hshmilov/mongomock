@@ -279,12 +279,12 @@ export const device = {
 				let deviceTags = new Set(device.tags.map((tag) => {
 					return tag.name
 				}))
-				payload.tags.forEach((tag) => {
+				payload.labels.forEach((tag) => {
 					if (deviceTags.has(tag)) return
 					device.tags.push({ name: tag, type: 'label', data: true })
 				})
 			})
-			payload.tags.forEach((tag) => {
+			payload.labels.forEach((tag) => {
 				if (!state.tagList.data || !state.tagList.data.includes(tag)) {
 					state.tagList.data.push(tag)
 				}
@@ -293,7 +293,7 @@ export const device = {
 				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)) {
 				state.deviceList.data = { ...state.deviceDetails.data,
 					tags: Array.from(new Set([ ...state.deviceDetails.data.tags,
-						...payload.tags
+						...payload.labels
 					]))
 				}
 			}
@@ -305,11 +305,11 @@ export const device = {
 				if (!device.tags) { return }
 
 				device.tags = device.tags.filter((tag) => {
-					return !payload.tags.includes(tag.name)
+					return !payload.labels.includes(tag.name)
 				})
 			})
 			state.tagList.data = state.tagList.data.filter((tag) => {
-				if (!payload.tags.includes(tag)) return true
+				if (!payload.labels.includes(tag)) return true
 				let exists = false
 				state.deviceList.data.forEach((device) => {
 					if (!device.tags) return
@@ -327,7 +327,7 @@ export const device = {
 
 				state.deviceDetails.data = { ...state.deviceDetails.data,
 					tags: state.deviceDetails.data.tags.filter((tag) => {
-						return !payload.tags.includes(tag.name)
+						return !payload.labels.includes(tag.name)
 					})
 				}
 			}
@@ -385,7 +385,7 @@ export const device = {
 			})
 		},
 		[ CREATE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
-			if (!payload || !payload.devices || !payload.devices.length || !payload.tags || !payload.tags.length) {
+			if (!payload || !payload.devices || !payload.devices.length || !payload.labels || !payload.labels.length) {
 				return
 			}
 			return dispatch(REQUEST_API, {
@@ -395,7 +395,7 @@ export const device = {
 			}).then(() => commit(ADD_DEVICE_TAGS, payload))
 		},
 		[ DELETE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
-			if (!payload || !payload.devices || !payload.devices.length || !payload.tags || !payload.tags.length) {
+			if (!payload || !payload.devices || !payload.devices.length || !payload.labels || !payload.labels.length) {
 				return
 			}
 			return dispatch(REQUEST_API, {

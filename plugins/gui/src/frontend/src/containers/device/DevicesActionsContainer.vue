@@ -75,6 +75,8 @@
 		computed: {
 			...mapState(['device']),
 			deviceById () {
+				if (!this.device.deviceList.data || !this.device.deviceList.data.length) return
+
 				return this.device.deviceList.data.filter((device) => {
 					return this.devices.includes(device.id)
 				}).reduce(function (map, input) {
@@ -151,8 +153,8 @@
                 let removed = this.currentTags.filter((tag) => {
 					return (!this.tag.selected.includes(tag))
 				})
-				return Promise.all([this.addDeviceTags({devices: this.devices, tags: added}),
-					this.removeDeviceTags({devices: this.devices, tags: removed})])
+				return Promise.all([this.addDeviceTags({devices: this.devices, labels: added}),
+					this.removeDeviceTags({devices: this.devices, labels: removed})])
 
 			},
 			saveBlacklist () {
