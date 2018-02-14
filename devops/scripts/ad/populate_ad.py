@@ -1,7 +1,6 @@
 import ldap3
 import json
 import uuid
-import codenamize
 
 
 data_schema = {
@@ -62,7 +61,7 @@ ldap_connection.bind()
 for i in range(0, devices_num):
     if i % 100 == 0:
         print(i)
-    current_name = codenamize.codenamize(i) + "-PC"
+    current_name = f"PR-{i}"
     try:
         ldap_connection.add(schema.format(computer_name=current_name,
                                           address=address),

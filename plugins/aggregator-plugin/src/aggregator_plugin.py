@@ -21,7 +21,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE, IGNORE_DEVICE
 from axonius.device import LAST_SEEN_FIELD
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.parsing_utils import beautiful_adapter_device_name, get_device_id_for_plugin_name
+from axonius.parsing_utils import get_device_id_for_plugin_name
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from aggregator_exceptions import AdapterOffline, ClientsUnavailable
@@ -50,6 +50,9 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         Check AdapterBase documentation for additional params and exception details.
         """
         super().__init__(requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
+
+        self._index_lock = threading.RLock()
+        self._index = 0
 
         # Lock object for the global device list
         self.device_db_lock = MultiLockerLazy()
@@ -391,6 +394,12 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
         return ""
 
+    def _get_pretty_id(self):
+        with self._index_lock:
+            index = self._index
+            self._index += 1
+        return f'AX-{index}'
+
     def _save_devices_from_adapter(self, plugin_name, plugin_unique_name, plugin_type):
         """ Function for getting all devices from specific adapter periodically.
 
@@ -487,7 +496,7 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
 
                 # Here we have all the devices a single client sees
                 for device in devices_per_client['parsed']:
-                    device['pretty_id'] = beautiful_adapter_device_name(plugin_name, device['id'])
+                    device['pretty_id'] = self._get_pretty_id()
                     parsed_to_insert = {
                         'client_used': client_name,
                         'plugin_type': plugin_type,
