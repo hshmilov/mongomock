@@ -24,7 +24,7 @@
                                       @change="updateSelected"></checkbox>
                         </td>
                         <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
-                                            v-if="!field.hidden" :type="field.type" :value="record[field.path]">
+                                            v-if="!field.hidden" :type="field.type" :value="getData(record, field.path)">
                         </generic-table-cell>
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                             <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
@@ -148,6 +148,26 @@
 				}
 				this.updateSelected()
 			},
+            getData(data, path) {
+				if (!data) return ''
+			    if (Array.isArray(data)) {
+					let children = new Set()
+                    data.forEach((item) => {
+                    	let child = this.getData(item, path)
+                        if (Array.isArray(child)) {
+							children = new Set([...children, ...child])
+                        } else {
+							children.add(child)
+                        }
+                    })
+                    return Array.from(children)
+                }
+				let firstDot = path.indexOf('.')
+                if (firstDot === -1) {
+					return data[path]
+                }
+                return this.getData(data[path.substring(0, firstDot)], path.substring(firstDot + 1))
+            },
 			addData () {
 				if (this.fetching) { return }
 				this.fetchData({

@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
 import { REQUEST_API } from '../actions'
-import { UPDATE_ADAPTERS, adapterStaticData } from './adapter'
 import merge from 'deepmerge'
 
 export const RESTART_DEVICES = 'RESTART_DEVICES'
@@ -21,66 +20,15 @@ export const REMOVE_DEVICE_TAGS = 'REMOVE_DEVICE_TAGS'
 export const SELECT_FIELDS = 'SELECT_FIELDS'
 
 
-export const decomposeFieldPath = (data, fieldPath) => {
-	/*
-		Find ultimate value of controls, matching given field path, by recursively drilling into the dictionary,
-		until path exhausted or reached undefined.
-		Arrays along the way will be traversed so that final value is the list of all found values
-	 */
-	if (!data) { return '' }
-	if (typeof(data) === 'string' || (Array.isArray(data) && (!data.length || typeof(data[0]) === 'string'))) {
-		return data
-	}
-	if (Array.isArray(data)) {
-		let aggregatedValues = []
-		data.forEach((item) => {
-			let foundValue = decomposeFieldPath(item, fieldPath)
-			if (!foundValue) { return }
-			if (Array.isArray(foundValue)) {
-				aggregatedValues = aggregatedValues.concat(foundValue)
-			} else {
-				aggregatedValues.push(foundValue)
+export const mergeDeviceData = (adapters, requiredFields) => {
+	return merge.all(adapters.map((adapter) => {
+		return requiredFields.reduce((map, field) => {
+			if (adapter.data[field]) {
+				map[field] = adapter.data[field]
 			}
-		})
-		return aggregatedValues
-	}
-	if (fieldPath.indexOf('.') === -1) { return decomposeFieldPath(data[fieldPath], '') }
-	let firstPointIndex = fieldPath.indexOf('.')
-	return decomposeFieldPath(data[fieldPath.substring(0, firstPointIndex)], fieldPath.substring(firstPointIndex + 1))
-}
-
-export const findValues = (field, data) => {
-	let value = []
-	field.path.split(',').forEach((currentPath) => {
-		value = value.concat(decomposeFieldPath({...data}, currentPath))
-	})
-	if ((!field.type || field.type.indexOf('list') === -1) && Array.isArray(value)) {
-		return (value.length > 0) ? value[0] : ''
-	} else if (Array.isArray(value)) {
-		return Array.from(new Set(value))
-	}
-	return value
-}
-
-export const processDevice = (device, fields) => {
-	if (!device.adapters || !device.adapters.length) { return }
-	let processedDevice = {id: device['internal_axon_id']}
-	fields.common.forEach((field) => {
-		if (!field.selected) { return }
-		let value = findValues(field, device)
-		if (value) { processedDevice[field.path] = value }
-	})
-	if (device['tags']) {
-		processedDevice['tags.name'] = device['tags'].filter((tag) => {
-			return tag.type === 'label' && tag.data
-		}).map((tag) => {
-			return tag.name
-		})
-		processedDevice['tags.name'] = processedDevice['tags.name'].filter((tag, index, self) => {
-			return self.indexOf(tag) === index
-		})
-	}
-	return processedDevice
+			return map
+		}, {})
+	}))
 }
 
 export const device = {
@@ -259,8 +207,7 @@ export const device = {
 					control: 'multiple-select',
 					options: []
 				},
-				{path: 'tags.data', selected: true, hidden: true},
-				{path: 'last_used_user', selected: false, name: 'Last User Logged'}
+				{path: 'tags.data', selected: true, hidden: true}
 			]
 		},
 
@@ -278,7 +225,18 @@ export const device = {
 			if (payload.data) {
 				let processedData = []
 				payload.data.forEach((device) => {
-					processedData.push(processDevice(device, state.fields))
+					processedData.push({
+						id: device['internal_axon_id'],
+						adapters: {
+							data: mergeDeviceData(device.adapters, state.deviceFields.data.required),
+							plugin_name: device.adapters.map((adapter) => {
+								return adapter['plugin_name']
+							})
+						},
+						tags: device.tags.filter((tag) => {
+							return tag.type === 'label' && tag.data
+						})
+					})
 				})
 				state.deviceList.data = [...state.deviceList.data, ...processedData]
 			}
@@ -294,23 +252,15 @@ export const device = {
 			state.deviceDetails.fetching = payload.fetching
 			state.deviceDetails.error = payload.error
 			if (payload.data) {
-				let adapterDatas = payload.data.adapters.map((adapter) => {
-					let requiredData = {}
-					state.deviceFields.data.required.forEach((field) => {
-						if (adapter.data[field]) {
-							requiredData[field] = adapter.data[field]
-						}
-					})
-					return requiredData
-				})
+
 				state.deviceDetails.data = {
 					...payload.data,
-					data: merge.all(adapterDatas),
+					data: mergeDeviceData(payload.data.adapters, state.deviceFields.data.required),
 					tags: payload.data.tags.filter((tag) => {
-						return tag.tagtype === 'label' && tag.data
+						return tag.type === 'label' && tag.data
 					}),
 					dataTags: payload.data.tags.filter((tag) => {
-						return tag.tagtype === 'data' && tag.data
+						return tag.type === 'data' && tag.data
 					})
 				}
 			}
@@ -318,39 +268,25 @@ export const device = {
 		[ UPDATE_TAGS ] (state, payload) {
 			state.tagList.fetching = payload.fetching
 			state.tagList.error = payload.error
-			if (payload.data) {
-				state.tagList.data = payload.data.map((tag) => {
-					return {name: tag, path: tag}
-				})
-				state.fields.common.forEach((field) => {
-					if (field.path === 'tags.name') {
-						field.options = state.tagList.data
-					}
-				})
-			}
+			if (!payload.fetching) state.tagList.data = payload.data
 		},
 		[ ADD_DEVICE_TAGS ] (state, payload) {
 			state.deviceList.data = [...state.deviceList.data]
 			state.deviceList.data.forEach(function (device) {
-				if (payload.devices.indexOf(device['id']) > -1) {
-					if (!device['tags.name']) { device['tags.name'] = [] }
-					payload.tags.forEach((tag) => {
-						if (device['tags.name'].indexOf(tag) !== -1) { return }
-						device['tags.name'].push(tag)
-					})
-				}
-			})
-			let tags = state.tagList.data.map((tag) => {
-				return tag.path
+				if (!payload.devices.includes(device.id)) return
+				if (!device.tags) device.tags = []
+
+				let deviceTags = new Set(device.tags.map((tag) => {
+					return tag.name
+				}))
+				payload.tags.forEach((tag) => {
+					if (deviceTags.has(tag)) return
+					device.tags.push({ name: tag, type: 'label', data: true })
+				})
 			})
 			payload.tags.forEach((tag) => {
-				if (tags.indexOf(tag) === -1) {
-					state.tagList.data.push({name: tag, path: tag})
-				}
-			})
-			state.fields.common.forEach((field) => {
-				if (field.path === 'tags.name') {
-					field.options = state.tagList.data
+				if (!state.tagList.data || !state.tagList.data.includes(tag)) {
+					state.tagList.data.push(tag)
 				}
 			})
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
@@ -365,31 +301,25 @@ export const device = {
 		[ REMOVE_DEVICE_TAGS ] (state, payload) {
 			state.deviceList.data = [...state.deviceList.data]
 			state.deviceList.data.forEach((device) => {
-				if (payload.devices.indexOf(device['id']) > -1) {
-					if (!device['tags.name']) { return }
-					device['tags.name'] = device['tags.name'].filter((tag) => {
-						return payload.tags.indexOf(tag) === -1
-					})
-				}
+				if (!payload.devices.includes(device.id)) return
+				if (!device.tags) { return }
+
+				device.tags = device.tags.filter((tag) => {
+					return !payload.tags.includes(tag.name)
+				})
 			})
 			state.tagList.data = state.tagList.data.filter((tag) => {
-				if (!payload.tags.includes(tag.path)) { return true }
+				if (!payload.tags.includes(tag)) return true
 				let exists = false
 				state.deviceList.data.forEach((device) => {
-					if (!device['tags.name']) { return }
-					device['tags.name'].forEach((deviceTag) => {
-						if (deviceTag === tag.path) {
+					if (!device.tags) return
+					device.tags.forEach((deviceTag) => {
+						if (deviceTag.name === tag) {
 							exists = true
 						}
 					})
 				})
 				return exists
-
-			})
-			state.fields.common.forEach((field) => {
-				if (field.path === 'tags.name') {
-					field.options = state.tagList.data
-				}
 			})
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
 				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)
@@ -405,23 +335,6 @@ export const device = {
 		[ SELECT_FIELDS ] (state, payload) {
 			state.fields.common.forEach((field) => {
 				field.selected = payload.indexOf(field.path) > -1
-			})
-		},
-		[ UPDATE_ADAPTERS ] (state, payload) {
-			if (!payload.data) { return }
-			state.fields.common.forEach((field) => {
-				if (field.path !== 'adapters.plugin_name') { return }
-				field.options = []
-				let used = new Set()
-				payload.data.forEach((adapter) => {
-					if (used.has(adapter.plugin_name)) { return }
-					let name = adapter.plugin_name
-					if (adapterStaticData[adapter.plugin_name]) {
-						name = adapterStaticData[adapter.plugin_name].name
-					}
-					field.options.push({name: name, path: adapter.plugin_name})
-					used.add(adapter.plugin_name)
-				})
 			})
 		},
 		[ SELECT_DEVICE_PAGE ] (state, pageNumber) {

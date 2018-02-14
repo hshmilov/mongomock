@@ -84,15 +84,18 @@
 			},
 			currentTags () {
 				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
-				let tags = this.deviceById[this.devices[0]]['tags.name']
+				let tags = this.deviceById[this.devices[0]]['tags'].map((tag) => {
+					return tag.name
+                })
                 if (this.devices.length === 1) { return tags }
 				this.devices.forEach((device) => {
-					let deviceTags = this.deviceById[device]['tags.name']
-					if (!deviceTags || !deviceTags.length) {
-						tags = []
-					}
+					let deviceTags = this.deviceById[device]['tags'].map((tag) => {
+						return tag.name
+					})
+					if (!deviceTags || !deviceTags.length) tags = []
+
 					tags = tags.filter((tag) => {
-						return deviceTags.includes(tag)
+						return deviceTags.includes(tag.name)
                     })
 				})
 				return tags

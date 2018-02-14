@@ -185,7 +185,12 @@
 				this.selectedFilter = this.queryFilter
 				this.updateQuery(this.queryFilter)
                 this.fetchDevicesCount({ filter: this.queryFilter })
-                this.fetchDevices({ filter: this.queryFilter, skip: 0})
+                this.fetchDevices({
+                    filter: this.queryFilter, skip: 0, fields: this.deviceFields.map((field) => {
+                	    return field.path
+                    })
+                })
+                this.selectPage(0)
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {

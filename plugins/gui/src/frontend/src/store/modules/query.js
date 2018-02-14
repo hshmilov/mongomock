@@ -15,66 +15,6 @@ export const UPDATE_NEW_QUERY = 'UPDATE_NEW_QUERY'
 export const UPDATE_QUICK_SAVED = 'UPDATE_QUICK_SAVED'
 export const UPDATE_QUICK_EXECUTED = 'UPDATE_QUICK_EXECUTED'
 
-export const matchToVal = (match) => {
-	/*
-		Convert given match of type string to the appropriate type, according to its value.
-		If it is surrounded with quotes - its a string
-		If its value is 'true' or 'false', its a boolean with that value
-		Otherwise, it should be a number
-	 */
-	let strMatch = match.match(/"(.*)"/)
-	if (strMatch && strMatch.length === 2) {
-		return strMatch[1]
-	} else if (match === 'false') {
-		return false
-	} else if (match === 'true') {
-		return true
-	}
-	return parseInt(match)
-}
-
-export const queryToStr = (query) => {
-	/*
-		Given query is expected to be an object where values are either primitives or an array of primitives,
-		e.g. {
-			'field1': 'value1', 'field2': value2,
-			'field3': [ value3.1, value3.2 ]
-		}
-	 */
-	let fieldParts = []
-	Object.keys(query).forEach(function (andKey) {
-		if (query[andKey] === undefined) { return }
-		if (typeof query[andKey] === 'object') {
-			/* Items of array are separated as OR between value of the key field */
-			let valueParts = []
-			query[andKey].forEach(function(orKey) {
-				if (typeof orKey === 'string') {
-					if (andKey === 'tags.name') {
-						valueParts.push(`tags==match({"name":"${orKey}","data":true})`)
-					} else {
-						valueParts.push(`${andKey}=="${orKey}"`)
-					}
-				} else {
-					valueParts.push(`${andKey}==${orKey}`)
-				}
-			})
-			if (!valueParts.length) { return }
-			if (valueParts.length === 1) {
-				fieldParts.push(valueParts[0])
-			} else {
-				fieldParts.push(`(${valueParts.join(' and ')})`)
-			}
-		} else if (typeof query[andKey] === 'string') {
-			fieldParts.push(`${andKey}=="${query[andKey]}"`)
-		} else {
-			fieldParts.push(`${andKey}==${query[andKey]}`)
-		}
-	})
-	if (!fieldParts.length) {
-		return ''
-	}
-	return fieldParts.join(' and ')
-}
 
 const updateQueries = (currentQueries, payload, restart) => {
 	/* Freshly fetched devices are added to currently stored devices */

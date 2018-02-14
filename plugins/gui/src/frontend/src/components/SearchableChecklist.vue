@@ -24,7 +24,10 @@
         props: [ 'title', 'searchable', 'extendable', 'items', 'value' ],
         computed: {
             requestedItems() {
-                let items = this.items.filter((item) => {
+                let items = this.items.map((item) => {
+                	if (item.path) return item
+                    return { name: item, path: item }
+                }).filter((item) => {
                     if (this.searchValue === '') { return true }
                     return item.name.toLowerCase().indexOf(this.searchValue.toLowerCase()) > -1
                 })
@@ -49,11 +52,14 @@
         },
         watch: {
         	value: function(newValue) {
-        		if (!newValue || !newValue.length) { this.itemSelection = {} }
-        		this.itemSelection = newValue.reduce(function(map, input) {
-					map[input] = true
-					return map
-				}, {})
+        		if (!newValue || !newValue.length) {
+        			this.itemSelection = {}
+        		} else {
+					this.itemSelection = newValue.reduce(function(map, input) {
+						map[input] = true
+						return map
+					}, {})
+				}
             },
             searchValue: function(newSearchValue, oldSearchValue) {
         		if (this.itemSelection[oldSearchValue]) {
