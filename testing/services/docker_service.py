@@ -101,28 +101,31 @@ COPY src/ ./
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
-            os.system(f"cd {self.service_dir}; start cmd docker logs -f {self.container_name} >> {logsfile} 2>&1")
+            os.system(f'start /B cmd /c "docker logs -f {self.container_name} >> {logsfile} 2>&1"')
         else:  # good stuff
-            os.system(f"cd {self.service_dir}; docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
+            os.system(f"docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
 
     def build(self, mode='', runner=None):
         docker_build = ['docker', 'build']
         dockerfile = None
 
         # If Dockerfile exists, use it, else use the provided Dockerfile test from self.get_dockerfile
-        if not os.path.isfile(os.path.join(self.service_dir, 'Dockerfile')):
+        dockerfile_path = os.path.join(self.service_dir, 'Dockerfile')
+        if not os.path.isfile(dockerfile_path):
             dockerfile = self.get_dockerfile(mode)
             assert dockerfile is not None
             docker_build.extend(['-f', '-'])
+
+            # dump Dockerfile.autogen to local folder
+            open(dockerfile_path + '.autogen', 'w').write('# This is an auto-generated file, Do not modify\n\n' +
+                                                          dockerfile)
+
             dockerfile = dockerfile.encode('UTF-8')
+
         docker_build.extend(['.', '--tag', self.image])
         if runner is None:  # runner is passed as a ParallelRunner
             print(' '.join(docker_build))
-            output = subprocess.check_output(docker_build, cwd=self.service_dir, input=dockerfile)
-            error_string = 'Error response from daemon: driver failed programming external connectivity on endpoint'
-            if error_string in output.decode('utf-8'):
-                print('Common problem with docker service, please restart using: docker-machine restart')
-            print(output)
+            subprocess.run(docker_build, cwd=self.service_dir, input=dockerfile)
         else:
             process = runner.append_single(self.container_name, docker_build, cwd=self.service_dir,
                                            stdin=subprocess.PIPE)
@@ -223,4 +226,7 @@ COPY src/ ./
                 except:
                     pass
             timeout -= 3
-        super().wait_for_service(timeout=timeout)
+        try:
+            super().wait_for_service(timeout=timeout)
+        except TimeoutException:
+            raise TimeoutException(f'Service {self.container_name} failed to start')

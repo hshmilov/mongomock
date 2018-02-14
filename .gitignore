@@ -282,3 +282,4 @@ testing/reporting/*
 logs/*
 projectFilesBackup/*
 .idea/codeStyles/*
+Dockerfile.autogen
