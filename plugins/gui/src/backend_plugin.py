@@ -5,6 +5,9 @@ GUIPlugin.py: Backend services for the web app
 __author__ = "Mark Segal"
 
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.device import Device
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
+
 import tarfile
 import io
 import os
@@ -19,7 +22,6 @@ from bson import SON, ObjectId
 import json
 import pql
 from datetime import datetime
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -118,86 +120,6 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
     return wrap
 
 
-def _parse_to_mongo_filter(object_filter):
-    """Parsed the filter received from the frontend to a mongo appropriate one.
-    :param object_filter: The filter to parse.
-    :return:
-    """
-
-    def _create_regex(value):
-        """
-        Wrap value with a document that tell mongo to regard it as regex
-        :param value:
-        :return:
-        """
-        return {'$regex': value, '$options': 'i'}
-
-    mongo_filter = dict()
-    if object_filter:
-        try:
-            object_filter = json.loads(object_filter)
-            # TODO: Beautify by taking the $or case into an external method.
-            # If there are more than one filter, should be regarded as "and" logic
-            if len(object_filter) > 1:
-                and_expressions = []
-
-                for key, val in object_filter.items():
-                    if val is None:
-                        # Ignore empty values
-                        continue
-                    # If a value is a list, should be regarded as "or" logic
-                    if isinstance(val, list):
-                        if not len(val):
-                            # Ignore empty values
-                            continue
-
-                        or_list = {"$or": []}
-                        for or_val in val:
-                            or_list["$or"].append(
-                                {key: _create_regex(or_val)})
-
-                            and_expressions.append(or_list)
-
-                    elif isinstance(val, str):
-                        if not val:
-                            # Ignore empty values
-                            continue
-
-                        and_expressions.append(
-                            {key: _create_regex(val)})
-                    else:
-                        and_expressions.append(
-                            {key: val})
-
-                if and_expressions:
-                    mongo_filter['$and'] = and_expressions
-            else:
-                mongo_filter_key = list(object_filter.keys())[0]
-                mongo_filter_value = list(object_filter.values())[0]
-
-                if mongo_filter_value is not None:
-
-                    # If a value is a list, should be regarded as "or" logic
-                    if isinstance(mongo_filter_value, list):
-                        if len(mongo_filter_value):
-                            mongo_filter['$or'] = []
-                            for or_val in mongo_filter_value:
-                                mongo_filter["$or"].append(
-                                    {mongo_filter_key: _create_regex(or_val)})
-
-                    elif isinstance(mongo_filter_value, str):
-                        if mongo_filter_value:
-                            mongo_filter[mongo_filter_key] = _create_regex(mongo_filter_value)
-
-                    else:
-                        mongo_filter[mongo_filter_key] = mongo_filter_value
-
-        except json.JSONDecodeError:
-            pass
-
-        return mongo_filter
-
-
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
@@ -269,9 +191,6 @@ class BackendPlugin(PluginBase):
         config.read('plugin_config.ini')
 
         super().__init__(*args, **kwargs)
-        # AXONIUS_REST.root_path = os.getcwd()
-        # AXONIUS_REST.static_folder = 'my-project/dist/static'
-        # AXONIUS_REST.static_url_path = 'static'
         self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self._elk_addr = config['gui_specific']['elk_addr']
@@ -318,7 +237,7 @@ class BackendPlugin(PluginBase):
         """
         with self._get_db_connection(False) as db_connection:
             client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
-            return str(client_collection.find(mongo_filter).count())
+            return str(client_collection.find(mongo_filter, {'_id': 1}).count())
 
     @add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
     def current_device_by_id(self, device_id):
@@ -335,44 +254,30 @@ class BackendPlugin(PluginBase):
             return jsonify(device)
 
     @add_rule_unauthenticated("devices/fields")
-    def unique_fields(self):
+    def device_fields(self):
         """
-        Get all unique fields that devices may have data for, coming from the adapters' parsed data
+        Get generic fields schema as well as adapter-specific parsed fields schema.
+        Together these are all fields that any device may have data for and should be presented in UI accordingly.
         :return:
         """
+        def _censor_fields(fields):
+            # Remove fields from data that are not relevant to UI
+            fields['items'] = filter(lambda x: x.get('name', '') not in ['id', 'scanner'], fields['items'])
+            return fields
 
-        def _find_paths_to_strings(data, current_path):
-            """
-            Recursion to find full paths of string \ list field values
-            :param data:
-            :param current_path:
-            :return:
-            """
-            if data is None or isinstance(data, list):
-                return []
-            if isinstance(data, dict):
-                new_paths = []
-                for current_key in data.keys():
-                    new_paths.extend(_find_paths_to_strings(
-                        data[current_key], '{0}.{1}'.format(current_path, current_key)))
-                return new_paths
-            control = 'text'
-            if isinstance(data, int):
-                control = 'number'
-            if isinstance(data, bool):
-                control = 'bool'
-            return [{'path': current_path, 'control': control}]
-
-        all_fields = {}
+        fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}
         with self._get_db_connection(False) as db_connection:
-            all_devices = list(
-                db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find())
-            for current_device in all_devices:
-                for current_adapter in current_device['adapters']:
-                    all_fields[current_adapter['plugin_name']] = _find_paths_to_strings(
-                        current_adapter['data']['raw'], 'adapters.data.raw')
+            adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
+                                                                              {'plugin_type': 'ScannerAdapter'}]}).sort(
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            for adapter in adapters_from_db:
+                adapter_fields_record = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
+                    {'name': 'parsed'},
+                    projection={'schema': 1})
+                if adapter_fields_record:
+                    fields['specific'][adapter[PLUGIN_NAME]] = _censor_fields(adapter_fields_record['schema'])
 
-        return jsonify(all_fields)
+        return jsonify(fields)
 
     @add_rule_unauthenticated("devices/tags", methods=['GET', 'POST', 'DELETE'])
     def tags(self):
@@ -698,7 +603,8 @@ class BackendPlugin(PluginBase):
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME, "gui", "watch_service",
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME, "gui",
+                                                                                  "watch_service",
                                                                                   "execution"]:
                     continue
 
@@ -946,62 +852,3 @@ class BackendPlugin(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
-
-    ########
-    # UNUSED
-    ########
-
-    @add_rule_unauthenticated("adapter_devices/<device_id>")
-    def adapter_device_by_id(self, device_id):
-        """
-        -- this has to be remade, postponed because it's not for MVP
-        Returns a device by id
-        :param device_id: device id
-        :return:
-        """
-        with self._get_db_connection(False) as db_connection:
-            parsed_db = db_connection[AGGREGATOR_PLUGIN_NAME]['parsed']
-            device = parsed_db.find_one({'id': device_id}, sort=[
-                ('_id', pymongo.DESCENDING)])
-            if device is None:
-                return return_error("Device not found", 404)
-            return jsonify(beautify_db_entry(device))
-
-    @paginated()
-    @filtered()
-    @projectioned()
-    @add_rule_unauthenticated("adapter_devices")
-    def adapter_devices(self, limit, skip, mongo_filter, mongo_projection):
-        """
-        Returns all known devices. All parameters are generated by the decorators.
-        :param limit: limit for pagination
-        :param skip: start index for pagination
-        :param fields: fields to return, or None for all
-        :return:
-        """
-        if query is None:
-            group_by = {"_id": "$data.id",
-                        "all":
-                            {"$first": "$$ROOT"}
-                        }
-        else:
-            group_by = {field_name: {'$first': '$' + db_path}
-                        for field_name, db_path in fields}
-            group_by['_id'] = "$data.id"
-            group_by['date_fetcher'] = {"$first": "$_id"}
-
-        with self._get_db_connection(False) as db_connection:
-            parsed_db = db_connection[self._devices_db_name]['parsed']
-            devices = parsed_db.aggregate([
-                {"$sort": SON([('_id', pymongo.DESCENDING)])},
-                {
-                    "$group": group_by
-                },
-                {"$sort": SON([('all.data.name', pymongo.ASCENDING)])},
-                {"$skip": skip},
-                {"$limit": limit}
-            ])
-
-            if query is None:
-                return jsonify([beautify_db_entry(x['all']) for x in devices])
-        return jsonify(devices)

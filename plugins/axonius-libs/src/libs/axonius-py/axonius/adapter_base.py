@@ -113,11 +113,10 @@ class AdapterBase(PluginBase, Feature, ABC):
 
             # Upsert new fields
             fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['fields']
-            fields_collection.update({'name': 'fields'}, {'$addToSet': {'specific': {'$each': fields}}}, upsert=True)
-            fields_collection.update({'name': 'fields'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
+            fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
             if self._first_fields_change:
-                fields_collection.update({'name': self.plugin_name},
-                                         {'name': self.plugin_name, 'schema': self.MyDevice.get_fields_info()},
+                fields_collection.update({'name': 'parsed'},
+                                         {'name': 'parsed', 'schema': self.MyDevice.get_fields_info()},
                                          upsert=True)
                 self._first_fields_change = False
 
