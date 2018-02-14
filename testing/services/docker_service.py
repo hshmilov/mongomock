@@ -5,6 +5,7 @@ from abc import abstractmethod
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
+from test_helpers.parallel_runner import ParallelRunner
 
 
 class DockerService(AxonService):
@@ -106,32 +107,30 @@ COPY src/ ./
             os.system(f"docker logs -f {self.container_name} >> {logsfile} 2>&1 &")
 
     def build(self, mode='', runner=None):
-        docker_build = ['docker', 'build']
-        dockerfile = None
+        docker_build = ['docker', 'build', '.']
 
         # If Dockerfile exists, use it, else use the provided Dockerfile test from self.get_dockerfile
         dockerfile_path = os.path.join(self.service_dir, 'Dockerfile')
         if not os.path.isfile(dockerfile_path):
             dockerfile = self.get_dockerfile(mode)
             assert dockerfile is not None
-            docker_build.extend(['-f', '-'])
 
             # dump Dockerfile.autogen to local folder
-            open(dockerfile_path + '.autogen', 'w').write('# This is an auto-generated file, Do not modify\n\n' +
-                                                          dockerfile)
+            dockerfile_path += '.autogen'
+            open(dockerfile_path, 'w').write('# This is an auto-generated file, Do not modify\n\n' + dockerfile)
+            docker_build.extend(['-f', os.path.relpath(dockerfile_path, self.service_dir)])
 
-            dockerfile = dockerfile.encode('UTF-8')
+        docker_build.extend(['--tag', self.image])
 
-        docker_build.extend(['.', '--tag', self.image])
+        wait = False
         if runner is None:  # runner is passed as a ParallelRunner
-            print(' '.join(docker_build))
-            subprocess.run(docker_build, cwd=self.service_dir, input=dockerfile)
-        else:
-            process = runner.append_single(self.container_name, docker_build, cwd=self.service_dir,
-                                           stdin=subprocess.PIPE)
-            if dockerfile is not None:
-                process.stdin.write(dockerfile)
-                process.stdin.close()
+            runner = ParallelRunner()
+            wait = True
+
+        runner.append_single(self.container_name, docker_build, cwd=self.service_dir)
+
+        if wait:
+            assert runner.wait_for_all() == 0
 
     def get_is_container_up(self, include_not_running=False):
         docker_cmd = ['docker', 'ps', '--filter', f'name={self.container_name}']
