@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="execution" type="PythonConfigurationType" factoryName="Python" folderName="Plugins" singleton="true">
+  <configuration default="false" name="execution" type="PythonConfigurationType" factoryName="Python" folderName="AxoniusSystem" singleton="true">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>

@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
 from bson import ObjectId
-from threading import RLock
+from threading import RLock, Thread, Event
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
 from axonius.mixins.feature import Feature
@@ -82,12 +82,13 @@ class AdapterBase(PluginBase, Feature, ABC):
         self.last_seen_timedelta = timedelta(hours=device_alive_thresh)
 
         self._clients_lock = RLock()
+        self._clients = {}
 
         self._send_reset_to_ec()
 
         self._update_clients_schema_in_db(self._clients_schema())
 
-        self._prepare_parsed_clients_config()
+        self._prepare_parsed_clients_config(False)
 
         self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
 
@@ -136,16 +137,31 @@ class AdapterBase(PluginBase, Feature, ABC):
                                    plugin_unique_name='execution',
                                    method='POST')
 
-    def _prepare_parsed_clients_config(self):
-        with self._clients_lock:
-            configured_clients = self._get_clients_config()
+    def _prepare_parsed_clients_config(self, blocking=True):
+        configured_clients = self._get_clients_config()
+        event = Event()
 
-            # self._clients might be replaced at any moment when POST /clients is received
-            # so it must be used cautiously
-            self._clients = {}
-            for client in configured_clients:
-                # client id from DB not sent to verify it is updated
-                self._add_client(client['client_config'], str(client['_id']))
+        def refresh():
+            with self._clients_lock:
+                event.set()
+                try:
+                    # self._clients might be replaced at any moment when POST /clients is received
+                    # so it must be used cautiously
+                    self._clients = {}
+                    for client in configured_clients:
+                        # client id from DB not sent to verify it is updated
+                        self._add_client(client['client_config'], str(client['_id']))
+                except:
+                    self.logger.exception('Error while loading clients from config')
+                    if blocking:
+                        raise
+
+        if blocking:
+            refresh()
+        else:
+            thread = Thread(target=refresh)
+            thread.start()
+            event.wait()
 
     @add_rule('devices', methods=['GET'])
     def devices(self):
@@ -167,9 +183,10 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         client_name = request.args.get('name')
         self.logger.info(f"Trying to query devices from client {client_name}")
-        if client_name not in self._clients:
-            self.logger.error(f"client {client_name} does not exist")
-            return return_error("Client does not exist", 404)
+        with self._clients_lock:
+            if client_name not in self._clients:
+                self.logger.error(f"client {client_name} does not exist")
+                return return_error("Client does not exist", 404)
         try:
             time_before_query = datetime.now()
             raw_devices, parsed_devices = self._try_query_devices_by_client(client_name)
@@ -213,7 +230,8 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         """
 
-        current_clients = self._clients.copy()
+        with self._clients_lock:
+            current_clients = self._clients.copy()
         users_object = {}
         try:
             for key, value in current_clients.items():
@@ -282,18 +300,16 @@ class AdapterBase(PluginBase, Feature, ABC):
                 self.logger.info("No connected client {0} to remove".format(client_id))
             return '', 200
 
-    def _add_client(self, client_config, id=None):
+    def _add_client(self, client_config: dict, id=None):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
 
         :param client_config: Credential values representing a client of the adapter
-
-        :type client_config: dict of objects, following structure stated by client schema
-
+        :param id: The mongo object id
         :return: Mongo id of created \ updated document (updated should be the given client_unique_id)
 
-        :raises AdapterExceptions.ClientSaveException: If there was a problem saving given client
+        assumes self._clients_lock is locked by the current thread
         """
         client_id = None
         status = "error"
@@ -592,7 +608,8 @@ class AdapterBase(PluginBase, Feature, ABC):
                     raise adapter_exceptions.CredentialErrorException(
                         "No credentials found for client {0}. Reason: {1}".format(client_id, str(e)))
             try:
-                self._clients[client_id] = self._connect_client(current_client["client_config"])
+                with self._clients_lock:
+                    self._clients[client_id] = self._connect_client(current_client["client_config"])
             except Exception as e2:
                 # No connection to attempt querying
                 self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
@@ -618,12 +635,14 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         :return: iterator([client_name, devices])
         """
-        if len(self._clients) == 0:
-            self.logger.info(f"{self.plugin_unique_name}: Trying to fetch devices but no clients found")
-            return
+        with self._clients_lock:
+            if len(self._clients) == 0:
+                self.logger.info(f"{self.plugin_unique_name}: Trying to fetch devices but no clients found")
+                return
+            clients = self._clients.copy()
 
         # Running query on each device
-        for client_name in self._clients:
+        for client_name in clients:
             try:
                 raw_devices, parsed_devices = self._try_query_devices_by_client(client_name)
             except adapter_exceptions.CredentialErrorException as e:

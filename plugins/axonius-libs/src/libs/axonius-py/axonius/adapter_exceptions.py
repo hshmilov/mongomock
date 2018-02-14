@@ -18,12 +18,6 @@ class ClientConnectionException(AdapterException):
     pass
 
 
-class ClientSaveException(AdapterException):
-    """
-    Exception to be thrown if there was a problem with saving the client to the adapters DB.
-    """
-
-
 class TagDeviceError(AdapterException):
     """
     Exception to be thrown if tagging a device failed.
