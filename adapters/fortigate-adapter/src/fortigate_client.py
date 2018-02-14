@@ -9,6 +9,10 @@ import fortigate_consts
 class FortigateClient(object):
 
     def __init__(self, logger, host, username, password, verify_ssl=False, port=fortigate_consts.DEFAULT_FORTIGATE_PORT, vdom=None, dhcp_lease_time=fortigate_consts.DEFAULT_DHCP_LEASE_TIME):
+        if port is None:
+            port = fortigate_consts.DEFAULT_FORTIGATE_PORT
+        if dhcp_lease_time is None:
+            dhcp_lease_time = fortigate_consts.DEFAULT_DHCP_LEASE_TIME
         self.logger = logger
         self.host = host
         self.username = username
