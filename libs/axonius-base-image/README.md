@@ -12,8 +12,8 @@ Notice! Once you push it to the system you affect everyone!
 How to:
 ```sh
 docker login    # login to docker hub with axoniusdockerreadwrite
-docker build -t aoxnius/axonius-base-image .
-docker push axonius/axonius-base-image
+docker build -t axonius/axonius-base-image .
 ```
 
-afterwards, rebuild axonius/axonius-libs and your images with ../../prepare_ci_env.sh .
+afterwards create a pull request with the appropriate changes,
+rebuild axonius/axonius-libs and your images with ../../prepare_ci_env.sh .
