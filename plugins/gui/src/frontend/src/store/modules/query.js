@@ -49,8 +49,8 @@ export const queryToStr = (query) => {
 			let valueParts = []
 			query[andKey].forEach(function(orKey) {
 				if (typeof orKey === 'string') {
-					if (andKey === 'tags.tagname') {
-						valueParts.push(`tags==match({"tagname":"${orKey}","tagvalue":true})`)
+					if (andKey === 'tags.name') {
+						valueParts.push(`tags==match({"name":"${orKey}","data":true})`)
 					} else {
 						valueParts.push(`${andKey}=="${orKey}"`)
 					}

@@ -688,37 +688,38 @@ class PluginBase(Feature):
         aggregator = self.get_plugin_by_name('aggregator')
         return self._get_collection("devices_db", db_name=aggregator[PLUGIN_UNIQUE_NAME])
 
-    def __tag_device(self, device_identity_by_adapter, tagname, tagvalue, tagtype):
+    def __tag_device(self, device_identity_by_adapter, name, data, type):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param device_identity_by_adapter: a tuple of (adapter_unique_name, device_unique_id).
                                            e.g. ("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")
-        :param tagname: the name of the tag. should be a string.
-        :param tagvalue: the value of the tag. could be any object.
-        :param tagtype: the type of the tag. "label" for a regular tag, "data" for a data tag.
+        :param name: the name of the tag. should be a string.
+        :param data: the data of the tag. could be any object.
+        :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
         :return:
         """
         tag_data = {'association_type': 'Tag',
                     'associated_adapter_devices': [
                         (device_identity_by_adapter[0], device_identity_by_adapter[1])
                     ],
-                    "tagname": tagname,
-                    "tagvalue": tagvalue,
-                    "data": tagvalue,       # passing twice, its stage 1 before we do a full refactor.
-                    "tagtype": tagtype}
+                    "name": name,
+                    "data": data,
+                    "type": type}
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', data=json.dumps(tag_data))
         if response.status_code != 200:
             self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
-            raise TagDeviceError()
+            raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+
+        return response
 
     def add_label_to_device(self, device_identity_by_adapter, label, is_enabled=True):
         """ A shortcut to _tag_device with tagtype "label" . if is_enabled = False, the label is grayed out."""
         return self.__tag_device(device_identity_by_adapter, label, is_enabled, "label")
 
-    def add_data_to_device(self, device_identity_by_adapter, name, value):
+    def add_data_to_device(self, device_identity_by_adapter, name, data):
         """ A shortcut to _tag_device with tagtype "data" """
-        return self.__tag_device(device_identity_by_adapter, name, value, "data")
+        return self.__tag_device(device_identity_by_adapter, name, data, "data")
 
-    def add_adapterdata_to_device(self, device_identity_by_adapter, name, value):
+    def add_adapterdata_to_device(self, device_identity_by_adapter, name, data):
         """ A shortcut to _tag_device with tagtype "adapterdata" """
-        return self.__tag_device(device_identity_by_adapter, name, value, "adapterdata")
+        return self.__tag_device(device_identity_by_adapter, name, data, "adapterdata")

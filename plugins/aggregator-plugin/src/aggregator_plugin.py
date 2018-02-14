@@ -243,9 +243,8 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         if association_type == 'Tag':
             if len(associated_adapter_devices) != 1:
                 return return_error("Tag must only be associated with a single adapter_device")
-            tagname = sent_plugin.get('tagname')
-            if not isinstance(tagname, str):
-                return return_error("tagname must be provided as a string")
+            if not isinstance(sent_plugin.get('name'), str) or not isinstance(sent_plugin.get('type'), str):
+                return return_error("tag name and data must be provided as a string")
 
         # user doesn't send this
         sent_plugin['accurate_for_datetime'] = datetime.now()
@@ -295,9 +294,9 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 all_unique_adapter_devices_data = [v for d in collected_adapter_devices for v in d]
 
                 # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
-                # a tag is the same tag, if it has the same plugin_unique_name and tagname.
+                # a tag is the same tag, if it has the same plugin_unique_name and name.
                 def keyfunc(tag):
-                    return (tag['plugin_unique_name'], tag['tagname'])
+                    return (tag['plugin_unique_name'], tag['name'])
 
                 # first, lets get all tags and have them sorted. This will make the same tags be consecutive.
                 all_tags = sorted((t for dc in axonius_device_candidates for t in dc['tags']), key=keyfunc)
@@ -573,12 +572,18 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         :param axonius_device: axonius device from db
         :return: None
         """
-        if any((x['tagname'] == tag['tagname'] and x['plugin_unique_name'] == tag['plugin_unique_name'])
+
+        if any((x['name'] == tag['name'] and x['plugin_unique_name'] == tag['plugin_unique_name'])
                for x in axonius_device['tags']):
             self.devices_db.update_one({
                 "internal_axon_id": axonius_device['internal_axon_id'],
-                "tags.tagname": tag['tagname'],
-                "tags.plugin_unique_name": tag['plugin_unique_name']
+                "tags": {
+                    "$elemMatch":
+                        {
+                            "name": tag['name'],
+                            "plugin_unique_name": tag['plugin_unique_name']
+                        }
+                }
             }, {
                 "$set": {
                     "tags.$": tag

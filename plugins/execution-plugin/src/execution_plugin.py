@@ -87,7 +87,7 @@ class ExecutionPlugin(PluginBase):
             if result is None:
                 self.logger.error("could not find device. Are you sure the device exists?")
                 raise ValueError("could not find device. Are you sure the device exists?")
-            if any(tag['tagname'] == 'do_not_execute' and tag['tagvalue'] == True for tag in result['tags']):
+            if any(tag['name'] == 'do_not_execute' and tag['data'] == True for tag in result['tags']):
                 self.logger.debug(f"Device {device_id} skipped from execution due to blacklist")
                 return
             try:

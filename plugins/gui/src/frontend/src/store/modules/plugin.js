@@ -94,11 +94,11 @@ export const plugin = {
 							adapters: result.adapters
 						}
 						let tag = result.tags.filter((tag) => {
-							return tag.tagname === 'IP_CONFLICT'
+							return tag.name === 'IP_CONFLICT'
 						})
 
-						if (tag && tag.length && tag[0].tagvalue) {
-							let conflictMap = JSON.parse(tag[0].tagvalue)
+						if (tag && tag.length && tag[0].data) {
+							let conflictMap = JSON.parse(tag[0].data)
 							processedResult.conflicts = Object.keys(conflictMap).map((conflictIP) => {
 								return {ip: conflictIP, server: conflictMap[conflictIP]}
 							})

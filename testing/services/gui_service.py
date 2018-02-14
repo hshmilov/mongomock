@@ -18,7 +18,7 @@ class GuiService(PluginService):
         return [f'{libs}:/home/axonius/libs:ro']
 
     def get_dockerfile(self, mode=''):
-        dev = 'dev-' if mode == 'debug' else ''
+        dev = '' if mode == 'prod' else 'dev-'
         return f"""
 FROM axonius/axonius-libs
 
@@ -50,12 +50,12 @@ RUN cd ./frontend && npm set progress=false && npm install && npm run {dev}build
     def get_all_tags(self, *vargs, **kwargs):
         return self.get('tags', session=self._session, *vargs, **kwargs)
 
-    def remove_tags_from_device(self, payload, *vargs, **kwargs):
-        return self.delete('devices/tags', data=json.dumps(payload), session=self._session, *vargs,
+    def remove_labels_from_device(self, payload, *vargs, **kwargs):
+        return self.delete('devices/labels', data=json.dumps(payload), session=self._session, *vargs,
                            **kwargs)
 
-    def add_tags_to_device(self, payload, *vargs, **kwargs):
-        return self.post('devices/tags'.format(id), data=json.dumps(payload), session=self._session, *vargs, **kwargs)
+    def add_labels_to_device(self, payload, *vargs, **kwargs):
+        return self.post('devices/labels'.format(id), data=json.dumps(payload), session=self._session, *vargs, **kwargs)
 
     def activate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/start', *vargs, **kwargs)

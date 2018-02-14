@@ -16,7 +16,7 @@ docker logout
 
 echo "Running all..."
 (
-./axonius.sh system up --all
+./axonius.sh system up --all --prod
 )
 
 echo "Removing anything irrelevant.."

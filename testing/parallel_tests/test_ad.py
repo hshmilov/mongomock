@@ -1,11 +1,13 @@
 import pytest
+from test_helpers.adapter_test_base import AdapterTestBase
+from test_helpers.utils import try_until_not_thrown
+from test_credentials.test_ad_credentials import *
+
+# These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
 from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fixture
 from services.general_info_service import general_info_fixture
 from services.execution_service import execution_fixture
-from test_helpers.adapter_test_base import AdapterTestBase
-from test_helpers.utils import try_until_not_thrown
-from test_credentials.test_ad_credentials import *
 
 
 CLIENT_ID_1_ADMIN_SID = "S-1-5-21-4050441107-50035988-2732102988-500"
@@ -81,36 +83,38 @@ class TestAdAdapter(AdapterTestBase):
 
         def has_ip_conflict_tag():
             dns_conflicts_fixture.find_conflicts()
-            assert len(self.axonius_system.get_devices_with_condition({"tags.tagname": "IP_CONFLICT"})) > 0
+            assert len(self.axonius_system.get_devices_with_condition({"tags.name": "IP_CONFLICT"})) > 0
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
 
-    def test_ad_users_association(self, execution_fixture, general_info_fixture):
+    def test_ad_users_association(self, general_info_fixture):
         general_info_fixture.activateable_start()
         general_info_fixture.run()
 
         def has_ad_users_association_tag():
             #  general_info_fixture.associate()
-            tags = list(self.axonius_system.get_devices_with_condition({"tags.tagname": "Last User Logon"}))
+            tags = list(self.axonius_system.get_devices_with_condition({"tags.name": "Last User Logon"}))
             assert len(tags) > 0
 
         try_until_not_thrown(30, 5, has_ad_users_association_tag)
 
-    def test_ad_execute_wmi(self, execution_fixture):
+    def test_ad_execute_wmi(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
-        action_id = execution_fixture.make_action("execute_wmi",
-                                                  internal_axon_id,
-                                                  {"wmi_commands": [
-                                                      {"type": "query", "args": ["select SID from Win32_UserProfile"]},
-                                                      {"type": "query", "args": ["select SID from Win32_UserAccount"]}
-                                                  ]},
-                                                  adapters_to_whitelist=["ad_adapter"])
+        action_id = self.axonius_system.execution.make_action("execute_wmi",
+                                                              internal_axon_id,
+                                                              {"wmi_commands": [
+                                                                  {"type": "query", "args": [
+                                                                      "select SID from Win32_UserProfile"]},
+                                                                  {"type": "query", "args": [
+                                                                      "select SID from Win32_UserAccount"]}
+                                                              ]},
+                                                              adapters_to_whitelist=["ad_adapter"])
 
         def check_execute_wmi_results():
             # Get the first action from the action list ([0])
-            action_data = execution_fixture.get_action_data(self.axonius_system.db, action_id)[0]
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
             assert action_data["result"] == "Success"
             assert action_data["status"] == "finished"
             assert len(action_data["product"]) == 2  # We queried for 2 queries, assert we have 2 answers.
@@ -127,18 +131,18 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(15, 5, check_execute_wmi_results)
 
-    def test_ad_execute_shell(self, execution_fixture):
+    def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
-        action_id = execution_fixture.make_action("execute_shell",
-                                                  internal_axon_id,
-                                                  {"shell_command": {"Windows": [
-                                                      "dir c:\\windows\\system32\\drivers\\etc"]}},
-                                                  adapters_to_whitelist=["ad_adapter"])
+        action_id = self.axonius_system.execution.make_action("execute_shell",
+                                                              internal_axon_id,
+                                                              {"shell_command": {"Windows": [
+                                                                  "dir c:\\windows\\system32\\drivers\\etc"]}},
+                                                              adapters_to_whitelist=["ad_adapter"])
 
         def check_execute_shell_results():
-            action_data = execution_fixture.get_action_data(self.axonius_system.db, action_id)[0]
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
             assert action_data["result"] == "Success"
             assert action_data["status"] == "finished"
 
@@ -148,17 +152,17 @@ class TestAdAdapter(AdapterTestBase):
         try_until_not_thrown(15, 5, check_execute_shell_results)
 
     @pytest.mark.skip("Not implemented")
-    def test_ad_getfile(self, execution_fixture):
+    def test_ad_getfile(self):
         pass
 
     @pytest.mark.skip("Not implemented")
-    def test_ad_putfile(self, execution_fixture):
+    def test_ad_putfile(self):
         pass
 
     @pytest.mark.skip("Not implemented")
-    def test_ad_delete_file(self, execution_fixture):
+    def test_ad_delete_file(self):
         pass
 
     @pytest.mark.skip("Not implemented")
-    def test_ad_execute_binary(self, execution_fixture):
+    def test_ad_execute_binary(self):
         pass

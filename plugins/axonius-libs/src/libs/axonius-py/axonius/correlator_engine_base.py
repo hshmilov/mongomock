@@ -286,7 +286,7 @@ class CorrelatorEngineBase(ABC):
                 if correlation_base_axonius_device is None:
                     raise RuntimeError(f"Base responder for correlation doesn't exist, {first_name} {first_id}")
 
-                if any(tag['tagname'] == 'strongly_unbound_with' and [second_name, second_id] in tag['tagvalue'] for
+                if any(tag['name'] == 'strongly_unbound_with' and [second_name, second_id] in tag['data'] for
                        tag
                        in correlation_base_axonius_device['tags']):
                     continue

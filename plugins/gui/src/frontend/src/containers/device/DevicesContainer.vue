@@ -129,7 +129,7 @@
                         		type: 'array',
                                 items: [
                                     {
-                                    	name: 'tagname',
+                                    	name: 'name',
                                         title: 'Tag Name',
                                         type: 'string'
                                     }

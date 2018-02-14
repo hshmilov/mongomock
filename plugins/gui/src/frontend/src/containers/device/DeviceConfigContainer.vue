@@ -13,8 +13,8 @@
                 <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" font-class="icon-tag">
                     <card>
                         <div v-for="tag in deviceData.tags" class="d-flex tag-content">
-                            <div>{{tag.tagname}}</div>
-                            <div class="link" @click="removeTag(tag.tagname)">Remove</div>
+                            <div>{{tag.name}}</div>
+                            <div class="link" @click="removeTag(tag.name)">Remove</div>
                         </div>
                     </card>
                 </named-section>
@@ -39,8 +39,8 @@
                 </named-section>
                 <named-section title="Plugin Data" icon-name="action/add_field" v-if="hasFieldTags">
                     <tabs>
-                        <tab v-for="tag, i in deviceData.dataTags" :title="tag.tagname" :id="i" :key="i" :selected="!i">
-                            <x-custom-data :data="tag.tagvalue"></x-custom-data>
+                        <tab v-for="tag, i in deviceData.dataTags" :title="tag.name" :id="i" :key="i" :selected="!i">
+                            <x-custom-data :data="tag.data"></x-custom-data>
                         </tab>
                     </tabs>
                 </named-section>

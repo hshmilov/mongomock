@@ -84,10 +84,10 @@
 			},
 			currentTags () {
 				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
-				let tags = this.deviceById[this.devices[0]]['tags.tagname']
+				let tags = this.deviceById[this.devices[0]]['tags.name']
                 if (this.devices.length === 1) { return tags }
 				this.devices.forEach((device) => {
-					let deviceTags = this.deviceById[device]['tags.tagname']
+					let deviceTags = this.deviceById[device]['tags.name']
 					if (!deviceTags || !deviceTags.length) {
 						tags = []
 					}

@@ -25,19 +25,19 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
     first_esx_device = next((d for d in devices_response if d['adapters'][0]['plugin_name'] == 'esx_adapter'), None)
     assert first_esx_device is not None, "No ESX device found"
 
-    axonius_fixture.aggregator.add_tag("ad_taggy", first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME],
-                                       first_ad_device['adapters'][0]['data']['id'])
+    axonius_fixture.aggregator.add_label("ad_taggy", first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME],
+                                         first_ad_device['adapters'][0]['data']['id'])
     assert any(
-        x['tags'] and x['tags'][0]['tagname'] == 'ad_taggy' and
+        x['tags'] and x['tags'][0]['name'] == 'ad_taggy' and
         x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
         x['adapters'][0]['data']['id'] == first_ad_device['adapters'][0]['data']['id']
         for x in axonius_fixture.get_devices_with_condition({})), "Tagging AD failed"
 
-    axonius_fixture.aggregator.add_tag("esx_taggy", first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME],
-                                       first_esx_device['adapters'][0]['data']['id'])
+    axonius_fixture.aggregator.add_label("esx_taggy", first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME],
+                                         first_esx_device['adapters'][0]['data']['id'])
 
     assert any(
-        x['tags'] and x['tags'][0]['tagname'] == 'esx_taggy' and
+        x['tags'] and x['tags'][0]['name'] == 'esx_taggy' and
         x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
         x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id']
         for x in axonius_fixture.get_devices_with_condition({})), "Tagging esx failed"
@@ -70,8 +70,8 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
                           ), None)
     assert linked_device is not None, "Can't find instance of linked device"
 
-    assert any(x['tagname'] == 'esx_taggy' for x in linked_device['tags']), "ESX tag is gone"
-    assert any(x['tagname'] == 'ad_taggy' for x in linked_device['tags']), "AD tag is gone"
+    assert any(x['name'] == 'esx_taggy' for x in linked_device['tags']), "ESX tag is gone"
+    assert any(x['name'] == 'ad_taggy' for x in linked_device['tags']), "AD tag is gone"
     axonius_fixture.aggregator.unlink([
         (first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_ad_device['adapters'][0]['data']['id'])
     ])

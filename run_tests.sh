@@ -13,6 +13,8 @@ if [ $(git ls-files | grep -E "(\.py|\.sh|\.yml|Dockerfile)" | xargs grep $(prin
     exit 1
 fi
 
+# We must delete old data, or else tests will fail.
+docker volume rm `docker volume ls -q`
 
 echo "Running unitests"
 pytest --ignore=testing --ignore=plugins/gui/src/frontend --junitxml=testing/reporting/ut_report.xml

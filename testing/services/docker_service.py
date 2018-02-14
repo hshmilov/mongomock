@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
-from test_helpers.exceptions import ComposeException
+from test_helpers.exceptions import DockerException
 
 
 class DockerService(AxonService):
@@ -56,7 +56,7 @@ COPY src/ ./
 """[1:]
 
     def start(self, mode='', allow_restart=False, rebuild=False):
-        assert mode in ('debug', '')
+        assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
@@ -68,10 +68,10 @@ COPY src/ ./
 
         volumes = self.volumes
 
-        if mode == 'debug':
-            volumes.extend(self.volumes_override)
-        else:
+        if mode == 'prod':
             docker_up.extend(['--restart', 'always'])
+        else:
+            volumes.extend(self.volumes_override)
 
         for volume in volumes:
             docker_up.extend(['--volume', volume])
@@ -95,8 +95,9 @@ COPY src/ ./
         else:
             self.build(mode)
 
-        print(' '.join(docker_up))
-        subprocess.check_call(docker_up, cwd=self.service_dir)
+        # print(' '.join(docker_up))
+        print(f"Running container {self.container_name} in -{'production' if mode == 'prod' else 'debug'}- mode.")
+        subprocess.check_call(docker_up, cwd=self.service_dir, stdout=subprocess.PIPE)
 
         # redirect logs to logfile. Make sure redirection lives as long as process lives
         if os.name == 'nt':  # windows
@@ -186,7 +187,7 @@ COPY src/ ./
         (out, err) = p.communicate()
 
         if p.returncode != 0:
-            raise ComposeException("Failed to run 'cat' on docker {0}".format(self.container_name))
+            raise DockerException("Failed to run 'cat' on docker {0}".format(self.container_name))
 
         return out, err, p.returncode
 
@@ -202,7 +203,7 @@ COPY src/ ./
         (out, err) = p.communicate()
 
         if p.returncode != 0:
-            raise ComposeException("Failed to run {0} on docker {1}".format(command, self.container_name))
+            raise DockerException("Failed to run {0} on docker {1}".format(command, self.container_name))
 
         return out, err, p.returncode
 

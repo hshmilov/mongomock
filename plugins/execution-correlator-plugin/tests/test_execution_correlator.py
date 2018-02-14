@@ -864,8 +864,8 @@ def test_execution_strongly_unbound_with():
         {
             "internal_axon_id": "axon1",
             "tags": [{
-                "tagname": "strongly_unbound_with",
-                "tagvalue": [['esx_adapter', 'esx1']],
+                "name": "strongly_unbound_with",
+                "data": [['esx_adapter', 'esx1']],
             }],
             "adapters": [
                 {
@@ -883,8 +883,8 @@ def test_execution_strongly_unbound_with():
         {
             "internal_axon_id": "axon2",
             "tags": [{
-                "tagname": "strongly_unbound_with",
-                "tagvalue": [['ad_adapter', 'ad1']],
+                "name": "strongly_unbound_with",
+                "data": [['ad_adapter', 'ad1']],
             }],
             "adapters": [
                 {

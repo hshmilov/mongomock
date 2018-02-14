@@ -9,6 +9,7 @@ import services
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.device import NETWORK_INTERFACES_FIELD
 from services import adapters
+from services.execution_service import ExecutionService
 from services.aggregator_service import AggregatorService
 from services.axon_service import TimeoutException
 from services.core_service import CoreService
@@ -29,8 +30,9 @@ class AxoniusService(object):
         self.core = CoreService()
         self.aggregator = AggregatorService()
         self.gui = GuiService()
+        self.execution = ExecutionService()
 
-        self.axonius_services = [self.db, self.core, self.aggregator, self.gui]
+        self.axonius_services = [self.db, self.core, self.aggregator, self.gui, self.execution]
 
     def stop(self, should_delete):
         # Not critical but lets stop in reverse order
