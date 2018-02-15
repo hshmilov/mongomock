@@ -8,7 +8,7 @@ from axonius.utils.xml2json_parser import Xml2Json
 
 
 class JamfConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, logger, domain, http_proxy=None, https_proxy=None):
         """ Initializes a connection to Jamf using its rest API
 
         :param obj logger: Logger object of the system
@@ -23,6 +23,12 @@ class JamfConnection(object):
         self.url = url + 'JSSResource/'
         self.headers = {'Accept': 'application/json'}
         self.auth = None
+        self.proxies = {}
+        if http_proxy is not None:
+            self.proxies['http'] = http_proxy
+        if https_proxy is not None:
+            self.proxies['https'] = https_proxy
+        self.logger.info(f"Proxies: {self.proxies}")
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -71,7 +77,7 @@ class JamfConnection(object):
         :param str data: the body of the request
         :return: the service response or raises an exception if it's not 200
         """
-        response = requests.post(self.get_url_request(name), headers=headers, data=data)
+        response = requests.post(self.get_url_request(name), headers=headers, data=data, proxies=self.proxies)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -85,7 +91,7 @@ class JamfConnection(object):
         :param dict headers: the headers for the post request
         :return: the service response or raises an exception if it's not 200
         """
-        response = requests.get(self.get_url_request(name), headers=headers)
+        response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -101,7 +107,7 @@ class JamfConnection(object):
         :return: the response
         :rtype: list of computers
         """
-        search = JamfAdvancedSearch(self, url, data, headers)
+        search = JamfAdvancedSearch(self, url, data, headers, self.proxies)
         # update has succeeded or an exception would have been raised
         with search:
             try:

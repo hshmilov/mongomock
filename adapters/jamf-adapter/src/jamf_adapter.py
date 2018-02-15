@@ -21,8 +21,12 @@ class JamfAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = jamf_connection.JamfConnection(logger=self.logger, domain=client_config["Jamf_Domain"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = jamf_connection.JamfConnection(logger=self.logger,
+                                                        domain=client_config[jamf_consts.JAMF_DOMAIN],
+                                                        http_proxy=client_config.get(jamf_consts.HTTP_PROXY),
+                                                        https_proxy=client_config.get(jamf_consts.HTTPS_PROXY))
+            connection.set_credentials(username=client_config[jamf_consts.USERNAME],
+                                       password=client_config[jamf_consts.PASSWORD])
             connection.connect()
             return connection
         except jamf_exceptions.JamfException as e:
@@ -65,6 +69,16 @@ class JamfAdapter(AdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
+                },
+                {
+                    "name": jamf_consts.HTTP_PROXY,
+                    "title": "Http Proxy",
+                    "type": "string"
+                },
+                {
+                    "name": jamf_consts.HTTPS_PROXY,
+                    "title": "Https Proxy",
+                    "type": "string"
                 }
             ],
             "required": [
