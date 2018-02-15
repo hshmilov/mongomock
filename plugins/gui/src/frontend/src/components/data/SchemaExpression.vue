@@ -22,7 +22,8 @@
                 <option v-for="op, i in fieldOpsList" :key="i" :value="op">{{ op }}</option>
             </select>
             <template v-if="showValue">
-                <component :is="`x-${fieldSchema.type}-edit`" class="fill" :class="{'grid-span-2': !fieldOpsList.length}"
+                <component :is="`x-${fieldSchema.type}-edit`" class="fill"
+                           :class="{'grid-span-2': !fieldOpsList.length}"
                            :schema="fieldSchema" v-model="expression.value" @input="compileExpression"></component>
             </template>
             <template v-else>
@@ -44,8 +45,8 @@
 	import xNumberEdit from '../controls/numerical/NumberEdit.vue'
 	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
 	import xBoolEdit from '../controls/boolean/BooleanEdit.vue'
-    import xArrayEdit from '../controls/array/ArrayFilter.vue'
-    import IP from 'ip'
+	import xArrayEdit from '../controls/array/ArrayFilter.vue'
+	import IP from 'ip'
 
 	export default {
 		components: {
@@ -53,7 +54,7 @@
 			xNumberEdit,
 			xIntegerEdit,
 			xBoolEdit,
-            xArrayEdit
+			xArrayEdit
 		},
 		name: 'x-schema-expression',
 		props: {value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false}},
@@ -61,44 +62,47 @@
 			logicOps () {
 				return ['and', 'or']
 			},
-			fieldMap() {
+			fieldMap () {
 				return this.fields.reduce((map, item) => {
 					map[item.name] = item
-                    return map
-                }, {})
-            },
+					return map
+				}, {})
+			},
 			fieldSchema () {
 				if (!this.expression.field || !this.fieldMap[this.expression.field]) return {}
 
-                return this.fieldMap[this.expression.field]
+				return this.fieldMap[this.expression.field]
 			},
-            fieldOps() {
+			fieldOps () {
 				if (this.fieldSchema && this.fieldSchema.format) {
 					return this.compOps[this.fieldSchema.format] || {}
-                }
+				}
 				if (this.fieldSchema && this.fieldSchema.type) {
 					if (['number', 'integer'].includes(this.fieldSchema.type)) {
-                        return this.compOps['numerical'] || {}
-                    }
+						return this.compOps['numerical'] || {}
+					}
 					return this.compOps[this.fieldSchema.type] || {}
-                }
-                return {}
-            },
-            fieldOpsList () {
+				}
+				return {}
+			},
+			fieldOpsList () {
 				return Object.keys(this.fieldOps)
+
             },
             showValue() {
-				return this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
-                    && this.fieldOps[this.expression.compOp].pattern.includes('{val}')
+				return this.fieldSchema.format === 'predefined'
+                    || (this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
+                        && this.fieldOps[this.expression.compOp].pattern.includes('{val}'))
             }
 		},
 		data () {
 			return {
-				expression: {...this.value}
+				expression: {...this.value},
+                processedValue: ''
 			}
 		},
 		methods: {
-			checkErrors() {
+			checkErrors () {
 				if (!this.first && !this.expression.logicOp) {
 					return 'Logical operator is needed to add expression to the filter'
 				} else if (!this.expression.field) {
@@ -108,66 +112,72 @@
 				} else if (this.showValue && !this.expression.value) {
 					return 'A value to compare is needed to add expression to the filter'
 				}
-            },
-            formatExpression() {
-                if (this.fieldSchema.format && this.fieldSchema.format === 'ip' && this.expression.compOp === 'subnet') {
+			},
+			formatExpression () {
+				this.processedValue = ''
+				if (this.fieldSchema.format && this.fieldSchema.format === 'ip' && this.expression.compOp === 'subnet') {
 					let val = this.expression.value
 					if (!val.includes('/') || val.indexOf('/') === val.length - 1) {
-                    	return 'Specify <address>/<CIDR> to filter IP by subnet'
+						return 'Specify <address>/<CIDR> to filter IP by subnet'
+					}
+					try {
+					    let subnetInfo = IP.cidrSubnet(val)
+					    this.processedValue = [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
+                    } catch (err) {
+						return 'Specify <address>/<CIDR> to filter IP by subnet'
                     }
-                    let subnetInfo = IP.cidrSubnet(val)
-                    this.expression.value = [ IP.toLong(subnetInfo.firstAddress), IP.toLong(subnetInfo.lastAddress) ]
-                }
-				if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.expression.value) {
-                    let exists = this.fieldSchema.enum.filter((item) => {
-                    	return (item.name)? (item.name === this.expression.value) : item === this.expression.value
-                    })
-                    if (!exists || !exists.length) this.expression.value = ''
 				}
-                return ''
+				if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.expression.value) {
+					let exists = this.fieldSchema.enum.filter((item) => {
+						return (item.name) ? (item.name === this.expression.value) : item === this.expression.value
+					})
+					if (!exists || !exists.length) this.expression.value = ''
+				}
+				return ''
 			},
-            composeCondition() {
+			composeCondition () {
 				let cond = '{val}'
-                let selectedOp = this.fieldOps[this.expression.compOp]
+				let selectedOp = this.fieldOps[this.expression.compOp]
 				if (selectedOp && selectedOp.pattern && selectedOp.notPattern) {
-                    cond = (this.expression.not) ? selectedOp.notPattern : selectedOp.pattern
+					cond = (this.expression.not) ? selectedOp.notPattern : selectedOp.pattern
 					cond = cond.replace(/{field}/g, this.expression.field)
 				} else if (this.fieldOpsList.length) {
 					this.expression.compOp = ''
-                    return ''
-                }
+                    this.expression.value = ''
+					return ''
+				}
 
-                let iVal = Array.isArray(this.expression.value)? -1: undefined
-				let val = this.expression.value
+				let val = this.processedValue? this.processedValue : this.expression.value
+				let iVal = Array.isArray(val) ? -1 : undefined
 				return cond.replace(/{val}/g, () => {
 					if (iVal === undefined) return val
-                    iVal = (iVal + 1) % val.length
-                    return val[iVal]
-                })
-            },
+					iVal = (iVal + 1) % val.length
+					return val[iVal]
+				})
+			},
 			compileExpression () {
 				this.$emit('input', this.expression)
-                let error = this.checkErrors() || this.formatExpression()
-                if (error) {
+				let error = this.checkErrors() || this.formatExpression()
+				if (error) {
 					this.$emit('change', {error})
-                    return
-                }
+					return
+				}
 
-                let filterStack = []
-                if (this.expression.logicOp) {
+				let filterStack = []
+				if (this.expression.logicOp) {
 					filterStack.push(this.expression.logicOp + ' ')
-                }
-                let bracketWeight = 0
-                if (this.expression.leftBracket) {
+				}
+				let bracketWeight = 0
+				if (this.expression.leftBracket) {
 					filterStack.push('(')
 					bracketWeight -= 1
-                }
-                filterStack.push(this.composeCondition())
-                if (this.expression.rightBracket) {
+				}
+				filterStack.push(this.composeCondition())
+				if (this.expression.rightBracket) {
 					filterStack.push(')')
 					bracketWeight += 1
-                }
-                if (this.expression.not) {}
+				}
+				if (this.expression.not) {}
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
 			}
 		}

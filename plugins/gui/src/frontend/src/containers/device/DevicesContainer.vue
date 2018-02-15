@@ -22,7 +22,7 @@
             <div slot="cardContent">
                 <paginated-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                  :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                 :fields="deviceFields" :filter="selectedFilter" @click-row="configDevice"
+                                 :fields="deviceFields" :filter="queryFilter" @click-row="configDevice"
                                  :selected-page="device.deviceSelectedPage" @change-page="selectPage">
                 </paginated-table>
             </div>
@@ -145,7 +145,6 @@
 		},
 		data () {
 			return {
-				selectedFilter: this.queryFilter,
 				selectedFields: [],
 				selectedDevices: [],
 				saveQueryModal: {
@@ -182,7 +181,6 @@
                 fetchSavedQueries: FETCH_SAVED_QUERIES
 			}),
 			executeQuery () {
-				this.selectedFilter = this.queryFilter
 				this.updateQuery(this.queryFilter)
                 this.fetchDevicesCount({ filter: this.queryFilter })
                 this.fetchDevices({

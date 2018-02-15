@@ -107,9 +107,6 @@
 				if (!oldFields.length || newFields.length <= oldFields.length) { return }
 				this.restartData()
 			},
-			filter: function (newFilter) {
-				this.restartData()
-			},
 			fetching: function (newFetching) {
 				if (newFetching) {
 					this.fetchedPages++

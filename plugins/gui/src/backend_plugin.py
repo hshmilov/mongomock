@@ -359,8 +359,8 @@ class BackendPlugin(PluginBase):
         result = queries_collection.update({'name': name}, {'$set': {'filter': query_filter, 'name': name,
                                                                      'query_type': 'saved', 'timestamp': datetime.now(),
                                                                      'archived': False}}, upsert=True)
-        self.logger.info(f'Added query {name} id: {result.inserted_id}')
-        return result.inserted_id
+        self.logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
+        return result.get('inserted_id', '')
 
     def add_default_queries(self):
         # Load default queries and save them to the DB

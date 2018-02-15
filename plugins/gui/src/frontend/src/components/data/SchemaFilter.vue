@@ -48,13 +48,15 @@
                         'isIPv4': { pattern: '{field} == regex("\.")',
                             notPattern: '{field} == regex("^(?!.*\.)")' },
 						'isIPv6': { pattern: '{field} == regex(":")',
-                            notPattern: '{field} == regex("^(?!.*:)")' }
+                            notPattern: '{field} == regex("^(?!.*:)")' },
+						'exists': { pattern: '({field} == exists(true) and {field} != "")',
+							notPattern: '({field} == exists(false) or {field} == "")' }
                     },
                     'array': {
 						'size': { pattern: '{field} == size({val})',
                             notPattern: 'not {field} == size({val})' },
-                        'exists': { pattern: '{field} == exists(true) and {field} > []',
-                            notPattern: '{field} == exists(false) or {field} == []' }
+                        'exists': { pattern: '({field} == exists(true) and {field} > [])',
+                            notPattern: '({field} == exists(false) or {field} == [])' }
 					},
 					'string': {
 						'contains': { pattern: '{field} == regex("{val}", "i")',
@@ -65,8 +67,8 @@
                             notPattern: '{field} == regex("^(?!{val})$", "i")' },
 						'equals': { pattern: '{field} == "{val}"',
                             notPattern: '{field} != "{val}"' },
-                        'exists': { pattern: '{field} == exists(true) and {field} != ""',
-                            notPattern: '{field} == exists(false) or {field} == ""' }
+                        'exists': { pattern: '({field} == exists(true) and {field} != "")',
+                            notPattern: '({field} == exists(false) or {field} == ""' }
 					},
                     'bool': {
 						'true': {pattern: '{field} == true', notPattern: '{field} == false'},
