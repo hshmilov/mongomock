@@ -18,15 +18,19 @@ class NexposeV3Client(nexpose_base_client.NexposeClient):
 
             # for current_page_num in range(1, num_of_asset_pages):
             while current_page_num < num_of_asset_pages:
-                current_page_response_as_json = self._send_get_request(
-                    'assets', {'page': current_page_num, 'size': self.num_of_simultaneous_devices})
-                devices.extend(current_page_response_as_json.get('resources', []))
-                num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
+                try:
+                    current_page_response_as_json = self._send_get_request(
+                        'assets', {'page': current_page_num, 'size': self.num_of_simultaneous_devices})
+                    devices.extend(current_page_response_as_json.get('resources', []))
+                    num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
+                except Exception as e:
+                    self.logger.error(f"Got exception while fetching page {current_page_num+1}. {str(e)}")
 
-                if (current_page_num + 1) % (num_of_asset_pages / 10) == 0:
-                    self.logger.info(
-                        f"Got {(((current_page_num + 1) / (num_of_asset_pages / 10)) * 10)}% of device pages.")
                 current_page_num += 1
+                if current_page_num % (max(1, num_of_asset_pages / 100)) == 0:
+                    self.logger.info(
+                        f"Got {current_page_num} out of {num_of_asset_pages} pages. "
+                        f"({(current_page_num / num_of_asset_pages) * 100}% of device pages).")
 
             for item in devices:
                 item.update({"API": '3'})
