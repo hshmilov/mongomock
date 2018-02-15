@@ -13,7 +13,7 @@ from bson.objectid import ObjectId
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
 IMAGE_ID = "ami-a93811cc"  # Our own imported ubuntu 16.04 Server.
-INSTANCE_TYPE = "t2.micro"
+INSTANCE_TYPE = "t2.xlarge"
 SUBNET_ID = "subnet-4154273a"   # Our builds subnet.
 
 S3_EXPORT_PREFIX = "vm-"
