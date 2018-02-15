@@ -158,7 +158,7 @@ export const device = {
 					{
 						'title': 'Physical Path',
 						'name': 'vm_physical_path',
-						'type': 'bool'
+						'type': 'string'
 					}
 				],
 				'type': 'array',
