@@ -10,7 +10,8 @@ export const UPDATE_DEVICES_COUNT = 'UPDATE_DEVICES_COUNT'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 export const SELECT_DEVICE_PAGE = 'SELECT_DEVICE_PAGE'
-
+export const FETCH_DEVICE_FIELDS = 'FETCH_DEVICE_FIELDS'
+export const UPDATE_DEVICE_FIELDS = 'UPDATE_DEVICE_FIELDS'
 export const FETCH_TAGS = 'FETCH_TAGS'
 export const UPDATE_TAGS = 'UPDATE_TAGS'
 export const CREATE_DEVICE_TAGS = 'CREATE_DEVICE_TAGS'
@@ -44,127 +45,7 @@ export const device = {
 		deviceDetails: {fetching: false, data: {}, error: ''},
 
 		/* All fields parsed in the system - at least one adapter parses the field */
-		deviceFields: {
-			fetching: false, data: {
-				'name': 'adapters.data',
-				'items': [
-					{
-						'title': 'Axonius Name',
-						'name': 'pretty_id',
-						'type': 'string'
-					},
-					{
-						'title': 'ID',
-						'name': 'id',
-						'type': 'string'
-					},
-					{
-						'title': 'Asset Name',
-						'name': 'name',
-						'type': 'string'
-					},
-					{
-						'title': 'Host Name',
-						'name': 'hostname',
-						'type': 'string'
-					},
-					{
-						'name': 'os',
-						'items': [
-							{
-								'title': 'OS Type',
-								'enum': [
-									'Windows',
-									'Linux',
-									'OS X',
-									'iOS',
-									'Android'
-								],
-								'name': 'type',
-								'type': 'string'
-							},
-							{
-								'title': 'OS Distribution',
-								'name': 'distribution',
-								'type': 'string'
-							},
-							{
-								'title': 'OS Bitness',
-								'enum': [
-									32,
-									64
-								],
-								'name': 'bitness',
-								'type': 'integer'
-							},
-							{
-								'title': 'OS Major',
-								'name': 'major',
-								'type': 'string'
-							},
-							{
-								'title': 'OS Minor',
-								'name': 'minor',
-								'type': 'string'
-							}
-						],
-						'type': 'array'
-					},
-					{
-						'items': {
-							'items': [
-								{
-									'title': 'MAC',
-									'name': 'mac',
-									'type': 'string'
-								},
-								{
-									'title': 'IP',
-									'items': {
-										'type': 'string',
-										'format': 'ip'
-									},
-									'name': 'ips',
-									'type': 'array'
-								}
-							],
-							'type': 'array'
-						},
-						'name': 'network_interfaces',
-						'title': 'Network Interface',
-						'type': 'array'
-					},
-					{
-						'title': 'Last Seen',
-						'name': 'last_seen',
-						'type': 'string',
-						'format': 'date-time'
-					},
-					{
-						'title': 'VM Tools Status',
-						'name': 'vm_tools_status',
-						'type': 'string'
-					},
-					{
-						'title': 'Resolve Status',
-						'name': 'dns_resolve_status',
-						'type': 'string'
-					},
-					{
-						'title': 'Power State',
-						'name': 'power_state',
-						'type': 'string'
-					},
-					{
-						'title': 'Physical Path',
-						'name': 'vm_physical_path',
-						'type': 'string'
-					}
-				],
-				'type': 'array',
-				'required': ['pretty_id', 'name', 'hostname', 'os', 'network_interfaces']
-			}, error: ''
-		},
+		deviceFields: {fetching: false, data: {}, error: ''},
 
 		tagList: {fetching: false, data: [], error: ''},
 	},
@@ -212,12 +93,25 @@ export const device = {
 
 				state.deviceDetails.data = {
 					...payload.data,
-					data: mergeDeviceData(payload.data.adapters, state.deviceFields.data.required),
+					data: merge.all(payload.data.adapters).data,
 					tags: payload.data.tags.filter((tag) => {
 						return tag.type === 'label' && tag.data
 					}),
 					dataTags: payload.data.tags.filter((tag) => {
 						return tag.type === 'data' && tag.data
+					})
+				}
+			}
+		},
+		[ UPDATE_DEVICE_FIELDS ] (state, payload) {
+			state.deviceFields.fetching = payload.fetching
+			state.deviceFields.error = payload.error
+			if (!payload.fetching) {
+				state.deviceFields.data = payload.data
+				state.deviceFields.data.generic.name = 'adapters.data'
+				if (state.deviceFields.data.specific) {
+					Object.keys(state.deviceFields.data.specific).forEach((specificKey) => {
+						state.deviceFields.data.specific[specificKey].name ='adapters.data'
 					})
 				}
 			}
@@ -327,6 +221,12 @@ export const device = {
 			dispatch(REQUEST_API, {
 				rule: `/api/devices/${deviceId}`,
 				type: UPDATE_DEVICE
+			})
+		},
+		[ FETCH_DEVICE_FIELDS ] ({dispatch}) {
+			dispatch(REQUEST_API, {
+				rule: `/api/devices/fields`,
+				type: UPDATE_DEVICE_FIELDS
 			})
 		},
 		[ FETCH_TAGS ] ({dispatch}) {

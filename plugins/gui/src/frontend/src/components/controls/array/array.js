@@ -23,7 +23,7 @@ export default {
 					// Just filter item, if its not required and limit is on
 					return this.include(item.name)
 				})
-			} else if (this.schema.items instanceof Object) {
+			} else if (this.schema.items instanceof Object && this.schema.title) {
 				// schema.items contains one unified definition for type of all children
 				schemaItems = this.toList(this.data).map((item, index) => {
 					// Use same unified schema and add name

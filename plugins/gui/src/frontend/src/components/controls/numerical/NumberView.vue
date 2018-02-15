@@ -1,5 +1,5 @@
 <template>
-    <div>{{ data.toFixed(2) }}</div>
+    <div>{{ data? data.toFixed(2) : '' }}</div>
 </template>
 
 <script>

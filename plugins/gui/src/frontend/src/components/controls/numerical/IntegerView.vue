@@ -1,5 +1,5 @@
 <template>
-    <div>{{ parseInt(data) }}</div>
+    <div>{{ data? parseInt(data) : '' }}</div>
 </template>
 
 <script>

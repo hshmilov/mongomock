@@ -17,7 +17,7 @@
 
                     return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
                 }
-                if (this.schema.format === 'ip' && Array.isArray(this.value)) {
+                if (Array.isArray(this.value)) {
 					return this.value.join(', ')
                 }
                 return this.value

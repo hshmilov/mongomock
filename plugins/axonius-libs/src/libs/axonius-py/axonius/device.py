@@ -24,7 +24,7 @@ class DeviceOS(SmartJsonClass):
 class NetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     mac = Field(str, 'Mac', converter=format_mac)
-    ips = ListField(str, 'IPs', converter=format_ip)
+    ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
     ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
                         converter=format_ip_raw)
 
@@ -35,7 +35,7 @@ class Device(SmartJsonClass):
     name = Field(str, 'Device Name')
     hostname = Field(str, 'Host Name', json_format=JsonStringFormat.hostname)
     id = Field(str, 'ID')
-    os = Field(DeviceOS, 'OS')
+    os = Field(DeviceOS)
     last_seen = Field(datetime.datetime, 'Last Seen', json_format=JsonStringFormat.date_time)
     network_interfaces = ListField(NetworkInterface, 'Network Interfaces')
     scanner = Field(bool, 'Scanner')

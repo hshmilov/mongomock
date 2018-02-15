@@ -4,8 +4,11 @@
         <search-input v-if="searchable" v-model="searchValue" ref="searchInput"></search-input>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
             <div class="checklist-list">
-                <checkbox v-for="item, index in requestedItems" :key="index" :label="prepareLabel(item.title)"
-                          v-model="itemSelection[item.name]" @change="updateSelected"></checkbox>
+                <template v-for="item, index in requestedItems">
+                    <checkbox v-if="item.name" :key="index" :label="prepareLabel(item.title)"
+                              v-model="itemSelection[item.name]" @change="updateSelected"></checkbox>
+                    <div v-else>{{ item.title }}</div>
+                </template>
                 <checkbox v-if="extendable && searchValue && isNew(searchValue)" :label="`${searchValue} (New tag)`"
                           class="checklist-new" v-model="searchValueSelected" @change="createSelected"></checkbox>
             </div>
@@ -24,17 +27,13 @@
         props: [ 'title', 'searchable', 'extendable', 'items', 'value' ],
         computed: {
             requestedItems() {
-                let items = this.items.map((item) => {
-                	if (item.name) return item
+                return this.items.map((item) => {
+                	if (item.name || item.title) return item
                     return { name: item, title: item }
                 }).filter((item) => {
                     if (this.searchValue === '') { return true }
                     return item.name.toLowerCase().indexOf(this.searchValue.toLowerCase()) > -1
                 })
-                this.createdItems.forEach((item) => {
-                	items.push({name: item, title: item})
-                })
-                return items
             },
             totalItemNames() {
             	return this.items.map((item) => {

@@ -19,6 +19,7 @@ class JsonStringFormat(Enum):
     date_time = auto()
     email = auto()
     hostname = auto()
+    ip = auto()
     ipv4 = auto()
     ipv6 = auto()
     uri = auto()
@@ -27,8 +28,8 @@ class JsonStringFormat(Enum):
 class Field(object):
     """ A single field class, holds information regarding python type checking and json-serialization """
 
-    def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonStringFormat=None, min_value=None,
-                 max_value=None, pattern=None, enum=None):
+    def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonStringFormat = None,
+                 min_value=None, max_value=None, pattern=None, enum=None):
         """
         :param field_type: The python type of the field, must be provided.
         :param description: The description of the field (would be displayed in the GUI)
@@ -107,6 +108,8 @@ class Field(object):
     @property
     def json_name(self):
         if issubclass(self.type, int):
+            return 'integer'
+        elif issubclass(self.type, float):
             return 'number'
         elif issubclass(self.type, str):
             return 'string'

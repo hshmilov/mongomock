@@ -128,6 +128,8 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                 field_type = field.json_name
                 if isinstance(field, ListField):
                     item['items'] = {'type': field_type}
+                    if field.format is not None:
+                        item['items']['format'] = field.format.name.replace('_', '-')
                     field_type = 'array'
                 if field.format is not None:
                     item['format'] = field.format.name.replace('_', '-')

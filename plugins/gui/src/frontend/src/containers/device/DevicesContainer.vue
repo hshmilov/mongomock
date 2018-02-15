@@ -21,9 +21,9 @@
             </div>
             <div slot="cardContent">
                 <x-schema-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
-                                 :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                 :fields="viewDeviceSchemaSelected" :filter="queryFilter" @click-row="configDevice"
-                                 :selected-page="device.deviceSelectedPage" @change-page="selectPage">
+                                :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
+                                :fields="viewDeviceSchemaSelected" :filter="queryFilter" @click-row="configDevice"
+                                :selected-page="device.deviceSelectedPage" @change-page="selectPage">
                 </x-schema-table>
             </div>
         </card>
@@ -56,7 +56,8 @@
 		FETCH_DEVICES_COUNT,
 		FETCH_DEVICE,
 		FETCH_TAGS,
-		SELECT_DEVICE_PAGE
+		SELECT_DEVICE_PAGE,
+		FETCH_DEVICE_FIELDS
 	} from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
@@ -78,41 +79,64 @@
 				}
 			},
 			deviceFlatSchema () {
-				return this.flattenSchema(this.device.deviceFields.data)
+				if (!this.device.deviceFields.data.generic) return []
+				return this.flattenSchema(this.device.deviceFields.data.generic)
 			},
-            viewDeviceSchema() {
-                return [
-					{name: 'adapters.plugin_name', title: 'Adapters', type: 'array',
-						items: { type: 'string', format: 'logo'}
+			pluginsFlatSchema () {
+				if (!this.device.deviceFields.data.specific) return {}
+				const genericFields = this.deviceFlatSchema.map((item) => item.name)
+
+				let mergedPluginsSchema = []
+				Object.keys(this.device.deviceFields.data.specific).forEach((pluginName) => {
+					let pluginFlatSchema = this.flattenSchema(this.device.deviceFields.data.specific[pluginName])
+                        .filter((item) => {
+						return !genericFields.includes(item.name)
+					})
+					if (!pluginFlatSchema.length) return
+					mergedPluginsSchema.push({title: adapterStaticData[pluginName].name || pluginName})
+					mergedPluginsSchema = [...mergedPluginsSchema, ...pluginFlatSchema]
+				})
+                return mergedPluginsSchema
+			},
+			viewDeviceSchema () {
+				return [
+					{
+						name: 'adapters.plugin_name', title: 'Adapters', type: 'array',
+						items: {type: 'string', format: 'logo'}
 					},
-                    ...this.deviceFlatSchema.filter((field) => {
-                	    return field.name !== 'adapters.data.network_interfaces'
-                    }),
-					{name: 'tags.name', title: 'Tags', type: 'array',
-						items: { type: 'string', format: 'tag'}
-					}
-                ]
-            },
-            viewDeviceSchemaSelected() {
+					...this.deviceFlatSchema.filter((field) => {
+						return field.name !== 'adapters.data.network_interfaces'
+					}),
+					{
+						name: 'tags.name', title: 'Tags', type: 'array',
+						items: {type: 'string', format: 'tag'}
+					},
+					...this.pluginsFlatSchema
+				]
+			},
+			viewDeviceSchemaSelected () {
 				return this.viewDeviceSchema.filter((field) => {
 					return this.selectedFields.includes(field.name)
 				})
-            },
-			filterDeviceSchema() {
+			},
+			filterDeviceSchema () {
 				return [
-					{name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
+					{
+						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
 						enum: this.query.savedQueries.data.map((query) => {
 							return {name: query.filter, title: query.name}
-						})},
-                    {name: 'adapters', title: 'Adapters', type: 'array'},
-					{name: 'adapters.plugin_name', title: 'Adapter Name', type: 'string',
+						})
+					},
+					{name: 'adapters', title: 'Adapters', type: 'array'},
+					{
+						name: 'adapters.plugin_name', title: 'Adapter Name', type: 'string',
 						enum: Object.keys(adapterStaticData).map((name) => {
 							return {name, title: adapterStaticData[name].name}
 						})
 					},
 					...this.deviceFlatSchema,
-                    {name: 'tags', title: 'Tags', type: 'array'},
-                    {name: 'tags.tagname', title: 'Tag Name', type: 'string'}
+					{name: 'tags', title: 'Tags', type: 'array'},
+					{name: 'tags.tagname', title: 'Tag Name', type: 'string'}
 				]
 			}
 		},
@@ -128,6 +152,9 @@
 			}
 		},
 		mounted () {
+			if (!this.device.deviceFields.data || !this.device.deviceFields.data.generic) {
+				this.fetchDeviceFields()
+			}
 			if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
 				this.fetchSavedQueries()
 			}
@@ -143,6 +170,7 @@
 			...mapActions({
 				fetchDevices: FETCH_DEVICES,
 				fetchDevicesCount: FETCH_DEVICES_COUNT,
+				fetchDeviceFields: FETCH_DEVICE_FIELDS,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchTags: FETCH_TAGS,
@@ -152,12 +180,13 @@
 			executeQuery () {
 				this.updateQuery(this.queryFilter)
 				this.fetchDevicesCount({filter: this.queryFilter})
-                this.fetchDevices({filter: this.queryFilter, skip: 0,
-                    fields: this.viewDeviceSchemaSelected.map((field) => {
-                	    return field.name
-                    })
-                })
-                this.selectPage(0)
+				this.fetchDevices({
+					filter: this.queryFilter, skip: 0,
+					fields: this.viewDeviceSchemaSelected.map((field) => {
+						return field.name
+					})
+				})
+				this.selectPage(0)
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {
@@ -213,6 +242,7 @@
 					})
 					return children
 				}
+				if (!schema.title) return []
 				return [{...schema, name}]
 			}
 		}

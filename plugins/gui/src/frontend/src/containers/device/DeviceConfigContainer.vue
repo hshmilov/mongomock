@@ -5,9 +5,9 @@
     ]">
         <div class="row">
             <div class="col-4">
-                <named-section title="Device Generic Fields" icon-name="action/add_field" v-if="deviceData.data">
+                <named-section title="Device Generic Fields" icon-name="action/add_field" v-if="deviceData.data && deviceFields.generic">
                     <card>
-                        <x-schema-list :data="deviceData.data" :schema="deviceFields" :limit="true"></x-schema-list>
+                        <x-schema-list :data="deviceData.data" :schema="deviceFields.generic" :limit="true"></x-schema-list>
                     </card>
                 </named-section>
                 <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" font-class="icon-tag">
@@ -30,7 +30,8 @@
                                 <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
                                 <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                             </div>
-                            <x-schema-list v-if="viewBasic" :schema="deviceFields" :data="adapter.data"></x-schema-list>
+                            <x-schema-list v-if="viewBasic && deviceFields.specific[adapter.plugin_name]"
+                                           :schema="deviceFields.specific[adapter.plugin_name]" :data="adapter.data"></x-schema-list>
                             <div v-if="!viewBasic">
                                 <tree-view :data="adapter.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
                             </div>
@@ -57,7 +58,7 @@
     import Tab from '../../components/tabs/Tab.vue'
     import xSchemaList from '../../components/data/SchemaList.vue'
     import xCustomData from '../../components/data/CustomData.vue'
-    import { FETCH_DEVICE, DELETE_DEVICE_TAGS, UPDATE_DEVICE } from '../../store/modules/device.js'
+    import { FETCH_DEVICE, DELETE_DEVICE_TAGS, UPDATE_DEVICE, FETCH_DEVICE_FIELDS } from '../../store/modules/device.js'
     import { adapterStaticData } from '../../store/modules/adapter.js'
     import { mapState, mapMutations, mapActions } from 'vuex'
 
@@ -112,7 +113,8 @@
         },
         methods: {
             ...mapMutations({ updateDevice: UPDATE_DEVICE }),
-            ...mapActions({ fetchDevice: FETCH_DEVICE, deleteDeviceTags: DELETE_DEVICE_TAGS }),
+            ...mapActions({ fetchDevice: FETCH_DEVICE, deleteDeviceTags: DELETE_DEVICE_TAGS,
+                fetchDeviceFields: FETCH_DEVICE_FIELDS}),
             getAdapterName(pluginName) {
             	if (!adapterStaticData[pluginName]) {
             		return pluginName
@@ -124,6 +126,9 @@
             }
         },
         created() {
+			if (!this.deviceFields || !this.deviceFields.generic) {
+				this.fetchDeviceFields()
+			}
 			if (!this.deviceData || this.deviceData.internal_axon_id !== this.deviceId) {
 				this.updateDevice({ fetching: false, error: '', data: {
 					internal_axon_id: this.deviceId, adapters: [], tags: [], data: {}
