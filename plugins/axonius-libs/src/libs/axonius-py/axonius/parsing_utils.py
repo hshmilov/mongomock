@@ -9,8 +9,8 @@ import sys
 import os
 import dateutil.parser
 import ipaddress
-from bson.decimal128 import Decimal128
-from decimal import Decimal
+from bson.decimal128 import Decimal128, create_decimal128_context
+import decimal
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
@@ -150,7 +150,11 @@ def format_ip_raw(value):
         address = ipaddress.ip_address(value)
         if isinstance(address, ipaddress.IPv4Address):
             return address._ip
-        return Decimal128(address._ip)
+        return None
+        # TODO: Add support to ipv6
+        #decimal128_ctx = create_decimal128_context()
+        # with decimal.localcontext(decimal128_ctx) as ctx:
+        # return Decimal128(ctx.create_decimal(str(address._ip)))
     except:
         raise ValueError(f'Invalid raw IP address: {value}')
 

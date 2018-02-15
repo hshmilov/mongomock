@@ -90,6 +90,10 @@ export const adapterStaticData = {
 	'qcore_adapter': {
 		name: 'Qcore adapter',
 		description: 'Qcore medical pumps adapter (Saphire+ 14.5)'
+	},
+	'sccm_adapter': {
+		name: 'Microsoft SCCM',
+		description: 'Microsoft System Center Configuration Manager offers different solutions for managing PCs, servers, and devices, using on-premises Configuration Manager or Microsoft Exchange.'
 	}
 }
 

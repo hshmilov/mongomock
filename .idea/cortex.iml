@@ -36,6 +36,7 @@
       <sourceFolder url="file://$MODULE_DIR$/plugins/ad-users-associator-plugin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/qcore-adapter/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/fortigate-adapter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/adapters/sccm-adapter/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/plugins/gui/src/frontend" />
     </content>
     <orderEntry type="jdk" jdkName="cortex-venv" jdkType="Python SDK" />

@@ -12,7 +12,7 @@ from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from abc import ABC, abstractmethod
 from flask import jsonify, request
 import json
-from bson import ObjectId
+from bson import ObjectId, Decimal128
 from threading import RLock, Thread, Event
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
