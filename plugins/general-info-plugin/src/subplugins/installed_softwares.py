@@ -21,7 +21,7 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
     def get_wmi_commands(self):
         return [{"type": "query", "args": ["select Vendor, Name, Version, InstallState from Win32_Product"]}]
 
-    def handle_result(self, device, executer_info, result):
+    def handle_result(self, device, executer_info, result, adapterdata_device):
 
         installed_softwares = []
         for i in result[0]:
@@ -34,6 +34,8 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
                         "Version": i['Version']
                     }
                 )
+
+                adapterdata_device.installed_softwares.append(f"{i['Vendor']}: {i['Name']}")
 
         self.plugin_base.add_data_to_device(
             (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),

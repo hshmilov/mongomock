@@ -9,12 +9,14 @@ import traceback
 import requests
 import configparser
 import os
+import threading
 import logging
 import socket
 import urllib3
 
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
+from bson import json_util
 from pymongo import MongoClient
 # bson is requirement of mongo and its not recommended to install it manually
 from bson import ObjectId
@@ -30,6 +32,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.mixins.feature import Feature
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
 from axonius.logging.logger import create_logger
+from axonius.device import Device
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -165,6 +168,7 @@ class PluginBase(Feature):
     The user request.
 
     """
+    MyDevice = None
 
     def __init__(self, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
         """ Initialize the class.
@@ -192,6 +196,13 @@ class PluginBase(Feature):
         self.plugin_name = self.config['DEFAULT']['name']
         self.plugin_unique_name = None
         self.api_key = None
+
+        # MyDevice things.
+        self._fields_set = set()  # contains an Adapter specific list of field names.
+        self._raw_fields_set = set()  # contains an Adapter specific list of raw-fields names.
+        self._last_fields_count = (0, 0)  # count of _fields_set and _raw_fields_set when performed the last save to DB
+        self._first_fields_change = True
+        self._fields_db_lock = threading.RLock()
 
         print(f"{self.plugin_name} is starting")
 
@@ -295,6 +306,34 @@ class PluginBase(Feature):
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                               self.version,
                                                                                               self.lib_version))
+
+    def _save_field_names_to_db(self):
+        """ Saves fields_set and raw_fields_set to the Adapter's DB """
+        with self._fields_db_lock:
+            last_fields_count, last_raw_fields_count = self._last_fields_count
+            if len(self._fields_set) == last_fields_count and len(self._raw_fields_set) == last_raw_fields_count:
+                return  # Optimization
+
+            fields = list(self._fields_set)  # copy
+            raw_fields = list(self._raw_fields_set)  # copy
+
+            # Upsert new fields
+            fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['fields']
+            fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
+            if self._first_fields_change:
+                fields_collection.update({'name': 'parsed'},
+                                         {'name': 'parsed', 'schema': self.MyDevice.get_fields_info()},
+                                         upsert=True)
+                self._first_fields_change = False
+
+            # Save last update count
+            self._last_fields_count = len(fields), len(raw_fields)
+
+    def _new_device(self) -> Device:
+        """ Returns a new empty device associated with this adapter. """
+        if self.MyDevice is None:
+            raise ValueError('class MyDevice(Device) class was not declared inside this Adapter class')
+        return self.MyDevice(self._fields_set, self._raw_fields_set)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -411,7 +450,8 @@ class PluginBase(Feature):
         if post_data:
             # To make it string instead of bytes
             decoded_data = post_data.decode('utf-8')
-            data = json.loads(decoded_data)
+            # object_hook is needed to unserialize specific not json-serializable things, like Datetime.
+            data = json.loads(decoded_data, object_hook=json_util.object_hook)
             return data
         else:
             return None
@@ -705,7 +745,10 @@ class PluginBase(Feature):
                     "name": name,
                     "data": data,
                     "type": type}
-        response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', data=json.dumps(tag_data))
+        # Since datetime is often passed here, and it is not serializable, we use json_util.default
+        # That automatically serializes it as a mongodb date object.
+        response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
+                                              data=json.dumps(tag_data, default=json_util.default))
         if response.status_code != 200:
             self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
@@ -713,13 +756,13 @@ class PluginBase(Feature):
         return response
 
     def add_label_to_device(self, device_identity_by_adapter, label, is_enabled=True):
-        """ A shortcut to _tag_device with tagtype "label" . if is_enabled = False, the label is grayed out."""
+        """ A shortcut to _tag_device with type "label" . if is_enabled = False, the label is grayed out."""
         return self.__tag_device(device_identity_by_adapter, label, is_enabled, "label")
 
     def add_data_to_device(self, device_identity_by_adapter, name, data):
-        """ A shortcut to _tag_device with tagtype "data" """
+        """ A shortcut to _tag_device with type "data" """
         return self.__tag_device(device_identity_by_adapter, name, data, "data")
 
-    def add_adapterdata_to_device(self, device_identity_by_adapter, name, data):
-        """ A shortcut to _tag_device with tagtype "adapterdata" """
-        return self.__tag_device(device_identity_by_adapter, name, data, "adapterdata")
+    def add_adapterdata_to_device(self, device_identity_by_adapter, data):
+        """ A shortcut to _tag_device with type "adapterdata" """
+        return self.__tag_device(device_identity_by_adapter, self.plugin_unique_name, data, "adapterdata")

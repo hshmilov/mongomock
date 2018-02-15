@@ -2,6 +2,7 @@
 A skeleton for a general info subplugin.
 """
 from abc import ABC, abstractmethod
+from axonius.device import Device
 
 
 class GeneralInfoSubplugin(ABC):
@@ -22,7 +23,7 @@ class GeneralInfoSubplugin(ABC):
         pass
 
     @abstractmethod
-    def handle_result(self, device, executer_info, result):
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
         """
         Parses the result of the wmi queries.
 
@@ -30,6 +31,7 @@ class GeneralInfoSubplugin(ABC):
         :param executer_info: an object that contains the info of the adapter that executed the query:
         {"adapter_unique_name": "the plugin unique name", "adapter_unique_id": "data.id of the adapter's device"}
         :param result: a list of objects, each one is the result (in the order given by get_wmi_commands).
+        :param adapterdata_device: a Device object, that is used for having adapterdata tags (general-info enrichment).
         :return: the caption of the last logged user (domain+username). e.g., avidor@axonius.lan
         """
         pass

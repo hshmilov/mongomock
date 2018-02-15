@@ -8,6 +8,7 @@ from axonius.plugin_base import PluginBase, add_rule
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_exception_string
+from axonius.device import Device
 from subplugins.last_user_logon import GetLastUserLogon
 from subplugins.installed_softwares import GetInstalledSoftwares
 from subplugins.basic_computer_info import GetBasicComputerInfo
@@ -19,6 +20,9 @@ SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 
 class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
+    class MyDevice(Device):
+        pass
+
     def _is_work_in_progress(self) -> bool:
 
         if self.work_lock.acquire(False):
@@ -181,14 +185,25 @@ class GeneralInfoPlugin(PluginBase, Activatable, Triggerable):
             queries_response = data["output"]["product"]
             queries_response_index = 0
 
+            # Create a new device, since these subplugins will have some generic info enrichments.
+            adapterdata_device = self._new_device()
+
             for subplugin in self.subplugins:
                 subplugin_num_queries = len(subplugin.get_wmi_commands())
                 subplugin_result = queries_response[queries_response_index:
                                                     queries_response_index + subplugin_num_queries]
-                subplugin.handle_result(device, executer_info, subplugin_result)
+                subplugin.handle_result(device, executer_info, subplugin_result, adapterdata_device)
 
                 # Update the response index.
                 queries_response_index = queries_response_index + subplugin_num_queries
+
+            # All of these plugins might have inserted new devices, lets save the device & format.
+            self.add_adapterdata_to_device(
+                (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]), adapterdata_device.to_dict())
+
+            # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
+            # Fixme: running all queries.
+            self._save_field_names_to_db()
 
         except Exception as e:
             self.logger.exception("An error occured while processing wmi result: {0}, {1}"

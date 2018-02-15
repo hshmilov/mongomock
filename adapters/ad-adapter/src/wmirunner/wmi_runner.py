@@ -211,7 +211,7 @@ def run_command(w, command_type, command_args):
         else:
             raise ValueError("command type {0} does not exist".filter(command_type))
     except Exception as e:
-        result = [{"Exception": {"value": repr(e)}}]
+        result = [{"Exception": {"value": str(e)}}]
 
     return result
 

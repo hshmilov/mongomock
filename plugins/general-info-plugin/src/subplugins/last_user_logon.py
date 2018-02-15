@@ -50,7 +50,7 @@ class GetLastUserLogon(GeneralInfoSubplugin):
             {"type": "query", "args": ["select SID,Caption from Win32_UserAccount"]}
         ]
 
-    def handle_result(self, device, executer_info, result):
+    def handle_result(self, device, executer_info, result, adapterdata_device):
         internal_axon_id = device['internal_axon_id']
         clients_used = [p['client_used'] for p in device['adapters']]
         self.logger.info(f"The clients used for {internal_axon_id} are {clients_used}")
@@ -117,33 +117,41 @@ class GetLastUserLogon(GeneralInfoSubplugin):
             # This is a string in a special format, we need to parse it.
             last_use_time = wmi_date_to_datetime(profile['LastUseTime'])
             if last_use_time is not None:
-                last_used_time_arr.append({"sid": sid, "lastusetime": last_use_time})
+                last_used_time_arr.append(
+                    {"Sid": sid,
+                     "User": sids_to_users[sid],
+                     "Last Use": last_use_time})
 
         # Now sort the array.
-        last_used_time_arr = sorted(last_used_time_arr, key=lambda k: k["lastusetime"], reverse=True)
+        last_used_time_arr = sorted(last_used_time_arr, key=lambda k: k["Last Use"], reverse=True)
 
-        # Now we have a sorted list of sid's and lastusetime, and we can get the caption by sids_to_users.
+        # Update our adapterdata_device.
+        for u in last_used_time_arr:
+            adapterdata_device.add_users(username=u["User"], last_use_date=u["Last Use"])
+
+        # Now we have a sorted list of sid's, users, and lastusetime.
         # If we have at least one user, lets update the db.
         if len(last_used_time_arr) > 0:
             try:
-                last_used_user = sids_to_users[last_used_time_arr[0]["sid"]]
+                last_used_user = last_used_time_arr[0]["User"]
                 self.logger.info("Found last used user for axon_id {0}. sid: {0}, caption: {1}, lastusedtime: {2}"
                                  .format(internal_axon_id,
-                                         last_used_time_arr[0]["sid"],
+                                         last_used_time_arr[0]["Sid"],
                                          last_used_user,
-                                         last_used_time_arr[0]["lastusetime"]))
+                                         last_used_time_arr[0]["Last Use"]))
 
                 # Add data to that device.
-
+                adapterdata_device.last_logged_user = last_used_user
                 self.plugin_base.add_data_to_device(
-                    (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]), "Last User Logon", last_used_user)
+                    (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                    "Known Users Last Logins", last_used_time_arr)
 
                 return True
             except KeyError:
                 self.logger.info("No translation between sid to caption! axon_id {0}. sid: {0}, lastusedtime: {1}"
                                  .format(internal_axon_id,
-                                         last_used_time_arr[0]["sid"],
-                                         last_used_time_arr[0]["lastusetime"]))
+                                         last_used_time_arr[0]["Sid"],
+                                         last_used_time_arr[0]["Last Use"]))
 
         else:
             self.logger.error("Did not find any users. That is very weird and should not happen.")

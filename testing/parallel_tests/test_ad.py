@@ -93,7 +93,7 @@ class TestAdAdapter(AdapterTestBase):
 
         def has_ad_users_association_tag():
             #  general_info_fixture.associate()
-            tags = list(self.axonius_system.get_devices_with_condition({"tags.name": "Last User Logon"}))
+            tags = list(self.axonius_system.get_devices_with_condition({"tags.name": "Known Users Last Logins"}))
             assert len(tags) > 0
 
         try_until_not_thrown(30, 5, has_ad_users_association_tag)

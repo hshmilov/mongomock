@@ -16,6 +16,8 @@ class DeviceOS(SmartJsonClass):
     type = Field(str, 'OS', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android'])
     distribution = Field(str, 'OS Distribution')
     bitness = Field(int, 'OS Bitness', enum=[32, 64])
+    build = Field(int, 'OS Build')  # aka patch level
+    install_date = Field(datetime.datetime, "OS Install Date")
 
     major = Field(str, 'OS Major')
     minor = Field(str, 'OS Minor')
@@ -29,6 +31,51 @@ class NetworkInterface(SmartJsonClass):
                         converter=format_ip_raw)
 
 
+class DeviceHD(SmartJsonClass):
+    """ A definition for hard drives on that device. On windows, that would be a drive.
+    On linux and mac, we need to think what it is (not sure its mounts...) """
+
+    path = Field(str, "HD Path")
+    total_size = Field(float, "HD Size (mb)")
+    free_size = Field(float, "HD Free Size (mb)")
+    is_encrypted = Field(bool, "HD Encrypted")
+    file_system = Field(str, "HD Filesystem")
+
+
+class DeviceCPU(SmartJsonClass):
+    """ A definition for cpu's """
+
+    name = Field(str, "CPU Description")
+    bitness = Field(int, "CPU Bitness", enum=[32, 64])
+    cores = Field(int, "CPU Cores")
+    load_percentage = Field(int, "CPU Load Percentage")
+    architecture = Field(str, "CPU Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64"])
+    ghz = Field(float, "CPU Clockspeed (GHZ)")
+
+
+class DeviceBattery(SmartJsonClass):
+    """ A definition for a battery"""
+
+    percentage = Field(int, "Battery Percentage")
+    status = Field(str, "Battery Status", enum=["Not Charging", "Connected to AC", "Fully Charged", "Low", "Critical",
+                                                "Charging", "Charging and High", "Charging and Low",
+                                                "Charging and Critical", "Undefined", "Partially Charged"])
+
+
+class DeviceUser(SmartJsonClass):
+    """ A definition for users known by this device"""
+
+    username = Field(str, "Known User")
+    last_use_date = Field(datetime.datetime, "Known User Last Use Date")
+
+
+class DeviceSecurityPatch(SmartJsonClass):
+    """ A definition for installed security patch on this device"""
+
+    security_patch_id = Field(str, "Security Patch Name")
+    installed_on = Field(datetime.datetime, "Security Patch Installed On")
+
+
 class Device(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
@@ -39,6 +86,31 @@ class Device(SmartJsonClass):
     last_seen = Field(datetime.datetime, 'Last Seen', json_format=JsonStringFormat.date_time)
     network_interfaces = ListField(NetworkInterface, 'Network Interfaces')
     scanner = Field(bool, 'Scanner')
+    boot_time = Field(datetime.datetime, 'Boot Time', json_format=JsonStringFormat.date_time)
+    time_zone = Field(str, 'Time Zone')
+    last_logged_user = Field(str, "Last Logged User")
+    current_logged_user = Field(str, "Currently Logged User")
+    part_of_domain = Field(bool, "Part Of Domain")
+    domain = Field(str, "Domain")
+    bios_version = Field(str, "Bios Version")
+    bios_serial = Field(str, "Bios Serial")
+    total_physical_memory = Field(float, "Total RAM (gb)")
+    free_physical_memory = Field(float, "Free RAM (gb)")
+    physical_memory_percentage = Field(float, "RAM Usage (%)")
+    number_of_processes = Field(int, "Number Of Processes")
+    total_number_of_physical_processors = Field(int, "Total Number Of Physical Processors")
+    total_number_of_logical_Processors = Field(int, "Total Number Of Logical Processors")
+    installed_softwares = ListField(str, "Installed Softwares")
+    device_manufacturer = Field(str, "Device Manufacturer")
+    device_model = Field(str, "Device Model")
+    device_model_family = Field(str, "Device Model Family")
+    device_serial = Field(str, "Device Manufacturer Serial")
+    hard_drives = ListField(DeviceHD, "Hard Drives")
+    cpus = ListField(DeviceCPU, "CPUs")
+    battery = Field(DeviceBattery, "Battery")
+    users = ListField(DeviceUser, "Users")
+    security_patches = ListField(DeviceSecurityPatch, "Hotfixes")
+
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
     def __init__(self, adapter_fields: typing.MutableSet[str], adapter_raw_fields: typing.MutableSet[str]):
@@ -105,6 +177,18 @@ class Device(SmartJsonClass):
         if os_dict is None:
             return
         self.os = DeviceOS(**os_dict)
+
+    def add_hd(self, **kwargs):
+        self.hard_drives.append(DeviceHD(**kwargs))
+
+    def add_cpu(self, **kwargs):
+        self.cpus.append(DeviceCPU(**kwargs))
+
+    def add_users(self, **kwargs):
+        self.users.append(DeviceUser(**kwargs))
+
+    def add_security_patch(self, **kwargs):
+        self.security_patches.append(DeviceSecurityPatch(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = Device.network_interfaces.name

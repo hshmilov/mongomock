@@ -60,9 +60,11 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         # An executor dedicated to inserting devices to the DB
         self.__device_inserter = ThreadPoolExecutor(max_workers=200)
 
-        # Open connection to the adapters db
+        # Setting up db
         self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
+        self.insert_views()
         self.devices_db_actual_collection = self.devices_db_connection['devices_db']
+        self.devices_db_view = self.devices_db_connection['devices_db_view']
 
         # Scheduler for querying core for online adapters and querying the adapters themselves
         self._online_adapters_scheduler = None
@@ -73,6 +75,46 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
         # Starting the managing thread
         # No need to start if needed. We always start it.
         self.start_activatable()
+
+    def insert_views(self):
+        """
+        Insert useful views.
+        :return: None
+        """
+
+        # The following creates a view that has all adapters and tags
+        # of type "adapterdata" inside one (unsorted!) array.
+
+        try:
+            self.devices_db_connection.command({
+                "create": "devices_db_view",
+                "viewOn": "devices_db",
+                "pipeline": [
+                    {'$project':
+                     {'data':
+                          {'$concatArrays':
+                           ['$adapters',
+                            {'$filter':
+                             {'input': '$tags', 'as': 'tag',
+                              'cond': {'$eq': ['$$tag.type', 'adapterdata']}
+                              }
+                             }]
+                           },
+                          'adapters': '$adapters.plugin_name',
+                          'labels':
+                              {'$filter':
+                               {'input': '$tags', 'as': 'tag',
+                                'cond': {'$eq': ['$$tag.type', 'label']}
+                                }
+                               }
+                      }
+                     },
+                    {'$project': {'labels': '$labels.name', 'data': 1, 'adapters': 1}}
+                ]
+            })
+        except pymongo.errors.OperationFailure as e:
+            if "already exists" not in str(e):
+                raise
 
     @property
     def devices_db(self):

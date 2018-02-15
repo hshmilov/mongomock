@@ -70,7 +70,6 @@ class AdapterBase(PluginBase, Feature, ABC):
         "Available Device" - A device that the adapter source knows and reports its existence.
                              Doesn't necessary means that the device is turned on or connected.
     """
-    MyDevice = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,43 +91,9 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
 
-        self._fields_set = set()  # contains an Adapter specific list of field names.
-        self._raw_fields_set = set()  # contains an Adapter specific list of raw-fields names.
-        self._last_fields_count = (0, 0)  # count of _fields_set and _raw_fields_set when performed the last save to DB
-        self._first_fields_change = True
-        self._fields_db_lock = RLock()
-
     @classmethod
     def specific_supported_features(cls) -> list:
         return ["Adapter"]
-
-    def _save_field_names_to_db(self):
-        """ Saves fields_set and raw_fields_set to the Adapter's DB """
-        with self._fields_db_lock:
-            last_fields_count, last_raw_fields_count = self._last_fields_count
-            if len(self._fields_set) == last_fields_count and len(self._raw_fields_set) == last_raw_fields_count:
-                return  # Optimization
-
-            fields = list(self._fields_set)  # copy
-            raw_fields = list(self._raw_fields_set)  # copy
-
-            # Upsert new fields
-            fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['fields']
-            fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
-            if self._first_fields_change:
-                fields_collection.update({'name': 'parsed'},
-                                         {'name': 'parsed', 'schema': self.MyDevice.get_fields_info()},
-                                         upsert=True)
-                self._first_fields_change = False
-
-            # Save last update count
-            self._last_fields_count = len(fields), len(raw_fields)
-
-    def _new_device(self) -> Device:
-        """ Returns a new empty device associated with this adapter. """
-        if self.MyDevice is None:
-            raise ValueError('class MyDevice(Device) class was not declared inside this Adapter class')
-        return self.MyDevice(self._fields_set, self._raw_fields_set)
 
     def _send_reset_to_ec(self):
         """ Function for notifying the EC that this Adapted has been reset.
