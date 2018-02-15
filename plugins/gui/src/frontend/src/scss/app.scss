@@ -217,7 +217,8 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   color: $color-theme-light;
 }
 
-.tag-item {
+.tag {
+  display: inline;
   border: 1px solid $border-color;
   border-right: 0;
   padding: 2px 8px;

@@ -120,7 +120,7 @@
             	return adapterStaticData[pluginName].name
             },
             removeTag(tag) {
-            	this.deleteDeviceTags({devices: [this.deviceId], tags: [tag]})
+            	this.deleteDeviceTags({devices: [this.deviceId], labels: [tag]})
             }
         },
         created() {

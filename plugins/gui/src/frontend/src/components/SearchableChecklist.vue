@@ -4,8 +4,8 @@
         <search-input v-if="searchable" v-model="searchValue" ref="searchInput"></search-input>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
             <div class="checklist-list">
-                <checkbox v-for="item, index in requestedItems" :key="index" :label="prepareLabel(item.name)"
-                          v-model="itemSelection[item.path]" @change="updateSelected"></checkbox>
+                <checkbox v-for="item, index in requestedItems" :key="index" :label="prepareLabel(item.title)"
+                          v-model="itemSelection[item.name]" @change="updateSelected"></checkbox>
                 <checkbox v-if="extendable && searchValue && isNew(searchValue)" :label="`${searchValue} (New tag)`"
                           class="checklist-new" v-model="searchValueSelected" @change="createSelected"></checkbox>
             </div>
@@ -25,20 +25,20 @@
         computed: {
             requestedItems() {
                 let items = this.items.map((item) => {
-                	if (item.path) return item
-                    return { name: item, path: item }
+                	if (item.name) return item
+                    return { name: item, title: item }
                 }).filter((item) => {
                     if (this.searchValue === '') { return true }
                     return item.name.toLowerCase().indexOf(this.searchValue.toLowerCase()) > -1
                 })
                 this.createdItems.forEach((item) => {
-                	items.push({name: item, path: item})
+                	items.push({name: item, title: item})
                 })
                 return items
             },
-            totalItemPaths() {
+            totalItemNames() {
             	return this.items.map((item) => {
-            		return item.path
+            		return item.name
                 })
             }
         },
@@ -74,7 +74,7 @@
         		return `${label} (New tag)`
             },
             isNew(item) {
-        		return (this.totalItemPaths.indexOf(item) === -1) && (this.createdItems.indexOf(item) === -1)
+        		return (this.totalItemNames.indexOf(item) === -1) && (this.createdItems.indexOf(item) === -1)
             },
             updateSelected() {
                 let selectedItems = Object.keys(this.itemSelection).filter((id) => {

@@ -9,7 +9,7 @@
                             <checkbox v-if="value !== undefined" v-model="selectAllRecords"
                                       @change="updateSelectedAll()"></checkbox>
                         </th>
-                        <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
+                        <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.title }}</th>
                         <th class="table-head" v-if="actions !== undefined"></th>
                     </tr>
                 </thead>
@@ -23,9 +23,13 @@
                             <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]"
                                       @change="updateSelected"></checkbox>
                         </td>
-                        <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
-                                            v-if="!field.hidden" :type="field.type" :value="record[field.path]">
-                        </generic-table-cell>
+                        <td class="table-row-data" v-for="field,index in fields" :key="index">
+                            <component :is="`x-${field.type}-view`" :schema="field" :value="getData(record, field.name)"
+                                       :limit="2"></component>
+                        </td>
+                        <!--generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
+                                            v-if="!field.hidden" :type="field.type" :value="record[field.name]">
+                        </generic-table-cell-->
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                             <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
                                 <i v-if="action.triggerFont" :class="action.triggerFont"></i>
@@ -66,13 +70,12 @@
 	import xNumberView from '../../components/controls/numerical/NumberView.vue'
 	import xIntegerView from '../../components/controls/numerical/IntegerView.vue'
 	import xBoolView from '../../components/controls/boolean/BooleanView.vue'
-	import xFileView from '../../components/controls/array/FileView.vue'
-    import xArrayView from '../../components/controls/array/ArrayView.vue'
+    import xArrayView from '../../components/controls/array/ArrayInlineView.vue'
 
 	export default {
-		name: 'paginated-table',
+		name: 'x-schema-table',
 		components: { Checkbox, GenericTableCell, PulseLoader, VueScrollbar,
-            xStringView, xNumberView, xIntegerView, xBoolView, xFileView, xArrayView},
+            xStringView, xNumberView, xIntegerView, xBoolView, xArrayView},
 		props: {
 			'fetching': {}, 'data': {}, 'error': {}, 'fetchData': {}, 'filter': {}, 'value': {},
             'actions': {}, 'fields': {}, 'idField': {default: 'id'}, 'selectedPage': {}
@@ -88,7 +91,7 @@
 				return this.fields.filter(function (field) {
 					return !field.default
 				}).map(function (field) {
-					return field.path
+					return field.name
 				})
 			},
             viewFields() {
@@ -114,6 +117,9 @@
 				if (!oldFields.length || newFields.length <= oldFields.length) { return }
 				this.restartData()
 			},
+			filter: function (newFilter) {
+				this.restartData()
+			},
 			fetching: function (newFetching) {
 				if (newFetching) {
 					this.fetchedPages++
@@ -136,6 +142,26 @@
 			}
 		},
 		methods: {
+			getData(data, path) {
+				if (!data) return ''
+				if (Array.isArray(data)) {
+					let children = new Set()
+					data.forEach((item) => {
+						let child = this.getData(item, path)
+						if (Array.isArray(child)) {
+							children = new Set([...children, ...child])
+						} else {
+							children.add(child)
+						}
+					})
+					return Array.from(children)
+				}
+				let firstDot = path.indexOf('.')
+				if (firstDot === -1) {
+					return data[path]
+				}
+				return this.getData(data[path.substring(0, firstDot)], path.substring(firstDot + 1))
+			},
 			updateSelected () {
 				let selectedRecords = Object.keys(this.recordSelection).filter((id) => {
 					return this.recordSelection[id]

@@ -289,11 +289,12 @@ class BackendPlugin(PluginBase):
         """
         all_labels = set()
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
+            devices_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
             if request.method == 'GET':
-                for current_device in client_collection.find({"tags.type": "label"}, projection={"tags": 1}):
+                for current_device in devices_collection.find({"tags.type": "label"}, projection={"tags": 1}):
                     for current_label in current_device['tags']:
-                        all_labels.add(current_label['name'])
+                        if current_label['type'] == 'label' and current_label['data'] == True:
+                            all_labels.add(current_label['name'])
                 return jsonify(all_labels)
 
             # Now handling POST and DELETE - they determine if the label is an added or removed one
@@ -305,7 +306,7 @@ class BackendPlugin(PluginBase):
 
             responses = []
             for device_id in devices_and_labels['devices']:
-                device = client_collection.find_one({'internal_axon_id': device_id})
+                device = devices_collection.find_one({'internal_axon_id': device_id})
 
                 # We tag that device with a correlation to its first adapter. In case of a split,
                 # We should know this tag is a "gui" tag since the tag issuer ("tags.plugin_name") is "gui".

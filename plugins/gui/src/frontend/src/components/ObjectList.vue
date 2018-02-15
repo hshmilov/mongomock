@@ -7,7 +7,7 @@
                 <img :src="`/src/assets/images/logos/${item}.png`"
                      :class="`${vertical? 'img-lg' : 'img-md'} image-list-item`">
             </template>
-            <template v-else-if="type === 'tag-list'"><div class="tag-item">{{item}}</div></template>
+            <template v-else-if="type === 'tag-list'"><div class="tag">{{item}}</div></template>
             <template v-else><span>{{(index? ', ': '') + item}}</span></template>
             <div v-if="names">{{ names[item] }}</div>
         </div>
@@ -47,7 +47,7 @@
             vertical-align: middle;
             line-height: 36px;
         }
-        .tag-item {
+        .tag {
             flex: 0 1 auto;
         }
         .flex-item {

@@ -27,7 +27,7 @@ class JsonStringFormat(Enum):
 class Field(object):
     """ A single field class, holds information regarding python type checking and json-serialization """
 
-    def __init__(self, field_type, description=None, converter=None, json_format: JsonStringFormat=None, min_value=None,
+    def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonStringFormat=None, min_value=None,
                  max_value=None, pattern=None, enum=None):
         """
         :param field_type: The python type of the field, must be provided.
@@ -40,6 +40,7 @@ class Field(object):
         :param enum: if provided, will be checked that the values are valid and will be returned as format json-field
         """
         self._type = field_type
+        self._title = title
         self._description = description
         if converter is not None:
             assert callable(converter)
@@ -66,6 +67,10 @@ class Field(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def title(self):
+        return self._title
 
     @property
     def description(self):

@@ -1,23 +1,26 @@
 <template>
-    <div>{{ formattedData }}</div>
+    <img :src="`/src/assets/images/logos/${value}.png`" height="24px"
+         v-if="schema.format && schema.format === 'logo'">
+    <div :class="{tag: schema.format && schema.format === 'tag'}" :title="formattedData"
+         v-else>{{ formattedData }}</div>
 </template>
 
 <script>
 	export default {
 		name: 'x-string-view',
         props: ['schema', 'value'],
-        data() {
-			return {
-				data: this.value
-            }
-        },
         computed: {
 			formattedData() {
 				if (this.schema.format === 'date-time') {
-                    let dateTime = new Date(this.data)
+                    let dateTime = new Date(this.value)
+                    if (dateTime == 'Invalid Date') return this.value
+
                     return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
                 }
-                return this.data
+                if (this.schema.format === 'ip' && Array.isArray(this.value)) {
+					return this.value.join(', ')
+                }
+                return this.value
             }
         }
 	}

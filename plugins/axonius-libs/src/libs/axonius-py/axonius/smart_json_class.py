@@ -113,7 +113,11 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
         """ helper recursive function for get_fields_info """
         for field in cls.fields_info:
             assert isinstance(field, Field)
-            item = {'name': field.name, 'title': field.description}
+            item = {'name': field.name}
+            if field.title:
+                item['title'] = field.title
+            if field.description:
+                item['description'] = field.description
             if issubclass(field.type, SmartJsonClass):
                 field_type = list(field.type._get_fields_info())
                 if isinstance(field, ListField):

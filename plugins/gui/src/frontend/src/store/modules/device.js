@@ -17,7 +17,6 @@ export const CREATE_DEVICE_TAGS = 'CREATE_DEVICE_TAGS'
 export const ADD_DEVICE_TAGS = 'ADD_DEVICE_TAGS'
 export const DELETE_DEVICE_TAGS = 'DELETE_DEVICE_TAGS'
 export const REMOVE_DEVICE_TAGS = 'REMOVE_DEVICE_TAGS'
-export const SELECT_FIELDS = 'SELECT_FIELDS'
 
 
 export const mergeDeviceData = (adapters, requiredFields) => {
@@ -47,7 +46,7 @@ export const device = {
 		/* All fields parsed in the system - at least one adapter parses the field */
 		deviceFields: {
 			fetching: false, data: {
-				'name': 'data',
+				'name': 'adapters.data',
 				'items': [
 					{
 						'title': 'Axonius Name',
@@ -167,50 +166,6 @@ export const device = {
 			}, error: ''
 		},
 
-		/* Configurations specific for devices */
-		fields: {
-			common: [
-				{path: 'internal_axon_id', name: '', hidden: true, selected: true},
-				{
-					path: 'adapters.plugin_name',
-					name: 'Adapters',
-					selected: true,
-					type: 'image-list',
-					control: 'multiple-select',
-					options: []
-				},
-				{path: 'adapters.data.pretty_id', name: 'Axonius Name', selected: false, control: 'text'},
-				{path: 'adapters.data.hostname', name: 'Host Name', selected: true, control: 'text'},
-				{path: 'adapters.data.name', name: 'Asset Name', selected: true, control: 'text'},
-				{
-					path: 'adapters.data.network_interfaces.ips',
-					name: 'IPs',
-					selected: true,
-					type: 'list',
-					control: 'text'
-				},
-				{
-					path: 'adapters.data.network_interfaces.mac',
-					name: 'MACs',
-					selected: false,
-					type: 'list',
-					control: 'text'
-				},
-				{path: 'adapters.data.os.type', name: 'OS', selected: true, control: 'text'},
-				{path: 'adapters.data.os.distribution', name: 'OS Version', selected: false, control: 'text'},
-				{path: 'adapters.data.os.bitness', name: 'OS Bitness', selected: false, control: 'text'},
-				{
-					path: 'tags.name',
-					name: 'Tags',
-					selected: true,
-					type: 'tag-list',
-					control: 'multiple-select',
-					options: []
-				},
-				{path: 'tags.data', selected: true, hidden: true}
-			]
-		},
-
 		tagList: {fetching: false, data: [], error: ''},
 	},
 	getters: {},
@@ -225,10 +180,12 @@ export const device = {
 			if (payload.data) {
 				let processedData = []
 				payload.data.forEach((device) => {
+					if (!device.tags) device.tags = []
+
 					processedData.push({
 						id: device['internal_axon_id'],
 						adapters: {
-							data: mergeDeviceData(device.adapters, state.deviceFields.data.required),
+							data: merge.all(device.adapters).data,
 							plugin_name: device.adapters.map((adapter) => {
 								return adapter['plugin_name']
 							})
@@ -332,11 +289,6 @@ export const device = {
 				}
 			}
 		},
-		[ SELECT_FIELDS ] (state, payload) {
-			state.fields.common.forEach((field) => {
-				field.selected = payload.indexOf(field.path) > -1
-			})
-		},
 		[ SELECT_DEVICE_PAGE ] (state, pageNumber) {
 			state.deviceSelectedPage = pageNumber
 		}
@@ -350,8 +302,7 @@ export const device = {
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
 			if (payload.fields && payload.fields.length) {
-				commit(SELECT_FIELDS, payload.fields)
-				param += `&fields=${payload.fields}`
+				param += `&fields=internal_axon_id,tags.type,tags.data,${payload.fields}`
 			}
 			if (payload.filter && payload.filter.length) {
 				param += `&filter=${payload.filter}`
