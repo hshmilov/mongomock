@@ -4,7 +4,7 @@
         <search-input v-if="searchable" v-model="searchValue" ref="searchInput"></search-input>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
             <div class="checklist-list">
-                <template v-for="item, index in requestedItems">
+                <template v-for="item, index in filteredItems">
                     <checkbox v-if="item.name" :key="index" :label="prepareLabel(item.title)"
                               v-model="itemSelection[item.name]" @change="updateSelected"></checkbox>
                     <div v-else>{{ item.title }}</div>
@@ -26,14 +26,17 @@
         components: { VueScrollbar, SearchInput, Checkbox },
         props: [ 'title', 'searchable', 'extendable', 'items', 'value' ],
         computed: {
-            requestedItems() {
+            totalItems() {
                 return this.items.map((item) => {
                 	if (item.name || item.title) return item
                     return { name: item, title: item }
-                }).filter((item) => {
-                    if (this.searchValue === '') { return true }
-                    return item.name.toLowerCase().indexOf(this.searchValue.toLowerCase()) > -1
                 })
+            },
+            filteredItems() {
+            	return this.totalItems.filter((item) => {
+					if (this.searchValue === '') { return true }
+					return item.title.toLowerCase().includes(this.searchValue.toLowerCase())
+				})
             },
             totalItemNames() {
             	return this.items.map((item) => {

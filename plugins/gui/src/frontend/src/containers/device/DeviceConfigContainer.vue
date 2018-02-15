@@ -22,7 +22,7 @@
             <div class="col-8">
                 <named-section title="Adapter Specific Fields" icon-name="action/add_field">
                     <tabs>
-                        <tab v-for="adapter, i in sortedAdapters" :id="adapter.data.id" :key="adapter.data.id"
+                        <tab v-for="adapter, i in sortedAdapters" :id="adapter.data.id+adapter.plugin_unique_name" :key="adapter.data.id+adapter.plugin_unique_name"
                              :selected="!i" :title="getAdapterName(adapter.plugin_name)"
                              :logo="adapter.plugin_name" :outdated="adapter.outdated">
                             <div class="d-flex tab-header">
