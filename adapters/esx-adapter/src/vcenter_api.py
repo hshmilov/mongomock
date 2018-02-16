@@ -12,7 +12,7 @@ from namedlist import namedlist
 from pyVmomi import vim
 
 vCenterNode = namedlist(
-    'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None)])
+    'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None), ('Hardware', None)])
 
 
 def _is_vmomi_primitive(v):
@@ -45,7 +45,7 @@ def rawify_vcenter_data(folder):
     :return: dict
     """
     return vCenterNode(folder.Name, folder.Type, [rawify_vcenter_data(child) for child in folder.Children],
-                       folder.Details)._asdict()
+                       folder.Details, folder.Hardware)._asdict()
 
 
 def _should_retry_fetching(exception):
@@ -53,7 +53,7 @@ def _should_retry_fetching(exception):
 
 
 class vCenterApi():
-    def __init__(self, host, user, password, verify_ssl=False):
+    def __init__(self, logger, host, user, password, verify_ssl=False):
         """
         Ctor
         :param str host: ip or dns of the vcenter server
@@ -83,7 +83,10 @@ class vCenterApi():
         Parses networking from vm state
         :return: iter(dict)
         """
-        guest_net = vm.guest.net
+        guest = getattr(vm, 'guest', None)
+        if not guest:
+            return iter([])
+        guest_net = guest.net
         if guest_net is None:
             return iter([])
         for network in guest_net:
@@ -94,6 +97,63 @@ class vCenterApi():
                 primitives['ipAddresses'] = [_take_just_primitives(addr.__dict__) for addr in
                                              network.ipConfig.ipAddress]
             yield primitives
+
+    def _parse_host(self, host):
+        """
+        Parses a ESX host
+        :param host: of type pyVmomi.VmomiSupport.vim.ComputeResource
+        :return:
+        """
+        values_to_take = ['totalCpu', 'totalMemory', 'numCpuCores', 'numCpuThreads', 'effectiveCpu', 'effectiveMemory',
+                          'numHosts', 'numEffectiveHosts', 'overallStatus']
+        details = {k: getattr(host.summary, k, None) for k in values_to_take}
+        parsed_host = {}
+        if len(host.host) == 1:
+            parsed_host = self._parse_vm_host(host.host[0])
+        else:
+            self.logger.warn(f"Amount of hosts is {len(host.host)}, which is unexpected")
+        return vCenterNode(Name=host.name, Type='ESXHost', Details=parsed_host, Hardware=details)
+
+    def _parse_vm_host(self, vm_root):
+        """
+        Parse a vm host into a dict
+        :param vm_root:
+        :return:
+        """
+        # let's take what we can and return it
+        summary = vm_root.summary
+        attributes_from_summary = ['quickStats', 'guest', 'config', 'storage', 'runtime', 'overallStatus',
+                                   'customValue', 'config']
+        details = {}
+        for k in attributes_from_summary:
+            taken = getattr(summary, k, None)
+            if taken:
+                details[k] = _take_just_primitives(taken.__dict__)
+
+        runtime = getattr(summary, 'runtime', None)
+        if runtime:
+            esx_host = getattr(runtime, 'host', None)
+            if esx_host:
+                esx_host_name = getattr(esx_host, 'name', None)
+                if esx_host_name:
+                    details['esx_host_name'] = esx_host_name
+
+        config = getattr(vm_root, 'config', None)
+        if config:
+            hardware = getattr(config, 'hardware', None)
+            if hardware:
+                details['hardware'] = _take_just_primitives(hardware.__dict__)
+                devices = getattr(hardware, 'device', [])
+                details['hardware']['devices'] = []
+                for device in devices:
+                    device_raw = _take_just_primitives(device.__dict__)
+                    device_info = getattr(device, 'deviceInfo', None)
+                    if device_info:
+                        device_raw['deviceInfo'] = _take_just_primitives(device_info.__dict__)
+                    details['hardware']['devices'].append(device_raw)
+
+        details['networking'] = list(self._parse_networking(vm_root))
+        return details
 
     def _parse_vm(self, vm_root, depth=1):
         """
@@ -111,7 +171,8 @@ class vCenterApi():
         if hasattr(vm_root, 'vmFolder'):
             vm_list = vm_root.vmFolder.childEntity
             children = [self._parse_vm(c, depth + 1) for c in vm_list]
-            return vCenterNode(Name=vm_root.name, Type="Datacenter", Children=children)
+            hosts = [self._parse_host(c) for c in vm_root.hostFolder.childEntity]
+            return vCenterNode(Name=vm_root.name, Type="Datacenter", Children=children + hosts)
 
         # if this is a group it will have children. if it does, recurse into them
         # and then return
@@ -121,15 +182,8 @@ class vCenterApi():
             return vCenterNode(Name=vm_root.name, Type="Folder", Children=children)
 
         # otherwise, we're dealing with a machine
-        # let's take what we can and return it
         summary = vm_root.summary
-        attributes_from_summary = ['config', 'quickStats', 'guest', 'config', 'storage', 'runtime', 'overallStatus',
-                                   'customValue']
-        details = {k: _take_just_primitives(summary.__getattribute__(
-            k).__dict__) for k in attributes_from_summary}
-        details['networking'] = list(self._parse_networking(vm_root))
-
-        return vCenterNode(Name=summary.config.name, Type="Machine", Details=details)
+        return vCenterNode(Name=summary.config.name, Type="Machine", Details=self._parse_vm_host(vm_root))
 
     @retry(stop_max_attempt_number=3, retry_on_exception=_should_retry_fetching)
     def get_all_vms(self):
