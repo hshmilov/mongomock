@@ -5,9 +5,10 @@ Currently, allows you to view AWS EC2 instances you possess.
 
 __author__ = "Mark Segal"
 
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.device import Device
 from axonius.adapter_base import AdapterBase, DeviceRunningState
+from axonius.smart_json_class import SmartJsonClass
 import axonius.adapter_exceptions
 import boto3
 import re
@@ -53,10 +54,36 @@ def _describe_images_from_client_by_id(client, amis):
     return {image['ImageId']: image for image in described_images['Images']}
 
 
-class AWSAdapter(AdapterBase):
+def _describe_vpcs_from_client(client):
+    """
+    Described VPCS's from specific client
 
+    :param client: the client (boto3.client('ec2'))
+    :return dict: vpc-id -> vpc
+    """
+    described_images = client.describe_vpcs()
+
+    # make a dictionary from ami key to the value
+    return {vpc['VpcId']: vpc for vpc in described_images['Vpcs']}
+
+
+class AWSTagKeyValue(SmartJsonClass):
+    """ A definition for a key value field"""
+    key = Field(str, "AWS Tag Key")
+    value = Field(str, "AWS Tag Value")
+
+
+class AWSAdapter(AdapterBase):
     class MyDevice(Device):
         power_state = Field(DeviceRunningState, 'Power state')
+        aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
+        instance_type = Field(str, "AWS EC2 Instance Type")
+        key_name = Field(str, "AWS EC2 Key Name")
+        vpc_id = Field(str, "AWS EC2 VPC Id")
+        vpc_name = Field(str, "AWS EC2 VPC Name")
+
+        def add_aws_ec2_tag(self, **kwargs):
+            self.aws_tags.append(AWSTagKeyValue(**kwargs))
 
     def __init__(self, *args, **kwargs):
         """
@@ -120,12 +147,23 @@ class AWSAdapter(AdapterBase):
                 for instance in reservation['Instances']:
                     amis.add(instance['ImageId'])
 
-            described_images = _describe_images_from_client_by_id(client_data, amis)
+            try:
+                described_images = _describe_images_from_client_by_id(client_data, amis)
+            except:
+                described_images = {}
+                self.logger.exception("Couldn't describe aws images")
 
-            # add image information to each instance
+            try:
+                described_vpcs = _describe_vpcs_from_client(client_data)
+            except:
+                described_vpcs = {}
+                self.logger.exception("Couldn't describe aws vpcs")
+
+            # add image and vpc information to each instance
             for reservation in instances['Reservations']:
                 for instance in reservation['Instances']:
                     instance['DescribedImage'] = described_images.get(instance['ImageId'])
+                    instance['VPC'] = described_vpcs.get(instance.get('VpcId'))
 
             return instances
         except (botocore.exceptions.NoCredentialsError, botocore.exceptions.PartialCredentialsError,
@@ -175,8 +213,18 @@ class AWSAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for reservation in devices_raw_data.get('Reservations', []):
             for device_raw in reservation.get('Instances', []):
-                tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                 device = self._new_device()
+                tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
+                for key, value in tags_dict.items():
+                    device.add_aws_ec2_tag(key=key, value=value)
+                device.instance_type = device_raw['InstanceType']
+                device.key_name = device_raw['KeyName']
+                if device_raw.get('VpcId') is not None:
+                    device.vpc_id = device_raw['VpcId']
+                if device_raw.get("VPC") is not None:
+                    vpc_tags_dict = {i['Key']: i['Value'] for i in device_raw['VPC'].get('Tags', {})}
+                    if vpc_tags_dict.get('Name') is not None:
+                        device.vpc_name = vpc_tags_dict.get('Name')
                 device.name = tags_dict.get('Name', '')
                 device.figure_os(device_raw['DescribedImage'].get('Description', '')
                                  if device_raw['DescribedImage'] is not None

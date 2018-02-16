@@ -5,6 +5,7 @@ __author__ = "Ofir Yefet"
 from axonius.consts.adapter_consts import DNSResolvableDevice, DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.device import Device, NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
 from axonius.devices.dns_resolvable import DNSResolveStatus
+from axonius.fields import ListField
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import add_rule
@@ -37,7 +38,7 @@ class ActiveDirectoryAdapter(AdapterBase):
     """
 
     class MyDevice(Device, DNSResolvableDevice):
-        pass
+        ad_organizational_unit = ListField(str, "Active Directory Organizational Unit")
 
     # Functions
     def __init__(self, **kwargs):
@@ -295,6 +296,8 @@ class ActiveDirectoryAdapter(AdapterBase):
             device.last_seen = last_seen
             device.dns_resolve_status = DNSResolveStatus.Pending
             device.id = device_raw['distinguishedName']
+            for ou in [ou[3:] for ou in device_raw['distinguishedName'].split(",") if ou.startswith("OU=")]:
+                device.ad_organizational_unit.append(ou)
             device.set_raw(device_raw)
 
             device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])

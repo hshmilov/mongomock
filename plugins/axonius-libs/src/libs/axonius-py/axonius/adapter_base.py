@@ -158,7 +158,6 @@ class AdapterBase(PluginBase, Feature, ABC):
             query_time = datetime.now() - time_before_query
             self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
                              f"returned {len(parsed_devices)} devices")
-            self.logger.info("Querying devices on ")
         except adapter_exceptions.CredentialErrorException as e:
             self.logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)

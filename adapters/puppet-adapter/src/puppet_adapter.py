@@ -123,9 +123,19 @@ class PuppetAdapter(AdapterBase):
             device.figure_os(' '.join([device_raw["operatingsystem"],
                                        device_raw["architecture"],
                                        device_raw["kernel"]]))
-            device.os.major = device_raw["os"]['release']['major']
-            if 'minor' in device_raw['os']['release']:
-                device.os.minor = device_raw["os"]['release']['minor']
+            try:
+                if 'minor' in device_raw['os']['release']:
+                    device.os.major = int(float(device_raw["os"]['release']['major']))
+                    device.os.minor = int(float(device_raw["os"]['release']['minor']))
+                else:
+                    temp_release = device_raw["os"]['release']['major'].split('.')
+                    device.os.major = int(temp_release[0])
+                    if len(temp_release) > 1:
+                        # In case major contains minor also
+                        device.os.minor = int(temp_release[1])
+            except Exception as e:
+                self.logger.exception("Cannot parse os release number")
+
             device.id = device_raw[u'certname']
             for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
                 device.add_nic(inet.get(MAC_FIELD, ''),

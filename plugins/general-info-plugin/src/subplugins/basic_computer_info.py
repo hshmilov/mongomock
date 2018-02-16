@@ -149,13 +149,22 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             # we can access its fields.
             adapterdata_device.figure_os(basic['Operating System']['Name'])
             adapterdata_device.os.install_date = basic['Operating System']['Install Date']  # datetime
+            adapterdata_device.os.major, adapterdata_device.os.minor, _ = \
+                [int(i) for i in basic['Operating System']['Version'].split('.')]
             adapterdata_device.boot_time = basic['Operating System']['Last Boot Up Time']   # datetime
             adapterdata_device.total_physical_memory = float(basic['Operating System']['Total RAM (GB)'])
             adapterdata_device.free_physical_memory = float(basic['Operating System']['Free RAM (GB)'])
             adapterdata_device.physical_memory_percentage = float(basic['Operating System']['RAM Usage (%)'])
             adapterdata_device.number_of_processes = int(basic['Operating System']['Number Of Processes'])
 
-            # Build returns as a string and not an int, i'm afraid it could be an str...
+            # Some things that for somereason (TODO: understand why) not always works.
+            try:
+                basic['Operating System']['Hostname'] = result[5][0]['DNSHostName']
+                adapterdata_device.hostname = result[5][0]['DNSHostName']
+            except:
+                pass
+
+            # Build returns as a string and not an int, i'm afraid it could be an exception...
             try:
                 adapterdata_device.os.build = int(basic['Operating System']['Build Number'])
             except:

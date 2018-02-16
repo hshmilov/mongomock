@@ -19,8 +19,8 @@ class DeviceOS(SmartJsonClass):
     build = Field(int, 'OS Build')  # aka patch level
     install_date = Field(datetime.datetime, "OS Install Date")
 
-    major = Field(str, 'OS Major')
-    minor = Field(str, 'OS Minor')
+    major = Field(int, 'OS Major')
+    minor = Field(int, 'OS Minor')
 
 
 class NetworkInterface(SmartJsonClass):
@@ -36,8 +36,8 @@ class DeviceHD(SmartJsonClass):
     On linux and mac, we need to think what it is (not sure its mounts...) """
 
     path = Field(str, "HD Path")
-    total_size = Field(float, "HD Size (mb)")
-    free_size = Field(float, "HD Free Size (mb)")
+    total_size = Field(float, "HD Size (gb)")
+    free_size = Field(float, "HD Free Size (gb)")
     is_encrypted = Field(bool, "HD Encrypted")
     file_system = Field(str, "HD Filesystem")
 
@@ -109,7 +109,7 @@ class Device(SmartJsonClass):
     cpus = ListField(DeviceCPU, "CPUs")
     battery = Field(DeviceBattery, "Battery")
     users = ListField(DeviceUser, "Users")
-    security_patches = ListField(DeviceSecurityPatch, "Hotfixes")
+    security_patches = ListField(DeviceSecurityPatch, "Security Patch")
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
 
