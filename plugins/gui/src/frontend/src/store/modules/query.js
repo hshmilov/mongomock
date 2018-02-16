@@ -125,6 +125,7 @@ export const query = {
 				return savedQuery.id === payload
 			})
 			state.newQuery.filter = requestedQuery[0].filter
+			state.newQuery.filterExpressions = []
 			state.executedQueries.data = []
 		},
 		[ UPDATE_NEW_QUERY ] (state, payload) {

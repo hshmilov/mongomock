@@ -1,6 +1,6 @@
 <template>
     <div class="paginated-table">
-        <pulse-loader :loading="fetching && (!data || !data.length)" color="#26dad2"></pulse-loader>
+        <pulse-loader :loading="(fetching && !data.length) || !fields.length" color="#26dad2"></pulse-loader>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
             <table class="table table-responsive">
                 <thead>
@@ -112,6 +112,9 @@
 		watch: {
 			filterFields: function (newFields, oldFields) {
 				if (!oldFields.length || newFields.length <= oldFields.length) { return }
+				this.restartData()
+			},
+			filter: function (newFilter) {
 				this.restartData()
 			},
 			fetching: function (newFetching) {

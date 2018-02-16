@@ -41,7 +41,7 @@
                     <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
                         v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
                         <td class="table-row-data" v-if="value">&nbsp</td>
-                        <td v-for="field in viewFields" class="table-row-data">&nbsp</td>
+                        <td v-for="field in fields" class="table-row-data">&nbsp</td>
                         <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
                     </tr>
                 </tbody>
@@ -87,17 +87,8 @@
 			isLastPage () {
 				return this.currentPage === this.maxPages
 			},
-			filterFields () {
-				return this.fields.filter(function (field) {
-					return !field.default
-				}).map(function (field) {
-					return field.name
-				})
-			},
-            viewFields() {
-				return this.fields.filter(function (field) {
-					return !field.hidden
-                })
+            fieldNames () {
+				return this.fields.map((field) => field.name)
             }
 		},
 		data () {
@@ -183,7 +174,7 @@
 				this.fetchData({
 					skip: this.fetchedPages * this.pageSize * 50,
 					limit: this.pageSize * 50,
-					fields: this.filterFields,
+					fields: this.fieldNames,
 					filter: this.filter
 				})
 			},

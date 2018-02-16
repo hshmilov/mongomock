@@ -190,7 +190,10 @@ export const device = {
 	actions: {
 		[ FETCH_DEVICES ] ({dispatch, commit}, payload) {
 			/* Fetch list of devices for requested page and filtering */
-			if (!payload.skip) { payload.skip = 0 }
+			if (!payload.skip) {
+				payload.skip = 0
+				dispatch(FETCH_DEVICES_COUNT, { filter: payload.filter })
+			}
 			if (!payload.limit) { payload.limit = 0 }
 			/* Getting first page - empty table */
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }

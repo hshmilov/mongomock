@@ -83,7 +83,7 @@
 				return this.flattenSchema(this.device.deviceFields.data.generic)
 			},
 			pluginsFlatSchema () {
-				if (!this.device.deviceFields.data.specific) return {}
+				if (!this.device.deviceFields.data.specific) return []
 				const genericFields = this.deviceFlatSchema.map((item) => item.name)
 
 				let mergedPluginsSchema = []
@@ -99,6 +99,7 @@
                 return mergedPluginsSchema
 			},
 			viewDeviceSchema () {
+				if (!this.deviceFlatSchema.length) return []
 				return [
 					{
 						name: 'adapters.plugin_name', title: 'Adapters', type: 'array',
@@ -115,11 +116,21 @@
 				]
 			},
 			viewDeviceSchemaSelected () {
+				let existing = new Set()
 				return this.viewDeviceSchema.filter((field) => {
-					return this.selectedFields.includes(field.name)
+					if (existing.has(field.name)) return false
+                    existing.add(field.name)
+					return field.name && this.selectedFields.includes(field.name)
 				})
 			},
 			filterDeviceSchema () {
+				if (!this.deviceFlatSchema.length) return []
+				let existing = new Set()
+                let pluginsFlatSchemaUnique = this.pluginsFlatSchema.filter((field) => {
+					if (!field.name || existing.has(field.name)) return false
+					existing.add(field.name)
+					return true
+				})
 				return [
 					{
 						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
@@ -136,7 +147,8 @@
 					},
 					...this.deviceFlatSchema,
 					{name: 'tags', title: 'Tags', type: 'array'},
-					{name: 'tags.tagname', title: 'Tag Name', type: 'string'}
+					{name: 'tags.tagname', title: 'Tag Name', type: 'string'},
+					...pluginsFlatSchemaUnique
 				]
 			}
 		},
@@ -160,7 +172,6 @@
 			}
 			this.fetchAdapters()
 			this.fetchTags()
-			this.fetchDevicesCount({filter: this.queryFilter})
 		},
 		methods: {
 			...mapMutations({
@@ -169,7 +180,6 @@
 			}),
 			...mapActions({
 				fetchDevices: FETCH_DEVICES,
-				fetchDevicesCount: FETCH_DEVICES_COUNT,
 				fetchDeviceFields: FETCH_DEVICE_FIELDS,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
@@ -179,12 +189,9 @@
 			}),
 			executeQuery () {
 				this.updateQuery(this.queryFilter)
-				this.fetchDevicesCount({filter: this.queryFilter})
 				this.fetchDevices({
 					filter: this.queryFilter, skip: 0,
-					fields: this.viewDeviceSchemaSelected.map((field) => {
-						return field.name
-					})
+					fields: this.viewDeviceSchemaSelected.map((field) => field.name)
 				})
 				this.selectPage(0)
 				this.$parent.$el.click()

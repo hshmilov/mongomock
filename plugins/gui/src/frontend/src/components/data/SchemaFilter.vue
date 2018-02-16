@@ -33,52 +33,76 @@
 				}
 			},
 			compOps () {
+				const exists = {
+					pattern: '({field} == exists(true) and {field} != "")',
+					notPattern: '({field} == exists(false) or {field} == "")'
+				}
+				const equals = {
+					pattern: '{field} == "{val}"',
+					notPattern: '{field} != "{val}"'
+				}
+				const numerical = {
+					'==': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
+					'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
+					'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
+				}
 				return {
 					'date-time': {
-						'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
-						'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' }
-                    },
-                    'ip': {
+						'<': {pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")'},
+						'>': {pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")'}
+					},
+					'ip': {
 						'subnet': {
 							pattern: '({field}_raw >= {val} and {field}_raw <= {val})',
-                            notPattern: '({field}_raw < {val} or {field}_raw > {val})'
-                        },
-						'contains': { pattern: '{field} == regex("{val}")',
-                            notPattern: '{field} == regex("^(?!.*{val})")' },
-                        'isIPv4': { pattern: '{field} == regex("\.")',
-                            notPattern: '{field} == regex("^(?!.*\.)")' },
-						'isIPv6': { pattern: '{field} == regex(":")',
-                            notPattern: '{field} == regex("^(?!.*:)")' },
-						'exists': { pattern: '({field} == exists(true) and {field} != "")',
-							notPattern: '({field} == exists(false) or {field} == "")' }
-                    },
-                    'array': {
-						'size': { pattern: '{field} == size({val})',
-                            notPattern: 'not {field} == size({val})' },
-                        'exists': { pattern: '({field} == exists(true) and {field} > [])',
-                            notPattern: '({field} == exists(false) or {field} == [])' }
+							notPattern: '({field}_raw < {val} or {field}_raw > {val})'
+						},
+						'contains': {
+							pattern: '{field} == regex("{val}")',
+							notPattern: '{field} == regex("^(?!.*{val})")'
+						},
+						'isIPv4': {
+							pattern: '{field} == regex("\.")',
+							notPattern: '{field} == regex("^(?!.*\.)")'
+						},
+						'isIPv6': {
+							pattern: '{field} == regex(":")',
+							notPattern: '{field} == regex("^(?!.*:)")'
+						},
+						exists
+					},
+                    'enum': { equals },
+					'array': {
+						'size': {
+							pattern: '{field} == size({val})',
+							notPattern: 'not {field} == size({val})'
+						},
+						'exists': {
+							pattern: '({field} == exists(true) and {field} > [])',
+							notPattern: '({field} == exists(false) or {field} == [])'
+						}
 					},
 					'string': {
-						'contains': { pattern: '{field} == regex("{val}", "i")',
-                            notPattern: '{field} == regex("^(?!.*{val})", "i")' },
-						'starts': { pattern: '{field} == regex("^{val}", "i")',
-                            notPattern: '{field} == regex("^^(?!{val})", "i")' },
-						'ends': { pattern: '{field} == regex("{val}$", "i")',
-                            notPattern: '{field} == regex("^(?!{val})$", "i")' },
-						'equals': { pattern: '{field} == "{val}"',
-                            notPattern: '{field} != "{val}"' },
-                        'exists': { pattern: '({field} == exists(true) and {field} != "")',
-                            notPattern: '({field} == exists(false) or {field} == ""' }
+						'contains': {
+							pattern: '{field} == regex("{val}", "i")',
+							notPattern: '{field} == regex("^(?!.*{val})", "i")'
+						},
+						equals,
+						'starts': {
+							pattern: '{field} == regex("^{val}", "i")',
+							notPattern: '{field} == regex("^^(?!{val})", "i")'
+						},
+						'ends': {
+							pattern: '{field} == regex("{val}$", "i")',
+							notPattern: '{field} == regex("^(?!{val})$", "i")'
+						},
+						exists
 					},
-                    'bool': {
+					'bool': {
 						'true': {pattern: '{field} == true', notPattern: '{field} == false'},
 						'false': {pattern: '{field} == false', notPattern: '{field} == true'}
 					},
-					'numerical': {
-						'==': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
-						'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
-						'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
-					}
+					'number': numerical,
+					'integer': numerical
 				}
 			}
 		},
@@ -86,15 +110,15 @@
 			return {
 				expressions: [...this.value],
 				filters: [],
-                bracketWeights: [],
-                error: ''
+				bracketWeights: [],
+				error: ''
 			}
 		},
 		watch: {
 			value (newValue) {
 				if (newValue.length === this.expressions.length) return
-				this.expressions = [ ...newValue ]
-            },
+				this.expressions = [...newValue]
+			},
 			expressions (newExpressions) {
 				this.$emit('input', newExpressions)
 			}
@@ -103,43 +127,43 @@
 			compileFilter (index, payload) {
 				if (payload.error) {
 					this.error = payload.error
-                    this.$emit('error')
-                    return
-                }
+					this.$emit('error')
+					return
+				}
 				this.filters[index] = payload.filter
-                this.bracketWeights[index] = payload.bracketWeight
-                let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
-                if (totalBrackets !== 0) {
+				this.bracketWeights[index] = payload.bracketWeight
+				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
+				if (totalBrackets !== 0) {
 					this.error = (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket'
-                    return
-                }
-                // No compilation error - propagating
-                this.error = ''
+					return
+				}
+				// No compilation error - propagating
+				this.error = ''
 				this.$emit('change', this.filters.join(' '))
 			},
 			addExpression () {
-				this.expressions.push({ ...this.expression, i: this.expressions.length })
+				this.expressions.push({...this.expression, i: this.expressions.length})
 				this.$emit('input', this.expressions)
 			},
-            removeExpression(index) {
+			removeExpression (index) {
 				if (index >= this.expressions.length) return
 				this.expressions.splice(index, 1)
 				this.filters.splice(index, 1)
-                if (!index && this.expressions.length) {
+				if (!index && this.expressions.length) {
 					this.expressions[index].logicOp = ''
-                    if (this.filters.length) {
-                        this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
-                    }
+					if (this.filters.length) {
+						this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
+					}
 				}
 				this.$emit('change', this.filters.join(' '))
-            }
+			}
 		},
-        created() {
+		created () {
 			if (!this.expressions.length) {
 				this.addExpression()
-                this.addExpression()
-            }
-        }
+				this.addExpression()
+			}
+		}
 	}
 </script>
 

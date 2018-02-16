@@ -7,7 +7,7 @@
                 <template v-for="item, index in filteredItems">
                     <checkbox v-if="item.name" :key="index" :label="prepareLabel(item.title)"
                               v-model="itemSelection[item.name]" @change="updateSelected"></checkbox>
-                    <div v-else>{{ item.title }}</div>
+                    <div v-else class="title">{{ item.title }}</div>
                 </template>
                 <checkbox v-if="extendable && searchValue && isNew(searchValue)" :label="`${searchValue} (New tag)`"
                           class="checklist-new" v-model="searchValueSelected" @change="createSelected"></checkbox>
@@ -119,6 +119,11 @@
                     &:first-of-type {
                         margin-top: 0;
                     }
+                }
+                .title {
+                    font-weight: 300;
+                    text-transform: uppercase;
+                    margin-top: 8px;
                 }
             }
             .vue-scrollbar__scrollbar-vertical {

@@ -74,13 +74,15 @@
 				return this.fieldMap[this.expression.field]
 			},
 			fieldOps () {
-				if (this.fieldSchema && this.fieldSchema.format) {
+				if (!this.fieldSchema) return {}
+
+				if (this.fieldSchema.enum) {
+					return this.compOps['enum'] || {}
+				}
+				if (this.fieldSchema.format) {
 					return this.compOps[this.fieldSchema.format] || {}
 				}
-				if (this.fieldSchema && this.fieldSchema.type) {
-					if (['number', 'integer'].includes(this.fieldSchema.type)) {
-						return this.compOps['numerical'] || {}
-					}
+				if (this.fieldSchema.type) {
 					return this.compOps[this.fieldSchema.type] || {}
 				}
 				return {}

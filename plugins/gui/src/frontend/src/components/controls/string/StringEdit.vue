@@ -11,7 +11,7 @@
             <option value="" disabled hidden>VALUE...</option>
             <template v-for="item in schema.enum">
                 <option v-if="item.name" :value="item.name">{{item.title || item.name}}</option>
-                <option :value="item" v-else>{{item}}</option>
+                <option v-else :value="item">{{item}}</option>
             </template>
         </select>
     </div>
