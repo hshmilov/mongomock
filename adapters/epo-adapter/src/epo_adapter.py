@@ -1,6 +1,7 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.device import Device
+from axonius.fields import ListField, Field
 from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
 import json
 import ipaddress
@@ -73,7 +74,8 @@ class EpoAdapter(AdapterBase):
     """
 
     class MyDevice(Device):
-        pass
+        epo_products = ListField(str, "EPO Products")
+        epo_agent_version = Field(str, "EPO Agent Version")
 
     def __init__(self, **kwargs):
         """Class initialization.
@@ -157,6 +159,51 @@ class EpoAdapter(AdapterBase):
             last_seen = parse_date(device_raw['EPOLeafNode.LastUpdate'])
             if last_seen:
                 device.last_seen = last_seen
+
+            device.domain = device_raw.get("EPOComputerProperties.DomainName")
+            device.epo_agent_version = device_raw.get("EPOLeafNode.AgentVersion")
+
+            # TODO: Understand if the next line is always included in hostname. Do we need it?
+            # device.computer_name = device_raw.get("EPOComputerProperties.ComputerName")
+
+            # The next thing, i'm afraid, could go bad
+            try:
+                # Set up epo products
+                for product in device_raw.get("EPOProductPropertyProducts.Products", "").split(", "):
+                    device.epo_products.append(product)
+
+                # Set up os version
+                os_version = device_raw.get("EPOComputerProperties.OSVersion")
+                if os_version is not None:
+                    major, *minor = os_version.split(".")
+                    device.os.major = int(major)
+                    if len(minor) > 0:
+                        device.os.minor = int(minor[0])
+
+                os_build_num = device_raw.get("EPOComputerProperties.OSBuildNum")
+                if os_build_num is not None:
+                    device.os.build = int(os_build_num)
+
+                # Set up memory
+                device.free_physical_memory = int(device_raw.get("EPOComputerProperties.FreeMemory")) / (1024**2)
+                device.total_physical_memory = int(device_raw.get(
+                    "EPOComputerProperties.TotalPhysicalMemory")) / (1024**2)
+
+                # Set up hard disks
+                device.add_hd(
+                    total_size=(int(device_raw.get("EPOComputerProperties.TotalDiskSpace")) / 1024),
+                    free_size=(int(device_raw.get("EPOComputerProperties.FreeDiskSpace")) / 1024)
+                )
+
+                # Set up cpu's
+                device.total_number_of_logical_Processors = int(device_raw.get("EPOComputerProperties.NumOfCPU"))
+                device.add_cpu(
+                    speed=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
+                    name=device_raw.get("EPOComputerProperties.CPUType")
+                )
+
+            except:
+                self.logger.exception("Couldn't set some epo info")
 
             device.set_raw(device_raw)
             yield device
