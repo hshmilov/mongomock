@@ -128,6 +128,12 @@ class NexposeV2Client(nexpose_base_client.NexposeClient):
         device.id = str(device_raw['id'])
         device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []), logger)
         device.hostname = device_raw['host_names'][0] if len(device_raw.get('host_names', [])) > 0 else ''
+        risk_score = device_raw.get('riskScore')
+        if risk_score is not None:
+            try:
+                device.risk_score = float(risk_score)
+            except Exception as e:
+                logger.exception("Cant get risk score")
         device.scanner = True
         device.set_raw(device_raw)
         return device

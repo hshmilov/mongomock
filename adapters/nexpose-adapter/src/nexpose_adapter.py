@@ -1,6 +1,7 @@
 import nexpose_clients
 from typing import Tuple
 
+from axonius.fields import Field
 import axonius.adapter_exceptions
 from axonius.device import Device
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
@@ -36,7 +37,7 @@ class NexposeAdapter(ScannerAdapterBase):
     """
 
     class MyDevice(Device):
-        pass
+        risk_score = Field(float, 'Risk score')
 
     def __init__(self, **kwargs):
         """Class initialization.
