@@ -3,9 +3,9 @@ Using wmi queries, determines basic computer info
 """
 from .general_info_subplugin import GeneralInfoSubplugin
 from .wmi_utils import wmi_date_to_datetime
-from dateutil import parser
 import datetime
 from axonius.device import Device
+from axonius.parsing_utils import parse_date
 
 
 class GetBasicComputerInfo(GeneralInfoSubplugin):
@@ -204,7 +204,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             hot_fixes = []
             for qfe in result[4]:
                 try:
-                    installedon_datetime = parser.parse(qfe['InstalledOn'])
+                    installedon_datetime = parse_date(qfe['InstalledOn'])
                 except:
                     installedon_datetime = datetime.datetime(1, 1, 1)   # Unknown date...
 

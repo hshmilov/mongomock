@@ -12,6 +12,7 @@ from axonius.adapter_base import AdapterBase, DeviceRunningState
 from axonius import adapter_exceptions
 from pyVmomi import vim
 from vcenter_api import vCenterApi, rawify_vcenter_data
+from axonius.parsing_utils import parse_date
 
 # translation table between ESX values to parsed values
 POWER_STATE_MAP = {
@@ -37,9 +38,9 @@ class ESXAdapter(AdapterBase):
     class MyDevice(Device):
         vm_tools_status = Field(str, 'VM Tools Status')
         vm_physical_path = Field(str, 'VM physical path')
-        power_state = Field(DeviceRunningState, 'Power state')
-        device_type = Field(ESXDeviceType, 'Device type')
-        esx_host = Field(str, 'Hoster Esx')
+        power_state = Field(DeviceRunningState, 'VM Power state')
+        device_type = Field(ESXDeviceType, 'VM type')
+        esx_host = Field(str, 'VM ESX Host')
 
     def __init__(self, *args, **kwargs):
         """
@@ -115,9 +116,11 @@ class ESXAdapter(AdapterBase):
         if not details:
             return None
         guest = details.get('guest', {})
+        config = details.get('config', {})
+
         device = self._new_device()
         device.name = node.get('Name', '')
-        device.figure_os(details.get('config', {}).get('guestFullName', ''))
+        device.figure_os(config.get('guestFullName', ''))
         try:
             device.id = details['config']['instanceUuid']
         except KeyError:
@@ -144,6 +147,17 @@ class ESXAdapter(AdapterBase):
         device.vm_physical_path = _curr_path + "/" + node.get('Name', '')
         device.power_state = POWER_STATE_MAP.get(details.get('runtime', {}).get('powerState'),
                                                  DeviceRunningState.Unknown)
+        boot_time = details.get("runtime", {}).get("bootTime")
+        if boot_time is not None:
+            device.boot_time = parse_date(boot_time)
+
+        memory_size_mb = config.get("memorySizeMB")
+        if memory_size_mb is not None:
+            device.total_physical_memory = memory_size_mb / 1024.0
+        total_num_of_cpus = config.get("numCpu")
+        if total_num_of_cpus is not None:
+            device.total_number_of_physical_processors = int(total_num_of_cpus)
+
         device.set_raw(details)
         return device
 

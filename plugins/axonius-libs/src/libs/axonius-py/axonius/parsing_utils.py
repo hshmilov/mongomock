@@ -115,6 +115,10 @@ def figure_out_os(s):
         if len(version):
             distribution = version[0]
 
+    elif 'freebsd' in s:
+        os_type = "FreeBSD"
+        distribution = "FreeBSD"
+
     return {"type": os_type,
             "distribution": distribution,
             "bitness": bitness}
