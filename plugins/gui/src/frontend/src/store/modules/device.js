@@ -12,12 +12,12 @@ export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 export const SELECT_DEVICE_PAGE = 'SELECT_DEVICE_PAGE'
 export const FETCH_DEVICE_FIELDS = 'FETCH_DEVICE_FIELDS'
 export const UPDATE_DEVICE_FIELDS = 'UPDATE_DEVICE_FIELDS'
-export const FETCH_TAGS = 'FETCH_TAGS'
-export const UPDATE_TAGS = 'UPDATE_TAGS'
-export const CREATE_DEVICE_TAGS = 'CREATE_DEVICE_TAGS'
-export const ADD_DEVICE_TAGS = 'ADD_DEVICE_TAGS'
-export const DELETE_DEVICE_TAGS = 'DELETE_DEVICE_TAGS'
-export const REMOVE_DEVICE_TAGS = 'REMOVE_DEVICE_TAGS'
+export const FETCH_LABELS = 'FETCH_LABELS'
+export const UPDATE_LABELS = 'UPDATE_LABELS'
+export const CREATE_DEVICE_LABELS = 'CREATE_DEVICE_LABELS'
+export const ADD_DEVICE_LABELS = 'ADD_DEVICE_LABELS'
+export const DELETE_DEVICE_LABELS = 'DELETE_DEVICE_LABELS'
+export const REMOVE_DEVICE_LABELS = 'REMOVE_DEVICE_LABELS'
 
 
 export const mergeDeviceData = (adapters, requiredFields) => {
@@ -47,7 +47,7 @@ export const device = {
 		/* All fields parsed in the system - at least one adapter parses the field */
 		deviceFields: {fetching: false, data: {}, error: ''},
 
-		tagList: {fetching: false, data: [], error: ''},
+		labelList: {fetching: false, data: [], error: ''},
 	},
 	getters: {},
 	mutations: {
@@ -61,19 +61,11 @@ export const device = {
 			if (payload.data) {
 				let processedData = []
 				payload.data.forEach((device) => {
-					if (!device.tags) device.tags = []
-
 					processedData.push({
 						id: device['internal_axon_id'],
-						adapters: {
-							data: merge.all(device.adapters).data,
-							plugin_name: device.adapters.map((adapter) => {
-								return adapter['plugin_name']
-							})
-						},
-						tags: device.tags.filter((tag) => {
-							return tag.type === 'label' && tag.data
-						})
+						specific_data: merge.all(device.specific_data),
+						adapters: device.adapters,
+						labels: device.labels
 					})
 				})
 				state.deviceList.data = [...state.deviceList.data, ...processedData]
@@ -90,16 +82,11 @@ export const device = {
 			state.deviceDetails.fetching = payload.fetching
 			state.deviceDetails.error = payload.error
 			if (payload.data) {
-
 				state.deviceDetails.data = {
 					...payload.data,
-					data: merge.all(payload.data.adapters).data,
-					tags: payload.data.tags.filter((tag) => {
-						return tag.type === 'label' && tag.data
-					}),
-					dataTags: payload.data.tags.filter((tag) => {
-						return tag.type === 'data' && tag.data
-					})
+					specific_data: payload.data.specific_data,
+					generic_data: [ merge.all(payload.data.specific_data).data, ...payload.data.generic_data ],
+					labels: payload.data.labels
 				}
 			}
 		},
@@ -108,77 +95,64 @@ export const device = {
 			state.deviceFields.error = payload.error
 			if (!payload.fetching) {
 				state.deviceFields.data = payload.data
-				state.deviceFields.data.generic.name = 'adapters.data'
+				state.deviceFields.data.generic.name = 'specific_data.data'
 				if (state.deviceFields.data.specific) {
 					Object.keys(state.deviceFields.data.specific).forEach((specificKey) => {
-						state.deviceFields.data.specific[specificKey].name ='adapters.data'
+						state.deviceFields.data.specific[specificKey].name ='specific_data.data'
 					})
 				}
 			}
 		},
-		[ UPDATE_TAGS ] (state, payload) {
-			state.tagList.fetching = payload.fetching
-			state.tagList.error = payload.error
-			if (!payload.fetching) state.tagList.data = payload.data
+		[ UPDATE_LABELS ] (state, payload) {
+			state.labelList.fetching = payload.fetching
+			state.labelList.error = payload.error
+			if (!payload.fetching) state.labelList.data = payload.data
 		},
-		[ ADD_DEVICE_TAGS ] (state, payload) {
+		[ ADD_DEVICE_LABELS ] (state, payload) {
 			state.deviceList.data = [...state.deviceList.data]
 			state.deviceList.data.forEach(function (device) {
 				if (!payload.devices.includes(device.id)) return
-				if (!device.tags) device.tags = []
+				if (!device.labels) device.labels = []
 
-				let deviceTags = new Set(device.tags.map((tag) => {
-					return tag.name
-				}))
-				payload.labels.forEach((tag) => {
-					if (deviceTags.has(tag)) return
-					device.tags.push({ name: tag, type: 'label', data: true })
-				})
+				device.labels = Array.from(new Set([ ...device.labels, ...payload.labels ]))
 			})
-			payload.labels.forEach((tag) => {
-				if (!state.tagList.data || !state.tagList.data.includes(tag)) {
-					state.tagList.data.push(tag)
-				}
-			})
+			state.labelList.data = Array.from(new Set([ ...state.labelList.data, ...payload.labels ]))
+
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
 				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)) {
 				state.deviceList.data = { ...state.deviceDetails.data,
-					tags: Array.from(new Set([ ...state.deviceDetails.data.tags,
+					labels: Array.from(new Set([ ...state.deviceDetails.data.labels,
 						...payload.labels
 					]))
 				}
 			}
 		},
-		[ REMOVE_DEVICE_TAGS ] (state, payload) {
+		[ REMOVE_DEVICE_LABELS ] (state, payload) {
 			state.deviceList.data = [...state.deviceList.data]
 			state.deviceList.data.forEach((device) => {
 				if (!payload.devices.includes(device.id)) return
-				if (!device.tags) { return }
+				if (!device.labels) { return }
 
-				device.tags = device.tags.filter((tag) => {
-					return !payload.labels.includes(tag.name)
+				device.labels = device.labels.filter((label) => {
+					return !payload.labels.includes(label)
 				})
 			})
-			state.tagList.data = state.tagList.data.filter((tag) => {
-				if (!payload.labels.includes(tag)) return true
+			state.labelList.data = state.labelList.data.filter((label) => {
+				if (!payload.labels.includes(label)) return true
 				let exists = false
 				state.deviceList.data.forEach((device) => {
-					if (!device.tags) return
-					device.tags.forEach((deviceTag) => {
-						if (deviceTag.name === tag) {
-							exists = true
-						}
-					})
+					if (!device.labels) return
+					exists = exists && device.labels.includes(label)
 				})
 				return exists
 			})
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
 				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)
-				&& state.deviceDetails.data.tags) {
+				&& state.deviceDetails.data.labels) {
 
 				state.deviceDetails.data = { ...state.deviceDetails.data,
-					tags: state.deviceDetails.data.tags.filter((tag) => {
-						return !payload.labels.includes(tag.name)
+					labels: state.deviceDetails.data.labels.filter((label) => {
+						return !payload.labels.includes(label)
 					})
 				}
 			}
@@ -199,7 +173,7 @@ export const device = {
 			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
 			if (payload.fields && payload.fields.length) {
-				param += `&fields=internal_axon_id,tags.type,tags.data,${payload.fields}`
+				param += `&fields=internal_axon_id,${payload.fields}`
 			}
 			if (payload.filter && payload.filter.length) {
 				param += `&filter=${payload.filter}`
@@ -232,13 +206,13 @@ export const device = {
 				type: UPDATE_DEVICE_FIELDS
 			})
 		},
-		[ FETCH_TAGS ] ({dispatch}) {
+		[ FETCH_LABELS ] ({dispatch}) {
 			dispatch(REQUEST_API, {
 				rule: `/api/devices/labels`,
-				type: UPDATE_TAGS
+				type: UPDATE_LABELS
 			})
 		},
-		[ CREATE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
+		[ CREATE_DEVICE_LABELS ] ({dispatch, commit}, payload) {
 			if (!payload || !payload.devices || !payload.devices.length || !payload.labels || !payload.labels.length) {
 				return
 			}
@@ -246,9 +220,9 @@ export const device = {
 				rule: `/api/devices/labels`,
 				method: 'POST',
 				data: payload
-			}).then(() => commit(ADD_DEVICE_TAGS, payload))
+			}).then(() => commit(ADD_DEVICE_LABELS, payload))
 		},
-		[ DELETE_DEVICE_TAGS ] ({dispatch, commit}, payload) {
+		[ DELETE_DEVICE_LABELS ] ({dispatch, commit}, payload) {
 			if (!payload || !payload.devices || !payload.devices.length || !payload.labels || !payload.labels.length) {
 				return
 			}
@@ -256,7 +230,7 @@ export const device = {
 				rule: `/api/devices/labels`,
 				method: 'DELETE',
 				data: payload
-			}).then(() => commit(REMOVE_DEVICE_TAGS, payload))
+			}).then(() => commit(REMOVE_DEVICE_LABELS, payload))
 		}
 	}
 }

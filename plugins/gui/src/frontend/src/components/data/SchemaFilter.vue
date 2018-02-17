@@ -79,7 +79,8 @@
 						'exists': {
 							pattern: '({field} == exists(true) and {field} > [])',
 							notPattern: '({field} == exists(false) or {field} == [])'
-						}
+						},
+                        'contains': equals
 					},
 					'string': {
 						'contains': {

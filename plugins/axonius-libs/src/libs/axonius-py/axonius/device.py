@@ -79,9 +79,10 @@ class DeviceSecurityPatch(SmartJsonClass):
 class Device(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
-    name = Field(str, 'Asset Name')
-    hostname = Field(str, 'Host Name', json_format=JsonStringFormat.hostname)
+    pretty_id = Field(str, 'Axonius Name')
     id = Field(str, 'ID')
+    name = Field(str, 'Asset Name')
+    hostname = Field(str, 'Host Name')
     os = Field(DeviceOS)
     last_seen = Field(datetime.datetime, 'Last Seen', json_format=JsonStringFormat.date_time)
     network_interfaces = ListField(NetworkInterface, 'Network Interfaces')

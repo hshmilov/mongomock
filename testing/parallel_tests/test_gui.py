@@ -25,8 +25,7 @@ def test_devices():
 
 
 def _count_num_of_labels(device):
-    return len([current_label['name'] for current_label in device['tags'] if
-                current_label.get('type') == "label" and current_label.get("data") is True])
+    return len(device['labels'])
 
 
 def test_default_queries():
@@ -75,7 +74,7 @@ def test_labels_via_gui():
             # TODO: fix the following race condition
             # If the next asserts fail, it might be because of a raise condition. did someone add label meanwhile?
             assert _count_num_of_labels(fresh_device) == starting_num_of_labels_on_device + 1
-            assert fresh_device['tags'][-1]['name'] == test_label_value
+            assert fresh_device['labels'][-1] == test_label_value
             gui_service.remove_labels_from_device(
                 {'devices': [label_test_device['internal_axon_id']], 'labels': [test_label_value]})
 
@@ -90,13 +89,13 @@ def test_labels_via_gui():
             # TODO: fix the following race condition
             # If the next asserts fail, it might be because of a raise condition. did someone add label meanwhile?
             assert _count_num_of_labels(fresh_device) == starting_num_of_labels_on_device + 1
-            assert fresh_device['tags'][-1]['name'] == test_label_value
+            assert fresh_device['labels'][-1] == test_label_value
             response = gui_service.add_labels_to_device(
                 {'devices': [label_test_device['internal_axon_id']], 'labels': [test_label_value]})
             assert response.status_code == 200
             fresh_device = gui_service.get_device_by_id(label_test_device['internal_axon_id']).json()
             assert _count_num_of_labels(fresh_device) == starting_num_of_labels_on_device + 1
-            assert fresh_device['tags'][-1]['name'] == test_label_value
+            assert fresh_device['labels'][-1] == test_label_value
             gui_service.remove_labels_from_device(
                 {'devices': [label_test_device['internal_axon_id']], 'labels': [test_label_value]})
 
@@ -111,7 +110,7 @@ def test_labels_via_gui():
             # TODO: fix the following race condition
             # If the next asserts fail, it might be because of a raise condition. did someone add label meanwhile?
             assert _count_num_of_labels(fresh_device) == starting_num_of_labels_on_device + 2
-            assert set([current_label['name'] for current_label in fresh_device['tags'][-2:]]) == set(test_labels)
+            assert set([current_label for current_label in fresh_device['labels'][-2:]]) == set(test_labels)
             gui_service.remove_labels_from_device(
                 {'devices': [label_test_device['internal_axon_id']], 'labels': test_labels})
 
@@ -153,8 +152,7 @@ def test_labels_via_gui():
             gui_service.remove_labels_from_device(
                 {'devices': [label_test_device['internal_axon_id']], 'labels': ['blah_label']})
             fresh_device = gui_service.get_device_by_id(label_test_device['internal_axon_id']).json()
-            assert len([current_label['name'] for current_label in fresh_device['tags'] if
-                        current_label['data']]) == starting_num_of_labels_on_device + 1
+            assert len(fresh_device['labels']) == starting_num_of_labels_on_device + 1
 
         def remove_multiple_labels():
             label_test_device = get_gui_test_devices()[2]
@@ -172,8 +170,7 @@ def test_labels_via_gui():
             gui_service.remove_labels_from_device(
                 {'devices': [label_test_device['internal_axon_id']], 'labels': test_labels_values})
             fresh_device = gui_service.get_device_by_id(label_test_device['internal_axon_id']).json()
-            assert len([current_label['name'] for current_label in fresh_device['tags'] if
-                        current_label['data']]) == starting_num_of_labels_on_device
+            assert len(fresh_device['labels']) == starting_num_of_labels_on_device
 
         remove_one_label()
         remove_non_existing_label()

@@ -32,7 +32,7 @@
             </nested-menu>
         </triggerable-dropdown>
         <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
-                <searchable-checklist title="Tag as:" :items="device.tagList.data" :searchable="true"
+                <searchable-checklist title="Tag as:" :items="device.labelList.data" :searchable="true"
                                       :extendable="true" v-model="tag.selected"></searchable-checklist>
         </feedback-modal>
         <feedback-modal v-model="blacklist.isActive" :handleSave="saveBlacklist" message="Blacklist saved">
@@ -61,8 +61,8 @@
 
 	import { mapState, mapActions } from 'vuex'
 	import {
-		CREATE_DEVICE_TAGS,
-		DELETE_DEVICE_TAGS
+		CREATE_DEVICE_LABELS,
+		DELETE_DEVICE_LABELS
 	} from '../../store/modules/device'
 
 	export default {
@@ -86,26 +86,24 @@
 			},
 			currentTags () {
 				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
-				let tags = this.deviceById[this.devices[0]]['tags'].map((tag) => {
-					return tag.name
-                })
-                if (this.devices.length === 1) { return tags }
+				let labels = this.deviceById[this.devices[0]].labels
+                if (this.devices.length === 1) { return labels }
 				this.devices.forEach((device) => {
-					let deviceTags = this.deviceById[device]['tags'].map((tag) => {
-						return tag.name
-					})
-					if (!deviceTags || !deviceTags.length) tags = []
-
-					tags = tags.filter((tag) => {
-						return deviceTags.includes(tag.name)
+					let deviceLabels = this.deviceById[device].labels
+					if (!deviceLabels || !deviceLabels.length) {
+						labels = []
+                        return
+					}
+					labels = labels.filter((label) => {
+						return deviceLabels.includes(label)
                     })
 				})
-				return tags
+				return labels
 			}
 		},
         watch: {
-			currentTags(newTags) {
-				this.tag.selected = newTags
+			currentTags(newLabels) {
+				this.tag.selected = newLabels
             }
         },
 		data () {
@@ -136,8 +134,8 @@
 		},
 		methods: {
 			...mapActions({
-				addDeviceTags: CREATE_DEVICE_TAGS,
-				removeDeviceTags: DELETE_DEVICE_TAGS
+				addDeviceTags: CREATE_DEVICE_LABELS,
+				removeDeviceTags: DELETE_DEVICE_LABELS
 			}),
             activate(module) {
 				module.isActive = true

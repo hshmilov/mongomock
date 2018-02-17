@@ -91,25 +91,33 @@ class AggregatorPlugin(PluginBase, Activatable, Triggerable):
                 "viewOn": "devices_db",
                 "pipeline": [
                     {'$project':
-                     {'data':
-                          {'$concatArrays':
-                           ['$adapters',
-                            {'$filter':
-                             {'input': '$tags', 'as': 'tag',
-                              'cond': {'$eq': ['$$tag.type', 'adapterdata']}
-                              }
-                             }]
-                           },
+                     {'internal_axon_id': 1,
+                          'generic_data':
+                              {'$filter':
+                               {'input': '$tags', 'as': 'tag', 'cond': {'$eq': ['$$tag.type', 'data']}
+                                }
+                               },
+                          'specific_data':
+                              {'$concatArrays':
+                               ['$adapters',
+                                {'$filter':
+                                 {'input': '$tags', 'as': 'tag',
+                                  'cond': {'$eq': ['$$tag.type', 'adapterdata']}
+                                  }
+                                 }]
+                               },
                           'adapters': '$adapters.plugin_name',
                           'labels':
                               {'$filter':
-                               {'input': '$tags', 'as': 'tag',
-                                'cond': {'$eq': ['$$tag.type', 'label']}
-                                }
+                               {'input': '$tags', 'as': 'tag', 'cond': {'$and': [
+                                   {'$eq': ['$$tag.type', 'label']},
+                                   {'$eq': ['$$tag.data', True]}
+                               ]}}
                                }
                       }
                      },
-                    {'$project': {'labels': '$labels.name', 'data': 1, 'adapters': 1}}
+                    {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'specific_data': 1, 'adapters': 1,
+                                  'labels': '$labels.name'}}
                 ]
             })
         except pymongo.errors.OperationFailure as e:

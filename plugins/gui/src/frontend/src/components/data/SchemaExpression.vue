@@ -17,14 +17,13 @@
         </select>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
-            <select v-model="expression.compOp" @change="compileExpression" v-if="fieldOpsList.length">
+            <select v-model="expression.compOp" @change="onFuncChange" v-if="fieldOpsList.length">
                 <option value="" disabled hidden>FUNC...</option>
                 <option v-for="op, i in fieldOpsList" :key="i" :value="op">{{ op }}</option>
             </select>
             <template v-if="showValue">
-                <component :is="`x-${fieldSchema.type}-edit`" class="fill"
-                           :class="{'grid-span-2': !fieldOpsList.length}"
-                           :schema="fieldSchema" v-model="expression.value" @input="compileExpression"></component>
+                <component :is="`x-${valueSchema.type}-edit`" class="fill" :class="{'grid-span2': !fieldOpsList.length}"
+                           :schema="valueSchema" v-model="expression.value" @input="compileExpression"></component>
             </template>
             <template v-else>
                 <!-- No need for value, since function is boolean, not comparison -->
@@ -73,6 +72,12 @@
 
 				return this.fieldMap[this.expression.field]
 			},
+            valueSchema() {
+				if (this.fieldSchema && this.fieldSchema.type === 'array' && this.expression.compOp === 'contains') {
+					return this.fieldSchema.items
+                }
+                return this.fieldSchema
+            },
 			fieldOps () {
 				if (!this.fieldSchema) return {}
 
@@ -181,7 +186,11 @@
 				}
 				if (this.expression.not) {}
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
-			}
+			},
+            onFuncChange() {
+				this.expression.value = null
+                this.compileExpression()
+            }
 		}
 	}
 </script>
@@ -197,10 +206,7 @@
         align-items: center;
         grid-gap: 8px;
         margin-bottom: 20px;
-        .grid-span-2 {
-            grid-column-end: span 2;
-        }
-        .grid-span-2 {
+        .grid-span2 {
             grid-column-end: span 2;
         }
         select, input:not([type=checkbox]) {

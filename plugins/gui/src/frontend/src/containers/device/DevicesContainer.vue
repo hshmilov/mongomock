@@ -53,9 +53,8 @@
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 	import {
 		FETCH_DEVICES,
-		FETCH_DEVICES_COUNT,
 		FETCH_DEVICE,
-		FETCH_TAGS,
+		FETCH_LABELS,
 		SELECT_DEVICE_PAGE,
 		FETCH_DEVICE_FIELDS
 	} from '../../store/modules/device'
@@ -80,7 +79,21 @@
 			},
 			deviceFlatSchema () {
 				if (!this.device.deviceFields.data.generic) return []
-				return this.flattenSchema(this.device.deviceFields.data.generic)
+				return [
+					{
+						name: 'adapters', title: 'Adapters', type: 'array',
+						items: {type: 'string', format: 'logo',
+                            enum: Object.keys(adapterStaticData).map((name) => {
+								return {name, title: adapterStaticData[name].name}
+                            })
+						}
+					},
+                    ...this.flattenSchema(this.device.deviceFields.data.generic),
+					{
+						name: 'labels', title: 'Tags', type: 'array',
+						items: {type: 'string', format: 'tag'}
+					}
+                ]
 			},
 			pluginsFlatSchema () {
 				if (!this.device.deviceFields.data.specific) return []
@@ -100,20 +113,9 @@
 			},
 			viewDeviceSchema () {
 				if (!this.deviceFlatSchema.length) return []
-				return [
-					{
-						name: 'adapters.plugin_name', title: 'Adapters', type: 'array',
-						items: {type: 'string', format: 'logo'}
-					},
-					...this.deviceFlatSchema.filter((field) => {
-						return field.name !== 'adapters.data.network_interfaces'
-					}),
-					{
-						name: 'tags.name', title: 'Tags', type: 'array',
-						items: {type: 'string', format: 'tag'}
-					},
-					...this.pluginsFlatSchema
-				]
+				return this.deviceFlatSchema.filter((field) => {
+						return field.name !== 'specific_data.data.network_interfaces'
+					}).concat(this.pluginsFlatSchema)
 			},
 			viewDeviceSchemaSelected () {
 				let existing = new Set()
@@ -138,24 +140,15 @@
 							return {name: query.filter, title: query.name}
 						})
 					},
-					{name: 'adapters', title: 'Adapters', type: 'array'},
-					{
-						name: 'adapters.plugin_name', title: 'Adapter Name', type: 'string',
-						enum: Object.keys(adapterStaticData).map((name) => {
-							return {name, title: adapterStaticData[name].name}
-						})
-					},
 					...this.deviceFlatSchema,
-					{name: 'tags', title: 'Tags', type: 'array'},
-					{name: 'tags.tagname', title: 'Tag Name', type: 'string'},
 					...pluginsFlatSchemaUnique
 				]
 			}
 		},
 		data () {
 			return {
-				selectedFields: ['adapters.plugin_name', 'adapters.data.hostname', 'adapters.data.name',
-					'adapters.data.network_interfaces.ips', 'adapters.data.os.type', 'tags.name'],
+				selectedFields: ['adapters', 'specific_data.data.hostname', 'specific_data.data.name',
+					'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type', 'labels'],
 				selectedDevices: [],
 				saveQueryModal: {
 					open: false,
@@ -183,7 +176,7 @@
 				fetchDeviceFields: FETCH_DEVICE_FIELDS,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
-				fetchTags: FETCH_TAGS,
+				fetchTags: FETCH_LABELS,
 				fetchAdapters: FETCH_ADAPTERS,
 				fetchSavedQueries: FETCH_SAVED_QUERIES
 			}),

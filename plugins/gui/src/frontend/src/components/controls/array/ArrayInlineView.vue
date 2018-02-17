@@ -32,7 +32,7 @@
 				if (!this.schemaItems || !this.limit || (this.schemaItems.length <= this.limit)) {
 					return this.schemaItems
 				}
-                return [...this.schemaItems].splice(0, this.limit)
+                return this.schemaItems.slice(0, this.limit)
             },
             allItems() {
 				if (Array.isArray(this.data)) return this.data.join(',')

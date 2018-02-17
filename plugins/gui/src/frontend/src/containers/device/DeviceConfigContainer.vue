@@ -3,168 +3,171 @@
     	{ title: 'devices', path: { name: 'Devices'}},
     	{ title: deviceName }
     ]">
-        <div class="row">
-            <div class="col-4">
-                <named-section title="Device Generic Fields" icon-name="action/add_field" v-if="deviceData.data && deviceFields.generic">
-                    <card>
-                        <x-schema-list :data="deviceData.data" :schema="deviceFields.generic" :limit="true"></x-schema-list>
-                    </card>
-                </named-section>
-                <named-section v-if="deviceData.tags && deviceData.tags.length" title="Tags" font-class="icon-tag">
-                    <card>
-                        <div v-for="tag in deviceData.tags" class="d-flex tag-content">
-                            <div>{{tag.name}}</div>
-                            <div class="link" @click="removeTag(tag.name)">Remove</div>
+        <div class="row" v-if="deviceFields.generic">
+            <!--<named-section title="General Data" icon-name="action/add_field">-->
+                <tabs v-if="deviceData.generic_data && deviceData.generic_data.length">
+                    <tab title="Basic Info" id="basic" key="basic" :selected="true">
+                        <x-schema-list :data="deviceData.generic_data[0]" :schema="deviceFields.generic"
+                                       :limit="true"></x-schema-list>
+                    </tab>
+                    <tab v-for="item, i in deviceData.generic_data.slice(1)" :title="item.name" :id="i" :key="i">
+                        <x-custom-data :data="item.data"></x-custom-data>
+                    </tab>
+                    <tab title="Tags" id="tags" key="tags" v-if="deviceData.labels && deviceData.labels.length">
+                        <div v-for="label in deviceData.labels" class="col-4 d-flex tag-content">
+                            <div>{{ label }}</div>
+                            <div class="link" @click="removeTag(label)">Remove</div>
                         </div>
-                    </card>
-                </named-section>
-            </div>
-            <div class="col-8">
-                <named-section title="Adapter Specific Fields" icon-name="action/add_field">
-                    <tabs>
-                        <tab v-for="adapter, i in sortedAdapters" :id="adapter.data.id+adapter.plugin_unique_name" :key="adapter.data.id+adapter.plugin_unique_name"
-                             :selected="!i" :title="getAdapterName(adapter.plugin_name)"
-                             :logo="adapter.plugin_name" :outdated="adapter.outdated">
-                            <div class="d-flex tab-header">
-                                <div>Data From: {{ adapter.client_used }}</div>
-                                <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
-                                <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
-                            </div>
-                            <x-schema-list v-if="viewBasic && deviceFields.specific[adapter.plugin_name]"
-                                           :schema="deviceFields.specific[adapter.plugin_name]" :data="adapter.data"></x-schema-list>
-                            <div v-if="!viewBasic">
-                                <tree-view :data="adapter.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
-                            </div>
-                        </tab>
-                    </tabs>
-                </named-section>
-                <named-section title="Plugin Data" icon-name="action/add_field" v-if="hasFieldTags">
-                    <tabs>
-                        <tab v-for="tag, i in deviceData.dataTags" :title="tag.name" :id="i" :key="i" :selected="!i">
-                            <x-custom-data :data="tag.data"></x-custom-data>
-                        </tab>
-                    </tabs>
-                </named-section>
-            </div>
+                    </tab>
+                </tabs>
+            <!--</named-section>-->
+        </div>
+        <div class="row" v-if="deviceFields.specific">
+            <!--<named-section title="Adapter Specific Data" icon-name="action/add_field">-->
+                <tabs>
+                    <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
+                         :key="item.data.id+item.plugin_unique_name"
+                         :selected="!i" :title="getAdapterName(item.plugin_name)"
+                         :logo="item.plugin_name" :outdated="item.outdated">
+                        <div class="d-flex tab-header">
+                            <div>Data From: {{ item.client_used }}</div>
+                            <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
+                            <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
+                        </div>
+                        <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]" :data="item.data"
+                                       :schema="deviceFields.specific[item.plugin_name]"></x-schema-list>
+                        <div v-if="!viewBasic">
+                            <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
+                        </div>
+                    </tab>
+                </tabs>
+            <!--</named-section>-->
         </div>
     </scrollable-page>
 </template>
 
 <script>
-    import ScrollablePage from '../../components/ScrollablePage.vue'
-    import NamedSection from '../../components/NamedSection.vue'
-    import Card from '../../components/Card.vue'
-    import Tabs from '../../components/tabs/Tabs.vue'
-    import Tab from '../../components/tabs/Tab.vue'
-    import xSchemaList from '../../components/data/SchemaList.vue'
-    import xCustomData from '../../components/data/CustomData.vue'
-    import { FETCH_DEVICE, DELETE_DEVICE_TAGS, UPDATE_DEVICE, FETCH_DEVICE_FIELDS } from '../../store/modules/device.js'
-    import { adapterStaticData } from '../../store/modules/adapter.js'
-    import { mapState, mapMutations, mapActions } from 'vuex'
+	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import NamedSection from '../../components/NamedSection.vue'
+	import Card from '../../components/Card.vue'
+	import Tabs from '../../components/tabs/Tabs.vue'
+	import Tab from '../../components/tabs/Tab.vue'
+	import xSchemaList from '../../components/data/SchemaList.vue'
+	import xCustomData from '../../components/data/CustomData.vue'
+	import {
+		FETCH_DEVICE,
+		CREATE_DEVICE_LABELS,
+		DELETE_DEVICE_LABELS,
+		UPDATE_DEVICE,
+		FETCH_DEVICE_FIELDS
+	} from '../../store/modules/device.js'
+	import { adapterStaticData } from '../../store/modules/adapter.js'
+	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
 		name: 'device-config-container',
-        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData},
-        computed: {
-            ...mapState(['device']),
-            deviceId() {
-            	return this.$route.params.id
-            },
-            deviceData() {
-            	return this.device.deviceDetails.data
-            },
-            sortedAdapters() {
-                if (!this.deviceData || !this.deviceData.adapters) return []
-                this.deviceData.adapters.sort((first, second) => {
-                	// Adapters with no last_seen field go first
-                    if(!second.data.last_seen) return 1
-                    if(!first.data.last_seen) return -1
+		components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData},
+		computed: {
+			...mapState(['device']),
+			deviceId () {
+				return this.$route.params.id
+			},
+			deviceData () {
+				return this.device.deviceDetails.data
+			},
+			sortedSpecificData () {
+				if (!this.deviceData || !this.deviceData.specific_data) return []
+				this.deviceData.specific_data.sort((first, second) => {
+					// Adapters with no last_seen field go first
+					if (!second.data.last_seen) return 1
+					if (!first.data.last_seen) return -1
 
-                    // Turn strings into dates and subtract them to get a negative, positive, or zero value.
-                    return new Date(second.data.last_seen) - new Date(first.data.last_seen)
-                })
-                let lastSeen = new Set()
-                this.deviceData.adapters.forEach((adapter) => {
-                    if (lastSeen.has(adapter.plugin_name)) {
-                    	adapter.outdated = true
-                        return
+					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
+					return new Date(second.data.last_seen) - new Date(first.data.last_seen)
+				})
+				let lastSeen = new Set()
+				this.deviceData.specific_data.forEach((item) => {
+					if (lastSeen.has(item.plugin_name)) {
+						item.outdated = true
+						return
 					}
-                    lastSeen.add(adapter.plugin_name)
-                })
-                return this.deviceData.adapters
-            },
-            deviceName() {
-            	if (!this.deviceData.data) {
-            		return ''
-                }
-            	return this.deviceData.data.hostname || this.deviceData.data.name || this.deviceData.data.pretty_id
-            },
-            deviceFields() {
-            	return this.device.deviceFields.data
-            },
-            hasFieldTags() {
-            	return this.deviceData.dataTags && Object.keys(this.deviceData.dataTags).length
-            }
-        },
-        data() {
+					lastSeen.add(item.plugin_name)
+				})
+				return this.deviceData.specific_data
+			},
+			deviceName () {
+				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) {
+					return ''
+				}
+				return this.deviceData.generic_data[0].hostname || this.deviceData.generic_data[0].name
+					|| this.deviceData.generic_data[0].pretty_id
+			},
+			deviceFields () {
+				return this.device.deviceFields.data
+			}
+		},
+		data () {
 			return {
-				viewBasic: true
-            }
-        },
-        methods: {
-            ...mapMutations({ updateDevice: UPDATE_DEVICE }),
-            ...mapActions({ fetchDevice: FETCH_DEVICE, deleteDeviceTags: DELETE_DEVICE_TAGS,
-                fetchDeviceFields: FETCH_DEVICE_FIELDS}),
-            getAdapterName(pluginName) {
-            	if (!adapterStaticData[pluginName]) {
-            		return pluginName
+				viewBasic: true,
+                tag: {
+					isActive: false,
+                    value: ''
                 }
-            	return adapterStaticData[pluginName].name
-            },
-            removeTag(tag) {
-            	this.deleteDeviceTags({devices: [this.deviceId], labels: [tag]})
-            }
-        },
-        created() {
+			}
+		},
+		methods: {
+			...mapMutations({updateDevice: UPDATE_DEVICE}),
+			...mapActions({
+				fetchDevice: FETCH_DEVICE, deleteDeviceTags: DELETE_DEVICE_LABELS,
+                createDeviceTags: CREATE_DEVICE_LABELS,
+				fetchDeviceFields: FETCH_DEVICE_FIELDS
+			}),
+			getAdapterName (pluginName) {
+				if (!adapterStaticData[pluginName]) {
+					return pluginName
+				}
+				return adapterStaticData[pluginName].name
+			},
+			removeTag (label) {
+				this.deleteDeviceTags({devices: [this.deviceId], labels: [label]})
+			}
+		},
+		created () {
 			if (!this.deviceFields || !this.deviceFields.generic) {
 				this.fetchDeviceFields()
 			}
 			if (!this.deviceData || this.deviceData.internal_axon_id !== this.deviceId) {
-				this.updateDevice({ fetching: false, error: '', data: {
-					internal_axon_id: this.deviceId, adapters: [], tags: [], data: {}
-                }})
 				this.fetchDevice(this.deviceId)
 			}
-        }
+		}
 	}
 </script>
 
 <style lang="scss">
 
-    .section {
-        .card-body {
+    .tabs {
+        width: 100%;
+        margin-bottom: 12px;
+        .tab-pane {
             font-size: 14px;
-            .tag-content {
+            .tab-header {
+                border-bottom: 1px solid #ddd;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                margin-left: -12px;
+                margin-right: -12px;
+                padding-left: 12px;
+                padding-right: 12px;
                 .link {
                     flex: 1 0 auto;
                     text-align: right;
                 }
             }
-        }
-    }
-    .tab-pane {
-        font-size: 14px;
-        .tab-header {
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            margin-left: -12px;
-            margin-right: -12px;
-            padding-left: 12px;
-            padding-right: 12px;
-            .link {
-                flex: 1 0 auto;
-                text-align: right;
+            .tag-content {
+                .link {
+                    flex: 1 0 auto;
+                    text-align: right;
+                }
             }
         }
     }

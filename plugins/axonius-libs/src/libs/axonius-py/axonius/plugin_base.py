@@ -308,12 +308,13 @@ class PluginBase(Feature):
                                                                                               self.lib_version))
 
     def _save_field_names_to_db(self):
-        """ Saves fields_set and raw_fields_set to the Adapter's DB """
+        """ Saves fields_set and raw_fields_set to the Plugin's DB """
         with self._fields_db_lock:
             last_fields_count, last_raw_fields_count = self._last_fields_count
             if len(self._fields_set) == last_fields_count and len(self._raw_fields_set) == last_raw_fields_count:
                 return  # Optimization
 
+            self.logger.info("Persisting my fields to DB")
             fields = list(self._fields_set)  # copy
             raw_fields = list(self._raw_fields_set)  # copy
 

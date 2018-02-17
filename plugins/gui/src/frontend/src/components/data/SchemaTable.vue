@@ -27,9 +27,6 @@
                             <component :is="`x-${field.type}-view`" :schema="field" :value="getData(record, field.name)"
                                        :limit="2"></component>
                         </td>
-                        <!--generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
-                                            v-if="!field.hidden" :type="field.type" :value="record[field.name]">
-                        </generic-table-cell-->
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                             <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
                                 <i v-if="action.triggerFont" :class="action.triggerFont"></i>

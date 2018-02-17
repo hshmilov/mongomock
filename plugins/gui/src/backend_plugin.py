@@ -216,7 +216,7 @@ class BackendPlugin(PluginBase):
         Get Axonius devices from the aggregator
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
+            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
             device_list = client_collection.find(
                 mongo_filter, mongo_projection)
             if mongo_filter and not skip:
@@ -236,7 +236,7 @@ class BackendPlugin(PluginBase):
         :return: Number of devices
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
+            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
             return str(client_collection.find(mongo_filter, {'_id': 1}).count())
 
     @add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
@@ -247,7 +247,7 @@ class BackendPlugin(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            device = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find_one(
+            device = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find_one(
                 {'internal_axon_id': device_id})
             if device is None:
                 return return_error("Device ID wasn't found", 404)
@@ -260,6 +260,7 @@ class BackendPlugin(PluginBase):
         Together these are all fields that any device may have data for and should be presented in UI accordingly.
         :return:
         """
+
         def _censor_fields(fields):
             # Remove fields from data that are not relevant to UI
             fields['items'] = filter(lambda x: x.get('name', '') not in ['id', 'scanner'], fields['items'])
@@ -267,15 +268,13 @@ class BackendPlugin(PluginBase):
 
         fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}
         with self._get_db_connection(False) as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
-                                                                              {'plugin_type': 'ScannerAdapter'}]}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            adapters_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             for adapter in adapters_from_db:
-                adapter_fields_record = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
-                    {'name': 'parsed'},
-                    projection={'schema': 1})
-                if adapter_fields_record:
-                    fields['specific'][adapter[PLUGIN_NAME]] = _censor_fields(adapter_fields_record['schema'])
+                if db_connection[adapter[PLUGIN_UNIQUE_NAME]]['fields']:
+                    adapter_fields_record = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
+                        {'name': 'parsed'}, projection={'schema': 1})
+                    if adapter_fields_record:
+                        fields['specific'][adapter[PLUGIN_NAME]] = _censor_fields(adapter_fields_record['schema'])
 
         return jsonify(fields)
 

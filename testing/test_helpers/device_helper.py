@@ -24,6 +24,6 @@ def get_device_dict(test_name, device_id, plugin_name, plugin_unique_name):
 def filter_by_plugin_name(devices, plugin_name):
     l = []
     for d in devices:
-        if len([True for x in d['adapters'] if x['plugin_name'] == plugin_name]) > 0:
+        if len([True for x in d.get('adapters', []) if x == plugin_name]) > 0:
             l.append(d)
     return l
