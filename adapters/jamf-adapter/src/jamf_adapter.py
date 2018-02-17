@@ -104,6 +104,32 @@ class JamfAdapter(AdapterBase):
             else:
                 device.figure_os(' '.join([device_raw.get('Model_Identifier', ''), device_raw.get('iOS_Version', '')]))
                 device.add_nic(device_raw.get('Wi_Fi_MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
+
+            total_ram_mb = device_raw.get('Total_RAM_MB')
+            if total_ram_mb is not None:
+                total_ram_mb = float(total_ram_mb)
+                device.total_physical_memory = total_ram_mb / 1024.0
+
+            total_number_of_physical_procesors = device_raw.get("Number_of_Processors")
+            if total_number_of_physical_procesors is not None:
+                device.total_number_of_physical_processors = int(total_number_of_physical_procesors)
+
+            total_number_of_cores = device_raw.get("Total_Number_of_Cores")
+            if total_number_of_cores is not None:
+                device.total_number_of_cores = int(total_number_of_cores)
+
+            device_serial = device_raw.get("Serial_Number")
+            if device_serial is not None:
+                device.device_serial = device_serial
+
+            processor_speed_mhz = device_raw.get("Processor_Speed_MHz")
+            processor_type = device_raw.get("Processor_Type")
+            if processor_speed_mhz is not None and processor_type is not None:
+                device.add_cpu(
+                    name=processor_type,
+                    ghz=float(processor_speed_mhz) / 1024.0
+                )
+
             device.set_raw(device_raw)
             yield device
 

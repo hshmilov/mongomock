@@ -100,7 +100,7 @@ class Device(SmartJsonClass):
     physical_memory_percentage = Field(float, "RAM Usage (%)")
     number_of_processes = Field(int, "Number Of Processes")
     total_number_of_physical_processors = Field(int, "Total Number Of Physical Processors")
-    total_number_of_logical_Processors = Field(int, "Total Number Of Logical Processors")
+    total_number_of_cores = Field(int, "Total Number Of Cores")
     installed_softwares = ListField(str, "Installed Softwares")
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")

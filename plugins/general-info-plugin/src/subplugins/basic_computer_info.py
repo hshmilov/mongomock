@@ -83,7 +83,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                 "Device Model": result[5][0].get("Model", "Unknown"),
                 "Device Model Family": result[5][0].get("SystemFamily", "Unknown"),
                 "Total Number Of Physical Processors": result[5][0].get("NumberOfProcessors", "Unknown"),
-                "Total Number Of Logical Processors": result[5][0].get("NumberOfLogicalProcessors", "Unknown")
+                "Total Number Of Cores": result[5][0].get("NumberOfLogicalProcessors", "Unknown")
             }
 
             adapterdata_device.bios_version = str(basic['Hardware']['BIOS Version'])
@@ -96,8 +96,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                 adapterdata_device.device_model_family = str(basic['Hardware']['Device Model Family'])
                 adapterdata_device.total_number_of_physical_processors = \
                     int(basic["Hardware"]['Total Number Of Physical Processors'])
-                adapterdata_device.total_number_of_logical_Processors = \
-                    int(basic["Hardware"]['Total Number Of Logical Processors'])
+                adapterdata_device.total_number_of_cores = \
+                    int(basic["Hardware"]['Total Number Of Cores'])
             else:
                 self.logger.error(f"Noice that we do not take data from Win32_ComputerSystem, since there is"
                                   f" an excpetion there: {result[5]}")
