@@ -119,7 +119,7 @@ class GetLastUserLogon(GeneralInfoSubplugin):
             if last_use_time is not None:
                 last_used_time_arr.append(
                     {"Sid": sid,
-                     "User": sids_to_users[sid],
+                     "User": sids_to_users.get(sid, "Unknown Name"),
                      "Last Use": last_use_time})
 
         # Now sort the array.
