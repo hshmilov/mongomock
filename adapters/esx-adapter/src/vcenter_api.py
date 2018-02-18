@@ -68,6 +68,7 @@ class vCenterApi():
         self._password = password
         self._connect()
         self.devices_count = None
+        self.logger = logger
 
     def _connect(self):
         if self._verify_ssl:
