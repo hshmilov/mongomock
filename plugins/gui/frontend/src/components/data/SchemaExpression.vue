@@ -1,29 +1,29 @@
 <template>
     <div class="expression">
         <!-- Choice of logical operator, available from second expression --->
-        <select v-if="!first" v-model="expression.logicOp" @change="compileExpression">
+        <select v-if="!first" v-model="expression.logicOp">
             <option value="" disabled hidden>OP...</option>
             <option v-for="op, i in logicOps" :key="i" :value="op">{{ op }}</option>
         </select>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
         <label class="btn-light checkbox-label" :class="{'active': expression.leftBracket}">
-            <input type="checkbox" v-model="expression.leftBracket" @change="compileExpression">(</label>
+            <input type="checkbox" v-model="expression.leftBracket">(</label>
         <label class="btn-light checkbox-label" :class="{'active': expression.not}">
-            <input type="checkbox" v-model="expression.not" @change="compileExpression">NOT</label>
+            <input type="checkbox" v-model="expression.not">NOT</label>
         <select v-model="expression.field" @change="compileExpression">
             <option value="" disabled hidden>FIELD...</option>
             <option v-for="field in fields" :key="field.name" :value="field.name">{{ field.title }}</option>
         </select>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
-            <select v-model="expression.compOp" @change="onFuncChange" v-if="fieldOpsList.length">
+            <select v-model="expression.compOp" v-if="fieldOpsList.length">
                 <option value="" disabled hidden>FUNC...</option>
                 <option v-for="op, i in fieldOpsList" :key="i" :value="op">{{ op }}</option>
             </select>
             <template v-if="showValue">
-                <component :is="`x-${valueSchema.type}-edit`" class="fill" :class="{'grid-span2': !fieldOpsList.length}"
-                           :schema="valueSchema" v-model="expression.value" @input="compileExpression"></component>
+                <component :is="`x-${valueSchema.type}-edit`" :schema="valueSchema" v-model="expression.value"
+                           class="fill" :class="{'grid-span2': !fieldOpsList.length}"></component>
             </template>
             <template v-else>
                 <!-- No need for value, since function is boolean, not comparison -->
@@ -33,7 +33,7 @@
         <template v-else><select></select><input disabled></template>
         <!-- Option to add ')' and to remove the expression -->
         <label class="btn-light checkbox-label" :class="{'active': expression.rightBracket}">
-            <input type="checkbox" v-model="expression.rightBracket" @change="compileExpression">)</label>
+            <input type="checkbox" v-model="expression.rightBracket">)</label>
         <div class="link" @click="$emit('remove')">x</div>
     </div>
 </template>
@@ -81,7 +81,7 @@
 			fieldOps () {
 				if (!this.fieldSchema) return {}
 
-				if (this.fieldSchema.enum) {
+				if (this.fieldSchema.enum && this.fieldSchema.format !== 'predefined') {
 					return this.compOps['enum'] || {}
 				}
 				if (this.fieldSchema.format) {
@@ -108,6 +108,13 @@
                 processedValue: ''
 			}
 		},
+        watch: {
+			valueSchema(newSchema, oldSchema) {
+				if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
+					this.expression.value = null
+                }
+            }
+        },
 		methods: {
 			checkErrors () {
 				if (!this.first && !this.expression.logicOp) {
@@ -186,12 +193,11 @@
 				}
 				if (this.expression.not) {}
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
-			},
-            onFuncChange() {
-				this.expression.value = null
-                this.compileExpression()
-            }
-		}
+			}
+		},
+        updated() {
+			this.compileExpression()
+        }
 	}
 </script>
 

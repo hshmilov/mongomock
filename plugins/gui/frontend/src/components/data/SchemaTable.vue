@@ -101,7 +101,7 @@
 			}
 		},
 		watch: {
-			filterFields: function (newFields, oldFields) {
+			fields: function (newFields, oldFields) {
 				if (!oldFields.length || newFields.length <= oldFields.length) { return }
 				this.restartData()
 			},

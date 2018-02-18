@@ -93,11 +93,13 @@ export const query = {
 	mutations: {
 		[ADD_SAVED_QUERY] (state, payload) {
 			if (!state.savedQueries.data || !state.savedQueries.data.length) { return }
-			state.savedQueries.data = [ { ...payload,
+			const savedQuery = { ...payload,
 				query_name: payload.name,
 				filter: payload.filter,
 				'timestamp': new Date().getTime()
-			}, ...state.savedQueries.data ]
+			}
+			state.savedQueries.data = [ savedQuery, ...state.savedQueries.data ]
+			state.quickQuery.savedQueries.data = [ savedQuery, ...state.savedQueries.slice(0, 4)]
 		},
 		[REMOVE_SAVED_QUERY] (state, payload) {
 			state.savedQueries.data = [ ...state.savedQueries.data ].filter(function(query) {

@@ -3,7 +3,7 @@
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
             <devices-filter-container slot="cardContent" :schema="filterDeviceSchema" v-model="queryFilter"
-                                      @submit="executeQuery"></devices-filter-container>
+                                      :selected="selectedFields" @submit="executeQuery"></devices-filter-container>
         </card>
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
@@ -114,7 +114,7 @@
 			viewDeviceSchema () {
 				if (!this.deviceFlatSchema.length) return []
 				return this.deviceFlatSchema.filter((field) => {
-						return field.name !== 'specific_data.data.network_interfaces'
+						return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
 					}).concat(this.pluginsFlatSchema)
 			},
 			viewDeviceSchemaSelected () {

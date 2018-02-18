@@ -26,13 +26,13 @@
         props: {data: {required: true}},
         computed: {
 			isObject() {
-				return typeof this.data === 'object'
+				return this.data && typeof this.data === 'object'
             },
             isArray() {
-				return Array.isArray(this.data)
+				return this.data && Array.isArray(this.data)
             },
             gridCols() {
-                if (!this.isObject || this.isArray) return 'none'
+                if (!this.data || !this.isObject || this.isArray) return 'none'
 
                 let foundObjChild = false
                 return Object.keys(this.data).filter((key) => {
