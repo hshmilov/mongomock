@@ -12,7 +12,11 @@ class GuiService(PluginService):
 
     @property
     def volumes_override(self):
-        # GUI currently doesn't support debug, to use, please remove this entire property (and build your local npm...)
+        # GUI supports debug, but to use, you have to build your *local* node modules
+        local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
+        local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
+        if os.path.isdir(local_npm) and os.path.isdir(local_dist):
+            return super().volumes_override
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
                                             'axonius-libs', 'src', 'libs'))
         return [f'{libs}:/home/axonius/libs:ro']

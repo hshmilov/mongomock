@@ -13,7 +13,7 @@
     <module name="cortex" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/devops/axonius_system.py" />
-    <option name="PARAMETERS" value="service up ad_users_associator --restart" />
+    <option name="PARAMETERS" value="service ad_users_associator up --restart" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

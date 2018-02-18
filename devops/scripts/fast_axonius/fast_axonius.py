@@ -24,7 +24,7 @@ def fast_axonius():
     for ad_name, variable in axonius_system.get_all_adapters():
         # Initialize it
         service = variable()
-        name = os.path.basename(service.service_dir)
+        service.take_process_ownership()
         services[ad_name] = service
 
     plugins = {}
@@ -33,6 +33,7 @@ def fast_axonius():
     for plugin_name, variable in axonius_system.get_all_plugins():
         # Initialize it
         plugin = variable()
+        plugin.take_process_ownership()
         plugins[plugin_name] = plugin
 
     parallel_tests = os.path.join(testing_folder, 'parallel_tests')
