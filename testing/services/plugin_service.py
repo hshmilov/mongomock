@@ -5,6 +5,7 @@ import os
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
+from services.debug_template import py_charm_debug_template, py_charm_debug_port_template
 from services.docker_service import DockerService
 from services.ports import DOCKER_PORTS
 
@@ -118,6 +119,15 @@ class PluginService(DockerService):
     @property
     def unique_name(self):
         return self.vol_conf.unique_name
+
+    def generate_debug_template(self):
+        name = self.adapter_name.replace("-", "_") if isinstance(self, AdapterService) else self.package_name
+        ports = '\n'.join([py_charm_debug_port_template.format(host_port=host_port, internal_port=internal_port)
+                           for host_port, internal_port in self.exposed_ports])
+        output = py_charm_debug_template.format(name=name, container_name=self.container_name, ports=ports,
+                                                run_type='adapters' if isinstance(self, AdapterService) else 'plugins')
+        path = os.path.join(os.path.dirname(__file__), '..', '..', '.idea', 'runConfigurations', name + '_debug.xml')
+        open(path, 'w').write(output)
 
 
 class AdapterService(PluginService):
