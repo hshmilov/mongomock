@@ -1,4 +1,5 @@
 import inspect
+import subprocess
 from datetime import datetime, timedelta
 import importlib
 import time
@@ -247,6 +248,23 @@ class AxoniusService(object):
                     adapters_list.append((module_name[:-len('_service')], variable))
                     break
         return adapters_list
+
+    def build_libs(self, rebuild=False):
+        image_name = 'axonius/axonius-libs'
+        output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
+        image_exists = image_name in output
+        if image_exists:
+            if rebuild:
+                subprocess.call(['docker', 'rmi', image_name, '--force'],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            else:
+                print('Image axonius-libs already built - skipping build step')
+                return
+        runner = ParallelRunner()
+        runner.append_single('axonius-libs', ['docker', 'build', '.', '-t', image_name],
+                             cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
+                                                              'axonius-libs')))
+        assert runner.wait_for_all() == 0
 
     def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, async=True):
         to_build = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]

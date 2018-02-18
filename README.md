@@ -34,10 +34,10 @@ Examples:
 # All system commands start and stop the system [mongo, core, aggregator, gui] plus any other specified containers
 
 # In order to start and stop a specific *container*:
-./axonius.sh adapter up [--prod] ad
-./axonius.sh adapter down [--prod] ad
-./axonius.sh plugin up [--prod] watch
-./axonius.sh plugin down [--prod] watch
+./axonius.sh adapter ad up [--prod]
+./axonius.sh adapter ad down [--prod]
+./axonius.sh service watch up [--prod]
+./axonius.sh service watch down [--prod]
 
 ./axonius.sh ls
 ```

@@ -24,9 +24,9 @@ except (ModuleNotFoundError, ImportError):
 def main():
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} [-h] {system,adapter,service} [<args>]
-       {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--skip]
-                                [--services [N [N ...]]] [--adapters [N [N ...]]]
-       {name} {adapter,service} [-h] {up,down,build} name [--prod] [--restart] [--rebuild]
+       {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
+                                [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
+       {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
     parser.add_argument('target', choices=['system', 'adapter', 'service', 'ls'])
@@ -56,19 +56,23 @@ def main():
 
 def system_entry_point(args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--skip]
-                                [--services [N [N ...]]] [--adapters [N [N ...]]]"""[1:].replace(
-        '{name}', os.path.basename(__file__)))
+{name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
+                                [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]"""[1:].
+                                     replace('{name}', os.path.basename(__file__)))
     parser.add_argument('mode', choices=['up', 'down', 'build'])
     parser.add_argument('--all', type=str2bool, nargs='?', const=True, default=False, help='All adapters and services')
     parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Prod Mode')
     parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
+    parser.add_argument('--hard', type=str2bool, nargs='?', const=True, default=False,
+                        help='Rebuild Image after rebuilding axonius-libs')
     parser.add_argument('--skip', type=str2bool, nargs='?', const=True, default=False,
                         help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
+    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', help='Adapters and Services to exclude',
+                        default=[])
 
     try:
         args = parser.parse_args(args)
@@ -82,7 +86,18 @@ def system_entry_point(args):
         args.services = [name for name, variable in axonius_system.get_all_plugins()]
         args.adapters = [name for name, variable in axonius_system.get_all_adapters()]
 
+    if args.exclude:
+        for name in args.exclude:
+            if name not in args.services and name not in args.adapters:
+                raise ValueError(f'Excluded name {name} not found')
+        args.services = [name for name in args.services if name not in args.exclude]
+        args.adapters = [name for name in args.adapters if name not in args.exclude]
+
     axonius_system.take_process_ownership()
+    if args.hard:
+        assert args.mode in ('up', 'build')
+        axonius_system.build_libs(True)
+        args.rebuild = True
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
@@ -108,14 +123,16 @@ def system_entry_point(args):
 
 def service_entry_point(target, args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} {target} [-h] {up,down,build} name [--prod] [--restart] [--rebuild]
+{name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
+    parser.add_argument('name')
     parser.add_argument('mode', choices=['up', 'down', 'build'])
     parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Prod Mode')
     parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
-    parser.add_argument('name')
+    parser.add_argument('--hard', type=str2bool, nargs='?', const=True, default=False,
+                        help='Rebuild Image after rebuilding axonius-libs')
 
     try:
         args = parser.parse_args(args)
@@ -132,6 +149,10 @@ def service_entry_point(target, args):
         services.append(args.name)
 
     axonius_system = get_service()
+    if args.hard:
+        assert args.mode in ('up', 'build')
+        axonius_system.build_libs(True)
+        args.rebuild = True
     if args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild)

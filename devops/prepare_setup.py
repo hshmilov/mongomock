@@ -24,14 +24,9 @@ if __name__ == '__main__':
 
     runner = ParallelRunner()
 
-    # first build libs
-    runner.append_single('axonius-libs', ['docker', 'build', 'plugins/axonius-libs', '-t', 'axonius/axonius-libs'])
-    print("waiting to build axonius-libs")
-    assert runner.wait_for_all() == 0
-
     # venv
     runner.append_single('venv', safe_run_bash(['./create_venv.sh']))
     assert runner.wait_for_all() == 0
 
-    runner.append_single('system', safe_run_bash(['./axonius.sh', 'system', 'build', '--all', '--prod']))
+    runner.append_single('system', safe_run_bash(['./axonius.sh', 'system', 'build', '--all', '--prod', '--hard']))
     assert runner.wait_for_all() == 0
