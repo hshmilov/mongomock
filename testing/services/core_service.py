@@ -5,7 +5,7 @@ from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PA
 
 class CoreService(PluginService):
     def __init__(self):
-        super().__init__('core', service_dir='../plugins/core')
+        super().__init__('core')
 
     def register(self, api_key=None, plugin_name=""):
         headers = {}

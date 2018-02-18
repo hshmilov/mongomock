@@ -7,7 +7,7 @@ from services.plugin_service import PluginService
 
 class GuiService(PluginService):
     def __init__(self):
-        super().__init__('gui', service_dir='../plugins/gui')
+        super().__init__('gui')
         self._session = requests.Session()
 
     @property
@@ -26,14 +26,14 @@ FROM axonius/axonius-libs
 WORKDIR /home/axonius/app
 
 # Copy the current directory contents into the container at /app
-COPY src/ ./
+COPY ./ ./gui/
 COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
 
 # Removing folders generated from build, so that next command will build properly
-RUN cd ./frontend && rm -rf dist node_modules
+RUN cd ./gui/frontend && rm -rf dist node_modules
 
 # Compile npm. we assume we have it from axonius-libs
-RUN cd ./frontend && npm set progress=false && npm install && npm run {dev}build"""[1:]
+RUN cd ./gui/frontend && npm set progress=false && npm install && npm run {dev}build"""[1:]
 
     def __del__(self):
         self._session.close()

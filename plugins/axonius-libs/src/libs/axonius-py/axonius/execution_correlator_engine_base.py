@@ -96,15 +96,6 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
         self._parse_correlation_results = _parse_correlation_results
 
     def _raw_correlate(self, devices):
-        """
-        Perform correlation over the online devices provided.
-        This does no validation over correlations: it doesn't check that correlations made are consistent, but
-        it does check that the execution is consistent with `devices`.
-        For example, this might try to correlate a device with a another device (returned from execution) even if
-        the second device isn't known to the system.
-        :param devices: axonius devices to correlate
-        :return: iter(CorrelationResult or WarningResult)
-        """
         # refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/90472522/Correlation+Implementation
         all_adapter_devices = [adapter for adapters in devices for adapter in adapters['adapters']]
 
@@ -223,16 +214,6 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                                   f"as {response_id}"})
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
-        """
-        Virtual by design.
-        :param first_name: plugin name of available device
-        :param first_id: id of available device
-        :param second_name: plugin name of correlated device
-        :param second_id: id of correlated device
-        :param data: object
-        :param reason: given by the engine implementor
-        :return: whether to use the association
-        """
         if reason == 'Execution':
             if second_name == first_name:
                 # this means that some logic in the correlator logic is wrong, because

@@ -162,9 +162,9 @@ class AxoniusService(object):
             for plugin in plugins:
                 plugin.remove_container()
         for plugin in plugins:
+            plugin.take_process_ownership()
             if skip and plugin.get_is_container_up():
                 continue
-            plugin.take_process_ownership()
             plugin.start(mode, allow_restart=allow_restart)
         timeout = 60
         start = time.time()

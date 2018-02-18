@@ -9,12 +9,14 @@ from test_helpers.parallel_runner import ParallelRunner
 
 
 class DockerService(AxonService):
-    def __init__(self, container_name, service_dir):
+    def __init__(self, container_name: str, service_dir: str):
         super().__init__()
         self.container_name = container_name
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
-        self.log_dir = os.path.abspath(os.path.join("..", "logs", self.container_name))
+        self.package_name = os.path.basename(self.service_dir)
+        self.log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs', self.container_name))
         self._process_owner = False
+        self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -46,14 +48,30 @@ class DockerService(AxonService):
         return []
 
     def get_dockerfile(self, mode=''):
-        return """
+        return f"""
 FROM axonius/axonius-libs
 
 # Set the working directory to /app
 WORKDIR /home/axonius/app
 
 # Copy the current directory contents into the container at /app
-COPY src/ ./
+COPY ./ ./{self.package_name}/
+"""[1:]
+
+    def get_main_file(self):
+        return f"""
+from {self.package_name}.service import {self.service_class_name} as CurrentService
+from axonius.server_utils import init_wsgi
+
+if __name__ == '__main__':
+    # Initialize
+    service = CurrentService()
+
+    # Run (Blocking)
+    service.start_serve()
+else:
+    # Init wsgi if in it.
+    wsgi_app = init_wsgi(CurrentService)
 """[1:]
 
     def start(self, mode='', allow_restart=False, rebuild=False):
@@ -109,19 +127,25 @@ COPY src/ ./
     def build(self, mode='', runner=None):
         docker_build = ['docker', 'build', '.']
 
-        # If Dockerfile exists, use it, else use the provided Dockerfile test from self.get_dockerfile
+        # If Dockerfile exists, use it, else use the provided Dockerfile from self.get_dockerfile
         dockerfile_path = os.path.join(self.service_dir, 'Dockerfile')
-        if not os.path.isfile(dockerfile_path):
+        if os.path.isfile(dockerfile_path):
+            dockerfile = open(dockerfile_path, 'r').read()
+        else:
             dockerfile = self.get_dockerfile(mode)
             assert dockerfile is not None
 
-            # dump Dockerfile.autogen to local folder
-            dockerfile_path += '.autogen'
-            open(dockerfile_path, 'w').write('# This is an auto-generated file, Do not modify\n\n' + dockerfile)
-            docker_build.extend(['-f', os.path.relpath(dockerfile_path, self.service_dir)])
+        # Append the main.py file creation
+        main_file_data = self.get_main_file().replace('\n', '\\n')
+        assert '"' not in main_file_data
+        dockerfile += f'\nRUN echo "{main_file_data}" > ./main.py'
+
+        # dump Dockerfile.autogen to local folder
+        autogen_path = dockerfile_path + '.autogen'
+        open(autogen_path, 'w').write('# This is an auto-generated file, Do not modify\n\n' + dockerfile)
+        docker_build.extend(['-f', os.path.relpath(autogen_path, self.service_dir)])
 
         docker_build.extend(['--tag', self.image])
-
         wait = False
         if runner is None:  # runner is passed as a ParallelRunner
             runner = ParallelRunner()

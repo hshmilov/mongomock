@@ -7,7 +7,7 @@ from services.activateable_service import ActivateableService
 
 class DnsConflictsService(PluginService, ActivateableService):
     def __init__(self):
-        super().__init__('dns-conflicts', service_dir='../plugins/dns-conflicts-plugin')
+        super().__init__('dns-conflicts')
 
     def find_conflicts(self):
         result = self.post('find_conflicts')

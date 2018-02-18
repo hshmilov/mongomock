@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 class WatchService(PluginService):
     def __init__(self):
-        super().__init__('watch', service_dir='../plugins/watch-service')
+        super().__init__('watch')
 
     def _request_watches(self, method, *vargs, **kwargs):
         return getattr(self, method)('watch', api_key=self.api_key, *vargs, **kwargs)

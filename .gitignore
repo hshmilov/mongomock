@@ -238,20 +238,20 @@ cmake-build-debug/
 ## Plugin-specific files:
 
 # Ad adapter cpp project
-/adapters/ad-adapter/src/temp_files/*
-/adapters/ad-adapter/src/ExecuteSvc/.vs/*
-/adapters/ad-adapter/src/ExecuteSvc/Release/*
-/adapters/ad-adapter/src/ExecuteSvc/Debug/*
-/adapters/ad-adapter/src/ExecuteSvc/x64/*
-/adapters/ad-adapter/src/ExecuteSvc/ExecuteSvc/Release/*
-/adapters/ad-adapter/src/ExecuteSvc/ExecuteSvc/Debug/*
-/adapters/ad-adapter/src/ExecuteSvc/ExecuteSvc/x64/*
-/adapters/ad-adapter/src/ExecuteSvc/ExecuteSvc/Release/*
-/adapters/ad-adapter/src/ExecuteSvc/ExecuteSvc/Debug/*
-/adapters/ad-adapter/src/ExecuteSvc/ExecuteSvc/x64/*
-/adapters/ad-adapter/src/ExecuteSvc/Payload/Release/*
-/adapters/ad-adapter/src/ExecuteSvc/Payload/Debug/*
-/adapters/ad-adapter/src/ExecuteSvc/Payload/x64/*
+/adapters/active_directory/temp_files/*
+/adapters/active_directory/ExecuteSvc/.vs/*
+/adapters/active_directory/ExecuteSvc/Release/*
+/adapters/active_directory/ExecuteSvc/Debug/*
+/adapters/active_directory/ExecuteSvc/x64/*
+/adapters/active_directory/ExecuteSvc/ExecuteSvc/Release/*
+/adapters/active_directory/ExecuteSvc/ExecuteSvc/Debug/*
+/adapters/active_directory/ExecuteSvc/ExecuteSvc/x64/*
+/adapters/active_directory/ExecuteSvc/ExecuteSvc/Release/*
+/adapters/active_directory/ExecuteSvc/ExecuteSvc/Debug/*
+/adapters/active_directory/ExecuteSvc/ExecuteSvc/x64/*
+/adapters/active_directory/ExecuteSvc/Payload/Release/*
+/adapters/active_directory/ExecuteSvc/Payload/Debug/*
+/adapters/active_directory/ExecuteSvc/Payload/x64/*
 
 # IntelliJ
 out/

@@ -6,7 +6,7 @@ from services.simple_fixture import initialize_fixture
 
 class AdService(AdapterService):
     def __init__(self):
-        super().__init__('ad')
+        super().__init__('active-directory')
 
     def resolve_ip(self):
         self.post('resolve_ip', None, None)

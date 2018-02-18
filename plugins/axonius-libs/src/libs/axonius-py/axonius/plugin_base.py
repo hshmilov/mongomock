@@ -1,7 +1,5 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
-__author__ = "Ofir Yefet"
-
 import json
 from datetime import datetime, timedelta
 import sys
@@ -12,6 +10,7 @@ import os
 import threading
 import logging
 import socket
+import ssl
 import urllib3
 
 from flask import Flask, request, jsonify
@@ -45,6 +44,14 @@ TIME_WAIT_FOR_REGISTER = 60 * 5
 
 # Removing ssl_verify false warnings from appearing in the logs on all the plugins.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
 
 
 @AXONIUS_REST.after_request
@@ -170,7 +177,7 @@ class PluginBase(Feature):
     """
     MyDevice = None
 
-    def __init__(self, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
+    def __init__(self, config_file_path: str, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
         """ Initialize the class.
 
         This will automatically add the rule of '/version' to get the Plugin version.
@@ -186,7 +193,7 @@ class PluginBase(Feature):
         # Getting values from configuration file
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
-        self.config_file_path = 'plugin_config.ini'
+        self.config_file_path = config_file_path
 
         self.config = configparser.ConfigParser()
         self.config.read(self.config_file_path)

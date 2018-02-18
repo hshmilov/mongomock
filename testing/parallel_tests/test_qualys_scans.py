@@ -1,4 +1,3 @@
-import pytest
 import requests
 from services.adapters.qualys_scans_service import QualysScansService, qualys_scans_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -31,7 +30,7 @@ class TestQualysScansAdapter(AdapterTestBase):
             super().test_fetch_devices()
         except AssertionError:
             try:
-                from qualys_scans_connection import QualysScansConnection
+                from qualys_scans_adapter.connection import QualysScansConnection
                 qualys_connection = QualysScansConnection(
                     self.axonius_system.aggregator.logger, client_details['Qualys_Scans_Domain'])
                 qualys_connection.set_credentials(client_details["username"], client_details["password"])

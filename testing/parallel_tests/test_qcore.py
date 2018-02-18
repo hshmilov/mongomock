@@ -30,7 +30,7 @@ class TestQcoreAdapter(AdapterTestBase):
         return "659"
 
     def test_fetch_devices(self):
-        from qcore_mongo import QcoreMongo
+        from qcore_adapter.qcore_mongo import QcoreMongo
         assert self.adapter_service.is_up()
         pump = QcoreFakePump()
         pump.send_registration()

@@ -9,8 +9,8 @@ try:
     import axonius
 except (ModuleNotFoundError, ImportError):
     # if not in path...
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'plugins', 'axonius-libs', 'src', 'libs',
-                                                 'axonius-py')))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'plugins', 'axonius-libs',
+                                                 'src', 'libs', 'axonius-py')))
 
 
 try:
@@ -23,13 +23,13 @@ except (ModuleNotFoundError, ImportError):
 
 def main():
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} [-h] {system,adapter,plugin} [<args>]
+{name} [-h] {system,adapter,service} [<args>]
        {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--skip]
-                                [--plugins [N [N ...]]] [--adapters [N [N ...]]]
-       {name} {adapter,plugin} [-h] {up,down,build} name [--prod] [--restart] [--rebuild]
+                                [--services [N [N ...]]] [--adapters [N [N ...]]]
+       {name} {adapter,service} [-h] {up,down,build} name [--prod] [--restart] [--rebuild]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
-    parser.add_argument('target', choices=['system', 'adapter', 'plugin', 'ls'])
+    parser.add_argument('target', choices=['system', 'adapter', 'service', 'ls'])
 
     try:
         args = parser.parse_args(sys.argv[1:2])
@@ -41,13 +41,13 @@ def main():
         system_entry_point(sys.argv[2:])
     elif args.target == 'ls':
         axonius_system = get_service()
-        print('Core Plugins:')
+        print('Core Services:')
         for service in axonius_system.axonius_services:
             print(f'    {service.container_name}')
-        print('Plugins:')
+        print('Services:')
         for name, _ in axonius_system.get_all_plugins():
             print(f'    {name}')
-        print('Adatpers:')
+        print('Adapters:')
         for name, _ in axonius_system.get_all_adapters():
             print(f'    {name}')
     else:
@@ -57,17 +57,17 @@ def main():
 def system_entry_point(args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--skip]
-                                [--plugins [N [N ...]]] [--adapters [N [N ...]]]"""[1:].replace(
+                                [--services [N [N ...]]] [--adapters [N [N ...]]]"""[1:].replace(
         '{name}', os.path.basename(__file__)))
     parser.add_argument('mode', choices=['up', 'down', 'build'])
-    parser.add_argument('--all', type=str2bool, nargs='?', const=True, default=False, help='All adapters and plugins')
+    parser.add_argument('--all', type=str2bool, nargs='?', const=True, default=False, help='All adapters and services')
     parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Prod Mode')
     parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
                         help='Restart container')
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
     parser.add_argument('--skip', type=str2bool, nargs='?', const=True, default=False,
                         help='Skip already up containers')
-    parser.add_argument('--plugins', metavar='N', type=str, nargs='*', help='Plugins to activate', default=[])
+    parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
 
     try:
@@ -78,32 +78,32 @@ def system_entry_point(args):
 
     axonius_system = get_service()
     if args.all:
-        assert len(args.plugins) == 0 and len(args.adapters) == 0
-        args.plugins = [name for name, variable in axonius_system.get_all_plugins()]
+        assert len(args.services) == 0 and len(args.adapters) == 0
+        args.services = [name for name, variable in axonius_system.get_all_plugins()]
         args.adapters = [name for name, variable in axonius_system.get_all_adapters()]
 
     axonius_system.take_process_ownership()
     if args.mode == 'up':
-        print(f'Starting system and {args.adapters + args.plugins}')
+        print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
         if args.restart:
             # clear old containers if exists...
-            axonius_system.remove_plugin_containers(args.adapters, args.plugins)
+            axonius_system.remove_plugin_containers(args.adapters, args.services)
 
         # Optimization - async build first
-        axonius_system.build(True, args.adapters, args.plugins, 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
 
         axonius_system.start_and_wait(mode, args.restart, skip=args.skip)
-        axonius_system.start_plugins(args.adapters, args.plugins, mode, args.restart, skip=args.skip)
+        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, skip=args.skip)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
-        print(f'Stopping system and {args.adapters + args.plugins}')
-        axonius_system.stop_plugins(args.adapters, args.plugins, should_delete=False)
+        print(f'Stopping system and {args.adapters + args.services}')
+        axonius_system.stop_plugins(args.adapters, args.services, should_delete=False)
         axonius_system.stop(should_delete=False)
     else:
         assert not args.restart and not args.skip
-        print(f'Building system and {args.adapters + args.plugins}')
-        axonius_system.build(True, args.adapters, args.plugins, 'prod' if args.prod else '', args.rebuild)
+        print(f'Building system and {args.adapters + args.services}')
+        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
 
 
 def service_entry_point(target, args):
@@ -124,25 +124,25 @@ def service_entry_point(target, args):
         sys.exit(1)
 
     adapters = []
-    plugins = []
+    services = []
 
     if target == 'adapter':
         adapters.append(args.name)
     else:
-        plugins.append(args.name)
+        services.append(args.name)
 
     axonius_system = get_service()
     if args.mode == 'up':
         print(f'Starting {args.name}')
-        axonius_system.start_plugins(adapters, plugins, 'prod' if args.prod else '', args.restart, args.rebuild)
+        axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
-        axonius_system.stop_plugins(adapters, plugins, should_delete=False)
+        axonius_system.stop_plugins(adapters, services, should_delete=False)
     else:
         assert not args.restart
         print(f'Building {args.name}')
-        axonius_system.build(False, adapters, plugins, 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(False, adapters, services, 'prod' if args.prod else '', args.rebuild)
 
 
 def str2bool(v):

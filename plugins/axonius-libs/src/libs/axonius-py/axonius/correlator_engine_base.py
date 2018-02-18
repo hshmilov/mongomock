@@ -87,8 +87,8 @@ def _process_preconditioned_bucket(bucket: List[adapter_device],
 
 
 class CorrelatorEngineBase(ABC):
-    def __init__(self, logger, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, logger):
+        super().__init__()
         self.logger = logger
 
     def _prefilter_device(self, devices) -> iter:

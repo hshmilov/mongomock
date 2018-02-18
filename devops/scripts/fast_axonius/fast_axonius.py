@@ -25,9 +25,7 @@ def fast_axonius():
         # Initialize it
         service = variable()
         name = os.path.basename(service.service_dir)
-        assert name.endswith('-adapter')
-        name = name[:-len('-adapter')].replace('-', '_')
-        services[name] = service
+        services[ad_name] = service
 
     plugins = {}
     for plugin in axonius_system.axonius_services:

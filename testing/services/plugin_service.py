@@ -4,6 +4,7 @@ import os
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
+from axonius.utils.files import CONFIG_FILE_NAME
 from services.docker_service import DockerService
 from services.ports import DOCKER_PORTS
 
@@ -12,21 +13,24 @@ UNIQUE_KEY_PARAM = "unique_name"
 
 
 class PluginService(DockerService):
-    def __init__(self, container_name, service_dir):
+    def __init__(self, container_name, service_dir=None):
+        if service_dir is None:
+            service_dir = f'../plugins/{container_name.replace("-", "_")}'
         super().__init__(container_name, service_dir)
         if self.container_name not in DOCKER_PORTS:
             raise ValueError(f'Container {self.container_name} missing external port in DOCKER_PORTS')
         self.endpoint = ('localhost', DOCKER_PORTS[self.container_name])
         self.req_url = "http://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
-        self.config_file_path = self.service_dir + '/src/plugin_config.ini'
+        self.config_file_path = self.service_dir + '/' + CONFIG_FILE_NAME
         self.last_vol_conf = None
+        if not self.service_class_name.endswith('Adapter'):
+            self.service_class_name += 'Service'
 
     @property
     def volumes_override(self):
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
                                             'axonius-libs', 'src', 'libs'))
-        return ['{0}:/home/axonius/app:ro'.format(os.path.join(self.service_dir, 'src')),
-                f'{libs}:/home/axonius/libs:ro']
+        return [f'{self.service_dir}:/home/axonius/app/{self.package_name}:ro', f'{libs}:/home/axonius/libs:ro']
 
     def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
         if headers is None:
@@ -118,8 +122,8 @@ class PluginService(DockerService):
 
 class AdapterService(PluginService):
 
-    def __init__(self, name):
-        super().__init__(f'{name}-adapter', f'../adapters/{name}-adapter')
+    def __init__(self, name: str):
+        super().__init__(f'{name}-adapter', f'../adapters/{name.replace("-", "_")}_adapter')
         self.adapter_name = name
 
     def add_client(self, client_details):

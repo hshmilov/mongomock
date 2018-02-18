@@ -7,7 +7,7 @@ from services.simple_fixture import initialize_fixture
 
 class ExecutionService(PluginService):
     def __init__(self):
-        super().__init__('execution', service_dir='../plugins/execution-plugin')
+        super().__init__('execution')
 
     def make_action(self, action_type, axon_id, data, adapters_to_whitelist=None):
         """

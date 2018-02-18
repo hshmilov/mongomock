@@ -2,8 +2,6 @@
 ParsingUtils.py: Collection of utils that might be used by parsers, specifically adapters
 """
 
-__author__ = "Mark Segal"
-
 import re
 import sys
 import os
