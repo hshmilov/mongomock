@@ -3,7 +3,7 @@ import base64
 from jamf_adapter.exceptions import JamfConnectionError, JamfRequestException
 from jamf_adapter.search import JamfAdvancedSearch
 from jamf_adapter import consts
-from json import JSONDecodeError
+import xml.etree.cElementTree as ET
 from axonius.utils.xml2json_parser import Xml2Json
 
 
@@ -21,7 +21,7 @@ class JamfConnection(object):
         if not url.endswith('/'):
             url += '/'
         self.url = url + 'JSSResource/'
-        self.headers = {'Accept': 'application/json'}
+        self.headers = {}
         self.auth = None
         self.proxies = {}
         if http_proxy is not None:
@@ -52,7 +52,7 @@ class JamfConnection(object):
 
         if self.auth is None:
             raise JamfConnectionError(f"Username and password is None")
-        response = self._get("accounts", headers=self.headers)
+        response = self.get("accounts")
 
         # the only case where we get 200 and no accounts is if the domain is not the Jamf one
         # i.e. someone lied in the domain and somehow the page <domain>/JSSResource/accounts exists
@@ -84,58 +84,72 @@ class JamfConnection(object):
             raise JamfRequestException(str(e))
         return response.json()
 
-    def _get(self, name, headers=None):
+    def jamf_request(self, request_method, url_addition, data, error_message):
+        post_headers = self.headers
+        post_headers['Content-Type'] = 'application/xml'
+        response = request_method(self.get_url_request(url_addition),
+                                  headers=post_headers,
+                                  data=data,
+                                  proxies=self.proxies)
+        try:
+            response.raise_for_status()
+            response_tree = ET.fromstring(response.text)
+            int(response_tree.find("id").text)
+        except ValueError:
+            # conversion of the query id to int failed
+            self.logger.exception(error_message + f": {response.text}")
+            raise JamfRequestException(error_message + f": {response.text}")
+        except Exception as e:
+            # any other error during creation of the query or during the conversion
+            self.logger.exception(error_message)
+            raise JamfRequestException(error_message + str(e))
+
+    def get(self, name, headers=None):
         """ Serves a POST request to Jamf API
 
         :param str name: the name of the page to request
         :param dict headers: the headers for the post request
         :return: the service response or raises an exception if it's not 200
         """
+        headers = headers or self.headers
         response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies)
         try:
             response.raise_for_status()
+            return Xml2Json(response.text).result
         except requests.HTTPError as e:
             raise JamfRequestException(str(e))
-        try:
-            return response.json()
-        except JSONDecodeError:
-            return Xml2Json(response.text).result
 
-    def _get_jamf_devices(self, url, data, xml_name, device_list_name, headers):
+    def _get_jamf_devices(self, url, data, xml_name, device_list_name, device_type):
         """ Returns a list of all computers
 
         :return: the response
         :rtype: list of computers
         """
-        search = JamfAdvancedSearch(self, url, data, headers, self.proxies)
+        search = JamfAdvancedSearch(self, url, data)
         # update has succeeded or an exception would have been raised
         with search:
-            try:
-                response = search.search_results.json()
-            except JSONDecodeError:
-                response = Xml2Json(search.search_results.text).result
-            return response[xml_name][device_list_name]
+            devices = search.search_results[xml_name][device_list_name].get(device_type, [])
+
+        return [devices] if type(devices) == dict else devices
 
     def get_devices(self):
         """ Returns a list of all agents
         :return: the response
         :rtype: list of computers and phones
         """
-        non_json_headers = self.headers.copy()
-        non_json_headers.pop("Accept")
         # Getting all devices at once so no progress is logged
-        computers = self._get_jamf_devices(url=consts.ADVANCED_COMPUTER_SEARCH_URL,
-                                           data=consts.ADVANCED_COMPUTER_SEARCH,
-                                           xml_name=consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,
-                                           device_list_name=consts.ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME,
-                                           headers=self.headers)
-        if type(computers) == dict:
-            computers = [computers]
-        mobile_devices = self._get_jamf_devices(url=consts.ADVANCED_MOBILE_SEARCH_URL,
-                                                data=consts.ADVANCED_MOBILE_SEARCH,
-                                                xml_name=consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
-                                                device_list_name=consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
-                                                headers=non_json_headers).get('mobile_device', [])
-        if type(mobile_devices) == dict:
-            mobile_devices = [mobile_devices]
+        computers = self._get_jamf_devices(
+            url=consts.ADVANCED_COMPUTER_SEARCH_URL,
+            data=consts.ADVANCED_COMPUTER_SEARCH,
+            xml_name=consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,
+            device_list_name=consts.ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME,
+            device_type=consts.COMPUTER_DEVICE_TYPE)
+
+        mobile_devices = self._get_jamf_devices(
+            url=consts.ADVANCED_MOBILE_SEARCH_URL,
+            data=consts.ADVANCED_MOBILE_SEARCH,
+            xml_name=consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
+            device_list_name=consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
+            device_type=consts.MOBILE_DEVICE_TYPE)
+
         return computers + mobile_devices

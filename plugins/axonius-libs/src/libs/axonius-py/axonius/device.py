@@ -76,6 +76,14 @@ class DeviceSecurityPatch(SmartJsonClass):
     installed_on = Field(datetime.datetime, "Security Patch Installed On")
 
 
+class DeviceInstalledSoftware(SmartJsonClass):
+    """ A definition for installed security patch on this device"""
+
+    vendor = Field(str, "Installed Software Vendor")
+    name = Field(str, "Installed Software Name")
+    version = Field(str, "Installed Software Version")
+
+
 class Device(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
@@ -101,7 +109,7 @@ class Device(SmartJsonClass):
     number_of_processes = Field(int, "Number Of Processes")
     total_number_of_physical_processors = Field(int, "Total Number Of Physical Processors")
     total_number_of_cores = Field(int, "Total Number Of Cores")
-    installed_softwares = ListField(str, "Installed Softwares")
+    installed_softwares = ListField(DeviceInstalledSoftware, "Installed Softwares")
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
     device_model_family = Field(str, "Device Model Family")
@@ -190,6 +198,9 @@ class Device(SmartJsonClass):
 
     def add_security_patch(self, **kwargs):
         self.security_patches.append(DeviceSecurityPatch(**kwargs))
+
+    def add_installed_software(self, **kwargs):
+        self.installed_softwares.append(DeviceInstalledSoftware(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = Device.network_interfaces.name

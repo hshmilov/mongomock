@@ -2,7 +2,7 @@ from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.device import Device
 from axonius.utils.files import get_local_config_file
-import jamf_adapter.consts as consts
+from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection
 from jamf_adapter.exceptions import JamfException
 
@@ -94,41 +94,50 @@ class JamfAdapter(AdapterBase):
             device.hostname = device_raw.get('name', '')
             device.id = device_raw.get('udid', '')
             if 'Operating_System' in device_raw:
+                # The field 'Operating_System' means that we are handling a computer, and not a mobile.
+                # Thus we believe the following fields will be present.
                 device.figure_os(' '.join([device_raw.get('Operating_System', ''),
                                            device_raw.get('Architecture_Type', '')]))
                 device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
-                if device_raw['Last_Reported_IP_Address'] != '':
-                    device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('Last_Reported_IP_Address', '')],
-                                   self.logger)
+
+                for app in device_raw.get('Applications', {}).get('Application', []):
+                    device.add_installed_software(
+                        name=app.get('Application_Title', ''),
+                        version=app.get('Application_Version', '')
+                    )
+                total_ram_mb = device_raw.get('Total_RAM_MB')
+                if total_ram_mb is not None:
+                    total_ram_mb = float(total_ram_mb)
+                    device.total_physical_memory = total_ram_mb / 1024.0
+
+                total_number_of_physical_procesors = device_raw.get("Number_of_Processors")
+                if total_number_of_physical_procesors is not None:
+                    device.total_number_of_physical_processors = int(total_number_of_physical_procesors)
+
+                total_number_of_cores = device_raw.get("Total_Number_of_Cores")
+                if total_number_of_cores is not None:
+                    device.total_number_of_cores = int(total_number_of_cores)
+                processor_speed_mhz = device_raw.get("Processor_Speed_MHz")
+                processor_type = device_raw.get("Processor_Type")
+                boot_drive_available = device_raw.get("Boot_Drive_Available_MB")
+                boot_drive_full_percentage = device_raw.get("Boot_Drive_Percentage_Full")
+                if boot_drive_available is not None and boot_drive_full_percentage is not None:
+                    device.add_hd(total_size=100.0 * float(boot_drive_available) /
+                                  (100.0 - float(boot_drive_full_percentage)) / 1024,
+                                  free_size=float(boot_drive_available) / 1024)
+                if processor_speed_mhz is not None and processor_type is not None:
+                    device.add_cpu(
+                        name=processor_type,
+                        ghz=float(processor_speed_mhz) / 1024.0
+                    )
+                device.device_manufacturer = device_raw.get('Make')
             else:
                 device.figure_os(' '.join([device_raw.get('Model_Identifier', ''), device_raw.get('iOS_Version', '')]))
                 device.add_nic(device_raw.get('Wi_Fi_MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
 
-            total_ram_mb = device_raw.get('Total_RAM_MB')
-            if total_ram_mb is not None:
-                total_ram_mb = float(total_ram_mb)
-                device.total_physical_memory = total_ram_mb / 1024.0
-
-            total_number_of_physical_procesors = device_raw.get("Number_of_Processors")
-            if total_number_of_physical_procesors is not None:
-                device.total_number_of_physical_processors = int(total_number_of_physical_procesors)
-
-            total_number_of_cores = device_raw.get("Total_Number_of_Cores")
-            if total_number_of_cores is not None:
-                device.total_number_of_cores = int(total_number_of_cores)
-
-            device_serial = device_raw.get("Serial_Number")
-            if device_serial is not None:
-                device.device_serial = device_serial
-
-            processor_speed_mhz = device_raw.get("Processor_Speed_MHz")
-            processor_type = device_raw.get("Processor_Type")
-            if processor_speed_mhz is not None and processor_type is not None:
-                device.add_cpu(
-                    name=processor_type,
-                    ghz=float(processor_speed_mhz) / 1024.0
-                )
-
+            device.device_model = device_raw.get('Model_Identifier')
+            device.device_model_family = device_raw.get('Model')
+            device.device_serial = device_raw.get("Serial_Number")
             device.set_raw(device_raw)
             yield device
 

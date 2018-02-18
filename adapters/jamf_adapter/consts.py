@@ -281,6 +281,7 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 </advanced_computer_search>"""
 ADVANCED_COMPUTER_SEARCH_XML_NAME = 'advanced_computer_search'
 ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME = 'computers'
+COMPUTER_DEVICE_TYPE = 'computer'
 ADVANCED_MOBILE_SEARCH_URL = 'advancedmobiledevicesearches'
 ADVANCED_MOBILE_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 <advanced_mobile_device_search>
@@ -576,6 +577,8 @@ ADVANCED_MOBILE_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 </advanced_mobile_device_search>"""
 ADVANCED_MOBILE_SEARCH_XML_NAME = 'advanced_mobile_device_search'
 ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME = 'mobile_devices'
+MOBILE_DEVICE_TYPE = 'mobile_device'
+ADVANCE_SEARCH_NAME = "/name/Axonius-Adapter-Inventory"
 
 USERNAME = 'username'
 JAMF_DOMAIN = 'Jamf_Domain'
