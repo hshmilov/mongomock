@@ -165,11 +165,19 @@ class Field(object):
                     raise ValueError(f'Got {value} less then defined minimum {field_instance.min}')
                 if field_instance._max and value > field_instance._max:
                     raise ValueError(f'Got {value} more then defined maximum {field_instance.max}')
-            elif name not in self._dict:
+            else:
+                if name in self._dict:
+                    self._dict.pop(name)
                 return
 
             if field_instance.converter:
                 value = field_instance.converter(value)
+
+            if value is None or (isinstance(value, str) and value == ''):
+                if name in self._dict:
+                    self._dict.pop(name)
+                return
+
             self._dict[name] = value
             self._extend_names(name, value)  # add our name to the SmartJsonClass instance
 
@@ -230,7 +238,9 @@ class ListField(Field):
                         pass
                     elif not isinstance(item, field_type):
                         raise TypeError(f'{name} expected to be {field_type}, got {item} of {type(item)} instead')
-            elif name not in self._dict:
+            else:
+                if name in self._dict:
+                    self._dict.pop(name)
                 return
 
             if field_instance.converter:

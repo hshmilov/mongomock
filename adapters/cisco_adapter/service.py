@@ -10,11 +10,12 @@ PASSWORD = 'password'
 
 
 class CiscoAdapter(AdapterBase):
-    def __init__(self):
-        super(CiscoAdapter, self).__init__(get_local_config_file(__file__))
 
     class MyDevice(Device):
         pass
+
+    def __init__(self):
+        super().__init__(get_local_config_file(__file__))
 
     def _connect_client(self, client_config):
         # tries to connect and throws adapter Exception on failure

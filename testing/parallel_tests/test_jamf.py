@@ -35,7 +35,7 @@ class TestJamfAdapter(AdapterTestBase):
 
         # check the device is read by adapter
         devices_list = devices_as_dict[self.some_client_id]['parsed']
-        jamf_device = list(filter(lambda device: device['hostname'] ==
+        jamf_device = list(filter(lambda device: device.get('hostname', '') ==
                                   FETCHED_DEVICE_EXAMPLE['hostname'], devices_list))
         assert jamf_device[0][OS_FIELD] == FETCHED_DEVICE_EXAMPLE[OS_FIELD]
         assert jamf_device[0][NETWORK_INTERFACES_FIELD] == FETCHED_DEVICE_EXAMPLE[NETWORK_INTERFACES_FIELD]

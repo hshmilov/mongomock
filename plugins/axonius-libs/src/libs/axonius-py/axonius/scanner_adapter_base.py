@@ -35,7 +35,7 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: id of previous instance
         """
-        hostname = parsed_device.get('hostname').strip()
+        hostname = parsed_device.get('hostname', '').strip()
         if not hostname:
             return
         for adapter_device in self._all_adapter_devices:
@@ -50,7 +50,7 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return:
         """
-        hostname = parsed_device.get('hostname').strip()
+        hostname = parsed_device.get('hostname', '').strip()
         if not hostname:
             return
         for adapter_device in self._all_adapter_devices:
