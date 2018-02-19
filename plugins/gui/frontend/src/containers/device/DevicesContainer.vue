@@ -56,6 +56,7 @@
 		FETCH_DEVICE,
 		FETCH_LABELS,
 		SELECT_DEVICE_PAGE,
+        SELECT_DEVICE_FIELDS,
 		FETCH_DEVICE_FIELDS
 	} from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
@@ -75,6 +76,14 @@
 				},
 				set (newFilter) {
 					this.updateQuery(newFilter)
+				}
+			},
+			selectedFields: {
+				get() {
+					return this.device.deviceSelectedFields
+				},
+				set(fieldList) {
+                    this.selectFields(fieldList)
 				}
 			},
 			deviceFlatSchema () {
@@ -147,8 +156,6 @@
 		},
 		data () {
 			return {
-				selectedFields: ['adapters', 'specific_data.data.hostname', 'specific_data.data.name',
-					'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type', 'labels'],
 				selectedDevices: [],
 				saveQueryModal: {
 					open: false,
@@ -169,7 +176,8 @@
 		methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY,
-				selectPage: SELECT_DEVICE_PAGE
+				selectPage: SELECT_DEVICE_PAGE,
+                selectFields: SELECT_DEVICE_FIELDS
 			}),
 			...mapActions({
 				fetchDevices: FETCH_DEVICES,

@@ -10,6 +10,7 @@ export const UPDATE_DEVICES_COUNT = 'UPDATE_DEVICES_COUNT'
 export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 export const SELECT_DEVICE_PAGE = 'SELECT_DEVICE_PAGE'
+export const SELECT_DEVICE_FIELDS = 'SELECT_DEVICE_FIELDS'
 export const FETCH_DEVICE_FIELDS = 'FETCH_DEVICE_FIELDS'
 export const UPDATE_DEVICE_FIELDS = 'UPDATE_DEVICE_FIELDS'
 export const FETCH_LABELS = 'FETCH_LABELS'
@@ -37,6 +38,8 @@ export const device = {
 		deviceList: {fetching: false, data: [], error: ''},
 
 		deviceSelectedPage: 0,
+		deviceSelectedFields: ['adapters', 'specific_data.data.hostname', 'specific_data.data.name',
+			'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type', 'labels'],
 
 		/* Number of devices according to current filter performed by user */
 		deviceCount: {fetching: false, data: 0, error: ''},
@@ -159,6 +162,9 @@ export const device = {
 		},
 		[ SELECT_DEVICE_PAGE ] (state, pageNumber) {
 			state.deviceSelectedPage = pageNumber
+		},
+		[ SELECT_DEVICE_FIELDS ] (state, fieldList) {
+			state.deviceSelectedFields = fieldList
 		}
 	},
 	actions: {
