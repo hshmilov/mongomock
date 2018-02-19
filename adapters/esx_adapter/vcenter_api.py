@@ -59,13 +59,13 @@ class vCenterApi():
         :param bool verify_ssl: should we verify SSL or not
         :raise See pyVim documentation for connect
         """
+        self.logger = logger
         self._verify_ssl = verify_ssl
         self._host = host
         self._user = user
         self._password = password
         self._connect()
         self.devices_count = None
-        self.logger = logger
 
     def _connect(self):
         if self._verify_ssl:

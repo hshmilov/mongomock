@@ -10,12 +10,10 @@ from axonius.utils.files import get_local_config_file
 from epo_adapter.mcafee import client
 
 
-ADMIN_PASS = 'admin_password'
-ADMIN_USER = 'admin_user'
 EPO_HOST = 'host'
 EPO_PORT = 'port'
-QUERY_PASS = 'query_password'
-QUERY_USER = 'query_user'
+PASS = 'password'
+USER = 'user'
 
 LEAF_NODE_TABLE = 'EPOLeafNode'
 
@@ -92,40 +90,27 @@ class EpoAdapter(AdapterBase):
                     "type": "string"
                 },
                 {
-                    "name": ADMIN_USER,
-                    "title": "Admin User",
-                    "type": "string"
-                },
-                {
-                    "name": ADMIN_PASS,
-                    "title": "Admin Password",
-                    "type": "string",
-                    "format": "password"
-                },
-                {
                     "name": EPO_PORT,
                     "title": "Port",
                     "type": "number"
                 },
                 {
-                    "name": QUERY_USER,
-                    "title": "Query User",
+                    "name": USER,
+                    "title": "User",
                     "type": "string"
                 },
                 {
-                    "name": QUERY_PASS,
-                    "title": "Query Password",
+                    "name": PASS,
+                    "title": "Password",
                     "type": "string",
                     "format": "password"
                 }
             ],
             "required": [
-                ADMIN_USER,
-                ADMIN_USER,
                 EPO_PORT,
                 EPO_HOST,
-                QUERY_PASS,
-                QUERY_USER
+                PASS,
+                USER
             ],
             "type": "array"
         }
@@ -206,7 +191,7 @@ class EpoAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         mc = client(client_data[EPO_HOST], client_data[EPO_PORT],
-                    client_data[QUERY_USER], client_data[QUERY_PASS])
+                    client_data[USER], client_data[PASS])
         table = mc.run("core.listTables", table=LEAF_NODE_TABLE)
 
         all_linked_tables = get_all_linked_tables(table)
@@ -231,7 +216,7 @@ class EpoAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             client(client_config[EPO_HOST], client_config[EPO_PORT],
-                   client_config[QUERY_USER], client_config[QUERY_PASS])
+                   client_config[USER], client_config[PASS])
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
             self.logger.exception(message)

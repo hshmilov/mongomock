@@ -88,8 +88,8 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   self._ldap_page_size,
                                   dc_details['dc_name'],
                                   dc_details['domain_name'],
-                                  dc_details['query_user'],
-                                  dc_details['query_password'],
+                                  dc_details['user'],
+                                  dc_details['password'],
                                   dc_details.get('dns_server_address'))
         except LdapException as e:
             message = "Error in ldap process for dc {0}. reason: {1}".format(
@@ -123,24 +123,13 @@ class ActiveDirectoryAdapter(AdapterBase):
                     "type": "string"
                 },
                 {
-                    "name": "admin_user",
-                    "title": "Admin User",
+                    "name": "user",
+                    "title": "User",
                     "type": "string"
                 },
                 {
-                    "name": "admin_password",
-                    "title": "Admin Password",
-                    "type": "string",
-                    "format": "password"
-                },
-                {
-                    "name": "query_user",
-                    "title": "Query User",
-                    "type": "string"
-                },
-                {
-                    "name": "query_password",
-                    "title": "Query Password",
+                    "name": "password",
+                    "title": "Password",
                     "type": "string",
                     "format": "password"
                 },
@@ -152,11 +141,9 @@ class ActiveDirectoryAdapter(AdapterBase):
             ],
             "required": [
                 "dc_name",
-                "query_user",
-                "admin_user",
-                "query_password",
+                "user",
                 "domain_name",
-                "admin_password"
+                "password"
             ],
             "type": "array"
         }
@@ -377,8 +364,8 @@ class ActiveDirectoryAdapter(AdapterBase):
             client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
                 # We have found the correct client. Getting credentials
-                domain_name, user_name = client_config['admin_user'].split('\\')
-                password = client_config['admin_password']
+                domain_name, user_name = client_config['user'].split('\\')
+                password = client_config['password']
                 try:
                     device_ip = self._resolve_device_name(
                         device_data['data']['hostname'], client_config)
@@ -402,8 +389,8 @@ class ActiveDirectoryAdapter(AdapterBase):
             client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
                 # We have found the correct client. Getting credentials
-                domain_name, user_name = client_config['admin_user'].split('\\')
-                password = client_config['admin_password']
+                domain_name, user_name = client_config['user'].split('\\')
+                password = client_config['password']
                 try:
                     device_ip = self._resolve_device_name(device_data['data']['hostname'], client_config)
                 except Exception as e:
