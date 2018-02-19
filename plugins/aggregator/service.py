@@ -564,9 +564,13 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                     for field in fields_to_update:
                         field_of_device = device.get(field, [])
                         try:
-                            if len(field_of_device) > 0:
+                            if type(field_of_device) in [list, dict, str] and len(field_of_device) == 0:
+                                # We don't want to insert empty values, only one that has a valid data
+                                continue
+                            else:
                                 device_to_update[f"adapters.$.data.{field}"] = field_of_device
                         except TypeError:
+                            self.logger.error(f"Got TypeError while getting field {field}")
                             continue
                     device_to_update['accurate_for_datetime'] = datetime.now()
 
