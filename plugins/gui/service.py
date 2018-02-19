@@ -251,7 +251,7 @@ class GuiService(PluginBase):
 
         def _censor_fields(fields):
             # Remove fields from data that are not relevant to UI
-            fields['items'] = filter(lambda x: x.get('name', '') not in ['id', 'scanner'], fields['items'])
+            fields['items'] = filter(lambda x: x.get('name', '') not in ['scanner'], fields['items'])
             return fields
 
         fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}

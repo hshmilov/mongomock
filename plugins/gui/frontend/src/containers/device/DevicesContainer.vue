@@ -163,16 +163,6 @@
 				}
 			}
 		},
-		mounted () {
-			if (!this.device.deviceFields.data || !this.device.deviceFields.data.generic) {
-				this.fetchDeviceFields()
-			}
-			if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
-				this.fetchSavedQueries()
-			}
-			this.fetchAdapters()
-			this.fetchTags()
-		},
 		methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY,
@@ -253,6 +243,26 @@
 				if (!schema.title) return []
 				return [{...schema, name}]
 			}
+		},
+		created () {
+			if (!this.device.deviceFields.data || !this.device.deviceFields.data.generic) {
+				this.fetchDeviceFields()
+			}
+			if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
+				this.fetchSavedQueries()
+			}
+			this.fetchAdapters()
+			this.fetchTags()
+
+			this.interval = setInterval(function () {
+				this.fetchDevices({
+					filter: this.queryFilter, skip: 0,
+					fields: this.viewDeviceSchemaSelected.map((field) => field.name)
+				})
+			}.bind(this), 3000);
+		},
+		beforeDestroy() {
+			clearInterval(this.interval);
 		}
 	}
 </script>

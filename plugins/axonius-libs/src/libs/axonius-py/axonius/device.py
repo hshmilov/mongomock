@@ -109,7 +109,7 @@ class Device(SmartJsonClass):
     number_of_processes = Field(int, "Number Of Processes")
     total_number_of_physical_processors = Field(int, "Total Number Of Physical Processors")
     total_number_of_cores = Field(int, "Total Number Of Cores")
-    installed_softwares = ListField(DeviceInstalledSoftware, "Installed Softwares")
+    installed_softwares = ListField(DeviceInstalledSoftware, "Installed Software")
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
     device_model_family = Field(str, "Device Model Family")
