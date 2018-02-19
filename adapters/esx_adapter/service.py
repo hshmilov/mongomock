@@ -132,6 +132,9 @@ class EsxAdapter(AdapterBase):
             if 'macAddress' in hwdevice and hwdevice['macAddress'] not in added_macs:
                 device.add_nic(mac=hwdevice['macAddress'])
 
+        for hwdevice in details.get('hardware_networking', {}):
+            device.add_nic(**hwdevice)
+
         device.esx_host = details.get('esx_host_name', None)
         device.hostname = guest.get('hostName', '')
         device.vm_tools_status = guest.get('toolsStatus', '')

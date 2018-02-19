@@ -5,7 +5,6 @@ from datetime import datetime
 from namedlist import namedlist
 from pyVmomi import vim
 
-
 vCenterNode = namedlist(
     'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None), ('Hardware', None)])
 
@@ -83,10 +82,10 @@ class vCenterApi():
         """
         guest = getattr(vm, 'guest', None)
         if not guest:
-            return iter([])
+            return []
         guest_net = guest.net
         if guest_net is None:
-            return iter([])
+            return []
         for network in guest_net:
             if network is None:
                 continue
@@ -95,6 +94,19 @@ class vCenterApi():
                 primitives['ipAddresses'] = [_take_just_primitives(addr.__dict__) for addr in
                                              network.ipConfig.ipAddress]
             yield primitives
+
+    def _parse_networking_from_hardware(self, vm_root):
+        config = getattr(vm_root, 'config', None)
+        if not config:
+            return
+        network = getattr(config, 'network', None)
+        if not network:
+            return
+        vnic = getattr(network, 'vnic', None)
+        if not vnic:
+            return
+        for network_interface in vnic:
+            yield {'mac': network_interface.spec.mac, 'ips': [network_interface.spec.ip.ipAddress]}
 
     def _parse_host(self, host):
         """
@@ -151,6 +163,7 @@ class vCenterApi():
                     details['hardware']['devices'].append(device_raw)
 
         details['networking'] = list(self._parse_networking(vm_root))
+        details['hardware_networking'] = list(self._parse_networking_from_hardware(vm_root))
         return details
 
     def _parse_vm(self, vm_root, depth=1):
