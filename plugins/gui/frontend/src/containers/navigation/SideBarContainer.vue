@@ -12,24 +12,22 @@
                         </a>
                     </div>
                 </div>
-                <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
-                    <nav class="sidebar-nav">
-                        <nested-nav-bar>
-                            <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"
-                                             :disabled="true"></nested-nav-item>
-                            <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
-                            <!--nested-nav-item routeName="Tasks" iconName="task" :disabled="true"></nested-nav-item-->
-                            <nested-nav-item routeName="Devices" iconName="device">
-                                <nested-nav-bar nestLevel="1" class="collapse">
-                                    <nested-nav-item routeName="Saved Queries"></nested-nav-item>
-                                    <nested-nav-item routeName="Queries History"></nested-nav-item>
-                                </nested-nav-bar>
-                            </nested-nav-item>
-                            <nested-nav-item routeName="Plugins" iconName="plugin" :disabled="true"></nested-nav-item>
-                            <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
-                        </nested-nav-bar>
-                    </nav>
-                </vue-scrollbar>
+                <nav class="sidebar-nav">
+                    <nested-nav-bar>
+                        <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"
+                                         :disabled="true"></nested-nav-item>
+                        <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
+                        <!--nested-nav-item routeName="Tasks" iconName="task" :disabled="true"></nested-nav-item-->
+                        <nested-nav-item routeName="Devices" iconName="device">
+                            <nested-nav-bar nestLevel="1" class="collapse">
+                                <nested-nav-item routeName="Saved Queries"></nested-nav-item>
+                                <nested-nav-item routeName="Queries History"></nested-nav-item>
+                            </nested-nav-bar>
+                        </nested-nav-item>
+                        <nested-nav-item routeName="Plugins" iconName="plugin" :disabled="true"></nested-nav-item>
+                        <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
+                    </nested-nav-bar>
+                </nav>
             </div>
         <footer class="footer">
             <div class="content">© {{ (new Date()).getFullYear() }} Axonius</div></footer>
@@ -39,7 +37,6 @@
 <script>
     import '../../components/icons/navigation'
 
-    import VueScrollbar from 'vue2-scrollbar'
     import NestedNavBar from '../../components/NestedNavBar.vue'
     import NestedNavItem from '../../components/NestedNavItem.vue'
     import { LOGOUT } from '../../store/modules/user'
@@ -47,7 +44,7 @@
 
     export default {
         name: 'side-bar-container',
-        components: { VueScrollbar, NestedNavBar, NestedNavItem },
+        components: { NestedNavBar, NestedNavItem },
         computed: mapState([ 'user', 'interaction' ]),
         methods: mapActions({ logout: LOGOUT })
     }
@@ -105,21 +102,26 @@
                     }
                 }
             }
-            .scrollbar-container {
-                background-color: $color-theme-dark;
-                flex: 1 1 auto;
-                margin: 0;
-                .sidebar-nav {
-                    background: $color-theme-dark;
-                    padding: 0px;
-                    padding-top: 30px;
-                    .nav-nest {
-                        transition: all ease-in 0.2s;
+            .sidebar-nav {
+                background: $color-theme-dark;
+                padding: 0px;
+                padding-top: 30px;
+                .nav-nest {
+                    transition: all ease-in 0.2s;
+                    .nav-item:hover {
+                        position: relative;
+                        .nav-nest.collapse {
+                            display: block;
+                            .nav-link span {
+                                transition: all ease-in 0.5s;
+                                opacity: 1;
+                            }
+                        }
                     }
-                    .nav-link.has-arrow::after {
-                        transition: all ease-in 0.2s;
-                        opacity: 1;
-                    }
+                }
+                .nav-link.has-arrow::after {
+                    transition: all ease-in 0.2s;
+                    opacity: 1;
                 }
             }
         }
@@ -149,7 +151,6 @@
             padding-bottom: 0px;
             position: absolute;
             width: 60px;
-            overflow-x: hidden !important;
             .user {
                 .user-profile {
                     text-align: left;
@@ -160,8 +161,18 @@
                 .nav-nest .nav-link span {
                     opacity: 0;
                 }
-                .nav-item.active .nav-nest.collapse {
-                    display: none;
+                .nav-item {
+                    .nav-nest.collapse {
+                        display: none;
+                        transition: all ease-in 0.2s;
+                    }
+                    &:hover .nav-nest.collapse {
+                        left: 56px;
+                        margin-left: 0;
+                        top: 0;
+                        position: absolute;
+                        background-color: $color-theme-dark;
+                    }
                 }
                 .nav-link.has-arrow::after {
                     opacity: 0;
