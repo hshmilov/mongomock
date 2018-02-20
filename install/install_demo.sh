@@ -23,7 +23,7 @@ echo "Setting all credentials."
 (
 source ./prepare_python_env.sh
 python3 ./devops/scripts/credentials_inputer.py
-./axonius.sh service up aggregator --restart
+./axonius.sh service aggregator up --restart
 )
 
 echo "Done."

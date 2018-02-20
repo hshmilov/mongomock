@@ -74,7 +74,7 @@
 			},
             valueSchema() {
 				if (this.fieldSchema && this.fieldSchema.type === 'array'
-                    && ['contains', 'equals'].includes(this.expression.compOp)) {
+                    && ['contains', 'equals', 'subnet'].includes(this.expression.compOp)) {
 					return this.fieldSchema.items
                 }
                 return this.fieldSchema
