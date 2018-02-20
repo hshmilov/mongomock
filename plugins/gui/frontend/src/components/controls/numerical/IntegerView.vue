@@ -1,16 +1,11 @@
 <template>
-    <div>{{ data? parseInt(data) : '' }}</div>
+    <div>{{ value? parseInt(value) : '' }}</div>
 </template>
 
 <script>
 	export default {
 		name: 'x-integer-view',
-		props: ['schema', 'value'],
-		data() {
-			return {
-				data: this.value
-			}
-		}
+		props: ['schema', 'value']
 	}
 </script>
 

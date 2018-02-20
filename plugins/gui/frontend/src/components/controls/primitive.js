@@ -27,6 +27,13 @@ export default {
 			valid: true
 		}
 	},
+	watch: {
+		value(newValue, oldValue) {
+			if (newValue !== oldValue) {
+				this.data = this.value
+			}
+		}
+	},
 	methods: {
 		validate() {
 			if (!this.validator) { return }
