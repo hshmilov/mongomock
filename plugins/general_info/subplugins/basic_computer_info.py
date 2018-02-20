@@ -257,9 +257,3 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         except Exception:
             basic["Timezone"] = "Unknown Exception"
             self.logger.exception(f"Couldn't handle Win32_TimeZone: {result[7]}")
-
-        self.plugin_base.add_data_to_device(
-            (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]), "Basic Info", basic)
-
-        self.plugin_base.add_data_to_device(
-            (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]), "Hot Fixes", hot_fixes)

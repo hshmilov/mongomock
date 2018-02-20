@@ -120,6 +120,7 @@
 			}),
 			selectQuery (filter) {
 				this.updateQuery(filter)
+                this.filterExpressions = []
 				this.$refs.greatInput.focus()
 			},
             updateQuery (filter) {

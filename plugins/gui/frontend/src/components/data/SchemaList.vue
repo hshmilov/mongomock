@@ -1,6 +1,6 @@
 <template>
     <div class="schema-list">
-        <x-array-view :value="data" :schema="schema" :limit="limit"></x-array-view>
+        <x-array-view :value="data" :schema="schema"></x-array-view>
     </div>
 </template>
 
@@ -15,7 +15,7 @@
 	export default {
 		name: 'x-schema-list',
         components: { xArrayView },
-        props: {data: {required: true}, schema: {required: true}, limit: {default: false}}
+        props: {data: {required: true}, schema: {required: true}}
 	}
 </script>
 

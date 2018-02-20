@@ -17,7 +17,7 @@ import { INIT_USER, SET_USER } from './modules/user'
     }
  */
 export const REQUEST_API = 'REQUEST_API'
-export const requestApi = ({dispatch, commit}, payload) => {
+export const requestApi = ({commit}, payload) => {
     if (!payload.rule) {
         return
     }
@@ -40,7 +40,8 @@ export const requestApi = ({dispatch, commit}, payload) => {
             if (payload.type) {
                 commit(payload.type, {
                   fetching: false,
-                  data: response.data
+                  data: response.data,
+                    ...payload.payload
                 })
             }
             resolve(response)

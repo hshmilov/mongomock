@@ -138,10 +138,6 @@ class GetLastUserLogon(GeneralInfoSubplugin):
 
                 # Add data to that device.
                 adapterdata_device.last_logged_user = last_used_user
-                self.plugin_base.add_data_to_device(
-                    (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
-                    "Known Users Last Logins", last_used_time_arr)
-
                 return True
             except KeyError:
                 self.logger.info("No translation between sid to caption! axon_id {0}. sid: {0}, lastusedtime: {1}"

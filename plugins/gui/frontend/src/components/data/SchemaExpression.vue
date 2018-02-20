@@ -73,7 +73,8 @@
 				return this.fieldMap[this.expression.field]
 			},
             valueSchema() {
-				if (this.fieldSchema && this.fieldSchema.type === 'array' && this.expression.compOp === 'contains') {
+				if (this.fieldSchema && this.fieldSchema.type === 'array'
+                    && ['contains', 'equals'].includes(this.expression.compOp)) {
 					return this.fieldSchema.items
                 }
                 return this.fieldSchema
@@ -150,7 +151,7 @@
 				return ''
 			},
 			composeCondition () {
-				let cond = '{val}'
+				let cond = '({val})'
 				let selectedOp = this.fieldOps[this.expression.compOp]
 				if (selectedOp && selectedOp.pattern && selectedOp.notPattern) {
 					cond = (this.expression.not) ? selectedOp.notPattern : selectedOp.pattern

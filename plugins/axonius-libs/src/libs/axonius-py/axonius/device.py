@@ -66,22 +66,22 @@ class DeviceUser(SmartJsonClass):
     """ A definition for users known by this device"""
 
     username = Field(str, "Known User")
-    last_use_date = Field(datetime.datetime, "Known User Last Use Date")
+    last_use_date = Field(datetime.datetime, "Last Usage Date")
 
 
 class DeviceSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    security_patch_id = Field(str, "Security Patch Name")
-    installed_on = Field(datetime.datetime, "Security Patch Installed On")
+    security_patch_id = Field(str, "Name")
+    installed_on = Field(datetime.datetime, "Installed On")
 
 
 class DeviceInstalledSoftware(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    vendor = Field(str, "Installed Software Vendor")
-    name = Field(str, "Installed Software Name")
-    version = Field(str, "Installed Software Version")
+    vendor = Field(str, "Vendor")
+    name = Field(str, "Name")
+    version = Field(str, "Version")
 
 
 class Device(SmartJsonClass):
@@ -109,7 +109,7 @@ class Device(SmartJsonClass):
     number_of_processes = Field(int, "Number Of Processes")
     total_number_of_physical_processors = Field(int, "Total Number Of Physical Processors")
     total_number_of_cores = Field(int, "Total Number Of Cores")
-    installed_softwares = ListField(DeviceInstalledSoftware, "Installed Software")
+    installed_software = ListField(DeviceInstalledSoftware, "Installed Software")
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
     device_model_family = Field(str, "Device Model Family")

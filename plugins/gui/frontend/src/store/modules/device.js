@@ -62,16 +62,15 @@ export const device = {
 			state.deviceList.fetching = payload.fetching
 			state.deviceList.error = payload.error
 			if (payload.data) {
-				let processedData = []
+				state.deviceList.data = payload.restart? []: [ ...state.deviceList.data ]
 				payload.data.forEach((device) => {
-					processedData.push({
+					state.deviceList.data.push({
 						id: device['internal_axon_id'],
 						specific_data: merge.all(device.specific_data),
 						adapters: device.adapters,
 						labels: device.labels
 					})
 				})
-				state.deviceList.data = [...state.deviceList.data, ...processedData]
 			}
 		},
 		[ UPDATE_DEVICES_COUNT ] (state, payload) {
@@ -168,15 +167,13 @@ export const device = {
 		}
 	},
 	actions: {
-		[ FETCH_DEVICES ] ({dispatch, commit}, payload) {
+		[ FETCH_DEVICES ] ({dispatch}, payload) {
 			/* Fetch list of devices for requested page and filtering */
 			if (!payload.skip) {
 				payload.skip = 0
 				dispatch(FETCH_DEVICES_COUNT, { filter: payload.filter })
 			}
 			if (!payload.limit) { payload.limit = 0 }
-			/* Getting first page - empty table */
-			if (payload.skip === 0) { commit(RESTART_DEVICES) }
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
 			if (payload.fields && payload.fields.length) {
 				param += `&fields=internal_axon_id,${payload.fields}`
@@ -186,7 +183,8 @@ export const device = {
 			}
 			dispatch(REQUEST_API, {
 				rule: `/api/devices${param}`,
-				type: UPDATE_DEVICES
+				type: UPDATE_DEVICES,
+				payload: { restart: (payload.skip === 0) }
 			})
 		},
 		[ FETCH_DEVICES_COUNT ] ({dispatch}, payload) {

@@ -6,12 +6,11 @@
 	   describing types of children, either unified for a regular array or a tuple representing an ordered object.
 	 - value - data in the form of object, where keys are numbers (for a unified array) or names of items
 	   (for a tuple representing an ordered object)
-	 - limit - whether to present only the fields which names are defined in the 'required' list of each array.
  */
 
 export default {
 	props: {
-		'schema': {required: true}, 'value': {required: true}, 'limit': {default: false}
+		'schema': {required: true}, 'value': {required: true}
 	},
 	computed: {
 		schemaItems () {
@@ -19,10 +18,7 @@ export default {
 			// Process schema to create list of items which Array components can present
 			if (Array.isArray(this.schema.items)) {
 				// schema.items contains explicit definition for each type of contained children
-				schemaItems = this.schema.items.filter((item) => {
-					// Just filter item, if its not required and limit is on
-					return this.include(item.name)
-				})
+				schemaItems = this.schema.items
 			} else if (this.schema.items instanceof Object && this.schema.title) {
 				// schema.items contains one unified definition for type of all children
 				schemaItems = this.toList(this.data).map((item, index) => {
@@ -62,10 +58,6 @@ export default {
 				if (value) { hasValue = true }
 			})
 			return !hasValue
-		},
-		include (fieldName) {
-			if (!this.limit) { return true }
-			return this.schema.required.includes(fieldName)
 		},
 		toList(data) {
 			if (!Array.isArray(data)) {

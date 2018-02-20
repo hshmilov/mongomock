@@ -41,6 +41,10 @@
 					pattern: '{field} == "{val}"',
 					notPattern: '{field} != "{val}"'
 				}
+				const contains = {
+					pattern: '{field} == regex("{val}", "i")',
+					notPattern: '{field} == regex("^(?!.*{val})", "i")'
+				}
 				const numerical = {
 					'==': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
 					'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
@@ -56,10 +60,7 @@
 							pattern: '({field}_raw >= {val} and {field}_raw <= {val})',
 							notPattern: '({field}_raw < {val} or {field}_raw > {val})'
 						},
-						'contains': {
-							pattern: '{field} == regex("{val}")',
-							notPattern: '{field} == regex("^(?!.*{val})")'
-						},
+						contains,
 						'isIPv4': {
 							pattern: '{field} == regex("\.")',
 							notPattern: '{field} == regex("^(?!.*\.)")'
@@ -80,13 +81,11 @@
 							pattern: '({field} == exists(true) and {field} > [])',
 							notPattern: '({field} == exists(false) or {field} == [])'
 						},
-                        'contains': equals
+                        equals,
+                        contains
 					},
 					'string': {
-						'contains': {
-							pattern: '{field} == regex("{val}", "i")',
-							notPattern: '{field} == regex("^(?!.*{val})", "i")'
-						},
+						contains,
 						equals,
 						'starts': {
 							pattern: '{field} == regex("^{val}", "i")',
@@ -121,6 +120,9 @@
 				this.expressions = [...newValue]
 			},
 			expressions (newExpressions) {
+				if (!newExpressions.length) {
+					this.filters = []
+                }
 				this.$emit('input', newExpressions)
 			}
 		},

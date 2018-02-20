@@ -115,7 +115,8 @@
 						return !genericFields.includes(item.name)
 					})
 					if (!pluginFlatSchema.length) return
-					mergedPluginsSchema.push({title: adapterStaticData[pluginName].name || pluginName})
+                    let title = adapterStaticData[pluginName] ? adapterStaticData[pluginName].name : pluginName
+					mergedPluginsSchema.push({ title })
 					mergedPluginsSchema = [...mergedPluginsSchema, ...pluginFlatSchema]
 				})
                 return mergedPluginsSchema
@@ -218,14 +219,14 @@
 				if (schema.type === 'array' && schema.items) {
 					if (!Array.isArray(schema.items)) {
 						let childSchema = {...schema.items}
+						if (schema.items.type !== 'array') {
+							if (!schema.title) return []
+							return [{...schema, name}]
+						}
 						if (schema.title) {
 							childSchema.title = childSchema.title ? `${schema.title} ${childSchema.title}` : schema.title
 						}
-						let children = this.flattenSchema(childSchema, name)
-						if (schema.items.type !== 'array') {
-							return children
-						}
-						return [{...schema, name}, ...children]
+						return this.flattenSchema(childSchema, name)
 					}
 					let children = []
 					schema.items.forEach((item) => {

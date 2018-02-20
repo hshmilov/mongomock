@@ -7,10 +7,9 @@
             <!--<named-section title="General Data" icon-name="action/add_field">-->
                 <tabs v-if="deviceData.generic_data && deviceData.generic_data.length">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                        <x-schema-list :data="deviceData.generic_data[0]" :schema="deviceFields.generic"
-                                       :limit="true"></x-schema-list>
+                        <x-schema-list :data="deviceDataGenericBasic" :schema="deviceFields.generic"></x-schema-list>
                     </tab>
-                    <tab v-for="item, i in deviceData.generic_data.slice(1)" :title="item.name" :id="i" :key="i">
+                    <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.name" :id="i" :key="i">
                         <x-custom-data :data="item.data"></x-custom-data>
                     </tab>
                     <tab title="Tags" id="tags" key="tags" v-if="deviceData.labels && deviceData.labels.length">
@@ -104,6 +103,27 @@
 			},
 			deviceFields () {
 				return this.device.deviceFields.data
+			},
+            deviceFieldsGenericAdvanced() {
+				return ['installed_software', 'security_patches', 'users']
+            },
+            deviceDataGenericBasic() {
+				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) return {}
+
+				let genericBasic = { ...this.deviceData.generic_data[0] }
+                this.deviceFieldsGenericAdvanced.forEach((field) => {
+					delete genericBasic[field]
+                })
+                return genericBasic
+            },
+			deviceDataGenericAdvanced() {
+				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) return {}
+
+				return Object.keys(this.deviceData.generic_data[0]).filter((name) => {
+					return this.deviceFieldsGenericAdvanced.includes(name)
+                }).map((name) => {
+					return { name: name.split('_').join(' '), data: this.deviceData.generic_data[0][name] }
+                }).concat(this.deviceData.generic_data.slice(1))
 			}
 		},
 		data () {

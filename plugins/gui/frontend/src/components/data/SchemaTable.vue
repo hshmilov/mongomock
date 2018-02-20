@@ -115,6 +115,8 @@
 			},
 			data: function (newData, oldData) {
 				let diff = newData.length - oldData.length
+                if (!diff) return
+                
 				if (diff === this.pageSize * 50) {
 					this.maxPages += 50
 					this.linkedPageCount = Math.min(this.maxPages, 5)
@@ -289,6 +291,9 @@
                     }
                     &:last-of-type {
                         border-right: 1px solid $border-color;
+                    }
+                    .array .item {
+                        margin-right: 0;
                     }
                 }
                 .table-row-actions {

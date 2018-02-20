@@ -87,17 +87,6 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
 
-    def test_ad_users_association(self, general_info_fixture):
-        general_info_fixture.activateable_start()
-        general_info_fixture.run()
-
-        def has_ad_users_association_tag():
-            #  general_info_fixture.associate()
-            tags = list(self.axonius_system.get_devices_with_condition({"tags.name": "Known Users Last Logins"}))
-            assert len(tags) > 0
-
-        try_until_not_thrown(30, 5, has_ad_users_association_tag)
-
     def test_ad_execute_wmi(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']

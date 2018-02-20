@@ -247,7 +247,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   position: absolute;
   width: 100%;
   top: -48px;
-  z-index: 2000;
+  z-index: 100;
   transition: opacity .3s ease;
   .v-pulse {
     position: absolute;

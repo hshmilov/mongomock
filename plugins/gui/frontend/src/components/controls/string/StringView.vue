@@ -17,9 +17,6 @@
 
                     return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
                 }
-                if (Array.isArray(this.value)) {
-					return this.value.join(', ')
-                }
                 return this.value
             }
         }

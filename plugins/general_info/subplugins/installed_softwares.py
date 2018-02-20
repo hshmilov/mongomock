@@ -36,7 +36,3 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
                     name=i['Name'],
                     version=i['Version']
                 )
-
-        self.plugin_base.add_data_to_device(
-            (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
-            "Installed Softwares", installed_softwares)
