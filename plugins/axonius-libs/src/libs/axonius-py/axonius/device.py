@@ -200,7 +200,7 @@ class Device(SmartJsonClass):
         self.security_patches.append(DeviceSecurityPatch(**kwargs))
 
     def add_installed_software(self, **kwargs):
-        self.installed_softwares.append(DeviceInstalledSoftware(**kwargs))
+        self.installed_software.append(DeviceInstalledSoftware(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = Device.network_interfaces.name
