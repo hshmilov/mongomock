@@ -103,10 +103,13 @@
 		watch: {
 			fields: function (newFields, oldFields) {
 				if (!oldFields.length || newFields.length <= oldFields.length) { return }
-				this.restartData()
+				this.fetchedPages = 0
+				this.addData()
 			},
 			filter: function (newFilter) {
-				this.restartData()
+				this.fetchedPages = 0
+				this.selectPage(0)
+				this.addData()
 			},
 			fetching: function (newFetching) {
 				if (newFetching) {
@@ -193,15 +196,6 @@
             lastPage() {
 				if (this.isLastPage) { return }
 				this.selectPage(this.maxPages)
-            },
-            restartData() {
-				this.maxPages = 0
-				this.fetchedPages = 0
-				this.currentPage = 0
-				this.linkedPageCount = 1
-				this.linkedPageStart = 0
-				this.recordSelection = {}
-				this.addData()
             },
             restartPagination() {
 				/*
