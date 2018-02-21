@@ -7,7 +7,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from namedlist import namedlist
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.device import OS_FIELD
+from axonius.device import MAC_FIELD, OS_FIELD, NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import PluginBase
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
@@ -46,16 +46,20 @@ class UnsupportedOS(Exception):
     pass
 
 
-def is_scanner_device(adapters):
-    return does_device_have_field(adapters, 'scanner')
-
-
-def does_device_have_field(adapters, field):
-    return any(field in device_info['data'] for device_info in adapters)
+def does_device_have_field(adapters, check_data):
+    return any(check_data(device_info['data']) for device_info in adapters)
 
 
 def has_hostname(adapters):
-    return does_device_have_field(adapters, 'hostname')
+    return does_device_have_field(adapters, lambda adapter_data: 'hostname' in adapter_data)
+
+
+def has_mac(adapters):
+    return does_device_have_field(adapters, _has_mac)
+
+
+def _has_mac(adapter_data):
+    return any(nic.get(MAC_FIELD) for nic in adapter_data.get(NETWORK_INTERFACES_FIELD) or [])
 
 
 def figure_actual_os(adapters):

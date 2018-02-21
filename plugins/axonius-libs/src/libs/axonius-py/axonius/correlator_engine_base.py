@@ -1,17 +1,17 @@
-from typing import List, NewType, Tuple, Iterable
+from typing import List, NewType, Tuple, Iterable, Callable
 from types import FunctionType
 from abc import ABC, abstractmethod
 
 import itertools
 from funcy import pairwise
 
-from axonius.correlator_base import CorrelationResult, \
-    figure_actual_os, OSTypeInconsistency, is_scanner_device, has_hostname
+from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.plugin_exceptions import PluginException
 
 adapter_device = NewType('adapter_device', dict)
 pair_comparator = NewType('lambda x,y -> bool', FunctionType)
-parameter_function = NewType('lambda x -> paramter of x', FunctionType)
+parameter_function = NewType('lambda x -> paramter of x', Callable)
 device_pair = NewType('DevicePair', Tuple)
 
 
@@ -86,10 +86,21 @@ def _process_preconditioned_bucket(bucket: List[adapter_device],
     yield from _process_combinations(preconditioned_bucket, inner_bucket_comparators, data_dict, reason)
 
 
+def _prefilter_devices(devices, correlation_preconditions):
+    for device in devices:
+        try:
+            adapters = device['adapters']
+            if any(correlation_precondition(adapters) for correlation_precondition in correlation_preconditions):
+                yield device
+        except Exception:
+            pass
+
+
 class CorrelatorEngineBase(ABC):
     def __init__(self, logger):
         super().__init__()
         self.logger = logger
+        self.correlation_preconditions = None
 
     def _prefilter_device(self, devices) -> iter:
         """
@@ -97,16 +108,8 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: device to pass the device to _correlate
         """
-        # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
-        # way to correlate the devices and so it won't be added to adapters_to_correlate
-        correlation_preconditions = [is_scanner_device, has_hostname, figure_actual_os]
-        for device in devices:
-            try:
-                adapters = device['adapters']
-                if any(correlation_precondition(adapters) for correlation_precondition in correlation_preconditions):
-                    yield device
-            except OSTypeInconsistency:
-                self.logger.exception("OS inconsistent over correlated devices", device['internal_axon_id'])
+        assert self.correlation_preconditions, "Correlation preconditions were not defined"
+        return _prefilter_devices(devices, self.correlation_preconditions)
 
     def _bucket_creator(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
                         bucket_insertion_comparators: List[pair_comparator]):
@@ -126,7 +129,7 @@ class CorrelatorEngineBase(ABC):
         if len(adapters_to_correlate) < 2:
             return
 
-        for func in sort_order:
+        for func in reversed(sort_order):
             adapters_to_correlate.sort(key=func)
 
         bucket = [adapters_to_correlate[0]]
@@ -236,14 +239,15 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: iter(CorrelationResult or WarningResult)
         """
-        devices = list(self._prefilter_device(devices))
+        logic_correlations = self._preprocess_devices(devices)
         all_adapter_devices = [adapter for adapters in devices for adapter in adapters['adapters']]
+        devices = list(self._prefilter_device(devices))
         correlations_done_already = list()
 
         correlations_with_unavailable_devices = list()
 
         self.logger.info(f"Correlating {len(devices)} devices")
-        for result in itertools.chain(self._preprocess_devices(devices), self._raw_correlate(devices)):
+        for result in itertools.chain(logic_correlations, self._raw_correlate(devices)):
             if not isinstance(result, CorrelationResult):
                 yield result  # only post process correlation results
                 continue

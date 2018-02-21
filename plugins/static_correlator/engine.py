@@ -1,4 +1,5 @@
 from axonius.correlator_engine_base import CorrelatorEngineBase
+from axonius.correlator_base import has_mac, has_hostname
 from axonius.parsing_utils import normalize_hostname, compare_normalized_hostnames
 from axonius.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 
@@ -62,8 +63,10 @@ def _compare_os_type(adapter_device1, adapter_device2):
     return False
 
 
-def _compare_ips(adapter_device1, adapter_device2):
-    return _is_one_subset_of_the_other(adapter_device1[NORMALIZED_IPS], adapter_device2[NORMALIZED_IPS])
+def _ips_do_not_contradict(adapter_device1, adapter_device2):
+    device1_ips = adapter_device1.get(NORMALIZED_IPS)
+    device2_ips = adapter_device2.get(NORMALIZED_IPS)
+    return not device1_ips or not device2_ips or _is_one_subset_of_the_other(device1_ips, device2_ips)
 
 
 def _compare_macs(adapter_device1, adapter_device2):
@@ -126,12 +129,7 @@ def _has_mac_or_ip(adapter_data):
     :param adapter_data: the data of the adapter to test
     :return: True if there's at least one MAC or IP
     """
-    return adapter_data.get(NETWORK_INTERFACES_FIELD) is not None and \
-        len(adapter_data[NETWORK_INTERFACES_FIELD]) > 0 and \
-        ((len([x.get(IPS_FIELD) for x in adapter_data[NETWORK_INTERFACES_FIELD]
-               if x.get(IPS_FIELD) is not None and len(x.get(IPS_FIELD, [])) > 0]) > 0) or
-         (len([x.get(MAC_FIELD) for x in adapter_data[NETWORK_INTERFACES_FIELD]
-               if x.get(MAC_FIELD) is not None and len(x.get(MAC_FIELD, [])) > 0]) > 0))
+    return any(x.get(IPS_FIELD) or x.get(MAC_FIELD) for x in (adapter_data.get(NETWORK_INTERFACES_FIELD) or []))
 
 
 def _normalize_adapter_devices(devices):
@@ -185,7 +183,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     }
     """
 
-    def _correlate_mac_ip_os(self, adapters_to_correlate):
+    def _prefilter_device(self, devices):
+        # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
+        # way to correlate the devices and so it won't be added to adapters_to_correlate
+        self.correlation_preconditions = [has_hostname, has_mac]
+        return super()._prefilter_device(devices)
+
+    def _correlate_mac_ip_no_contradiction(self, adapters_to_correlate):
         """
         To write a correlator rule we do a few things:
         1.  list(filtered_adapters_list) -
@@ -204,59 +208,32 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         4.  [is_different_plugin, _compare_macs, _compare_ips] - the list of comparators to use on a pair from the
                 bucket - a pair that has made it through this list is considered a correlation so choose wisely!
 
-        5.  {'Reason': 'They have the same OS, MAC and IPs'} - the reason for the correlation - try to make it as
+        5.  {'Reason': 'They have the same MAC and IPs don\'t contradict'} - the reason for the correlation - try to make it as
                 descriptive as possible please
 
         6. 'StaticAnalysis' - the analysis used to discover the correlation
         """
-        self.logger.info("Starting to correlate on MAC-IP-OS")
-        filtered_adapters_list = filter(_get_normalized_mac,
-                                        filter(_get_normalized_ip,
-                                               filter(_get_os_type, adapters_to_correlate)))
+        self.logger.info("Starting to correlate on MAC-IP")
+        filtered_adapters_list = filter(_get_normalized_mac, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
-                                      [_get_os_type],
-                                      [_compare_os_type],
                                       [],
-                                      [is_different_plugin, _compare_macs, _compare_ips],
-                                      {'Reason': 'They have the same OS, MAC and IPs'},
+                                      [],
+                                      [],
+                                      [is_different_plugin, _compare_macs, _ips_do_not_contradict],
+                                      {'Reason': 'They have the same MAC and IPs don\'t contradict'},
                                       'StaticAnalysis')
 
-    def _correlate_scanner_mac_ip(self, adapters_to_correlate):
-        self.logger.info("Starting to correlate on MAC-IP-Scanner")
-        filtered_adapters_list = filter(_get_normalized_mac,
-                                        filter(_get_normalized_ip, adapters_to_correlate))
-        return self._bucket_correlate(list(filtered_adapters_list),
-                                      [],
-                                      [],
-                                      [is_a_scanner],
-                                      [is_different_plugin, _compare_macs, _compare_ips],
-                                      {'Reason': 'They have the same MAC and IPs'},
-                                      'ScannerAnalysis')
-
-    def _correlate_hostname_ip_os(self, adapters_to_correlate):
-        self.logger.info("Starting to correlate on Hostname-IP-OS")
-        filtered_adapters_list = filter(_get_hostname,
-                                        filter(_get_normalized_ip,
-                                               filter(_get_os_type, adapters_to_correlate)))
-        return self._bucket_correlate(list(filtered_adapters_list),
-                                      [_get_hostname, _get_normalized_ip, _get_os_type],
-                                      [_compare_normalized_hostname, _compare_os_type],
-                                      [],
-                                      [is_different_plugin, _compare_ips],
-                                      {'Reason': 'They have the same OS, hostname and IPs'},
-                                      'StaticAnalysis')
-
-    def _correlate_scanner_hostname_ip(self, adapters_to_correlate):
-        self.logger.info("Starting to correlate on Hostname-IP-Scanner")
+    def _correlate_hostname_ip(self, adapters_to_correlate):
+        self.logger.info("Starting to correlate on Hostname-IP")
         filtered_adapters_list = filter(_get_hostname,
                                         filter(_get_normalized_ip, adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [_get_hostname],
                                       [_compare_normalized_hostname],
-                                      [is_a_scanner],
-                                      [is_different_plugin, _compare_ips],
+                                      [],
+                                      [is_different_plugin, _ips_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
-                                      'ScannerAnalysis')
+                                      'StaticAnalysis')
 
     def _correlate_with_ad(self, adapters_to_correlate):
         """
@@ -281,17 +258,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # 3. splitting the hostname into a list in order to be able to compare hostnames without depending on the domain
         adapters_to_correlate = list(_normalize_adapter_devices(devices))
 
-        # let's find devices by, hostname, os, and ip:
-        yield from self._correlate_hostname_ip_os(adapters_to_correlate)
+        # let's find devices by, hostname, and ip:
+        yield from self._correlate_hostname_ip(adapters_to_correlate)
 
-        # Now let's find devices by MAC, os, and IP
-        yield from self._correlate_mac_ip_os(adapters_to_correlate)
+        # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
+        yield from self._correlate_mac_ip_no_contradiction(adapters_to_correlate)
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
-        # Now let's correlate scanner devices
-        yield from self._correlate_scanner_mac_ip(adapters_to_correlate)
-
-        yield from self._correlate_scanner_hostname_ip(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == 'StaticAnalysis':

@@ -5,7 +5,8 @@ from collections import OrderedDict
 from datetime import timedelta, datetime
 from promise import Promise
 
-from axonius.correlator_base import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os
+from axonius.correlator_base import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os, \
+    OSTypeInconsistency
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
@@ -94,6 +95,17 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                                              )
 
         self._parse_correlation_results = _parse_correlation_results
+
+    def _prefilter_device(self, devices) -> iter:
+        """
+        Virtual by design.
+        :param devices: axonius devices to correlate
+        :return: device to pass the device to _correlate
+        """
+        # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
+        # way to correlate the devices and so it won't be added to adapters_to_correlate
+        self.correlation_preconditions = [figure_actual_os]
+        return super()._prefilter_device(devices)
 
     def _raw_correlate(self, devices):
         # refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/90472522/Correlation+Implementation

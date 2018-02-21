@@ -280,6 +280,7 @@ def test_execution_correlation():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -296,6 +297,7 @@ def test_execution_correlation():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -351,6 +353,7 @@ def test_execution_nonexistent_device_nocorrelation():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -367,6 +370,7 @@ def test_execution_nonexistent_device_nocorrelation():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -414,6 +418,7 @@ def test_execution_nonexistent_device_deduction_correlation():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -430,6 +435,7 @@ def test_execution_nonexistent_device_deduction_correlation():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -446,6 +452,7 @@ def test_execution_nonexistent_device_deduction_correlation():
                     "plugin_name": "aws_adapter",
                     "plugin_unique_name": "aws_adapter_1",
                     "data": {
+                        "hostname": "aws1",
                         "os": {
                             "type": "Windows"
                         },
@@ -503,6 +510,7 @@ def test_partial_cmds_execution_correlation():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -519,6 +527,7 @@ def test_partial_cmds_execution_correlation():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -597,6 +606,7 @@ def test_multi_adapter_execution_correlation():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -613,6 +623,7 @@ def test_multi_adapter_execution_correlation():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -623,6 +634,7 @@ def test_multi_adapter_execution_correlation():
                     "plugin_name": "aws_adapter",
                     "plugin_unique_name": "aws_adapter_1",
                     "data": {
+                        "hostname": "aws1",
                         "os": {
                             "type": "Windows"
                         },
@@ -674,6 +686,7 @@ def test_find_just_contradictions_no_contradictions():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -684,6 +697,7 @@ def test_find_just_contradictions_no_contradictions():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -700,6 +714,7 @@ def test_find_just_contradictions_no_contradictions():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad2",
                         "os": {
                             "type": "Windows"
                         },
@@ -710,6 +725,7 @@ def test_find_just_contradictions_no_contradictions():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx2",
                         "os": {
                             "type": "Windows"
                         },
@@ -754,6 +770,7 @@ def test_find_just_contradictions_with_contradictions():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -764,6 +781,7 @@ def test_find_just_contradictions_with_contradictions():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -801,6 +819,7 @@ def test_execution_correlation_contradiction():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -811,6 +830,7 @@ def test_execution_correlation_contradiction():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
@@ -821,6 +841,7 @@ def test_execution_correlation_contradiction():
                     "plugin_name": "aws_adapter",
                     "plugin_unique_name": "aws_adapter_1",
                     "data": {
+                        "hostname": "aws1",
                         "os": {
                             "type": "Windows"
                         },
@@ -872,6 +893,7 @@ def test_execution_strongly_unbound_with():
                     "plugin_name": "ad_adapter",
                     "plugin_unique_name": "ad_adapter_1",
                     "data": {
+                        "hostname": "ad1",
                         "os": {
                             "type": "Windows"
                         },
@@ -891,6 +913,7 @@ def test_execution_strongly_unbound_with():
                     "plugin_name": "esx_adapter",
                     "plugin_unique_name": "esx_adapter_1",
                     "data": {
+                        "hostname": "esx1",
                         "os": {
                             "type": "Windows"
                         },
