@@ -15,6 +15,17 @@ osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
 ubuntu_full = re.compile(r'([Uu]buntu \d\d\.\d\d(?:\.\d+)?)')
 mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 
+# Unfortunately there's no normalized way to return a hostname - currently many adapters return hostname.domain.
+# However in non-windows systems, the hostname itself can contain "." which means there's no way to tell which part is
+# the hostname when splitting.
+# The problem starts as some adapters yield a hostname with a default domain added to it even when a domain exists, and
+# some don't return a domain at all.
+# In order to ignore that and allow proper hostname comparison we want to remove the default domains.
+# Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
+# Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
+NORMALIZED_HOSTNAME = 'normalized_hostname'
+DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP']
+
 
 def get_exception_string():
     """
@@ -154,7 +165,7 @@ def format_ip_raw(value):
             return address._ip
         return None
         # TODO: Add support to ipv6
-        #decimal128_ctx = create_decimal128_context()
+        # decimal128_ctx = create_decimal128_context()
         # with decimal.localcontext(decimal128_ctx) as ctx:
         # return Decimal128(ctx.create_decimal(str(address._ip)))
     except:
@@ -194,3 +205,29 @@ def get_device_id_for_plugin_name(associated_adapter_devices, plugin_name_key):
     """
     return next((device_id for plugin_unique_name, device_id in associated_adapter_devices
                  if plugin_name_key == plugin_unique_name), None)
+
+
+def normalize_hostname(adapter_data):
+    hostname = adapter_data.get('hostname')
+    if hostname is not None:
+        final_hostname = hostname.upper()
+        adapter_data['hostname'] = final_hostname
+        for extension in DEFAULT_DOMAIN_EXTENSIONS:
+            final_hostname = remove_trailing(final_hostname, extension)
+        return final_hostname.split('.')
+
+
+def compare_normalized_hostnames(host1, host2) -> bool:
+    """
+    As mentioned above in the documentation near the definition of NORMALIZED_HOSTNAME we want to compare hostnames not
+    based on the domain as some adapters don't return one or return a default one even when one exists. After we
+    split each host name on "." if one list starts with the other - one hostname is the beginning of the other not
+    including the domain - which means in our view - they are the same - for example:
+    1. ubuntuLolol.local == ubuntulolol.workgroup  --- because both have a default domain
+    2. ubuntuLolol.local == ubuntulolol.axonius  --- because one has a default domain and the other has a normal one
+        when normalizing this would become ['ubuntuLolol'], ['ubuntulolol','axonius'] and list2 starts with list1
+    3. ubuntuLolol.local.axonius != ubuntulolol.9 as when normalizing they'd become
+        ['ubuntuLolol', 'local', 'axonius'], ['ubuntulolol', '9'] and no list is the beginning of the other.
+    """
+    return host1 and host2 and (does_list_startswith(host1, host2) or
+                                does_list_startswith(host2, host1))

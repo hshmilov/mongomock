@@ -1,5 +1,5 @@
 from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.parsing_utils import does_list_startswith, remove_trailing
+from axonius.parsing_utils import normalize_hostname, compare_normalized_hostnames
 from axonius.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 
 
@@ -76,20 +76,14 @@ def _compare_hostname(adapter_device1, adapter_device2):
     return False
 
 
-def _compare_normalized_hostname(adapter_device1, adapter_device2):
+def _compare_normalized_hostname(adapter_device1, adapter_device2) -> bool:
     """
-    As mentioned above in the documentation near the definition of NORMALIZED_HOSTNAME we want to compare hostnames not
-    based on the domain as some adapters don't return one or return a default one even when one exists. After we
-    split each host name on "." if one list starts with the other - one hostname is the beginning of the other not
-    including the domain - which means in our view - they are the same - for example:
-    1. ubuntuLolol.local == ubuntulolol.workgroup  --- because both have a default domain
-    2. ubuntuLolol.local == ubuntulolol.axonius  --- because one has a default domain and the other has a normal one
-        when normalizing this would become ['ubuntuLolol'], ['ubuntulolol','axonius'] and list2 starts with list1
-    3. ubuntuLolol.local.axonius != ubuntulolol.9 as when normalizing they'd become
-        ['ubuntuLolol', 'local', 'axonius'], ['ubuntulolol', '9'] and no list is the beginning of the other.
+    See compare_normalized_hostnames docs
+    :param adapter_device1: first device
+    :param adapter_device2: second device
+    :return:
     """
-    return does_list_startswith(adapter_device1[NORMALIZED_HOSTNAME], adapter_device2[NORMALIZED_HOSTNAME]) or \
-        does_list_startswith(adapter_device2[NORMALIZED_HOSTNAME], adapter_device1[NORMALIZED_HOSTNAME])
+    return compare_normalized_hostnames(adapter_device1[NORMALIZED_HOSTNAME], adapter_device2[NORMALIZED_HOSTNAME])
 
 
 def is_a_scanner(adapter_device):
@@ -157,15 +151,9 @@ def _normalize_adapter_devices(devices):
                 macs = set(_extract_all_macs(adapter_data[NETWORK_INTERFACES_FIELD]))
                 adapter_device[NORMALIZED_IPS] = ips if len(ips) > 0 else None
                 adapter_device[NORMALIZED_MACS] = macs if len(macs) > 0 else None
-            hostname = adapter_data.get('hostname')
-            if hostname is not None:
-                final_hostname = hostname.upper()
-                adapter_data['hostname'] = final_hostname
-                for extension in DEFAULT_DOMAIN_EXTENSIONS:
-                    final_hostname = remove_trailing(final_hostname, extension)
-                # Save the normalized hostname so we can later easily compare.
-                # See further doc near definition of NORMALIZED_HOSTNAME.
-                adapter_device[NORMALIZED_HOSTNAME] = final_hostname.split('.')
+            # Save the normalized hostname so we can later easily compare.
+            # See further doc near definition of NORMALIZED_HOSTNAME.
+            adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_device['data'])
             if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
                 adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
             yield adapter_device

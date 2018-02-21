@@ -4,6 +4,7 @@ from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.device import Device
+from axonius.parsing_utils import normalize_hostname, compare_normalized_hostnames
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
 from axonius.utils.files import get_local_config_file
 import nexpose_adapter.clients as nexpose_clients
@@ -22,14 +23,11 @@ class NexposeScannerCorrelatorBase(ScannerCorrelatorBase):
         :param parsed_device:
         :return:
         """
-        hostname = parsed_device.get('hostname', '').strip()
-        if not hostname:
-            return
+        hostname = normalize_hostname(parsed_device)
         for adapter_device in self._all_adapter_devices:
-            remote_hostname = adapter_device['data'].get('hostname')
-            if isinstance(remote_hostname, str):
-                if remote_hostname.split('.')[0].upper() == hostname.split('.')[0].upper():
-                    return adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id']
+            remote_hostname = normalize_hostname(adapter_device['data'])
+            if compare_normalized_hostnames(hostname, remote_hostname):
+                return adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id']
 
 
 class NexposeAdapter(ScannerAdapterBase):

@@ -40,6 +40,6 @@ class TestNexposeAdapter(AdapterTestBase):
 
         # check the device is read by adapter
         devices_list = devices_as_dict[self.some_client_id]['parsed']
-        nexpose_device = list(filter(lambda device: device.get('hostname', '') == FETCHED_DEVICE_EXAMPLE['hostname'],
+        nexpose_device = list(filter(lambda device: device.get('hostname', '').upper() == FETCHED_DEVICE_EXAMPLE['hostname'].upper(),
                                      devices_list))
         assert nexpose_device[0]['raw']['mac'] == FETCHED_DEVICE_EXAMPLE['raw']['mac']
