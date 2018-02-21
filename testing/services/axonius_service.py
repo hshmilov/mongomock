@@ -53,7 +53,7 @@ class AxoniusService(object):
         for service in self.axonius_services:
             service.take_process_ownership()
 
-    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, skip=False):
+    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False):
         if rebuild:
             for service in self.axonius_services:
                 service.remove_image()
@@ -66,7 +66,7 @@ class AxoniusService(object):
         for service in self.axonius_services:
             if skip and service.get_is_container_up():
                 continue
-            service.start(mode=mode, allow_restart=allow_restart)
+            service.start(mode=mode, allow_restart=allow_restart, hard=hard)
 
         # wait for all
         for service in self.axonius_services:
@@ -160,9 +160,6 @@ class AxoniusService(object):
         if rebuild:
             for plugin in plugins:
                 plugin.remove_image()
-        if hard:
-            for plugin in plugins:
-                plugin.remove_volume()
         if allow_restart:
             for plugin in plugins:
                 plugin.remove_container()
@@ -170,7 +167,7 @@ class AxoniusService(object):
             plugin.take_process_ownership()
             if skip and plugin.get_is_container_up():
                 continue
-            plugin.start(mode, allow_restart=allow_restart)
+            plugin.start(mode, allow_restart=allow_restart, hard=hard)
         timeout = 60
         start = time.time()
         first = True

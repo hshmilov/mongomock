@@ -74,7 +74,7 @@ else:
     wsgi_app = init_wsgi(CurrentService)
 """[1:]
 
-    def start(self, mode='', allow_restart=False, rebuild=False):
+    def start(self, mode='', allow_restart=False, rebuild=False, hard=False):
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
@@ -113,6 +113,9 @@ else:
                 print(f'Container {self.container_name} already built - skipping build step')
         else:
             self.build(mode)
+
+        if hard:
+            self.remove_volume()
 
         # print(' '.join(docker_up))
         print(f"Running container {self.container_name} in -{'production' if mode == 'prod' else 'debug'}- mode.")
@@ -190,15 +193,19 @@ else:
                         cwd=self.service_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def remove_volume(self):
+        if self.get_is_container_up():
+            print(f'Container {self.container_name} still in use, skipping remove data volume '
+                  f'\'{self.container_name}_data\'')
+            return  # docker volume rm will fail otherwise...
         subprocess.call(['docker', 'volume', 'rm', f"{self.container_name}_data"], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    def start_and_wait(self, mode='', allow_restart=False, rebuild=False):
+    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False):
         """
         Take notice that the constructor already calls 'start' method. So use this function only
         after manual stop
         """
-        self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild)
+        self.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard)
         self.wait_for_service()
 
     def get_file_contents_from_container(self, file_path):

@@ -106,10 +106,10 @@ def system_entry_point(args):
             axonius_system.remove_plugin_containers(args.adapters, args.services)
 
         # Optimization - async build first
-        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild, args.hard)
+        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
 
-        axonius_system.start_and_wait(mode, args.restart, skip=args.skip)
-        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, skip=args.skip)
+        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip)
+        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
