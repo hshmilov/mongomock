@@ -100,7 +100,11 @@ class CoreService(PluginBase):
             delete_list = []
             for plugin_unique_name in temp_list:
                 with self.adapters_lock:
-                    if not self._check_plugin_online(plugin_unique_name):
+                    plugin_is_debug = temp_list[plugin_unique_name].get('is_debug', False)
+                    should_delete = False
+                    if not plugin_is_debug:
+                        should_delete = not self._check_plugin_online(plugin_unique_name)
+                    if should_delete:
                         if self.did_adapter_registered:
                             # We need to wait a bit and then try to check if plugin exists again
                             self.did_adapter_registered = False
@@ -224,6 +228,7 @@ class CoreService(PluginBase):
             plugin_name = data['plugin_name']
             plugin_type = data['plugin_type']
             plugin_port = data['plugin_port']
+            plugin_is_debug = data.get('is_debug', False)
 
             self.logger.info(f"Got registration request : {data} from {request.remote_addr}")
 
@@ -294,6 +299,9 @@ class CoreService(PluginBase):
 
                 if is_plugin_adapter(plugin_type):
                     doc[adapter_consts.DEVICE_SAMPLE_RATE] = int(data[adapter_consts.DEFAULT_SAMPLE_RATE])
+
+                if plugin_is_debug:
+                    doc['is_debug'] = True
 
             else:
                 # This is an existing plugin, we should update its data on the db (data that the plugin can change)

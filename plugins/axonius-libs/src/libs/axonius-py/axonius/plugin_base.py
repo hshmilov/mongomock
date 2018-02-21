@@ -28,10 +28,11 @@ from promise import Promise
 from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.mixins.feature import Feature
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
-from axonius.logging.logger import create_logger
 from axonius.device import Device
+from axonius.logging.logger import create_logger
+from axonius.mixins.feature import Feature
+from axonius.utils.debug import is_debug_attached
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -287,12 +288,15 @@ class PluginBase(Feature):
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(1)}
             self.online_plugins_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
-            self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
-                                                  trigger=IntervalTrigger(seconds=30),
-                                                  next_run_time=datetime.now() + timedelta(seconds=20),
-                                                  id='check_registered',
-                                                  name='check_registered',
-                                                  max_instances=1)
+            if is_debug_attached():
+                self.logger.info(f'Plugin is under debug mode, disabling keep alive thread')
+            else:
+                self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
+                                                      trigger=IntervalTrigger(seconds=30),
+                                                      next_run_time=datetime.now() + timedelta(seconds=20),
+                                                      id='check_registered',
+                                                      name='check_registered',
+                                                      max_instances=1)
             self.online_plugins_scheduler.start()
 
         # Creating open actions dict. This dict will hold all of the open actions issued by this plugin.
@@ -399,8 +403,8 @@ class PluginBase(Feature):
         """
         register_doc = {"plugin_name": self.plugin_name,
                         "plugin_type": self.plugin_type,
-                        "plugin_port": self.port
-                        }
+                        "plugin_port": self.port,
+                        "is_debug": is_debug_attached()}
 
         self.populate_register_doc(register_doc, self.config_file_path)
 

@@ -16,7 +16,7 @@ In order to start the system, or start (/stop) a specific container, use ./axoni
 Examples:
 ```bash
 
-# Start empty (just mongo, core, aggregator, gui)
+# Start empty (just mongo, core, aggregator, gui, execution)
 ./axonius.sh system up
 
 # Start basic configuration:

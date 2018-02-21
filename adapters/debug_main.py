@@ -7,8 +7,8 @@ def debug_main():
     package_name = adapter_name + '_adapter'
     module = importlib.import_module(f"{package_name}.service")
     service_class_name = package_name.replace('_', ' ').title().replace(' ', '')
-    SerivceClass = getattr(module, service_class_name)
-    service = SerivceClass()
+    ServiceClass = getattr(module, service_class_name)
+    service = ServiceClass()
 
     # Run (Blocking)
     service.start_serve()

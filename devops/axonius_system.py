@@ -106,7 +106,7 @@ def system_entry_point(args):
             axonius_system.remove_plugin_containers(args.adapters, args.services)
 
         # Optimization - async build first
-        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild, args.hard)
 
         axonius_system.start_and_wait(mode, args.restart, skip=args.skip)
         axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, skip=args.skip)
@@ -118,7 +118,7 @@ def system_entry_point(args):
     else:
         assert not args.restart and not args.skip
         print(f'Building system and {args.adapters + args.services}')
-        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild, args.hard)
 
 
 def service_entry_point(target, args):
@@ -155,7 +155,8 @@ def service_entry_point(target, args):
         args.rebuild = True
     if args.mode == 'up':
         print(f'Starting {args.name}')
-        axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild)
+        axonius_system.start_plugins(adapters, services, 'prod' if args.prod else '', args.restart, args.rebuild,
+                                     args.hard)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild
         print(f'Stopping {args.name}')
@@ -163,7 +164,7 @@ def service_entry_point(target, args):
     else:
         assert not args.restart
         print(f'Building {args.name}')
-        axonius_system.build(False, adapters, services, 'prod' if args.prod else '', args.rebuild)
+        axonius_system.build(False, adapters, services, 'prod' if args.prod else '', args.rebuild, args.hard)
 
 
 def str2bool(v):

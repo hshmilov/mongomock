@@ -2,6 +2,11 @@ import time
 import subprocess
 import os
 
+try:
+    from axonius.utils.debug import COLOR
+except ModuleNotFoundError:
+    COLOR = {}
+
 
 class ParallelRunner(object):
     def __init__(self):
@@ -19,7 +24,7 @@ class ParallelRunner(object):
 
     def append_single(self, task_name, args, **kwargs):
         command = ' '.join(args)
-        print(f"Running <{command}>")
+        print(f"Running {COLOR.get('light_blue', '<')}{command}{COLOR.get('reset', '>')}")
         stdout = open(self.std_file(task_name), "wb")
         stderr = open(self.err_file(task_name), "wb")
         process = subprocess.Popen(args, stdout=stdout, stderr=stderr, **kwargs)
@@ -66,9 +71,9 @@ class ParallelRunner(object):
             self.clean()
 
     def pump_std(self, name, proc):
-        print(name, "STDOUT")
+        print(name, f"{COLOR.get('light_magenta', '')}STDOUT{COLOR.get('reset', '')}")
         print(open(self.std_file(name), "rb").read().decode("utf-8"))
-        print(name, "STDERR")
+        print(name, f"{COLOR.get('light_red', '')}STDERR{COLOR.get('reset', '')}")
         print(open(self.err_file(name), "rb").read().decode("utf-8"))
 
     def __del__(self):

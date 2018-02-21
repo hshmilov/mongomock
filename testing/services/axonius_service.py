@@ -154,11 +154,15 @@ class AxoniusService(object):
                 return variable()
         raise ValueError('Adapter not found')
 
-    def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, skip=False):
+    def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
+                      skip=False):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         if rebuild:
             for plugin in plugins:
                 plugin.remove_image()
+        if hard:
+            for plugin in plugins:
+                plugin.remove_volume()
         if allow_restart:
             for plugin in plugins:
                 plugin.remove_container()
@@ -266,13 +270,16 @@ class AxoniusService(object):
                                                               'axonius-libs')))
         assert runner.wait_for_all() == 0
 
-    def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, async=True):
+    def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, hard=False, async=True):
         to_build = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         if system:
             to_build = self.axonius_services + to_build
         if rebuild:
             for service in to_build:
                 service.remove_image()
+        if hard:
+            for service in to_build:
+                service.remove_volume()
         if async and len(to_build) > 1:
             runner = ParallelRunner()
             for service in to_build:
