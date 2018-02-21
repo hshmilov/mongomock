@@ -2,25 +2,25 @@
 AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
+from abc import ABC, abstractmethod
+from bson import ObjectId
+from datetime import datetime, timedelta
+from enum import Enum, auto
+from flask import jsonify, request
+import json
+import sys
+from threading import RLock, Thread, Event
 from typing import Iterable
 
 from axonius import adapter_exceptions
-from axonius.device import Device, LAST_SEEN_FIELD
-from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.parsing_utils import get_exception_string
-from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from abc import ABC, abstractmethod
-from flask import jsonify, request
-import json
-from bson import ObjectId, Decimal128
-from threading import RLock, Thread, Event
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
+from axonius.device import Device, LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
-from datetime import datetime
-from datetime import timedelta
-from enum import Enum, auto
-import sys
+from axonius.parsing_utils import get_exception_string
+from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.utils.json import to_json
 
 
 def is_plugin_adapter(plugin_type: str) -> bool:
@@ -136,7 +136,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         Accepts:
            GET - Finds all available devices, and returns them
         """
-        return jsonify(self._query_devices())
+        return to_json(dict(self._query_devices()))
 
     @add_rule('devices_by_name', methods=['GET'])
     def devices_by_client(self):
@@ -172,7 +172,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             devices_list = {'raw': raw_devices,
                             'parsed': parsed_devices}
 
-            return jsonify(devices_list)
+            return to_json(devices_list)
 
     @add_rule('users', methods=['GET'])
     def users(self):

@@ -2,7 +2,6 @@ from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from dateutil.parser import parse as dateparse
 import functools
 from itertools import groupby
 from promise import Promise
@@ -16,13 +15,13 @@ from axonius.adapter_base import is_plugin_adapter
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE, IGNORE_DEVICE
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
-from axonius.device import LAST_SEEN_FIELD
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_device_id_for_plugin_name
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.threading_utils import MultiLockerLazy, run_in_executor_helper
 from axonius.utils.files import get_local_config_file
+from axonius.utils.json import from_json
 
 get_devices_job_name = "Get device job"
 
@@ -202,7 +201,7 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                 self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}. "
                                  f"Reason: {str(devices.content)}")
                 continue
-            yield (client_name, devices.json())
+            yield (client_name, from_json(devices.content))
 
     def _triggered(self, job_name, post_json, *args):
         current_adapters = requests.get(self.core_address + '/register')
@@ -462,13 +461,6 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
             Insert a device into the DB in a locked way
             :return:
             """
-            if LAST_SEEN_FIELD in parsed_to_insert['data']:
-                try:
-                    parsed_to_insert['data'][LAST_SEEN_FIELD] = dateparse(
-                        parsed_to_insert['data'][LAST_SEEN_FIELD])
-                except ValueError:
-                    pass  # failed :( ? unchanged
-
             # if `device_to_update` has a `correlates` field
             # then it's similar to a correlation, so we need to lock both devices
             lock_indexes = [get_unique_name_from_device(parsed_to_insert)]

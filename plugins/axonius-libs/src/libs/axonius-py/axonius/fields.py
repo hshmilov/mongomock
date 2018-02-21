@@ -2,6 +2,7 @@
     See smart_json_class.py for usage.
 """
 from enum import Enum, auto
+import datetime
 
 
 class NamedProperty(property):
@@ -47,6 +48,8 @@ class Field(object):
             assert callable(converter)
         self._converter = converter
         self._name = None
+        if json_format is None and isinstance(field_type, type) and issubclass(field_type, datetime.datetime):
+            json_format = JsonStringFormat.date_time
         if json_format is not None:
             assert isinstance(json_format, JsonStringFormat)
         self._format = json_format
@@ -107,14 +110,14 @@ class Field(object):
 
     @property
     def json_name(self):
-        if issubclass(self.type, int):
+        if issubclass(self.type, bool):
+            return 'boolean'
+        elif issubclass(self.type, int):
             return 'integer'
         elif issubclass(self.type, float):
             return 'number'
         elif issubclass(self.type, str):
             return 'string'
-        elif issubclass(self.type, bool):
-            return 'boolean'
         return 'string'
 
     def __repr__(self):

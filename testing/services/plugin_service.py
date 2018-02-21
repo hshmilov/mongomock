@@ -1,10 +1,11 @@
-import requests
 import json
+import requests
 import os
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
+from axonius.utils.json import from_json
 from services.debug_template import py_charm_debug_template, py_charm_debug_port_template
 from services.docker_service import DockerService
 from services.ports import DOCKER_PORTS
@@ -149,7 +150,7 @@ class AdapterService(PluginService):
         response = requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
-        return dict(json.loads(response.content))
+        return from_json(response.content)
 
     def clients(self, client_data=None):
         if not client_data:
