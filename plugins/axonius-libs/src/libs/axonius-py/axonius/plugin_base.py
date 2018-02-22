@@ -258,11 +258,15 @@ class PluginBase(Feature):
                 temp_config.write(temp_config_file)
 
         # Use the data we have from the core.
+        try:
+            self.db_host = self.config['DEBUG']['db_addr']
+            self.logstash_host = self.config['DEBUG']['log_addr']
+        except KeyError:
+            self.db_host = core_data['db_addr']
+            self.logstash_host = core_data['log_addr']
 
-        self.db_host = core_data['db_addr']
         self.db_user = core_data['db_user']
         self.db_password = core_data['db_password']
-        self.logstash_host = core_data['log_addr']
 
         self.log_path = LOG_PATH + '/' + self.plugin_unique_name + '_axonius.log'
         self.log_level = logging.INFO
