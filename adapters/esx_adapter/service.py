@@ -3,7 +3,7 @@ from pyVmomi import vim
 
 from axonius.adapter_base import AdapterBase, DeviceRunningState
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.fields import Field
 from axonius.parsing_utils import parse_date
 from axonius.utils.files import get_local_config_file

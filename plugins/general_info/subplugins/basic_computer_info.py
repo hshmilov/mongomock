@@ -1,7 +1,7 @@
 import datetime
 
 
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.parsing_utils import parse_date
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime

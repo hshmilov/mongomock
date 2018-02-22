@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device, MAC_FIELD
+from axonius.devices.device import Device, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from puppet_adapter.connection import PuppetConnection
 from puppet_adapter.exceptions import PuppetException

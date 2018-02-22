@@ -8,7 +8,7 @@ import os
 
 import services
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.device import NETWORK_INTERFACES_FIELD
+from axonius.devices.device import NETWORK_INTERFACES_FIELD
 from services import adapters
 from services.execution_service import ExecutionService
 from services.aggregator_service import AggregatorService

@@ -1,7 +1,7 @@
 from threading import Thread
 
 from axonius.adapter_base import AdapterBase
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from qcore_adapter.protocol.consts import PUMP_SERIAL
 from qcore_adapter.qcore_mongo import QcoreMongo

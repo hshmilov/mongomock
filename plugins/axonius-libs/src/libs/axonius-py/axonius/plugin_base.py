@@ -29,7 +29,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.logging.logger import create_logger
 from axonius.mixins.feature import Feature
 from axonius.utils.debug import is_debug_attached

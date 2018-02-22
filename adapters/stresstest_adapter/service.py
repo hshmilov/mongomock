@@ -3,7 +3,7 @@ import time
 import random
 
 from axonius.adapter_base import AdapterBase
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 

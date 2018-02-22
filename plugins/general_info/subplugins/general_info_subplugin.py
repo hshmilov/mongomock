@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from axonius.device import Device
+from axonius.devices.device import Device
 
 
 class GeneralInfoSubplugin(ABC):

@@ -1,7 +1,7 @@
 from epo_adapter import service
 import pytest
 
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.parsing_utils import figure_out_os
 from axonius.utils.mongo_escaping import escape_dict
 from unittest.mock import MagicMock

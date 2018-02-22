@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device, IPS_FIELD, MAC_FIELD
+from axonius.devices.device import Device, IPS_FIELD, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from splunk_symantec_adapter.connection import SplunkConnection
 

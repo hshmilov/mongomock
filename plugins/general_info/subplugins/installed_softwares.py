@@ -1,5 +1,5 @@
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from axonius.device import Device
+from axonius.devices.device import Device
 
 
 class GetInstalledSoftwares(GeneralInfoSubplugin):

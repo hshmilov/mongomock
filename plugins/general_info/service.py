@@ -6,7 +6,7 @@ import functools
 import threading
 import time
 
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_exception_string

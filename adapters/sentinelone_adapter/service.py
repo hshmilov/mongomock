@@ -2,7 +2,7 @@ import re
 
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 
 from sentinelone_adapter.connection import SentinelOneConnection

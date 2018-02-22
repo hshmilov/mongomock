@@ -1,6 +1,5 @@
 import pytest
 
-from axonius.device import NETWORK_INTERFACES_FIELD, OS_FIELD
 from services.adapters.jamf_service import JamfService, jamf_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_jamf_credentials import *

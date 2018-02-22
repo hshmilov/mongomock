@@ -14,11 +14,11 @@ from active_directory_adapter.exceptions import LdapException, IpResolveError, N
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import DNSResolvableDevice, DEVICES_DATA, DNS_RESOLVE_STATUS
-from axonius.device import Device, NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
+from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
+from axonius.devices.device import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
+from axonius.devices.ad_device import ADDevice
 from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns
-from axonius.fields import ListField
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 
@@ -29,8 +29,8 @@ TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 class ActiveDirectoryAdapter(AdapterBase):
 
-    class MyDevice(Device, DNSResolvableDevice):
-        ad_organizational_unit = ListField(str, "Active Directory Organizational Unit")
+    class MyDevice(ADDevice):
+        pass
 
     def __init__(self):
 
@@ -277,8 +277,7 @@ class ActiveDirectoryAdapter(AdapterBase):
             device.last_seen = last_seen
             device.dns_resolve_status = DNSResolveStatus.Pending
             device.id = device_raw['distinguishedName']
-            for ou in [ou[3:] for ou in device_raw['distinguishedName'].split(",") if ou.startswith("OU=")]:
-                device.ad_organizational_unit.append(ou)
+            device.add_organizational_units(device.id)
             device.set_raw(device_raw)
 
             device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])

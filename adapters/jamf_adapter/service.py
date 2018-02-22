@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection

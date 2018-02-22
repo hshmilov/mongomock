@@ -1,7 +1,7 @@
 from axonius.correlator_engine_base import CorrelatorEngineBase
+from axonius.devices.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 from axonius.correlator_base import has_mac, has_hostname
 from axonius.parsing_utils import normalize_hostname, compare_normalized_hostnames
-from axonius.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 
 
 # NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.

@@ -2,7 +2,7 @@ from itertools import groupby
 
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from qualys_adapter.exceptions import QualysException
 from qualys_adapter.connection import QualysConnection

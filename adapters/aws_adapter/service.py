@@ -5,7 +5,7 @@ import re
 
 from axonius.adapter_base import AdapterBase, DeviceRunningState
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException, AdapterException
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file

@@ -1,6 +1,6 @@
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 
 import tarfile

@@ -15,7 +15,7 @@ from typing import Iterable
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
-from axonius.device import Device, LAST_SEEN_FIELD
+from axonius.devices.device import Device, LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
 from axonius.parsing_utils import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error

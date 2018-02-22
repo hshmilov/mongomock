@@ -3,7 +3,7 @@ import ctypes
 
 from axonius.adapter_base import AdapterBase
 from axonius.parsing_utils import format_mac, parse_date
-from axonius.device import Device
+from axonius.devices.device import Device
 import axonius.adapter_exceptions
 from axonius.utils.files import get_local_config_file
 from eset_adapter.client import EsetClient

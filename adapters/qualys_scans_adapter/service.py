@@ -2,7 +2,7 @@ import dateutil.parser
 
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from axonius.utils.xml2json_parser import Xml2Json
 from qualys_scans_adapter.connection import QualysScansConnection

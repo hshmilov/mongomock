@@ -3,7 +3,7 @@ from typing import Tuple
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.device import Device
+from axonius.devices.device import Device
 from axonius.parsing_utils import normalize_hostname, compare_normalized_hostnames
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
 from axonius.utils.files import get_local_config_file

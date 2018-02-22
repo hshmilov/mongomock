@@ -1,7 +1,7 @@
 import itertools
 
 from axonius.correlator_base import figure_actual_os
-from axonius.device import NETWORK_INTERFACES_FIELD, IPS_FIELD
+from axonius.devices.device import NETWORK_INTERFACES_FIELD, IPS_FIELD
 from axonius.execution_correlator_engine_base import ExecutionCorrelatorEngineBase
 
 
