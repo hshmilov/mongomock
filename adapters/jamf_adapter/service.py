@@ -1,10 +1,12 @@
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.consts import adapter_consts
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection
 from jamf_adapter.exceptions import JamfException
+from distutils.util import strtobool
 
 
 class JamfAdapter(AdapterBase):
@@ -14,6 +16,7 @@ class JamfAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
+        self.alive_hours = float(self.config['DEFAULT'][adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS])
 
     def _get_client_id(self, client_config):
         return client_config['Jamf_Domain']
@@ -22,6 +25,8 @@ class JamfAdapter(AdapterBase):
         try:
             connection = JamfConnection(logger=self.logger,
                                         domain=client_config[consts.JAMF_DOMAIN],
+                                        search_name=client_config[consts.ADVANCE_SEARCH_NAME],
+                                        all_permissions=client_config[consts.CREATE_SEARCH_PRIVILEGES],
                                         http_proxy=client_config.get(consts.HTTP_PROXY),
                                         https_proxy=client_config.get(consts.HTTPS_PROXY))
             connection.set_credentials(username=client_config[consts.USERNAME],
@@ -43,7 +48,7 @@ class JamfAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Jamf Server
         """
-        return client_data.get_devices()
+        return client_data.get_devices(alive_hours=self.alive_hours)
 
     def _clients_schema(self):
         """
@@ -70,6 +75,16 @@ class JamfAdapter(AdapterBase):
                     "format": "password"
                 },
                 {
+                    "name": consts.ADVANCE_SEARCH_NAME,
+                    "title": "Advanced Search Name",
+                    "type": "string",
+                },
+                {
+                    "name": consts.CREATE_SEARCH_PRIVILEGES,
+                    "title": "Create and Update Advanced Search",
+                    "type": "bool",
+                },
+                {
                     "name": consts.HTTP_PROXY,
                     "title": "Http Proxy",
                     "type": "string"
@@ -83,7 +98,9 @@ class JamfAdapter(AdapterBase):
             "required": [
                 consts.JAMF_DOMAIN,
                 consts.USERNAME,
-                consts.PASSWORD
+                consts.PASSWORD,
+                consts.CREATE_SEARCH_PRIVILEGES,
+                consts.ADVANCE_SEARCH_NAME
             ],
             "type": "array"
         }

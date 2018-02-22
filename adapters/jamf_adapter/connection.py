@@ -8,7 +8,7 @@ from axonius.utils.xml2json_parser import Xml2Json
 
 
 class JamfConnection(object):
-    def __init__(self, logger, domain, http_proxy=None, https_proxy=None):
+    def __init__(self, logger, domain, search_name, all_permissions, http_proxy=None, https_proxy=None):
         """ Initializes a connection to Jamf using its rest API
 
         :param obj logger: Logger object of the system
@@ -29,6 +29,8 @@ class JamfConnection(object):
         if https_proxy is not None:
             self.proxies['https'] = https_proxy
         self.logger.info(f"Proxies: {self.proxies}")
+        self.all_permissions = all_permissions
+        self.search_name = search_name
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -125,29 +127,30 @@ class JamfConnection(object):
         :return: the response
         :rtype: list of computers
         """
-        search = JamfAdvancedSearch(self, url, data)
+        search = JamfAdvancedSearch(self, url, data, self.search_name, self.all_permissions)
         # update has succeeded or an exception would have been raised
         with search:
             devices = search.search_results[xml_name][device_list_name].get(device_type, [])
 
         return [devices] if type(devices) == dict else devices
 
-    def get_devices(self):
+    def get_devices(self, alive_hours):
         """ Returns a list of all agents
         :return: the response
         :rtype: list of computers and phones
         """
         # Getting all devices at once so no progress is logged
+        # alive_hours/24 evaluates to an int on purpose
         computers = self._get_jamf_devices(
             url=consts.ADVANCED_COMPUTER_SEARCH_URL,
-            data=consts.ADVANCED_COMPUTER_SEARCH,
+            data=consts.ADVANCED_COMPUTER_SEARCH.format(self.search_name, int(alive_hours / 24)),
             xml_name=consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,
             device_list_name=consts.ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME,
             device_type=consts.COMPUTER_DEVICE_TYPE)
 
         mobile_devices = self._get_jamf_devices(
             url=consts.ADVANCED_MOBILE_SEARCH_URL,
-            data=consts.ADVANCED_MOBILE_SEARCH,
+            data=consts.ADVANCED_MOBILE_SEARCH.format(self.search_name, int(alive_hours / 24)),
             xml_name=consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
             device_list_name=consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
             device_type=consts.MOBILE_DEVICE_TYPE)

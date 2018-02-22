@@ -1,7 +1,18 @@
 ADVANCED_COMPUTER_SEARCH_URL = 'advancedcomputersearches'
 ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 <advanced_computer_search>
-    <name>Axonius-Adapter-Inventory</name>
+    <name>{0}</name>
+    <criteria>
+        <size>1</size>
+        <criterion>
+            <name>Last Check-in</name>
+            <and_or>and</and_or>
+            <search_type>less than x days ago</search_type>
+            <value>{1}</value>
+            <opening_paren>false</opening_paren>
+            <closing_paren>false</closing_paren>
+        </criterion>
+    </criteria>
     <display_fields>
         <size>91</size>
         <display_field>
@@ -285,9 +296,17 @@ COMPUTER_DEVICE_TYPE = 'computer'
 ADVANCED_MOBILE_SEARCH_URL = 'advancedmobiledevicesearches'
 ADVANCED_MOBILE_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 <advanced_mobile_device_search>
-    <name>Axonius-Adapter-Inventory</name>
+    <name>{0}</name>
     <criteria>
-        <size>0</size>
+        <size>1</size>
+        <criterion>
+            <name>Last Inventory Update</name>
+            <and_or>and</and_or>
+            <search_type>less than x days ago</search_type>
+            <value>{1}</value>
+            <opening_paren>false</opening_paren>
+            <closing_paren>false</closing_paren>
+        </criterion>
     </criteria>
     <display_fields>
         <size>94</size>
@@ -578,10 +597,12 @@ ADVANCED_MOBILE_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 ADVANCED_MOBILE_SEARCH_XML_NAME = 'advanced_mobile_device_search'
 ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME = 'mobile_devices'
 MOBILE_DEVICE_TYPE = 'mobile_device'
-ADVANCE_SEARCH_NAME = "/name/Axonius-Adapter-Inventory"
+ADVANCE_SEARCH_URL_NAME = "/name/{0}"
 
+ADVANCE_SEARCH_NAME = "advanced_search_name"
 USERNAME = 'username'
 JAMF_DOMAIN = 'Jamf_Domain'
 PASSWORD = 'password'
 HTTP_PROXY = 'http_proxy'
 HTTPS_PROXY = 'http_proxy'
+CREATE_SEARCH_PRIVILEGES = 'create_search_privileges'
