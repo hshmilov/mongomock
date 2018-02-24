@@ -56,7 +56,10 @@
 			xArrayEdit
 		},
 		name: 'x-schema-expression',
-		props: {value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false}},
+		props: {
+			value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false},
+			recompile: {default: false}
+		},
 		computed: {
 			logicOps () {
 				return ['and', 'or']
@@ -72,13 +75,13 @@
 
 				return this.fieldMap[this.expression.field]
 			},
-            valueSchema() {
+			valueSchema () {
 				if (this.fieldSchema && this.fieldSchema.type === 'array'
-                    && ['contains', 'equals', 'subnet'].includes(this.expression.compOp)) {
+					&& ['contains', 'equals', 'subnet'].includes(this.expression.compOp)) {
 					return this.fieldSchema.items
-                }
-                return this.fieldSchema
-            },
+				}
+				return this.fieldSchema
+			},
 			fieldOps () {
 				if (!this.fieldSchema) return {}
 
@@ -96,26 +99,32 @@
 			fieldOpsList () {
 				return Object.keys(this.fieldOps)
 
-            },
-            showValue() {
+			},
+			showValue () {
 				return this.fieldSchema.format === 'predefined'
-                    || (this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
-                        && this.fieldOps[this.expression.compOp].pattern.includes('{val}'))
-            }
+					|| (this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
+						&& this.fieldOps[this.expression.compOp].pattern.includes('{val}'))
+			}
 		},
 		data () {
 			return {
 				expression: {...this.value},
-                processedValue: ''
+				processedValue: ''
 			}
 		},
-        watch: {
-			valueSchema(newSchema, oldSchema) {
+		watch: {
+			valueSchema (newSchema, oldSchema) {
 				if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
 					this.expression.value = null
-                }
+				}
+			},
+            recompile (newRecompile) {
+				if (!newRecompile) return
+
+                this.compileExpression()
+                this.$emit('recompiled')
             }
-        },
+		},
 		methods: {
 			checkErrors () {
 				if (!this.first && !this.expression.logicOp) {
@@ -136,11 +145,11 @@
 						return 'Specify <address>/<CIDR> to filter IP by subnet'
 					}
 					try {
-					    let subnetInfo = IP.cidrSubnet(val)
-					    this.processedValue = [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
-                    } catch (err) {
+						let subnetInfo = IP.cidrSubnet(val)
+						this.processedValue = [IP.toLong(subnetInfo.networkAddress), IP.toLong(subnetInfo.broadcastAddress)]
+					} catch (err) {
 						return 'Specify <address>/<CIDR> to filter IP by subnet'
-                    }
+					}
 				}
 				if (this.fieldSchema.enum && this.fieldSchema.enum.length && this.expression.value) {
 					let exists = this.fieldSchema.enum.filter((item) => {
@@ -158,11 +167,11 @@
 					cond = cond.replace(/{field}/g, this.expression.field)
 				} else if (this.fieldOpsList.length) {
 					this.expression.compOp = ''
-                    this.expression.value = ''
+					this.expression.value = ''
 					return ''
 				}
 
-				let val = this.processedValue? this.processedValue : this.expression.value
+				let val = this.processedValue ? this.processedValue : this.expression.value
 				let iVal = Array.isArray(val) ? -1 : undefined
 				return cond.replace(/{val}/g, () => {
 					if (iVal === undefined) return val
@@ -192,13 +201,12 @@
 					filterStack.push(')')
 					bracketWeight += 1
 				}
-				if (this.expression.not) {}
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
 			}
 		},
-        updated() {
+		updated () {
 			this.compileExpression()
-        }
+		}
 	}
 </script>
 

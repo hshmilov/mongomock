@@ -89,7 +89,11 @@ export const adapterStaticData = {
 	},
 	'sccm_adapter': {
 		name: 'Microsoft SCCM',
-		description: 'Microsoft System Center Configuration Manager offers different solutions for managing PCs, servers, and devices, using on-premises Configuration Manager or Microsoft Exchange.'
+		description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers and devices.'
+	},
+	'csv_adapter': {
+		name: 'CSV Adapter',
+		description: 'The CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
 	}
 }
 

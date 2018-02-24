@@ -58,21 +58,18 @@
 	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
 	import DynamicPopover from '../../components/popover/DynamicPopover.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
-
-	import { mapState, mapActions } from 'vuex'
-	import {
-		CREATE_DEVICE_LABELS,
-		DELETE_DEVICE_LABELS
-	} from '../../store/modules/device'
+    import TagsMixin from './tags'
+	import { mapState } from 'vuex'
 
 	export default {
 		name: 'devices-actions-container',
-		props: {'devices': {required: true}},
 		components: {
 			TriggerableDropdown, FeedbackModal, DynamicPopover, SearchableChecklist,
 			'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem
 		},
-		computed: {
+		props: {'devices': {required: true}},
+        mixins: [TagsMixin],
+        computed: {
 			...mapState(['device']),
 			deviceById () {
 				if (!this.device.deviceList.data || !this.device.deviceList.data.length) return {}
@@ -87,31 +84,22 @@
 			currentTags () {
 				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
 				let labels = this.deviceById[this.devices[0]].labels
-                if (this.devices.length === 1) { return labels }
+				if (this.devices.length === 1) { return labels }
 				this.devices.forEach((device) => {
 					let deviceLabels = this.deviceById[device].labels
 					if (!deviceLabels || !deviceLabels.length) {
 						labels = []
-                        return
+						return
 					}
 					labels = labels.filter((label) => {
 						return deviceLabels.includes(label)
-                    })
+					})
 				})
 				return labels
 			}
-		},
-        watch: {
-			currentTags(newLabels) {
-				this.tag.selected = newLabels
-            }
         },
 		data () {
 			return {
-				tag: {
-					isActive: false,
-					selected: []
-				},
                 blacklist: {
 					isActive: false
                 },
@@ -133,34 +121,17 @@
 			}
 		},
 		methods: {
-			...mapActions({
-				addDeviceTags: CREATE_DEVICE_LABELS,
-				removeDeviceTags: DELETE_DEVICE_LABELS
-			}),
             activate(module) {
 				module.isActive = true
                 // Close the actions dropdown
                 this.$el.click()
             },
-			saveTags () {
-				/* Separate added and removed tags and create an uber promise returning after both are updated */
-
-                let added = this.tag.selected.filter((tag) => {
-					return (!this.currentTags.includes(tag))
-				})
-                let removed = this.currentTags.filter((tag) => {
-					return (!this.tag.selected.includes(tag))
-				})
-				return Promise.all([this.addDeviceTags({devices: this.devices, labels: added}),
-					this.removeDeviceTags({devices: this.devices, labels: removed})])
-
-			},
 			saveBlacklist () {
 				/*
 				Blacklist is currently implemented by checking for a designated tag,
 				Therefore, adding this tag to selected devices
 				 */
-                return this.addDeviceTags({devices: this.devices, tags: ['do_not_execute']})
+                return this.addDeviceLabels({devices: this.devices, tags: ['do_not_execute']})
 			},
 			saveBlock () {
 				return new Promise((resolve, reject) => {
@@ -177,10 +148,7 @@
 					resolve()
 				})
 			}
-		},
-        mounted() {
-			this.tag.selected = this.currentTags
-        }
+		}
 	}
 </script>
 

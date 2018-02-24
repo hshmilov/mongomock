@@ -3,6 +3,7 @@
         <div class="mb-4">Show only Devices:</div>
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
                              v-model="expressions[i]" :fields="schema" :comp-ops="compOps"
+                             :recompile="recompile" @recompiled="handleRecompiled"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"></x-schema-expression>
         <div class="footer">
             <div @click="addExpression" class="btn-light">+</div>
@@ -19,7 +20,7 @@
 	export default {
 		name: 'x-schema-filter',
 		components: {xSchemaExpression},
-		props: {'schema': {required: true}, 'value': {}},
+		props: {'schema': {required: true}, 'value': {}, recompile: {default: false}},
 		computed: {
 			expression () {
 				return {
@@ -111,7 +112,8 @@
 				expressions: [...this.value],
 				filters: [],
 				bracketWeights: [],
-				error: ''
+				error: '',
+                recompiledCounter: 0
 			}
 		},
 		watch: {
@@ -133,6 +135,7 @@
 					this.$emit('error')
 					return
 				}
+
 				this.filters[index] = payload.filter
 				this.bracketWeights[index] = payload.bracketWeight
 				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
@@ -159,7 +162,16 @@
 					}
 				}
 				this.$emit('change', this.filters.join(' '))
-			}
+			},
+            handleRecompiled() {
+				if (!this.recompile) return
+
+                this.recompiledCounter += 1
+				if (this.recompiledCounter === this.expressions.length) {
+					this.$emit('recompiled')
+                    this.recompiledCounter = 0
+				}
+            }
 		},
 		created () {
 			if (!this.expressions.length) {

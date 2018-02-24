@@ -122,7 +122,7 @@ export const device = {
 
 			if (state.deviceDetails.data && state.deviceDetails.data.internal_axon_id
 				&& payload.devices.includes(state.deviceDetails.data.internal_axon_id)) {
-				state.deviceList.data = { ...state.deviceDetails.data,
+				state.deviceDetails.data = { ...state.deviceDetails.data,
 					labels: Array.from(new Set([ ...state.deviceDetails.data.labels,
 						...payload.labels
 					]))

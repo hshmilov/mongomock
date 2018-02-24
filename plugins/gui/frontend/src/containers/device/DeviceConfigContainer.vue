@@ -12,7 +12,8 @@
                     <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.name" :id="i" :key="i">
                         <x-custom-data :data="item.data"></x-custom-data>
                     </tab>
-                    <tab title="Tags" id="tags" key="tags" v-if="deviceData.labels && deviceData.labels.length">
+                    <tab title="Tags" id="tags" key="tags">
+                        <div @click="tag.isActive = true" class="link tag-edit">Edit Tags</div>
                         <div v-for="label in deviceData.labels" class="col-4 d-flex tag-content">
                             <div>{{ label }}</div>
                             <div class="link" @click="removeTag(label)">Remove</div>
@@ -42,6 +43,10 @@
                 </tabs>
             <!--</named-section>-->
         </div>
+        <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
+            <searchable-checklist title="Tag as:" :items="device.labelList.data" :searchable="true"
+                                  :extendable="true" v-model="tag.selected"></searchable-checklist>
+        </feedback-modal>
     </scrollable-page>
 </template>
 
@@ -53,19 +58,22 @@
 	import Tab from '../../components/tabs/Tab.vue'
 	import xSchemaList from '../../components/data/SchemaList.vue'
 	import xCustomData from '../../components/data/CustomData.vue'
+	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
+	import SearchableChecklist from '../../components/SearchableChecklist.vue'
+    import TagsMixin from './tags'
+
+	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
-		FETCH_DEVICE,
-		CREATE_DEVICE_LABELS,
-		DELETE_DEVICE_LABELS,
-		UPDATE_DEVICE,
-		FETCH_DEVICE_FIELDS
+	FETCH_DEVICE, UPDATE_DEVICE, FETCH_DEVICE_FIELDS,
+	CREATE_DEVICE_LABELS, DELETE_DEVICE_LABELS, FETCH_LABELS,
 	} from '../../store/modules/device.js'
 	import { adapterStaticData } from '../../store/modules/adapter.js'
-	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
 		name: 'device-config-container',
-		components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData},
+		components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData,
+            FeedbackModal, SearchableChecklist },
+        mixins: [TagsMixin],
 		computed: {
 			...mapState(['device']),
 			deviceId () {
@@ -124,23 +132,23 @@
                 }).map((name) => {
 					return { name: name.split('_').join(' '), data: this.deviceData.generic_data[0][name] }
                 }).concat(this.deviceData.generic_data.slice(1))
-			}
+			},
+            currentTags() {
+				return this.deviceData.labels
+            }
 		},
 		data () {
 			return {
 				viewBasic: true,
-                tag: {
-					isActive: false,
-                    value: ''
-                }
+                devices: [ this.$route.params.id ]
 			}
 		},
 		methods: {
 			...mapMutations({updateDevice: UPDATE_DEVICE}),
 			...mapActions({
-				fetchDevice: FETCH_DEVICE, deleteDeviceTags: DELETE_DEVICE_LABELS,
-                createDeviceTags: CREATE_DEVICE_LABELS,
-				fetchDeviceFields: FETCH_DEVICE_FIELDS
+				fetchDevice: FETCH_DEVICE, fetchDeviceFields: FETCH_DEVICE_FIELDS,
+                deleteDeviceTags: DELETE_DEVICE_LABELS, createDeviceTags: CREATE_DEVICE_LABELS,
+                fetchLabels: FETCH_LABELS
 			}),
 			getAdapterName (pluginName) {
 				if (!adapterStaticData[pluginName]) {
@@ -158,6 +166,9 @@
 			}
 			if (!this.deviceData || this.deviceData.internal_axon_id !== this.deviceId) {
 				this.fetchDevice(this.deviceId)
+			}
+			if (!this.device.labelList.data || !this.device.labelList.data.length) {
+				this.fetchLabels()
 			}
 		}
 	}
@@ -188,6 +199,9 @@
                     flex: 1 0 auto;
                     text-align: right;
                 }
+            }
+            .tag-edit {
+                text-align: right;
             }
         }
     }

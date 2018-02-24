@@ -175,7 +175,7 @@
 				fetchDeviceFields: FETCH_DEVICE_FIELDS,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
-				fetchTags: FETCH_LABELS,
+				fetchLabels: FETCH_LABELS,
 				fetchAdapters: FETCH_ADAPTERS,
 				fetchSavedQueries: FETCH_SAVED_QUERIES
 			}),
@@ -253,7 +253,9 @@
 				this.fetchSavedQueries()
 			}
 			this.fetchAdapters()
-			this.fetchTags()
+            if (!this.device.labelList.data || !this.device.labelList.data.length) {
+				this.fetchLabels()
+			}
 
 			this.interval = setInterval(function () {
 				this.fetchDevices({

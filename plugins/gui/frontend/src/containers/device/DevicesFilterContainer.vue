@@ -30,10 +30,10 @@
             </div>
         </triggerable-dropdown>
         <triggerable-dropdown class="form-control" align="right" size="xl">
-            <div slot="dropdownTrigger" class="link">Query</div>
+            <div slot="dropdownTrigger" class="link" @click="recompile = true">Query</div>
             <div slot="dropdownContent">
-                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery"
-                                 @error="filterValid = false"></x-schema-filter>
+                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery" @error="filterValid = false"
+                                 :recompile="recompile" @recompiled="recompile = false"></x-schema-filter>
                 <div class="row">
                     <div class="form-group place-right">
                         <a class="btn btn-inverse" @click="filterExpressions = []; searchValue = ''">Clear</a>
@@ -109,7 +109,8 @@
 		data () {
 			return {
 				searchValue: this.value,
-                filterValid: true
+                filterValid: true,
+                recompile: false
 			}
 		},
 		methods: {

@@ -103,21 +103,12 @@
                 }
             }
             .sidebar-nav {
+                overflow: hidden;
                 background: $color-theme-dark;
                 padding: 0px;
                 padding-top: 30px;
                 .nav-nest {
                     transition: all ease-in 0.2s;
-                    .nav-item:hover {
-                        position: relative;
-                        .nav-nest.collapse {
-                            display: block;
-                            .nav-link span {
-                                transition: all ease-in 0.5s;
-                                opacity: 1;
-                            }
-                        }
-                    }
                 }
                 .nav-link.has-arrow::after {
                     transition: all ease-in 0.2s;
@@ -158,20 +149,31 @@
                 }
             }
             .sidebar-nav {
+                overflow: visible;
                 .nav-nest .nav-link span {
                     opacity: 0;
                 }
                 .nav-item {
+                    overflow: hidden;
                     .nav-nest.collapse {
                         display: none;
                         transition: all ease-in 0.2s;
                     }
-                    &:hover .nav-nest.collapse {
-                        left: 56px;
-                        margin-left: 0;
-                        top: 0;
-                        position: absolute;
-                        background-color: $color-theme-dark;
+                    &:hover {
+                        overflow: visible;
+                        position: relative;
+                        .nav-nest.collapse {
+                            left: 56px;
+                            margin-left: 0;
+                            top: 0;
+                            position: absolute;
+                            background-color: $color-theme-dark;
+                            display: block;
+                            .nav-link span {
+                                transition: all ease-in 0.5s;
+                                opacity: 1;
+                            }
+                        }
                     }
                 }
                 .nav-link.has-arrow::after {
