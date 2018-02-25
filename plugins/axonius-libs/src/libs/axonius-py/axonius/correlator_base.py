@@ -91,7 +91,7 @@ def figure_actual_os(adapters):
     raise OSTypeInconsistency(oses)  # some adapters disagree
 
 
-class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
+class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -116,48 +116,15 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
         if self._devices_filter is None:
             self._devices_filter = {}
 
-    def _start_activatable(self):
-        """
-        Start the scheduler
-        :return:
-        """
-        self._refresh_devices_filter()
-
-        assert self._correlation_scheduler is None, "Correlation is already scheduled"
-
-        executors = {'default': ThreadPoolExecutor(1)}
-        self._correlation_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
-        self._correlation_scheduler.add_job(func=self.__correlate,
-                                            trigger=IntervalTrigger(hours=2),
-                                            next_run_time=datetime.now(),
-                                            name='correlation',
-                                            id='correlation',
-                                            max_instances=1)
-        self._correlation_scheduler.start()
-
-    def _stop_activatable(self):
-        """
-        Stop the scheduler
-        :return:
-        """
-        assert self._correlation_scheduler is not None, "Correlation is not running"
-
-        self._correlation_scheduler.remove_all_jobs()
-        self._correlation_scheduler.shutdown(wait=True)
-        self._correlation_scheduler = None
-
-    def _is_work_in_progress(self) -> bool:
-        if self._correlation_lock.acquire(False):
-            self._correlation_lock.release()
-            return False
-        return True
-
     def _triggered(self, job_name, post_json, *args):
         """
         Returns any errors as-is.
         Post data is a list of axon-ids. Otherwise, will query DB-wise.
         :return:
         """
+        if job_name == 'execute':
+            return self.__correlate()
+
         devices_to_correlate = None
         if post_json is not None:
             devices_to_correlate = list(post_json)
@@ -229,3 +196,7 @@ class CorrelatorBase(PluginBase, Activatable, Triggerable, Feature, ABC):
         :return: list(CorrelationResult or WarningResult)
         """
         pass
+
+    @property
+    def plugin_subtype(self):
+        return "Correlator"

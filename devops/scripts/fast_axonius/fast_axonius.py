@@ -86,9 +86,8 @@ def fast_axonius():
 
         def set_all_clients(self):
             for service in self._services.values():
-                if not service.get_is_container_up():
-                    continue
-                service.set_client()
+                if service.get_is_container_up():
+                    service.set_client()
 
     ax = AxTests()
     for name, service in services.items():

@@ -68,10 +68,10 @@ export const plugin = {
 							logo: plugin.plugin_name,
 							status: plugin.status
 						},
-						state: plugin.state.State,
+						state: plugin.state.state,
 						description: description,
-						startable: (plugin.status !== 'error' && plugin.state.State === 'Disabled'),
-						stoppable: (plugin.status !== 'error' && (plugin.state.State === 'Scheduled' || plugin.state.State === 'InProgress')),
+						startable: (plugin.status !== 'error' && plugin.state.state === 'Disabled'),
+						stoppable: (plugin.status !== 'error' && (plugin.state.state === 'Scheduled' || plugin.state.state === 'Triggered')),
 						configurable: plugin.plugin_name === 'dns_conflicts_plugin'
 					}
 				})
@@ -168,8 +168,9 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}/start`,
-				method: 'POST'
+				rule: `/api/plugins/${pluginId}/trigger_activate`,
+				method: 'POST',
+				data: {'trigger': 'execute'}
 			}).then((response) => {
 				if (response.data !== '') {
 					return
@@ -183,8 +184,9 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}/stop`,
-				method: 'POST'
+				rule: `/api/plugins/${pluginId}/trigger_deactivate`,
+				method: 'POST',
+				data: {'trigger': 'execute'}
 			}).then((response) => {
 				if (response.data !== '') {
 					return

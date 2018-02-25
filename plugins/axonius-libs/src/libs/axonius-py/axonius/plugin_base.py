@@ -106,7 +106,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
             logger = getattr(self, "logger", None)
 
             if logger:
-                logger.info(f"Rule={rule} request={request}")
+                logger.debug(f"Rule={rule} request={request}")
 
             try:
                 if should_authenticate:
@@ -407,8 +407,10 @@ class PluginBase(Feature):
         """
         register_doc = {"plugin_name": self.plugin_name,
                         "plugin_type": self.plugin_type,
+                        "plugin_subtype": self.plugin_subtype,
                         "plugin_port": self.port,
-                        "is_debug": is_debug_attached()}
+                        "is_debug": is_debug_attached()
+                        }
 
         self.populate_register_doc(register_doc, self.config_file_path)
 
@@ -732,6 +734,10 @@ class PluginBase(Feature):
     @property
     def plugin_type(self):
         return "Plugin"
+
+    @property
+    def plugin_subtype(self):
+        return "Pre-Correlation"
 
     @property
     def devices_db(self):

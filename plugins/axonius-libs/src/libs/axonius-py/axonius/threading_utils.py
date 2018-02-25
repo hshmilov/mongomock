@@ -46,7 +46,7 @@ class MultiLocker(object):
         self.release()
 
 
-class MultiLockerLazy(object):
+class LazyMultiLocker(object):
     """
     Allows for lazy locking on a per index basis.
     For example, you may want lock on "1", "2" and something else wants to lock "1" and "3".

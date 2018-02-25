@@ -1,9 +1,11 @@
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+"""
+AggregatorPlugin.py: A Plugin for the devices aggregation process
+"""
 import functools
+from datetime import datetime, timedelta
 from itertools import groupby
+import concurrent.futures
+
 from promise import Promise
 import pymongo
 import requests
@@ -12,14 +14,12 @@ import uuid
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
-from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import DEVICE_SAMPLE_RATE, IGNORE_DEVICE
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
-from axonius.mixins.activatable import Activatable
-from axonius.mixins.triggerable import Triggerable
-from axonius.parsing_utils import get_device_id_for_plugin_name
+from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.threading_utils import MultiLockerLazy, run_in_executor_helper
+from axonius.parsing_utils import get_device_id_for_plugin_name
+from axonius.mixins.triggerable import Triggerable
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
+from axonius.threading_utils import LazyMultiLocker, run_in_executor_helper
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
 
@@ -39,7 +39,7 @@ def get_unique_name_from_device(parsed_data) -> str:
     return get_unique_name_from_plugin_unique_name_and_id(parsed_data[PLUGIN_UNIQUE_NAME], parsed_data['data']['id'])
 
 
-class AggregatorService(PluginBase, Activatable, Triggerable):
+class AggregatorService(PluginBase, Triggerable):
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -51,10 +51,10 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
         self._index = 0
 
         # Lock object for the global device list
-        self.device_db_lock = MultiLockerLazy()
+        self.device_db_lock = LazyMultiLocker()
 
         # An executor dedicated to inserting devices to the DB
-        self.__device_inserter = ThreadPoolExecutor(max_workers=200)
+        self.__device_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
 
         # Setting up db
         self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
@@ -62,15 +62,12 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
         self.devices_db_actual_collection = self.devices_db_connection['devices_db']
         self.devices_db_view = self.devices_db_connection['devices_db_view']
 
-        # Scheduler for querying core for online adapters and querying the adapters themselves
-        self._online_adapters_scheduler = None
-
         # insertion and link/unlink lock
-        self.thread_manager_lock = threading.RLock()
+        self.fetch_lock = {}
 
-        # Starting the managing thread
-        # No need to start if needed. We always start it.
-        self.start_activatable()
+        self._activate('fetch_filtered_adapters')
+
+        self._default_activity = True
 
     def insert_views(self):
         """
@@ -129,43 +126,6 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
 
         return self.devices_db_actual_collection
 
-    def _start_activatable(self):
-        assert self._online_adapters_scheduler is None, "Aggregator thinks we're already running but still got a " \
-                                                        "/start request "
-
-        executors = {'default': ThreadPoolExecutorApscheduler(10)}
-        self._online_adapters_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
-        self._online_adapters_scheduler.add_job(func=self._adapters_thread_manager,
-                                                trigger=IntervalTrigger(seconds=60),
-                                                next_run_time=datetime.now(),
-                                                name='adapters_thread_manager',
-                                                id='adapters_thread_manager',
-                                                max_instances=1)
-        self._online_adapters_scheduler.start()
-
-    def _stop_activatable(self):
-        assert self._online_adapters_scheduler is not None, "Aggregator thinks we're not running but still got a " \
-                                                            "/stop request "
-
-        self._online_adapters_scheduler.remove_all_jobs()
-        self._online_adapters_scheduler.shutdown(wait=True)
-        self._online_adapters_scheduler = None
-
-    def _is_work_in_progress(self) -> bool:
-        assert self._online_adapters_scheduler is not None, "Aggregator isn't running"
-
-        # if device_db_lock is taken, it means we're fetching devices
-        if self.device_db_lock.is_any_locked():
-            return True
-
-        # if thread_manager_lock is taken, it means we're fetching adapters
-        if self.thread_manager_lock.acquire(False):
-            self.thread_manager_lock.release()
-        else:
-            return True
-
-        return False
-
     def _get_devices_data(self, adapter):
         """Get mapped data from all devices.
 
@@ -204,68 +164,71 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
             yield (client_name, from_json(devices.content))
 
     def _triggered(self, job_name, post_json, *args):
-        current_adapters = requests.get(self.core_address + '/register')
+        def _filter_adapters_by_parameter(adapter_filter, adapters):
+            filtered_adapters = list(adapters.values())
+            for current_adapter in adapters.values():
+                for key, val in adapter_filter.items():
+                    if current_adapter[key] != val:
+                        filtered_adapters.remove(current_adapter)
+            return filtered_adapters
 
-        assert current_adapters.status_code == 200, "Error getting devices from core. reason:" + \
-                                                    f"{str(current_adapters.status_code)}, " + \
-                                                    str(current_adapters.content)
+        adapters = requests.get(self.core_address + '/register')
 
-        adapter = next((adapter for adapter in current_adapters.json().values()
-                        if adapter[PLUGIN_UNIQUE_NAME] == job_name), None)
-        if adapter is None:
-            raise RuntimeError(f"Can't find plugin named {job_name}")
-        self._save_devices_from_adapter(adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME], adapter['plugin_type'])
+        if adapters.status_code != 200:
+            self.logger.error(f"Error getting devices from core. reason: "
+                              f"{str(adapters.status_code)}, {str(adapters.content)}")
+            return return_error('Could not fetch adapters', 500)
 
-    def _adapters_thread_manager(self):
-        """ Function for monitoring other threads activity.
+        adapters = adapters.json()
 
-        This function should run in a different thread. It runs forever and monitors the other collector threads.
-        If a new adapter will register, this function will create a new thread for him.
-        Currently the sampling rate is hard coded for 60 seconds.
+        if job_name != 'fetch_filtered_adapters':
+            adapters = [adapter for adapter in adapters.values()
+                        if adapter[PLUGIN_UNIQUE_NAME] == job_name]
+        else:
+            adapters = _filter_adapters_by_parameter(post_json, adapters)
+
+        self.logger.debug("registered adapters = {}".format(adapters))
+
+        return self._fetch_devices_from_adapters(job_name, adapters)
+
+    def _fetch_devices_from_adapters(self, job_name, current_adapters=None):
+        """ Function for fetching devices from adapters.
+
+        This function runs on all the received adapters and in a different thread fetches all of them.
         """
         try:
-            with self.thread_manager_lock:
-                current_adapters = requests.get(self.core_address + '/register')
-
-                if current_adapters.status_code != 200:
-                    self.logger.error(f"Error getting devices from core. reason: "
-                                      f"{str(current_adapters.status_code)}, {str(current_adapters.content)}")
-
-                    return
-
-                current_adapters = current_adapters.json()
-
-                self.logger.debug("registered adapters = {}".format(current_adapters))
+            with self.fetch_lock.setdefault(job_name, threading.RLock()):
+                futures_for_adapter = {}
 
                 # let's add jobs for all adapters
-                for adapter_name, adapter in current_adapters.items():
-                    if not is_plugin_adapter(adapter['plugin_type']):
-                        # This is not an adapter, not running
-                        continue
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    num_of_adapters_to_fetch = len(current_adapters)
+                    for adapter in current_adapters:
+                        if not is_plugin_adapter(adapter['plugin_type']):
+                            # This is not an adapter, not running
+                            num_of_adapters_to_fetch -= 1
+                            continue
 
-                    if self._online_adapters_scheduler.get_job(adapter_name):
-                        # We already have a running thread for this adapter
-                        continue
-                    sample_rate = int(adapter[DEVICE_SAMPLE_RATE])
+                        futures_for_adapter[executor.submit(
+                            self._save_devices_from_adapter, adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME],
+                            adapter['plugin_type'])] = adapter['plugin_name']
 
-                    self._online_adapters_scheduler.add_job(func=self._save_devices_from_adapter,
-                                                            trigger=IntervalTrigger(seconds=sample_rate),
-                                                            next_run_time=datetime.now(),
-                                                            kwargs={PLUGIN_UNIQUE_NAME: adapter[PLUGIN_UNIQUE_NAME],
-                                                                    'plugin_name': adapter['plugin_name'],
-                                                                    'plugin_type': adapter['plugin_type']},
-                                                            name=get_devices_job_name,
-                                                            id=adapter_name,
-                                                            max_instances=1)
+                    for future in concurrent.futures.as_completed(futures_for_adapter):
+                        try:
+                            num_of_adapters_to_fetch -= 1
+                            future.result()
+                            # notify_adapter_fetch_devices finished
+                            self._notify_adapter_fetch_devices_finished(
+                                futures_for_adapter[future], num_of_adapters_to_fetch)
+                        except Exception as err:
+                            self.logger.exception("An exception was raised while trying to get a result.")
 
-                for job in self._online_adapters_scheduler.get_jobs():
-                    if job.id not in current_adapters and job.name == get_devices_job_name:
-                        # this means that the adapter has disconnected, so we stop fetching it
-                        job.remove()
+                self.logger.info("Finished getting all device data.")
+
+                return ''  # raw_detailed_devices
 
         except Exception as e:
-            self.logger.exception('Managing thread got exception, '
-                                  'must restart aggregator manually.')
+            self.logger.exception('Getting devices from all requested adapters failed.')
 
     @add_rule("plugin_push", methods=["POST"])
     def save_data_from_plugin(self):
@@ -345,7 +308,7 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                 # Get all tags from all devices. If we have the same tag name and issuer, prefer the newest.
                 # a tag is the same tag, if it has the same plugin_unique_name and name.
                 def keyfunc(tag):
-                    return (tag['plugin_unique_name'], tag['name'])
+                    return tag['plugin_unique_name'], tag['name']
 
                 # first, lets get all tags and have them sorted. This will make the same tags be consecutive.
                 all_tags = sorted((t for dc in axonius_device_candidates for t in dc['tags']), key=keyfunc)
@@ -446,14 +409,14 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
             self._index += 1
         return f'AX-{index}'
 
-    def _save_devices_from_adapter(self, plugin_name, plugin_unique_name, plugin_type):
+    def _save_devices_from_adapter(self, adapter_name, adapter_unique_name, plugin_type):
         """ Function for getting all devices from specific adapter periodically.
 
         This function should be called in a different thread. It will run forever and periodically get all devices
         From a wanted adapter and save it to the local general db, and the historical db.abs
 
-        :param str plugin_name: The name of the adapter
-        :param str plugin_unique_name: The name of the adapter (unique name)
+        :param str adapter_name: The name of the adapter
+        :param str adapter_unique_name: The name of the adapter (unique name)
         """
 
         def insert_device_to_db(device_to_update, parsed_to_insert):
@@ -517,21 +480,21 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                             "tags": []
                         })
 
-        self.logger.info("Starting to fetch device for {} {}".format(plugin_name, plugin_unique_name))
+        self.logger.info(f"Starting to fetch device for {adapter_name} {adapter_unique_name}")
         promises = []
         try:
-            devices = self._get_devices_data(plugin_unique_name)
+            devices = self._get_devices_data(adapter_unique_name)
             for client_name, devices_per_client in devices:
                 time_before_client = datetime.now()
                 # Saving the raw data on the historic db
                 try:
                     self._save_data_in_history(devices_per_client['raw'],
-                                               plugin_name,
-                                               plugin_unique_name,
+                                               adapter_name,
+                                               adapter_unique_name,
                                                plugin_type)
                 except pymongo.errors.DocumentTooLarge:
                     # wanna see my "something too large"?
-                    self.logger.warn(f"Got DocumentTooLarge for {plugin_unique_name} with client {client_name}.")
+                    self.logger.warn(f"Got DocumentTooLarge for {adapter_unique_name} with client {client_name}.")
 
                 # Here we have all the devices a single client sees
                 for device in devices_per_client['parsed']:
@@ -539,8 +502,8 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                     parsed_to_insert = {
                         'client_used': client_name,
                         'plugin_type': plugin_type,
-                        'plugin_name': plugin_name,
-                        PLUGIN_UNIQUE_NAME: plugin_unique_name,
+                        'plugin_name': adapter_name,
+                        PLUGIN_UNIQUE_NAME: adapter_unique_name,
                         'accurate_for_datetime': datetime.now(),
                         'data': device
                     }
@@ -577,18 +540,20 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                 if promise_all.is_rejected:
                     self.logger.error("Error in insertion to DB", exc_info=promise_all.reason)
                 time_for_client = datetime.now() - time_before_client
-                self.logger.info(f"Finished aggregating for client {client_name} from adapter {plugin_unique_name},"
-                                 f" aggregation took {time_for_client.seconds} seconds and returned {devices_count}.")
+                self.logger.info(
+                    f"Finished aggregating for client {client_name} from adapter {adapter_unique_name},"
+                    f" aggregation took {time_for_client.seconds} seconds and returned {devices_count}.")
 
         except (AdapterOffline, ClientsUnavailable) as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
-            self.logger.warn(f"adapter {plugin_unique_name} might be offline. Reason {str(e)}")
+            self.logger.warn(f"adapter {adapter_unique_name} might be offline. Reason {str(e)}")
         except Exception as e:
             self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info("Finished for {} {}".format(plugin_name, plugin_unique_name))
+        self.logger.info("Finished for {} {}".format(adapter_name, adapter_unique_name))
+        return ''
 
     def _save_parsed_in_db(self, device, db_type='parsed'):
         """
@@ -649,3 +614,11 @@ class AggregatorService(PluginBase, Activatable, Triggerable):
                     "tags": tag
                 }
             })
+
+    @property
+    def plugin_subtype(self):
+        return "Core"
+
+    def _notify_adapter_fetch_devices_finished(self, adapter_name, num_of_adapters_left):
+        self.request_remote_plugin('sub_phase_update', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json={
+                                   'adapter_name': adapter_name, 'num_of_adapters_left': num_of_adapters_left})

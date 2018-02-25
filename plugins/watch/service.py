@@ -1,24 +1,24 @@
-from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.triggers.interval import IntervalTrigger
-from bson.objectid import ObjectId
+# Standard modules
+import concurrent.futures
+import threading
 import datetime
 from deepdiff import DeepDiff
-from flask import jsonify, json
-import os
-import threading
+from bson.objectid import ObjectId
+from axonius.mixins.triggerable import Triggerable
 
+# pip modules
+from flask import jsonify, json
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
-from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
 
 
-class WatchService(PluginBase):
-    """ This service is responsible for alerting users in several ways and cases when a
-        watched query result changes. """
-
+class WatchService(PluginBase, Triggerable):
     def __init__(self, *args, **kwargs):
+        """ This service is responsible for alerting users in several ways and cases when a
+                        watched query result changes. """
+
         # Initialize the watcher threads, get the DB credentials and set the default sampling rate.
         def _parse_mongo_id(watch):
             watch['_id'] = str(watch['_id'])
@@ -26,25 +26,21 @@ class WatchService(PluginBase):
 
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
-        self._scheduler = None
-
         # Loading watch resources from db (If any exist).
         self._watched_queries = {str(watch['query']): _parse_mongo_id(watch)
                                  for watch in self._get_collection('watches').find()}
 
         # Set's a sample rate to check the saved queries.
-        self._default_query_sample_rate = 10
+        self._watch_check_lock = threading.RLock()
 
-        # Starts the watch manager thread.
-        self._start_managing_thread()
+        self._activate('execute')
 
-    @add_rule("trigger_watches", methods=['GET'])
-    def run_jobs(self):
-        if self._scheduler is not None:
-            for job in self._scheduler.get_jobs():
-                job.modify(next_run_time=datetime.datetime.now())
-            self._scheduler.wakeup()
-        return '', 200
+    def _triggered(self, job_name: str, post_json: dict, *args):
+        if job_name != 'execute':
+            self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            return return_error("Got bad trigger request for non-existent job", 400)
+        else:
+            return self._check_watches()
 
     @add_rule("watch/<watch_id>", methods=['GET', 'DELETE', 'POST'])
     def watch_by_id(self, watch_id):
@@ -126,7 +122,6 @@ class WatchService(PluginBase):
                 watch_resource = {'watch_time': datetime.datetime.now(), 'criteria': int(watch_data['criteria']),
                                   'alert_types': watch_data['alert_types'],
                                   'result': current_query_result,
-                                  'query_sample_rate': self._default_query_sample_rate,
                                   'query': json.dumps(watch_data['query']),
                                   'retrigger': watch_data['retrigger'],
                                   'triggered': 0,
@@ -216,25 +211,7 @@ class WatchService(PluginBase):
         """
         return list(self._get_collection('devices_db', db_name=AGGREGATOR_PLUGIN_NAME).find(query))
 
-    def _start_managing_thread(self):
-        """
-        Starts watching.
-        """
-        if self._scheduler is None:
-            executors = {'default': ThreadPoolExecutor(10)}
-            self._scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
-            self._scheduler.add_job(func=self._watch_thread_manager,
-                                    trigger=IntervalTrigger(seconds=60),
-                                    next_run_time=datetime.datetime.now(),
-                                    name='watch_thread_manager',
-                                    id='watch_thread_manager',
-                                    max_instances=1)
-            self._scheduler.start()
-
-        else:
-            raise RuntimeError("Already running")
-
-    def _watch_thread_manager(self):
+    def _check_watches(self):
         """Function for monitoring other threads activity.
 
         This function should run in a different thread. It runs forever and monitors the other watch threads.
@@ -242,34 +219,19 @@ class WatchService(PluginBase):
         Currently the sampling rate is hard coded for 60 seconds.
         """
         try:
-            # let's add jobs for all adapters
-            for query_string, current_query in self._watched_queries.items():
+            with self._watch_check_lock:
+                for query_string, current_query in self._watched_queries.items():
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
 
-                if self._scheduler.get_job(query_string):
-                    # We already have a running thread for this adapter
-                    continue
+                        future_for_watch_checks = {executor.submit(
+                            self._check_current_query_result, query_string): current_query for query_string, current_query in self._watched_queries.items()}
 
-                sample_rate = current_query['query_sample_rate']
-                self._scheduler.add_job(func=self._check_current_query_result,
-                                        trigger=IntervalTrigger(
-                                            seconds=sample_rate),
-                                        next_run_time=datetime.datetime.now(),
-                                        kwargs={
-                                            'query': current_query['query']},
-                                        name="Fetching job for query={}".format(
-                                            query_string),
-                                        id=query_string,
-                                        max_instances=1)
-
-            for job in self._scheduler.get_jobs():
-                if job.id not in self._watched_queries.keys() and job.id != 'watch_thread_manager':
-                    # this means that the adapter has disconnected, so we stop fetching it
-                    job.remove()
-
-        except Exception as e:
-            self.logger.critical('Managing thread got exception, '
-                                 'must restart aggregator manually. Exception: {0}'.format(str(e)))
-            os._exit(1)
+                        for future in concurrent.futures.as_completed(future_for_watch_checks):
+                            self.logger.info(f'{future_for_watch_checks[future]} finished checking watch.')
+        except Exception:
+            self.logger.exception("Failed to check watches.")
+            return return_error("Failed to check watches.")
+        return ''
 
     def _check_current_query_result(self, query):
         """Function for getting all devices from specific adapter periodically.
@@ -323,3 +285,7 @@ class WatchService(PluginBase):
                 "Thread {0} encountered error: {1}. Repeated errors like this could be a race condition of a deleted watch.".format(
                     threading.current_thread(), str(e)))
             raise
+
+    @property
+    def plugin_subtype(self):
+        return "Post-Correlation"

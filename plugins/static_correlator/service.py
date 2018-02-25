@@ -12,8 +12,6 @@ class StaticCorrelatorService(CorrelatorBase):
 
         self._correlation_engine = StaticCorrelatorEngine(logger=self.logger)
 
-        self.activatable_start_if_needed()
-
     def get_devices_from_ids(self, devices_ids=None):
         with self._get_db_connection(True) as db:
             aggregator_db = db[AGGREGATOR_PLUGIN_NAME]

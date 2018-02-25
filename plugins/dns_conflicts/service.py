@@ -1,57 +1,31 @@
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.executors.pool import ThreadPoolExecutor
-from datetime import timedelta, datetime
+from datetime import datetime
 import json
 import time
 import threading
 
-from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns, NoIpFoundError
-from axonius.mixins.activatable import Activatable
-from axonius.plugin_base import PluginBase, add_rule
+from axonius.mixins.triggerable import Triggerable
+from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
 
 
-class DnsConflictsService(PluginBase, Activatable):
-    def _is_work_in_progress(self) -> bool:
-
-        if self.resolve_lock.acquire(False):
-            self.resolve_lock.release()
-            return False
-        return True
-
-    def _stop_activatable(self):
-        self.scheduler.pause()
-
-    def _start_activatable(self):
-        self.scheduler.resume()
-        self._check_ip_conflict_now()
-
+class DnsConflictsService(PluginBase, Triggerable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
         self.resolve_lock = threading.RLock()
 
-        executors = {'default': ThreadPoolExecutor(1)}
-        self.scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
+    def _triggered(self, job_name: str, post_json: dict, *args):
+        if job_name != 'execute':
+            self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            return return_error("Got bad trigger request for non-existent job", 400)
+        else:
+            return self.check_ip_conflict_now()
 
-        # Thread for resetting the resolving process
-        self.scheduler.add_job(func=self._find_dns_conflicts_thread,
-                               trigger=IntervalTrigger(
-                                   seconds=60 * 60 * 12),  # Every 12 hours
-                               next_run_time=datetime.now() + timedelta(minutes=1),
-                               name='find_dns_conflicts_thread',
-                               id='find_dns_conflicts_thread',
-                               max_instances=1)
-        self.scheduler.start()
-        self.scheduler.pause()
-
-        self.activatable_start_if_needed()
-
-    def _find_dns_conflicts_thread(self):
+    def _find_all_dns_conflicts(self):
         """ Thread for finding dns conflicts.
         This thread will try to find ip contradiction between different dns servers. If it finds such contradiction,
         The related device will get tagged with 'IP_CONFLICT' tag
@@ -137,11 +111,5 @@ class DnsConflictsService(PluginBase, Activatable):
 
     @add_rule('find_conflicts', methods=['POST'], should_authenticate=False)
     def check_ip_conflict_now(self):
-        self._check_ip_conflict_now()
+        self._find_all_dns_conflicts()
         return ""
-
-    def _check_ip_conflict_now(self):
-        jobs = self.scheduler.get_jobs()
-        reset_job = next(job for job in jobs if job.name == 'find_dns_conflicts_thread')
-        reset_job.modify(next_run_time=datetime.now())
-        self.scheduler.wakeup()

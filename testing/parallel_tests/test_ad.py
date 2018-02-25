@@ -59,7 +59,7 @@ class TestAdAdapter(AdapterTestBase):
         # self.axonius_system.add_client_to_adapter(self.adapter_service, ad_client2_details)
 
         # Checking that we have devices from both clients
-        self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_1, DEVICE_ID_FOR_CLIENT_1)
+        self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id_1, DEVICE_ID_FOR_CLIENT_1)])
         # Testing the ability to filter old devices
         devices_list = self.axonius_system.get_devices_with_condition({"adapters.hostname": "nonExistance"})
         assert len(devices_list) == 0, "Found device that should have been filtered"
@@ -78,7 +78,7 @@ class TestAdAdapter(AdapterTestBase):
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
     def test_dns_conflicts(self, dns_conflicts_fixture):
-        dns_conflicts_fixture.activateable_start()
+        dns_conflicts_fixture.triggerable_execute_enable()
         dns_conflicts_fixture.find_conflicts()
 
         def has_ip_conflict_tag():

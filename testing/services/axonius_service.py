@@ -15,6 +15,7 @@ from services.aggregator_service import AggregatorService
 from services.axon_service import TimeoutException
 from services.core_service import CoreService
 from services.gui_service import GuiService
+from services.system_scheduler_service import SystemSchedulerService
 from services.mongo_service import MongoService
 from services.plugin_service import AdapterService, PluginService
 from test_helpers.parallel_runner import ParallelRunner
@@ -30,10 +31,11 @@ class AxoniusService(object):
         self.db = MongoService()
         self.core = CoreService()
         self.aggregator = AggregatorService()
+        self.scheduler = SystemSchedulerService()
         self.gui = GuiService()
         self.execution = ExecutionService()
 
-        self.axonius_services = [self.db, self.core, self.aggregator, self.gui, self.execution]
+        self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution]
 
     def stop(self, should_delete):
         # Not critical but lets stop in reverse order
@@ -92,22 +94,11 @@ class AxoniusService(object):
                               adapter_device[PLUGIN_UNIQUE_NAME] == adapter_name)
         return adapter_device['data'][NETWORK_INTERFACES_FIELD]
 
-    def assert_device_aggregated(self, adapter, client_id, some_device_id, max_tries=30):
+    def assert_device_aggregated(self, adapter, client_details, max_tries=30):
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
-        devices_as_dict = adapter.devices()
-        assert client_id in devices_as_dict
-
-        # check the device is read by adapter
-        devices_list = devices_as_dict[client_id]['parsed']
-        assert len(list(filter(lambda device: device['id'] == some_device_id, devices_list))) == 1
-
-        # check that the device is collected by aggregator and now in db
-
-        def assert_device_inserted():
+        for client_id, some_device_id in client_details:
             devices = self.get_device_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1
-
-        try_until_not_thrown(max_tries, 10, assert_device_inserted)
 
     def restart_plugin(self, plugin):
         """

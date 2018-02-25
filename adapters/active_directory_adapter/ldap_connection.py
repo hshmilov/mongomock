@@ -56,11 +56,6 @@ class LdapConnection:
         In order to distinguish between a real device and the class object, we are searching on a specific
         Object that exists only on real devices objects.
 
-        :param wanted_attr: A list containing all the wanted attributes from the Device object.
-                            If not given, all available attributes will be returned.
-
-        :type wanted_attr: list of str
-
         :returns: A list with all the devices registered to this DC
 
         :raises exceptions.LdapException: In case of error in the LDAP protocol

@@ -591,7 +591,8 @@ class GuiService(PluginBase):
                 # TODO check supported features
                 if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME, "gui",
                                                                                   "watch_service",
-                                                                                  "execution"]:
+                                                                                  "execution",
+                                                                                  "system_scheduler"]:
                     continue
 
                 processed_plugin = {'plugin_name': plugin['plugin_name'],
@@ -601,13 +602,13 @@ class GuiService(PluginBase):
                                     }
                 if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
                     processed_plugin['status'] = 'warning'
-                    response = self.request_remote_plugin("state", plugin[PLUGIN_UNIQUE_NAME])
+                    response = self.request_remote_plugin("trigger_state/execute", plugin[PLUGIN_UNIQUE_NAME])
                     if response.status_code != 200:
                         self.logger.error("Error getting state of plugin {0}".format(plugin[PLUGIN_UNIQUE_NAME]))
                         processed_plugin['status'] = 'error'
                     else:
                         processed_plugin['state'] = response.json()
-                        if (processed_plugin['state']['State'] != 'Disabled'):
+                        if (processed_plugin['state']['state'] != 'Disabled'):
                             processed_plugin['status'] = "success"
                 plugins_to_return.append(processed_plugin)
 
@@ -649,7 +650,8 @@ class GuiService(PluginBase):
         :param plugin_unique_name:
         :return:
         """
-        response = self.request_remote_plugin(command, plugin_unique_name, method='post')
+        request_data = self.get_request_data_as_object()
+        response = self.request_remote_plugin(f"{command}/{request_data['trigger']}", plugin_unique_name, method='post')
         if response and response.status_code == 200:
             return ""
         return response.json(), response.status_code
@@ -838,3 +840,7 @@ class GuiService(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
+
+    @property
+    def plugin_subtype(self):
+        return "Core"

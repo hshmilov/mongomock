@@ -39,7 +39,7 @@ class TestQcoreAdapter(AdapterTestBase):
 
         try_until_not_thrown(10, 10, lambda: len(list(qcore_db.all_pumps)) > 0)
 
-        self.axonius_system.assert_device_aggregated(self.adapter_service, self.some_client_id, self.some_device_id)
+        self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
 
 if __name__ == '__main__':

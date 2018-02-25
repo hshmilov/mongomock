@@ -6,6 +6,7 @@ DOCKER_PORTS = {
     'watch':                            5002,
     'epo-adapter':                      5003,
     'jamf-adapter':                     5004,
+    'system-scheduler':                 5005,
     'correlator':                       5009,
     'static-correlator':                5010,
     'dns-conflicts':                    5011,

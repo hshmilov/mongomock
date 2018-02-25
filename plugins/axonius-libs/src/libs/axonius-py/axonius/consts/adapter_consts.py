@@ -1,7 +1,8 @@
 from axonius.devices.dns_resolvable import DNSResolvableDevice
 
 ADAPTER_PLUGIN_TYPE = 'Adapter'
-SCANNER_ADAPTER_PLUGIN_TYPE = 'ScannerAdapter'
+SCANNER_ADAPTER_PLUGIN_SUBTYPE = 'Scanner'
+DEVICE_ADAPTER_PLUGIN_SUBTYPE = 'Device'
 IGNORE_DEVICE = "IgnoreDevice"
 DEVICE_SAMPLE_RATE = 'device_sample_rate'
 

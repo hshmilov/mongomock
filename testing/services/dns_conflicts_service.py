@@ -2,10 +2,10 @@ import pytest
 
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
-from services.activateable_service import ActivateableService
+from services.triggerable_service import TriggerableService
 
 
-class DnsConflictsService(PluginService, ActivateableService):
+class DnsConflictsService(PluginService, TriggerableService):
     def __init__(self):
         super().__init__('dns-conflicts')
 

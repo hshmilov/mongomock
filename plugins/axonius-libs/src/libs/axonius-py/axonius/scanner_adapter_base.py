@@ -9,7 +9,7 @@ from typing import Tuple
 from axonius.mixins.feature import Feature
 
 from axonius.adapter_base import AdapterBase
-from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_TYPE
+from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_SUBTYPE, ADAPTER_PLUGIN_TYPE
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 
@@ -105,7 +105,11 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
 
     @property
     def plugin_type(self):
-        return SCANNER_ADAPTER_PLUGIN_TYPE
+        return ADAPTER_PLUGIN_TYPE
+
+    @property
+    def plugin_subtype(self):
+        return SCANNER_ADAPTER_PLUGIN_SUBTYPE
 
     @classmethod
     def specific_supported_features(cls) -> list:

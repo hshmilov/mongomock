@@ -22,12 +22,13 @@ class TestEsxAdapter(AdapterTestBase):
         return SOME_DEVICE_ID
 
     def test_fetch_devices(self):
-        for client, _ in client_details:
+        client_details_to_send = []
+        for client, some_device_id in client_details:
             self.adapter_service.add_client(client)
 
-        for client, some_device_id in client_details:
             client_id = "{}/{}".format(client['host'], client['user'])
-            self.axonius_system.assert_device_aggregated(self.adapter_service, client_id, some_device_id)
+            client_details_to_send.append((client_id, some_device_id))
+        self.axonius_system.assert_device_aggregated(self.adapter_service, client_details_to_send)
 
     def test_folder_on_dc_level(self):
         self.drop_clients()
@@ -37,4 +38,4 @@ class TestEsxAdapter(AdapterTestBase):
         client_id = "{}/{}".format(client['host'], client['user'])
         self.adapter_service.add_client(client)
 
-        self.axonius_system.assert_device_aggregated(self.adapter_service, client_id, AGGREGATED_DEVICE_ID)
+        self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id, AGGREGATED_DEVICE_ID)])

@@ -55,4 +55,4 @@ class AggregatorService(PluginService):
         return response
 
     def is_up(self):
-        return super().is_up() and {"Activatable", "Triggerable"}.issubset(self.get_supported_features())
+        return super().is_up() and {"Triggerable"}.issubset(self.get_supported_features())

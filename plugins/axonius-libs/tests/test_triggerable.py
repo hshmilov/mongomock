@@ -57,8 +57,7 @@ class SimpleWaitableTriggerableImplementedMock(Triggerable):
 
     def _triggered(self, job_name, post_json, *args):
         self.counter += 1
-        with self.__wait_for[job_name]:
-            return job_name
+        return job_name
 
 
 @retry(wait_fixed=20,
@@ -76,29 +75,38 @@ def retry_assert_equal(a, b):
 
 
 def runall():
-    test_trigger_basic()
+    test_trigger_disabled()
+    test_trigger_activated()
     test_double_trigger()
-    test_too_much_trigger()
-    test_two_jobs_parallelization()
     test_double_trigger_with_failure()
 
 
-def test_trigger_basic():
+def test_trigger_disabled():
     lock = Lock()
     job_name = 'ds'
     x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
-    with lock:
-        x.trigger(job_name)
-        assert x.get_trigger_activatable_state(job_name) == {
-            "state": "Triggered",
-            "last_error": ""
-        }
-        retry_assert_equal(x.counter, 1)
+    response = x.trigger(job_name)
+    assert response == ''
+    retry_assert_equal(x.counter, 0)
 
     assert verify_state(x, {
-        "state": "Idle",
+        "state": "Disabled",
         "last_error": ""
     }, job_name)
+    retry_assert_equal(x.counter, 0)
+
+
+def test_trigger_activated():
+    lock = Lock()
+    job_name = 'ds'
+    x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
+    response = x._activate(job_name)
+    assert response == ''
+    x.trigger(job_name)
+    assert x.get_trigger_activatable_state(job_name) == {
+        "state": "Scheduled",
+        "last_error": ""
+    }
     retry_assert_equal(x.counter, 1)
 
 
@@ -106,79 +114,19 @@ def test_double_trigger():
     lock = Lock()
     job_name = 'ds'
     x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
-    with lock:
-        x.trigger(job_name)
-        assert x.get_trigger_activatable_state(job_name) == {
-            "state": "Triggered",
-            "last_error": ""
-        }
-        retry_assert_equal(x.counter, 1)
-        x.trigger(job_name)
-
-    assert verify_state(x, {
-        "state": "Idle",
+    x._activate(job_name)
+    x.trigger(job_name)
+    assert x.get_trigger_activatable_state(job_name) == {
+        "state": "Scheduled",
         "last_error": ""
-    }, job_name)
-    retry_assert_equal(x.counter, 2)
-
-
-def test_too_much_trigger():
-    # test that calling trigger more than 2 times in parallel will always result in 2 calls
-    lock = Lock()
-    job_name = 'ds'
-    x = SimpleWaitableTriggerableImplementedMock({job_name: lock})
-    with lock:
-        x.trigger(job_name)
-        assert x.get_trigger_activatable_state(job_name) == {
-            "state": "Triggered",
-            "last_error": ""
-        }
-        retry_assert_equal(x.counter, 1)
-        x.trigger(job_name)
-        x.trigger(job_name)
-        x.trigger(job_name)
-
-    assert verify_state(x, {
-        "state": "Idle",
-        "last_error": ""
-    }, job_name)
-    retry_assert_equal(x.counter, 2)
-
-
-def test_two_jobs_parallelization():
-    locks = Lock(), Lock()
-    job_names = 'ds', 'ds2'
-    x = SimpleWaitableTriggerableImplementedMock(dict(zip(job_names, locks)))
-
-    locks[0].acquire()
-    locks[1].acquire()
-
-    x.trigger(job_names[0])
+    }
     retry_assert_equal(x.counter, 1)
-    assert x.get_trigger_activatable_state(job_names[0]) == {
-        "state": "Triggered",
-        "last_error": ""
-    }
+    x.trigger(job_name)
 
-    x.trigger(job_names[1])
-    assert x.get_trigger_activatable_state(job_names[1]) == {
-        "state": "Triggered",
-        "last_error": ""
-    }
-    retry_assert_equal(x.counter, 2)
-
-    locks[0].release()
     assert verify_state(x, {
-        "state": "Idle",
+        "state": "Scheduled",
         "last_error": ""
-    }, job_names[0])
-    retry_assert_equal(x.counter, 2)
-
-    locks[1].release()
-    assert verify_state(x, {
-        "state": "Idle",
-        "last_error": ""
-    }, job_names[1])
+    }, job_name)
     retry_assert_equal(x.counter, 2)
 
 
@@ -193,27 +141,39 @@ class FailingWaitableTriggerableImplementedMock(Triggerable):
 
     def _triggered(self, job_name, post_json, *args):
         self.counter += 1
-        with self.__wait_for[job_name]:
-            if self.__fail_array[self.counter - 1]:
-                raise Exception(f"Fail {self.counter}")
-            return job_name
+        if self.__fail_array[self.counter - 1]:
+            raise Exception(f"Fail {self.counter}")
+        return job_name
 
 
 def test_double_trigger_with_failure():
     lock = Lock()
     job_name = 'ds'
+    caught_exception = False
     x = FailingWaitableTriggerableImplementedMock({job_name: lock}, [False, True])
-    with lock:
+    x._activate(job_name)
+    try:
         x.trigger(job_name)
-        assert x.get_trigger_activatable_state(job_name) == {
-            "state": "Triggered",
-            "last_error": ""
-        }
-        retry_assert_equal(x.counter, 1)
+    except Exception:
+        caught_exception = True
+
+    assert not caught_exception
+    caught_exception = False
+
+    assert x.get_trigger_activatable_state(job_name) == {
+        "state": "Scheduled",
+        "last_error": ""
+    }
+    retry_assert_equal(x.counter, 1)
+    try:
         x.trigger(job_name)
+    except Exception:
+        caught_exception = True
+
+    assert caught_exception
 
     assert verify_state(x, {
-        "state": "Idle",
+        "state": "Scheduled",
         "last_error": "Exception('Fail 2',)"
     }, job_name)
     retry_assert_equal(x.counter, 2)

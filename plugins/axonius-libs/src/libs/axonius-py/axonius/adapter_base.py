@@ -29,7 +29,7 @@ def is_plugin_adapter(plugin_type: str) -> bool:
     :param plugin_type:
     :return:
     """
-    return plugin_type in (adapter_consts.ADAPTER_PLUGIN_TYPE, adapter_consts.SCANNER_ADAPTER_PLUGIN_TYPE)
+    return plugin_type == adapter_consts.ADAPTER_PLUGIN_TYPE
 
 
 class DeviceRunningState(Enum):
@@ -691,6 +691,10 @@ class AdapterBase(PluginBase, Feature, ABC):
     @property
     def plugin_type(self):
         return adapter_consts.ADAPTER_PLUGIN_TYPE
+
+    @property
+    def plugin_subtype(self):
+        return adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
 
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)

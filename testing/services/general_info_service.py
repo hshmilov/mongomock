@@ -2,17 +2,12 @@ import pytest
 
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
-from services.activateable_service import ActivateableService
+from services.triggerable_service import TriggerableService
 
 
-class GeneralInfoService(PluginService, ActivateableService):
+class GeneralInfoService(PluginService, TriggerableService):
     def __init__(self):
         super().__init__('general-info')
-
-    def run(self):
-        result = self.post('run')
-        assert result.status_code == 200
-        return result
 
 
 @pytest.fixture(scope="module")

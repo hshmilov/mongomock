@@ -177,6 +177,32 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         return users_list_in_specific_format
 
+    def _resolve_hosts_addresses(self, hosts):
+        resolved_hosts = []
+        for host in hosts:
+            time_before_resolve = datetime.now()
+            dns_name = host['raw'].get('AXON_DNS_ADDR')
+            dc_name = host['raw'].get('AXON_DC_ADDR')
+            current_resolved_host = dict(host)
+            try:
+                ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "dc_name": dc_name})
+                network_interfaces = [{MAC_FIELD: None, IPS_FIELD: [ip]}]
+                current_resolved_host[NETWORK_INTERFACES_FIELD] = network_interfaces
+                current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
+
+            except Exception as e:
+                self.logger.exception(f"Error resolving host ip from dc.")
+                current_resolved_host = dict(host)
+                current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
+
+            finally:
+                resolved_hosts.append(current_resolved_host)
+                resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
+                time_to_sleep = max(0.0, 0.05 - resolve_time)
+                time.sleep(time_to_sleep)
+
+        return resolved_hosts
+
     def _resolve_hosts_addr_thread(self):
         """ Thread for ip resolving of devices.
         This thread will try to resolve IP's of known devices.
@@ -187,35 +213,23 @@ class ActiveDirectoryAdapter(AdapterBase):
                                                                         'raw.AXON_DNS_ADDR': True,
                                                                         'raw.AXON_DC_ADDR': True,
                                                                         'hostname': True})
-            hosts = list(hosts)
-            self.logger.info(f"Going to resolve for {len(hosts)} hosts")
-            did_one_resolved = False
-            for host in hosts:
-                time_before_resolve = datetime.now()
-                dns_name = host['raw'].get('AXON_DNS_ADDR')
-                dc_name = host['raw'].get('AXON_DC_ADDR')
-                try:
-                    ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "dc_name": dc_name})
-                    network_interfaces = [{MAC_FIELD: None, IPS_FIELD: [ip]}]
 
-                    self._get_collection(DEVICES_DATA).update_one({"_id": host["_id"]},
+            self.logger.info(f"Going to resolve for {hosts.count()} hosts")
+
+            did_one_resolved = False
+
+            for resolved_host in self._resolve_hosts_addresses(hosts):
+                if resolved_host.get(NETWORK_INTERFACES_FIELD) is not None:
+                    if resolved_host[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
+                        did_one_resolved = True
+                    self._get_collection(DEVICES_DATA).update_one({"_id": resolved_host["_id"]},
                                                                   {'$set':
                                                                    {NETWORK_INTERFACES_FIELD:
-                                                                    network_interfaces,
+                                                                    resolved_host[NETWORK_INTERFACES_FIELD],
                                                                     DNS_RESOLVE_STATUS:
-                                                                    DNSResolveStatus.Resolved.name}})
-                    did_one_resolved = True
-                except Exception as e:
-                    self.logger.debug(f"Error resolving host ip from dc. Err: {str(e)}")
-                    self._get_collection(DEVICES_DATA).update_one({"_id": host["_id"]},
-                                                                  {'$set': {NETWORK_INTERFACES_FIELD: [],
-                                                                            DNS_RESOLVE_STATUS:
-                                                                            DNSResolveStatus.Failed.name}})
-                finally:
-                    resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
-                    time_to_sleep = max(0.0, 0.05 - resolve_time)
-                    time.sleep(time_to_sleep)
-            if not did_one_resolved and len(hosts) != 0:
+                                                                    resolved_host[DNS_RESOLVE_STATUS]}})
+
+            if not did_one_resolved and hosts.count() != 0:
                 # Raise log message only if no host could get resolved
                 self.logger.error("Couldn't resolve IP's. Maybe dns is incorrect?")
             return
@@ -286,9 +300,14 @@ class ActiveDirectoryAdapter(AdapterBase):
                 device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]
             else:
                 device_as_dict = device.to_dict()
+                resolved_device = self._resolve_hosts_addresses([device_as_dict])[0]
+                if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
+                    device.network_interfaces = resolved_device[NETWORK_INTERFACES_FIELD]
+                    device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
                 if not self.is_old_device(device_as_dict):
                     # That means that the device is new (As determined in adapter_base code)
                     to_insert.append(device_as_dict)
+
             yield device
 
         if len(to_insert) > 0:

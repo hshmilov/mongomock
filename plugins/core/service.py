@@ -227,6 +227,7 @@ class CoreService(PluginBase):
 
             plugin_name = data['plugin_name']
             plugin_type = data['plugin_type']
+            plugin_subtype = data['plugin_subtype']
             plugin_port = data['plugin_port']
             plugin_is_debug = data.get('is_debug', False)
 
@@ -289,6 +290,7 @@ class CoreService(PluginBase):
                     'plugin_ip': request.remote_addr,
                     'plugin_port': plugin_port,
                     'plugin_type': plugin_type,
+                    'plugin_subtype': plugin_subtype,
                     'api_key': uuid.uuid4().hex,
                     'db_addr': self.db_host,
                     'db_user': plugin_user,
@@ -349,6 +351,7 @@ class CoreService(PluginBase):
         online_devices = dict()
         for plugin_name, plugin in self.online_plugins.items():
             online_devices[plugin_name] = {'plugin_type': plugin['plugin_type'],
+                                           'plugin_subtype': plugin['plugin_subtype'],
                                            PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
                                            'plugin_name': plugin['plugin_name']}
 
