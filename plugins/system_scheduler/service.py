@@ -50,14 +50,14 @@ class SystemSchedulerService(PluginBase, Triggerable):
             StateLevels.SubPhase.name: None,
             StateLevels.SubPhaseStatus.name: None
         }
-        self.system_research_rate = int(self.config['DEFAULT']['system_research_rate'])
+        self.system_research_rate = int(self.config['DEFAULT']['system_research_rate_in_seconds'])
         self.research_phase_lock = threading.RLock()
         self._research_phase_scheduler = None
 
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._research_phase_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
         self._research_phase_scheduler.add_job(func=self._research_phase_thread,
-                                               trigger=IntervalTrigger(minutes=self.system_research_rate),
+                                               trigger=IntervalTrigger(seconds=self.system_research_rate),
                                                next_run_time=datetime.now(),
                                                name=RESEARCH_THREAD_ID,
                                                id=RESEARCH_THREAD_ID,
@@ -84,7 +84,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         self.system_research_rate = data['system_research_rate']
 
         self._research_phase_scheduler.reschedule_job(
-            'phase_thread', trigger=IntervalTrigger(minutes=self.system_research_rate))
+            'phase_thread', trigger=IntervalTrigger(seconds=self.system_research_rate))
 
     @add_rule('sub_phase_update', ['POST'])
     def set_sub_phase_state(self):
