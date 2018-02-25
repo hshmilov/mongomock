@@ -255,14 +255,18 @@ class GuiService(PluginBase):
             return fields
 
         fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}
+        plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
-            for adapter in adapters_from_db:
-                if db_connection[adapter[PLUGIN_UNIQUE_NAME]]['fields']:
-                    adapter_fields_record = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
+            plugins_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            for plugin in plugins_from_db:
+                if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
+                    # Plugin not registered - unwanted in UI
+                    continue
+                if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields']:
+                    plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
                         {'name': 'parsed'}, projection={'schema': 1})
-                    if adapter_fields_record:
-                        fields['specific'][adapter[PLUGIN_NAME]] = _censor_fields(adapter_fields_record['schema'])
+                    if plugin_fields_record:
+                        fields['specific'][plugin[PLUGIN_NAME]] = _censor_fields(plugin_fields_record['schema'])
 
         return jsonify(fields)
 
@@ -408,16 +412,17 @@ class GuiService(PluginBase):
                 [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
-                status = ''
                 if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
-                    status = 'error'
-                else:
-                    clients_configured = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
-                        projection={'_id': 1}).count()
-                    if clients_configured:
-                        clients_connected = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
-                            {'status': 'success'}, projection={'_id': 1}).count()
-                        status = 'success' if clients_configured == clients_connected else 'warning'
+                    # Plugin not registered - unwanted in UI
+                    continue
+
+                clients_configured = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
+                    projection={'_id': 1}).count()
+                status = ''
+                if clients_configured:
+                    clients_connected = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
+                        {'status': 'success'}, projection={'_id': 1}).count()
+                    status = 'success' if clients_configured == clients_connected else 'warning'
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
                                            'unique_plugin_name': adapter[PLUGIN_UNIQUE_NAME],

@@ -11,10 +11,9 @@
             <input type="checkbox" v-model="expression.leftBracket">(</label>
         <label class="btn-light checkbox-label" :class="{'active': expression.not}">
             <input type="checkbox" v-model="expression.not">NOT</label>
-        <select v-model="expression.field" @change="compileExpression">
-            <option value="" disabled hidden>FIELD...</option>
-            <option v-for="field in fields" :key="field.name" :value="field.name">{{ field.title }}</option>
-        </select>
+
+        <x-graded-select v-model="expression.field" @change="compileExpression" placeholder="FIELD..."
+                         :options="fields"></x-graded-select>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
             <select v-model="expression.compOp" v-if="fieldOpsList.length">
@@ -45,6 +44,7 @@
 	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
 	import xBoolEdit from '../controls/boolean/BooleanEdit.vue'
 	import xArrayEdit from '../controls/array/ArrayFilter.vue'
+	import xGradedSelect from '../GradedSelect.vue'
 	import IP from 'ip'
 
 	export default {
@@ -53,7 +53,8 @@
 			xNumberEdit,
 			xIntegerEdit,
 			xBoolEdit,
-			xArrayEdit
+			xArrayEdit,
+            xGradedSelect
 		},
 		name: 'x-schema-expression',
 		props: {
@@ -66,7 +67,13 @@
 			},
 			fieldMap () {
 				return this.fields.reduce((map, item) => {
-					map[item.name] = item
+					if (item.fields) {
+						item.fields.forEach((field) => {
+							map[field.name] = field
+                        })
+					} else {
+					    map[item.name] = item
+                    }
 					return map
 				}, {})
 			},

@@ -35,7 +35,7 @@
             filteredItems() {
             	return this.totalItems.filter((item) => {
 					if (this.searchValue === '') { return true }
-					return item.title.toLowerCase().includes(this.searchValue.toLowerCase())
+					return !item.name || item.title.toLowerCase().includes(this.searchValue.toLowerCase())
 				})
             },
             totalItemNames() {

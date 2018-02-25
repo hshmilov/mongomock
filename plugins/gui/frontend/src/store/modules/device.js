@@ -64,11 +64,8 @@ export const device = {
 			if (payload.data) {
 				state.deviceList.data = payload.restart? []: [ ...state.deviceList.data ]
 				payload.data.forEach((device) => {
-					state.deviceList.data.push({
-						id: device['internal_axon_id'],
-						specific_data: merge.all(device.specific_data),
-						adapters: device.adapters,
-						labels: device.labels
+					state.deviceList.data.push({ ...device,
+						specific_data: device.specific_data? merge.all(device.specific_data) : []
 					})
 				})
 			}
@@ -100,7 +97,7 @@ export const device = {
 				state.deviceFields.data.generic.name = 'specific_data.data'
 				if (state.deviceFields.data.specific) {
 					Object.keys(state.deviceFields.data.specific).forEach((specificKey) => {
-						state.deviceFields.data.specific[specificKey].name ='specific_data.data'
+						state.deviceFields.data.specific[specificKey].name = `adapters_data.${specificKey}`
 					})
 				}
 			}

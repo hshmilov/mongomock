@@ -1,6 +1,6 @@
 <template>
-    <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
-        <div class="page-wrapper"
+    <vue-scrollbar class="scrollbar-container page-wrapper" ref="Scrollbar">
+        <div class="page-content"
              v-bind:class=" { 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
             <div v-if="title || breadcrumbs" class="page-header">
                 <h2 v-if="title">{{ title }}</h2>
@@ -46,9 +46,17 @@
     @import '../scss/config';
 
     .page-wrapper {
+        height: 100vh;
+        > .vue-scrollbar__area {
+            height: 100%;
+        }
+    }
+
+    .page-content {
         background: $background-color;
         padding: 62px 0 0;
-        height: 100%;
+        height: auto;
+        min-height: 100%;
         padding-left: 240px;
         position: relative;
         width: 100%;

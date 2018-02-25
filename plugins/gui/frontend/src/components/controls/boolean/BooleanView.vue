@@ -22,13 +22,16 @@
 
 <style lang="scss">
     .checkmark {
-        width: 4px;
+        width: 6px;
         height: 12px;
         -webkit-transform: rotate(45deg);
         -moz-transform: rotate(45deg);
         -ms-transform: rotate(45deg);
         -o-transform: rotate(45deg);
         transform: rotate(45deg);
+        border-bottom: 1px solid;
+        border-right: 1px solid;
+        margin-left: 4px;
     }
     .cross {
         width: 6px;
@@ -36,13 +39,14 @@
         border-top: 1px solid;
         border-left: 1px solid;
         &.top {
-            -webkit-transform: rotate(135deg);
-            -moz-transform: rotate(135deg);
-            -ms-transform: rotate(135deg);
-            -o-transform: rotate(135deg);
-            transform: rotate(135deg);
+            -webkit-transform: rotate(225deg);
+            -moz-transform: rotate(225deg);
+            -ms-transform: rotate(225deg);
+            -o-transform: rotate(225deg);
+            transform: rotate(225deg);
         }
         &.bottom {
+            margin-top: 2px;
             -webkit-transform: rotate(45deg);
             -moz-transform: rotate(45deg);
             -ms-transform: rotate(45deg);

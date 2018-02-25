@@ -16,6 +16,8 @@
                     if (dateTime == 'Invalid Date') return this.value
 
                     return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
+                } else if (Array.isArray(this.value)) {
+					return this.value.join(', ')
                 }
                 return this.value
             }

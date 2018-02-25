@@ -111,7 +111,7 @@ class Field(object):
     @property
     def json_name(self):
         if issubclass(self.type, bool):
-            return 'boolean'
+            return 'bool'
         elif issubclass(self.type, int):
             return 'integer'
         elif issubclass(self.type, float):

@@ -1,5 +1,5 @@
 <template>
-    <div>{{ value? parseInt(value) : '' }}</div>
+    <div>{{ typeof value === 'number'? parseInt(value) : '' }}</div>
 </template>
 
 <script>

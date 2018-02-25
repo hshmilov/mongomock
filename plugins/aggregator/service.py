@@ -83,34 +83,28 @@ class AggregatorService(PluginBase, Triggerable):
                 "create": "devices_db_view",
                 "viewOn": "devices_db",
                 "pipeline": [
-                    {'$project':
-                     {'internal_axon_id': 1,
-                          'generic_data':
-                              {'$filter':
-                               {'input': '$tags', 'as': 'tag', 'cond': {'$eq': ['$$tag.type', 'data']}
-                                }
-                               },
-                          'specific_data':
-                              {'$concatArrays':
-                               ['$adapters',
-                                {'$filter':
-                                 {'input': '$tags', 'as': 'tag',
-                                  'cond': {'$eq': ['$$tag.type', 'adapterdata']}
+                    {'$project': {'internal_axon_id': 1,
+                                  'generic_data':
+                                      {'$filter': {'input': '$tags', 'as': 'tag',
+                                                   'cond': {'$eq': ['$$tag.type', 'data']}}},
+                                  'specific_data':
+                                      {'$concatArrays': ['$adapters',
+                                                         {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
+                                                                      {'$eq': ['$$tag.type', 'adapterdata']}}}]},
+                                  'adapters': '$adapters.plugin_name',
+                                  'labels': {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
+                                                         {'$and': [{'$eq': ['$$tag.type', 'label']},
+                                                                   {'$eq': ['$$tag.data', True]}]}
+                                                         }
+                                             }
                                   }
-                                 }]
-                               },
-                          'adapters': '$adapters.plugin_name',
-                          'labels':
-                              {'$filter':
-                               {'input': '$tags', 'as': 'tag', 'cond': {'$and': [
-                                   {'$eq': ['$$tag.type', 'label']},
-                                   {'$eq': ['$$tag.data', True]}
-                               ]}}
-                               }
-                      }
                      },
-                    {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'specific_data': 1, 'adapters': 1,
-                                  'labels': '$labels.name'}}
+                    {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1, 'labels': '$labels.name',
+                                  'adapters_data': {'$map': {'input': '$specific_data', 'as': 'data', 'in': {
+                                      '$arrayToObject': {'$concatArrays': [[], [{'k': '$$data.plugin_name',
+                                                                                 'v': '$$data.data'}]]}}}},
+                                  'specific_data': 1}
+                     }
                 ]
             })
         except pymongo.errors.OperationFailure as e:

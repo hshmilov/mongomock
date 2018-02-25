@@ -1,5 +1,6 @@
 <template>
-    <div :class="`dynamic-popover dropdown-menu w-${size}`" :style="{left: left + 'px'}">
+    <div class="dynamic-popover dropdown-menu" :class="`w-${size} ${alignBottomClass}`"
+         :style="{left: left + 'px'}">
         <slot></slot>
     </div>
 </template>
@@ -7,7 +8,13 @@
 <script>
 	export default {
 		name: 'dynamic-popover',
-        props: ['size', 'left']
+        props: ['size', 'left', 'alignBottom'],
+        computed: {
+			alignBottomClass() {
+				if (this.alignBottom) return 'bottom'
+				return ''
+            }
+        }
 	}
 </script>
 
@@ -15,5 +22,9 @@
     .dynamic-popover.dropdown-menu {
         display: block;
         top: -18px;
+        &.bottom {
+            top: auto;
+            bottom: -18px;
+        }
     }
 </style>

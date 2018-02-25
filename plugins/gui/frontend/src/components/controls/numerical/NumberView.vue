@@ -1,5 +1,5 @@
 <template>
-    <div>{{ value? value.toFixed(2) : '' }}</div>
+    <div>{{ typeof value === 'number'? value.toFixed(2) : '' }}</div>
 </template>
 
 <script>

@@ -2,7 +2,7 @@
     <scrollable-page title="devices">
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
-            <devices-filter-container slot="cardContent" :schema="filterDeviceSchema" v-model="queryFilter"
+            <devices-filter-container slot="cardContent" :schema="filterFields" v-model="queryFilter"
                                       :selected="selectedFields" @submit="executeQuery"></devices-filter-container>
         </card>
         <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
@@ -15,15 +15,16 @@
                 <!-- Dropdown for selecting fields to be presented in table as well as query form -->
                 <triggerable-dropdown size="lg" align="right">
                     <div slot="dropdownTrigger" class="link">Add Columns</div>
-                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="viewDeviceSchema"
+                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="coloumnSelectionFields"
                                           :searchable="true" v-model="selectedFields"></searchable-checklist>
                 </triggerable-dropdown>
             </div>
             <div slot="cardContent">
                 <x-schema-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
                                 :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                :fields="viewDeviceSchemaSelected" :filter="queryFilter" @click-row="configDevice"
-                                :selected-page="device.deviceSelectedPage" @change-page="selectPage">
+                                :fields="selectedTableFields" :filter="queryFilter" @click-row="configDevice"
+                                :selected-page="device.deviceSelectedPage" @change-page="selectPage"
+                                id-field="internal_axon_id">
                 </x-schema-table>
             </div>
         </card>
@@ -86,7 +87,7 @@
                     this.selectFields(fieldList)
 				}
 			},
-			deviceFlatSchema () {
+			genericFlatSchema () {
 				if (!this.device.deviceFields.data.generic) return []
 				return [
 					{
@@ -104,45 +105,49 @@
 					}
                 ]
 			},
-			pluginsFlatSchema () {
+			specificFlatSchema () {
 				if (!this.device.deviceFields.data.specific) return []
-				const genericFields = this.deviceFlatSchema.map((item) => item.name)
 
-				let mergedPluginsSchema = []
-				Object.keys(this.device.deviceFields.data.specific).forEach((pluginName) => {
+				return Object.keys(this.device.deviceFields.data.specific).reduce((map, pluginName) => {
 					let pluginFlatSchema = this.flattenSchema(this.device.deviceFields.data.specific[pluginName])
-                        .filter((item) => {
-						return !genericFields.includes(item.name)
-					})
 					if (!pluginFlatSchema.length) return
                     let title = adapterStaticData[pluginName] ? adapterStaticData[pluginName].name : pluginName
-					mergedPluginsSchema.push({ title })
-					mergedPluginsSchema = [...mergedPluginsSchema, ...pluginFlatSchema]
-				})
-                return mergedPluginsSchema
+					map[title] = pluginFlatSchema
+                    return map
+				}, {})
 			},
-			viewDeviceSchema () {
-				if (!this.deviceFlatSchema.length) return []
-				return this.deviceFlatSchema.filter((field) => {
-						return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
-					}).concat(this.pluginsFlatSchema)
+            coloumnSelectionFields() {
+				if (!this.genericFlatSchema.length) return []
+
+				return this.genericFlatSchema.filter((field) => {
+					return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
+				}).concat(Object.keys(this.specificFlatSchema).reduce((merged, title) => {
+					merged = [...merged, { title }, ...this.specificFlatSchema[title]]
+					return merged
+				}, []))
+            },
+			tableFields () {
+				if (!this.genericFlatSchema.length) return []
+				return this.genericFlatSchema.filter((field) => {
+                    return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
+				}).concat(Object.keys(this.specificFlatSchema).reduce((merged, title) => {
+					merged = [...merged, ...this.specificFlatSchema[title].map((field) => {
+						return { ...field, title: `${title} ${field.title}`}
+                    })]
+					return merged
+				}, []))
 			},
-			viewDeviceSchemaSelected () {
+            selectedTableFields() {
 				let existing = new Set()
-				return this.viewDeviceSchema.filter((field) => {
+				return this.tableFields.filter((field) => {
 					if (existing.has(field.name)) return false
-                    existing.add(field.name)
+					existing.add(field.name)
 					return field.name && this.selectedFields.includes(field.name)
 				})
-			},
-			filterDeviceSchema () {
-				if (!this.deviceFlatSchema.length) return []
-				let existing = new Set()
-                let pluginsFlatSchemaUnique = this.pluginsFlatSchema.filter((field) => {
-					if (!field.name || existing.has(field.name)) return false
-					existing.add(field.name)
-					return true
-				})
+            },
+			filterFields () {
+				if (!this.genericFlatSchema.length) return []
+
 				return [
 					{
 						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
@@ -150,8 +155,12 @@
 							return {name: query.filter, title: query.name}
 						})
 					},
-					...this.deviceFlatSchema,
-					...pluginsFlatSchemaUnique
+                    {
+                    	title: 'Generic', fields: this.genericFlatSchema
+                    },
+                    ...Object.keys(this.specificFlatSchema).map((title) => {
+					    return { title, fields: this.specificFlatSchema[title] }
+                    })
 				]
 			}
 		},
@@ -183,7 +192,7 @@
 				this.updateQuery(this.queryFilter)
 				this.fetchDevices({
 					filter: this.queryFilter, skip: 0,
-					fields: this.viewDeviceSchemaSelected.map((field) => field.name)
+					fields: this.selectedTableFields.map((field) => field.name)
 				})
 				this.selectPage(0)
 				this.$parent.$el.click()
@@ -260,7 +269,7 @@
 			this.interval = setInterval(function () {
 				this.fetchDevices({
 					filter: this.queryFilter, skip: 0,
-					fields: this.viewDeviceSchemaSelected.map((field) => field.name)
+					fields: this.selectedTableFields.map((field) => field.name)
 				})
 			}.bind(this), 3000);
 		},

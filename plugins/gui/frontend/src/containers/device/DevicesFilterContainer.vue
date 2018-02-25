@@ -36,7 +36,7 @@
                                  :recompile="recompile" @recompiled="recompile = false"></x-schema-filter>
                 <div class="row">
                     <div class="form-group place-right">
-                        <a class="btn btn-inverse" @click="filterExpressions = []; searchValue = ''">Clear</a>
+                        <a class="btn btn-inverse" @click="emptyFilter">Clear</a>
                         <a class="btn" @click="submitFilter">Search</a>
                     </div>
                 </div>
@@ -158,6 +158,11 @@
             	if (!this.filterValid) return
 
                 this.$emit('submit')
+            },
+            emptyFilter() {
+				this.filterExpressions = []
+                this.searchValue = ''
+                this.$emit('input', '')
             }
 		},
         created() {

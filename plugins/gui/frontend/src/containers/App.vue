@@ -42,4 +42,8 @@
     @import '../assets/plugins/css/animate.css';
     @import '../../node_modules/vue2-scrollbar/dist/style/vue2-scrollbar.css';
     @import '../scss/app';
+
+    #app {
+        height: 100vh;
+    }
 </style>

@@ -244,7 +244,7 @@
         .table {
             border-collapse: separate;
             border-spacing: 0;
-            /*overflow-x: auto;*/
+            height: auto;
             font-size: 14px;
             .table-head {
                 border: 0;
