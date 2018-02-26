@@ -16,7 +16,7 @@ class DeviceOS(SmartJsonClass):
     type = Field(str, 'OS', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD'])
     distribution = Field(str, 'OS Distribution')
     bitness = Field(int, 'OS Bitness', enum=[32, 64])
-    build = Field(int, 'OS Build')  # aka patch level
+    build = Field(str, 'OS Build')  # aka patch level
     install_date = Field(datetime.datetime, "OS Install Date")
 
     major = Field(int, 'OS Major')
@@ -36,8 +36,8 @@ class DeviceHD(SmartJsonClass):
     On linux and mac, we need to think what it is (not sure its mounts...) """
 
     path = Field(str, "HD Path")
-    total_size = Field(float, "HD Size (gb)")
-    free_size = Field(float, "HD Free Size (gb)")
+    total_size = Field(float, "HD Size (GB)")
+    free_size = Field(float, "HD Free Size (GB)")
     is_encrypted = Field(bool, "HD Encrypted")
     file_system = Field(str, "HD Filesystem")
 
@@ -67,6 +67,7 @@ class DeviceUser(SmartJsonClass):
 
     username = Field(str, "Known User")
     last_use_date = Field(datetime.datetime, "Last Usage Date")
+    is_local = Field(bool, "Is Local User")
 
 
 class DeviceSecurityPatch(SmartJsonClass):
@@ -97,14 +98,17 @@ class Device(SmartJsonClass):
     scanner = Field(bool, 'Scanner')
     boot_time = Field(datetime.datetime, 'Boot Time')
     time_zone = Field(str, 'Time Zone')
-    last_logged_user = Field(str, "Last Logged User")
+    pc_type = Field(str, "PC Type", enum=["Unspecified", "Desktop", "Laptop or Tablet", "Workstation",
+                                          "Enterprise Server", "SOHO Server", "Appliance PC", "Performance Server",
+                                          "Maximum"])
+    last_used_users = ListField(str, "Last Used Users")
     current_logged_user = Field(str, "Currently Logged User")
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")
     bios_version = Field(str, "Bios Version")
     bios_serial = Field(str, "Bios Serial")
-    total_physical_memory = Field(float, "Total RAM (gb)")
-    free_physical_memory = Field(float, "Free RAM (gb)")
+    total_physical_memory = Field(float, "Total RAM (GB)")
+    free_physical_memory = Field(float, "Free RAM (GB)")
     physical_memory_percentage = Field(float, "RAM Usage (%)")
     number_of_processes = Field(int, "Number Of Processes")
     total_number_of_physical_processors = Field(int, "Total Number Of Physical Processors")
@@ -116,7 +120,7 @@ class Device(SmartJsonClass):
     device_serial = Field(str, "Device Manufacturer Serial")
     hard_drives = ListField(DeviceHD, "Hard Drives")
     cpus = ListField(DeviceCPU, "CPUs")
-    battery = Field(DeviceBattery, "Battery")
+    batteries = ListField(DeviceBattery, "Battery")
     users = ListField(DeviceUser, "Users")
     security_patches = ListField(DeviceSecurityPatch, "Security Patch")
 
@@ -186,6 +190,9 @@ class Device(SmartJsonClass):
         if os_dict is None:
             return
         self.os = DeviceOS(**os_dict)
+
+    def add_battery(self, **kwargs):
+        self.batteries.append(DeviceBattery(**kwargs))
 
     def add_hd(self, **kwargs):
         self.hard_drives.append(DeviceHD(**kwargs))

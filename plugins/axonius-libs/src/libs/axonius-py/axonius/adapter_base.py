@@ -398,6 +398,9 @@ class AdapterBase(PluginBase, Feature, ABC):
                                'delete_file']:
             return return_error("Invalid action type", 400)
 
+        if action_type not in self.supported_execution_features():
+            return return_error("Operation not implemented yet", 501)   # 501 -> Not implemented
+
         needed_action_function = getattr(self, action_type)
 
         self.logger.info("Got action type {0}. Request data is {1}".format(action_type, request_data))
@@ -405,6 +408,9 @@ class AdapterBase(PluginBase, Feature, ABC):
         self._create_action_thread(
             device_data, needed_action_function, action_id, **request_data)
         return ''
+
+    def supported_execution_features(self):
+        return []
 
     def put_file(self, device_data, file_buffer, dst_path):
         raise RuntimeError("Not implemented yet")
@@ -637,7 +643,7 @@ class AdapterBase(PluginBase, Feature, ABC):
     def _parse_raw_data(self, devices_raw_data) -> Iterable[Device]:
         """
         To be implemented by inheritors
-        Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed' 
+        Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed'
 
         :param devices_raw_data: raw data as received by /devices/client, i.e. without the client->data association
         :return: parsed data as iterable Device collection

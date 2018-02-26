@@ -592,7 +592,10 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         return {"result": result, "product": product}
 
-    def delete_file(self, device_data, file_path):
-        return {"result": 'Failure', "product": 'Delete file is not implemeted yet'}
+    def supported_execution_features(self):
+        """
+        :return: Returns a list of all supported execution features by this adapter.
+        """
+        return ["put_file", "get_file", "execute_binary", "execute_wmi", "execute_shell"]
 
         # Exported API functions - None for now

@@ -163,7 +163,7 @@ class EpoAdapter(AdapterBase):
 
                 os_build_num = device_raw.get("EPOComputerProperties.OSBuildNum")
                 if os_build_num is not None:
-                    device.os.build = int(os_build_num)
+                    device.os.build = str(os_build_num)
 
                 # Set up memory
                 device.free_physical_memory = int(device_raw.get("EPOComputerProperties.FreeMemory")) / (1024**2)

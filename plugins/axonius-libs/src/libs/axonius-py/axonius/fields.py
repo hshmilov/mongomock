@@ -157,7 +157,22 @@ class Field(object):
             # Type-check for value before setting inside the dict of SmartJsonClass
             if is_smart_field and isinstance(value, dict):  # accept also free-dict instead of SmartJsonClass
                 pass
-            elif value is not None:
+
+            # There are some special cases, where we consider the value as none.
+            # If we expect str and we get '', or if we expect str and we get 0 (int).
+            if (field_type == str and isinstance(value, str) and value == '') \
+                    or (field_type == str and isinstance(value, int) and value == 0):
+                value = None
+
+            if value is not None:
+                # We want to avoid stupid int/str/float mistakes. so lets try converting these values first.
+                if not isinstance(value, field_type) and (field_type == str or field_type == int or field_type == float):
+                    try:
+                        value = field_type(value)
+                    except Exception:
+                        pass
+
+                # If still its not...
                 if not isinstance(value, field_type):
                     raise TypeError(f'{name} expected to be {field_type}, got {value} of {type(value)} instead')
                 if field_instance._enum:
@@ -176,6 +191,7 @@ class Field(object):
             if field_instance.converter:
                 value = field_instance.converter(value)
 
+            # Again, after converter.
             if value is None or (isinstance(value, str) and value == ''):
                 if name in self._dict:
                     self._dict.pop(name)
