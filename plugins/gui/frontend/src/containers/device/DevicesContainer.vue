@@ -67,7 +67,7 @@
 			Modal, TriggerableDropdown, xGradedMultiSelect, xSchemaTable
 		},
 		computed: {
-			...mapState(['device', 'query']),
+			...mapState(['device', 'query', 'adapter']),
 			queryFilter: {
 				get () {
 					return this.query.newQuery.filter
@@ -104,10 +104,13 @@
 			},
 			specificFlatSchema () {
 				if (!this.device.deviceFields.data.specific) return []
+                let registeredAdapters = new Set(this.adapter.adapterList.data.map((adapter) => adapter.plugin_name.logo))
 
 				return Object.keys(this.device.deviceFields.data.specific).reduce((map, pluginName) => {
+					if (!registeredAdapters.has(pluginName)) return map
+
 					let pluginFlatSchema = this.flattenSchema(this.device.deviceFields.data.specific[pluginName])
-					if (!pluginFlatSchema.length) return
+					if (!pluginFlatSchema.length) return map
                     let title = adapterStaticData[pluginName] ? adapterStaticData[pluginName].name : pluginName
 					map[title] = pluginFlatSchema
                     return map
@@ -249,13 +252,13 @@
 			}
 		},
 		created () {
+			this.fetchAdapters()
 			if (!this.device.deviceFields.data || !this.device.deviceFields.data.generic) {
 				this.fetchDeviceFields()
 			}
 			if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
 				this.fetchSavedQueries()
 			}
-			this.fetchAdapters()
             if (!this.device.labelList.data || !this.device.labelList.data.length) {
 				this.fetchLabels()
 			}

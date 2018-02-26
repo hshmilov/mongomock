@@ -255,13 +255,9 @@ class GuiService(PluginBase):
             return fields
 
         fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}
-        plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             for plugin in plugins_from_db:
-                if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
-                    # Plugin not registered - unwanted in UI
-                    continue
                 if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields']:
                     plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
                         {'name': 'parsed'}, projection={'schema': 1})

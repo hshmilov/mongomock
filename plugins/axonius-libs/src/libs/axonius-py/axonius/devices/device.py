@@ -67,7 +67,7 @@ class DeviceUser(SmartJsonClass):
 
     username = Field(str, "Known User")
     last_use_date = Field(datetime.datetime)
-    is_local = Field(bool)
+    is_local = Field(bool, "Is User Local")
 
 
 class DeviceSecurityPatch(SmartJsonClass):

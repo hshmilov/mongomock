@@ -113,7 +113,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
 
         time_to_research = datetime.now()
 
-        if "timestamp" in post_json:
+        if post_json and "timestamp" in post_json:
             try:
                 time_to_research = dateutil.parser.parse(post_json["timestamp"])
                 if time_to_research < datetime.now():

@@ -21,17 +21,6 @@ export const DELETE_DEVICE_LABELS = 'DELETE_DEVICE_LABELS'
 export const REMOVE_DEVICE_LABELS = 'REMOVE_DEVICE_LABELS'
 
 
-export const mergeDeviceData = (adapters, requiredFields) => {
-	return merge.all(adapters.map((adapter) => {
-		return requiredFields.reduce((map, field) => {
-			if (adapter.data[field]) {
-				map[field] = adapter.data[field]
-			}
-			return map
-		}, {})
-	}))
-}
-
 export const device = {
 	state: {
 		/* Devices according to current filter performed by user, updating by request */
