@@ -1,4 +1,5 @@
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
+from general_info.subplugins.wmi_utils import wmi_query_commands, is_wmi_answer_ok
 from axonius.devices.device import Device
 
 
@@ -12,18 +13,22 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         """
         super().__init__(plugin_base_delegate)
         self.users = {}  # a cache var for storing users from adapters.
-        self.logger.info("Initialized InstalledSoftwares plugin")
 
-    def get_wmi_commands(self):
-        return [{"type": "query", "args": ["select Vendor, Name, Version, InstallState from Win32_Product"]}]
+    @staticmethod
+    def get_wmi_commands():
+        return wmi_query_commands(["select Vendor, Name, Version, InstallState from Win32_Product"])
 
     def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+        super().handle_result(device, executer_info, result, adapterdata_device)
+        if not all(is_wmi_answer_ok(a) for a in result):
+            self.logger.info("Not handling result, result has exception")
+            return False
 
-        installed_softwares = []
+        installed_software = []
         for i in result[0]:
-            if i["InstallState"] == 5:
+            if i.get("InstallState") == 5:
                 # 5 means it's installed
-                installed_softwares.append(
+                installed_software.append(
                     {
                         "Vendor": i['Vendor'],
                         "Name": i['Name'],
@@ -36,3 +41,5 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
                     name=i['Name'],
                     version=i['Version']
                 )
+
+        return True

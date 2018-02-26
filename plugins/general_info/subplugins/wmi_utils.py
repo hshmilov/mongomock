@@ -32,3 +32,45 @@ def wmi_date_to_datetime(s):
                       int(g[6]), MinutesFromUTC(offset))
 
         return dt
+
+
+def wmi_query_commands(list_of_queries):
+    """
+    Gets wmi queries and returns the format needed for execution commands.
+    :param list_of_queries: a list of wmi queries
+    :type list_of_queries: list of str
+    :return:
+    """
+
+    return [{"type": "query", "args": [q]} for q in list_of_queries]
+
+
+def is_wmi_answer_ok(answer):
+    """
+    Checks if a specific wmi query was successfully run.
+    :param answer: The answer list.
+    :return: True if true, else False
+    """
+
+    is_exception = len(answer) > 0 and answer[0].get("Exception") is not None
+    return not is_exception
+
+
+def check_wmi_answers_integrity(answers, logger=None):
+    """
+    Gets answers and checks for integrity.
+    :param answers: list of answers from wmi execution.
+    :param logger: optional logger.
+    :param prefix: optional logger prefix.
+    :return:
+    """
+
+    ok = True
+
+    for i, a in enumerate(answers):
+        if is_wmi_answer_ok(a) is False:
+            ok = False
+            if logger is not None:
+                logger.error(f"Query {i} exception: {a[0]['Exception']}")
+
+    return ok

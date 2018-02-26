@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 from axonius.devices.device import Device
+from axonius.logging.logger_wrapper import LoggerWrapper
+from axonius.plugin_base import PluginBase
+from general_info.subplugins.wmi_utils import check_wmi_answers_integrity
 
 
 class GeneralInfoSubplugin(ABC):
@@ -7,14 +10,22 @@ class GeneralInfoSubplugin(ABC):
     A skeleton for a general info subplugin.
     """
 
-    def __init__(self, plugin_base_delegate):
+    def __init__(self, plugin_base_delegate: PluginBase):
         """
         initialization.
         :param plugin_base_delegate: the "self" of a relevant plugin base.
         """
         self.plugin_base = plugin_base_delegate
-        self.logger = self.plugin_base.logger
+        self.logger = LoggerWrapper(self.plugin_base.logger, self.__class__.__name__)
 
+    def get_error_logs(self):
+        """
+        :return: a list of error logs recorded by the logger.
+        """
+
+        return self.logger.error_messages
+
+    @staticmethod
     @abstractmethod
     def get_wmi_commands(self):
         """
@@ -23,7 +34,6 @@ class GeneralInfoSubplugin(ABC):
         """
         pass
 
-    @abstractmethod
     def handle_result(self, device, executer_info, result, adapterdata_device: Device):
         """
         Parses the result of the wmi queries.
@@ -35,4 +45,4 @@ class GeneralInfoSubplugin(ABC):
         :param adapterdata_device: a Device object, that is used for having adapterdata tags (general-info enrichment).
         :return: the caption of the last logged user (domain+username). e.g., avidor@axonius.lan
         """
-        pass
+        check_wmi_answers_integrity(result, self.logger)

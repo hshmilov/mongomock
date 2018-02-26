@@ -327,7 +327,7 @@ class PluginBase(Feature):
         with self._fields_db_lock:
             last_fields_count, last_raw_fields_count = self._last_fields_count
             if len(self._fields_set) == last_fields_count and len(self._raw_fields_set) == last_raw_fields_count:
-                return  # Optimization
+                return  # Optimization. Note that this is true only if we don't delete fields!
 
             self.logger.info("Persisting my fields to DB")
             fields = list(self._fields_set)  # copy
