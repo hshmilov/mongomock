@@ -164,7 +164,7 @@
 			updateSelectedAll () {
 				if (this.selectAllRecords) {
 					this.data.forEach((record) => {
-						this.recordSelection[record['id']] = true
+						this.recordSelection[record[this.idField]] = true
 					})
 				} else {
 					this.recordSelection = {}
