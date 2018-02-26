@@ -34,7 +34,7 @@ class GeneralInfoSubplugin(ABC):
         """
         pass
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device, extra):
         """
         Parses the result of the wmi queries.
 

@@ -21,6 +21,7 @@ from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
+from axonius.parsing_utils import get_exception_string
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -547,6 +548,27 @@ class ActiveDirectoryAdapter(AdapterBase):
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
 
+    def execute_wmi_and_shell(self, device_data, wmi_commands, shell_command):
+        """
+        Hack until we fix the execution.
+        :param device_data: look at execute_wmi
+        :param wmi_commands: look at execute_wmi
+        :param shell_command: look at execute_wmi
+        :return:
+        """
+        result = self.execute_wmi(device_data, wmi_commands)
+        if result.get('result') == 'Success':
+            result['product'] = {"wmi": result['product']}
+            try:
+                shell_result = self.execute_shell(device_data, shell_command)
+                result['product']['shell'] = shell_result
+            except Exception:
+                result['product']['shell'] = {"result": "Exception", "product": get_exception_string()}
+        else:
+            result['product']['shell'] = {"result": "Failed", "product": "did not query because wmi failed"}
+
+        return result
+
     def execute_shell(self, device_data, shell_command):
         # Creating a file from the buffer (to pass it on to PSEXEC)
         # Adding separator to the commands list
@@ -596,6 +618,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         """
         :return: Returns a list of all supported execution features by this adapter.
         """
+        return ["put_file", "get_file", "execute_binary", "execute_wmi", "execute_shell", "execute_wmi_and_shell"]
         return ["put_file", "get_file", "execute_binary", "execute_wmi", "execute_shell"]
 
         # Exported API functions - None for now

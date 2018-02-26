@@ -19,6 +19,15 @@ SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo]
 
+GET_INSTALLED_SOFTWARE_COMMANDS = [
+    r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
+    r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
+    r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
+    r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
+    'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:64 /s)',
+    'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:32 /s)'
+]
+
 
 class GeneralInfoService(PluginBase, Triggerable):
     class MyDevice(Device):
@@ -121,8 +130,17 @@ class GeneralInfoService(PluginBase, Triggerable):
                         wmi_commands.extend(subplugin.get_wmi_commands())
 
                     # Now run all queries you have got on that device.
-                    p = self.request_action("execute_wmi", internal_axon_id,
-                                            {"wmi_commands": wmi_commands})
+                    p = self.request_action(
+                        "execute_wmi_and_shell",
+                        internal_axon_id,
+                        {
+                            "wmi_commands": wmi_commands,
+                            "shell_command":
+                                {
+                                    "Windows": GET_INSTALLED_SOFTWARE_COMMANDS
+                                }
+                        }
+                    )
 
                     p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
                            did_reject=functools.partial(self._handle_wmi_execution_failure, device))
@@ -145,8 +163,9 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # We have got many requests. Lets call the handler of each of our subplugins.
             # We go through the amount of queries each subplugin requested, linearly.
-            queries_response = data["output"]["product"]
+            queries_response = data["output"]["product"]["wmi"]
             queries_response_index = 0
+            shell_response = data["output"]["product"]["shell"]
 
             # Create a new device, since these subplugins will have some generic info enrichments.
             adapterdata_device = self._new_device()
@@ -158,7 +177,11 @@ class GeneralInfoService(PluginBase, Triggerable):
                                                     queries_response_index + subplugin_num_queries]
                 try:
                     did_subplugin_succeed = \
-                        subplugin.handle_result(device, executer_info, subplugin_result, adapterdata_device)
+                        subplugin.handle_result(device,
+                                                executer_info,
+                                                subplugin_result,
+                                                adapterdata_device,
+                                                shell_response)
 
                     all_error_logs.extend(subplugin.get_error_logs())
 
@@ -166,8 +189,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                         raise ValueError("return value is not True")
                 except Exception:
                     self.logger.exception(f"Subplugin {subplugin.__class__.__name__} exception."
-                                          f"Internal axon id is {device['internal_axon_id']}."
-                                          f" Moving on to next plugin.")
+                                          f"Internal axon id is {device['internal_axon_id']}. "
+                                          f"Moving on to next plugin.")
 
                 # Update the response index.
                 queries_response_index = queries_response_index + subplugin_num_queries

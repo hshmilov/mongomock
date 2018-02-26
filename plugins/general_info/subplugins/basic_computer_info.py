@@ -36,8 +36,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         ]
         )
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
-        super().handle_result(device, executer_info, result, adapterdata_device)
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device, extra):
+        super().handle_result(device, executer_info, result, adapterdata_device, extra)
         # Put Results
         win32_processor = result[0]
         win32_bios = result[1]

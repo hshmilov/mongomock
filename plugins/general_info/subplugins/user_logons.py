@@ -55,10 +55,10 @@ class GetUserLogons(GeneralInfoSubplugin):
                 "select SID,Caption, LocalAccount from Win32_UserAccount"
             ])
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
-        super().handle_result(device, executer_info, result, adapterdata_device)
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device, extra):
+        super().handle_result(device, executer_info, result, adapterdata_device, extra)
         if not all(is_wmi_answer_ok(a) for a in result):
-            self.logger.info("Not handling result, result has exception")
+            self.logger.error("Not handling result, result has exception")
             return False
 
         clients_used = [p['client_used'] for p in device['adapters']]

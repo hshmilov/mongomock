@@ -5,15 +5,6 @@ import subprocess
 import time
 from testing.test_credentials.test_ad_credentials import ad_client1_details
 
-
-ad_client1_details = {
-    "password": "Password1",
-    "user": "TestDomain\\Administrator",
-    "dc_name": "10.0.229.30",
-    "domain_name": "DC=TestDomain,DC=test",
-    "dns_server_address": fakednsaddr
-}
-
 DOMAIN = ad_client1_details["domain_name"]
 DOMAIN_NAME, USERNAME = ad_client1_details["user"].split("\\")
 PASSWORD = ad_client1_details["password"]
