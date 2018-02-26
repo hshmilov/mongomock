@@ -27,12 +27,12 @@
 
 	export default {
 		name: 'x-graded-select',
-        props: ['value', 'options', 'placeholder'],
-        model: {
+		components: { TriggerableDropdown, NestedMenu, NestedMenuItem, DynamicPopover, VueScrollbar },
+		props: ['value', 'options', 'placeholder'],
+		model: {
             prop: 'value',
             event: 'change'
         },
-        components: { TriggerableDropdown, NestedMenu, NestedMenuItem, DynamicPopover, VueScrollbar },
         computed: {
 			selectedTitle() {
 				if (!this.value) return ''

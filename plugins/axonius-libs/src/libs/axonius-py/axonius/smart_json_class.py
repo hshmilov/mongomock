@@ -36,7 +36,7 @@ class SmartJsonClassMetaclass(type):
         if bases:
             base_fields = getattr(bases[0], 'fields_info', [])
         assert len(set([field.name for field in fields])) == len(fields), 'Found duplicate fields'
-        namespace['fields_info'] = base_fields + fields
+        namespace['fields_info'] = fields + base_fields
         result = type.__new__(cls, name, bases, namespace)
         return result
 

@@ -64,6 +64,7 @@
 				}
             },
             searchValue: function(newSearchValue, oldSearchValue) {
+				this.$refs.Scrollbar.scrollToY(0)
         		if (this.itemSelection[oldSearchValue]) {
 					this.createdItems.push(oldSearchValue)
 					this.searchValueSelected = false

@@ -11,12 +11,13 @@
         props: ['value'],
         computed: {
 			dateTimeOption() {
+			    let now = new Date()
 				return {
 					type: 'min',
 					week: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
 					month: ['January', 'February', 'March', 'April', 'May', 'June',
 						'July', 'August', 'September', 'October', 'November', 'December'],
-					format: 'MM/DD/YYYY HH:mm',
+					format: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
 					placeholder: '',
 					inputStyle: {},
 					color: {

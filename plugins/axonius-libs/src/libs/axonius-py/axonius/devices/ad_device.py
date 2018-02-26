@@ -4,7 +4,7 @@ from axonius.fields import ListField
 
 
 class ADDevice(Device, DNSResolvableDevice):
-    ad_organizational_unit = ListField(str, "Active Directory Organizational Unit")
+    ad_organizational_unit = ListField(str, "Organizational Unit")
 
     def add_organizational_units(self, distinguished_name):
         for ou in [ou[3:] for ou in distinguished_name.split(",") if ou.startswith("OU=")]:

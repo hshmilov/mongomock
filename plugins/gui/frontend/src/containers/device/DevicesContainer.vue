@@ -12,12 +12,9 @@
                 <devices-actions-container v-show="selectedDevices && selectedDevices.length"
                                            :devices="selectedDevices"></devices-actions-container>
 
-                <!-- Dropdown for selecting fields to be presented in table as well as query form -->
-                <triggerable-dropdown size="lg" align="right">
-                    <div slot="dropdownTrigger" class="link">Add Columns</div>
-                    <searchable-checklist slot="dropdownContent" title="Display fields:" :items="coloumnSelectionFields"
-                                          :searchable="true" v-model="selectedFields"></searchable-checklist>
-                </triggerable-dropdown>
+                <!-- Dropdown for selecting fields to be presented in table, including adapter hierarchy -->
+                <x-graded-multi-select placeholder="Add Columns" :options="coloumnSelectionFields"
+                                       v-model="selectedFields"></x-graded-multi-select>
             </div>
             <div slot="cardContent">
                 <x-schema-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
@@ -44,10 +41,10 @@
 	import Modal from '../../components/popover/Modal.vue'
 	import Card from '../../components/Card.vue'
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
-	import SearchableChecklist from '../../components/SearchableChecklist.vue'
 	import xSchemaTable from '../../components/data/SchemaTable.vue'
 	import DevicesActionsContainer from './DevicesActionsContainer.vue'
 	import DevicesFilterContainer from './DevicesFilterContainer.vue'
+    import xGradedMultiSelect from '../../components/GradedMultiSelect.vue'
 
 	import '../../components/icons/action'
 
@@ -67,7 +64,7 @@
 		name: 'devices-container',
 		components: {
 			DevicesFilterContainer, DevicesActionsContainer, ScrollablePage, Card,
-			Modal, TriggerableDropdown, SearchableChecklist, xSchemaTable
+			Modal, TriggerableDropdown, xGradedMultiSelect, xSchemaTable
 		},
 		computed: {
 			...mapState(['device', 'query']),
@@ -119,12 +116,14 @@
             coloumnSelectionFields() {
 				if (!this.genericFlatSchema.length) return []
 
-				return this.genericFlatSchema.filter((field) => {
-					return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
-				}).concat(Object.keys(this.specificFlatSchema).reduce((merged, title) => {
-					merged = [...merged, { title }, ...this.specificFlatSchema[title]]
-					return merged
-				}, []))
+				return [
+					{
+						title: 'Generic', fields: this.genericFlatSchema
+					},
+					...Object.keys(this.specificFlatSchema).map((title) => {
+						return { title, fields: this.specificFlatSchema[title] }
+					})
+                ]
             },
 			tableFields () {
 				if (!this.genericFlatSchema.length) return []
@@ -155,12 +154,7 @@
 							return {name: query.filter, title: query.name}
 						})
 					},
-                    {
-                    	title: 'Generic', fields: this.genericFlatSchema
-                    },
-                    ...Object.keys(this.specificFlatSchema).map((title) => {
-					    return { title, fields: this.specificFlatSchema[title] }
-                    })
+                    ...this.coloumnSelectionFields
 				]
 			}
 		},

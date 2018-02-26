@@ -171,13 +171,13 @@ export const alert = {
 				rule: `api/alerts/${alertId}`,
 				method: 'DELETE'
 			}).then((response) => {
-				if (response !== '') {
+				if (response.data !== '') {
 					return
 				}
 				commit(REMOVE_ALERT, alertId)
 			})
 		},
-		[ UPDATE_ALERT ] ({dispatch, commit}, payload) {
+		[ UPDATE_ALERT ] ({dispatch}, payload) {
 			/*
 				Call to api to add \ update an alert. If given an id, the matching alert will be updated with the
 				new controls. Otherwise a new alert will be added to the collection.
@@ -195,7 +195,7 @@ export const alert = {
 				rule: rule,
 				method: method,
 				data: payload
-			}).then((response) => {
+			}).then(() => {
 				dispatch(FETCH_ALERTS, {skip: 0, limit: 50})
 			})
 		}
