@@ -20,6 +20,12 @@ from impacket.dcerpc.v5.dcomrt import DCOMConnection
 from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_AUTHN_LEVEL_PKT_INTEGRITY, \
     RPC_C_AUTHN_LEVEL_NONE
 from multiprocessing.pool import ThreadPool
+from retrying import retry
+
+
+MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
+MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
+TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 
 
 class WMIRunner(object):
@@ -123,6 +129,8 @@ class WMIRunner(object):
         iEnumWbemClassObject.RemRelease()
         return records
 
+    # TODO: This will attempt even on legitimate errors like access denied. fix that
+    @retry(stop_max_attempt_number=MAX_NUM_OF_TRIES_PER_CONNECT, wait_fixed=TIME_TO_REST_BETWEEN_CONNECT_RETRY)
     def connect(self):
         """
         Just tries to connect to the host.
@@ -209,6 +217,7 @@ def run_command(w, command_type, command_args):
         else:
             raise ValueError("command type {0} does not exist".filter(command_type))
     except Exception as e:
+        # Note that we put here value because soon we are going to get it in minimize_and_convert
         result = [{"Exception": {"value": str(e)}}]
 
     return result
@@ -217,25 +226,44 @@ def run_command(w, command_type, command_args):
 if __name__ == '__main__':
     _, domain, username, password, address, commands = sys.argv
     tp = ThreadPool(processes=30)
-    # Commands is a json formatted list of commands.
-    commands = json.loads(commands)
-    final_result_array = []
+    try:
+        # Commands is a json formatted list of commands.
+        commands = json.loads(commands)
+        final_result_array = [None for i in range(len(commands))]
+        queries_left = [True for i in range(len(commands))]
 
-    w = WMIRunner(address, username, password, domain=domain)
-    w.connect()
+        # We are going to try to get each one of these queries a couple of times.
+        # Between each try, we'll query only what we haven't queried yet, and we'll reconnect.
+        for _ in range(MAX_NUM_OF_TRIES_OVERALL):
+            # If we have something left, lets connect and run it.
+            if any(queries_left):
+                with WMIRunner(address, username, password, domain=domain) as w:
+                    # First, add every one needed.
+                    for i, is_left in enumerate(queries_left):
+                        if is_left is True:
+                            #  We need to run command[i]
+                            command_type, command_args = (commands[i]['type'], commands[i]['args'])
+                            final_result_array[i] = tp.apply_async(run_command, (w, command_type, command_args))
 
-    for command in commands:
-        command_type, command_args = (command['type'], command['args'])
-        final_result_array.append(tp.apply_async(run_command, (w, command_type, command_args)))
+                    # Now wait for all of the added ones to finish to finish
+                    for i, is_left in enumerate(queries_left):
+                        if is_left is True:
+                            final_result_array[i] = final_result_array[i].get()
 
-    # Now wait for all of them to finish.
-    for i in range(len(final_result_array)):
-        final_result_array[i] = final_result_array[i].get()
+                            # Check if we are done with it.
+                            if len(final_result_array[i]) == 0 or final_result_array[i][0].get("Exception") is None:
+                                queries_left[i] = False
+            else:
+                break
 
-    w.close()
+        # To see it normally, change to(json.dumps("", indent=4)
+        print json.dumps(minimize_and_convert(final_result_array), encoding="utf-16")
+        sys.stdout.flush()
 
-    # To see it normally, change to(json.dumps("", indent=4)
-    print json.dumps(minimize_and_convert(final_result_array), encoding="utf-16")
-    sys.stdout.flush()
+    except Exception:
+        raise
+
+    finally:
+        tp.terminate()
 
     sys.exit(0)

@@ -2,6 +2,7 @@
 
 import ldap3
 from active_directory_adapter.exceptions import LdapException
+from retrying import retry
 
 
 class LdapConnection:
@@ -49,6 +50,7 @@ class LdapConnection:
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise LdapException(str(ldap_error))
 
+    @retry(stop_max_attempt_number=3, wait_fixed=1000 * 3)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
 
@@ -61,6 +63,9 @@ class LdapConnection:
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
+
             # The search filter will get only enabled "computer" objects.
             # We are using paged search, as documented here:
             # http://ldap3.readthedocs.io/searches.html#simple-paged-search
@@ -95,8 +100,10 @@ class LdapConnection:
                 return []
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
+            # A specific connection is usually terminated if we do not use it a lot.
             raise LdapException(str(ldap_error))
 
+    @retry(stop_max_attempt_number=3, wait_fixed=1000 * 3)
     def get_users_list(self):
         """
         returns a list of objects representing the users in this DC.
@@ -104,10 +111,12 @@ class LdapConnection:
 
         :returns: a list of objects representing the users in this DC.
         :raises exceptions.LdapException: In case of error in the LDAP protocol
-        aaa
         """
 
         try:
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
+
             # A paged search, to get only users of type person and class user. notice we also only get
             # the attributes we need, to make the query as lightweight as possible.
             # The user account control queries only for active users.
@@ -135,7 +144,4 @@ class LdapConnection:
                     pass
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
-            # Avidor: sometimes there is a SIGPIPE here, which i don't really understand yet, and i can't reproduce it.
-            # so lets reconnect.
-            self._connect_to_server()
             raise LdapException(str(ldap_error))

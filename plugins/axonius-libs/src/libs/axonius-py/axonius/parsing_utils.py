@@ -32,10 +32,19 @@ def get_exception_string():
     when inside a catch exception flow, returns a really informative string representing it.
     :return: a string representing the exception.
     """
-
     exc_type, exc_obj, exc_tb = sys.exc_info()
-    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    return "{0}:{1}, in location {2}:{3}".format(exc_type, exc_obj, fname, exc_tb.tb_lineno)
+
+    ex_str = "Traceback (most recent call last):\n"
+    while exc_tb is not None:
+        ex_str = ex_str + "  File {0}, line {1}, in {2}\n".format(
+            exc_tb.tb_frame.f_code.co_filename,
+            exc_tb.tb_lineno,
+            exc_tb.tb_frame.f_code.co_name)
+
+        exc_tb = exc_tb.tb_next
+
+    ex_str = ex_str + f"{exc_type}:{exc_obj}"
+    return ex_str
 
 
 def figure_out_os(s):
