@@ -12,6 +12,7 @@ from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares
 from general_info.subplugins.user_logons import GetUserLogons
 from axonius.fields import Field
+from datetime import datetime
 
 
 MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 50
