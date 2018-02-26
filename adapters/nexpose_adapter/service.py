@@ -1,11 +1,8 @@
-from typing import Tuple
 
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.devices.device import Device
-from axonius.parsing_utils import normalize_hostname, compare_normalized_hostnames
-from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
 import nexpose_adapter.clients as nexpose_clients
 
@@ -14,20 +11,6 @@ USER = 'username'
 NEXPOSE_HOST = 'host'
 NEXPOSE_PORT = 'port'
 VERIFY_SSL = 'verify_ssl'
-
-
-class NexposeScannerCorrelatorBase(ScannerCorrelatorBase):
-    def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
-        """
-        check only first part of the hostname
-        :param parsed_device:
-        :return:
-        """
-        hostname = normalize_hostname(parsed_device)
-        for adapter_device in self._all_adapter_devices:
-            remote_hostname = normalize_hostname(adapter_device['data'])
-            if compare_normalized_hostnames(hostname, remote_hostname):
-                return adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id']
 
 
 class NexposeAdapter(ScannerAdapterBase):
@@ -108,7 +91,3 @@ class NexposeAdapter(ScannerAdapterBase):
             return nexpose_clients.NexposeV3Client(self.logger, self.num_of_simultaneous_devices, **client_config)
         except ClientConnectionException:
             return nexpose_clients.NexposeV2Client(self.logger, self.num_of_simultaneous_devices, **client_config)
-
-    @property
-    def _get_scanner_correlator(self):
-        return NexposeScannerCorrelatorBase

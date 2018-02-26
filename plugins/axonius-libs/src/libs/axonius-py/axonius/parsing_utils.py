@@ -5,10 +5,11 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 import re
 import sys
 import os
+from types import FunctionType
+from typing import NewType, Callable
+
 import dateutil.parser
 import ipaddress
-from bson.decimal128 import Decimal128, create_decimal128_context
-import decimal
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
@@ -25,6 +26,14 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
 DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP']
+# NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.
+# Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
+# them each time.
+NORMALIZED_IPS = 'normalized_ips'
+NORMALIZED_MACS = 'normalized_macs'
+
+pair_comparator = NewType('lambda x,y -> bool', FunctionType)
+parameter_function = NewType('lambda x -> paramter of x', Callable)
 
 
 def get_exception_string():
@@ -216,6 +225,91 @@ def get_device_id_for_plugin_name(associated_adapter_devices, plugin_name_key):
                  if plugin_name_key == plugin_unique_name), None)
 
 
+def extract_all_ips(network_ifs):
+    """
+    :param network_ifs: the network_ifs as appear in the axonius device scheme
+    :return: yields every ip in the network interfaces
+    """
+    from axonius.devices.device import IPS_FIELD
+    if network_ifs is None:
+        return
+    for network_if in network_ifs:
+        for ip in network_if.get(IPS_FIELD) or []:
+            yield ip
+
+
+def extract_all_macs(network_ifs):
+    """
+    :param network_ifs: the network_ifs as appear in the axonius device scheme
+    :return: yields every mac in the network interfaces
+    """
+    from axonius.devices.device import MAC_FIELD
+    if network_ifs is None:
+        return
+    for network_if in network_ifs:
+        current_mac = network_if.get(MAC_FIELD, '')
+        if current_mac != '' and current_mac is not None:
+            yield current_mac.upper().replace('-', '').replace(':', '')
+
+
+def is_one_subset_of_the_other(first_set, second_set):
+    """
+    :param first_set: a set
+    :param second_set: a set
+    :return: True if one of the sets is a subset of the other
+    """
+    if not first_set or not second_set:
+        return False
+    return first_set.issubset(second_set) or second_set.issubset(first_set)
+
+
+def compare_os_type(adapter_device1, adapter_device2):
+    from axonius.devices.device import OS_FIELD
+    return adapter_device1['data'][OS_FIELD]['type'] == adapter_device2['data'][OS_FIELD]['type']
+
+
+def compare_hostname(adapter_device1, adapter_device2):
+    return adapter_device1['data']['hostname'] == adapter_device2['data']['hostname']
+
+
+def is_a_scanner(adapter_device):
+    """
+    checks if the adapters is the result of a scanner device
+    :param adapter_device: an adapter device to check
+    """
+    from axonius.devices.device import SCANNER_FIELD
+    if adapter_device['data'].get(SCANNER_FIELD, False):
+        return True
+    return False
+
+
+def is_different_plugin(adapter_device1, adapter_device2):
+    return adapter_device1['plugin_name'] != adapter_device2['plugin_name']
+
+
+def is_from_ad(adapter_device):
+    return adapter_device['plugin_name'] == 'ad_adapter'
+
+
+def get_os_type(adapter_device):
+    from axonius.devices.device import OS_FIELD
+    return (adapter_device['data'].get(OS_FIELD) or {}).get('type')
+
+
+def get_hostname(adapter_device):
+    return adapter_device['data'].get('hostname')
+
+
+def has_mac_or_ip(adapter_data):
+    """
+    checks if one of the network interfaces in adapter data has a MAC or ip
+    :param adapter_data: the data of the adapter to test
+    :return: True if there's at least one MAC or IP
+    """
+    from axonius.devices.device import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
+    return any(x.get(IPS_FIELD) or x.get(MAC_FIELD) for x in (adapter_data.get(NETWORK_INTERFACES_FIELD) or []))
+
+
 def normalize_hostname(adapter_data):
     hostname = adapter_data.get('hostname')
     if hostname is not None:
@@ -240,3 +334,106 @@ def compare_normalized_hostnames(host1, host2) -> bool:
     """
     return host1 and host2 and (does_list_startswith(host1, host2) or
                                 does_list_startswith(host2, host1))
+
+
+def ips_do_not_contradict(adapter_device1, adapter_device2):
+    device1_ips = adapter_device1.get(NORMALIZED_IPS)
+    device2_ips = adapter_device2.get(NORMALIZED_IPS)
+    return not device1_ips or not device2_ips or is_one_subset_of_the_other(device1_ips, device2_ips)
+
+
+def macs_do_not_contradict(adapter_device1, adapter_device2):
+    device1_macs = adapter_device1.get(NORMALIZED_MACS)
+    device2_macs = adapter_device2.get(NORMALIZED_MACS)
+    return not device1_macs or not device2_macs or is_one_subset_of_the_other(device1_macs, device2_macs)
+
+
+def hostnames_do_not_contradict(adapter_device1, adapter_device2):
+    device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
+    device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
+    return not device1_hostnames or not device2_hostnames or compare_normalized_hostnames(device1_hostnames, device2_hostnames)
+
+
+def compare_ips(adapter_device1, adapter_device2):
+    return is_one_subset_of_the_other(adapter_device1.get(NORMALIZED_IPS), adapter_device2.get(NORMALIZED_IPS))
+
+
+def compare_macs(adapter_device1, adapter_device2):
+    return is_one_subset_of_the_other(adapter_device1.get(NORMALIZED_MACS), adapter_device2.get(NORMALIZED_MACS))
+
+
+def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool:
+    """
+    See compare_normalized_hostnames docs
+    :param adapter_device1: first device
+    :param adapter_device2: second device
+    :return:
+    """
+    return compare_normalized_hostnames(adapter_device1.get(NORMALIZED_HOSTNAME),
+                                        adapter_device2.get(NORMALIZED_HOSTNAME))
+
+
+def get_normalized_mac(adapter_device):
+    return adapter_device.get(NORMALIZED_MACS)
+
+
+def get_normalized_ip(adapter_device):
+    return adapter_device.get(NORMALIZED_IPS)
+
+
+def normalize_adapter_devices(devices):
+    """
+    in order to save a lot of time later - we normalize the adapter devices.
+        every adapter_device with an ip or mac is given a corresponding set in the root of the adapter_device.
+        we upper the hostname of every adapter_device with a hostname
+        we upper the os type of every adapter_device with a os type
+    :param devices: all of the devices to be correlated
+    :return: a normalized list of the adapter_devices
+    """
+    for device in devices:
+        for adapter_device in device['adapters']:
+            yield normalize_adapter_device(adapter_device)
+
+
+def normalize_adapter_device(adapter_device):
+    """
+    See normalize_adapter_devices
+    """
+    from axonius.devices.device import OS_FIELD, NETWORK_INTERFACES_FIELD
+    adapter_data = adapter_device['data']
+    if has_mac_or_ip(adapter_data):
+        ips = set(extract_all_ips(adapter_data[NETWORK_INTERFACES_FIELD]))
+        macs = set(extract_all_macs(adapter_data[NETWORK_INTERFACES_FIELD]))
+        adapter_device[NORMALIZED_IPS] = ips if len(ips) > 0 else None
+        adapter_device[NORMALIZED_MACS] = macs if len(macs) > 0 else None
+    # Save the normalized hostname so we can later easily compare.
+    # See further doc near definition of NORMALIZED_HOSTNAME.
+    adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_device['data'])
+    if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
+        adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
+    return adapter_device
+
+
+def inverse_function(x: FunctionType) -> FunctionType:
+    """
+    Returns the inverse of a boolean function
+    """
+
+    def tmp(*args, **kwargs):
+        return not x(*args, **kwargs)
+
+    return tmp
+
+
+def or_function(*functions) -> FunctionType:
+    """
+    Returns a function that represents the OR of the provided functions
+    """
+
+    def tmp(*args, **kwargs):
+        for func in functions:
+            if func(*args, **kwargs):
+                return True
+        return False
+
+    return tmp

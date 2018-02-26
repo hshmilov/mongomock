@@ -25,9 +25,3 @@ class TestJamfAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip
-    def test_fetch_devices(self):
-        # We remove the search and re-create it every time - two parallel tests could
-        # interrupt each other so for stability it's skipped
-        pass

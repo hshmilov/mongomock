@@ -1,10 +1,9 @@
-from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
 from nessus_adapter.exceptions import NessusException
-
 
 HOST = 'host'
 PORT = 'port'
@@ -12,7 +11,7 @@ USERNAME = 'username'
 PASSWORD = 'password'
 
 
-class NessusAdapter(AdapterBase):
+class NessusAdapter(ScannerAdapterBase):
     """ An adapter for Tenable's Nessus Vulnerability scanning platform. """
 
     class MyDevice(Device):
@@ -69,7 +68,7 @@ class NessusAdapter(AdapterBase):
                         continue
                     # Get all hosts for scan
                     for host in client_data.get_hosts(scan['id']):
-                        if host.get('host_id') is None or host.get('hostname') is None:
+                        if host.get('host_id') is None:
                             continue
                         devices_count += 1
                         if devices_count % 1000 == 0:
@@ -79,14 +78,13 @@ class NessusAdapter(AdapterBase):
                         if not host_details:
                             continue
 
-                        hostname = host['hostname']
-                        if hostname not in device_dict:
+                        host_id = host.get('host_id')
+                        if host_id not in device_dict:
                             # Add host that is not yet listed in dict
-                            host_details['id'] = hostname
                             host_details['scans'] = {}
-                            device_dict[hostname] = host_details
+                            device_dict[host_id] = host_details
                         # Add current scan info to the host, by scan id
-                        device_dict[hostname]['scans'][scan['id']] = host
+                        device_dict[host_id]['scans'][scan['id']] = host
 
                 return device_dict.values()
         except NessusException:
@@ -138,8 +136,6 @@ class NessusAdapter(AdapterBase):
         """
         for device_raw in devices_raw_data:
             device = self._new_device()
-            device.id = device_raw['id']
-            device.hostname = ''
             device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
                            [device_raw.get('info', {}).get('host-ip', '')], self.logger)

@@ -1,5 +1,4 @@
-from typing import List, NewType, Tuple, Iterable, Callable
-from types import FunctionType
+from typing import List, NewType, Tuple, Iterable
 from abc import ABC, abstractmethod
 
 import itertools
@@ -7,11 +6,9 @@ from funcy import pairwise
 
 from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.plugin_exceptions import PluginException
+from axonius.parsing_utils import pair_comparator, parameter_function
 
 adapter_device = NewType('adapter_device', dict)
-pair_comparator = NewType('lambda x,y -> bool', FunctionType)
-parameter_function = NewType('lambda x -> paramter of x', Callable)
 device_pair = NewType('DevicePair', Tuple)
 
 

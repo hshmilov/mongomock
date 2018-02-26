@@ -78,7 +78,6 @@ class FortigateAdapter(AdapterBase):
                 mac_address = format_mac(raw_device.get('mac', ''))
                 device.id = mac_address
                 device.add_nic(mac_address, [raw_device.get("ip")] if raw_device.get("ip") else [], self.logger)
-                device.scanner = True
 
                 last_seen = raw_device.get('expire_time')
                 # The DHCP lease time is kept in seconds and by getting the dhcp lease expiry - lease time

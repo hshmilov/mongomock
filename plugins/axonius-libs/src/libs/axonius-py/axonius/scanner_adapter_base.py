@@ -4,14 +4,28 @@ See https://axonius.atlassian.net/wiki/spaces/AX/pages/415858710/ScannerAdapter+
 """
 import uuid
 from abc import ABC
-from typing import Tuple
+from typing import Tuple, List
 
 from axonius.mixins.feature import Feature
 
 from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_SUBTYPE, ADAPTER_PLUGIN_TYPE
 
-from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
+from axonius.parsing_utils import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \
+    extract_all_macs, get_hostname, compare_ips, macs_do_not_contradict, hostnames_do_not_contradict, \
+    inverse_function, or_function, compare_macs, compare_device_normalized_hostname, ips_do_not_contradict
+
+
+def newest(devices):
+    """
+    Return the newest deviceaccording to accurate_for_datetime
+    If empty, returns None
+    """
+    devices = list(devices)
+    if not devices:
+        return None
+    return max(devices, key=lambda device: device['accurate_for_datetime'])
 
 
 class ScannerCorrelatorBase(object):
@@ -21,41 +35,88 @@ class ScannerCorrelatorBase(object):
         :param all_devices: all axonius devices from DB
         """
         super().__init__(*args, **kwargs)
-        self._all_devices = all_devices
-        self._all_adapter_devices = [adapter for adapters in all_devices for adapter in adapters['adapters']]
+        self._all_devices = list(all_devices)
+        self._all_adapter_devices = [adapter for adapters in self._all_devices for adapter in adapters['adapters']]
 
         self._plugin_unique_name = plugin_unique_name
 
-    def _find_correlation_with_self(self, parsed_device) -> str:
+    def find_suitable(self, parsed_device, normalizations: List[parameter_function],
+                      predicates: List[pair_comparator]) -> Tuple[str, str]:
+        """
+        Returns all devices that are compatible with all given predicates
+        :return: iterator(parsed_devices)
+        """
+        for normalization in normalizations:
+            parsed_device = normalization(parsed_device)
+
+        for device in self._all_adapter_devices:
+            for normalization in normalizations:
+                device = normalization(device)
+            if all(predict(parsed_device, device) for predict in predicates):
+                yield device
+
+    def find_suitable_newest(self, *args, **kwargs) -> Tuple[str, str]:
+        """
+        Returns newest from find_suitable - see find_suitable docs
+        :return: parsed_devices
+        """
+        newest_device = newest(self.find_suitable(*args, **kwargs))
+        if not newest_device:
+            return None
+        return newest_device[PLUGIN_UNIQUE_NAME], newest_device['data']['id']
+
+    def find_suitable_no_ip_contrdictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
+        devices = list(self.find_suitable(parsed_device, *args, **kwargs))
+        if len(devices) > 1:
+            device = next(filter(lambda dev: ips_do_not_contradict(dev, parsed_device), devices), None)
+        elif len(devices) == 0:
+            return None
+        else:
+            device = devices[0]
+        return None if device is None else (device[PLUGIN_UNIQUE_NAME], device['data']['id'])
+
+    def _find_correlation_with_self(self, parsed_device) -> Tuple[str, str]:
         """
         virtual by design
 
         find, if possible, a previous instance of a scanner result that refers
         to the given parsed_device
         :param parsed_device:
-        :return: id of previous instance
+        :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
-        hostname = parsed_device.get('hostname', '').strip()
-        if not hostname:
-            return
-        for adapter_device in self._all_adapter_devices:
-            if adapter_device[PLUGIN_UNIQUE_NAME] == self._plugin_unique_name:
-                if adapter_device['data']['hostname'] == hostname:
-                    return adapter_device['data']['id']
+        return self.find_suitable_no_ip_contrdictions(parsed_device,
+                                                      normalizations=[normalize_adapter_device],
+                                                      predicates=[inverse_function(is_different_plugin),
+                                                                  or_function(compare_macs,
+                                                                              compare_device_normalized_hostname)])
 
     def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
         """
         virtual by design
 
         :param parsed_device:
-        :return:
+        :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
-        hostname = parsed_device.get('hostname', '').strip()
-        if not hostname:
-            return
-        for adapter_device in self._all_adapter_devices:
-            if adapter_device['data'].get('hostname') == hostname:
-                return adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id']
+        remote_correlation = self.find_suitable_newest(parsed_device,
+                                                       normalizations=[normalize_adapter_device],
+                                                       predicates=[is_different_plugin, compare_ips,
+                                                                   macs_do_not_contradict,
+                                                                   hostnames_do_not_contradict])
+        if remote_correlation is None:
+            return None
+        plugin_unique_name, adapter_device_id = remote_correlation
+        correlation_base_axonius_device = next((axon_device for
+                                                axon_device in self._all_devices
+                                                if
+                                                any(adapter_device[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
+                                                    adapter_device['data']['id'] == adapter_device_id for
+                                                    adapter_device in axon_device['adapters'])), None)
+        newest_device = newest(filter(lambda dev: parsed_device[PLUGIN_UNIQUE_NAME] == dev[PLUGIN_UNIQUE_NAME],
+                                      correlation_base_axonius_device['adapters']))
+        if newest_device is None:
+            return plugin_unique_name, adapter_device_id
+        else:
+            return newest_device[PLUGIN_UNIQUE_NAME], newest_device['data']['id']
 
     def find_correlation(self, parsed_device) -> Tuple[str, str]:
         """
@@ -67,26 +128,28 @@ class ScannerCorrelatorBase(object):
         if self_correlation:
             # Case "A": The device has been found to be the same as a previous result
             # meaning that it should get an `id` but not a "correlate" field
-            parsed_device['id'] = self_correlation
+            _, self_correlation_id = self_correlation
+            parsed_device['data']['id'] = self_correlation_id
             return None
 
-        # (In any case but A):
-        # The device wasn't found to be the same as from a previous result
-        # (i.e. this should be the first time this device is seen) so it gets an arbitrary Id
-        parsed_device['id'] = uuid.uuid4().hex
+        # generate a fake id
+        parsed_device['data']['id'] = uuid.uuid4().hex
 
         remote_correlation = self._find_correlation_with_real_adapter(parsed_device)
         if remote_correlation:
-            # Case B: in this case we can correlate with something else
+            if parsed_device[PLUGIN_UNIQUE_NAME] == remote_correlation[0]:
+                # updating a current adapter correlation so no new one will be created - basically a different kind
+                # of self correlation
+                parsed_device['data']['id'] = remote_correlation[1]
+                return None
             return remote_correlation
 
-        if not parsed_device.get('hostname'):
-            # Case C: this device will never be able to correlate with anything in the future - ignore it
-            return IGNORE_DEVICE
+        # if a scanner has a hostname or macs this will act as its ID
+        my_macs = set(extract_all_macs(parsed_device['data'].get('network_interfaces')))
+        hostname = get_hostname(parsed_device)
 
-        # Case D: no association at all :( - just store the device, perhaps it will fall under case A
-        # and in the future something will correlate us
-        return None
+        # the device has only a fake ID and no correlations - ignore it
+        return None if my_macs or hostname else IGNORE_DEVICE
 
 
 class ScannerAdapterBase(AdapterBase, Feature, ABC):
@@ -100,7 +163,10 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         scanner = self._get_scanner_correlator(devices, self.plugin_unique_name)
         raw_devices, parsed_devices = super()._try_query_devices_by_client(*args, **kwargs)
         for device in parsed_devices:
-            device['correlates'] = scanner.find_correlation(device)
+            device['correlates'] = scanner.find_correlation({"data": device,
+                                                             PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                                                             PLUGIN_NAME: self.plugin_name,
+                                                             'plugin_type': self.plugin_type})
         return raw_devices, parsed_devices
 
     @property

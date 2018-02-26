@@ -5,7 +5,7 @@ client_details = {
     "username": "axonius",
     "password": "wBV8LgOP4uHrnKiq3VMQ",
     'advanced_search_name': 'Axonius-Inventory-Search',
-    'create_search_privileges': True
+    'create_search_privileges': False
 }
 
 # Our office Mac mini (Axonius Printer)
