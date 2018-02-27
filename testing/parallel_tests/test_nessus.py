@@ -25,7 +25,7 @@ class TestNessusAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip("Nessus server is down")
+    @pytest.mark.skip("Nessus returns only the nessus server and only its IP so no comparison is possible")
     def test_fetch_devices(self):
         super().test_fetch_devices()
         devices_as_dict = self.adapter_service.devices()
@@ -38,4 +38,4 @@ class TestNessusAdapter(AdapterTestBase):
 
 if __name__ == '__main__':
     import pytest
-    pytest.main(["parallel_tests/test_nessus.py"])
+    pytest.main([__file__])
