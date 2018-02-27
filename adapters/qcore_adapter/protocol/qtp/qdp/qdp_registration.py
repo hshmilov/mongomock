@@ -46,7 +46,9 @@ PumpInfo = Struct(
 
 RegistrationRequestMessage = Struct(
     'RegistrationRequestMessage' / Pass,
-    'pump_info' / PumpInfo
+    'pump_info' / PumpInfo,
+    # 14.5
+    'barcode_crc' / Int32ul
 )
 
 RegistrationResponseMessage = Struct(

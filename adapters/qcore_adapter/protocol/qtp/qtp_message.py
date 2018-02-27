@@ -91,13 +91,14 @@ class QtpMessage(object):
         items = []
         for key in container.keys():
             try:
+                ret = []
                 if isinstance(container[key], (Container, ListContainer)):
                     if isinstance(container[key], Container):
                         ret = QtpMessage._search(container[key], compiled_pattern, search_all)
                     else:
                         for list_item in container[key]:
                             ret.extend(QtpMessage._search(list_item, compiled_pattern, search_all))
-                    if ret is not None:
+                    if ret is not None and len(ret) > 0:
                         if search_all:
                             items.extend(ret)
                         else:

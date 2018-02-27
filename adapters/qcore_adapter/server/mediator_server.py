@@ -1,4 +1,5 @@
 import socketserver
+import threading
 
 from qcore_adapter.protocol.exceptions import ProtocolException
 from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
@@ -14,21 +15,18 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
     client.
     """
 
-    def send_and_flush(self, bytes):
-        self.wfile.write(bytes)
-        self.wfile.flush()
-
-    def get_send_func(self):
-        def send_func(bytes):
-            self.send_and_flush(bytes)
-
-        return send_func
-
     def handle(self):
 
-        print(f"Established connection {self.client_address}")
+        send_lock = threading.Lock()
 
-        pump_connection = PumpConnection(self.get_send_func())
+        def send_and_flush(bytes_to_send):
+            with send_lock:
+                self.wfile.write(bytes_to_send)
+                self.wfile.flush()
+
+        print(f'Connection established: {self.client_address}')
+
+        pump_connection = PumpConnection(send_and_flush)
 
         connection_alive = False
         while not connection_alive:
@@ -39,7 +37,7 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
                 while not qtp.is_complete():
                     inp = self.rfile.read(qtp.remaining_bytes())
                     if len(inp) == 0:
-                        print("DONE...")
+                        print(f'Connection lost: {self.client_address}')
                         connection_alive = True
                         break
 
@@ -53,10 +51,9 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
 def run_mediator_server():
     host, port = '0.0.0.0', 5016
     socketserver.TCPServer.allow_reuse_address = True
-    # Create the server, binding to localhost on port 9999
+    # Create the server, binding to address
     with socketserver.TCPServer((host, port), MyTCPHandler) as server:
-        # Activate the server; this will keep running until you
-        # interrupt the program with Ctrl-C
+        # Activate the server
         server.serve_forever()
 
 

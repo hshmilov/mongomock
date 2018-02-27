@@ -1,18 +1,18 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="MEDIATOR" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="run_all_qcore_unitests" type="PythonConfigurationType" factoryName="Python" folderName="tests">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/adapters/qcore_adapter/server" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/adapters/qcore_adapter/tests" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <module name="cortex" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/adapters/qcore_adapter/server/mediator_server.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/adapters/qcore_adapter/tests/run_all_qcore_unitests.py" />
     <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />

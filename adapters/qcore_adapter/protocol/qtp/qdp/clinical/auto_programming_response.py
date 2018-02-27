@@ -35,7 +35,7 @@ AutoProgramingResponseClinicalStatus = Struct(
     'dose_rate_field_details' / Int32ul,
     'patient_weight' / Int32ul,
     'dl_id' / QcoreString,
-    'unkown_drug' / Byte,
+    'unknown_drug' / Byte,
     'medication_strength_field_details' / Int32ul,
     'dilient_volume_field_details' / Int32ul,
     'volume_to_be_infused_field_details' / Int32ul,

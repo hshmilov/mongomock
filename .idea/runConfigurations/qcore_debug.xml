@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="qcore debug" type="PythonConfigurationType" factoryName="Python" folderName="Debug" singleton="true">
+  <configuration default="false" name="qcore debug" type="PythonConfigurationType" factoryName="Python" folderName="Debug">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="docker://axonius/qcore-adapter/python3.6" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/adapters" />
+    <option name="SDK_HOME" value="docker://axonius/qcore-adapter:latest/python3.6" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/adapters/qcore-adapter/src" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -49,22 +49,28 @@
       <option name="volumeBindings">
         <list>
           <DockerVolumeBindingImpl>
-            <option name="containerPath" value="/app/" />
+            <option name="containerPath" value="/opt/project" />
             <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/adapters" />
+            <option name="hostPath" value="$PROJECT_DIR$" />
+            <option name="readOnly" value="false" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/opt/project/adapters/qcore_adapter/" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/adapters/qcore_adapter/" />
+            <option name="readOnly" value="true" />
+          </DockerVolumeBindingImpl>
+          <DockerVolumeBindingImpl>
+            <option name="containerPath" value="/opt/project/plugins/axonius-libs/src/libs/axonius-py" />
+            <option name="editable" value="true" />
+            <option name="hostPath" value="$PROJECT_DIR$/plugins/axonius-libs/src/libs/axonius-py" />
             <option name="readOnly" value="true" />
           </DockerVolumeBindingImpl>
           <DockerVolumeBindingImpl>
             <option name="containerPath" value="/home/axonius/logs" />
             <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/logs/qcore-adapter" />
+            <option name="hostPath" value="$PROJECT_DIR$/logs/qcore_adapter" />
             <option name="readOnly" value="false" />
-          </DockerVolumeBindingImpl>
-          <DockerVolumeBindingImpl>
-            <option name="containerPath" value="/home/axonius/libs" />
-            <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/plugins/axonius-libs/src/libs" />
-            <option name="readOnly" value="true" />
           </DockerVolumeBindingImpl>
         </list>
       </option>

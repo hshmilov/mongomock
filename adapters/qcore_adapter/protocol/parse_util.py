@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from qcore_adapter.protocol.qtp.qtp_decoder import QtpDecoder
 from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
 import sys
 

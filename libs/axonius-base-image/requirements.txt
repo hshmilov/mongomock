@@ -29,3 +29,4 @@ netstruct==1.1.2
 construct==2.9.25
 netmiko==2.0.1
 pyodbc==4.0.22
+dpkt==1.9.1

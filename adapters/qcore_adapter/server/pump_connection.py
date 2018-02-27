@@ -1,51 +1,19 @@
-from qcore_adapter.protocol.build_helpers.registration import get_registration_response_buffer
-from qcore_adapter.protocol.consts import PUMP_SERIAL
+from qcore_adapter.protocol.build_helpers.response_builder import get_registration_response_buffer
+from qcore_adapter.protocol.consts import UNFINISHED_PARSING_MARKER
 from qcore_adapter.protocol.qtp.qtp_keepalive_message import QtpKeepAliveMessage
 from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
 import qcore_adapter.server.bins as bins
-from qcore_adapter.qcore_mongo import QcoreMongo
 
-
-class PumpState(object):
-    def __init__(self, registration: QtpMessage):
-        self.db = QcoreMongo()
-        self.pump_info = registration.get_field('pump_info')
-        self.serial = registration.get_field(PUMP_SERIAL)
-        self.id = str(self.serial)
-        self.clinical_state = {}
-        self.pump_filter = {PUMP_SERIAL: self.id}
-        self.table = self.db.table
-        self.table.update_one(filter=self.pump_filter,
-                              update={
-                                  "$set": {'pump_info': self.pump_info, 'status': 'ONLINE', PUMP_SERIAL: self.id}},
-                              upsert=True)
-
-    def update_clinical(self, qtp: QtpMessage):
-        csi_elements = qtp.get_field('csi_elements')
-        for element in csi_elements:
-            # TODO: insert only newer ts (if has sequence number...)
-            self.clinical_state[element['csi_item_type']] = element['csi_item']
-
-        print("Clinical state")
-        for k, v in self.clinical_state.items():
-            print(k, v)
-            self.table.update_one(filter=self.pump_filter,
-                                  update={"$set": {'clinical_status': self.clinical_state}}, upsert=True)
-
-    def __del__(self):
-        # TODO: use contextlib ...
-        print("Connection to pump lost...")
-        self.table.update_one(filter=self.pump_filter, update={"$set": {'status': 'OFFLINE'}}, upsert=True)
+from qcore_adapter.server.pump_state import PumpState
 
 
 class PumpConnection(object):
     def __init__(self, send_func):
         self._send_func = send_func
         self.is_registered = False
-        self._registered_pumps = dict()
         self._pump_state = None
 
-        print("Sending Connection established")
+        print('Sending Connection established')
         self._send_func(bins.CONNECTION_ESTABLISHED)
 
     @property
@@ -67,15 +35,22 @@ class PumpConnection(object):
 
     def on_message(self, qtp: QtpMessage):
 
+        if self.is_registered:
+            self.pump_state.keepalive_mark()
+
         if isinstance(qtp.payload_root, QtpKeepAliveMessage):
             return
 
+        if qtp.has_field(UNFINISHED_PARSING_MARKER):
+            print(f'Got partially parsed message = {qtp.bytes}')
+            print(qtp.payload_root)
+
         if qtp.has_field('EmptyMessage'):
-            print("Got keepalive")
+            print('Got keepalive')
             return
 
         if qtp.has_field('TimeSyncMessage'):
-            print("Got TimeSyncMessage")
+            print('Got TimeSyncMessage')
             self._send_func(bins.TIMESYNC_ACK)
             self._send_func(bins.HARDCODED_TIMESYNC)
             return
@@ -89,9 +64,10 @@ class PumpConnection(object):
             self.handle_clinical_message(qtp)
             return
 
-        if qtp.has_field('UNHANDLED_QDP_TYPE'):
-            print(f'unknown message = {qtp.bytes}')
-            print(qtp.payload_root)
+        if qtp.get_field('qdp_message_type') == 'FileDeploymentInquiryRequest':
+            print('Got file deployment, TBD later')
             return
 
+        print(f'Got unknown qtp message:')
+        print(qtp.bytes)
         print(qtp.payload_root)

@@ -1,5 +1,7 @@
 from construct import Struct, Int32ul
 
+CSI_SEQUENCE_NUMBER = 'csi_sequence_number'
+
 QcoreSequence = Struct(
-    'sequence_timestamp' / Int32ul,
-    'sequence_number' / Int32ul)
+    'csi_sequence_timestamp' / Int32ul,
+    CSI_SEQUENCE_NUMBER / Int32ul)

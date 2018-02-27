@@ -3,7 +3,7 @@ from construct import Struct, Enum, Byte, Int32ul, Embedded, Int32sl, If, this, 
 from qcore_adapter.protocol.qtp.qdp.clinical.sequence import QcoreSequence
 from qcore_adapter.protocol.qtp.qdp.clinical_common import ClinicalMessageTypeReverseMapping
 
-InfusionClinicalStatus = Struct(
+InfusionStateClinicalStatus = Struct(
     Embedded(QcoreSequence),
     'message_type' / Enum(Byte, **ClinicalMessageTypeReverseMapping),
     'auto_program_reference_id' / Int32ul,
@@ -33,7 +33,7 @@ InfusionClinicalStatus = Struct(
     'volume_delivered_since_last_start' / Int32sl,
     'total_bag_volume_delivered' / Int32sl,
     'distal_occlusion_threshold' / Int32sl,
-    'proxima_occlusion_threshold' / Int32sl,
+    'proximal_occlusion_threshold' / Int32sl,
     'shift_total_volume_delivered' / Int32sl,
     'cummulative_volume' / Int32sl,
 )
