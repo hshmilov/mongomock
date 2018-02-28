@@ -82,7 +82,7 @@ def parse_rate(rate):
         return f'{drug_unit}/{weight}/{time}'
     except Exception as e:
         print(f'failed to parse {rate} - {e}')
-        return "Failed parsing"
+        return f'Failed parsing {rate}'
 
 
 AperiodicInfusionClinicalStatus = Struct(

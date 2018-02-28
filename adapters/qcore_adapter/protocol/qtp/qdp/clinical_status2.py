@@ -1,4 +1,5 @@
-from construct import Struct, Int32ul, Byte, Int16ul, Enum, Pass, Range, this, Switch, Embedded, GreedyRange, Probe
+from construct import Struct, Int32ul, Byte, Int16ul, Enum, Pass, Range, this, Switch, Embedded, GreedyRange, Probe, \
+    Computed
 
 from qcore_adapter.protocol.consts import UNFINISHED_PARSING_MARKER
 from qcore_adapter.protocol.qtp.common import QcoreString, enum_to_mapping, CStyleEnum
@@ -70,8 +71,18 @@ QcoreInt64 = Struct(
 CSI_ITEM_TYPE = 'csi_item_type'
 CSI_ITEM = 'csi_item'
 
+
+def csi_to_string(ctx):
+    try:
+        return ClinicalStatusItemType(ctx.csi_type_numeric).name
+    except:
+        return str(ctx.csi_type_numeric)
+
+
 ClinicalStatusItem = Struct(
-    CSI_ITEM_TYPE / Enum(Byte, **ClinicalStatusItemTypeReverseMapping),
+
+    'csi_type_numeric' / Byte,
+    CSI_ITEM_TYPE / Computed(csi_to_string),  # Enum(Byte, default=":(", **ClinicalStatusItemTypeReverseMapping),
     # Shared/Mednet/ClinicalItemsFactory.cpp
     CSI_ITEM / Switch(this.csi_item_type, {
         ClinicalStatusItemType.Connectivity.name: ConnectivityClinicalStatus,

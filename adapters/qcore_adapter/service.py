@@ -33,15 +33,21 @@ class QcoreAdapter(AdapterBase):
         inf_volume_remaining = Field(float, 'Volume remaining [ml]')
         inf_volume_infused = Field(float, 'Volume infused [ml]')
         inf_line_id = Field(int, 'Line id')
+        inf_total_bag_volume_delivered = Field(int, 'Total bag volume delivered')  # complex
+        inf_is_bolus = Field(bool, 'Is Bolus')  # complex
+        inf_bolus_data = Field(dict, 'Bolus data')  # complex
 
         # taken from aperiodic only
         inf_medication = Field(str, 'Medication')
         inf_cca = Field(int, 'Cca index')
         inf_delivery_rate = Field(float, 'Infusion rate [ml/h]')
 
-        inf_dose_rate = Field(float, 'Dose rate')
-        inf_dose_rate_units = Field(str, 'Units')
-        inf_status = Field(list, 'Infusion status')
+        inf_infusion_event = Field(str, 'Infusion event')  # complex
+        inf_dose_rate = Field(float, 'Dose rate')  # complex
+        inf_dose_rate_units = Field(str, 'Units')  # complex
+        inf_status = Field(list, 'Infusion status')  # complex
+
+        gen_device_context_type = Field(str, 'Context type')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -82,6 +88,9 @@ class QcoreAdapter(AdapterBase):
                 device.inf_dose_rate_units = aperiodic_status['rate_units_parsed']
 
                 device.inf_status = [k for k, v in aperiodic_status['operational_status'].items() if v is True]
+
+                device.inf_infusion_event = aperiodic_status['infusion_event']
+
                 # this data exists both in periodic and aperiodic and we will take the most recent
                 aperiodic_inf_state = aperiodic_status['csi_infusion_state']
 
@@ -98,10 +107,16 @@ class QcoreAdapter(AdapterBase):
             self.logger.exception("Failed to populate infusion status")
 
     def populate_infusion_state(self, device, infusion):
-        device.inf_time_remaining = str(timedelta(seconds=infusion['total_time_remaining']))
-        device.inf_volume_remaining = infusion['total_volume_remaining'] / 1000.
-        device.inf_volume_infused = infusion['total_volume_delivered'] / 1000.
+        device.inf_is_bolus = infusion['is_bolus'] != 0
+        if device.inf_is_bolus != 0:
+            device.inf_bolus_data = infusion['bolus_data']
+        else:
+            device.inf_time_remaining = str(timedelta(seconds=infusion['total_time_remaining']))
+            device.inf_volume_remaining = infusion['total_volume_remaining'] / 1000.
+            device.inf_volume_infused = infusion['total_volume_delivered'] / 1000.
+
         device.inf_line_id = infusion['line_id']
+        device.inf_total_bag_volume_delivered = infusion['total_bag_volume_delivered'] / 1000.
 
     def _query_devices_by_client(self, client_name, client_data):
         qcore_mongo = QcoreMongo()
@@ -122,11 +137,7 @@ class QcoreAdapter(AdapterBase):
             "type": "array"
         }
 
-    def stringify(self, d: dict):
-        return str(dict_filter(d, lambda v: v is None))
-
     def _parse_raw_data(self, devices_raw_data):
-
         now = time.time()
 
         for pump_document in devices_raw_data:
@@ -140,10 +151,14 @@ class QcoreAdapter(AdapterBase):
 
             device.pump_serial = device.id
             device.pump_name = infuser_info['infuser_name']
-            # note: can use stringify if needed
+
             device.sw_version = infuser_info['active_infuser_sw']['version']
             device.dl_version = infuser_info['active_dl']['name']
-            device.location = pump_document[CLINICAL_STATUS]['Connectivity']['bssid']
+
+            if CLINICAL_STATUS in pump_document:
+                device.location = pump_document[CLINICAL_STATUS]['Connectivity']['bssid']
+                device.gen_device_context_type = pump_document[CLINICAL_STATUS].get('general', {}).get(
+                    'device_context_type', '')
 
             self.populate_infusion_status(device, pump_document)
 

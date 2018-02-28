@@ -58,9 +58,22 @@ class PumpState(object):
             else:
                 self.clinical_state[item_type] = csi_item
 
+        self._update_general_state(qtp)
+
+        # store everything
         self.update_db({CLINICAL_STATUS: self.clinical_state})
 
     def __del__(self):
         print('Connection to pump lost...')
         # a small hack, not necessary but allows to discover disconnect faster
         self.update_db({KEEPALIVE_TS: 0.0})
+
+    def _update_general_state(self, qtp):
+        clinical2_state = qtp.get_field('qdp_payload')
+        sequence_in_message = clinical2_state['sequence_id']['low']
+        stored_sequence = self.clinical_state.get('general', {}).get('sequence_id', {}).get('low', 0)
+
+        if sequence_in_message > stored_sequence:
+            self.clinical_state['general'] = clinical2_state
+            del self.clinical_state['general'][CSI_ELEMENTS]
+            del self.clinical_state['general']['items_list_size']
