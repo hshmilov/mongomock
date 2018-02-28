@@ -205,9 +205,7 @@ class GuiService(PluginBase):
         Get Axonius devices from the aggregator
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
-            device_list = client_collection.find(
-                mongo_filter, mongo_projection)
+            device_list = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find(mongo_filter, mongo_projection)
             if mongo_filter and not skip:
                 db_connection[self.plugin_unique_name]['queries'].insert_one(
                     {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
@@ -874,6 +872,32 @@ class GuiService(PluginBase):
         # TODO get next cycle time
         return jsonify({'stages': [phase.name for phase in list(ResearchPhases)],
                         'current_stage': current_stage, 'current_status': current_status, 'next_cycle_time': ''})
+
+    @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
+    def get_adapter_devices(self):
+        """
+        For each adapter currently registered in system, count how many devices it fetched.
+
+        :return: Map between each adapter and the number of devices it has, unless no devices
+        """
+        adapter_devices = {}
+        plugins_available = requests.get(self.core_address + '/register').json()
+        with self._get_db_connection(False) as db_connection:
+            adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
+                                                                              {'plugin_type': 'ScannerAdapter'}]}).sort(
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            for adapter in adapters_from_db:
+                if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
+                    # Plugin not registered - unwanted in UI
+                    continue
+                devices_count = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find(
+                    {'adapters.plugin_name': adapter['plugin_name']}).count()
+                if not devices_count:
+                    # No need to document since adapter has no devices
+                    continue
+                adapter_devices[adapter['plugin_name']] = devices_count
+
+        return jsonify(adapter_devices)
 
     @property
     def plugin_subtype(self):

@@ -1,5 +1,8 @@
 <template>
     <scrollable-page title="axonius dashboard" class="dashboard">
+        <card title="Devices per Adapter">
+            <x-histogram :data="adapterDevices"></x-histogram>
+        </card>
         <card title="System Lifecycle">
             <x-progress-cycle :complete="cyclePortionComplete" :parts="lifecycle.stages"
                               :remaining="lifecycle.current_status"></x-progress-cycle>
@@ -12,18 +15,24 @@
     import ScrollablePage from '../../components/ScrollablePage.vue'
     import Card from '../../components/Card.vue'
     import xProgressCycle from '../../components/charts/ProgressCycle.vue'
-    import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
+    import xHistogram from '../../components/charts/Histogram.vue'
+    import { FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES } from '../../store/modules/dashboard'
     import { mapState, mapActions } from 'vuex'
 
     export default {
         name: 'x-dashboard',
-        components: { ScrollablePage, Card, xProgressCycle },
+        components: { ScrollablePage, Card, xProgressCycle, xHistogram },
         computed: {
             ...mapState(['dashboard']),
             lifecycle() {
 				if (!this.dashboard.lifecycle.data) return {}
 
 				return this.dashboard.lifecycle.data
+            },
+            adapterDevices() {
+            	if (!this.dashboard.adapterDevices.data) return {}
+
+            	return this.dashboard.adapterDevices.data
             },
             cyclePortionComplete() {
                 if (!this.lifecycle || !this.lifecycle.stages || !this.lifecycle.stages.length) return 0
@@ -38,16 +47,20 @@
             }
         },
         methods: {
-            ...mapActions({fetchLifecycle: FETCH_LIFECYCLE})
+            ...mapActions({fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES}),
+            getDashboardData() {
+            	this.fetchLifecycle()
+                this.fetchAdapterDevices()
+            }
         },
         created() {
-        	this.fetchLifecycle()
-			this.interval = setInterval(function () {
-				this.fetchLifecycle()
-			}.bind(this), 1000);
+        	this.getDashboardData()
+            this.interval = setInterval(function () {
+				this.getDashboardData()
+			}.bind(this), 1000)
 		},
 		beforeDestroy() {
-			clearInterval(this.interval);
+        	clearInterval(this.interval)
 		}
     }
 </script>
@@ -55,10 +68,14 @@
 
 <style lang="scss">
     .dashboard {
-        .card {
-            width: 360px;
-            .card-body {
-                text-align: center;
+        .page-body {
+            display: flex;
+            .card {
+                width: 360px;
+                margin-right: 24px;
+                .card-body {
+                    text-align: center;
+                }
             }
         }
     }

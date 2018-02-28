@@ -24,12 +24,11 @@
     .card {
         margin-bottom: 12px;
         .card-header {
+            flex: 0 1 auto;
             padding: 8px 12px;
             display: flex;
             flex-direction: row;
             -ms-flex-direction: row;
-            flex-basis: 100%;
-            -ms-flex-preferred-size: 100%;
             background-color: $background-color-light;
             .card-header-title {
                 flex: 1 1 auto;
