@@ -20,6 +20,7 @@ DOCKER_PORTS = {
     'aws-adapter':                      5112,
     'traiana-lab-machines-adapter':     5113,
     'stress-test-adapter':              5114,
+    'bomgar-adapter':                   5115,
     'puppet-adapter':                   5222,
     'nessus-adapter':                   5555,
     'general-info':                     5556,

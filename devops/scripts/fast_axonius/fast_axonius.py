@@ -59,7 +59,7 @@ def fast_axonius():
                 services[name].test = test
 
                 # Create a set_client with credentials function for that adapter's name
-                def get_func(name):
+                def get_funcs(name):
                     def set_client():
                         if not services[name].get_is_container_up():
                             print(f'Container {name} not running')
@@ -72,9 +72,16 @@ def fast_axonius():
                         else:
                             services[name].add_client(services[name].test.some_client_details)
 
-                    return set_client
+                    def refresh_devices():
+                        if not services[name].get_is_container_up():
+                            print(f'Container {name} not running')
+                            return
+                        if not services[name].clients():
+                            print('No clients exists')
+                        axonius_system.aggregator.query_devices(services[name].unique_name)
+                    return set_client, refresh_devices
 
-                services[name].set_client = get_func(name)
+                services[name].set_client, services[name].refresh_devices = get_funcs(name)
 
     class AxTests(object):
         def __init__(self, services=services, plugins=plugins):

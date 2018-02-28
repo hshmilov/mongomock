@@ -26,12 +26,12 @@ Examples:
 ./axonius.sh system up --all --prod
 
 # Start basic configuration with ad-adpter and aws-adapter and watch plugin 
-./axonius.sh system up --plugins watch --adapters ad aws
+./axonius.sh system up --services watch --adapters ad aws
 
 # Shutdown system (the basic configuration)
 ./axonius.sh system down --all
 
-# All system commands start and stop the system [mongo, core, aggregator, gui] plus any other specified containers
+# All system commands start and stop the system [mongo, core, aggregator, gui, execution] plus any other specified containers
 
 # In order to start and stop a specific *container*:
 ./axonius.sh adapter ad up [--prod]

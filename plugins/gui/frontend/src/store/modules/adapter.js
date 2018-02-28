@@ -94,6 +94,10 @@ export const adapterStaticData = {
 	'csv_adapter': {
 		name: 'CSV Adapter',
 		description: 'The CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
+	},
+	'bomgar_adapter': {
+		name: 'Bomgar Adapter',
+		description: 'Bomgar is a remote support solution that allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile device.'
 	}
 }
 
