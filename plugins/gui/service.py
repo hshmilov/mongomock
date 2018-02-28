@@ -1,7 +1,8 @@
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device import Device
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
+from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 
 import tarfile
 import io
@@ -841,6 +842,38 @@ class GuiService(PluginBase):
                             }
                         })
         return json.dumps(list(res['hits']['hits']))
+
+    #############
+    # DASHBOARD #
+    #############
+
+    @add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
+    def get_system_lifecycle(self):
+        """
+        Fetches and build data needed for presenting current status of the system's lifecycle in a graph
+
+        :return: Data containing:
+         - All research phases names, for showing the whole picture
+         - Current research phase, which is empty if system is not stable
+         - Estimated time remaining for the current phase
+         - The time next cycle is scheduled for
+        """
+        response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME, method='get')
+        if not response or not response.status_code:
+            return return_error("Error fetching status of system scheduler")
+        if response.status_code != 200:
+            return return_error(f"Error fetching status of system scheduler. Reason: {response.json()}")
+
+        state = response.json()
+        current_stage = ''
+        current_status = 0
+        if state[StateLevels.Phase.name] != Phases.Stable.name:
+            current_stage = state[StateLevels.SubPhase.name]
+            current_status = state[StateLevels.SubPhaseStatus.name]
+
+        # TODO get next cycle time
+        return jsonify({'stages': [phase.name for phase in list(ResearchPhases)],
+                        'current_stage': current_stage, 'current_status': current_status, 'next_cycle_time': ''})
 
     @property
     def plugin_subtype(self):

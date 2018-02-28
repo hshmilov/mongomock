@@ -3,7 +3,6 @@ import threading
 import dateutil.parser
 from datetime import datetime
 import requests
-from enum import Enum, auto
 from contextlib import contextmanager
 from flask import jsonify
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
@@ -14,42 +13,17 @@ from axonius.consts import adapter_consts
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.mixins.triggerable import Triggerable
 import axonius.plugin_exceptions
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME
+from axonius.consts import plugin_consts
 from axonius.utils.files import get_local_config_file
-
-
-class Phases(Enum):
-    Research = auto()
-    Stable = auto()
-
-
-class ResearchPhases(Enum):
-    Fetch_Devices = auto()
-    Fetch_Scanners = auto()
-    RunPreCorrelationplugins = auto()
-    RunCorrelations = auto()
-    RunPostCorrelationplugins = auto()
-
-
-class StateLevels(Enum):
-    Phase = auto()
-    SubPhase = auto()
-    SubPhaseStatus = auto()
-
-
-RESEARCH_THREAD_ID = 'phase_thread'
+from axonius.consts import scheduler_consts
 
 
 class SystemSchedulerService(PluginBase, Triggerable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
-                         requested_unique_plugin_name=SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
+                         requested_unique_plugin_name=plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
 
-        self.state = {
-            StateLevels.Phase.name: Phases.Stable.name,
-            StateLevels.SubPhase.name: None,
-            StateLevels.SubPhaseStatus.name: None
-        }
+        self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
         self.system_research_rate = int(self.config['DEFAULT']['system_research_rate_in_seconds'])
         self.research_phase_lock = threading.RLock()
         self._research_phase_scheduler = None
@@ -59,8 +33,8 @@ class SystemSchedulerService(PluginBase, Triggerable):
         self._research_phase_scheduler.add_job(func=self._research_phase_thread,
                                                trigger=IntervalTrigger(seconds=self.system_research_rate),
                                                next_run_time=datetime.now(),
-                                               name=RESEARCH_THREAD_ID,
-                                               id=RESEARCH_THREAD_ID,
+                                               name=scheduler_consts.RESEARCH_THREAD_ID,
+                                               id=scheduler_consts.RESEARCH_THREAD_ID,
                                                max_instances=1)
         self._research_phase_scheduler.start()
         self._activate('execute')
@@ -95,7 +69,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         received_update = self.get_request_data_as_object()
         self.logger.info(
             f"{self.get_caller_plugin_name()} notified that {received_update['adapter_name']} finished fetching data. f{received_update['num_of_adapters_left']} left.")
-        self.state[StateLevels.SubPhaseStatus.name] = received_update['num_of_adapters_left']
+        self.state[scheduler_consts.StateLevels.SubPhaseStatus.name] = received_update['num_of_adapters_left']
         return ''
 
     def _triggered(self, job_name: str, post_json: dict, *args):
@@ -131,30 +105,32 @@ class SystemSchedulerService(PluginBase, Triggerable):
         A context manager that enters research phase if it's not already under way.
         :return:
         """
-        if self.state[StateLevels.Phase.name] is Phases.Research.name:
-            raise axonius.plugin_exceptions.PhaseExecutionException(f"{Phases.Research.name} is already executing.")
+        if self.state[scheduler_consts.StateLevels.Phase.name] is scheduler_consts.Phases.Research.name:
+            raise axonius.plugin_exceptions.PhaseExecutionException(
+                f"{scheduler_consts.Phases.Research.name} is already executing.")
         else:
             with self.research_phase_lock:
                 # Change current phase
-                self.logger.info(f"Entered {Phases.Research.name} Phase.")
-                self.current_phase = Phases.Research.name
+                self.logger.info(f"Entered {scheduler_consts.Phases.Research.name} Phase.")
+                self.current_phase = scheduler_consts.Phases.Research.name
                 try:
                     yield
                 except Exception:
-                    self.logger.exception(f"Failed {Phases.Research.name} Phase.")
+                    self.logger.exception(f"Failed {scheduler_consts.Phases.Research.name} Phase.")
                 finally:
-                    self.current_phase = Phases.Stable.name
-                    self.logger.info(f"Back to {Phases.Stable.name} Phase.")
+                    self.current_phase = scheduler_consts.Phases.Stable.name
+                    self.logger.info(f"Back to {scheduler_consts.Phases.Stable.name} Phase.")
+                    self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
 
     def _schedule_research_phase(self, time_to_run):
         """
         Makes the apscheduler schedule a research phase right now.
         :return:
         """
-        research_job = self._research_phase_scheduler.get_job(RESEARCH_THREAD_ID)
+        research_job = self._research_phase_scheduler.get_job(scheduler_consts.RESEARCH_THREAD_ID)
         research_job.modify(next_run_time=time_to_run)
         self._research_phase_scheduler.wakeup()
-        self.logger.info(f"Scheduling a  {Phases.Research.name} Phase.")
+        self.logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase.")
         return ""
 
     def _research_phase_thread(self):
@@ -162,31 +138,33 @@ class SystemSchedulerService(PluginBase, Triggerable):
         Manages a research phase and it's sub phases.
         :return:
         """
+
         def _change_subphase(subphase_name):
-            self.state[StateLevels.SubPhaseStatus.name] = subphase_name
+            self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase_name
             self.logger.info(f'Started Subphase {subphase_name}')
 
         with self._start_research():
+            self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
             # Fetch Devices Data.
-            _change_subphase(ResearchPhases.Fetch_Devices.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices.name)
             self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
 
             # Fetch Scanners Data.
-            _change_subphase(ResearchPhases.Fetch_Scanners.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners.name)
             self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
 
             # Run Pre Correlation plugins.
-            _change_subphase(ResearchPhases.RunPreCorrelationplugins.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation.name)
             self._run_plugins('Pre-Correlation')
 
             # Run Correlations.
-            _change_subphase(ResearchPhases.RunCorrelations.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations.name)
             self._run_plugins('Correlator')
 
-            _change_subphase(ResearchPhases.RunPostCorrelationplugins.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation.name)
             self._run_plugins('Post-Correlation')
 
-            self.logger.info(f"Finished {Phases.Research.name} Phase Successfuly.")
+            self.logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfuly.")
 
     def _get_plugins(self, plugin_subtype):
         """
@@ -209,7 +187,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         with concurrent.futures.ThreadPoolExecutor() as executor:
 
             future_for_pre_correlation_plugin = {executor.submit(
-                self._run_blocking_request, 'trigger/execute', plugin[PLUGIN_UNIQUE_NAME], 'post'): plugin[PLUGIN_NAME] for plugin in plugins_to_run}
+                self._run_blocking_request, 'trigger/execute', plugin[plugin_consts.PLUGIN_UNIQUE_NAME], 'post'): plugin[plugin_consts.PLUGIN_NAME] for plugin in plugins_to_run}
 
             for future in concurrent.futures.as_completed(future_for_pre_correlation_plugin):
                 try:
@@ -224,7 +202,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         :param plugin_subtype: A plugin_subtype to filter as a white list.
         :return:
         """
-        self._run_blocking_request('trigger/fetch_filtered_adapters', AGGREGATOR_PLUGIN_NAME, 'post',
+        self._run_blocking_request('trigger/fetch_filtered_adapters', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post',
                                    json={'plugin_subtype': plugin_subtype})
 
     def _run_blocking_request(self, *args, **kwargs):
@@ -238,9 +216,9 @@ class SystemSchedulerService(PluginBase, Triggerable):
         # 403 is a disabled plugin.
         if response.status_code not in (200, 403):
             self.logger.exception(
-                f"Executing {args[1]} failed as part of {self.state[StateLevels.SubPhaseStatus.name]} subphase failed.")
+                f"Executing {args[1]} failed as part of {self.state[scheduler_consts.StateLevels.SubPhase.name]} subphase failed.")
             raise axonius.plugin_exceptions.PhaseExecutionException(
-                f"Executing {args[1]} failed as part of {self.state[StateLevels.SubPhaseStatus.name]} subphase failed.")
+                f"Executing {args[1]} failed as part of {self.state[scheduler_consts.StateLevels.SubPhase.name]} subphase failed.")
 
     @property
     def plugin_subtype(self):

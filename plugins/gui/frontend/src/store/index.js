@@ -10,6 +10,7 @@ import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
 import { notification } from '../store/modules/notifications'
 import { user } from '../store/modules/user'
+import { dashboard } from '../store/modules/dashboard'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -39,7 +40,8 @@ export default new Vuex.Store({
 		adapter,
 		alert,
         notification,
-        user
+        user,
+        dashboard
     }
 
 })

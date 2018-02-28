@@ -64,6 +64,22 @@ $media-break-md: "(min-width : 768px)";
 $media-break-lg: "(min-width : 992px)";
 $media-break-xl: "(min-width : 1200px)";
 
+
+/* Main Colours */
+$orange: #FF7D46;
+$black: #1D222C;
+$blue: #0076FF;
+$white: #FFFFFF;
+$gray-light: #F3F3F3;
+$gray-dark: #727272;
+
+/* Info Colours */
+$error-colour: #D0011B;
+$warning-colour: #F6A623;
+$info-colour: #4796E4;
+$success-colour: #0FBC18;
+
+
 @mixin color-theme-transparent($alpha) {
 
 }

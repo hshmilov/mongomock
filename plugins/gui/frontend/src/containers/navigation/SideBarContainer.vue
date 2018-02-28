@@ -14,8 +14,7 @@
                 </div>
                 <nav class="sidebar-nav">
                     <nested-nav-bar>
-                        <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"
-                                         :disabled="true"></nested-nav-item>
+                        <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"></nested-nav-item>
                         <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
                         <!--nested-nav-item routeName="Tasks" iconName="task" :disabled="true"></nested-nav-item-->
                         <nested-nav-item routeName="Devices" iconName="device">
