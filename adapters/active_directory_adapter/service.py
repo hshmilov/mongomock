@@ -422,6 +422,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         raise NoClientError()  # Couldn't find an appropriate client
 
     def put_file(self, device_data, file_buffer, dst_path):
+        return "Not implemented"
         # Since Active Directory supports only windows, we will take the windows file
         dst_path = dst_path['windows']
         file_buffer = file_buffer['windows']
@@ -454,6 +455,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         return {"result": result, "product": product}
 
     def get_file(self, device_data, file_path):
+        return "Not implemented"
         # Since Active Directory supports only windows, we will take the windows file
         remote_file_path = file_path['windows']
 
@@ -486,6 +488,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         return {"result": result, "product": product}
 
     def execute_binary(self, device_data, binary_buffer):
+        return "Not implemented"
         # Creating a file from the buffer (to pass it on to PSEXEC)
         # Since Active Directory supports only windows, we will take the windows file
         binary_buffer = standard_b64decode(binary_buffer['windows'])
@@ -556,6 +559,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         :param shell_command: look at execute_wmi
         :return:
         """
+        return "Not implemented"
         result = self.execute_wmi(device_data, wmi_commands)
         if result.get('result') == 'Success':
             result['product'] = {"wmi": result['product']}
@@ -570,6 +574,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         return result
 
     def execute_shell(self, device_data, shell_command):
+        return "Not implemented"
         # Creating a file from the buffer (to pass it on to PSEXEC)
         # Adding separator to the commands list
         shell_command_windows = shell_command.get('Windows')

@@ -120,6 +120,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(15, 5, check_execute_wmi_results)
 
+    @pytest.mark.skip("Not implemented")
     def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
