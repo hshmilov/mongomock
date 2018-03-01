@@ -880,8 +880,8 @@ class GuiService(PluginBase):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-        adapter_devices = {}
         plugins_available = requests.get(self.core_address + '/register').json()
+        adapter_devices = {'total_gross': 0, 'adapter_count': {}}
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
                                                                               {'plugin_type': 'ScannerAdapter'}]}).sort(
@@ -895,7 +895,9 @@ class GuiService(PluginBase):
                 if not devices_count:
                     # No need to document since adapter has no devices
                     continue
-                adapter_devices[adapter['plugin_name']] = devices_count
+                adapter_devices['adapter_count'][adapter['plugin_name']] = devices_count
+                adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
+            adapter_devices['total_net'] = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find({}).count()
 
         return jsonify(adapter_devices)
 
