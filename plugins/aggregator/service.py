@@ -1,12 +1,10 @@
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
-import functools
-from datetime import datetime, timedelta
+from datetime import datetime
 from itertools import groupby
 import concurrent.futures
 
-from promise import Promise
 import pymongo
 import requests
 import threading
@@ -14,12 +12,11 @@ import uuid
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
-from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.parsing_utils import get_device_id_for_plugin_name
 from axonius.mixins.triggerable import Triggerable
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
-from axonius.threading_utils import LazyMultiLocker, run_in_executor_helper
+from axonius.threading_utils import LazyMultiLocker
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
 
@@ -120,7 +117,7 @@ class AggregatorService(PluginBase, Triggerable):
 
         return self.devices_db_actual_collection
 
-    def _get_devices_data(self, adapter):
+    def _request_insertion_from_adapters(self, adapter):
         """Get mapped data from all devices.
 
         Returned from the Adapter/Plugin.
@@ -146,7 +143,7 @@ class AggregatorService(PluginBase, Triggerable):
             raise ClientsUnavailable()
         for client_name in clients:
             try:
-                devices = self.request_remote_plugin(f'devices_by_name?name={client_name}', adapter)
+                devices = self.request_remote_plugin(f'insert_to_db?client_name={client_name}', adapter, method='PUT')
             except Exception as e:
                 # request failed
                 self.logger.exception(f"{repr(e)}")
@@ -204,8 +201,7 @@ class AggregatorService(PluginBase, Triggerable):
                             continue
 
                         futures_for_adapter[executor.submit(
-                            self._save_devices_from_adapter, adapter['plugin_name'], adapter[PLUGIN_UNIQUE_NAME],
-                            adapter['plugin_type'])] = adapter['plugin_name']
+                            self._save_devices_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
 
                     for future in concurrent.futures.as_completed(futures_for_adapter):
                         try:
@@ -397,146 +393,18 @@ class AggregatorService(PluginBase, Triggerable):
 
         return ""
 
-    def _get_pretty_id(self):
-        with self._index_lock:
-            index = self._index
-            self._index += 1
-        return f'AX-{index}'
+    def _save_devices_from_adapter(self, adapter_unique_name):
+        """
+        Requests from the given adapter to insert its devices into the DB.
 
-    def _save_devices_from_adapter(self, adapter_name, adapter_unique_name, plugin_type):
-        """ Function for getting all devices from specific adapter periodically.
-
-        This function should be called in a different thread. It will run forever and periodically get all devices
-        From a wanted adapter and save it to the local general db, and the historical db.abs
-
-        :param str adapter_name: The name of the adapter
-        :param str adapter_unique_name: The name of the adapter (unique name)
+        :param str adapter_unique_name: The unique name of the adapter
         """
 
-        def insert_device_to_db(device_to_update, parsed_to_insert):
-            """
-            Insert a device into the DB in a locked way
-            :return:
-            """
-            # if `device_to_update` has a `correlates` field
-            # then it's similar to a correlation, so we need to lock both devices
-            lock_indexes = [get_unique_name_from_device(parsed_to_insert)]
-            correlates = parsed_to_insert['data'].get('correlates')
-            if correlates == IGNORE_DEVICE:
-                # special case: this is a device we shouldn't handle
-                self._save_parsed_in_db(parsed_to_insert, db_type='ignored_scanner_devices')
-                return
-
-            if correlates:
-                # this is to support case B: see `find_correlation` in `scanner_adapter_base.py`
-                lock_indexes.append(get_unique_name_from_plugin_unique_name_and_id(*correlates))
-
-            with self.device_db_lock.get_lock(lock_indexes):
-                # trying to update the device if it is already in the DB
-                modified_count = self.devices_db.update_one({
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                            'data.id': parsed_to_insert['data']['id']
-                        }
-                    }
-                }, {"$set": device_to_update}).modified_count
-
-                if modified_count == 0:
-                    # if it's not in the db then,
-
-                    if correlates:
-                        # for scanner adapters this is case B - see "scanner_adapter_base.py"
-                        # we need to add this device to the list of adapters in another device
-                        correlate_plugin_unique_name, correlated_id = correlates
-                        modified_count = self.devices_db.update_one({
-                            'adapters': {
-                                '$elemMatch': {
-                                    PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
-                                    'data.id': correlated_id
-                                }
-                            }},
-                            {
-                                "$addToSet": {
-                                    "adapters": parsed_to_insert
-                                }
-                        })
-                        if modified_count == 0:
-                            self.logger.error("No devices update for case B for scanner device "
-                                              f"{parsed_to_insert['data']['id']} from "
-                                              f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
-                    else:
-                        # this is regular first-seen device, make its own value
-                        self.devices_db.insert_one({
-                            "internal_axon_id": uuid.uuid4().hex,
-                            "accurate_for_datetime": datetime.now(),
-                            "adapters": [parsed_to_insert],
-                            "tags": []
-                        })
-
-        self.logger.info(f"Starting to fetch device for {adapter_name} {adapter_unique_name}")
-        promises = []
+        self.logger.info(f"Starting to fetch device for {adapter_unique_name}")
         try:
-            devices = self._get_devices_data(adapter_unique_name)
+            devices = self._request_insertion_from_adapters(adapter_unique_name)
             for client_name, devices_per_client in devices:
-                time_before_client = datetime.now()
-                # Saving the raw data on the historic db
-                try:
-                    self._save_data_in_history(devices_per_client['raw'],
-                                               adapter_name,
-                                               adapter_unique_name,
-                                               plugin_type)
-                except pymongo.errors.DocumentTooLarge:
-                    # wanna see my "something too large"?
-                    self.logger.warn(f"Got DocumentTooLarge for {adapter_unique_name} with client {client_name}.")
-
-                # Here we have all the devices a single client sees
-                for device in devices_per_client['parsed']:
-                    device['pretty_id'] = self._get_pretty_id()
-                    parsed_to_insert = {
-                        'client_used': client_name,
-                        'plugin_type': plugin_type,
-                        'plugin_name': adapter_name,
-                        PLUGIN_UNIQUE_NAME: adapter_unique_name,
-                        'accurate_for_datetime': datetime.now(),
-                        'data': device
-                    }
-                    device_to_update = {f"adapters.$.{key}": value
-                                        for key, value in parsed_to_insert.items() if key != 'data'}
-
-                    promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                              self.__device_inserter,
-                                                              self._save_parsed_in_db,
-                                                              args=[dict(parsed_to_insert)])))
-
-                    fields_to_update = device.keys() - ['id']
-                    for field in fields_to_update:
-                        field_of_device = device.get(field, [])
-                        try:
-                            if type(field_of_device) in [list, dict, str] and len(field_of_device) == 0:
-                                # We don't want to insert empty values, only one that has a valid data
-                                continue
-                            else:
-                                device_to_update[f"adapters.$.data.{field}"] = field_of_device
-                        except TypeError:
-                            self.logger.error(f"Got TypeError while getting field {field}")
-                            continue
-                    device_to_update['accurate_for_datetime'] = datetime.now()
-
-                    promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                              self.__device_inserter,
-                                                              insert_device_to_db,
-                                                              args=[device_to_update, parsed_to_insert])))
-                devices_count = len(promises)
-                promise_all = Promise.all(promises)
-                Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
-                promises = []
-                if promise_all.is_rejected:
-                    self.logger.error("Error in insertion to DB", exc_info=promise_all.reason)
-                time_for_client = datetime.now() - time_before_client
-                self.logger.info(
-                    f"Finished aggregating for client {client_name} from adapter {adapter_unique_name},"
-                    f" aggregation took {time_for_client.seconds} seconds and returned {devices_count}.")
+                self.logger.info(f"Got {devices_per_client} for client {client_name} in {adapter_unique_name}")
 
         except (AdapterOffline, ClientsUnavailable) as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
@@ -546,8 +414,7 @@ class AggregatorService(PluginBase, Triggerable):
             self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info("Finished for {} {}".format(adapter_name, adapter_unique_name))
-        return ''
+        self.logger.info(f"Finished for {adapter_unique_name}")
 
     def _save_parsed_in_db(self, device, db_type='parsed'):
         """
@@ -557,24 +424,6 @@ class AggregatorService(PluginBase, Triggerable):
         :return: None
         """
         self.devices_db_connection[db_type].insert_one(device)
-
-    def _save_data_in_history(self, device, plugin_name, plugin_unique_name, plugin_type):
-        """ Function for saving raw data in history.
-
-        This function will save the data on mongodb. the db name is 'devices' and the collection is 'raw' always!
-
-        :param device: The raw data of the current device
-        :param str plugin_name: The name of the plugin
-        :param str plugin_unique_name: The unique name of the plugin
-        :param str plugin_type: The type of the plugin
-        """
-        try:
-            self.devices_db_connection['raw'].insert_one({'raw': device,
-                                                          'plugin_name': plugin_name,
-                                                          PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                                                          'plugin_type': plugin_type})
-        except pymongo.errors.PyMongoError as e:
-            self.logger.exception("Error in pymongo. details: {}".format(e))
 
     def _update_device_with_tag(self, tag, axonius_device):
         """
@@ -615,4 +464,4 @@ class AggregatorService(PluginBase, Triggerable):
 
     def _notify_adapter_fetch_devices_finished(self, adapter_name, num_of_adapters_left):
         self.request_remote_plugin('sub_phase_update', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json={
-                                   'adapter_name': adapter_name, 'num_of_adapters_left': num_of_adapters_left})
+            'adapter_name': adapter_name, 'num_of_adapters_left': num_of_adapters_left})

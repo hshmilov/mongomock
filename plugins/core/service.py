@@ -15,7 +15,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CON
 from axonius.adapter_base import is_plugin_adapter
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
 
@@ -183,6 +183,7 @@ class CoreService(PluginBase):
         db_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         db_connection = self._get_db_connection(False)
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
+                 {'role': 'dbOwner', 'db': AGGREGATOR_PLUGIN_NAME},
                  {'role': 'insert_notification', 'db': 'core'},
                  {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's
 
