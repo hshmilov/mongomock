@@ -856,22 +856,24 @@ class GuiService(PluginBase):
          - Estimated time remaining for the current phase
          - The time next cycle is scheduled for
         """
-        response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME, method='get')
-        if not response or not response.status_code:
-            return return_error("Error fetching status of system scheduler")
-        if response.status_code != 200:
-            return return_error(f"Error fetching status of system scheduler. Reason: {response.json()}")
+        state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        if state_response.status_code != 200:
+            return return_error(f"Error fetching status of system scheduler. Reason: {state_response.text}")
 
-        state = response.json()
+        state = state_response.json()
         current_stage = ''
         current_status = 0
         if state[StateLevels.Phase.name] != Phases.Stable.name:
             current_stage = state[StateLevels.SubPhase.name]
             current_status = state[StateLevels.SubPhaseStatus.name]
 
-        # TODO get next cycle time
-        return jsonify({'stages': [phase.name for phase in list(ResearchPhases)],
-                        'current_stage': current_stage, 'current_status': current_status, 'next_cycle_time': ''})
+        run_time_response = self.request_remote_plugin('next_run_time', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        if run_time_response.status_code != 200:
+            return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
+
+        return jsonify({'stages': [subphase.name for subphase in list(ResearchPhases)],
+                        'current_stage': current_stage, 'current_status': current_status,
+                        'next_run_time': run_time_response.text})
 
     @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
     def get_adapter_devices(self):
@@ -884,8 +886,7 @@ class GuiService(PluginBase):
         adapter_devices = {'total_gross': 0, 'adapter_count': {}}
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
-                                                                              {'plugin_type': 'ScannerAdapter'}]}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+                                                                              {'plugin_type': 'ScannerAdapter'}]})
             for adapter in adapters_from_db:
                 if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI

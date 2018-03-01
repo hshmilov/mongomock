@@ -9,6 +9,7 @@
         <card title="System Lifecycle">
             <x-progress-cycle :complete="cyclePortionComplete" :parts="lifecycle.stages"
                               :remaining="lifecycle.current_status"></x-progress-cycle>
+            <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div></div>
         </card>
     </scrollable-page>
 </template>
@@ -59,7 +60,18 @@
                 	completed += parseInt(100 / (this.lifecycle.stages.length * 2))
                 }
                 return completed
-            }
+            },
+            nextRunTime() {
+				let leftToRun = new Date(parseInt(this.lifecycle.next_run_time) * 1000) - Date.now()
+                let thresholds = [1000, 60 * 1000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
+                let units = ['seconds', 'minutes', 'hours', 'days']
+                for (var i = 1; i < thresholds.length; i++) {
+					if (leftToRun < thresholds[i]) {
+						return `${parseInt(leftToRun / thresholds[i - 1])} ${units[i-1]}`
+					}
+                }
+				return `${parseInt(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
+			}
         },
         methods: {
             ...mapActions({fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES}),
@@ -91,6 +103,14 @@
                 margin-right: 24px;
                 .card-body {
                     text-align: center;
+                    .cycle-time {
+                        margin-top: 16px;
+                        font-size: 14px;
+                        .blue {
+                            display: inline-block;
+                            margin-left: 8px;
+                        }
+                    }
                 }
             }
         }

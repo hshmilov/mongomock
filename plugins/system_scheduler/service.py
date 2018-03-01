@@ -1,7 +1,9 @@
 import concurrent.futures
 import threading
 import dateutil.parser
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
+import pytz
 import requests
 from contextlib import contextmanager
 from flask import jsonify
@@ -45,6 +47,16 @@ class SystemSchedulerService(PluginBase, Triggerable):
         Get plugin state.
         """
         return jsonify(self.state)
+
+    @add_rule('next_run_time', should_authenticate=False)
+    def get_next_run_time(self):
+        """
+        Calculates next run time by adding research rate seconds to the time last run time
+        :return: The time next research is supposed to start running
+        """
+        next_run_time = self._research_phase_scheduler.get_job(
+            scheduler_consts.RESEARCH_THREAD_ID).trigger.get_next_fire_time(None, datetime.now(pytz.utc))
+        return str(int(time.mktime(next_run_time.timetuple())))
 
     @add_rule('research_rate', ['POST'])
     def set_system_research_rate(self):

@@ -18,13 +18,13 @@
 		computed: {
 			dataNames () {
 				if (!this.data) return []
-				return Object.keys(this.data)
+				return Object.keys(this.data).sort((first, second) => this.data[second] - this.data[first])
 			},
 			dataNamesTruncated () {
 				return this.dataNames.slice(0, this.limit)
 			},
 			maxQuantity () {
-				return Object.values(this.data).sort((first, second) => second - first)[0]
+				return this.data[this.dataNames[0]]
 			}
 		},
 		methods: {
