@@ -4,7 +4,7 @@
             <x-counter :data="adapterDevicesCounterData"></x-counter>
         </card>
         <card title="Devices per Adapter">
-            <x-histogram :data="adapterDevicesCount"></x-histogram>
+            <x-histogram :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"></x-histogram>
         </card>
         <card title="System Lifecycle">
             <x-progress-cycle :complete="cyclePortionComplete" :parts="lifecycle.stages"
@@ -24,7 +24,8 @@
     import xProgressCycle from '../../components/charts/ProgressCycle.vue'
 
     import { FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES } from '../../store/modules/dashboard'
-    import { mapState, mapActions } from 'vuex'
+    import { UPDATE_NEW_QUERY } from '../../store/modules/query'
+    import { mapState, mapMutations, mapActions } from 'vuex'
 
     export default {
         name: 'x-dashboard',
@@ -74,16 +75,21 @@
 			}
         },
         methods: {
-            ...mapActions({fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES}),
+			...mapMutations({ updateQuery: UPDATE_NEW_QUERY}),
+			...mapActions({ fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES }),
             getDashboardData() {
             	this.fetchLifecycle()
                 this.fetchAdapterDevices()
+            },
+			runAdapterDevicesFilter(adapterName) {
+                this.updateQuery({filter: `adapters == '${adapterName}'`})
+				this.$router.push({name: 'Devices'})
             }
         },
         created() {
         	this.getDashboardData()
             this.interval = setInterval(function () {
-				this.getDashboardData()
+				this.fetchLifecycle()
 			}.bind(this), 1000)
 		},
 		beforeDestroy() {

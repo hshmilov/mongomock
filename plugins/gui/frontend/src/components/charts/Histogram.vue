@@ -1,8 +1,8 @@
 <template>
     <div class="histogram">
-        <div v-for="name in dataNamesTruncated" class="histogram-item">
+        <div v-for="name in dataNamesTruncated" class="histogram-item" @click="$emit('click-bar', name)">
             <div class="quantity">{{data[name]}}</div>
-            <div class="bar" :style="{height: calculateBarHeight(data[name]) + 'px'}">
+            <div class="bar" :style="{height: calculateBarHeight(data[name]) + 'px'}" :title="name">
                 <img :src="`/src/assets/images/logos/${name}.png`" width="16">
             </div>
         </div>
@@ -29,7 +29,7 @@
 		},
 		methods: {
 			calculateBarHeight (quantity) {
-				return 20 + ((180 * quantity) / this.maxQuantity)
+				return 30 + ((210 * quantity) / this.maxQuantity)
 			}
 		}
 	}
@@ -42,7 +42,6 @@
         display: flex;
         align-items: flex-end;
         justify-content: space-around;
-        height: 240px;
         padding-bottom: 8px;
         .histogram-item {
             .quantity {
@@ -53,6 +52,10 @@
                 padding: 4px;
                 align-items: flex-end;
                 background-color: rgba($info-colour, 0.2);
+                &:hover {
+                    box-shadow: 2px 2px 12px -2px $gray-dark;
+                    cursor: pointer;
+                }
             }
         }
         .remainder {
