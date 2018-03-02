@@ -34,6 +34,7 @@ DOCKER_PORTS = {
     'sccm-adapter':                     5699,
     'qualys-scans-adapter':             5777,
     'cisco-adapter':                    6001,
+    'minerva-adapter':                  6010,
     'mongo':                            27017,
 }
 

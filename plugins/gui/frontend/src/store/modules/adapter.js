@@ -92,8 +92,13 @@ export const adapterStaticData = {
 		description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers and devices.'
 	},
 	'csv_adapter': {
-		name: 'CSV Adapter',
-		description: 'The CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
+		name: 'Serials CSV Adapter',
+		description: 'The Serials CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
+	},
+	'minerva_adapter': {
+		name: 'Minerva Labs Endpoint Malware Vaccination',
+		description: 'Minerva Labs Endpoint Malware Vaccination enables incident response teams' +
+		' to immunize endpoints to neutralize attacks. By simulating infection markers, rather than creating them, Minerva contains outbreaks that bypass AV tools.'
 	},
 	'bomgar_adapter': {
 		name: 'Bomgar Adapter',
