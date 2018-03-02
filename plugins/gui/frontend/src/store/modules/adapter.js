@@ -91,6 +91,11 @@ export const adapterStaticData = {
 		name: 'Microsoft SCCM',
 		description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers and devices.'
 	},
+	'desktop_central_adapter':{
+		name: 'ManageEngine Desktop Central',
+		description: 'Desktop Central is a Desktop Management and Mobile Device' +
+		' Management Software for managing desktops in LAN and across WAN and mobile devices from a central location\n'
+	},
 	'forcepoint_csv_adapter': {
 		name: 'Forcepoint Web Security Endpoint',
 		description: 'Forcepoint Web Security Endpoint enables end users to authenticate and' +
