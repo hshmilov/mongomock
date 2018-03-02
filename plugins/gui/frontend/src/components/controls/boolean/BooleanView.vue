@@ -1,5 +1,6 @@
 <template>
-    <div v-if="value">
+    <div v-if="typeof value !== 'boolean'"></div>
+    <div v-else-if="value">
         <div class="checkmark"></div>
     </div>
     <div class="d-flex flex-column" v-else>

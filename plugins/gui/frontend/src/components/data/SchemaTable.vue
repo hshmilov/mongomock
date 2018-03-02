@@ -138,14 +138,18 @@
 			getData(data, path) {
 				if (!data) return ''
 				if (Array.isArray(data)) {
+					if (data.length === 1) {
+						return this.getData(data[0], path)
+                    }
 					let children = new Set()
 					data.forEach((item) => {
 						let child = this.getData(item, path)
-						if (Array.isArray(child)) {
-							children = new Set([...children, ...child])
-						} else {
-							children.add(child)
-						}
+                        if (!child) return
+                        if (Array.isArray(child)) {
+                            children = new Set([...children, ...child])
+                        } else {
+                            children.add(child)
+                        }
 					})
 					return Array.from(children)
 				}
