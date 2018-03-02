@@ -91,6 +91,11 @@ export const adapterStaticData = {
 		name: 'Microsoft SCCM',
 		description: 'Microsoft System Center Configuration Manager (SCCM) uses on-premises Configuration Manager or Microsoft Exchange to manage PCs, servers and devices.'
 	},
+	'forcepoint_csv_adapter': {
+		name: 'Forcepoint Web Security Endpoint',
+		description: 'Forcepoint Web Security Endpoint enables end users to authenticate and' +
+		' receive policy enforcement via the Forcepoint Web Security Cloud cloud infrastructure.'
+	},
 	'csv_adapter': {
 		name: 'Serials CSV Adapter',
 		description: 'The Serials CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
