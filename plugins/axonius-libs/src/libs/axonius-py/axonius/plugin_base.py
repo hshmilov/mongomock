@@ -750,6 +750,34 @@ class PluginBase(Feature):
         aggregator = self.get_plugin_by_name('aggregator')
         return self._get_collection("devices_db", db_name=aggregator[PLUGIN_UNIQUE_NAME])
 
+    def __tag_many_device(self, device_identity_by_adapter, names, data, type):
+        """ Function for tagging many adapter devices with many tags.
+        This function will tag a wanted device. The tag will be related to all adapters in the device.
+        :param device_identity_by_adapter: a list of tuples of (adapter_unique_name, device_unique_id).
+                                           e.g. [("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D...."),...]
+        :param names: a list of the tag. should be a list of strings.
+        :param data: the data of the tag. could be any object. will be the same for all tags.
+        :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
+                     will be the same for all tags.
+        :return:
+        """
+        tag_data = {'association_type': 'Multitag',
+                    'associated_adapter_devices': device_identity_by_adapter,
+                    'tags': [{
+                        "name": name,
+                        "data": data,
+                        "type": type} for name in names]
+                    }
+        # Since datetime is often passed here, and it is not serializable, we use json_util.default
+        # That automatically serializes it as a mongodb date object.
+        response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
+                                              data=json.dumps(tag_data, default=json_util.default))
+        if response.status_code != 200:
+            self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+            raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+
+        return response
+
     def __tag_device(self, device_identity_by_adapter, name, data, type):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
@@ -761,9 +789,10 @@ class PluginBase(Feature):
         :return:
         """
         tag_data = {'association_type': 'Tag',
-                    'associated_adapter_devices': [
-                        (device_identity_by_adapter[0], device_identity_by_adapter[1])
-                    ],
+                    'associated_adapter_devices':
+                        [
+                            (device_identity_by_adapter[0], device_identity_by_adapter[1])
+                        ],
                     "name": name,
                     "data": data,
                     "type": type}
@@ -776,6 +805,10 @@ class PluginBase(Feature):
             raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
 
         return response
+
+    def add_many_labels_to_device(self, devices_identity_by_adapter, labels, are_enabled=True):
+        """ Tag many devices with many tags. if is_enabled = False, the labels are grayed out."""
+        return self.__tag_many_device(devices_identity_by_adapter, labels, are_enabled, "label")
 
     def add_label_to_device(self, device_identity_by_adapter, label, is_enabled=True):
         """ A shortcut to _tag_device with type "label" . if is_enabled = False, the label is grayed out."""

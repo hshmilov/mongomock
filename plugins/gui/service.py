@@ -1,7 +1,8 @@
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device import Device
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, \
+    SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 
 import tarfile
@@ -290,26 +291,20 @@ class GuiService(PluginBase):
             if not devices_and_labels.get('labels'):
                 return return_error("Cannot label devices without list of labels.", 400)
 
-            responses = []
-            for device_id in devices_and_labels['devices']:
-                device = devices_collection.find_one({'internal_axon_id': device_id})
+            devices = [devices_collection.find_one({'internal_axon_id': device_id})['adapters'][0]
+                       for device_id in
+                       devices_and_labels['devices']]
+            devices = [(device[PLUGIN_UNIQUE_NAME], device['data']['id'])
+                       for device in devices]
 
-                # We tag that device with a correlation to its first adapter. In case of a split,
-                # We should know this tag is a "gui" tag since the tag issuer ("tags.plugin_name") is "gui".
-                # TODO: have a key that says this is a "global" tag that should be equally split when we get
-                # TODO: a split situation.
+            response = self.add_many_labels_to_device(devices,
+                                                      labels=devices_and_labels['labels'],
+                                                      are_enabled=request.method == 'POST')
 
-                device_identity = device['adapters'][0]['plugin_unique_name'], device['adapters'][0]['data']['id']
-                for label in devices_and_labels['labels']:
-                    responses.append(
-                        self.add_label_to_device(device_identity, label, True if request.method == 'POST' else False))
+            if response.status_code != 200:
+                self.logger.error(f"Tagging did not complete. First {response.json()}")
+                return_error(f'Tagging did not complete. First error: {response.json()}', 400)
 
-            all_bad_responses = [current_response.json()
-                                 for current_response in responses if current_response.status_code != 200]
-
-            if len(all_bad_responses) > 0:
-                self.logger.error(f"Tagging did not complete. First error: {all_bad_responses[0]}")
-                return_error(f'Tagging did not complete. First error: {all_bad_responses[0]}', 400)
             return '', 200
 
     @paginated()
