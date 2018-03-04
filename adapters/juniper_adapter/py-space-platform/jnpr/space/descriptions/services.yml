@@ -1,0 +1,54 @@
+---
+services:
+    audit_log_management:
+        service_name: 'audit-log-management'
+        url: '/api/space/audit-log-management'
+
+    job_management:
+        service_name: 'job-management'
+        url: '/api/space/job-management'
+
+    tag_management:
+        service_name: 'tag-management'
+        url: '/api/space/tag-management'
+
+    device_management:
+        service_name: 'device-management'
+        url: '/api/space/device-management'
+
+    config_file_management:
+        service_name: 'config-file-management'
+        url: '/api/space/config-file-management'
+
+    configuration_management:
+        service_name: 'configuration-management'
+        url: '/api/space/configuration-management'
+
+    config_template_management:
+        service_name: 'config-template-management'
+        url: '/api/space/config-template-management'
+
+    schema_management:
+        service_name: 'schema-service'
+        url: '/api/space/schema-service'
+
+    script_management:
+        service_name: 'script-management'
+        url: '/api/space/script-management'
+
+    software_management:
+        service_name: 'software-management'
+        url: '/api/space/software-management'
+
+    user_management:
+        service_name: 'user-management'
+        url: '/api/space/user-management'
+
+    domain_management:
+        service_name: 'domain-management'
+        url: '/api/space/domain-management'
+
+    managed_domain:
+        service_name: 'managed-domain'
+        url: '/api/space/managed-domain'
+...

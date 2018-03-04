@@ -110,6 +110,10 @@ export const adapterStaticData = {
 		description: 'Minerva Labs Endpoint Malware Vaccination enables incident response teams' +
 		' to immunize endpoints to neutralize attacks. By simulating infection markers, rather than creating them, Minerva contains outbreaks that bypass AV tools.'
 	},
+	'juniper_adapter': {
+        name: 'Juniper Junos Space',
+        description: 'Junos Space Network Management Platform simplifies and automates management of Juniper’s switching, routing, and security devices.'
+    },
 	'bomgar_adapter': {
 		name: 'Bomgar Adapter',
 		description: 'Bomgar is a remote support solution that allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile device.'
