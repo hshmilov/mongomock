@@ -79,7 +79,7 @@ def figure_out_os(s):
         # this means we don't know anything
         return {}
     orig_s = s
-    s = s.lower()
+    s = s.strip().lower()
 
     makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64']
     makes_32bit = ['32-bit', 'x86']
@@ -135,16 +135,35 @@ def figure_out_os(s):
         version = mobile_version.findall(s)
         if len(version):
             distribution = version[0]
-
     elif 'android' in s:
         os_type = 'Android'
         version = mobile_version.findall(s)
         if len(version):
             distribution = version[0]
-
     elif 'freebsd' in s:
         os_type = "FreeBSD"
         distribution = "FreeBSD"
+    elif s.startswith('vmware'):
+        os_type = "VMWare"
+        esx_distributions = ['ESX 4.0',
+                             'ESX 4.1',
+                             'ESXi 4.0',
+                             'ESXi 4.1',
+                             'ESXi 5.0',
+                             'ESXi 5.1',
+                             'ESXi 5.1.0',
+                             'ESXi 5.1.0a',
+                             'ESXi 5.5',
+                             'ESXi 6.0',
+                             'ESXi 6.0.0b',
+                             'ESXi 6.5',
+                             'ESXi 6.5.',
+                             'ESXi 6.5.0',
+                             'ESXi 6.5.0d',
+                             'ESXi/ESX 4.1']
+        distribution = s.replace("VMWare ", "")
+        if distribution not in esx_distributions:
+            distribution = "(?) " + distribution
 
     return {"type": os_type,
             "distribution": distribution,
@@ -351,7 +370,8 @@ def macs_do_not_contradict(adapter_device1, adapter_device2):
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
     device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
-    return not device1_hostnames or not device2_hostnames or compare_normalized_hostnames(device1_hostnames, device2_hostnames)
+    return not device1_hostnames or not device2_hostnames or compare_normalized_hostnames(device1_hostnames,
+                                                                                          device2_hostnames)
 
 
 def compare_ips(adapter_device1, adapter_device2):
