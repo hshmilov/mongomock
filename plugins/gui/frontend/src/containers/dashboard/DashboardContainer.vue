@@ -6,9 +6,8 @@
         <card title="Devices per Adapter">
             <x-histogram :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"></x-histogram>
         </card>
-        <card title="System Lifecycle">
-            <x-progress-cycle :complete="cyclePortionComplete" :parts="lifecycle.stages"
-                              :remaining="lifecycle.current_status"></x-progress-cycle>
+        <card title="System Lifecycle" class="lifecycle">
+            <x-cycle-chart :data="lifecycle.subPhases"></x-cycle-chart>
             <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div></div>
         </card>
     </scrollable-page>
@@ -21,7 +20,7 @@
 
     import xCounter from '../../components/charts/Counter.vue'
     import xHistogram from '../../components/charts/Histogram.vue'
-    import xProgressCycle from '../../components/charts/ProgressCycle.vue'
+    import xCycleChart from '../../components/charts/Cycle.vue'
 
     import { FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES } from '../../store/modules/dashboard'
     import { UPDATE_NEW_QUERY } from '../../store/modules/query'
@@ -29,7 +28,8 @@
 
     export default {
         name: 'x-dashboard',
-        components: { ScrollablePage, Card, xCounter, xHistogram, xProgressCycle },
+        components: {
+			ScrollablePage, Card, xCounter, xHistogram, xCycleChart },
         computed: {
             ...mapState(['dashboard']),
             lifecycle() {
@@ -51,22 +51,11 @@
 					{count: this.adapterDevices.total_net, title: 'Actual Devices Discovered'},
                 ]
             },
-            cyclePortionComplete() {
-                if (!this.lifecycle || !this.lifecycle.stages || !this.lifecycle.stages.length) return 0
-                if (!this.lifecycle.current_stage) return 100
-
-                const currentPhase = this.lifecycle.stages.indexOf(this.lifecycle.current_stage)
-                let completed = (currentPhase / this.lifecycle.stages.length) * 100
-                if (this.lifecycle.current_status) {
-                	completed += parseInt(100 / (this.lifecycle.stages.length * 2))
-                }
-                return completed
-            },
             nextRunTime() {
-				let leftToRun = new Date(parseInt(this.lifecycle.next_run_time) * 1000) - Date.now()
+				let leftToRun = new Date(parseInt(this.lifecycle.nextRunTime) * 1000) - Date.now()
                 let thresholds = [1000, 60 * 1000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
                 let units = ['seconds', 'minutes', 'hours', 'days']
-                for (var i = 1; i < thresholds.length; i++) {
+                for (let i = 1; i < thresholds.length; i++) {
 					if (leftToRun < thresholds[i]) {
 						return `${parseInt(leftToRun / thresholds[i - 1])} ${units[i-1]}`
 					}
@@ -90,7 +79,7 @@
         	this.getDashboardData()
             this.interval = setInterval(function () {
 				this.fetchLifecycle()
-			}.bind(this), 1000)
+			}.bind(this), 500)
 		},
 		beforeDestroy() {
         	clearInterval(this.interval)
@@ -104,13 +93,18 @@
     .dashboard {
         .page-body {
             display: flex;
+            flex-wrap: wrap;
             .card {
                 width: 360px;
                 margin-right: 24px;
-                .card-body {
+                &.lifecycle .card-body {
                     text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    .cycle {
+                        flex: 100%;
+                    }
                     .cycle-time {
-                        margin-top: 16px;
                         font-size: 14px;
                         .blue {
                             display: inline-block;

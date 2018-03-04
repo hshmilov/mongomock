@@ -214,9 +214,9 @@ class AggregatorService(PluginBase, Triggerable):
                         try:
                             num_of_adapters_to_fetch -= 1
                             future.result()
-                            # notify_adapter_fetch_devices finished
+                            # notify the portion of adapters left to fetch, out of total required
                             self._notify_adapter_fetch_devices_finished(
-                                futures_for_adapter[future], num_of_adapters_to_fetch)
+                                futures_for_adapter[future], num_of_adapters_to_fetch / len(current_adapters))
                         except Exception as err:
                             self.logger.exception("An exception was raised while trying to get a result.")
 
@@ -491,6 +491,6 @@ class AggregatorService(PluginBase, Triggerable):
     def plugin_subtype(self):
         return "Core"
 
-    def _notify_adapter_fetch_devices_finished(self, adapter_name, num_of_adapters_left):
+    def _notify_adapter_fetch_devices_finished(self, adapter_name, portion_of_adapters_left):
         self.request_remote_plugin('sub_phase_update', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json={
-            'adapter_name': adapter_name, 'num_of_adapters_left': num_of_adapters_left})
+            'adapter_name': adapter_name, 'portion_of_adapters_left': portion_of_adapters_left})

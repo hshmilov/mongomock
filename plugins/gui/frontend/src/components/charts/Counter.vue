@@ -28,7 +28,7 @@
         }
         .title {
             display: inline-block;
-            width: 180px;
+            max-width: 180px;
             text-align: left;
             line-height: 36px;
             margin-left: 12px;

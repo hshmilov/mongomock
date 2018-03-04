@@ -29,7 +29,7 @@
 		},
 		methods: {
 			calculateBarHeight (quantity) {
-				return 30 + ((210 * quantity) / this.maxQuantity)
+				return 20 + ((180 * quantity) / this.maxQuantity)
 			}
 		}
 	}

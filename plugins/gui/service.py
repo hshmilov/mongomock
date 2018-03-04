@@ -847,28 +847,37 @@ class GuiService(PluginBase):
 
         :return: Data containing:
          - All research phases names, for showing the whole picture
-         - Current research phase, which is empty if system is not stable
-         - Estimated time remaining for the current phase
-         - The time next cycle is scheduled for
+         - Current research sub-phase, which is empty if system is not stable
+         - Portion of work remaining for the current sub-phase
+         - The time next cycle is scheduled to run
         """
         state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
             return return_error(f"Error fetching status of system scheduler. Reason: {state_response.text}")
 
         state = state_response.json()
-        current_stage = ''
-        current_status = 0
-        if state[StateLevels.Phase.name] != Phases.Stable.name:
-            current_stage = state[StateLevels.SubPhase.name]
-            current_status = state[StateLevels.SubPhaseStatus.name]
+        is_research = state[StateLevels.Phase.name] == Phases.Research.name
+
+        # Map each sub-phase to a dict containing its name and status, which is determined by:
+        # - Sub-phase prior to current sub-phase - 1
+        # - Current sub-phase - complementary of retrieved status (indicating complete portion)
+        # - Sub-phase subsequent to current sub-phase - 0
+        sub_phases = []
+        found_current = False
+        for sub_phase in ResearchPhases:
+            if is_research and sub_phase.name == state[StateLevels.SubPhase.name]:
+                # Reached current status - set complementary of SubPhaseStatus value
+                found_current = True
+                sub_phases.append({'name': sub_phase.name, 'status': 1 - (state[StateLevels.SubPhaseStatus.name] or 1)})
+            else:
+                # Set 0 or 1, depending if reached current status yet
+                sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
 
         run_time_response = self.request_remote_plugin('next_run_time', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if run_time_response.status_code != 200:
             return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
 
-        return jsonify({'stages': [subphase.name for subphase in list(ResearchPhases)],
-                        'current_stage': current_stage, 'current_status': current_status,
-                        'next_run_time': run_time_response.text})
+        return jsonify({'sub_phases': sub_phases, 'next_run_time': run_time_response.text})
 
     @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
     def get_adapter_devices(self):

@@ -80,8 +80,8 @@ class SystemSchedulerService(PluginBase, Triggerable):
         """
         received_update = self.get_request_data_as_object()
         self.logger.info(
-            f"{self.get_caller_plugin_name()} notified that {received_update['adapter_name']} finished fetching data. f{received_update['num_of_adapters_left']} left.")
-        self.state[scheduler_consts.StateLevels.SubPhaseStatus.name] = received_update['num_of_adapters_left']
+            f"{self.get_caller_plugin_name()} notified that {received_update['adapter_name']} finished fetching data. f{received_update['portion_of_adapters_left']} left.")
+        self.state[scheduler_consts.StateLevels.SubPhaseStatus.name] = received_update['portion_of_adapters_left']
         return ''
 
     def _triggered(self, job_name: str, post_json: dict, *args):
