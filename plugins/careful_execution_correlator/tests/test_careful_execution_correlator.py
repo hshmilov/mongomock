@@ -50,7 +50,7 @@ def filterdevices(devices_db, executor=None, cmds=None, parse_results=None):
 def run_all():
     test_empty()
     test_no_pass()
-    test_os_error()
+    test_no_pass_different_plugin()
     test_network_error()
 
 
@@ -122,6 +122,58 @@ def test_no_pass():
                         "id": "ad1"
                     }
                 },
+            ]
+        }
+    ]
+    assert len(filterdevices(devices)) == 0
+
+
+def test_no_pass_different_plugin():
+    devices = [
+        {
+            "internal_axon_id": "axon1",
+            "tags": [],
+            "adapters": [
+                {
+                    "plugin_name": "ad_adapter",
+                    "plugin_unique_name": "ad_adapter_1",
+                    "data": {
+                        "os": {
+                            "type": "Windows"
+                        },
+                        "network_interfaces": [
+                            {
+                                "mac": "06:01:01:01:01:01",
+                                "ips": ["123.123.123.123"],
+                                "ips_raw": [123123]
+                            }
+                        ],
+                        "id": "ad1"
+                    }
+                },
+            ]
+        },
+        {
+            "internal_axon_id": "axon2",
+            "tags": [],
+            "adapters": [
+                {
+                    "plugin_name": "blat_adapter",
+                    "plugin_unique_name": "blat_adapter_2",
+                    "data": {
+                        "os": {
+                            "type": "Windows"
+                        },
+                        "network_interfaces": [
+                            {
+                                "mac": "06:01:01:01:01:01",
+                                "ips": ["123.123.123.123"],
+                                "ips_raw": [123123]
+                            }
+                        ],
+                        "id": "blat_adapter2"
+                    }
+                }
             ]
         }
     ]
