@@ -2,21 +2,24 @@ from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.consts import adapter_consts
 from axonius.devices.device import Device
+from axonius.parsing_utils import format_ip
 from axonius.utils.files import get_local_config_file
+from axonius.fields import Field, JsonStringFormat, ListField
 from jamf_adapter import consts
-from jamf_adapter.connection import JamfConnection
+from jamf_adapter.connection import JamfConnection, JamfPolicy
 from jamf_adapter.exceptions import JamfException
-from distutils.util import strtobool
 
 
 class JamfAdapter(AdapterBase):
 
     class MyDevice(Device):
-        pass
+        public_ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
+        policies = ListField(JamfPolicy, "Jamf Policies")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
         self.alive_hours = float(self.config['DEFAULT'][adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS])
+        self.num_of_simultaneous_devices = int(self.config["DEFAULT"]["num_of_simultaneous_devices"])
 
     def _get_client_id(self, client_config):
         return client_config['Jamf_Domain']
@@ -27,6 +30,7 @@ class JamfAdapter(AdapterBase):
                                         domain=client_config[consts.JAMF_DOMAIN],
                                         search_name=client_config[consts.ADVANCE_SEARCH_NAME],
                                         all_permissions=client_config[consts.CREATE_SEARCH_PRIVILEGES],
+                                        num_of_simultaneous_devices=self.num_of_simultaneous_devices,
                                         http_proxy=client_config.get(consts.HTTP_PROXY),
                                         https_proxy=client_config.get(consts.HTTPS_PROXY))
             connection.set_credentials(username=client_config[consts.USERNAME],
@@ -115,8 +119,9 @@ class JamfAdapter(AdapterBase):
                 # Thus we believe the following fields will be present.
                 device.figure_os(' '.join([device_raw.get('Operating_System', ''),
                                            device_raw.get('Architecture_Type', '')]))
-                device.add_nic(device_raw.get('MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)
-
+                device.add_nic(device_raw.get('MAC_Address', ''), [
+                               device_raw.get('Last_Reported_IP_Address', '')], self.logger)
+                device.public_ip = device_raw.get('IP_Address')
                 for app in device_raw.get('Applications', {}).get('Application', []):
                     device.add_installed_software(
                         name=app.get('Application_Title', ''),
@@ -148,6 +153,9 @@ class JamfAdapter(AdapterBase):
                         ghz=float(processor_speed_mhz) / 1024.0
                     )
                 device.device_manufacturer = device_raw.get('Make')
+                device.policies = device_raw['policies']
+                device_raw['policies'] = [x.to_dict() for x in device_raw['policies']]
+
             else:
                 device.figure_os(' '.join([device_raw.get('Model_Identifier', ''), device_raw.get('iOS_Version', '')]))
                 device.add_nic(device_raw.get('Wi_Fi_MAC_Address', ''), [device_raw.get('IP_Address', '')], self.logger)

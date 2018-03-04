@@ -293,6 +293,10 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 ADVANCED_COMPUTER_SEARCH_XML_NAME = 'advanced_computer_search'
 ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME = 'computers'
 COMPUTER_DEVICE_TYPE = 'computer'
+COMPUTER_HISTORY_URL = 'computerhistory/id/'
+COMPUTER_HISTORY_XML_NAME = 'computer_history'
+COMPUTER_HISTORY_POLICY_LIST_NAME = 'policy_logs'
+COMPUTER_HISTORY_POLICY_INFO_TYPE = 'policy_log'
 ADVANCED_MOBILE_SEARCH_URL = 'advancedmobiledevicesearches'
 ADVANCED_MOBILE_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
 <advanced_mobile_device_search>
