@@ -117,6 +117,10 @@ export const adapterStaticData = {
 	'bomgar_adapter': {
 		name: 'Bomgar Adapter',
 		description: 'Bomgar is a remote support solution that allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile device.'
+	},
+	'bigfix_adapter': {
+		name: 'IBM Bigfix',
+		description: 'IBM Bigfix is a systems-management software product developed by IBM for managing large groups of computers.'
 	}
 }
 
