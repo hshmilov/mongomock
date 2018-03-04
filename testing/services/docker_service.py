@@ -244,7 +244,7 @@ else:
     def is_up(self):
         pass
 
-    def wait_for_service(self, timeout=30):
+    def wait_for_service(self, timeout=50):
         if timeout > 3:
             try:
                 super().wait_for_service(timeout=3)
