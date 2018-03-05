@@ -42,6 +42,8 @@ class GeneralInfoService(PluginBase, Triggerable):
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
 
+        self.trigger_activate_if_needed()
+
     def _triggered(self, job_name: str, post_json: dict, *args):
         """
         Returns any errors as-is.

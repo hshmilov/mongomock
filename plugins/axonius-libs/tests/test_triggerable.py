@@ -1,8 +1,8 @@
 # mocking flask.request and jsonify
 from threading import Lock
-
-import flask
 from retrying import retry
+import flask
+import mongomock
 
 
 class MockRequest():
@@ -47,12 +47,34 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-class SimpleWaitableTriggerableImplementedMock(Triggerable):
-    def __init__(self, wait_for, *args, **kwargs):
+class WaitableTriggerableImplementedMock(Triggerable):
+    """
+    Just a parent class for the rest of the classes.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        init.
+        """
+        self.db = mongomock.MongoClient().db
         self.logger = logger
         self.api_key = 'asd'
-        self.__wait_for = wait_for
         self.counter = 0
+        super().__init__(*args, **kwargs)
+
+    def _get_collection(self, collection_name):
+        """
+        Mock to _get_collection
+        :param collection_name: the name of the collection
+        :return: the collection mock
+        """
+
+        return self.db[collection_name]
+
+
+class SimpleWaitableTriggerableImplementedMock(WaitableTriggerableImplementedMock):
+    def __init__(self, wait_for, *args, **kwargs):
+        self.__wait_for = wait_for
         super().__init__(*args, **kwargs)
 
     def _triggered(self, job_name, post_json, *args):
@@ -107,6 +129,8 @@ def test_trigger_activated():
         "state": "Scheduled",
         "last_error": ""
     }
+    assert len(list(x._get_collection("config").find(
+        {"trigger_activate_job": job_name, "trigger_activate_state": True}))) == 1
     retry_assert_equal(x.counter, 1)
 
 
@@ -130,13 +154,10 @@ def test_double_trigger():
     retry_assert_equal(x.counter, 2)
 
 
-class FailingWaitableTriggerableImplementedMock(Triggerable):
+class FailingWaitableTriggerableImplementedMock(WaitableTriggerableImplementedMock):
     def __init__(self, wait_for, fail_array, *args, **kwargs):
-        self.logger = logger
-        self.api_key = 'asd'
         self.__wait_for = wait_for
         self.__fail_array = fail_array
-        self.counter = 0
         super().__init__(*args, **kwargs)
 
     def _triggered(self, job_name, post_json, *args):

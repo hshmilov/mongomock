@@ -14,6 +14,9 @@ if [ $(git ls-files | grep -E "(\.py|\.sh|\.yml|Dockerfile)" | xargs grep $(prin
 fi
 
 # We must delete old data, or else tests will fail.
+# In order to delete them, we must stop the current containers first. We are going to do that anyway
+# in the integration tests.
+docker ps rm -f `docker ps -a -q`
 docker volume rm `docker volume ls -q`
 
 echo "Running unitests"

@@ -45,6 +45,31 @@ class Triggerable(Feature, ABC):
         self.__last_error = ""
         self._default_activity = False
 
+    def trigger_activate_if_needed(self):
+        docs = self._get_collection("config").find({"trigger_activate_job": {"$exists": 1}})
+        for doc in docs:
+            job_name = doc["trigger_activate_job"]
+            job_state = doc["trigger_activate_state"]
+            self.logger.info(f"Trigger activate job {job_name}: state is {job_state}")
+            if job_state is True:
+                self._activate(job_name)
+
+    def __trigger_activate_save_to_db(self):
+        """
+        Saves the state into the db.
+        :return:
+        """
+
+        for job_name, state in self.__state.items():
+            self._get_collection("config").update(
+                {"trigger_activate_job": job_name},
+                {
+                    "trigger_activate_job": job_name,
+                    "trigger_activate_state": bool(state.get('active', False))
+                },
+                upsert=True
+            )
+
     @classmethod
     def specific_supported_features(cls) -> list:
         return ["Triggerable"]
@@ -105,6 +130,7 @@ class Triggerable(Feature, ABC):
         # Flipping current active state.
         job_state['active'] = True
         self.logger.info(f'Trigger job {job_name} has been activated.')
+        self.__trigger_activate_save_to_db()
         return ''
 
     @add_rule('trigger_deactivate/<job_name>', methods=['POST'])

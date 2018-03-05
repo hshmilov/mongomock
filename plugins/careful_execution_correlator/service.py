@@ -22,6 +22,8 @@ class CarefulExecutionCorrelatorService(CorrelatorBase):
                                                                     parse_correlation_results,
                                                                     logger=self.logger)
 
+        self.trigger_activate_if_needed()
+
     def get_devices_from_ids(self, devices_ids=None):
         """
         Only devices that are either AD or AWS

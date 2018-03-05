@@ -21,7 +21,7 @@ class ExecutionCorrelatorService(CorrelatorBase):
                                                              parse_correlation_results,
                                                              logger=self.logger)
 
-        self.activatable_start_if_needed()
+        self.trigger_activate_if_needed()
 
     def _correlate(self, devices: list):
         return self._correlation_engine.correlate(devices)

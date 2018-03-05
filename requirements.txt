@@ -46,3 +46,4 @@ construct==2.9.25
 netmiko==2.0.1
 dpkt==1.9.1
 DeepDiff==3.3.0
+mongomock==3.9.0
