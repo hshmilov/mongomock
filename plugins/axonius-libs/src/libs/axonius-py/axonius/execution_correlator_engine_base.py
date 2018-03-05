@@ -144,7 +144,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                 self.logger.info(f"Device {device['internal_axon_id']} has unsupported OS")
                 continue
             data_for_action = {
-                'shell_command': {os_type: cmd}
+                'shell_commands': {os_type: cmd}
             }
             promises[i] = (self._executor('execute_shell', device['internal_axon_id'],
                                           data_for_action=data_for_action), os_type)
@@ -189,7 +189,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                 adapter_to_id = {
                     adapter: self._parse_correlation_results(adapter, result, os_type)
                     for adapter, result in
-                    zip(adapters_cmds.keys(), promise.value['output']['product'])
+                    zip(adapters_cmds.keys(), [i["data"] for i in promise.value['output']['product']])
                 }
 
                 # removing None values - those aren't real executions

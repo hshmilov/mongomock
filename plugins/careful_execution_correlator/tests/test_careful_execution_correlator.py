@@ -23,7 +23,7 @@ def filterdevices(devices_db, executor=None, cmds=None, parse_results=None):
     def _executor(action_type, axon_id, data_for_action=None):
         if action_type == 'execute_shell':
             if executor:
-                return executor(axon_id, data_for_action['shell_command'])
+                return executor(axon_id, data_for_action['shell_commands'])
             return None
 
     def default_get_remote_plugin_correlation_cmds(plugin_unique_name):

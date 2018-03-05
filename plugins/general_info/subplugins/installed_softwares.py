@@ -1,6 +1,16 @@
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from general_info.subplugins.wmi_utils import wmi_query_commands, is_wmi_answer_ok
+from general_info.subplugins.wmi_utils import wmi_query_commands, smb_shell_commands, is_wmi_answer_ok
 from axonius.devices.device import Device
+
+
+GET_INSTALLED_SOFTWARE_COMMANDS = [
+    r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
+    r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
+    r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
+    r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
+    'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:64 /s)',
+    'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:32 /s)'
+]
 
 
 class GetInstalledSoftwares(GeneralInfoSubplugin):
@@ -15,32 +25,28 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         self.users = {}  # a cache var for storing users from adapters.
 
     @staticmethod
-    def get_wmi_commands():
-        return wmi_query_commands(["select Vendor, Name, Version, InstallState from Win32_Product"])
+    def get_wmi_smb_commands():
+        return wmi_query_commands(["select Vendor, Name, Version, InstallState from Win32_Product"]) + \
+            smb_shell_commands(GET_INSTALLED_SOFTWARE_COMMANDS)
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device, extra):
-        super().handle_result(device, executer_info, result, adapterdata_device, extra)
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+        super().handle_result(device, executer_info, result, adapterdata_device)
 
         installed_software = set()
 
-        # First, handle wmi.
-        if not all(is_wmi_answer_ok(a) for a in result):
-            self.logger.error("Not handling wmi installed softwares, moving on to exec installed softwares")
-
-        else:
-            for i in result[0]:
-                if i.get("InstallState") == 5:
-                    # 5 means it's installed
-                    installed_software.add((i['Vendor'], i['Name'], i['Version']))
-
-        # Now, handle psexec
-
-        if extra.get("result") != "Success":
-            self.logger.error(f"Installed Softwares execution error: {extra}")
-            return False
-
+        win32_product_answer = result[0]["data"]
         # we have a list of cmd commands, lets join to one big output.
-        exec_installed_software = "\n".join(extra['product'])
+        exec_installed_software = "\n".join([i["data"] for i in result[1:]])
+
+        if is_wmi_answer_ok(result[0]):
+            try:
+                for i in win32_product_answer:
+                    if i.get("InstallState") == 5:
+                        # 5 means it's installed
+                        installed_software.add((i['Vendor'], i['Name'], i['Version']))
+            except:
+                self.logger.exception("Exception while handling win32_product")
+
         # Each software contains firstly the registry key, the following one appears in all of them.
         for software_details in exec_installed_software.split(r"Microsoft\Windows\CurrentVersion"):
             r"""

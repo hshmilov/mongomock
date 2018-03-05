@@ -12,20 +12,48 @@ The following also have three advantages:
 """
 
 import sys
+import ntpath
 import json
+import time
 
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.dcom import wmi
 from impacket.dcerpc.v5.dcomrt import DCOMConnection
 from impacket.dcerpc.v5.rpcrt import RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_AUTHN_LEVEL_PKT_INTEGRITY, \
     RPC_C_AUTHN_LEVEL_NONE
+from impacket.smbconnection import SMBConnection
 from multiprocessing.pool import ThreadPool
 from retrying import retry
+from contextlib import contextmanager
 
 
 MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
 MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
+SMB_CONNECTION_TIMEOUT = 60 * 2  # 2 min timeout. if there are large files which take more time to transfer change that.
+MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
+MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 30  # The amount of seconds we wait for the created shell process to finish
+DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
+
+
+def get_exception_string():
+    """
+    when inside a catch exception flow, returns a really informative string representing it.
+    :return: a string representing the exception.
+    """
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+
+    ex_str = "Traceback (most recent call last):\n"
+    while exc_tb is not None:
+        ex_str = ex_str + "  File {0}, line {1}, in {2}\n".format(
+            exc_tb.tb_frame.f_code.co_filename,
+            exc_tb.tb_lineno,
+            exc_tb.tb_frame.f_code.co_name)
+
+        exc_tb = exc_tb.tb_next
+
+    ex_str = ex_str + "{0}:{1}".format(exc_type, exc_obj)
+    return ex_str
 
 
 class WMIRunner(object):
@@ -80,6 +108,220 @@ class WMIRunner(object):
     def __del__(self):
         self.close()
 
+    def getfile(self, filepath, share=DEFAULT_SHARE):
+        """
+        Gets a file.
+        :param filepath: the filename, which exists on share.
+        :param share: a share to get the file from, e.g. ADMIN$.
+        :return: the file
+        """
+
+        # Normalize filepath
+        filepath = ntpath.normpath(filepath)    # also replaces / with \
+        assumed_share, filepath = ntpath.splitdrive(filepath)
+        if assumed_share != '':
+            share = assumed_share[:-1] + "$"
+
+        class FileReceiver(object):
+            """
+            Just a helper to receive files from SMB.
+            """
+
+            def __init__(self):
+                self.contents = ""
+
+            def write_to_contents(self, data):
+                self.contents = self.contents + data
+
+        fr = FileReceiver()
+
+        with self.get_smb_connection() as smb_connection:
+            sharing_violation_times = 0
+            while True:
+                try:
+                    smb_connection.getFile(share, filepath, fr.write_to_contents)
+                    break
+                except Exception as e:
+                    if str(e).find('STATUS_SHARING_VIOLATION') >= 0:
+                        sharing_violation_times = sharing_violation_times + 1
+                        if sharing_violation_times > MAX_SHARING_VIOLATION_TIMES:
+                            raise
+                        # Not finished, let's wait
+                        time.sleep(1)
+                    else:
+                        raise
+
+        # break was encountered, we got the full file.
+        return fr.contents
+
+    def putfile(self, filepath, filecontents, share=DEFAULT_SHARE):
+        """
+        Puts a file remotely.
+        :param filepath: the name of the file.
+        :param filecontents: the contents of the file.
+        :param share: the share (optional).
+        :return:
+        """
+
+        # Normalize filepath
+        filepath = ntpath.normpath(filepath)  # also replaces / with \
+        assumed_share, filepath = ntpath.splitdrive(filepath)
+        if assumed_share != '':
+            share = assumed_share[:-1] + "$"
+
+        class FileSender(object):
+            """
+            A helper class for sending files.
+            """
+
+            def __init__(self, file_contents):
+                self.contents = file_contents
+                self.already_sent = 0
+
+            def read(self, size):
+                buf = self.contents[self.already_sent:self.already_sent + size]
+                self.already_sent += size
+                return buf
+
+        fs = FileSender(filecontents)
+        with self.get_smb_connection() as smb_connection:
+            sharing_violation_times = 0
+            while True:
+                try:
+                    smb_connection.putFile(share, filepath, fs.read)
+                    break
+                except Exception as e:
+                    if str(e).find('STATUS_SHARING_VIOLATION') >= 0:
+                        sharing_violation_times = sharing_violation_times + 1
+                        if sharing_violation_times > MAX_SHARING_VIOLATION_TIMES:
+                            raise
+                        # Not finished, let's wait
+                        time.sleep(1)
+                    else:
+                        raise
+        return True
+
+    def deletefile(self, filepath, share=DEFAULT_SHARE):
+        """
+        Deletes a file.
+        :param filepath: the filepath, which exists on share.
+        :param share: a share to get the file from, e.g. ADMIN$.
+        :return: the file
+        """
+
+        # Normalize filepath
+        filepath = ntpath.normpath(filepath)  # also replaces / with \
+        assumed_share, filepath = ntpath.splitdrive(filepath)
+        if assumed_share != '':
+            share = assumed_share[:-1] + "$"
+
+        with self.get_smb_connection() as smb_connection:
+            sharing_violation_times = 0
+            while True:
+                try:
+                    smb_connection.deleteFile(share, filepath)
+                    break
+                except Exception as e:
+                    if str(e).find('STATUS_SHARING_VIOLATION') >= 0:
+                        sharing_violation_times = sharing_violation_times + 1
+                        if sharing_violation_times > MAX_SHARING_VIOLATION_TIMES:
+                            raise
+                        # Not finished, let's wait
+                        time.sleep(1)
+                    else:
+                        raise
+
+        return True
+
+    def execshell(self, shell_command):
+        """
+        Executes a shell command and returns its output.
+        :param str shell_command: the command, as you would type it in cmd.
+        :return str: the output.
+        """
+
+        win32_process, _ = self.iWbemServices.GetObject("Win32_Process")
+        output_filename = "axonius_output_{0}.txt".format(str(time.time()), )
+        command_to_run = r"cmd.exe /Q /c {0} 1> \\127.0.0.1\{1}\{2} 2>&1".format(
+            shell_command, DEFAULT_SHARE, output_filename)
+        is_process_created = False
+
+        try:
+            # Open the process. We specify c:\\ just because we have to specify something valid.
+            # TODO: Change c:\\ to something else. "None" does not work (as it should, by msdn documentation)
+            # TODO: and env variables are not supported. so we assume c:\\ is there.
+            rv = win32_process.Create(command_to_run, "c:\\", None)
+
+            # Lets get it's pid.
+            pid = int(rv.getProperties()['ProcessId']['value'])
+            if pid == 0:
+                raise ValueError("cmd with {0} could not be created, pid is 0".format(shell_command))
+
+            is_process_created = True
+
+            # Now we have to wait until the process ends. If it takes too much time terminate it.
+            create_time = time.time()
+            is_process_terminated = False
+            num_of_execquery_exceptions = 0
+            while (time.time() - create_time) < MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS:
+                try:
+                    query_results = self.execquery(
+                        "select ProcessId from Win32_Process where ProcessId={0}".format(pid))
+                    if len(query_results) == 0:
+                        # No process ID found, the process is terminated
+                        is_process_terminated = True
+                        # Note that this is the legitimate thing! The process should be terminated because
+                        # It has finished! We break the while loop because we have finished waiting for it.
+                        break
+
+                    time.sleep(1)
+                except:
+                    # execquery can fail occasionally when it runs too much. if it happens too much
+                    # raise an exception here.
+                    num_of_execquery_exceptions = num_of_execquery_exceptions + 1
+                    if num_of_execquery_exceptions > 3:
+                        raise
+
+            if is_process_terminated is False:
+                # We have to terminate it by ourselves. and raise an error
+                try:
+                    query_results = self.iWbemServices.ExecQuery(
+                        'SELECT * from Win32_Process where Handle ={0}'.format(pid))
+                    query_results.Next(0xffffffff, 1)[0].Terminate(0)
+
+                    # If its not terminated pop up an error.
+                    query_results = self.execquery(
+                        "select ProcessId from Win32_Process where ProcessId={0}".format(pid))
+                    if len(query_results) != 0:
+                        raise ValueError("Process was not terminated")
+                except Exception as e:
+                    raise ValueError("Process {0} with cmd {1} took too much time and "
+                                     "could not be terminated. exception {2}".format(pid, shell_command, repr(e)))
+
+                raise ValueError("Process {0} with cmd {1} took too much time and had to be terminated".format(
+                    pid, shell_command))
+
+            return self.getfile(output_filename)
+        except:
+            raise
+        finally:
+            if is_process_created is True:
+                self.deletefile(output_filename)
+
+    def execbinary(self, binary_file):
+        """
+        Not implemented yet
+        :param binary_file: the binary file.
+        :return:
+        """
+
+        # Todo:
+        # 1. self.putfile
+        # 2. same thing like exec shell but without the output redirecting
+        # 3. self.deletefile
+
+        raise NotImplementedError("Not Implemented Yet")
+
     def execmethod(self, object_name, method_name, *args):
         """
         Executes a wmi method with the given args and returns the result.
@@ -99,9 +341,9 @@ class WMIRunner(object):
 
         # If its not a list, return it as a list, to be in the same standard as execquery.
         if not isinstance(result, list):
-            return [result]
+            return minimize([result])
         else:
-            return result
+            return minimize(result)
 
     def execquery(self, query):
         """
@@ -127,7 +369,7 @@ class WMIRunner(object):
                     break
 
         iEnumWbemClassObject.RemRelease()
-        return records
+        return minimize(records)
 
     # TODO: This will attempt even on legitimate errors like access denied. fix that
     @retry(stop_max_attempt_number=MAX_NUM_OF_TRIES_PER_CONNECT, wait_fixed=TIME_TO_REST_BETWEEN_CONNECT_RETRY)
@@ -153,6 +395,21 @@ class WMIRunner(object):
         self.iWbemServices = iWbemServices
         self.dcom = dcom
 
+    @contextmanager
+    def get_smb_connection(self):
+        # Open an SMB connection. We do this again and again to allow parallelism
+        smb_connection = SMBConnection(self.address, self.address)
+        smb_connection.login(self.username, self.password, self.domain, self.lmhash, self.nthash)
+        # set timeout. If we intend to bring large files change that in the future.
+        smb_connection.setTimeout(SMB_CONNECTION_TIMEOUT)
+
+        yield smb_connection
+
+        try:
+            smb_connection.logout()
+        except:
+            pass
+
     def close(self):
         """
         Closes the connection.
@@ -160,13 +417,15 @@ class WMIRunner(object):
         """
 
         try:
-            self.iWbemServices.RemRelease()
-            self.dcom.disconnect()
+            if self.iWbemServices is not None:
+                self.iWbemServices.RemRelease()
+            if self.dcom is not None:
+                self.dcom.disconnect()
         except:
             pass
 
 
-def minimize_and_convert(result):
+def convert_unicode(result):
     # the object returned by w.query is an object that contains some strings. some of them are regular,
     # and some of them are utf-16. if we try to json.dumps a utf-16 string without mentioning encoding="utf-16",
     # an exception will be thrown. on the other side if we mention encoding="utf-16" and have an str("abc")
@@ -187,23 +446,27 @@ def minimize_and_convert(result):
         else:
             return input
 
-    # Also, We have a lot of "garbage" returned by impacket. we only need the "name", "value" combination,
-    # so lets reduce so very large amount of data.
+    return convert(result)
+
+
+def minimize(result):
+    """
+    We have a lot of "garbage" returned by impacket. we only need the "name", "value" combination,
+    so lets reduce so very large amount of data.
+    :param result: a list of sql result lines. each line is a dict that looks like {"key": {"value": "data", "a": "b"}}
+    :return: the same set of lines but {"key": "data"} and all other non-relevant keys removed.
+    """
+
+    # For each for each line in the result -> for each column in a line -> get the value.
     minified_result = []
+    for line in result:
+        new_line = {}
+        for column_name, column_value in line.items():
+            new_line[column_name] = column_value.get("value")
 
-    # For each result of a command -> for each line in the result -> for each column in a line -> get the value.
-    for command_result in result:
-        minified_command_result = []
-        for line in command_result:
-            new_line = {}
-            for column_name, column_value in line.items():
-                new_line[column_name] = column_value.get("value")
+        minified_result.append(new_line)
 
-            minified_command_result.append(new_line)
-
-        minified_result.append(minified_command_result)
-
-    return convert(minified_result)
+    return minified_result
 
 
 def run_command(w, command_type, command_args):
@@ -214,11 +477,28 @@ def run_command(w, command_type, command_args):
         elif command_type == "method":
             result = w.execmethod(*command_args)
 
+        elif command_type == "shell":
+            result = w.execshell(*command_args)
+
+        elif command_type == "getfile":
+            result = w.getfile(*command_args)
+
+        elif command_type == "putfile":
+            result = w.putfile(*command_args)
+
+        elif command_type == "deletefile":
+            result = w.deletefile(*command_args)
+
+        elif command_type == "execbinary":
+            result = w.execbinary(*command_args)
+
         else:
-            raise ValueError("command type {0} does not exist".filter(command_type))
-    except Exception as e:
+            raise ValueError("command type {0} does not exist".format(command_type))
+
+        result = {"status": "ok", "data": result}
+    except Exception:
         # Note that we put here value because soon we are going to get it in minimize_and_convert
-        result = [{"Exception": {"value": str(e)}}]
+        result = {"status": "exception", "data": get_exception_string()}
 
     return result
 
@@ -251,13 +531,13 @@ if __name__ == '__main__':
                             final_result_array[i] = final_result_array[i].get()
 
                             # Check if we are done with it.
-                            if len(final_result_array[i]) == 0 or final_result_array[i][0].get("Exception") is None:
+                            if final_result_array[i]["status"] == "ok":
                                 queries_left[i] = False
             else:
                 break
 
         # To see it normally, change to(json.dumps("", indent=4)
-        print json.dumps(minimize_and_convert(final_result_array), encoding="utf-16")
+        print json.dumps(convert_unicode(final_result_array), encoding="utf-16")
         sys.stdout.flush()
 
     except Exception:

@@ -20,15 +20,6 @@ SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo]
 
-GET_INSTALLED_SOFTWARE_COMMANDS = [
-    r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
-    r'reg query HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
-    r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:32 /s',
-    r'reg query HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ /reg:64 /s',
-    'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:64 /s)',
-    'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:32 /s)'
-]
-
 
 class GeneralInfoService(PluginBase, Triggerable):
     class MyDevice(Device):
@@ -128,25 +119,23 @@ class GeneralInfoService(PluginBase, Triggerable):
                     self.logger.debug(f"Going to request action on {internal_axon_id}")
 
                     # Get all wmi queries from all subadapters.
-                    wmi_commands = []
+                    wmi_smb_commands = []
                     for subplugin in subplugins_objects:
-                        wmi_commands.extend(subplugin.get_wmi_commands())
+                        wmi_smb_commands.extend(subplugin.get_wmi_smb_commands())
 
                     # Now run all queries you have got on that device.
                     p = self.request_action(
-                        "execute_wmi_and_shell",
+                        "execute_wmi_smb",
                         internal_axon_id,
                         {
-                            "wmi_commands": wmi_commands,
-                            "shell_command":
-                                {
-                                    "Windows": GET_INSTALLED_SOFTWARE_COMMANDS
-                                }
+                            "wmi_smb_commands": wmi_smb_commands
                         }
                     )
 
                     p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
                            did_reject=functools.partial(self._handle_wmi_execution_failure, device))
+
+        return True
 
     def _handle_wmi_execution_success(self, device, data):
         try:
@@ -166,16 +155,15 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # We have got many requests. Lets call the handler of each of our subplugins.
             # We go through the amount of queries each subplugin requested, linearly.
-            queries_response = data["output"]["product"]["wmi"]
+            queries_response = data["output"]["product"]
             queries_response_index = 0
-            shell_response = data["output"]["product"]["shell"]
 
             # Create a new device, since these subplugins will have some generic info enrichments.
             adapterdata_device = self._new_device()
             all_error_logs = []
 
             for subplugin in subplugins_list:
-                subplugin_num_queries = len(subplugin.get_wmi_commands())
+                subplugin_num_queries = len(subplugin.get_wmi_smb_commands())
                 subplugin_result = queries_response[queries_response_index:
                                                     queries_response_index + subplugin_num_queries]
                 try:
@@ -183,8 +171,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                         subplugin.handle_result(device,
                                                 executer_info,
                                                 subplugin_result,
-                                                adapterdata_device,
-                                                shell_response)
+                                                adapterdata_device)
 
                     all_error_logs.extend(subplugin.get_error_logs())
 
@@ -194,6 +181,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                     self.logger.exception(f"Subplugin {subplugin.__class__.__name__} exception."
                                           f"Internal axon id is {device['internal_axon_id']}. "
                                           f"Moving on to next plugin.")
+                    all_error_logs.append(f"Subplugin {subplugin.__class__.__name__} exception: "
+                                          f"{get_exception_string()}")
 
                 # Update the response index.
                 queries_response_index = queries_response_index + subplugin_num_queries

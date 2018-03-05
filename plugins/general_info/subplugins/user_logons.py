@@ -48,23 +48,23 @@ class GetUserLogons(GeneralInfoSubplugin):
             return dict_of_users
 
     @staticmethod
-    def get_wmi_commands():
+    def get_wmi_smb_commands():
         return wmi_query_commands(
             [
                 "select SID,LastUseTime from Win32_UserProfile",
                 "select SID,Caption, LocalAccount from Win32_UserAccount"
             ])
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device, extra):
-        super().handle_result(device, executer_info, result, adapterdata_device, extra)
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+        super().handle_result(device, executer_info, result, adapterdata_device)
         if not all(is_wmi_answer_ok(a) for a in result):
             self.logger.error("Not handling result, result has exception")
             return False
 
         clients_used = [p['client_used'] for p in device['adapters']]
 
-        user_profiles_data = result[0]
-        user_accounts_data = result[1]
+        user_profiles_data = result[0]["data"]
+        user_accounts_data = result[1]["data"]
 
         # First, lets build the sids_to_users table.
         sids_to_users = {}

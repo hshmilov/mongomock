@@ -45,6 +45,17 @@ def wmi_query_commands(list_of_queries):
     return [{"type": "query", "args": [q]} for q in list_of_queries]
 
 
+def smb_shell_commands(list_of_shell_commands):
+    """
+    Gets shell commands and returns the format needed for execution commands.
+    :param list_of_shell_commands: a list of wmi queries
+    :type list_of_shell_commands: list of str
+    :return:
+    """
+
+    return [{"type": "shell", "args": [q]} for q in list_of_shell_commands]
+
+
 def is_wmi_answer_ok(answer):
     """
     Checks if a specific wmi query was successfully run.
@@ -52,8 +63,7 @@ def is_wmi_answer_ok(answer):
     :return: True if true, else False
     """
 
-    is_exception = len(answer) > 0 and answer[0].get("Exception") is not None
-    return not is_exception
+    return answer["status"] == "ok"
 
 
 def check_wmi_answers_integrity(answers, logger=None):
@@ -71,6 +81,6 @@ def check_wmi_answers_integrity(answers, logger=None):
         if is_wmi_answer_ok(a) is False:
             ok = False
             if logger is not None:
-                logger.error(f"Query {i} exception: {a[0]['Exception']}")
+                logger.error(f"Query {i} exception: {a['data']}")
 
     return ok

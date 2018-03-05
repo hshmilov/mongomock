@@ -28,7 +28,7 @@ def correlate(devices_db, executor=None, cmds=None, parse_results=None):
     def _executor(action_type, axon_id, data_for_action=None):
         if action_type == 'execute_shell':
             if executor:
-                return executor(axon_id, data_for_action['shell_command'])
+                return executor(axon_id, data_for_action['shell_commands'])
             return None
 
     def default_get_remote_plugin_correlation_cmds(plugin_unique_name):
@@ -63,8 +63,13 @@ def windows_unique_cmd_generator(plugin_unique_name):
 
 
 def join_with_order(execution_result, cmd_shell):
-    cmd_shell = list(cmd_shell.values())[0]
-    result_ordered = [execution_result.get(x, UNAVAILABLE_CMD_OUTPUT) for x in cmd_shell]
+    cmd_shell = list(cmd_shell.values())[0]  # the list of operations for "Windows".
+    # The following assumes we only have one command.
+    result_ordered = [
+        {
+            "status": "ok",
+            "data": execution_result.get(x, UNAVAILABLE_CMD_OUTPUT)
+        } for x in cmd_shell]
     return result_ordered
 
 

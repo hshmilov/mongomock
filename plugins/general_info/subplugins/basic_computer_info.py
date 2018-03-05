@@ -17,7 +17,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         self.users = {}  # a cache var for storing users from adapters.
 
     @staticmethod
-    def get_wmi_commands():
+    def get_wmi_smb_commands():
         return wmi_query_commands([
             "select Name, AddressWidth, NumberOfCores, LoadPercentage, Architecture, "
             "MaxClockSpeed from Win32_Processor",
@@ -36,19 +36,19 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         ]
         )
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device, extra):
-        super().handle_result(device, executer_info, result, adapterdata_device, extra)
+    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+        super().handle_result(device, executer_info, result, adapterdata_device)
         # Put Results
-        win32_processor = result[0]
-        win32_bios = result[1]
-        win32_operatingsystem = result[2]
-        win32_logicaldisk = result[3]
-        win32_quickfixengineering = result[4]
-        win32_computersystem = result[5]
-        win32_battery = result[6]
-        win32_timezone = result[7]
-        win32_baseboard = result[8]
-        win32_networkadapterconfiguration = result[9]
+        win32_processor = result[0]["data"]
+        win32_bios = result[1]["data"]
+        win32_operatingsystem = result[2]["data"]
+        win32_logicaldisk = result[3]["data"]
+        win32_quickfixengineering = result[4]["data"]
+        win32_computersystem = result[5]["data"]
+        win32_battery = result[6]["data"]
+        win32_timezone = result[7]["data"]
+        win32_baseboard = result[8]["data"]
+        win32_networkadapterconfiguration = result[9]["data"]
 
         # Win32_Processor
         try:

@@ -24,12 +24,16 @@ def main():
     # test_users(l)
 
     commands = json.dumps([
-        {"type": "query", "args": ["select SID from Win32_Account"]},
-        {"type": "method", "args": ["StdRegProv", "EnumKey", 2147483649, ""]},
+        {"type": "shell", "args": ["dir"]},
+        # {"type": "query", "args": ["select SID from Win32_Account"]},
+        # {"type": "method", "args": ["StdRegProv", "EnumKey", 2147483649, ""]},
+        # {"type": "putfile", "args": ["c:\\a.txt", "abcdefgh"]},
+        # {"type": "getfile", "args": ["c:\\a.txt"]},
+        # {"type": "deletefile", "args": ["c:\\a.txt"]},
     ])
 
     p = subprocess.Popen(["python", "./wmirunner/wmi_runner.py", DOMAIN, USERNAME, PASSWORD, ADDRESS, commands],
-                         )
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     start = time.time()
     stdout, stderr = p.communicate()
@@ -37,6 +41,11 @@ def main():
 
     print(f"Stdout: {stdout}\nStderr: {stderr}")
     print(f"Finished after {end-start} seconds")
+
+    response = json.loads(stdout)
+    for i, q in enumerate(response):
+        print(f"{i}. status: {q['status']}")
+        print(f"{i}. data: {q['data']}")
 
     return 0
 

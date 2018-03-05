@@ -69,12 +69,8 @@ class ActiveDirectoryAdapter(AdapterBase):
         return self.config['paths']['python_27_path']
 
     @property
-    def _use_psexec_path(self):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), self.config['paths']['psexec_path']))
-
-    @property
-    def _use_wmiquery_path(self):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), self.config['paths']['wmiquery_path']))
+    def _use_wmi_smb_path(self):
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), self.config['paths']['wmi_smb_path']))
 
     @property
     def _ldap_page_size(self):
@@ -371,7 +367,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         raise IpResolveError(err)
 
-    def _get_basic_wmi_command(self, device_data):
+    def _get_basic_wmi_smb_command(self, device_data):
         """ Function for formatting the base wmiqery command.
 
         :param dict device_data: The device_data used to create this command
@@ -392,144 +388,69 @@ class ActiveDirectoryAdapter(AdapterBase):
                     self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
                     raise IpResolveError("Cant Resolve Ip")
 
-                # Putting the file using usePsexec.py
-                return [self._python_27_path, self._use_wmiquery_path, domain_name, user_name, password, device_ip]
+                # Putting the file using wmi_smb_path.
+                return [self._python_27_path, self._use_wmi_smb_path, domain_name, user_name, password, device_ip]
         raise NoClientError()  # Couldn't find an appropriate client
 
-    def _get_basic_psexec_command(self, device_data):
-        """ Function for formatting the base psexec command.
-
-        :param dict device_data: The device_data used to create this command
-        :return string: The basic command
+    def put_files(self, device_data, files_path, files_content):
         """
-        clients_config = self._get_clients_config()
-        wanted_client = device_data['client_used']
-        for client_config in clients_config:
-            client_config = client_config['client_config']
-            if client_config["dc_name"] == wanted_client:
-                # We have found the correct client. Getting credentials
-                domain_name, user_name = client_config['user'].split('\\')
-                password = client_config['password']
-                try:
-                    device_ip = self._resolve_device_name(device_data['data']['hostname'], client_config)
-                except Exception as e:
-                    self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
-                    raise IpResolveError("Cant Resolve Ip")
+        puts a list of files.
+        :param device_data: the device data.
+        :param files_path: a list of paths, e.g. ["c:\\a.txt"]
+        :param files_content: a list of files content.
+        :return:
+        """
 
-                # Putting the file using usePsexec.py
-                return [self._python_27_path, self._use_psexec_path, "--addr", device_ip, "--username", user_name,
-                        "--password", password, "--domain", domain_name]
-        raise NoClientError()  # Couldn't find an appropriate client
+        commands_list = []
+        for fp, fc in zip(files_path, files_content):
+            commands_list.append({"type": "putfile", "args": [fp, fc]})
 
-    def put_file(self, device_data, file_buffer, dst_path):
-        return "Not implemented"
-        # Since Active Directory supports only windows, we will take the windows file
-        dst_path = dst_path['windows']
-        file_buffer = file_buffer['windows']
+        return self.execute_wmi_smb(device_data, commands_list)
 
-        # Creating a file from the buffer (to pass it on to PSEXEC)
-        file_path = self._create_random_file(file_buffer)
-        try:
-            # Getting the base command (same for all actions)
-            command = self._get_basic_psexec_command(device_data)
-            command = command + ["sendfile", "--remote", dst_path, "--local", file_path]
+    def get_files(self, device_data, files_path):
+        """
+        gets a list of files.
+        :param device_data: the device data.
+        :param files_path: a list of paths, e.g. ["c:\\a.txt"]
+        :return:
+        """
 
-            # Running the command
-            command_result = subprocess.run(command, stdout=subprocess.PIPE)
+        commands_list = []
+        for fp in files_path:
+            commands_list.append({"type": "getfile", "args": [fp]})
 
-            # Checking if return code is zero, if not, it will raise an exception
-            command_result.check_returncode()
+        return self.execute_wmi_smb(device_data, commands_list)
 
-            # If we got here that means the the command executed successfuly
-            result = 'Success'
-            product = str(command_result.stdout)
+    def delete_files(self, device_data, files_path):
+        """
+        deletes a list of files.
+        :param device_data: the device data.
+        :param files_path: a list of paths, e.g. ["c:\\a.txt"]
+        :return:
+        """
 
-        except subprocess.CalledProcessError as e:
-            result = 'Failure'
-            product = str(e)
-        except Exception as e:
-            raise e
-        finally:
-            os.remove(file_path)
+        commands_list = []
+        for fp in files_path:
+            commands_list.append({"type": "deletefile", "args": [fp]})
 
-        return {"result": result, "product": product}
-
-    def get_file(self, device_data, file_path):
-        return "Not implemented"
-        # Since Active Directory supports only windows, we will take the windows file
-        remote_file_path = file_path['windows']
-
-        # Creating a file from the buffer (to pass it on to PSEXEC)
-        local_file_path = self._create_random_file('')
-        try:
-            # Getting the base command (same for all actions)
-            command = self._get_basic_psexec_command(device_data)
-            command = command + ["getfile", "--remote", remote_file_path, "--local", local_file_path]
-
-            # Running the command
-            command_result = subprocess.run(command, stdout=subprocess.PIPE)
-
-            # Checking if return code is zero, if not, it will raise an exception
-            command_result.check_returncode()
-
-            # If we got here that means the the command executed successfully
-            result = 'Success'
-            # TODO: Think about other way to send the file
-            product = str(file_path)
-
-        except subprocess.CalledProcessError as e:
-            result = 'Failure'
-            product = str(e)
-        except Exception as e:
-            raise e
-        finally:
-            os.remove(file_path)
-
-        return {"result": result, "product": product}
+        return self.execute_wmi_smb(device_data, commands_list)
 
     def execute_binary(self, device_data, binary_buffer):
-        return "Not implemented"
-        # Creating a file from the buffer (to pass it on to PSEXEC)
-        # Since Active Directory supports only windows, we will take the windows file
-        binary_buffer = standard_b64decode(binary_buffer['windows'])
-        exe_path = self._create_random_file(binary_buffer, 'wb')
-        try:
-            # Getting the base command (same for all actions)
-            command = self._get_basic_psexec_command(device_data)
-            command = command + ["runexe", "--exepath", exe_path]
+        raise NotImplementedError("Execute binary is not implemented")
 
-            # Running the command
-            command_result = subprocess.run(command, stdout=subprocess.PIPE)
-
-            # Checking if return code is zero, if not, it will raise an exception
-            command_result.check_returncode()
-
-            result = 'Success'
-            product = 'nothing?'
-
-        except subprocess.CalledProcessError as e:
-            result = 'Failure'
-            product = str(e)
-        except Exception as e:
-            raise e
-        finally:
-            os.remove(exe_path)
-
-        return {"result": result, "product": product}
-
-    def execute_wmi(self, device_data, wmi_commands):
+    def execute_wmi_smb(self, device_data, wmi_smb_commands):
         """
-        execute wql or wmi methods.
+        executes a list of wmi + smb possible queries. (look at wmi_smb_runner.py)
         :param device_data: the device data.
-        :param wmi_commands: a list of dicts, each list in the format of wmirunner.py.
-                            e.g. [{"type": "query", "args": "select * from Win32_Account"}]
+        :param wmi_smb_commands: a list of dicts, each list in the format of wmirunner.py.
+                            e.g. [{"type": "query", "args": ["select * from Win32_Account"]}]
         :return: axonius-execution result.
         """
 
-        if wmi_commands is None:
-            return {"result": 'Failure', "product": 'No WMI queries/commands list supplied'}
+        if wmi_smb_commands is None:
+            return {"result": 'Failure', "product": 'No WMI/SMB queries/commands list supplied'}
 
-        single_command = self._get_basic_wmi_command(device_data) + [json.dumps(wmi_commands)]
+        single_command = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
         self.logger.debug("running wmi {0}".format(single_command))
 
         # Running the command
@@ -548,82 +469,36 @@ class ActiveDirectoryAdapter(AdapterBase):
         product = json.loads(command_result.stdout.strip())
         self.logger.debug("command returned with return code 0 (successfully).")
 
+        # Optimization if all failed
+        if all([True if line['status'] != 'ok' else False for line in product]):
+            return {"result": 'Failure', "product": product}
+
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
 
-    def execute_wmi_and_shell(self, device_data, wmi_commands, shell_command):
+    def execute_shell(self, device_data, shell_commands):
         """
-        Hack until we fix the execution.
-        :param device_data: look at execute_wmi
-        :param wmi_commands: look at execute_wmi
-        :param shell_command: look at execute_wmi
+        Shell commands is a dict of which keys are operation systems and values are lists of cmd commands.
+        The commands will be run *in parallel* and not consequently.
+        :param device_data: the device data
+        :param shell_commands: e.g. {"Windows": ["dir", "ping google.com"]}
         :return:
         """
-        return "Not implemented"
-        result = self.execute_wmi(device_data, wmi_commands)
-        if result.get('result') == 'Success':
-            result['product'] = {"wmi": result['product']}
-            try:
-                shell_result = self.execute_shell(device_data, shell_command)
-                result['product']['shell'] = shell_result
-            except Exception:
-                result['product']['shell'] = {"result": "Exception", "product": get_exception_string()}
-        else:
-            result['product']['shell'] = {"result": "Failed", "product": "did not query because wmi failed"}
 
-        return result
-
-    def execute_shell(self, device_data, shell_command):
-        return "Not implemented"
-        # Creating a file from the buffer (to pass it on to PSEXEC)
-        # Adding separator to the commands list
-        shell_command_windows = shell_command.get('Windows')
+        shell_command_windows = shell_commands.get('Windows')
         if shell_command_windows is None:
             return {"result": 'Failure', "product": 'No Windows command supplied'}
 
-        SEPARATOR = '_SEPARATOR_STRING_'
-        conf_path = self._create_random_file(SEPARATOR.join(shell_command_windows) + SEPARATOR)
+        commands_list = []
+        for command in shell_command_windows:
+            commands_list.append({"type": "shell", "args": [command]})
 
-        # Creating a file to write the result to
-        result_path = self._create_random_file('')
-        try:
-            # Getting the base command (same for all actions)
-            command = self._get_basic_psexec_command(device_data)
-            command = command + ["runshell", "--command_path", conf_path, "--result_path", result_path]
-
-            # Running the command
-            command_result = subprocess.run(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-            # Checking if return code is zero, if not, it will raise an exception
-            command_result.check_returncode()
-
-            # If we got here that means the the command executed successfuly
-            result = 'Success'
-
-            result_file = open(result_path, 'r')
-            product = str(result_file.read())
-            if SEPARATOR in product:
-                product = product.split(SEPARATOR)[:-1]
-            result_file.close()
-
-        except subprocess.CalledProcessError as e:
-            result = 'Failure'
-            product = "stdout: {0}, stderr: {1}, exception: {2}" \
-                .format(str(command_result.stdout), str(command_result.stderr), str(e))
-        except Exception as e:
-            raise e
-        finally:
-            os.remove(conf_path)
-            os.remove(result_path)
-
-        return {"result": result, "product": product}
+        return self.execute_wmi_smb(device_data, commands_list)
 
     def supported_execution_features(self):
         """
         :return: Returns a list of all supported execution features by this adapter.
         """
-        return ["put_file", "get_file", "execute_binary", "execute_wmi", "execute_shell", "execute_wmi_and_shell"]
-        return ["put_file", "get_file", "execute_binary", "execute_wmi", "execute_shell"]
+        return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell"]
 
         # Exported API functions - None for now

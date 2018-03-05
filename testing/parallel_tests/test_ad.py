@@ -2,6 +2,7 @@ import pytest
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
 from test_credentials.test_ad_credentials import *
+import time
 
 # These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
@@ -87,13 +88,13 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(100, 5, has_ip_conflict_tag)
 
-    def test_ad_execute_wmi(self):
+    def test_ad_execute_wmi_smb(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
-        action_id = self.axonius_system.execution.make_action("execute_wmi",
+        action_id = self.axonius_system.execution.make_action("execute_wmi_smb",
                                                               internal_axon_id,
-                                                              {"wmi_commands": [
+                                                              {"wmi_smb_commands": [
                                                                   {"type": "query", "args": [
                                                                       "select SID from Win32_UserProfile"]},
                                                                   {"type": "query", "args": [
@@ -107,10 +108,11 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["result"] == "Success"
             assert action_data["status"] == "finished"
             assert len(action_data["product"]) == 2  # We queried for 2 queries, assert we have 2 answers.
+            assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
 
             sids = []
             # [0] is for getting the answer for the first wmi query
-            for user in action_data["product"][0]:
+            for user in action_data["product"][0]["data"]:
                 sids.append(user["SID"])
 
             # Lets validate we have the special SID's...
@@ -120,15 +122,16 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(15, 5, check_execute_wmi_results)
 
-    @pytest.mark.skip("Not implemented")
     def test_ad_execute_shell(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
         internal_axon_id = device['internal_axon_id']
 
         action_id = self.axonius_system.execution.make_action("execute_shell",
                                                               internal_axon_id,
-                                                              {"shell_command": {"Windows": [
-                                                                  "dir c:\\windows\\system32\\drivers\\etc"]}},
+                                                              {"shell_commands": {"Windows": [
+                                                                  r"dir c:\windows\system32\drivers\etc",
+                                                                  r"dir c:\windows\system32\*.exe"
+                                                              ]}},
                                                               adapters_to_whitelist=["ad_adapter"])
 
         def check_execute_shell_results():
@@ -137,22 +140,93 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["status"] == "finished"
 
             # The following is a file that is always present in c:\windows\system32\drivers\etc\
-            assert "lmhosts.sam" in action_data["product"][0]
+            assert action_data["product"][0]["status"] == "ok"
+            assert "lmhosts.sam" in action_data["product"][0]["data"]
+            # The following is a file that is always present in c:\windows\system32
+            assert action_data["product"][1]["status"] == "ok"
+            assert "cmd.exe" in action_data["product"][1]["data"]
 
         try_until_not_thrown(15, 5, check_execute_shell_results)
 
-    @pytest.mark.skip("Not implemented")
-    def test_ad_getfile(self):
-        pass
+    def test_ad_file_operations(self):
+        # We must remember this runs in parallel. So the filename is going to be random.
+        device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
+        internal_axon_id = device['internal_axon_id']
+        file1_name = f"axonius_test1_{time.time()}.txt"
+        file2_name = f"axonius_test2_{time.time()}.txt"
 
-    @pytest.mark.skip("Not implemented")
-    def test_ad_putfile(self):
-        pass
+        # 1. Put the files
+        action_id = self.axonius_system.execution.make_action("put_files",
+                                                              internal_axon_id,
+                                                              {
+                                                                  "files_path": [file1_name, file2_name],
+                                                                  "files_content": ["abcd", "efgh"]
+                                                              },
+                                                              adapters_to_whitelist=["ad_adapter"])
 
-    @pytest.mark.skip("Not implemented")
-    def test_ad_delete_file(self):
-        pass
+        def check_put_files_results():
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
+            assert action_data["result"] == "Success"
+            assert action_data["status"] == "finished"
+            assert len(action_data["product"]) == 2
+            assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
+            assert action_data["product"][0]["data"] is True and action_data["product"][1]["data"] is True
 
-    @pytest.mark.skip("Not implemented")
-    def test_ad_execute_binary(self):
-        pass
+        try_until_not_thrown(15, 5, check_put_files_results)
+
+        # 2. Get the files
+        action_id = self.axonius_system.execution.make_action("get_files",
+                                                              internal_axon_id,
+                                                              {
+                                                                  "files_path": [file1_name, file2_name]
+                                                              },
+                                                              adapters_to_whitelist=["ad_adapter"])
+
+        def check_get_files_results():
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
+            assert action_data["result"] == "Success"
+            assert action_data["status"] == "finished"
+            assert len(action_data["product"]) == 2
+            assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
+            assert action_data["product"][0]["data"] == "abcd" and action_data["product"][1]["data"] == "efgh"
+
+        try_until_not_thrown(15, 5, check_get_files_results)
+
+        # 3. Delete the files
+        action_id = self.axonius_system.execution.make_action("delete_files",
+                                                              internal_axon_id,
+                                                              {
+                                                                  "files_path": [file1_name, file2_name]
+                                                              },
+                                                              adapters_to_whitelist=["ad_adapter"])
+
+        def check_delete_files_results():
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
+            assert action_data["result"] == "Success"
+            assert action_data["status"] == "finished"
+            assert len(action_data["product"]) == 2
+            assert action_data["product"][0]["status"] == "ok" and action_data["product"][1]["status"] == "ok"
+            assert action_data["product"][0]["data"] is True and action_data["product"][1]["data"] is True
+
+        try_until_not_thrown(15, 5, check_delete_files_results)
+
+        # 4. Try to get the files again. This should fail
+        # 3. Delete the files
+        action_id = self.axonius_system.execution.make_action("get_files",
+                                                              internal_axon_id,
+                                                              {
+                                                                  "files_path": [file1_name, file2_name]
+                                                              },
+                                                              adapters_to_whitelist=["ad_adapter"])
+
+        def check_get_files_after_delete_results():
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
+            assert action_data["result"] == "Failure"
+            assert len(action_data["product"]) == 2
+            assert action_data["product"][0]["status"] == "exception"
+            assert action_data["product"][1]["status"] == "exception"
+            # file not found errors
+            assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_data["product"][0]["data"]
+            assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_data["product"][1]["data"]
+
+        try_until_not_thrown(15, 5, check_get_files_after_delete_results)

@@ -649,8 +649,8 @@ class AdapterBase(PluginBase, Feature, ABC):
         request_data = self.get_request_data_as_object()
         device_data = request_data.pop('device_data')
 
-        if action_type not in ['get_file', 'put_file', 'execute_binary', 'execute_shell', 'execute_wmi',
-                               'delete_file', 'execute_wmi_and_shell']:
+        if action_type not in ['get_files', 'put_files', 'execute_binary', 'execute_shell', 'execute_wmi_smb',
+                               'delete_files']:
             return return_error("Invalid action type", 400)
 
         if action_type not in self.supported_execution_features():
@@ -667,25 +667,22 @@ class AdapterBase(PluginBase, Feature, ABC):
     def supported_execution_features(self):
         return []
 
-    def put_file(self, device_data, file_buffer, dst_path):
+    def put_files(self, device_data, files_path, files_content):
         raise RuntimeError("Not implemented yet")
 
-    def get_file(self, device_data, file_path):
+    def get_files(self, device_data, files_path):
         raise RuntimeError("Not implemented yet")
 
     def execute_binary(self, device_data, binary_buffer):
         raise RuntimeError("Not implemented yet")
 
-    def execute_shell(self, device_data, shell_command):
+    def execute_shell(self, device_data, shell_commands):
         raise RuntimeError("Not implemented yet")
 
-    def execute_wmi_and_shell(self, device_data, wmi_commands, shell_command):
+    def execute_wmi_smb(self, device_data, wmi_smb_commands=None):
         raise RuntimeError("Not implemented yet")
 
-    def execute_wmi(self, device_data, wmi_commands=None):
-        raise RuntimeError("Not implemented yet")
-
-    def delete_file(self, device_data, file_path):
+    def delete_files(self, device_data, files_path):
         raise RuntimeError("Not implemented yet")
 
     @abstractmethod
