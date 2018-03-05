@@ -23,10 +23,6 @@ class MinervaAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            domain = client_config["Minerva_Domain"]
-            if domain in client_config:
-                self.logger.info("Different logins for Minerva domain {0}, user: {1}",
-                                 client_config["Minerva_Domain"], client_config["username"])
             connection = MinervaConnection(logger=self.logger, domain=client_config["Minerva_Domain"],
                                            is_ssl=client_config["is_ssl"])
             connection.set_credentials(username=client_config["username"], password=client_config["password"])
@@ -101,7 +97,11 @@ class MinervaAdapter(AdapterBase):
                     continue
                 device.hostname = device_raw.get("endpoint")
                 device.figure_os(device_raw.get("operatingSystem", ""))
-                device.add_nic(None, device_raw.get("reportedIpAddress", "").split(","), self.logger)
+                try:
+                    if device_raw.get("reportedIpAddress"):
+                        device.add_nic(None, device_raw.get("reportedIpAddress", "").split(","), self.logger)
+                except:
+                    self.logger.exception("Problem with adding nic to Minerva device")
                 device.agent_version = device_raw.get("armorVersion", "")
                 device.last_used_users = device_raw.get("loggedOnUsers", "").split(",")
                 device.last_seen = parse_date(device_raw.get("lastSeenOnline", ""))

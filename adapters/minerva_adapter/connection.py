@@ -77,7 +77,7 @@ class MinervaConnection(object):
         self.session = None
 
     def _post(self, name, params=None):
-        """ Serves a POST request to SentinelOne API
+        """ Serves a POST request to Minerva API
 
         :param str name: the name of the request
         :param dict params: Additional parameters
@@ -95,7 +95,7 @@ class MinervaConnection(object):
         return response.json()
 
     def _get(self, name, params=None):
-        """ Serves a GET request to SentinelOne API
+        """ Serves a GET request to Minerva API
 
         :param str name: the name of the request
         :param dict params: Additional parameters
@@ -115,7 +115,7 @@ class MinervaConnection(object):
     def get_device_list(self, **kwargs):
         """ Returns a list of all agents
 
-        :param dict kwargs: api query *string* parameters (ses SentinelOne's API documentation for more info)
+        :param dict kwargs: api query *string* parameters (ses Minerva's API documentation for more info)
         :return: the response
         :rtype: dict
         """
