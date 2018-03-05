@@ -97,14 +97,14 @@ def figure_out_os(s):
 
     ios_names = ["iphone", "ipad"]
 
-    if 'windows' in s:
+    if 'windows' in s or 'Win' in s:
         os_type = 'Windows'
         windows_distribution = ['Vista', 'XP', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
-                                'Windows Server 2003',
+                                'Windows Server 2003', 'Win10', 'Win7', 'Win8',
                                 'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016']
         for dist in windows_distribution:
             if dist.lower() in s:
-                distribution = dist.replace("Windows ", "")
+                distribution = dist.replace("Windows ", "").replace("Win", "")
                 break
 
     elif any(x in s for x in linux_names):

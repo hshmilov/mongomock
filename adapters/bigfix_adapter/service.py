@@ -16,6 +16,8 @@ class BigfixAdapter(AdapterBase):
 
     class MyDevice(Device):
         agent_version = Field(str, 'agent_version')
+        bigfix_device_type = Field(str, "Device type")
+        bigfix_computre_type = Field(str, "Computer type")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -106,6 +108,8 @@ class BigfixAdapter(AdapterBase):
                 device.agent_version = device_raw.get("Agent Version", "")
                 device.last_used_users = device_raw.get("User Name", "").split(",")
                 device.last_seen = parse_date(device_raw.get("Last Report Time", ""))
+                device.bigfix_device_type = device_raw.get("Device Type", "")
+                device.bigfix_computre_type = device_raw.get("Computer Type", "")
                 device.set_raw(device_raw)
                 yield device
             except:

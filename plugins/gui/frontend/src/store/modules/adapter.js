@@ -120,7 +120,7 @@ export const adapterStaticData = {
 	},
 	'bigfix_adapter': {
 		name: 'IBM Bigfix',
-		description: 'IBM Bigfix is a systems-management software product developed by IBM for managing large groups of computers.'
+		description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
 	}
 }
 
