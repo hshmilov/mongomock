@@ -2,7 +2,7 @@ from construct import Struct, Int32ul, Byte, Int16ul, Enum, Pass, Range, this, S
     Computed
 
 from qcore_adapter.protocol.consts import UNFINISHED_PARSING_MARKER
-from qcore_adapter.protocol.qtp.common import QcoreString, enum_to_mapping, CStyleEnum
+from qcore_adapter.protocol.qtp.common import QcoreString, enum_to_mapping, CStyleEnum, QcoreInt64
 from enum import auto
 
 from qcore_adapter.protocol.qtp.qdp.clinical.alarm import AlarmClinicalStatus
@@ -14,6 +14,7 @@ from qcore_adapter.protocol.qtp.qdp.clinical.infuser import InfuserClinicalStatu
 from qcore_adapter.protocol.qtp.qdp.clinical.infusion_state import InfusionStateClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical.power import PowerClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical.ruleset_violation import RulesetViolationClinicalStatus
+from qcore_adapter.protocol.qtp.qdp.clinical.system_update import SystemUpdateClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical_common import ClinicalMessageTypeReverseMapping
 
 
@@ -63,11 +64,6 @@ class ClinicalStatusItemType(CStyleEnum):
 
 ClinicalStatusItemTypeReverseMapping = enum_to_mapping(ClinicalStatusItemType)
 
-QcoreInt64 = Struct(
-    'high' / Int32ul,
-    'low' / Int32ul
-)
-
 CSI_ITEM_TYPE = 'csi_item_type'
 CSI_ITEM = 'csi_item'
 
@@ -82,7 +78,7 @@ def csi_to_string(ctx):
 ClinicalStatusItem = Struct(
 
     'csi_type_numeric' / Byte,
-    CSI_ITEM_TYPE / Computed(csi_to_string),  # Enum(Byte, default=":(", **ClinicalStatusItemTypeReverseMapping),
+    CSI_ITEM_TYPE / Computed(csi_to_string),
     # Shared/Mednet/ClinicalItemsFactory.cpp
     CSI_ITEM / Switch(this.csi_item_type, {
         ClinicalStatusItemType.Connectivity.name: ConnectivityClinicalStatus,
@@ -94,6 +90,7 @@ ClinicalStatusItem = Struct(
         ClinicalStatusItemType.Infusion.name: InfusionStateClinicalStatus,
         ClinicalStatusItemType.UpdateDeviceSettingsResponse.name: DeviceSettingsResponseClinicalStatus,
         ClinicalStatusItemType.Aperiodic_Infusion.name: AperiodicInfusionClinicalStatus,
+        ClinicalStatusItemType.SystemUpdate.name: SystemUpdateClinicalStatus,
     },
         default=Struct(
         UNFINISHED_PARSING_MARKER / Pass,
@@ -120,5 +117,5 @@ ClinicalStatus2Message = Struct(
     'dl_version' / QcoreString,
     'schema_version' / QcoreString,
     'items_list_size' / Int16ul,
-    CSI_ELEMENTS / Range(0, this.items_list_size, ClinicalStatusItem),
+    CSI_ELEMENTS / Range(this.items_list_size, this.items_list_size, ClinicalStatusItem),  # assert exact length
 )

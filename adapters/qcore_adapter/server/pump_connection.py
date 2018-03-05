@@ -1,5 +1,6 @@
 from qcore_adapter.protocol.build_helpers.response_builder import get_registration_response_buffer
 from qcore_adapter.protocol.consts import UNFINISHED_PARSING_MARKER
+from qcore_adapter.protocol.exceptions import ProtocolException
 from qcore_adapter.protocol.qtp.qtp_keepalive_message import QtpKeepAliveMessage
 from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
 import qcore_adapter.server.bins as bins
@@ -26,7 +27,7 @@ class PumpConnection(object):
     def registration_flow(self, qtp: QtpMessage):
 
         # TODO: check if should register
-        self._pump_state = PumpState(qtp)
+        self._pump_state = PumpState(qtp, self._send_func)
 
         # send ack
         self._send_func(bins.ACK_ON_REGISTRATION)
@@ -40,6 +41,8 @@ class PumpConnection(object):
 
         if isinstance(qtp.payload_root, QtpKeepAliveMessage):
             return
+
+        print(f"Got {qtp.get_field('qdp_message_type')}")
 
         if qtp.has_field(UNFINISHED_PARSING_MARKER):
             print(f'Got partially parsed message = {qtp.bytes}')
@@ -60,7 +63,18 @@ class PumpConnection(object):
             self.registration_flow(qtp)
             return
 
+        # Only register message from here on
+
+        if self.is_registered is False:
+            raise IOError('Reset connection, should register first')
+
+        if qtp.has_field('LogDownloadResponseMessage'):
+            # if self.is_registered:
+            self.pump_state.handle_log_download(qtp)
+            return
+
         if qtp.has_field('ClinicalStatus2Message'):
+            # if self.is_registered:
             self.handle_clinical_message(qtp)
             return
 

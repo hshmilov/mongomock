@@ -1,7 +1,7 @@
 import enum
 
 from construct import Struct, Enum, Byte, Int32ul, Embedded, Int32sl, If, this, Float64l, Pass, Int16ul, Probe, \
-    GreedyRange, Check, len_, FlagsEnum, BitStruct, BitsInteger, Computed
+    GreedyRange, Check, len_, FlagsEnum, BitStruct, BitsInteger, Computed, Int16sl
 
 from qcore_adapter.protocol.qtp.common import CStyleEnum, enum_to_mapping, QcoreString, QcoreTimeUnit, QcoreWightUnit, \
     DrugAmountUnit
@@ -103,21 +103,23 @@ AperiodicInfusionClinicalStatus = Struct(
     'dose_rate_field_details' / Int32ul,
     'dl_id' / QcoreString,
     'external_drug_id' / QcoreString,
-    'drug_units' / Enum(Byte, **enum_to_mapping(DrugAmountUnit)),
+    'drug_units' / Enum(Int16ul, **enum_to_mapping(DrugAmountUnit)),
     'cca_index' / Int16ul,
-    'operational_mode' / Enum(Byte, **enum_to_mapping(OperationalModeType)),
+    'operational_mode' / Enum(Int16ul, **enum_to_mapping(OperationalModeType)),
     # drug rule id
-    'drug_rule_id' / Byte,
+    'drug_rule_id' / Int16ul,
     'medication_strength' / Float64l,
     'patient_weight' / Float64l,
+    'cumulative_volume' / Int32ul,
     # 14.15
     'is_bolus' / Byte,
-    If(this.is_bolus, BolusProgrammedData),
+    'bolus_programmed_data' / If(lambda ctx: ctx.is_bolus > 0, BolusProgrammedData),
     'programmed_modes' / Int32ul,
+    # 14.5
     'number_of_programmed_steps' / Int32ul,
     'programed_steps_volume_field_details' / Int32ul,
-    'current_delivery_infusion_rate' / Float64l,  # usually garbage
-    'unknown_drug' / Int32ul,
+    'current_delivery_infusion_rate' / Float64l,
+    'unknown_drug' / Byte,  # bool in sources...
     'programmed_steps_remaining_field_details' / Int32ul,
     'patient_weight_field_details' / Int32ul,
     'distal_occlusion_threshold' / Int32ul,

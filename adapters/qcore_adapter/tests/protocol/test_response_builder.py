@@ -21,5 +21,14 @@ def test_get_update_settings():
     assert parsed.get_field('infusion_update_period_sec') == 666
 
 
+def test_get_log_download_message():
+    buff = response_builder.get_log_download_message(pump_serial=1337, ts=666, start={'high': 0, 'low': 1}, end={
+        'high': 0, 'low': 1024}, tag=7)
+    parsed = QtpMessage()
+    parsed.extend_bytes(buff)
+    payload = parsed.get_field('qdp_payload')
+    assert payload['tag'] == 7
+
+
 if __name__ == '__main__':
     pytest.main([__file__])

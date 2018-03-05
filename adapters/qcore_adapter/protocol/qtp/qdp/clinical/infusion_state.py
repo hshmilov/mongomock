@@ -34,6 +34,4 @@ InfusionStateClinicalStatus = Struct(
     'total_bag_volume_delivered' / Int32sl,
     'distal_occlusion_threshold' / Int32sl,
     'proximal_occlusion_threshold' / Int32sl,
-    'shift_total_volume_delivered' / Int32sl,
-    'cummulative_volume' / Int32sl,
-)
+    'shift_total_volume_delivered' / Int32sl,)

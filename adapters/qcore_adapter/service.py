@@ -33,7 +33,7 @@ class QcoreAdapter(AdapterBase):
         inf_volume_remaining = Field(float, 'Volume remaining [ml]')
         inf_volume_infused = Field(float, 'Volume infused [ml]')
         inf_line_id = Field(int, 'Line id')
-        inf_total_bag_volume_delivered = Field(int, 'Total bag volume delivered')  # complex
+        inf_total_bag_volume_delivered = Field(float, 'Total bag volume delivered [ml]')  # complex
         inf_is_bolus = Field(bool, 'Is Bolus')  # complex
         inf_bolus_data = Field(dict, 'Bolus data')  # complex
 

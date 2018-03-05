@@ -32,29 +32,30 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
         while not connection_alive:
             qtp = QtpMessage()
 
-            try:
+            while not qtp.is_complete():
+                inp = self.rfile.read(qtp.remaining_bytes())
+                if len(inp) == 0:
+                    print(f'Connection lost: {self.client_address}')
+                    connection_alive = True
+                    break
 
-                while not qtp.is_complete():
-                    inp = self.rfile.read(qtp.remaining_bytes())
-                    if len(inp) == 0:
-                        print(f'Connection lost: {self.client_address}')
-                        connection_alive = True
-                        break
+                qtp.extend_bytes(inp)
 
-                    qtp.extend_bytes(inp)
+            pump_connection.on_message(qtp)
 
-                pump_connection.on_message(qtp)
-            except ProtocolException:
-                pass
+
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
 
 
 def run_mediator_server():
     host, port = '0.0.0.0', 5016
     socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to address
-    with socketserver.TCPServer((host, port), MyTCPHandler) as server:
+    with ThreadedTCPServer((host, port), MyTCPHandler) as server:
         # Activate the server
-        server.serve_forever()
+        while 1:
+            server.serve_forever()
 
 
 if __name__ == "__main__":

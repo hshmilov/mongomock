@@ -1,4 +1,4 @@
-from construct import PascalString, Byte, StringsAsBytes
+from construct import PascalString, Byte, StringsAsBytes, Struct, Int32ul
 import enum
 from enum import auto
 
@@ -7,6 +7,11 @@ QTP_END = 0xCC
 QTP_SIZE_MARKER = 0xDD
 
 QcoreString = PascalString(lengthfield=Byte, encoding='utf8')
+
+QcoreInt64 = Struct(
+    'high' / Int32ul,
+    'low' / Int32ul
+)
 
 
 class CStyleEnum(enum.Enum):

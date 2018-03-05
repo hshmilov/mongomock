@@ -1,6 +1,6 @@
 from enum import auto
 
-from construct import Struct, Enum, Byte, Embedded, Int16ul, Int32ul
+from construct import Struct, Enum, Byte, Embedded, Int16ul, Int32ul, Int32sl, Int16sl
 
 from qcore_adapter.protocol.qtp.qdp.clinical.sequence import QcoreSequence
 from qcore_adapter.protocol.qtp.common import CStyleEnum, enum_to_mapping
@@ -67,6 +67,5 @@ AlarmClinicalStatus = Struct(
     'code' / Enum(Int16ul, **enum_to_mapping(AlarmCode)),
     'auto_programming_referece' / Int16ul,
     # for 14.5 and above
-    'infusion_id' / Int32ul,
-    'infusion_segment_id' / Int32ul
+    'infusion_id' / Int16ul,
 )
