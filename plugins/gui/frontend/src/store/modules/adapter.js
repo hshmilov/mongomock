@@ -120,7 +120,11 @@ export const adapterStaticData = {
 	},
 	'bigfix_adapter': {
 		name: 'IBM Bigfix',
-		description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
+    description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
+	},
+	'ensilo_adapter': {
+		name: 'enSilo Endpoint Protection',
+		description: 'enSilo comprehensively secures the endpoint pre- and post-infection. enSilo automates and orchestrates detection, prevention and real-time response against advanced malware and ransomware without burdening cybersecurity staff.'
 	},
 	'secdo_adapter': {
 		name: 'Secdo Endpoint Protection',
