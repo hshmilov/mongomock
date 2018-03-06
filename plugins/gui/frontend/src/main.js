@@ -18,6 +18,9 @@ Vue.use(mediaQueries)
 import TreeView from 'vue-json-tree-view'
 Vue.use(TreeView)
 
+import ToggleButton from 'vue-js-toggle-button'
+Vue.use(ToggleButton)
+
 new Vue({
 	el: '#app',
 	template: '<App />',

@@ -840,6 +840,34 @@ class GuiService(PluginBase):
     # DASHBOARD #
     #############
 
+    @add_rule_unauthenticated("research_phase", methods=['POST'])
+    def schedule_research_phase(self):
+        """
+        Schedules or initiates research phase.
+
+        :return: Map between each adapter and the number of devices it has, unless no devices
+        """
+        data = self.get_request_data_as_object()
+        self.logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
+
+        return self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+
+    @add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
+    def get_system_lifecycle_rate(self):
+        """
+        Fetches and build data needed for presenting current status of the system's lifecycle in a graph
+
+        :return: Data containing:
+         - All research phases names, for showing the whole picture
+         - Current research sub-phase, which is empty if system is not stable
+         - Portion of work remaining for the current sub-phase
+         - The time next cycle is scheduled to run
+        """
+        if self.get_method() == 'GET':
+            return self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        elif self.get_method() == 'POST':
+            return self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
+
     @add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
     def get_system_lifecycle(self):
         """
@@ -905,6 +933,50 @@ class GuiService(PluginBase):
             adapter_devices['total_net'] = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find({}).count()
 
         return jsonify(adapter_devices)
+
+    #############
+    # SETTINGS #
+    #############
+
+    @add_rule_unauthenticated("mail_server", methods=['POST', 'GET', 'DELETE'])
+    def mail_server(self):
+        """
+        Adds, Gets and Deletes currently saved mail servers
+
+        :return: Map between each adapter and the number of devices it has, unless no devices
+        """
+        return self.request_remote_plugin('email_server', 'core', self.get_method(),
+                                          json=self.get_request_data_as_object())
+
+    @add_rule_unauthenticated("execution/<plugin_state>", methods=['POST'])
+    def toggle_execution(self, plugin_state):
+        services = ['execution', 'careful_execution_correlator_plugin', 'general-info-plugin']
+        statuses = []
+
+        for current_service in services:
+            response = self.request_remote_plugin('plugin_state', current_service, 'POST',
+                                                  json=self.get_request_data_as_object(),
+                                                  params={'wanted': plugin_state})
+
+            if response.status_code != 200:
+                self.logger.error(f"Failed to {plugin_state} {current_service}.")
+                statuses.append(False)
+            else:
+                self.logger.info(f"Switched {current_service} to be {plugin_state}.")
+                statuses.append(True)
+
+        return '' if all(statuses) else return_error(f'Failed to {plugin_state} all plugins', 500)
+
+    @add_rule_unauthenticated("execution", methods=['GET'])
+    def toggle_execution(self,):
+        services = ['execution', 'careful_execution_correlator_plugin', 'general-info-plugin']
+        enabled = False
+        for current_service in services:
+            response = self.request_remote_plugin('plugin_state', current_service)
+            if response.status_code == 200 and response.json() == 'enable':
+                enabled = True
+
+        return 'enable' if enabled else 'disable'
 
     @property
     def plugin_subtype(self):

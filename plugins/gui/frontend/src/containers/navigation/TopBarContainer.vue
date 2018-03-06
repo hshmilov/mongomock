@@ -40,11 +40,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <!--<router-link :to="{ name: 'Settings' }" class="nav-link">-->
-                        <a class="nav-link">
+                        <router-link :to="{ name: 'Settings' }" class="nav-link" tag="a">
                             <i class="icon-settings"></i>
-                        </a>
-                        <!--</router-link>-->
+                        </router-link>
                     </li>
                 </ul>
             </div>

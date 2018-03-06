@@ -55,22 +55,27 @@ class SystemSchedulerService(PluginBase, Triggerable):
         :return: The time next research is supposed to start running
         """
         next_run_time = self._research_phase_scheduler.get_job(
-            scheduler_consts.RESEARCH_THREAD_ID).trigger.get_next_fire_time(None, datetime.now(pytz.utc))
+            scheduler_consts.RESEARCH_THREAD_ID).next_run_time
         return str(int(time.mktime(next_run_time.timetuple())))
 
-    @add_rule('research_rate', ['POST'])
+    @add_rule('research_rate', ['POST', 'GET'])
     def set_system_research_rate(self):
         """
         Set the systems research rate (Originally taken from config).
         """
-        data = self.get_request_data_as_object()
-        if 'system_research_rate' not in data or not isinstance(data['system_research_rate'], int):
-            return return_error('A new system_research_rate was not present in the request as a number', 400)
+        if self.get_method() == 'POST':
+            data = self.get_request_data_as_object()
+            if 'system_research_rate' not in data or not isinstance(data['system_research_rate'], int):
+                return return_error('A new system_research_rate was not present in the request as a number', 400)
 
-        self.system_research_rate = data['system_research_rate']
+            self.system_research_rate = data['system_research_rate']
 
-        self._research_phase_scheduler.reschedule_job(
-            'phase_thread', trigger=IntervalTrigger(seconds=self.system_research_rate))
+            self._research_phase_scheduler.reschedule_job(
+                scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(seconds=self.system_research_rate))
+
+            return ''
+        else:
+            return self.system_research_rate
 
     @add_rule('sub_phase_update', ['POST'])
     def set_sub_phase_state(self):
@@ -141,8 +146,8 @@ class SystemSchedulerService(PluginBase, Triggerable):
         """
         research_job = self._research_phase_scheduler.get_job(scheduler_consts.RESEARCH_THREAD_ID)
         research_job.modify(next_run_time=time_to_run)
-        self._research_phase_scheduler.wakeup()
-        self.logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase.")
+        # self._research_phase_scheduler.wakeup()
+        self.logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase for {time_to_run}.")
         return ""
 
     def _research_phase_thread(self):

@@ -1,5 +1,5 @@
 <template>
-    <date-picker :date="date" :option="dateTimeOption" @change="$emit('input', date.time)"></date-picker>
+    <date-picker :date="date" :option="dateTimeOption" @change="$emit('input', date.time)" :limit="limit"></date-picker>
 </template>
 
 <script>
@@ -8,16 +8,15 @@
 	export default {
 		name: 'x-date-edit',
 		components: { 'date-picker': DatePicker },
-        props: ['value'],
+        props: ['value', 'limit'],
         computed: {
 			dateTimeOption() {
-			    let now = new Date()
 				return {
 					type: 'min',
 					week: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
 					month: ['January', 'February', 'March', 'April', 'May', 'June',
 						'July', 'August', 'September', 'October', 'November', 'December'],
-					format: `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`,
+					format: (navigator.language === 'en-US') ? 'MM/DD/YYYY h:mm A' : 'DD/MM/YYYY HH:mm',
 					placeholder: '',
 					inputStyle: {},
 					color: {
@@ -30,6 +29,11 @@
         data() {
 			return {
 				date: { time: this.value }
+            }
+        },
+        watch: {
+            value(newValue) {
+                this.date.time = newValue
             }
         }
 	}

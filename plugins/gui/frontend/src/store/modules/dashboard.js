@@ -3,6 +3,9 @@ import { REQUEST_API } from '../actions'
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE'
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'
 
+export const FETCH_LIFECYCLE_RATE = 'FETCH_LIFECYCLE_RATE'
+export const UPDATE_LIFECYCLE_RATE = 'UPDATE_LIFECYCLE_RATE'
+
 export const FETCH_ADAPTER_DEVICES = 'FETCH_ADAPTER_DEVICES'
 export const UPDATE_ADAPTER_DEVICES = 'UPDATE_ADAPTER_DEVICES'
 
@@ -32,16 +35,29 @@ export const dashboard = {
 	},
 	actions: {
 		[ FETCH_LIFECYCLE ] ({dispatch}) {
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: 'api/dashboard/lifecycle',
 				type: UPDATE_LIFECYCLE
 			})
 		},
+        [ FETCH_LIFECYCLE_RATE ] ({dispatch}) {
+            return dispatch(REQUEST_API, {
+                rule: 'api/dashboard/lifecycle_rate',
+            })
+        },
+        [ UPDATE_LIFECYCLE_RATE ] ({dispatch}) {
+            return dispatch(REQUEST_API, {
+                rule: 'api/dashboard/lifecycle',
+                type: UPDATE_LIFECYCLE,
+                method: 'POST'
+            })
+        },
 		[ FETCH_ADAPTER_DEVICES ] ({dispatch}) {
-			dispatch(REQUEST_API, {
-				rule: 'api/dashboard/adapter_devices',
-				type: UPDATE_ADAPTER_DEVICES
-			})
-		}
+            dispatch(REQUEST_API, {
+                rule: 'api/dashboard/adapter_devices',
+                type: UPDATE_ADAPTER_DEVICES
+            })
+        },
+
 	}
 }
