@@ -952,10 +952,8 @@ class GuiService(PluginBase):
     def toggle_execution(self, plugin_state):
         services = ['execution', 'careful_execution_correlator_plugin', 'general-info-plugin']
         statuses = []
-
         for current_service in services:
             response = self.request_remote_plugin('plugin_state', current_service, 'POST',
-                                                  json=self.get_request_data_as_object(),
                                                   params={'wanted': plugin_state})
 
             if response.status_code != 200:
@@ -968,7 +966,7 @@ class GuiService(PluginBase):
         return '' if all(statuses) else return_error(f'Failed to {plugin_state} all plugins', 500)
 
     @add_rule_unauthenticated("execution", methods=['GET'])
-    def toggle_execution(self,):
+    def get_execution(self):
         services = ['execution', 'careful_execution_correlator_plugin', 'general-info-plugin']
         enabled = False
         for current_service in services:
