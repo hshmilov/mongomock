@@ -17,7 +17,7 @@ class DnsConflictsService(PluginBase, Triggerable):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
         self.resolve_lock = threading.RLock()
-        self.trigger_activate_if_needed()
+        self._activate('execute')
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
