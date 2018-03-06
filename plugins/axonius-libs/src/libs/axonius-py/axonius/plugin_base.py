@@ -574,9 +574,9 @@ class PluginBase(Feature):
             self.plugin_state = 'disabled'
         elif wanted_state == 'enable':
             self.plugin_state = 'enabled'
-            self.logger.info("Changing plugin state to disabled")
+            self.logger.info("Changing plugin state to enabled")
         else:
-            return return_error(f"Unrecognized state {wanted_state}")
+            return return_error(f"Unrecognized state {wanted_state}", 400)
 
         if 'registration' not in self.temp_config:
             self.logger.info("Making new configuration")
