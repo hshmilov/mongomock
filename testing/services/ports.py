@@ -38,6 +38,7 @@ DOCKER_PORTS = {
     'cisco-adapter':                    6001,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,
+    'secdo-adapter':                    6015,
     'mongo':                            27017,
 }
 

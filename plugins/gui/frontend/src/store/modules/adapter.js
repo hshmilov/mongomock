@@ -121,6 +121,10 @@ export const adapterStaticData = {
 	'bigfix_adapter': {
 		name: 'IBM Bigfix',
 		description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
+	},
+	'secdo_adapter': {
+		name: 'Secdo Endpoint Protection',
+		description: 'The SECDO Next Generation IR platform automates endpoint forensic analysis and cyber investigations to lower the skills barrier and make security teams more effective.'
 	}
 }
 
