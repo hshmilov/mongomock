@@ -108,6 +108,13 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
             if logger:
                 logger.debug(f"Rule={rule} request={request}")
 
+            if self.plugin_state == 'disabled':
+                request_url = str(request.url_rule)
+                if request_url != '/api/version' and request_url != '/api/plugin_state' and \
+                        request_url != '/api/supported_features':
+                    logger.warning(f"Tried to access disabled plugin {request_url}")
+                    return return_error(f"Plugin disabled for url {request_url}. ", 405)
+
             try:
                 if should_authenticate:
                     # finding the api key
@@ -192,8 +199,8 @@ class PluginBase(Feature):
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
 
         # Getting values from configuration file
-        temp_config = configparser.ConfigParser()
-        temp_config.read(VOLATILE_CONFIG_PATH)
+        self.temp_config = configparser.ConfigParser()
+        self.temp_config.read(VOLATILE_CONFIG_PATH)
         self.config_file_path = config_file_path
 
         self.config = configparser.ConfigParser()
@@ -216,9 +223,9 @@ class PluginBase(Feature):
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:
-            self.host = temp_config['DEBUG']['host']
-            self.port = int(temp_config['DEBUG']['port'])
-            self.core_address = temp_config['DEBUG']['core_address'] + '/api'
+            self.host = self.temp_config['DEBUG']['host']
+            self.port = int(self.temp_config['DEBUG']['port'])
+            self.core_address = self.temp_config['DEBUG']['core_address'] + '/api'
         except KeyError:
             try:
                 # We can enter debug value on all of the config files
@@ -236,8 +243,8 @@ class PluginBase(Feature):
             self.plugin_unique_name = requested_unique_plugin_name
 
         try:
-            self.plugin_unique_name = temp_config['registration'][PLUGIN_UNIQUE_NAME]
-            self.api_key = temp_config['registration']['api_key']
+            self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
+            self.api_key = self.temp_config['registration']['api_key']
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
@@ -247,15 +254,19 @@ class PluginBase(Feature):
         if not core_data or core_data['status'] == 'error':
             raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data['message']))
 
+        if 'registration' not in self.temp_config:
+            self.temp_config['registration'] = {}
+
         if core_data[PLUGIN_UNIQUE_NAME] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
             self.plugin_unique_name = core_data[PLUGIN_UNIQUE_NAME]
             self.api_key = core_data['api_key']
-            temp_config['registration'] = {}
-            temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
-            temp_config['registration']['api_key'] = self.api_key
+            self.temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
+            self.temp_config['registration']['api_key'] = self.api_key
 
-            with open(VOLATILE_CONFIG_PATH, 'w') as temp_config_file:
-                temp_config.write(temp_config_file)
+        self.plugin_state = self.temp_config['registration'].get('plugin_state', 'enabled')
+
+        with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
+            self.temp_config.write(self.temp_config_file)
 
         # Use the data we have from the core.
         try:
@@ -552,6 +563,29 @@ class PluginBase(Feature):
     def get_supported_features(self):
         return jsonify(self.supported_features)
 
+    @add_rule('plugin_state', should_authenticate=False, methods=['GET', 'POST'])
+    def state(self):
+        if self.get_method() == 'GET':
+            return jsonify({"state": self.plugin_state})
+        # Else its POST
+        wanted_state = str(self.get_url_param('wanted'))
+        if wanted_state == 'disable':
+            self.logger.info("Changing plugin state to disabled")
+            self.plugin_state = 'disabled'
+        elif wanted_state == 'enable':
+            self.plugin_state = 'enabled'
+            self.logger.info("Changing plugin state to disabled")
+        else:
+            return return_error(f"Unrecognized state {wanted_state}")
+
+        if 'registration' not in self.temp_config:
+            self.logger.info("Making new configuration")
+            self.temp_config['registration'] = {}
+        self.temp_config['registration']['plugin_state'] = self.plugin_state
+        with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
+            self.temp_config.write(self.temp_config_file)
+        return ''
+
     @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):
         """ /version - Get the version of the app.
@@ -577,7 +611,7 @@ class PluginBase(Feature):
         self._check_registered_thread(retries=0)
         return ''
 
-    @add_rule('logger', methods=['GET', 'PUT'])
+    @add_rule('logger', methods=['GET', 'PUT'], should_authenticate=False)
     def _logger_func(self):
         """ /logger - In order to change logger settings
 

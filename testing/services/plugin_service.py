@@ -67,6 +67,22 @@ class PluginService(DockerService):
     def version(self):
         return self.get('version', timeout=15)
 
+    def assert_plugin_state(self, wanted_state):
+        if wanted_state == 'enabled':
+            wanted_status = 200
+        elif wanted_state == 'disabled':
+            wanted_status = 405
+        else:
+            raise ValueError("Unrecognized state")
+
+        response = self.get('plugin_state')
+        assert response.status_code == 200
+        assert wanted_state == response.json()['state']
+
+        # Validate on common endpoint
+        self.version()
+        assert self.get('logger').status_code == wanted_status
+
     def get_supported_features(self):
         res = self.get('supported_features', timeout=15)
         assert res.status_code == 200

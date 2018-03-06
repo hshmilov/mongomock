@@ -18,6 +18,28 @@ def test_aggregator_registered(axonius_fixture):
     assert aggregator.is_plugin_registered(core)
 
 
+def test_plugin_state_change(axonius_fixture):
+    execution = axonius_fixture.execution
+    # Check initial state
+    execution.assert_plugin_state('enabled')
+    # Change state
+    assert execution.post('/plugin_state?wanted=disable').status_code == 200
+    # Check disabled
+    execution.assert_plugin_state('disabled')
+    # Restart plugin
+    axonius_fixture.restart_plugin(axonius_fixture.execution)
+    # Check disabled
+    execution.assert_plugin_state('disabled')
+    # Change back to enabled
+    assert execution.post('/plugin_state?wanted=enable').status_code == 200
+    # Check enabled
+    execution.assert_plugin_state('enabled')
+    # Restart plugin
+    axonius_fixture.restart_plugin(axonius_fixture.execution)
+    # Check enabled
+    execution.assert_plugin_state('enabled')
+
+
 def test_aggregator_restart(axonius_fixture):
     axonius_fixture.restart_plugin(axonius_fixture.aggregator)
 
