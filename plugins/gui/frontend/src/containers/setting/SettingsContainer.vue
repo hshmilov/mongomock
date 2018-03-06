@@ -8,8 +8,9 @@
                         <a class="btn start" @click="startResearch">Start Research Phase</a>
                         <label for="schedule" class="label">Next Scheduled Research:</label>
                         <x-date-edit id="schedule" v-model="nextResearchStart" @input="scheduleResearch" :limit="limit" />
-                        <label for="research_rate" class="label">Research Phases Rate</label>
-                        <input id="research_rate" type="number" class="ml-4" :onchange="setResearchRate">
+                        <label for="research_rate" class="label">Research Phases Rate (this number represents hours)</label>
+                        <input id="research_rate" type="number" min="0" class="ml-4" v-model="researchRate">
+                        <a class="btn set" @click="setResearchRate">Set</a>
                     </div>
                 </div>
                 <div class="row">
@@ -65,7 +66,8 @@
         data() {
             return {
                 nextResearchStart: "",
-                executionEnabled: true
+                executionEnabled: true,
+                researchRate: 0
             }
         },
         methods: {
@@ -95,11 +97,11 @@
                     data: {timestamp: scheduleDate}
                 })
             },
-            setResearchRate(researchRate) {
+            setResearchRate() {
                 this.fetchData({
-                    rule: `api/research_phase`,
+                    rule: `api/dashboard/lifecycle_rate`,
                     method: 'POST',
-                    data: {timestamp: researchRate}
+                    data: {system_research_rate: this.researchRate * 60 * 60}
                 })
             }
         },
@@ -112,6 +114,11 @@
                 rule: 'api/execution'
             }).then((response) => {
             	this.executionEnabled = (response.data === 'enabled')
+            })
+            this.fetchData({
+                rule: 'api/dashboard/lifecycle_rate'
+            }).then((response) => {
+                this.researchRate = response.data / 60 / 60
             })
         }
     }

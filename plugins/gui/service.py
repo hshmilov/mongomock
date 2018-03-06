@@ -853,7 +853,7 @@ class GuiService(PluginBase):
         return self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
 
     @add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
-    def get_system_lifecycle_rate(self):
+    def system_lifecycle_rate(self):
         """
         Fetches and build data needed for presenting current status of the system's lifecycle in a graph
 
@@ -864,9 +864,13 @@ class GuiService(PluginBase):
          - The time next cycle is scheduled to run
         """
         if self.get_method() == 'GET':
-            return self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
+            response = self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
+            return response.content
         elif self.get_method() == 'POST':
-            return self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
+            response = self.request_remote_plugin(
+                'research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
+            self.logger.info(f"response code: {response.status_code} response crap: {response.content}")
+            return ''
 
     @add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
     def get_system_lifecycle(self):

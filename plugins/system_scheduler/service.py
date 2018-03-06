@@ -59,7 +59,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         return str(int(time.mktime(next_run_time.timetuple())))
 
     @add_rule('research_rate', ['POST', 'GET'])
-    def set_system_research_rate(self):
+    def system_research_rate(self):
         """
         Set the systems research rate (Originally taken from config).
         """
@@ -70,12 +70,14 @@ class SystemSchedulerService(PluginBase, Triggerable):
 
             self.system_research_rate = data['system_research_rate']
 
+            self.logger.info(f"Setting research rate to: {self.system_research_rate}")
+
             self._research_phase_scheduler.reschedule_job(
                 scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(seconds=self.system_research_rate))
 
             return ''
         else:
-            return self.system_research_rate
+            return str(self.system_research_rate)
 
     @add_rule('sub_phase_update', ['POST'])
     def set_sub_phase_state(self):
