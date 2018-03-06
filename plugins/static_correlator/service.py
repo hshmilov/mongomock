@@ -11,7 +11,7 @@ class StaticCorrelatorService(CorrelatorBase):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
         self._correlation_engine = StaticCorrelatorEngine(logger=self.logger)
-        self.trigger_activate_if_needed()
+        self._activate('execute')
 
     def get_devices_from_ids(self, devices_ids=None):
         with self._get_db_connection(True) as db:
