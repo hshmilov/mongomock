@@ -971,10 +971,11 @@ class GuiService(PluginBase):
         enabled = False
         for current_service in services:
             response = self.request_remote_plugin('plugin_state', current_service)
-            if response.status_code == 200 and response.json() == 'enable':
+            if response.status_code == 200 and response.json()['state'] == 'enabled':
                 enabled = True
+                break
 
-        return 'enable' if enabled else 'disable'
+        return 'enabled' if enabled else 'disabled'
 
     @property
     def plugin_subtype(self):

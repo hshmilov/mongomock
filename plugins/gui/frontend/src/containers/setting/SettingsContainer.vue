@@ -111,7 +111,7 @@
             this.fetchData({
                 rule: 'api/execution'
             }).then((response) => {
-            	this.executionEnabled = (response === 'enable')
+            	this.executionEnabled = (response.data === 'enabled')
             })
         }
     }
