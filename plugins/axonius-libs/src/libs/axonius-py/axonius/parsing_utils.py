@@ -4,7 +4,6 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 
 import re
 import sys
-import os
 from types import FunctionType
 from typing import NewType, Callable
 
@@ -455,5 +454,19 @@ def or_function(*functions) -> FunctionType:
             if func(*args, **kwargs):
                 return True
         return False
+
+    return tmp
+
+
+def and_function(*functions) -> FunctionType:
+    """
+    Returns a function that represents the AND of the provided functions
+    """
+
+    def tmp(*args, **kwargs):
+        for func in functions:
+            if not func(*args, **kwargs):
+                return False
+        return True
 
     return tmp

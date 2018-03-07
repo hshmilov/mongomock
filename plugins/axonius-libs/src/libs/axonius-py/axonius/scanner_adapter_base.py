@@ -29,16 +29,15 @@ def newest(devices):
 
 
 class ScannerCorrelatorBase(object):
-    def __init__(self, all_devices, plugin_unique_name, *args, **kwargs):
+    def __init__(self, logger, all_devices, *args, **kwargs):
         """
         Base scanner correlator; base behavior is correlating with hostname
         :param all_devices: all axonius devices from DB
         """
         super().__init__(*args, **kwargs)
+        self.logger = logger
         self._all_devices = list(all_devices)
         self._all_adapter_devices = [adapter for adapters in self._all_devices for adapter in adapters['adapters']]
-
-        self._plugin_unique_name = plugin_unique_name
 
     def find_suitable(self, parsed_device, normalizations: List[parameter_function],
                       predicates: List[pair_comparator]) -> Tuple[str, str]:
@@ -97,26 +96,11 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
-        remote_correlation = self.find_suitable_newest(parsed_device,
-                                                       normalizations=[normalize_adapter_device],
-                                                       predicates=[is_different_plugin, compare_ips,
-                                                                   macs_do_not_contradict,
-                                                                   hostnames_do_not_contradict])
-        if remote_correlation is None:
-            return None
-        plugin_unique_name, adapter_device_id = remote_correlation
-        correlation_base_axonius_device = next((axon_device for
-                                                axon_device in self._all_devices
-                                                if
-                                                any(adapter_device[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
-                                                    adapter_device['data']['id'] == adapter_device_id for
-                                                    adapter_device in axon_device['adapters'])), None)
-        newest_device = newest(filter(lambda dev: parsed_device[PLUGIN_UNIQUE_NAME] == dev[PLUGIN_UNIQUE_NAME],
-                                      correlation_base_axonius_device['adapters']))
-        if newest_device is None:
-            return plugin_unique_name, adapter_device_id
-        else:
-            return newest_device[PLUGIN_UNIQUE_NAME], newest_device['data']['id']
+        return self.find_suitable_newest(parsed_device,
+                                         normalizations=[normalize_adapter_device],
+                                         predicates=[is_different_plugin, compare_ips,
+                                                     macs_do_not_contradict,
+                                                     hostnames_do_not_contradict])
 
     def find_correlation(self, parsed_device) -> Tuple[str, str]:
         """
@@ -137,10 +121,25 @@ class ScannerCorrelatorBase(object):
 
         remote_correlation = self._find_correlation_with_real_adapter(parsed_device)
         if remote_correlation:
-            if parsed_device[PLUGIN_UNIQUE_NAME] == remote_correlation[0]:
+            # If a remote correlation is found (but a self correction is not)
+            # it might be because of an edge case: self correlation is weaker than remote correlation.
+            # To handle this case gracefully the axonius device found will be checked to see if it has
+            # an adapter device from the current scanner (by PLUGIN_NAME). If that is the case,
+            # the ID of the current scanner device will be set to the found device and no correlation will be made.
+            plugin_unique_name, adapter_device_id = remote_correlation
+            correlation_base_axonius_device = next((axon_device for
+                                                    axon_device in self._all_devices
+                                                    if
+                                                    any(adapter_device[PLUGIN_UNIQUE_NAME] == plugin_unique_name and
+                                                        adapter_device['data']['id'] == adapter_device_id for
+                                                        adapter_device in axon_device['adapters'])), None)
+            newest_device = newest(filter(lambda dev: parsed_device[PLUGIN_NAME] == dev[PLUGIN_NAME],
+                                          correlation_base_axonius_device['adapters']))
+            if newest_device is not None:
+                self.logger.debug(f"Found remote correlation but not self correlation - {newest_device['data']['id']}")
                 # updating a current adapter correlation so no new one will be created - basically a different kind
                 # of self correlation
-                parsed_device['data']['id'] = remote_correlation[1]
+                parsed_device['data']['id'] = newest_device['data']['id']
                 return None
             return remote_correlation
 
@@ -160,7 +159,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         with self._get_db_connection(True) as db:
             aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             devices = aggregator_db['devices_db'].find()
-        scanner = self._get_scanner_correlator(devices, self.plugin_unique_name)
+        scanner = self._get_scanner_correlator(self.logger, devices)
         raw_devices, parsed_devices = super()._try_query_devices_by_client(*args, **kwargs)
         for device in parsed_devices:
             device['correlates'] = scanner.find_correlation({"data": device,
