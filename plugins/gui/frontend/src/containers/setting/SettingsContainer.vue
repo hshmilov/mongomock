@@ -2,14 +2,17 @@
     <scrollable-page title="Settings" class="settings">
         <tabs>
             <tab title="Lifecycle Settings" id="research-settings-tab" key="basic" selected="true">
-                <div class="row">
-                    <div class="col-4">
-                        <h3>Research</h3>
-                        <a class="btn start" @click="startResearch">Start Research Phase</a>
-                        <label for="schedule" class="label">Next Scheduled Research:</label>
-                        <x-date-edit id="schedule" v-model="nextResearchStart" @input="scheduleResearch" :limit="limit" />
-                        <label for="research_rate" class="label">Research Phases Rate (this number represents hours)</label>
-                        <input id="research_rate" type="number" min="0" class="ml-4" v-model="researchRate">
+                <h3>Research Phase</h3>
+                <div class="grid-2-3">
+                    <label for="start">Trigger Run</label>
+                    <div class="grid-item">
+                        <a id="start" class="btn" @click="startResearch">Start</a>
+                    </div>
+                    <label for="schedule" class="label">Next Scheduled Time:</label>
+                    <x-date-edit id="schedule" v-model="nextResearchStart" @input="scheduleResearch" :limit="limit" />
+                    <label for="research_rate" class="label">Schedule Rate (hours)</label>
+                    <div class="grid-item">
+                        <input id="research_rate" type="number" min="0" v-model="researchRate">
                         <a class="btn set" @click="setResearchRate">Set</a>
                     </div>
                 </div>
@@ -126,11 +129,28 @@
 
 <style lang="scss">
     .settings {
-        .btn.start {
-            width: 100%;
+        .grid-2-3 {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            grid-row-gap: 12px;
+            width: 500px;
+            align-items: center;
+            .grid-item {
+                text-align: right;
+            }
+        }
+        .btn {
+            width: auto;
+        }
+        #research_rate {
+            width: 80px;
         }
         input.cov-datepicker {
             width: 100%;
+        }
+        label {
+            margin-bottom: 0;
         }
         .row {
             margin-top: 24px;
