@@ -4,13 +4,15 @@
         <div v-for="item in schemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description">
                 <component :is="`x-${item.type}-edit`" :schema="item" v-model="data[item.name]"
-                           @input="$emit('input', data)" :validator="validator"></component>
+                           @input="$emit('input', data)" :validator="validator" @focusout="emitFocus" />
             </x-type-wrap>
         </div>
     </div>
 </template>
 
 <script>
+	import Vue from 'vue'
+
 	import xTypeWrap from './TypeWrap.vue'
 	import xStringEdit from '../string/StringEdit.vue'
 	import xNumberEdit from '../numerical/NumberEdit.vue'
@@ -31,7 +33,19 @@
 			xBoolEdit,
 			xFileEdit
 		},
-		props: ['validator']
+		data() {
+			return {
+				validator: new Vue()
+            }
+        },
+        methods : {
+			emitFocus() {
+				this.validator.$emit('focusout')
+			},
+        },
+        created() {
+			this.validator.$on('validate', (valid) => this.$emit('validate', valid))
+        }
 	}
 </script>
 

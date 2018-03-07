@@ -1,11 +1,12 @@
 <template>
-    <form class="schema-form" @keyup.enter.stop="emitFocus(); $emit('submit')" @focusout="emitFocus">
-        <x-array-edit v-model="data" :schema="schema" :validator="eventBus" @input="$emit('input', data)"></x-array-edit>
+    <form class="schema-form" @keyup.enter.stop="emitFocus(); $emit('submit')">
+        <x-array-edit v-model="data" :schema="schema" @input="$emit('input', data)" @validate="updateValidity" />
+        <div v-if="invalid.length" class="error-text">Complete "{{invalid[0]}}" to save server</div>
+        <div v-else>&nbsp;</div>
     </form>
 </template>
 
 <script>
-	import Vue from 'vue'
     import xArrayEdit from '../controls/array/ArrayEdit.vue'
 
     /*
@@ -22,13 +23,20 @@
         data() {
 			return {
                 data: { ...this.value },
-                eventBus: new Vue()
-            }
+				invalid: []
+			}
         },
         methods: {
-			emitFocus() {
-				this.eventBus.$emit('focusout')
-            }
+			updateValidity(field) {
+				let invalidFields = new Set(this.invalid)
+				if (field.valid) {
+					invalidFields.delete(field.title)
+				} else {
+					invalidFields.add(field.title)
+				}
+				this.invalid = Array.from(invalidFields)
+				this.$emit('validate', this.invalid.length === 0)
+			},
         },
         created() {
 			if (!Object.keys(this.data).length) {
@@ -36,12 +44,13 @@
                 	this.data[item.name] = undefined
                 })
             }
-            this.eventBus.$on('validate', (valid) => this.$emit('validate', valid))
         }
 	}
 </script>
 
 <style lang="scss">
+    @import '../../scss/config';
+
     .schema-form {
         font-size: 14px;
         .array {
@@ -52,6 +61,10 @@
                 width: 240px;
                 input, select {
                     width: 100%;
+                    border: 1px solid $gray-light;
+                    &.invalid {
+                        border-color: $error-colour;
+                    }
                 }
             }
         }

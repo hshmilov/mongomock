@@ -27,14 +27,11 @@
                     <div slot="body">
                         <!-- Container for configuration of a single selected / added server -->
                         <status-icon-logo-text :logoValue="adapterPluginName" status-icon-value="empty"
-                                               :textValue="serverModal.serverName"></status-icon-logo-text>
+                                               :textValue="serverModal.serverName" />
                         <div class="mt-3">
                             <div class="mb-2">Basic system credentials</div>
                             <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
-                                           @submit="saveServer" @validate="updateValidity"></x-schema-form>
-                            <div v-if="serverModal.invalid.length"
-                                 class="error-text">Complete "{{serverModal.invalid[0]}}" to save server</div>
-                            <div v-else>&nbsp;</div>
+                                           @submit="saveServer" @validate="serverModal.valid = $event"/>
                         </div>
                     </div>
                 </modal>
@@ -120,7 +117,7 @@
 					serverData: {},
                     serverName: 'New Server',
                     uuid: null,
-                    invalid: []
+                    valid: true
 				}
 			}
 		},
@@ -141,7 +138,7 @@
 				this.returnToAdapters()
 			},
 			configServer (serverId) {
-				this.serverModal.invalid = []
+				this.serverModal.valid = true
 				if (serverId === 'new') {
 					this.serverModal.serverData = {}
 					this.serverModal.serverName = 'New Server'
@@ -164,7 +161,7 @@
                 })
 			},
 			saveServer () {
-				if (this.serverModal.invalid.length > 0) {
+				if (!this.serverModal.valid) {
 					return
                 }
 				this.updateAdapterServer({
@@ -174,15 +171,6 @@
 				})
 				this.toggleServerModal()
 			},
-            updateValidity(field) {
-				let invalidFields = new Set(this.serverModal.invalid)
-                if (field.valid) {
-                	invalidFields.delete(field.title)
-                } else {
-					invalidFields.add(field.title)
-                }
-                this.serverModal.invalid = Array.from(invalidFields)
-            },
 			toggleServerModal () {
 				this.serverModal.open = !this.serverModal.open
 			}
