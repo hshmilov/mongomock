@@ -10,6 +10,21 @@
             <x-cycle-chart :data="lifecycle.subPhases"></x-cycle-chart>
             <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div></div>
         </card>
+        <card title="Windows Patch Status" class="patches">
+            <div class="info">29 Windows Devices:</div>
+            <div class="row">
+                <div class="col-8">Pending Patches</div>
+                <div class="col-4 warning">0</div>
+            </div>
+            <div class="row">
+                <div class="col-8">Fully Patched</div>
+                <div class="col-4 success">28</div>
+            </div>
+            <div class="row">
+                <div class="col-8">Failed Patches</div>
+                <div class="col-4 error">1</div>
+            </div>
+        </card>
     </scrollable-page>
 </template>
 
@@ -109,6 +124,19 @@
                         .blue {
                             display: inline-block;
                             margin-left: 8px;
+                        }
+                    }
+                }
+                &.patches {
+                    .info {
+                        font-size: 20px;
+                        margin-bottom: 8px;
+                    }
+                    .row {
+                        margin-left: 0;
+                        .col-4 {
+                            text-align: center;
+                            font-size: 20px;
                         }
                     }
                 }
