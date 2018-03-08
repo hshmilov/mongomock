@@ -200,12 +200,14 @@ class GuiService(PluginBase):
     @paginated()
     @filtered()
     @projectioned()
-    @add_rule_unauthenticated("devices")
+    @add_rule_unauthenticated("device")
     def current_devices(self, limit, skip, mongo_filter, mongo_projection):
         """
         Get Axonius devices from the aggregator
         """
         with self._get_db_connection(False) as db_connection:
+            if mongo_projection:
+                mongo_projection['internal_axon_id'] = 1
             device_list = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find(mongo_filter, mongo_projection)
             if mongo_filter and not skip:
                 db_connection[self.plugin_unique_name]['queries'].insert_one(
@@ -215,7 +217,7 @@ class GuiService(PluginBase):
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
     @filtered()
-    @add_rule_unauthenticated("devices/count", methods=['GET'])
+    @add_rule_unauthenticated("device/count", methods=['GET'])
     def current_devices_count(self, mongo_filter):
         """
         Count total number of devices answering given mongo_filter
@@ -227,7 +229,7 @@ class GuiService(PluginBase):
             client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
             return str(client_collection.find(mongo_filter, {'_id': 1}).count())
 
-    @add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
+    @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
     def current_device_by_id(self, device_id):
         """
         Retrieve device by the given id, from current devices DB or update it
@@ -241,7 +243,7 @@ class GuiService(PluginBase):
                 return return_error("Device ID wasn't found", 404)
             return jsonify(device)
 
-    @add_rule_unauthenticated("devices/fields")
+    @add_rule_unauthenticated("device/fields")
     def device_fields(self):
         """
         Get generic fields schema as well as adapter-specific parsed fields schema.
@@ -266,7 +268,7 @@ class GuiService(PluginBase):
 
         return jsonify(fields)
 
-    @add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
+    @add_rule_unauthenticated("device/labels", methods=['GET', 'POST', 'DELETE'])
     def labels(self):
         """
         GET Find all tags that currently belong to devices, to form a set of current tag values

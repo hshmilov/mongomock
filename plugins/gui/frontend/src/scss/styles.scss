@@ -23,3 +23,38 @@
 .error {
   color: $error-colour;
 }
+
+/* Basic Components */
+
+table {
+  width: 100%;
+  overflow: hidden;
+  thead {
+    overflow: auto;
+    th {
+      font-weight: 300;
+    }
+  }
+  tbody {
+    overflow: auto;
+    td {
+      padding: 2px;
+    }
+  }
+}
+
+
+/* Common Components */
+
+.x-striped-table {
+  thead {
+    tr {
+      border-bottom: 2px dashed $gray-light;
+    }
+  }
+  tbody {
+    tr:nth-child(odd) {
+      background: rgba($gray-light, 0.6);
+    }
+  }
+}

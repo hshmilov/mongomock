@@ -46,7 +46,7 @@ const fetchQueries = (dispatch, payload, queryType) => {
 	}
 	param += '&filter=' + encodeURI(filter)
 	dispatch(REQUEST_API, {
-		rule: `/api/queries${param}`,
+		rule: `queries${param}`,
 		type: payload.type
 	})
 }
@@ -153,7 +153,7 @@ export const query = {
 			if (!payload.filter) { return }
 			if (!payload.name) { payload.name = payload.filter }
 			return dispatch(REQUEST_API, {
-				rule: '/api/queries',
+				rule: 'queries',
 				method: 'POST',
 				data: payload
 			}).then((response) => {
@@ -167,7 +167,7 @@ export const query = {
 		[ ARCHIVE_SAVED_QUERY ] ({dispatch, commit}, queryId) {
 			if (!queryId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/queries/${queryId}`,
+				rule: `queries/${queryId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.data !== '') {

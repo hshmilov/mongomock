@@ -78,7 +78,7 @@
             ...mapActions({fetchData: REQUEST_API}),
             startResearch() {
                 this.fetchData({
-                    rule: `api/research_phase`,
+                    rule: `research_phase`,
                     method: 'POST'
                 })
             },
@@ -88,21 +88,21 @@
                     param = `disable`
                 }
                 this.fetchData({
-                    rule: `api/execution/${param}`,
+                    rule: `execution/${param}`,
                     method: 'POST'
                 })
                 this.executionEnabled = executionEnabled.value
             },
             scheduleResearch(scheduleDate) {
                 this.fetchData({
-                    rule: `api/research_phase`,
+                    rule: `research_phase`,
                     method: 'POST',
                     data: {timestamp: scheduleDate}
                 })
             },
             setResearchRate() {
                 this.fetchData({
-                    rule: `api/dashboard/lifecycle_rate`,
+                    rule: `dashboard/lifecycle_rate`,
                     method: 'POST',
                     data: {system_research_rate: this.researchRate * 60 * 60}
                 })
@@ -114,12 +114,12 @@
                 this.nextResearchStart = `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
             })
             this.fetchData({
-                rule: 'api/execution'
+                rule: 'execution'
             }).then((response) => {
             	this.executionEnabled = (response.data === 'enabled')
             })
             this.fetchData({
-                rule: 'api/dashboard/lifecycle_rate'
+                rule: 'dashboard/lifecycle_rate'
             }).then((response) => {
                 this.researchRate = response.data / 60 / 60
             })

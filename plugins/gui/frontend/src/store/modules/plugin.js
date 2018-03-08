@@ -148,7 +148,7 @@ export const plugin = {
 				param = `?filter=${JSON.stringify(payload.filter)}`
 			}
 			return dispatch(REQUEST_API, {
-				rule: `/api/plugins${param}`,
+				rule: `plugins${param}`,
 				type: UPDATE_PLUGINS
 			})
 		},
@@ -158,7 +158,7 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}`,
+				rule: `plugins/${pluginId}`,
 				type: UPDATE_PLUGIN
 			})
 		},
@@ -168,7 +168,7 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}/trigger_activate`,
+				rule: `plugins/${pluginId}/trigger_activate`,
 				method: 'POST',
 				data: {'trigger': 'execute'}
 			}).then((response) => {
@@ -184,7 +184,7 @@ export const plugin = {
 			 */
 			if (!pluginId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/plugins/${pluginId}/trigger_deactivate`,
+				rule: `plugins/${pluginId}/trigger_deactivate`,
 				method: 'POST',
 				data: {'trigger': 'execute'}
 			}).then((response) => {

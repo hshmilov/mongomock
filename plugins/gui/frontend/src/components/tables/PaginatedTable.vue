@@ -36,9 +36,9 @@
                     </tr>
                     <tr v-if="currentPage === maxPages && ((data.length % pageSize) > 0 || data.length === 0)"
                         v-for="n in pageSize - (data.length % pageSize)" class="table-row pad">
-                        <td class="table-row-data" v-if="value">&nbsp</td>
-                        <td v-for="field in viewFields" class="table-row-data">&nbsp</td>
-                        <td class="table-row-data" v-if="actions !== undefined">&nbsp</td>
+                        <td class="table-row-data" v-if="value">&nbsp;</td>
+                        <td v-for="field in viewFields" class="table-row-data">&nbsp;</td>
+                        <td class="table-row-data" v-if="actions !== undefined">&nbsp;</td>
                     </tr>
                 </tbody>
             </table>

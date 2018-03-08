@@ -2,10 +2,10 @@
     <triggerable-dropdown size="sm" align="right">
         <div slot="dropdownTrigger" class="link">{{ placeholder }}</div>
         <nested-menu slot="dropdownContent">
-            <nested-menu-item v-for="option, ind in options" v-if="option.fields" :title="option.title">
+            <nested-menu-item v-for="option, ind in options" v-if="option.fields" :title="option.title" :key="ind">
                 <dynamic-popover size="md" left="-360" :alignBottom="ind > 6">
                     <searchable-checklist :items="option.fields" :searchable="true"
-                                          v-model="selectedByTitle[option.title]" @input="onInput"></searchable-checklist>
+                                          v-model="selectedByTitle[option.title]" @input="onInput"/>
                 </dynamic-popover>
             </nested-menu-item>
         </nested-menu>

@@ -1,7 +1,13 @@
 import axios from 'axios'
 import Promise from 'promise'
 
-import { INIT_USER, SET_USER } from './modules/user'
+import { INIT_USER } from './modules/user'
+import { UPDATE_TABLE_CONTENT, UPDATE_TABLE_COUNT } from './mutations'
+
+let host = ''
+// if (process.env.NODE_ENV !== 'production') {
+// 	host = 'http://10.0.240.119'
+// }
 
 /*
     A generic wrapper for requests to server.
@@ -18,31 +24,19 @@ import { INIT_USER, SET_USER } from './modules/user'
  */
 export const REQUEST_API = 'REQUEST_API'
 export const requestApi = ({commit}, payload) => {
-    if (!payload.rule) {
-        return
-    }
+    if (!payload.rule) return
     if (payload.type) {
-        commit(payload.type, {
-            fetching: true,
-            error: ''
-        })
+        commit(payload.type, { fetching: true, error: '', ...payload.payload })
     }
-    if (!payload.method) { payload.method = 'GET' }
-    let request_config = {
-        method: payload.method,
-        url: payload.rule
-    }
+    if (!payload.method) payload.method = 'GET'
+    let request_config = { method: payload.method, url: `${host}/api/${payload.rule}`/*, withCredentials: true*/ }
     if (payload.data) {
         request_config['data'] = payload.data
     }
     return new Promise((resolve, reject) => axios(request_config)
         .then((response) => {
             if (payload.type) {
-                commit(payload.type, {
-                  fetching: false,
-                  data: response.data,
-                    ...payload.payload
-                })
+                commit(payload.type, { fetching: false, data: response.data, ...payload.payload })
             }
             resolve(response)
         })
@@ -60,11 +54,48 @@ export const requestApi = ({commit}, payload) => {
                 }
             }
             if (payload.type) {
-                commit(payload.type, {
-                  fetching: false,
-                  error: errorMessage
-                })
+                commit(payload.type, { fetching: false, error: errorMessage })
             }
             reject(error)
         }))
+}
+
+
+export const FETCH_TABLE_COUNT = 'FETCH_TABLE_COUNT'
+export const fetchTableCount = ({state, dispatch}, payload) => {
+	if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
+	const view = state[payload.module].dataTable.view
+
+	let param = (view && view.filter) ? `?filter=${view.filter}` : ''
+	dispatch(REQUEST_API, {
+		rule: `${payload.module}/count${param}`,
+		type: UPDATE_TABLE_COUNT,
+		payload
+	})
+}
+
+
+export const FETCH_TABLE_CONTENT = 'FETCH_TABLE_CONTENT'
+export const fetchTableContent = ({state, dispatch}, payload) => {
+    if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
+    const view = state[payload.module].dataTable.view
+
+	if (!payload.skip) {
+		payload.skip = 0
+		dispatch(FETCH_TABLE_COUNT, { module: payload.module })
+	}
+	if (!payload.limit) payload.limit = 0
+
+	let param = `?limit=${payload.limit}&skip=${payload.skip}`
+	if (view.fields && view.fields.length) {
+		param += `&fields=${view.fields}`
+	}
+	if (view.filter && view.filter.length) {
+		param += `&filter=${view.filter}`
+	}
+	dispatch(REQUEST_API, {
+		rule: payload.module + param,
+		type: UPDATE_TABLE_CONTENT,
+		payload: { module: payload.module, restart: (payload.skip === 0) }
+	})
 }

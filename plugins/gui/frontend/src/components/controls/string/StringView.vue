@@ -1,6 +1,6 @@
 <template>
     <img :src="`/src/assets/images/logos/${value}.png`" height="24px"
-         v-if="schema.format && schema.format === 'logo'">
+         v-if="schema.format && schema.format === 'logo'" class="logo">
     <div :class="{tag: schema.format && schema.format === 'tag'}" :title="formattedData"
          v-else>{{ formattedData }}</div>
 </template>

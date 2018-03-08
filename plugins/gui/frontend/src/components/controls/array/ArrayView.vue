@@ -4,8 +4,7 @@
         <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
             <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description">
-                <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]"
-                           @input="$emit('input', data)"></component>
+                <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]" @input="$emit('input', data)"/>
             </x-type-wrap>
         </div>
     </div>

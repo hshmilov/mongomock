@@ -61,7 +61,7 @@
 							pattern: '({field}_raw >= {val} and {field}_raw <= {val})',
 							notPattern: '({field}_raw < {val} or {field}_raw > {val})'
 						},
-						contains,
+						equals,
 						'isIPv4': {
 							pattern: '{field} == regex("\.")',
 							notPattern: '{field} == regex("^(?!.*\.)")'

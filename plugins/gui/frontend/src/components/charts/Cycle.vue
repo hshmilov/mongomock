@@ -15,7 +15,7 @@
                     strokeDashoffset: -(index * sliceLength)
                 }"></circle>
                 <!-- Path tracing the entire slice, slightly wider, for placing text around it -->
-                <path :d="calculateArc(index)" :id="item.name" transform="rotate(2 100 108)"></path>
+                <path :d="calculateArc(index)" :id="item.name" transform="rotate(4 100 108)"></path>
                 <!-- Text with the name of the item, clung to the arc path -->
                 <text><textPath :xlink:href="`#${item.name}`">{{item.name.split('_').join(' ')}}</textPath></text>
             </template>

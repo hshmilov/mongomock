@@ -43,23 +43,23 @@ RUN cd ./gui/frontend && npm set progress=false && npm install && npm run {dev}b
         self._session.close()
 
     def get_devices(self, *vargs, **kwargs):
-        return self.get('devices', session=self._session, *vargs, **kwargs)
+        return self.get('device', session=self._session, *vargs, **kwargs)
 
     def get_devices_count(self, *vargs, **kwargs):
-        return self.get('devices/count', session=self._session, *vargs, **kwargs)
+        return self.get('device/count', session=self._session, *vargs, **kwargs)
 
     def get_device_by_id(self, id, *vargs, **kwargs):
-        return self.get('devices/{0}'.format(id), session=self._session, *vargs, **kwargs)
+        return self.get('device/{0}'.format(id), session=self._session, *vargs, **kwargs)
 
     def get_all_tags(self, *vargs, **kwargs):
         return self.get('tags', session=self._session, *vargs, **kwargs)
 
     def remove_labels_from_device(self, payload, *vargs, **kwargs):
-        return self.delete('devices/labels', data=json.dumps(payload), session=self._session, *vargs,
+        return self.delete('device/labels', data=json.dumps(payload), session=self._session, *vargs,
                            **kwargs)
 
     def add_labels_to_device(self, payload, *vargs, **kwargs):
-        return self.post('devices/labels'.format(id), data=json.dumps(payload), session=self._session, *vargs, **kwargs)
+        return self.post('device/labels'.format(id), data=json.dumps(payload), session=self._session, *vargs, **kwargs)
 
     def activate_plugin_job(self, plugin_id, *vargs, **kwargs):
         return self.post(f'plugins/{plugin_id}/start', *vargs, **kwargs)

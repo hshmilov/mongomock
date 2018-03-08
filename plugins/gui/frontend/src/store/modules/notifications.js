@@ -94,7 +94,7 @@ export const notification = {
 			if (payload && payload.limit) {
 				params.push(`limit=${payload.limit}`)
 			}
-			let rule = '/api/notifications'
+			let rule = 'notifications'
 			if (params && params.length) {
 				rule += `?${params.join('&')}`
 			}
@@ -106,7 +106,7 @@ export const notification = {
 		[ FETCH_NOTIFICATION ] ({dispatch}, notificationId) {
 			if (!notificationId) { return }
 			dispatch(REQUEST_API, {
-				rule: `/api/notifications/${notificationId}`,
+				rule: `notifications/${notificationId}`,
 				type: SET_NOTIFICATION
 			})
 		},
@@ -116,7 +116,7 @@ export const notification = {
 			 */
 			if (!notificationIds || !notificationIds.length) { return }
 			dispatch(REQUEST_API, {
-				rule: '/api/notifications',
+				rule: 'notifications',
 				method: 'POST',
 				data: { 'notification_ids': notificationIds }
 			}).then((response) => {
@@ -135,7 +135,7 @@ export const notification = {
 			} else {
 				payload.filter = `(${payload.filter}) and seen == false`
 			}
-			let rule = `/api/notifications/count?filter=${payload.filter}`
+			let rule = `notifications/count?filter=${payload.filter}`
 			dispatch(REQUEST_API, {
 				rule: rule,
 				type: SET_NOTIFICATIONS_UNSEEN_COUNT
@@ -151,7 +151,7 @@ export const notification = {
 			} else {
 				payload.filter = `(${payload.filter}) and seen == false`
 			}
-			let rule = `/api/notifications?filter=${payload.filter}`
+			let rule = `notifications?filter=${payload.filter}`
 			if (payload.skip) {
 				rule += `&skip=${payload.skip}`
 			}

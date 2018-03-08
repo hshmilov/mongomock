@@ -35,7 +35,7 @@ export const user = {
 	actions: {
 		[ GET_USER ] ({dispatch}) {
 			dispatch(REQUEST_API, {
-				rule: '/api/login',
+				rule: 'login',
 				type: SET_USER
 			})
 		} ,
@@ -48,7 +48,7 @@ export const user = {
 				return
 			}
 			dispatch(REQUEST_API, {
-				rule: '/api/login',
+				rule: 'login',
 				method: 'POST',
 				data: payload
 			}).then((response) => {
@@ -66,7 +66,7 @@ export const user = {
 		},
 		[ LOGOUT ] ({dispatch}) {
 			dispatch(REQUEST_API, {
-				rule: 'api/logout',
+				rule: 'logout',
 				type: INIT_USER
 			})
 		}

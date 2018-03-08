@@ -1,13 +1,12 @@
 <template>
     <div class="paginated-table">
-        <pulse-loader :loading="fetching && (!data || !data.length)" color="#26dad2"></pulse-loader>
+        <pulse-loader :loading="fetching && (!data || !data.length)" color="#26dad2"/>
         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
             <table class="table table-responsive">
                 <thead>
                     <tr>
                         <th class="table-head checkbox-container" v-if="value">
-                            <checkbox v-if="value !== undefined" v-model="selectAllRecords"
-                                      @change="updateSelectedAll()"></checkbox>
+                            <checkbox v-if="value !== undefined" v-model="selectAllRecords" @change="updateSelectedAll()"/>
                         </th>
                         <th class="table-head" v-for="field in fields">{{ field.title }}</th>
                         <th class="table-head" v-if="actions !== undefined"></th>
@@ -20,18 +19,16 @@
                         v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
                         @click="handleRowClick(record[idField])">
                         <td class="table-row-data" v-if="value">
-                            <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]"
-                                      @change="updateSelected"></checkbox>
+                            <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]" @change="updateSelected"/>
                         </td>
                         <td class="table-row-data" v-for="field,index in fields" :key="field.name">
                             <component :is="`x-${field.type}-view`" :schema="field" :value="getData(record, field.name)"
-                                       :limit="2"></component>
+                                       :limit="2"/>
                         </td>
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                             <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
                                 <i v-if="action.triggerFont" :class="action.triggerFont"></i>
-                                <svg-icon :name="action.triggerIcon" height="24" width="24"
-                                          :original="true" v-else></svg-icon>
+                                <svg-icon :name="action.triggerIcon" height="24" width="24" :original="true" v-else/>
                             </a>
                         </td>
                     </tr>
@@ -141,14 +138,16 @@
 					if (data.length === 1) {
 						return this.getData(data[0], path)
                     }
-					let children = new Set()
+					let children = []
 					data.forEach((item) => {
 						let child = this.getData(item, path)
                         if (!child) return
+                        let lowerCaseChildren = children.map((child) => child.toLowerCase())
                         if (Array.isArray(child)) {
-                            children = new Set([...children, ...child])
-                        } else {
-                            children.add(child)
+                            children = children.concat(child.filter(
+                            	(childItem => lowerCaseChildren.includes(childItem.toLowerCase()))))
+                        } else if (!lowerCaseChildren.includes(child.toLowerCase())) {
+							children.push(child)
                         }
 					})
 					return Array.from(children)

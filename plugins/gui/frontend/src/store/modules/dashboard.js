@@ -36,28 +36,27 @@ export const dashboard = {
 	actions: {
 		[ FETCH_LIFECYCLE ] ({dispatch}) {
 			return dispatch(REQUEST_API, {
-				rule: 'api/dashboard/lifecycle',
+				rule: 'dashboard/lifecycle',
 				type: UPDATE_LIFECYCLE
 			})
 		},
         [ FETCH_LIFECYCLE_RATE ] ({dispatch}) {
             return dispatch(REQUEST_API, {
-                rule: 'api/dashboard/lifecycle_rate',
+                rule: 'dashboard/lifecycle_rate',
             })
         },
         [ UPDATE_LIFECYCLE_RATE ] ({dispatch}) {
             return dispatch(REQUEST_API, {
-                rule: 'api/dashboard/lifecycle',
+                rule: 'dashboard/lifecycle',
                 type: UPDATE_LIFECYCLE,
                 method: 'POST'
             })
         },
 		[ FETCH_ADAPTER_DEVICES ] ({dispatch}) {
-            dispatch(REQUEST_API, {
-                rule: 'api/dashboard/adapter_devices',
-                type: UPDATE_ADAPTER_DEVICES
-            })
-        },
-
+			dispatch(REQUEST_API, {
+				rule: 'dashboard/adapter_devices',
+				type: UPDATE_ADAPTER_DEVICES
+			})
+		}
 	}
 }

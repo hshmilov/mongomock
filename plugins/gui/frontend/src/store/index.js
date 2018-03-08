@@ -1,8 +1,16 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
-import { REQUEST_API, requestApi } from '../store/actions'
-import { TOGGLE_SIDEBAR, toggleSidebar } from './mutations'
+import {
+	REQUEST_API, requestApi, FETCH_TABLE_CONTENT, fetchTableContent, FETCH_TABLE_COUNT,
+	fetchTableCount
+} from './actions'
+import {
+	TOGGLE_SIDEBAR, toggleSidebar,
+	UPDATE_TABLE_CONTENT, updateTableContent,
+	UPDATE_TABLE_COUNT, updateTableCount,
+	UPDATE_TABLE_VIEW, updateTableView
+} from './mutations'
 import { device } from '../store/modules/device'
 import { query } from '../store/modules/query'
 import { plugin } from '../store/modules/plugin'
@@ -26,9 +34,16 @@ export default new Vuex.Store({
         }
     },
     mutations: {
-        [TOGGLE_SIDEBAR]: toggleSidebar
+        [ TOGGLE_SIDEBAR ]: toggleSidebar,
+        [ UPDATE_TABLE_CONTENT ]: updateTableContent,
+		[ UPDATE_TABLE_COUNT ]: updateTableCount,
+		[ UPDATE_TABLE_VIEW ]: updateTableView
     },
-    actions: { [REQUEST_API]: requestApi },
+    actions: {
+        [ REQUEST_API ]: requestApi,
+        [ FETCH_TABLE_CONTENT ]: fetchTableContent,
+		[ FETCH_TABLE_COUNT ]: fetchTableCount
+    },
     modules: {
         /*
             System's controls resource, relevant for each component.

@@ -1,28 +1,22 @@
 <template>
-    <scrollable-page title="devices">
+    <x-page title="devices">
         <a slot="pageAction" class="action mt-2" @click="openSaveQuery">Save Query</a>
         <card class="devices-query">
             <devices-filter-container slot="cardContent" :schema="filterFields" v-model="queryFilter"
-                                      :selected="selectedFields" @submit="executeQuery"></devices-filter-container>
+                                      :selected="selectedFields" @submit="executeQuery"/>
         </card>
-        <card :title="`devices (${device.deviceCount.data})`" class="devices-list">
+        <card :title="`devices (${device.dataTable.count.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
 
                 <!-- Available actions for performing on currently selected group of devices --->
-                <devices-actions-container v-show="selectedDevices && selectedDevices.length"
-                                           :devices="selectedDevices"></devices-actions-container>
+                <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices"/>
 
                 <!-- Dropdown for selecting fields to be presented in table, including adapter hierarchy -->
-                <x-graded-multi-select placeholder="Add Columns" :options="coloumnSelectionFields"
-                                       v-model="selectedFields"></x-graded-multi-select>
+                <x-graded-multi-select placeholder="Add Columns" :options="coloumnSelectionFields" v-model="selectedFields"/>
             </div>
             <div slot="cardContent">
-                <x-schema-table :fetching="device.deviceList.fetching" :data="device.deviceList.data"
-                                :error="device.deviceList.error" :fetchData="fetchDevices" v-model="selectedDevices"
-                                :fields="selectedTableFields" :filter="queryFilter" @click-row="configDevice"
-                                :selected-page="device.deviceSelectedPage" @change-page="selectPage"
-                                id-field="internal_axon_id">
-                </x-schema-table>
+                <x-data-table module="device" :fields="tableFields" id-field="internal_axon_id"
+                              v-model="selectedDevices" @click-row="configDevice"/>
             </div>
         </card>
         <modal v-if="saveQueryModal.open" @close="saveQueryModal.open = false" approveText="save"
@@ -33,38 +27,36 @@
                        @keyup.enter="approveSaveQuery()">
             </div>
         </modal>
-    </scrollable-page>
+    </x-page>
 </template>
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import Modal from '../../components/popover/Modal.vue'
 	import Card from '../../components/Card.vue'
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
-	import xSchemaTable from '../../components/data/SchemaTable.vue'
 	import DevicesActionsContainer from './DevicesActionsContainer.vue'
 	import DevicesFilterContainer from './DevicesFilterContainer.vue'
     import xGradedMultiSelect from '../../components/GradedMultiSelect.vue'
+    import xDataTable from '../../components/tables/DataTable.vue'
 
 	import '../../components/icons/action'
 
-	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
-		FETCH_DEVICES,
 		FETCH_DEVICE,
 		FETCH_LABELS,
-		SELECT_DEVICE_PAGE,
-        SELECT_DEVICE_FIELDS,
 		FETCH_DEVICE_FIELDS
 	} from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
+    import { UPDATE_TABLE_VIEW } from '../../store/mutations'
 
 	export default {
 		name: 'devices-container',
 		components: {
-			DevicesFilterContainer, DevicesActionsContainer, ScrollablePage, Card,
-			Modal, TriggerableDropdown, xGradedMultiSelect, xSchemaTable
+			xPage, DevicesFilterContainer, DevicesActionsContainer, Card,
+			Modal, TriggerableDropdown, xGradedMultiSelect, xDataTable
 		},
 		computed: {
 			...mapState(['device', 'query', 'adapter']),
@@ -74,14 +66,15 @@
 				},
 				set (newFilter) {
 					this.updateQuery(newFilter)
+                    this.updateView({module: 'device', view: {filter: newFilter}})
 				}
 			},
 			selectedFields: {
 				get() {
-					return this.device.deviceSelectedFields
+					return this.device.dataTable.view.fields
 				},
 				set(fieldList) {
-                    this.selectFields(fieldList)
+                    this.updateView({module: 'device', view: {fields: fieldList}})
 				}
 			},
 			genericFlatSchema () {
@@ -139,14 +132,6 @@
 					return merged
 				}, []))
 			},
-            selectedTableFields() {
-				let existing = new Set()
-				return this.tableFields.filter((field) => {
-					if (existing.has(field.name)) return false
-					existing.add(field.name)
-					return field.name && this.selectedFields.includes(field.name)
-				})
-            },
 			filterFields () {
 				if (!this.genericFlatSchema.length) return []
 
@@ -173,11 +158,9 @@
 		methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY,
-				selectPage: SELECT_DEVICE_PAGE,
-                selectFields: SELECT_DEVICE_FIELDS
+				updateView: UPDATE_TABLE_VIEW,
 			}),
 			...mapActions({
-				fetchDevices: FETCH_DEVICES,
 				fetchDeviceFields: FETCH_DEVICE_FIELDS,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
@@ -187,11 +170,7 @@
 			}),
 			executeQuery () {
 				this.updateQuery(this.queryFilter)
-				this.fetchDevices({
-					filter: this.queryFilter, skip: 0,
-					fields: this.selectedTableFields.map((field) => field.name)
-				})
-				this.selectPage(0)
+				this.updateView({module: 'device', view: {page: 0, filter: this.queryFilter}})
 				this.$parent.$el.click()
 			},
 			openSaveQuery () {
@@ -262,13 +241,6 @@
             if (!this.device.labelList.data || !this.device.labelList.data.length) {
 				this.fetchLabels()
 			}
-
-			this.interval = setInterval(function () {
-				this.fetchDevices({
-					filter: this.queryFilter, skip: 0,
-					fields: this.selectedTableFields.map((field) => field.name)
-				})
-			}.bind(this), 3000);
 		},
 		beforeDestroy() {
 			clearInterval(this.interval);

@@ -156,7 +156,7 @@ export const alert = {
 				param += `&filter=${JSON.stringify(payload.filter)}`
 			}
 			dispatch(REQUEST_API, {
-				rule: `api/alerts${param}`,
+				rule: `alerts${param}`,
 				type: UPDATE_ALERTS
 			})
 		},
@@ -168,7 +168,7 @@ export const alert = {
 			 */
 			if (!alertId) { return }
 			dispatch(REQUEST_API, {
-				rule: `api/alerts/${alertId}`,
+				rule: `alerts/${alertId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.data !== '') {
@@ -185,7 +185,7 @@ export const alert = {
 				controls, they are added to the alertList (instead of re-fetching), using a call to the mutation ADD_ALERT
 			 */
 			if (!payload || !payload.id) { return }
-			let rule = 'api/alerts'
+			let rule = 'alerts'
 			let method = 'PUT'
 			if (payload.id !== 'new') {
 				rule += '/' + payload.id

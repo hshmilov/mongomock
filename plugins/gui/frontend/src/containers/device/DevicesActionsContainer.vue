@@ -72,9 +72,9 @@
         computed: {
 			...mapState(['device']),
 			deviceById () {
-				if (!this.device.deviceList.data || !this.device.deviceList.data.length) return {}
+				if (!this.device.dataTable.content.data || !this.device.dataTable.content.data.length) return {}
 
-				return this.device.deviceList.data.filter((device) => {
+				return this.device.dataTable.content.data.filter((device) => {
 					return this.devices.includes(device.id)
 				}).reduce(function (map, input) {
 					map[input.id] = input
