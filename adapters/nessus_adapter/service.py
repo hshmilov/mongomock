@@ -4,6 +4,8 @@ from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
 from nessus_adapter.exceptions import NessusException
+from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
+
 
 HOST = 'host'
 PORT = 'port'
@@ -139,6 +141,7 @@ class NessusAdapter(ScannerAdapterBase):
             device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
                            [device_raw.get('info', {}).get('host-ip', '')], self.logger)
+            device.last_seen = parse_date(str(device_raw.get('info', {}).get('host_end', '')))
             device.scanner = True
             device.set_raw(device_raw)
             yield device

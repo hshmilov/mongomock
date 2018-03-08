@@ -3,9 +3,11 @@ from itertools import groupby
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
+from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
 from axonius.utils.files import get_local_config_file
 from qualys_adapter.exceptions import QualysException
 from qualys_adapter.connection import QualysConnection
+from axonius.fields import Field
 
 
 QUALYS_ITERATOR_FORMAT = """
@@ -26,7 +28,8 @@ PASSWORD = 'password'
 class QualysAdapter(AdapterBase):
 
     class MyDevice(Device):
-        pass
+        agent_version = Field(str, "Qualys agent version")
+        location = Field(str, "Qualys agent location")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -113,9 +116,23 @@ class QualysAdapter(AdapterBase):
             device.hostname = device_raw.get('name', '')
             device.figure_os(device_raw.get('os', ''))
             ifaces = device_raw.get('networkInterface', {}).get('list')
-            for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
-                device.add_nic(mac, [ip_iface['HostAssetInterface']['address'] for ip_iface in ip_ifaces], self.logger)
+            try:
+                for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
+                    device.add_nic(mac, [ip_iface['HostAssetInterface']['address']
+                                         for ip_iface in ip_ifaces], self.logger)
+            except:
+                self.logger.exception("Problem with adding nic to Qualys agent")
             device.id = device_raw['agentInfo']['agentId']
+            device.last_seen = parse_date(str(device_raw.get('agentInfo', {}).get("lastCheckedIn", "")))
+            device.agent_version = device_raw.get('agentInfo', {}).get("agentVersion", "")
+            device.location = device_raw.get('agentInfo', {}).get("location", "")
+            device.boot_time = parse_date(str(device_raw.get("lastSystemBoot", "")))
+            try:
+                for software_raw in device_raw.get("software", {}).get("list", []):
+                    device.add_installed_software(name=software_raw["HostAssetSoftware"]["name"],
+                                                  version=software_raw["HostAssetSoftware"]["version"])
+            except:
+                self.logger.exception("Problem with adding software to Qualys agent")
             device.set_raw(device_raw)
             yield device
 
