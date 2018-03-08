@@ -71,9 +71,10 @@ class LogstashHttpServer(logging.Handler):
                         # In any other cases, we should just ignore the current log line
                         # (This line will not be sent anymore)
                 if warning_count != 0:
-                    print("[fatal error]: %s." %
-                          (f"connection error occured {warning_count} times while sending log.",))
-                    self.fatal_logger.warning(f"connection error occured {warning_count} times while sending log.")
+                    # Not printing error on this for now
+                    # print("[fatal error]: %s." %
+                    #      (f"connection error occured {warning_count} times while sending log.",))
+                    # self.fatal_logger.warning(f"connection error occured {warning_count} times while sending log.")
                     # Adding logs that we couldn't send to the next cycle
                     if len(unsent_logs) > 0:
                         # That means we have logs we need to retry sending them. In order to do so we are
