@@ -148,7 +148,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         """
         research_job = self._research_phase_scheduler.get_job(scheduler_consts.RESEARCH_THREAD_ID)
         research_job.modify(next_run_time=time_to_run)
-        # self._research_phase_scheduler.wakeup()
+        self._research_phase_scheduler.wakeup()
         self.logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase for {time_to_run}.")
         return ""
 

@@ -849,8 +849,14 @@ class GuiService(PluginBase):
         """
         data = self.get_request_data_as_object()
         self.logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
+        response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
 
-        return self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+        if response.status_code != 200:
+            self.logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
+            return return_error(f"Could not schedule research phase to: {data if data else 'Now'}",
+                                response.status_code)
+
+        return ''
 
     @add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
     def system_lifecycle_rate(self):
