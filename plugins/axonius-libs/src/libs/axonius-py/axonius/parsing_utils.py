@@ -94,7 +94,7 @@ def figure_out_os(s):
     linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
                    'debian', 'fedora', 'centos', 'oracle', 'opensuse']
 
-    ios_names = ["iphone", "ipad"]
+    ios_names = ["iphone", "ipad", "iOS"]
 
     if 'windows' in s or 'Win' in s:
         os_type = 'Windows'

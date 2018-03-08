@@ -40,6 +40,7 @@ DOCKER_PORTS = {
     'bigfix-adapter':                   6012,
     'ensilo-adapter':                   6013,
     'secdo-adapter':                    6015,
+    'mobileiron-adapter':               6016,
     'mongo':                            27017,
 }
 

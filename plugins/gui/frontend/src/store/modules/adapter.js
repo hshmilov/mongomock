@@ -105,6 +105,10 @@ export const adapterStaticData = {
 		name: 'Serials CSV Adapter',
 		description: 'The Serials CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
 	},
+	'mobileiron_adapter': {
+		name: 'MobileIron Adapter',
+		description: 'The MobileIron EMM platform enables global enterprises to secure and manage modern operating systems in a world of mixed-use mobile devices and desktops.'
+	},
 	'minerva_adapter': {
 		name: 'Minerva Labs Endpoint Malware Vaccination',
 		description: 'Minerva Labs Endpoint Malware Vaccination enables incident response teams' +
