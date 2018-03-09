@@ -1,5 +1,5 @@
 <template>
-    <div class="dropdown" v-bind:class="{ 'show': isActive }" v-on-clickaway="close">
+    <div class="dropdown" v-bind:class="{ 'show': isActive }" v-on-clickaway="close" v-on:mouseout="$emit('mouseout')">
         <div class="dropdown-toggle" :class="{'arrow': arrow}" @click="isActive = !isActive"
              data-toggle="dropdown" aria-haspopup="true" :aria-expanded="`${isActive}`">
             <slot name="dropdownTrigger"></slot>

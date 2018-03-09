@@ -21,7 +21,7 @@
 <style lang="scss">
     .dynamic-popover.dropdown-menu {
         display: block;
-        top: -18px;
+        top: -40px;
         &.bottom {
             top: auto;
             bottom: -18px;

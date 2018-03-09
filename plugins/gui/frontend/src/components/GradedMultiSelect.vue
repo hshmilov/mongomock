@@ -1,14 +1,16 @@
 <template>
-    <triggerable-dropdown size="sm" align="right">
+    <triggerable-dropdown size="sm" align="right" class="graded-multi-select">
         <div slot="dropdownTrigger" class="link">{{ placeholder }}</div>
-        <nested-menu slot="dropdownContent">
-            <nested-menu-item v-for="option, ind in options" v-if="option.fields" :title="option.title" :key="ind">
-                <dynamic-popover size="md" left="-360" :alignBottom="ind > 6">
-                    <searchable-checklist :items="option.fields" :searchable="true"
-                                          v-model="selectedByTitle[option.title]" @input="onInput"/>
-                </dynamic-popover>
-            </nested-menu-item>
-        </nested-menu>
+        <template slot="dropdownContent">
+            <nested-menu>
+                <nested-menu-item v-for="option, ind in options" v-if="option.fields" :title="option.title" :key="ind"
+                                  v-on:mouseover="currentOption = option"><div/></nested-menu-item>
+            </nested-menu>
+            <dynamic-popover size="md" left="-360" v-if="this.currentOption.fields && this.currentOption.fields.length">
+                <searchable-checklist :items="currentOption.fields" :searchable="true"
+                                      v-model="selectedByTitle[currentOption.title]" @input="onInput"/>
+            </dynamic-popover>
+        </template>
     </triggerable-dropdown>
 </template>
 
@@ -33,6 +35,7 @@
         },
         data() {
 			return {
+				currentOption: {fields:[]},
 				selectedByTitle: {}
 			}
         },
@@ -60,5 +63,10 @@
 </script>
 
 <style lang="scss">
-
+    .graded-multi-select {
+        .menu {
+            max-height: 480px;
+            overflow: auto;
+        }
+    }
 </style>

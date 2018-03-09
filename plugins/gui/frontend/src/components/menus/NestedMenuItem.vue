@@ -1,6 +1,6 @@
 <template>
-    <div class="menu-item" :class="{'nested': nested}" @mouseover="isActive = true" @mouseout="isActive = false"
-         @click="$emit('click')">
+    <div class="menu-item" :class="{'nested': nested}" @mouseover="isActive = true; $emit('mouseover')"
+         @mouseout="isActive = false" @click="$emit('click')">
         <div>{{ title }}</div>
         <div v-show="isActive">
             <slot></slot>

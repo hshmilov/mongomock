@@ -190,11 +190,17 @@
     .x-data-table {
         .x-data-table-container {
             overflow: auto;
-            height: 67vh;
+            height: 62vh;
             border-bottom: 1px solid $gray-light;
             .x-striped-table {
                 .x-row {
                     height: 30px;
+                    cursor: pointer;
+                    &:hover {
+                        -webkit-box-shadow: 0px 2px 16px -4px $gray-dark;
+                        -moz-box-shadow: 0px 2px 16px -4px $gray-dark;
+                        box-shadow: 0px 2px 16px -4px $gray-dark;
+                    }
                 }
             }
         }
