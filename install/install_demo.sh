@@ -3,6 +3,8 @@
 # go to projects main dir
 cd ..
 
+optional_parameters=$1
+
 echo "Appending Metadata"
 (
 install/metadata.sh >> __build_metadata
@@ -16,7 +18,7 @@ docker logout
 
 echo "Running all..."
 (
-./axonius.sh system up --all
+eval ./axonius.sh system up --all ${optional_parameters}
 )
 
 echo "Setting all credentials."

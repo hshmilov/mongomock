@@ -14,11 +14,6 @@ echo "Building all..."
 docker logout
 )
 
-echo "Running all..."
-(
-./axonius.sh system up --all --prod
-)
-
 echo "Removing anything irrelevant.."
 (
 # find all directories in testing, filter 'services' and 'test_helpers', and remove them.
