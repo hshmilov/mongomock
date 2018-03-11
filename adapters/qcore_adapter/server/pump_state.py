@@ -44,9 +44,6 @@ class PumpState(object):
         self.update_db({KEEPALIVE_TS: time.time()})
 
     def request_missing(self, qtp: QtpMessage):
-
-        if time.time() - self.last_request_missing_ts < 10:
-            return
         self.last_request_missing_ts = time.time()
 
         clinical2 = self.extract_clinical_status(qtp)
@@ -82,8 +79,6 @@ class PumpState(object):
             csi_item = element[CSI_ITEM]
             item_type = element[CSI_ITEM_TYPE]
 
-            self.clinical_state[item_type] = csi_item
-
             # update state only if sequence number is greater
             if CSI_SEQUENCE_NUMBER in csi_item:
                 stored_sequence = self.clinical_state.get(item_type, {}).get(CSI_SEQUENCE_NUMBER, 0)
@@ -93,15 +88,14 @@ class PumpState(object):
                 if sequence_in_message > stored_sequence:
                     print(f'++++> Updating clinical entry {item_type} with recent data')
                     self.clinical_state[item_type] = csi_item
-                # else:
-                #     print(f'----> {item_type} was stale, discarding')
+
             else:
                 self.clinical_state[item_type] = csi_item
 
         self._update_general_state(qtp)
 
         # store everything
-        # self.request_missing(qtp)
+        self.request_missing(qtp)
         self.update_db({CLINICAL_STATUS: self.clinical_state})
 
     def on_sequence_number(self, seq_id):

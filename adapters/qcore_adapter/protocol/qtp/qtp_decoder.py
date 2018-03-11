@@ -1,7 +1,7 @@
 from qcore_adapter.protocol.qtp.qca.qca_message import QcaHeader
 from qcore_adapter.protocol.qtp.qtp_protocol_units import ProtocolUnit, ProtocolUnitReverseMapping
 from qcore_adapter.protocol.qtp.qtp_keepalive_message import QtpKeepAliveMessage
-from construct import Struct, this, Switch, Byte, Pass, Enum
+from construct import Struct, this, Switch, Byte, Pass, Enum, Probe
 
 from qcore_adapter.protocol.qtp.qdp.qdp_message import QdpHeader
 

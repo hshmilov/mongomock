@@ -30,12 +30,12 @@ class QcoreAdapter(AdapterBase):
 
         # Taken from periodic/aperiodic message updates
         inf_time_remaining = Field(str, 'Time remaining')
-        inf_volume_remaining = Field(float, 'Volume remaining [ml]')
-        inf_volume_infused = Field(float, 'Volume infused [ml]')
+        inf_volume_remaining = Field(str, 'Volume remaining [ml]')
+        inf_volume_infused = Field(str, 'Volume infused [ml]')
         inf_line_id = Field(int, 'Line id')
         inf_total_bag_volume_delivered = Field(float, 'Total bag volume delivered [ml]')  # complex
         inf_is_bolus = Field(bool, 'Is Bolus')  # complex
-        inf_bolus_data = Field(dict, 'Bolus data')  # complex
+        inf_bolus_data = Field(list, 'Bolus data')  # complex
 
         # taken from aperiodic only
         inf_medication = Field(str, 'Medication')
@@ -109,11 +109,15 @@ class QcoreAdapter(AdapterBase):
     def populate_infusion_state(self, device, infusion):
         device.inf_is_bolus = infusion['is_bolus'] != 0
         if device.inf_is_bolus != 0:
-            device.inf_bolus_data = infusion['bolus_data']
+            device.inf_bolus_data = [f'{k}:{v}' for k, v in infusion['bolus_data'].items()]
+            device.inf_time_remaining = 'N/A'
+            device.inf_volume_remaining = 'N/A'
+            device.inf_volume_infused = 'N/A'
         else:
+            device.inf_bolus_data = ['N/A']
             device.inf_time_remaining = str(timedelta(seconds=infusion['total_time_remaining']))
-            device.inf_volume_remaining = infusion['total_volume_remaining'] / 1000.
-            device.inf_volume_infused = infusion['total_volume_delivered'] / 1000.
+            device.inf_volume_remaining = str(infusion['total_volume_remaining'] / 1000.)
+            device.inf_volume_infused = str(infusion['total_volume_delivered'] / 1000.)
 
         device.inf_line_id = infusion['line_id']
         device.inf_total_bag_volume_delivered = infusion['total_bag_volume_delivered'] / 1000.

@@ -28,20 +28,25 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
 
         pump_connection = PumpConnection(send_and_flush)
 
-        connection_alive = False
-        while not connection_alive:
-            qtp = QtpMessage()
+        connection_alive = True
+        try:
+            while connection_alive:
+                qtp = QtpMessage()
 
-            while not qtp.is_complete():
-                inp = self.rfile.read(qtp.remaining_bytes())
-                if len(inp) == 0:
-                    print(f'Connection lost: {self.client_address}')
-                    connection_alive = True
-                    break
+                while not qtp.is_complete():
+                    inp = self.rfile.read(qtp.remaining_bytes())
+                    if len(inp) == 0:
+                        print(f'Connection lost: {self.client_address}')
+                        self.rfile.read()
+                        raise IOError("Disconnect")
 
-                qtp.extend_bytes(inp)
+                    qtp.extend_bytes(inp)
 
-            pump_connection.on_message(qtp)
+                pump_connection.on_message(qtp)
+        except ProtocolException as e:
+            print(f'Terminating connection because of protocol error {e}')
+            self.rfile.read()
+            raise e
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):

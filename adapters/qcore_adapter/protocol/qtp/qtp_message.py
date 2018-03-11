@@ -19,10 +19,10 @@ class QtpMessage(object):
 
     def append_byte(self, byte: int):
         if self.is_complete():
-            raise ProtocolException("Appending byte to a complete message")
+            raise ProtocolException('Appending byte to a complete message')
 
         if len(self.bytes) == 0 and byte != QTP_START:
-            raise ProtocolException("First byte is not start marker")
+            raise ProtocolException(f'First byte is not start marker, {hex(byte)}')
 
         if len(self.bytes) == 1:
             if byte == QTP_SIZE_MARKER:
