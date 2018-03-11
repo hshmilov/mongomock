@@ -1,7 +1,7 @@
 import axios from 'axios'
 import Promise from 'promise'
 
-import { INIT_USER } from './modules/user'
+import { INIT_USER } from './modules/auth'
 import { UPDATE_TABLE_CONTENT, UPDATE_TABLE_COUNT } from './mutations'
 
 let host = ''
@@ -25,14 +25,14 @@ let host = ''
 export const REQUEST_API = 'REQUEST_API'
 export const requestApi = ({commit}, payload) => {
     if (!payload.rule) return
+
     if (payload.type) {
         commit(payload.type, { fetching: true, error: '', ...payload.payload })
     }
     if (!payload.method) payload.method = 'GET'
+
     let request_config = { method: payload.method, url: `${host}/api/${payload.rule}`/*, withCredentials: true*/ }
-    if (payload.data) {
-        request_config['data'] = payload.data
-    }
+    if (payload.data) request_config['data'] = payload.data
     return new Promise((resolve, reject) => axios(request_config)
         .then((response) => {
             if (payload.type) {
@@ -59,7 +59,6 @@ export const requestApi = ({commit}, payload) => {
             reject(error)
         }))
 }
-
 
 export const FETCH_TABLE_COUNT = 'FETCH_TABLE_COUNT'
 export const fetchTableCount = ({state, dispatch}, payload) => {

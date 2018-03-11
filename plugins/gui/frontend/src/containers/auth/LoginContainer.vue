@@ -1,17 +1,17 @@
 <template>
-    <div class="login" v-if="!user.data.user_name && !user.fetching">
+    <div class="login" v-if="!auth.data.user_name && !auth.fetching">
         <div class="header">
             <svg-icon name="logo/logo" height="30" :original="true" class="navbar-logo"></svg-icon>
             <div class="title">Login</div>
         </div>
-        <div class="error-text">{{user.error}}</div>
+        <div class="error-text">{{auth.error}}</div>
         <generic-form :schema="schema" v-model="credentials" submitLabel="Login" @submit="login" :vertical="true"></generic-form>
     </div>
 </template>
 
 <script>
     import GenericForm from '../../components/GenericForm.vue'
-    import { LOGIN } from '../../store/modules/user'
+    import { LOGIN } from '../../store/modules/auth'
 	import '../../components/icons/logo'
     import { mapState, mapActions } from 'vuex'
 
@@ -25,7 +25,7 @@
                     { path: 'password', name: 'Password', control: 'password'}
                 ]
             },
-            ...mapState(['user'])
+            ...mapState(['auth'])
         },
         data() {
 			return {

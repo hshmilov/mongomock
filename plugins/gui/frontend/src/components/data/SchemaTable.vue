@@ -251,7 +251,6 @@
             font-size: 14px;
             .table-head {
                 border: 0;
-                text-transform: capitalize;
                 padding: 8px;
                 font-weight: 400;
                 color: $color-text-main;

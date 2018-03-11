@@ -1,6 +1,7 @@
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device import Device
+from axonius.users.user import User
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, \
     SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
@@ -226,8 +227,8 @@ class GuiService(PluginBase):
         :return: Number of devices
         """
         with self._get_db_connection(False) as db_connection:
-            client_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
-            return str(client_collection.find(mongo_filter, {'_id': 1}).count())
+            device_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
+            return str(device_collection.find(mongo_filter, {'_id': 1}).count())
 
     @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
     def current_device_by_id(self, device_id):
@@ -308,6 +309,71 @@ class GuiService(PluginBase):
                 return_error(f'Tagging did not complete. First error: {response.json()}', 400)
 
             return '', 200
+
+    @paginated()
+    @filtered()
+    @projectioned()
+    @add_rule_unauthenticated("user")
+    def current_users(self, limit, skip, mongo_filter, mongo_projection):
+        """
+        Get Axonius users from the aggregator
+        """
+        with self._get_db_connection(False) as db_connection:
+            if mongo_projection:
+                mongo_projection['internal_axon_id'] = 1
+            user_list = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db'].find(mongo_filter, mongo_projection)
+            # if mongo_filter and not skip:
+            #     db_connection[self.plugin_unique_name]['queries'].insert_one(
+            #         {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
+            #          'device_count': user_list.count() if user_list else 0, 'archived': False})
+            return jsonify(beautify_db_entry(user) for user in
+                           user_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+
+    @filtered()
+    @add_rule_unauthenticated("user/count", methods=['GET'])
+    def current_users_count(self, mongo_filter):
+        """
+        Count total number of users answering given mongo_filter
+
+        :param mongo_filter: Object defining a Mongo query
+        :return: Number of devices
+        """
+        with self._get_db_connection(False) as db_connection:
+            user_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db']
+            return str(user_collection.find(mongo_filter, {'_id': 1}).count())
+
+    @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
+    def current_user_by_id(self, user_id):
+        """
+        Retrieve user by the given id, from current users DB
+        :return:
+        """
+        with self._get_db_connection(False) as db_connection:
+            user = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db'].find_one(
+                {'internal_axon_id': user_id})
+            if user is None:
+                return return_error("User ID wasn't found", 404)
+            return jsonify(user)
+
+    @add_rule_unauthenticated("user/fields")
+    def user_fields(self):
+        """
+        Get generic fields schema as well as adapter-specific parsed fields schema.
+        Together these are all fields that any user may have data for and should be presented in UI accordingly.
+        :return:
+        """
+
+        fields = {'generic': User.get_fields_info(), 'specific': {}}
+        with self._get_db_connection(False) as db_connection:
+            plugins_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            for plugin in plugins_from_db:
+                if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['user_fields']:
+                    plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]]['user_fields'].find_one(
+                        {'name': 'parsed'}, projection={'schema': 1})
+                    if plugin_fields_record:
+                        fields['specific'][plugin[PLUGIN_NAME]] = plugin_fields_record['schema']
+
+        return jsonify(fields)
 
     @paginated()
     @filtered()

@@ -9,6 +9,9 @@ from typing import NewType, Callable
 
 import dateutil.parser
 import ipaddress
+import binascii
+import base64
+import datetime
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
@@ -208,9 +211,28 @@ def format_ip_raw(value):
         raise ValueError(f'Invalid raw IP address: {value}')
 
 
-def parse_date(datetime_as_string):
+def format_image(value):
     try:
-        return dateutil.parser.parse(datetime_as_string, ignoretz=True)
+        header = binascii.hexlify(value[:4])
+        if header.startswith(b"ffd8ff"):
+            header = "jpeg"
+        elif header == b"89504e47":
+            header = "png"
+        elif header == b"47494638":
+            header = "gif"
+        else:
+            raise ValueError("Invalid image. header is {header}, cannot determine if jpeg/png/gif.")
+        return "data:image/{0};base64,{1}".format(header, base64.b64encode(value).decode("utf-8"))
+    except:
+        raise ValueError(f'Invalid Image. Exception is {get_exception_string()}')
+
+
+def parse_date(datetime_to_parse):
+    try:
+        if type(datetime_to_parse) == datetime.datetime:
+            # sometimes that happens too
+            return datetime_to_parse
+        return dateutil.parser.parse(datetime_to_parse, ignoretz=True)
     except (TypeError, ValueError):
         return None
 

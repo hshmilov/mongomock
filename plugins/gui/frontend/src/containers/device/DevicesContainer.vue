@@ -241,9 +241,6 @@
             if (!this.device.labelList.data || !this.device.labelList.data.length) {
 				this.fetchLabels()
 			}
-		},
-		beforeDestroy() {
-			clearInterval(this.interval);
 		}
 	}
 </script>

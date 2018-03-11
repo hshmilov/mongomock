@@ -12,12 +12,13 @@ import {
 	UPDATE_TABLE_VIEW, updateTableView
 } from './mutations'
 import { device } from '../store/modules/device'
+import { user } from '../store/modules/user'
 import { query } from '../store/modules/query'
 import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
 import { notification } from '../store/modules/notifications'
-import { user } from '../store/modules/user'
+import { auth } from './modules/auth'
 import { dashboard } from '../store/modules/dashboard'
 
 Vue.use(Vuex)
@@ -50,12 +51,13 @@ export default new Vuex.Store({
             Module stores controls and manages the way of obtaining it.
          */
         device,
+		user,
         query,
 		plugin,
 		adapter,
 		alert,
         notification,
-        user,
+        auth,
         dashboard
     }
 

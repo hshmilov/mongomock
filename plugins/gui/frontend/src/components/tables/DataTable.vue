@@ -58,23 +58,29 @@
 	import xNumberView from '../../components/controls/numerical/NumberView.vue'
 	import xIntegerView from '../../components/controls/numerical/IntegerView.vue'
 	import xBoolView from '../../components/controls/boolean/BooleanView.vue'
+    import xFileView from '../../components/controls/array/FileView.vue'
 	import xArrayView from '../../components/controls/array/ArrayInlineView.vue'
 
 	export default {
 		name: 'x-data-table',
-        components: {PulseLoader, Checkbox, xStringView, xIntegerView, xNumberView, xBoolView, xArrayView},
+        components: {PulseLoader, Checkbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
         props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}},
         data() {
 			return {
-				loading: true,
-				selectAll: { selected: false }
+				loading: true
             }
         },
         computed: {
 			...mapState({
-				content: state => state['device'].dataTable.content,
-				count: state => state['device'].dataTable.count,
-				view: state => state['device'].dataTable.view
+                content(state) {
+                	return state[this.module].dataTable.content
+                },
+                count(state) {
+                	return state[this.module].dataTable.count
+                },
+                view(state) {
+                	return state[this.module].dataTable.view
+                }
 			}),
             fetching() {
 				return !this.fields.length || this.content.data.fetching || this.count.data.fetching
@@ -121,7 +127,7 @@
             content(newContent) {
 				if (!newContent.data.length) {
 					this.loading = true
-					this.fetchContent({module: 'device'})
+					this.fetchContent({module: this.module})
                 }
             }
         },
@@ -175,11 +181,14 @@
 			if (this.content.data.length) {
 				this.loading = false
 			} else {
-				this.fetchContent({module: 'device'})
+				this.fetchContent({module: this.module})
             }
 			this.interval = setInterval(function () {
-				this.fetchContent({module: 'device'})
+				this.fetchContent({module: this.module})
 			}.bind(this), 3000);
+		},
+		beforeDestroy() {
+			clearInterval(this.interval);
 		}
 	}
 </script>

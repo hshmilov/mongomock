@@ -24,6 +24,7 @@ class JsonStringFormat(Enum):
     ipv4 = auto()
     ipv6 = auto()
     uri = auto()
+    image = auto()
 
 
 class Field(object):

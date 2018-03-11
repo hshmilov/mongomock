@@ -3,8 +3,8 @@
             <div class="scroll-sidebar">
                 <div class="user">
                     <div class="user-profile">
-                        <img :src="user.data.pic_name" />
-                        <h5>{{ `${user.data.first_name} ${user.data.last_name}` }}</h5>
+                        <img :src="auth.data.pic_name" />
+                        <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
                     </div>
                     <div class="user-actions">
                         <a @click="logout" class="" data-toggle="tooltip" title="Logout">
@@ -15,7 +15,6 @@
                 <nav class="sidebar-nav">
                     <nested-nav-bar>
                         <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"></nested-nav-item>
-                        <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
                         <!--nested-nav-item routeName="Tasks" iconName="task" :disabled="true"></nested-nav-item-->
                         <nested-nav-item routeName="Devices" iconName="device">
                             <nested-nav-bar nestLevel="1" class="collapse">
@@ -23,6 +22,8 @@
                                 <nested-nav-item routeName="Queries History"></nested-nav-item>
                             </nested-nav-bar>
                         </nested-nav-item>
+                        <nested-nav-item routeName="Users" iconName="user"></nested-nav-item>
+                        <nested-nav-item routeName="Alerts" iconName="alert"></nested-nav-item>
                         <nested-nav-item routeName="Adapters" iconName="adapter"></nested-nav-item>
                     </nested-nav-bar>
                 </nav>
@@ -37,13 +38,13 @@
 
     import NestedNavBar from '../../components/NestedNavBar.vue'
     import NestedNavItem from '../../components/NestedNavItem.vue'
-    import { LOGOUT } from '../../store/modules/user'
+    import { LOGOUT } from '../../store/modules/auth'
     import { mapState, mapActions } from 'vuex'
 
     export default {
         name: 'side-bar-container',
         components: { NestedNavBar, NestedNavItem },
-        computed: mapState([ 'user', 'interaction' ]),
+        computed: mapState([ 'auth', 'interaction' ]),
         methods: mapActions({ logout: LOGOUT })
     }
 </script>
