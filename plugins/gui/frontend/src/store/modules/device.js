@@ -27,6 +27,8 @@ export const device = {
 			}
 		},
 
+		dataViews: { data: [], fetching: false, error: '' },
+
 		/* Currently selected devices, without censoring */
 		deviceDetails: {fetching: false, data: {}, error: ''},
 

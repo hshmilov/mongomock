@@ -38,8 +38,8 @@
             <div class="x-pages">
                 <div @click="onClickPage(0)" :class="{'x-link': view.page > 0}">&lt;&lt;</div>
                 <div @click="onClickPage(view.page - 1)" :class="{'x-link': view.page - 1 >= 0}">&lt;</div>
-                <div v-for="number in pageNumbers" @click="onClickPage(number)" class="x-link"
-                    :class="{active: (number === view.page)}">{{number + 1}}</div>
+                <div v-for="number in pageLinkNumbers" @click="onClickPage(number)" class="x-link"
+                     :class="{active: (number === view.page)}">{{number + 1}}</div>
                 <div @click="onClickPage(view.page + 1)" :class="{'x-link': view.page + 1 <= pageCount}">&gt;</div>
                 <div @click="onClickPage(pageCount)" :class="{'x-link': view.page < pageCount}">&gt;&gt;</div>
             </div>
@@ -83,8 +83,8 @@
                 }
 			}),
             fetching() {
-				return !this.fields.length || this.content.data.fetching || this.count.data.fetching
-                    || this.content.data.length !== this.count.data
+				return (!this.fields.length || this.content.fetching || this.count.fetching)
+                    && (!this.content.data.length && this.count.data > 0)
             },
             viewFields() {
 				return this.fields.filter((field) => field.name && this.view.fields.includes(field.name))
@@ -99,7 +99,7 @@
             pageCount() {
 				return Math.floor(this.count.data / this.view.pageSize)
             },
-            pageNumbers() {
+            pageLinkNumbers() {
                 let numbers = []
                 let steps = [5, 4, 3, 2, 1, 0]
                 steps.forEach((step) => {
@@ -120,20 +120,27 @@
         },
         watch: {
 			fetching(newFetching) {
-				if (newFetching === false) {
-					this.loading = false
-                }
+                this.loading = newFetching
             },
-            content(newContent) {
-				if (!newContent.data.length) {
+            pageData(newPageData) {
+				if (!newPageData.length && this.count.data) {
 					this.loading = true
-					this.fetchContent({module: this.module})
-                }
+                    this.fetchLinkedPages()
+				}
+            },
+            pageLinkNumbers() {
+				this.fetchLinkedPages()
             }
         },
         methods: {
             ...mapMutations({updateView: UPDATE_TABLE_VIEW}),
 			...mapActions({fetchContent: FETCH_TABLE_CONTENT}),
+            fetchLinkedPages() {
+            	this.fetchContent({
+					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
+                    limit: this.pageLinkNumbers.length * this.view.pageSize
+				})
+            },
 			getData(data, path) {
 				if (!data) return ''
 
@@ -152,8 +159,8 @@
                     let basicChildren = children.map((child) => this.getDataBasic(child))
                     if (Array.isArray(child)) {
                         children = children.concat(child.filter(
-                            (childItem => !basicChildren.includes(this.getDataBasic(childItem)))))
-                    } else if (!basicChildren.includes(this.getDataBasic(child))) {
+                            (childItem => !this.matchArrayPrefix(basicChildren, this.getDataBasic(childItem)))))
+                    } else if (!this.matchArrayPrefix(basicChildren, this.getDataBasic(child))) {
                         children.push(child)
                     }
                 })
@@ -162,6 +169,9 @@
             getDataBasic(data) {
             	if (typeof data === 'string') return data.toLowerCase()
                 return data
+            },
+            matchArrayPrefix(array, prefix) {
+            	return array.some(item => (item.match(`^${prefix}`) !== null))
             },
             onClickRow(id) {
 				if (!document.getSelection().isCollapsed) return
@@ -181,10 +191,11 @@
 			if (this.content.data.length) {
 				this.loading = false
 			} else {
-				this.fetchContent({module: this.module})
+				this.loading = true
+				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})
             }
 			this.interval = setInterval(function () {
-				this.fetchContent({module: this.module})
+				this.fetchLinkedPages()
 			}.bind(this), 3000);
 		},
 		beforeDestroy() {

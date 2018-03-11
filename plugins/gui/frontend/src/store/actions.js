@@ -2,7 +2,7 @@ import axios from 'axios'
 import Promise from 'promise'
 
 import { INIT_USER } from './modules/auth'
-import { UPDATE_TABLE_CONTENT, UPDATE_TABLE_COUNT } from './mutations'
+import { UPDATE_TABLE_CONTENT, UPDATE_TABLE_COUNT, UPDATE_TABLE_VIEWS, ADD_TABLE_VIEW } from './mutations'
 
 let host = ''
 // if (process.env.NODE_ENV !== 'production') {
@@ -96,5 +96,32 @@ export const fetchTableContent = ({state, dispatch}, payload) => {
 		rule: payload.module + param,
 		type: UPDATE_TABLE_CONTENT,
 		payload: { module: payload.module, restart: (payload.skip === 0) }
+	})
+}
+
+
+export const FETCH_TABLE_VIEWS = 'FETCH_TABLE_VIEWS'
+export const fetchTableViews = ({state, dispatch}, payload) => {
+	if (!payload.module || !state[payload.module] || !state[payload.module].dataViews) return
+	dispatch(REQUEST_API, {
+		rule: payload.module + '/views',
+		type: UPDATE_TABLE_VIEWS,
+		payload: { module: payload.module }
+	})
+}
+
+
+export const SAVE_TABLE_VIEW = 'SAVE_TABLE_VIEW'
+export const saveTableView = ({state, dispatch, commit}, payload) => {
+	if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
+	let viewObj = {name: payload.name, view: state[payload.module].dataTable.view}
+	dispatch(REQUEST_API, {
+		rule: payload.module + '/views',
+		data: viewObj,
+		method: 'POST'
+	}).then((response) => {
+		if (response.status === 200) {
+			commit(ADD_TABLE_VIEW, { module: payload.module, ...viewObj })
+		}
 	})
 }

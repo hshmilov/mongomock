@@ -269,6 +269,28 @@ class GuiService(PluginBase):
 
         return jsonify(fields)
 
+    @add_rule_unauthenticated("device/views", methods=['GET', 'POST'])
+    def device_views(self):
+        """
+        Save or fetch views over the devices db
+        :return:
+        """
+        device_views_collection = self._get_collection('device_views', limited_user=False)
+        if request.method == 'GET':
+            mongo_filter = {'$or': [{}, {'archived': {'$exists': False}}, {'archived': False}]}
+            return jsonify(beautify_db_entry(entry) for entry in device_views_collection.find(mongo_filter)
+                           .sort([('_id', pymongo.DESCENDING)]))
+        # Handle POST request
+        view_data = self.get_request_data_as_object()
+        if not view_data.get('name'):
+            return return_error(f'Name is required in order to save a view', 400)
+        if not view_data.get('view'):
+            return return_error(f'View data is required in order to save one', 400)
+        update_result = device_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
+        if not update_result.upserted_id and not update_result.modified_count:
+            return return_error(f'View named {view_data.name} was not saved', 400)
+        return ''
+
     @add_rule_unauthenticated("device/labels", methods=['GET', 'POST', 'DELETE'])
     def labels(self):
         """

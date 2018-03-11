@@ -34,9 +34,30 @@ export const UPDATE_TABLE_VIEW = 'UPDATE_TABLE_VIEW'
 export const updateTableView = (state, payload) => {
 	if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
 	let table = state[payload.module].dataTable
-	if (payload.view.filter || payload.view.fields || payload.view.sort) {
+	if (payload.view.filter || payload.view.sort) {
 		table.content.data = []
 		table.count.data = 0
 	}
 	table.view = { ...state[payload.module].dataTable.view, ...payload.view }
 }
+
+export const UPDATE_TABLE_VIEWS = 'UPDATE_TABLE_VIEWS'
+export const updateTableViews = (state, payload) => {
+	if (!payload.module || !state[payload.module] || !state[payload.module].dataViews) return
+	const views = state[payload.module].dataViews
+	views.fetching = payload.fetching
+	views.error = payload.error
+	if (payload.data) {
+		views.data = [ ]
+		payload.data.forEach((view) => views.data.push({ ...view }))
+	}
+}
+
+export const ADD_TABLE_VIEW = 'ADD_TABLE_VIEW'
+export const addTableView = (state, payload) => {
+	if (!payload.module || !state[payload.module] || !state[payload.module].dataViews) return
+	const views = state[payload.module].dataViews
+	if (!views.data) views.data = []
+	views.data = [{ name: payload.name, view: payload.view }, ...views.data]
+}
+

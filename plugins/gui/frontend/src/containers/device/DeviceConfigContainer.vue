@@ -7,10 +7,10 @@
             <!--<named-section title="General Data" icon-name="action/add_field">-->
                 <tabs v-if="deviceData.generic_data && deviceData.generic_data.length">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                        <x-schema-list :data="deviceDataGenericBasic" :schema="deviceFields.generic"></x-schema-list>
+                        <x-schema-list :data="deviceDataGenericBasic" :schema="deviceFields.generic"/>
                     </tab>
                     <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.name" :id="i" :key="i">
-                        <x-custom-data :data="item.data"></x-custom-data>
+                        <x-custom-data :data="item.data"/>
                     </tab>
                     <tab title="Tags" id="tags" key="tags">
                         <div @click="tag.isActive = true" class="link tag-edit">Edit Tags</div>
@@ -35,9 +35,9 @@
                             <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                         </div>
                         <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]" :data="item.data"
-                                       :schema="deviceFields.specific[item.plugin_name]"></x-schema-list>
+                                       :schema="deviceFields.specific[item.plugin_name]"/>
                         <div v-if="!viewBasic">
-                            <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"></tree-view>
+                            <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
                         </div>
                     </tab>
                 </tabs>
@@ -45,7 +45,7 @@
         </div>
         <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
             <searchable-checklist title="Tag as:" :items="device.labelList.data" :searchable="true"
-                                  :extendable="true" v-model="tag.selected"></searchable-checklist>
+                                  :extendable="true" v-model="tag.selected"/>
         </feedback-modal>
     </scrollable-page>
 </template>
