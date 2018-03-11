@@ -4,6 +4,7 @@ from axonius.devices.device import Device, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from puppet_adapter.connection import PuppetConnection
 from puppet_adapter.exceptions import PuppetException
+from axonius.fields import Field, JsonStringFormat, ListField
 
 # TODO ofir: Change the return values protocol
 
@@ -16,7 +17,7 @@ class PuppetAdapter(AdapterBase):
     """
 
     class MyDevice(Device):
-        pass
+        version = Field(str, "Puppet Version")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -142,6 +143,9 @@ class PuppetAdapter(AdapterBase):
                 device.add_nic(inet.get(MAC_FIELD, ''),
                                [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
                                [x['address'] for x in inet.get('bindings6', []) if x.get('address')], self.logger)
+            device.version = device_raw.get("puppetversion", '')
+            device.number_of_processes = device_raw.get("processors", {}).get("count")
+
             device.set_raw(device_raw)
             yield device
 

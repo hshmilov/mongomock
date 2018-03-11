@@ -8,6 +8,7 @@ from axonius.fields import Field, JsonStringFormat, ListField
 from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection, JamfPolicy
 from jamf_adapter.exceptions import JamfException
+from axonius.parsing_utils import parse_date
 
 
 class JamfAdapter(AdapterBase):
@@ -119,8 +120,11 @@ class JamfAdapter(AdapterBase):
                 # Thus we believe the following fields will be present.
                 device.figure_os(' '.join([device_raw.get('Operating_System', ''),
                                            device_raw.get('Architecture_Type', '')]))
-                device.add_nic(device_raw.get('MAC_Address', ''), [
-                               device_raw.get('Last_Reported_IP_Address', '')], self.logger)
+                try:
+                    device.add_nic(device_raw.get('MAC_Address', ''), [
+                                   device_raw.get('Last_Reported_IP_Address', '')], self.logger)
+                except:
+                    self.logger.exception(f"Problem adding nic to Jamf {str(device_raw)}")
                 device.public_ip = device_raw.get('IP_Address')
                 for app in device_raw.get('Applications', {}).get('Application', []):
                     device.add_installed_software(
@@ -163,6 +167,11 @@ class JamfAdapter(AdapterBase):
             device.device_model = device_raw.get('Model_Identifier')
             device.device_model_family = device_raw.get('Model')
             device.device_serial = device_raw.get("Serial_Number")
+            try:
+                device.last_seen = parse_date(
+                    str(device_raw.get('Last_Check_in', device_raw.get('Last_Inventory_Update', ''))))
+            except:
+                self.logger.exception("Problem with adding last seen to Jamf")
             device.set_raw(device_raw)
             yield device
 

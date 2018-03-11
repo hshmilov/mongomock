@@ -24,9 +24,9 @@ class JamfAdvancedSearch(object):
         try:
             self.jamf_connection.jamf_request(requests.delete, self.url + self.search_name, data,
                                               "Search update returned an error")
-        finally:
-            self.jamf_connection.jamf_request(requests.post, self.url + "/id/0", data,
-                                              "Search creation returned an error")
+        except Exception:
+            pass
+        self.jamf_connection.jamf_request(requests.post, self.url + "/id/0", data, "Search creation returned an error")
 
     def __enter__(self):
         tries = 0

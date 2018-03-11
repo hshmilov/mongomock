@@ -15,7 +15,7 @@ from axonius.parsing_utils import parse_date
 class BigfixAdapter(AdapterBase):
 
     class MyDevice(Device):
-        agent_version = Field(str, 'agent_version')
+        agent_version = Field(str, 'Agent Version')
         bigfix_device_type = Field(str, "Device type")
         bigfix_computre_type = Field(str, "Computer type")
 

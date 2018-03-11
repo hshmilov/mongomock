@@ -7,6 +7,7 @@ from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from fortigate_adapter import consts
 from fortigate_adapter.client import FortigateClient
+from axonius.fields import Field
 
 
 class FortigateAdapter(AdapterBase):
@@ -15,7 +16,7 @@ class FortigateAdapter(AdapterBase):
     """
 
     class MyDevice(Device):
-        pass
+        interface = Field(str, "Interface")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -84,6 +85,7 @@ class FortigateAdapter(AdapterBase):
                 # would let us know when the dhcp lease occurred which we would use as last_seen.
                 device.last_seen = datetime.datetime.fromtimestamp(
                     last_seen) - datetime.timedelta(seconds=dhcp_lease_time)
+                device.interface = raw_device.get('interface', '')
 
                 device.set_raw(raw_device)
 

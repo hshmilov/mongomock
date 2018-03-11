@@ -37,7 +37,8 @@ class JamfConnection(object):
         if not url.endswith('/'):
             url += '/'
         self.url = url + 'JSSResource/'
-        self.headers = {}
+        self.headers = {'Content-Type': 'application/xml',
+                        'Accept': 'application/xml'}
         self.auth = None
         self.proxies = {}
         if http_proxy is not None:
@@ -104,10 +105,8 @@ class JamfConnection(object):
         return response.json()
 
     def jamf_request(self, request_method, url_addition, data, error_message):
-        post_headers = self.headers
-        post_headers['Content-Type'] = 'application/xml'
         response = request_method(self.get_url_request(url_addition),
-                                  headers=post_headers,
+                                  headers=self.headers,
                                   data=data,
                                   proxies=self.proxies)
         try:

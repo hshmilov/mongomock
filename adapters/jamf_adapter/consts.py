@@ -14,7 +14,7 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
         </criterion>
     </criteria>
     <display_fields>
-        <size>91</size>
+        <size>88</size>
         <display_field>
             <name>Asset Tag</name>
         </display_field>
@@ -29,9 +29,6 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
         </display_field>
         <display_field>
             <name>Enrollment Method: PreStage enrollment</name>
-        </display_field>
-        <display_field>
-            <name>Gatekeeper</name>
         </display_field>
         <display_field>
             <name>IP Address</name>
@@ -73,13 +70,7 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
             <name>Platform</name>
         </display_field>
         <display_field>
-            <name>System Integrity Protection</name>
-        </display_field>
-        <display_field>
             <name>UDID</name>
-        </display_field>
-        <display_field>
-            <name>XProtect Definitions Version</name>
         </display_field>
         <display_field>
             <name>Architecture Type</name>
@@ -161,6 +152,15 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
         </display_field>
         <display_field>
             <name>Service Pack</name>
+        </display_field>
+        <display_field>
+            <name>Gatekeeper</name>
+        </display_field>
+        <display_field>
+            <name>System Integrity Protection</name>
+        </display_field>
+        <display_field>
+            <name>XProtect Definitions Version</name>
         </display_field>
         <display_field>
             <name>Building</name>
@@ -250,9 +250,6 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
             <name>FileVault 2 Status</name>
         </display_field>
         <display_field>
-            <name>Applications</name>
-        </display_field>
-        <display_field>
             <name>Available SWUs</name>
         </display_field>
         <display_field>
@@ -268,9 +265,6 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
             <name>Computer Group</name>
         </display_field>
         <display_field>
-            <name>Fonts</name>
-        </display_field>
-        <display_field>
             <name>Licensed Software</name>
         </display_field>
         <display_field>
@@ -281,9 +275,6 @@ ADVANCED_COMPUTER_SEARCH = """<?xml version="1.0" encoding="UTF-8"?>
         </display_field>
         <display_field>
             <name>Packages Installed By Casper</name>
-        </display_field>
-        <display_field>
-            <name>Plug-ins</name>
         </display_field>
         <display_field>
             <name>Running Services</name>
