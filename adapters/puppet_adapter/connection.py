@@ -1,19 +1,8 @@
 import requests
 import puppet_adapter.consts as consts
+from axonius.utils.files import create_temp_file
 from puppet_adapter.exceptions import PuppetException
 import tempfile
-
-
-def create_temp_file(data: bytes):
-    """
-    Creates a temporary file with some data, that can be read from
-    :param data: data to write
-    :return:
-    """
-    file = tempfile.NamedTemporaryFile()
-    file.write(data)
-    file.flush()
-    return file
 
 
 def _parse_json_request(response):

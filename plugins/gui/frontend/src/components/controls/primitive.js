@@ -58,5 +58,9 @@ export default {
 		if (this.validator) {
 			this.validator.$on('focusout', this.validate)
 		}
+		if (this.schema.default) {
+			this.data = this.schema.default
+		}
+
 	}
 }

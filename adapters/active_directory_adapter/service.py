@@ -1,6 +1,5 @@
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
-from base64 import standard_b64decode
 from datetime import datetime, timedelta
 import json
 import os
@@ -9,7 +8,7 @@ import threading
 import time
 import subprocess
 
-from active_directory_adapter.ldap_connection import LdapConnection
+from active_directory_adapter.ldap_connection import LdapConnection, SSLState
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase
@@ -21,15 +20,14 @@ from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
-from axonius.parsing_utils import get_exception_string
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
+
 
 # TODO ofir: Change the return values protocol
 
 
 class ActiveDirectoryAdapter(AdapterBase):
-
     class MyDevice(ADDevice):
         pass
 
@@ -87,7 +85,11 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   dc_details['domain_name'],
                                   dc_details['user'],
                                   dc_details['password'],
-                                  dc_details.get('dns_server_address'))
+                                  dc_details.get('dns_server_address'),
+                                  SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
+                                  bytes(dc_details.get('ca_file', [])),
+                                  bytes(dc_details.get('cert_file', [])),
+                                  bytes(dc_details.get('private_key', [])))
         except LdapException as e:
             message = "Error in ldap process for dc {0}. reason: {1}".format(
                 dc_details["dc_name"], str(e))
@@ -134,6 +136,46 @@ class ActiveDirectoryAdapter(AdapterBase):
                     "name": "dns_server_address",
                     "title": "DNS Server Address",
                     "type": "string"
+                },
+                {
+                    "name": "use_ssl",
+                    "title": "Use SSL for connection",
+                    "type": "string",
+                    "enum": [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
+                    "default": SSLState.Unverified.name,
+                },
+                {
+                    "name": "ca_file",
+                    "title": "CA File",
+                    "description": "The binary contents of the ca_file",
+                    "type": "array",
+                    "format": "bytes",
+                    "items": {
+                        "type": "integer",
+                        "default": 0,
+                    }
+                },
+                {
+                    "name": "cert_file",
+                    "title": "Certificate File",
+                    "description": "The binary contents of the cert_file",
+                    "type": "array",
+                    "format": "bytes",
+                    "items": {
+                        "type": "integer",
+                        "default": 0,
+                    }
+                },
+                {
+                    "name": "private_key",
+                    "title": "Private Key File",
+                    "description": "The binary contents of the private_key",
+                    "type": "array",
+                    "format": "bytes",
+                    "items": {
+                        "type": "integer",
+                        "default": 0
+                    }
                 }
             ],
             "required": [

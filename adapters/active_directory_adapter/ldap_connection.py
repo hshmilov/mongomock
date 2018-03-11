@@ -1,8 +1,19 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
+import ssl
+from enum import Enum, auto
 
 import ldap3
+
 from active_directory_adapter.exceptions import LdapException
 from retrying import retry
+
+from axonius.utils.files import create_temp_file
+
+
+class SSLState(Enum):
+    Unencrypted = auto()
+    Verified = auto()
+    Unverified = auto()
 
 
 class LdapConnection:
@@ -13,7 +24,9 @@ class LdapConnection:
     """
 
     def __init__(self, logger, ldap_page_size, server_addr, domain_name,
-                 user_name, user_password, dns_server):
+                 user_name, user_password, dns_server,
+                 use_ssl: SSLState=SSLState.Unverified, ca_file_data: bytes=None, cert_file: bytes=None,
+                 private_key: bytes = None):
         """Class initialization.
 
         :param obj logger: Logger object to send logs
@@ -23,6 +36,7 @@ class LdapConnection:
         :param str user_name: User name to connect with
         :param str user_password: Password
         :param str dns_server: Address of other dns server
+        :param bool use_ssl: Whether or not to use ssl. If true, ca_file_data, cert_file and private_key must be set
         """
 
         self.server_addr = server_addr
@@ -32,8 +46,14 @@ class LdapConnection:
         self.dns_server = dns_server
         self.ldap_connection = None
         self.ldap_page_size = ldap_page_size
-        self.logger = logger
+        self.__use_ssl = use_ssl
 
+        if self.__use_ssl != SSLState.Unencrypted:
+            self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
+            self.__cert_file = create_temp_file(cert_file) if cert_file else None
+            self.__private_key_file = create_temp_file(private_key) if private_key else None
+
+        self.logger = logger
         self._connect_to_server()
 
     def _connect_to_server(self):
@@ -42,7 +62,16 @@ class LdapConnection:
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            ldap_server = ldap3.Server(self.server_addr, connect_timeout=10)
+            if self.__use_ssl != SSLState.Unencrypted:
+                validation = ssl.CERT_REQUIRED if self.__use_ssl == SSLState.Verified else ssl.CERT_NONE
+                tls = ldap3.Tls(
+                    local_private_key_file=self.__private_key_file.name if self.__private_key_file else None,
+                    local_certificate_file=self.__cert_file.name if self.__cert_file else None,
+                    ca_certs_file=self.__ca_file.name if self.__ca_file else None,
+                    validate=validation)
+                ldap_server = ldap3.Server(self.server_addr, connect_timeout=10, use_ssl=True, tls=tls)
+            else:
+                ldap_server = ldap3.Server(self.server_addr, connect_timeout=10)
             self.ldap_connection = ldap3.Connection(
                 ldap_server, user=self.user_name, password=self.user_password,
                 raise_exceptions=True, receive_timeout=10)

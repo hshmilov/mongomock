@@ -8,7 +8,8 @@ ad_client1_details = {
     "user": "TestDomain\\Administrator",
     "dc_name": "10.0.229.30",
     "domain_name": "DC=TestDomain,DC=test",
-    "dns_server_address": fakednsaddr
+    "dns_server_address": fakednsaddr,
+    "use_ssl": "Unencrypted"
 }
 
 ad_client2_details = {
@@ -16,7 +17,7 @@ ad_client2_details = {
     "user": "TestSecDomain\\Administrator",
     "dc_name": "10.0.229.9",
     "domain_name": "DC=TestSecDomain,DC=test",
-    "dns_server_address": fakednsaddr
+    "dns_server_address": fakednsaddr,
 }
 
 # These devices has been configured to never sleep, so that we could try to execute code through them.
