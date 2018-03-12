@@ -1038,6 +1038,27 @@ class GuiService(PluginBase):
     # SETTINGS #
     #############
 
+    @add_rule_unauthenticated("settings", methods=['POST', 'GET'])
+    def settings(self):
+        """
+        Gets or saves current settings for the system
+
+        :return:
+        """
+        settings_collection = self._get_collection('settings', limited_user=False)
+        if (request.method == 'GET'):
+            settings_object = settings_collection.find_one({})
+            if not settings_object:
+                return jsonify({})
+            return jsonify(beautify_db_entry(settings_object))
+
+        # Handle POST request
+        settings_object = self.get_request_data_as_object()
+        update_result = settings_collection.replace_one({}, settings_object, upsert=True)
+        if not update_result.upserted_id and not update_result.modified_count:
+            return return_error('Error saving settings', 400)
+        return ''
+
     @add_rule_unauthenticated("mail_server", methods=['POST', 'GET', 'DELETE'])
     def mail_server(self):
         """

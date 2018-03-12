@@ -9,7 +9,8 @@
                             <checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
                                       :value="ids" @change="$emit('input', $event)"/>
                         </th>
-                        <th v-for="field in viewFields" nowrap>{{ field.title }}</th>
+                        <th v-for="field in viewFields" nowrap>
+                            <img v-if="field.logo" :src="`/src/assets/images/logos/${field.logo}.png`">{{ field.title }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,6 +81,10 @@
                 },
                 view(state) {
                 	return state[this.module].dataTable.view
+                },
+                refresh(state) {
+                	if (!state['settings'] || !state['settings'].data || !state['settings'].data.refreshRate) return 0
+                	return state['settings'].data.refreshRate
                 }
 			}),
             fetching() {
@@ -194,12 +199,16 @@
 				this.loading = true
 				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})
             }
-			this.interval = setInterval(function () {
-				this.fetchLinkedPages()
-			}.bind(this), 3000);
+            if (this.refresh) {
+                this.interval = setInterval(function () {
+					this.fetchLinkedPages()
+                }.bind(this), this.refresh * 1000);
+            }
 		},
 		beforeDestroy() {
-			clearInterval(this.interval);
+			if (this.refresh && this.interval) {
+			    clearInterval(this.interval);
+            }
 		}
 	}
 </script>

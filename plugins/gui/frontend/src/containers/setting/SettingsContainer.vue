@@ -1,31 +1,26 @@
 <template>
     <scrollable-page title="Settings" class="settings">
         <tabs>
-            <tab title="Lifecycle Settings" id="research-settings-tab" key="basic" selected="true">
+            <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
                 <h3>Research Phase</h3>
-                <div class="grid-2-3">
+                <div class="grid grid-col-2 grid-row-3">
                     <label for="start">Trigger Run</label>
                     <div class="grid-item">
                         <a id="start" class="btn" @click="startResearch">Start</a>
                     </div>
                     <label for="schedule" class="label">Next Scheduled Time:</label>
-                    <x-date-edit id="schedule" v-model="nextResearchStart" @input="scheduleResearch" :limit="limit" />
+                    <x-date-edit id="schedule" :value="nextResearchStart" @input="scheduleResearch" :limit="limit" />
                     <label for="research_rate" class="label">Schedule Rate (hours)</label>
                     <div class="grid-item">
-                        <input id="research_rate" type="number" min="0" v-model="researchRate">
+                        <input id="research_rate" type="number" min="0" v-model="lifecycle.researchRate">
                         <a class="btn set" @click="setResearchRate">Set</a>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-4">
-                        <h3>Execution</h3>
-                        <toggle-button id="toggle" :value="executionEnabled" color="#FF7D46" :sync="true" :labels="true"
-                                       @change="toggleExecution"/>
-                        <div v-if=""></div>
-                    </div>
-                </div>
+                <h3>Execution</h3>
+                <toggle-button id="toggle" :value="lifecycle.executionEnabled" color="#FF7D46" :sync="true"
+                               :labels="true" @change="toggleExecution"/>
             </tab>
-            <tab title="Email Settings" id="email-settings-tab" key="blah">
+            <tab title="Email Settings" id="email-settings-tab">
                 <div class="item">
                     <label for="host" class="label">Host</label>
                     <input id="host" type="text">
@@ -36,6 +31,19 @@
                 </div>
                 <div class="item">
                     <a id="save" class="btn">Save</a>
+                </div>
+            </tab>
+            <tab title="System Settings" id="system-settings-tab">
+                <h3>Data Tables</h3>
+                <div class="grid grid-col-2 grid-row-3">
+                    <label for="refresh-rate">Auto-Refresh Rate (seconds)</label>
+                    <input id="refresh-rate" type="number" min="0" v-model="refreshRate">
+                    <label for="single-adapter">Use Single Adapter View</label>
+                    <checkbox id="single-adapter" v-model="singleAdapter" />
+                    <div/>
+                    <button class="btn" @click="saveSettings">save</button>
+                </div>
+                <div class="row">
                 </div>
             </tab>
         </tabs>
@@ -49,33 +57,64 @@
     import Tabs from '../../components/tabs/Tabs.vue'
     import Tab from '../../components/tabs/Tab.vue'
     import xDateEdit from '../../components/controls/string/DateEdit.vue'
-    import {FETCH_LIFECYCLE} from '../../store/modules/dashboard'
-    import {REQUEST_API} from '../../store/actions'
-    import {mapActions} from 'vuex'
-    // import TagsMixin from './tags'
+    import Checkbox from '../../components/Checkbox.vue'
+
+    import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
+    import { FETCH_SETTINGS, UPDATE_REFRESH_RATE, UPDATE_SINGLE_ADAPTER, SAVE_SETTINGS } from '../../store/modules/settings'
+    import { REQUEST_API } from '../../store/actions'
+    import { mapState, mapMutations, mapActions } from 'vuex'
 
     export default {
         name: 'settings-container',
-        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xDateEdit},
-        mixins: [],
+        components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xDateEdit, Checkbox},
         computed: {
+            ...mapState(['dashboard', 'settings']),
             limit() {
                 return [{
                     type: 'fromto',
                     from: `${new Date().toDateString()} ${new Date().toTimeString()}`
                 }]
+            },
+            nextResearchStart() {
+				let tempDate = new Date(parseInt(this.dashboard.lifecycle.data.nextRunTime) * 1000)
+				return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
+            },
+            refreshRate: {
+            	get() {
+            		return this.settings.data.refreshRate
+                },
+                set(refreshRate) {
+            		this.updateRefreshRate(parseInt(refreshRate))
+                }
+            },
+            singleAdapter: {
+            	get(){
+            		return this.settings.data.singleAdapter
+                },
+                set(singleAdapter) {
+            		this.updateSingleAdapter(singleAdapter)
+                }
             }
         },
         data() {
             return {
-                nextResearchStart: "",
-                executionEnabled: true,
-                researchRate: 0
+            	lifecycle: {
+                    executionEnabled: true,
+                    researchRate: 0
+                }
             }
         },
         methods: {
-            ...mapActions({fetchLifecycle: FETCH_LIFECYCLE}),
-            ...mapActions({fetchData: REQUEST_API}),
+            ...mapMutations( {
+                updateRefreshRate: UPDATE_REFRESH_RATE,
+                updateSingleAdapter: UPDATE_SINGLE_ADAPTER
+            }),
+            ...mapActions({
+                fetchLifecycle: FETCH_LIFECYCLE,
+                fetchSettings: FETCH_SETTINGS,
+				fetchData: REQUEST_API,
+                saveSettings: SAVE_SETTINGS
+            }),
             startResearch() {
                 this.fetchData({
                     rule: `research_phase`,
@@ -109,10 +148,8 @@
             }
         },
         created() {
-            this.fetchLifecycle().then((response) => {
-                let tempDate = new Date(parseInt(response.data.next_run_time) * 1000)
-                this.nextResearchStart = `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
-            })
+            this.fetchLifecycle()
+            this.fetchSettings()
             this.fetchData({
                 rule: 'execution'
             }).then((response) => {
@@ -121,7 +158,7 @@
             this.fetchData({
                 rule: 'dashboard/lifecycle_rate'
             }).then((response) => {
-                this.researchRate = response.data / 60 / 60
+                this.lifecycle.researchRate = response.data / 60 / 60
             })
         }
     }
@@ -129,13 +166,17 @@
 
 <style lang="scss">
     .settings {
-        .grid-2-3 {
+        .grid {
             display: grid;
-            grid-template-columns: 1fr 2fr;
-            grid-template-rows: 1fr 1fr 1fr;
             grid-row-gap: 12px;
-            width: 500px;
+            width: 600px;
             align-items: center;
+            &.grid-col-2 {
+                grid-template-columns: 1fr 2fr;
+            }
+            &.grid-row-3 {
+                grid-template-rows: 1fr 1fr 1fr;
+            }
             .grid-item {
                 text-align: right;
             }
@@ -152,8 +193,10 @@
         label {
             margin-bottom: 0;
         }
-        .row {
-            margin-top: 24px;
+        #system-settings-tab {
+            .btn {
+                justify-self: end;
+            }
         }
     }
 </style>

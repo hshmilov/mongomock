@@ -16,6 +16,7 @@ import {
 	UPDATE_TABLE_VIEWS, updateTableViews,
 	ADD_TABLE_VIEW, addTableView
 } from './mutations'
+import { settings } from '../store/modules/settings'
 import { device } from '../store/modules/device'
 import { user } from '../store/modules/user'
 import { query } from '../store/modules/query'
@@ -59,6 +60,7 @@ export default new Vuex.Store({
             System's controls resource, relevant for each component.
             Module stores controls and manages the way of obtaining it.
          */
+        settings,
         device,
 		user,
         query,

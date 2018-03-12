@@ -58,14 +58,11 @@
 	import DynamicPopover from '../../components/popover/DynamicPopover.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-	import {
-		FETCH_DEVICE,
-		FETCH_LABELS,
-		FETCH_DEVICE_FIELDS
-	} from '../../store/modules/device'
+	import { FETCH_DEVICE, FETCH_LABELS, FETCH_DEVICE_FIELDS } from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
-    import { FETCH_TABLE_VIEWS, SAVE_TABLE_VIEW } from '../../store/actions'
+    import { FETCH_SETTINGS } from '../../store/modules/settings'
+	import { FETCH_TABLE_VIEWS, SAVE_TABLE_VIEW } from '../../store/actions'
 	import { UPDATE_TABLE_VIEW } from '../../store/mutations'
 
 	export default {
@@ -75,7 +72,7 @@
 			Modal, TriggerableDropdown, xGradedMultiSelect, xDataTable, NestedMenu, NestedMenuItem
 		},
 		computed: {
-			...mapState(['device', 'query', 'adapter']),
+			...mapState(['device', 'query', 'adapter', 'settings']),
 			queryFilter: {
 				get () {
 					return this.query.newQuery.filter
@@ -143,6 +140,7 @@
                     return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
 				}).concat(Object.keys(this.specificFlatSchema).reduce((merged, title) => {
 					merged = [...merged, ...this.specificFlatSchema[title].map((field) => {
+						if (this.settings.data.singleAdapter) return field
 						return { ...field, title: `${title} ${field.title}`}
                     })]
 					return merged
@@ -188,7 +186,8 @@
 				fetchAdapters: FETCH_ADAPTERS,
 				fetchSavedQueries: FETCH_SAVED_QUERIES,
                 fetchTableViews: FETCH_TABLE_VIEWS,
-                saveTableView: SAVE_TABLE_VIEW
+                saveTableView: SAVE_TABLE_VIEW,
+                fetchSettings: FETCH_SETTINGS
 			}),
 			executeQuery () {
 				this.updateQuery(this.queryFilter)
@@ -262,6 +261,7 @@
 		},
 		created () {
 			this.fetchAdapters()
+            this.fetchSettings()
             this.fetchTableViews({module: 'device'})
 			if (!this.device.deviceFields.data || !this.device.deviceFields.data.generic) {
 				this.fetchDeviceFields()

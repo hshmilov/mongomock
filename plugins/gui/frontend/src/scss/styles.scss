@@ -33,12 +33,13 @@ table {
     overflow: auto;
     th {
       font-weight: 300;
+      padding: 2px 8px;
     }
   }
   tbody {
     overflow: auto;
     td {
-      padding: 2px;
+      padding: 2px 8px;
     }
   }
 }
