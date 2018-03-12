@@ -253,7 +253,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # TODO: Fix the whole god damn execution system
 
             if "{'status': 'failed', 'output': ''}" == str(exc):
-                self.logger.info(f"No executing adpaters for device {device['internal_axon_id']}, continuing")
+                self.logger.debug(f"No executing adpaters for device {device['internal_axon_id']}, continuing")
                 return
 
             self.logger.info("Failed running wmi query on device {0}! error: {1}"

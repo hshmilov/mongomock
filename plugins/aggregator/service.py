@@ -61,10 +61,8 @@ class AggregatorService(PluginBase, Triggerable):
         self.__device_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
 
         # Setting up db
-        self.devices_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
+        self.aggregator_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
         self.insert_views()
-        self.devices_db_actual_collection = self.devices_db_connection['devices_db']
-        self.devices_db_view = self.devices_db_connection['devices_db_view']
 
         # insertion and link/unlink lock
         self.fetch_lock = {}
@@ -82,47 +80,39 @@ class AggregatorService(PluginBase, Triggerable):
         # The following creates a view that has all adapters and tags
         # of type "adapterdata" inside one (unsorted!) array.
 
-        try:
-            self.devices_db_connection.command({
-                "create": "devices_db_view",
-                "viewOn": "devices_db",
-                "pipeline": [
-                    {'$project': {'internal_axon_id': 1,
-                                  'generic_data':
-                                      {'$filter': {'input': '$tags', 'as': 'tag',
-                                                   'cond': {'$eq': ['$$tag.type', 'data']}}},
-                                  'specific_data':
-                                      {'$concatArrays': ['$adapters',
-                                                         {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
-                                                                      {'$eq': ['$$tag.type', 'adapterdata']}}}]},
-                                  'adapters': '$adapters.plugin_name',
-                                  'labels': {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
-                                                         {'$and': [{'$eq': ['$$tag.type', 'label']},
-                                                                   {'$eq': ['$$tag.data', True]}]}
-                                                         }
-                                             }
-                                  }
-                     },
-                    {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1, 'labels': '$labels.name',
-                                  'adapters_data': {'$map': {'input': '$specific_data', 'as': 'data', 'in': {
-                                      '$arrayToObject': {'$concatArrays': [[], [{'k': '$$data.plugin_name',
-                                                                                 'v': '$$data.data'}]]}}}},
-                                  'specific_data': 1}
-                     }
-                ]
-            })
-        except pymongo.errors.OperationFailure as e:
-            if "already exists" not in str(e):
-                raise
-
-    @property
-    def devices_db(self):
-        """
-        We override devices_db of pluginbase to be more efficient.
-        :return: A mongodb collection.
-        """
-
-        return self.devices_db_actual_collection
+        for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
+            try:
+                self.aggregator_db_connection.command({
+                    "create": create,
+                    "viewOn": view_on,
+                    "pipeline": [
+                        {'$project': {'internal_axon_id': 1,
+                                      'generic_data':
+                                          {'$filter': {'input': '$tags', 'as': 'tag',
+                                                       'cond': {'$eq': ['$$tag.type', 'data']}}},
+                                      'specific_data':
+                                          {'$concatArrays': ['$adapters',
+                                                             {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
+                                                                          {'$eq': ['$$tag.type', 'adapterdata']}}}]},
+                                      'adapters': '$adapters.plugin_name',
+                                      'labels': {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
+                                                             {'$and': [{'$eq': ['$$tag.type', 'label']},
+                                                                       {'$eq': ['$$tag.data', True]}]}
+                                                             }
+                                                 }
+                                      }
+                         },
+                        {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1, 'labels': '$labels.name',
+                                      'adapters_data': {'$map': {'input': '$specific_data', 'as': 'data', 'in': {
+                                          '$arrayToObject': {'$concatArrays': [[], [{'k': '$$data.plugin_name',
+                                                                                     'v': '$$data.data'}]]}}}},
+                                      'specific_data': 1}
+                         }
+                    ]
+                })
+            except pymongo.errors.OperationFailure as e:
+                if "already exists" not in str(e):
+                    raise
 
     def _request_insertion_from_adapters(self, adapter):
         """Get mapped data from all devices.
@@ -150,16 +140,16 @@ class AggregatorService(PluginBase, Triggerable):
             raise ClientsUnavailable()
         for client_name in clients:
             try:
-                devices = self.request_remote_plugin(f'insert_to_db?client_name={client_name}', adapter, method='PUT')
+                data = self.request_remote_plugin(f'insert_to_db?client_name={client_name}', adapter, method='PUT')
             except Exception as e:
                 # request failed
                 self.logger.exception(f"{repr(e)}")
                 raise AdapterOffline()
-            if devices.status_code != 200:
-                self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {devices.status_code}. "
-                                 f"Reason: {str(devices.content)}")
+            if data.status_code != 200:
+                self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {data.status_code}. "
+                                 f"Reason: {str(data.content)}")
                 continue
-            yield (client_name, from_json(devices.content))
+            yield (client_name, from_json(data.content))
 
     def _triggered(self, job_name, post_json, *args):
         def _filter_adapters_by_parameter(adapter_filter, adapters):
@@ -173,7 +163,7 @@ class AggregatorService(PluginBase, Triggerable):
         adapters = requests.get(self.core_address + '/register')
 
         if adapters.status_code != 200:
-            self.logger.error(f"Error getting devices from core. reason: "
+            self.logger.error(f"Error getting adapters from core. reason: "
                               f"{str(adapters.status_code)}, {str(adapters.content)}")
             return return_error('Could not fetch adapters', 500)
 
@@ -187,9 +177,9 @@ class AggregatorService(PluginBase, Triggerable):
 
         self.logger.debug("registered adapters = {}".format(adapters))
 
-        return self._fetch_devices_from_adapters(job_name, adapters)
+        return self._fetch_data_from_adapters(job_name, adapters)
 
-    def _fetch_devices_from_adapters(self, job_name, current_adapters=None):
+    def _fetch_data_from_adapters(self, job_name, current_adapters=None):
         """ Function for fetching devices from adapters.
 
         This function runs on all the received adapters and in a different thread fetches all of them.
@@ -208,7 +198,7 @@ class AggregatorService(PluginBase, Triggerable):
                             continue
 
                         futures_for_adapter[executor.submit(
-                            self._save_devices_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+                            self._save_data_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
 
                     for future in concurrent.futures.as_completed(futures_for_adapter):
                         try:
@@ -423,7 +413,7 @@ class AggregatorService(PluginBase, Triggerable):
                                      ]
                                      })
 
-    def _save_devices_from_adapter(self, adapter_unique_name):
+    def _save_data_from_adapter(self, adapter_unique_name):
         """
         Requests from the given adapter to insert its devices into the DB.
         :param str adapter_unique_name: The unique name of the adapter
@@ -431,8 +421,8 @@ class AggregatorService(PluginBase, Triggerable):
 
         self.logger.info(f"Starting to fetch device for {adapter_unique_name}")
         try:
-            devices = self._request_insertion_from_adapters(adapter_unique_name)
-            for client_name, devices_per_client in devices:
+            data = self._request_insertion_from_adapters(adapter_unique_name)
+            for client_name, devices_per_client in data:
                 self.logger.info(f"Got {devices_per_client} for client {client_name} in {adapter_unique_name}")
 
         except (AdapterOffline, ClientsUnavailable) as e:
@@ -452,7 +442,7 @@ class AggregatorService(PluginBase, Triggerable):
         :param db_type: 'parsed' or 'raw
         :return: None
         """
-        self.devices_db_connection[db_type].insert_one(device)
+        self.aggregator_db_connection[db_type].insert_one(device)
 
     def _update_device_with_tag(self, tag, axonius_device):
         """

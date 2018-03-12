@@ -3,7 +3,6 @@ import datetime
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
-from axonius.parsing_utils import format_image
 
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
@@ -12,31 +11,34 @@ from axonius.parsing_utils import format_image
 
 class UserDevice(SmartJsonClass):
     """ A definition for the json-scheme for a device that is associated to a user. """
+    device_caption = Field(str, "Name")  # The name of the device to be shown in the gui
+
     plugin_unique_name = Field(str)
-    # TODO: An enum of all adapters here.
-    adapter_name = Field(str, "Adapter Name")
+    adapter_name = Field(str, "Adapter Name")  # TODO: An enum of all adapters here.
     adapter_id = Field(str, "Unique ID By Adapter")
+    axonius_id = Field(str, "Axonius ID")
 
 
 class User(SmartJsonClass):
     """ A definition for the json-scheme for a User """
 
-    id = Field(str, "ID")  # Usually the same as username.
+    id = Field(str, "ID")  # Usually username@domain.
     username = Field(str, 'User Name')  # Only username, no domain
-    domain = Field(str, "Domain")   # Only domain, e.g. "TestDomain.Test"
+    domain = Field(str, "Domain")   # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     last_seen = Field(datetime.datetime, 'Last Seen')
     associated_devices = ListField(UserDevice, "Associated Devices")
     member_of = ListField(str, "Member Of")
     is_admin = Field(bool, "Is Admin")
+    is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
     account_expires = Field(datetime.datetime, "Account Expiration Date")
     last_bad_logon = Field(datetime.datetime, "Last Bad Logon Date")
     last_password_change = Field(datetime.datetime, "Last Password Change")
     last_logoff = Field(datetime.datetime, "Last Logoff Date")
     last_logon = Field(datetime.datetime, "Last Logon Date")
     user_created = Field(datetime.datetime, "User Creation Date")
-    image = Field(str, "Image", converter=format_image, json_format=JsonStringFormat.image)
+    image = Field(str, "Image", json_format=JsonStringFormat.image)
 
-    required = ['id', 'username']
+    required = ['id', 'username', 'domain']
 
     def __init__(self, user_fields: typing.MutableSet[str], user_raw_fields: typing.MutableSet[str]):
         """ The user_fields and user_raw_fields will be auto-populated when new fields are set. """

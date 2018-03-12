@@ -97,5 +97,8 @@ class MongoService(DockerService):
     def get_devices_db(self, aggregator_unique_name):
         return self.client[aggregator_unique_name]['devices_db']
 
+    def get_users_db(self, aggregator_unique_name):
+        return self.client[aggregator_unique_name]['users_db']
+
     def get_devices(self, aggregator_unique_name):
         return self.get_devices_db(aggregator_unique_name).find({})

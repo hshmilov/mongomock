@@ -23,3 +23,5 @@ ad_client2_details = {
 # These devices has been configured to never sleep, so that we could try to execute code through them.
 DEVICE_ID_FOR_CLIENT_1 = 'CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test'
 DEVICE_ID_FOR_CLIENT_2 = 'CN=DESKTOP-GO8PIUL,CN=Computers,DC=TestSecDomain,DC=test'
+USER_ID_FOR_CLIENT_1 = "Administrator"
+USER_SID_FOR_CLIENT_1 = "S-1-5-21-4050441107-50035988-2732102988-500"

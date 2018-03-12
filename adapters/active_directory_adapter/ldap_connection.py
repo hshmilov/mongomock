@@ -154,23 +154,13 @@ class LdapConnection:
             entry_generator = self.ldap_connection.extend.standard.paged_search(
                 search_base=self.domain_name,
                 search_filter='(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
-                attributes=['sAMAccountName', 'objectSid'],
+                attributes='*',
                 paged_size=self.ldap_page_size,
                 generator=True)
 
-            for i in entry_generator:
-                try:
-                    # fqdn is in the format of username@domain.domainsuffix.domainsuffix... etc.
-                    # so we assemble it. I'm going to assume self.domain_name does not consist "," in the domain itself,
-                    # as it is not a valid url. (it looks like DC=TestDomain,DC=test)
-                    # we do x[3:] to get rid of "DC=".
-
-                    fqdn = "{0}@{1}".format(i["attributes"]["sAMAccountName"],
-                                            ".".join([x[3:] for x in self.domain_name.strip().split(",")]))
-
-                    yield {"sid": i["attributes"]["objectSid"], "caption": f"{fqdn}"}
-                except KeyError:
-                    pass
+            for user in entry_generator:
+                if 'attributes' in user:
+                    yield dict(user['attributes'])
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise LdapException(str(ldap_error))

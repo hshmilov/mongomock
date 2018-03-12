@@ -13,6 +13,7 @@ import socket
 import ssl
 import urllib3
 
+from axonius.parsing_utils import get_exception_string
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
 from bson import json_util
@@ -30,6 +31,7 @@ from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
 from axonius.devices.device import Device
+from axonius.users.user import User
 from axonius.logging.logger import create_logger
 from axonius.mixins.feature import Feature
 from axonius.utils.debug import is_debug_attached
@@ -135,7 +137,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
                         extra_log['err_type'] = err_type
                         extra_log['err_message'] = err_message
                         logger.exception("Unhandled exception thrown from plugin", extra=extra_log)
-                    return json.dumps({"status": "error", "type": err_type, "message": err_message}), 400
+                    return json.dumps({"status": "error", "type": err_type, "message": get_exception_string()}), 400
                 except Exception as second_err:
                     return json.dumps({"status": "error", "type": type(second_err).__name__,
                                        "message": str(second_err)}), 400
@@ -184,6 +186,7 @@ class PluginBase(Feature):
 
     """
     MyDevice = None
+    MyUser = None
 
     def __init__(self, config_file_path: str, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
         """ Initialize the class.
@@ -218,6 +221,13 @@ class PluginBase(Feature):
         self._last_fields_count = (0, 0)  # count of _fields_set and _raw_fields_set when performed the last save to DB
         self._first_fields_change = True
         self._fields_db_lock = threading.RLock()
+
+        # MyUser things.
+        self._user_fields_set = set()  # contains an User specific list of field names.
+        self._user_raw_fields_set = set()  # contains a User specific list of raw-fields names.
+        self._user_last_fields_count = (0, 0)  # Count when db save is preformed.
+        self._user_first_fields_change = True
+        self._user_fields_db_lock = threading.RLock()
 
         print(f"{self.plugin_name} is starting")
 
@@ -328,6 +338,14 @@ class PluginBase(Feature):
         self.logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
 
         super().__init__(*args, **kwargs)
+
+        # DB's
+        self.aggregator_db_connection = self._get_db_connection(True)[AGGREGATOR_PLUGIN_NAME]
+        self.devices_db = self.aggregator_db_connection['devices_db']
+        self.users_db = self.aggregator_db_connection['users_db']
+        self.devices_db_view = self.aggregator_db_connection['devices_db_view']
+        self.users_db_view = self.aggregator_db_connection['users_db_view']
+
         # Finished, Writing some log
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
                                                                                               self.version,
@@ -361,6 +379,39 @@ class PluginBase(Feature):
         if self.MyDevice is None:
             raise ValueError('class MyDevice(Device) class was not declared inside this Adapter class')
         return self.MyDevice(self._fields_set, self._raw_fields_set)
+
+    # Users.
+    def _new_user(self) -> User:
+        """ Returns a new empty User associated with this adapter. """
+        if self.MyUser is None:
+            raise ValueError('class MyUser(user) class was not declared inside this Adapter class')
+        return self.MyUser(self._user_fields_set, self._user_raw_fields_set)
+
+    def _save_user_field_names_to_db(self):
+        """ Saves user_fields_set and user_raw_fields_set to the Plugin's DB """
+        with self._user_fields_db_lock:
+            user_last_fields_count, user_last_raw_fields_count = self._user_last_fields_count
+            if len(self._user_fields_set) == user_last_fields_count and \
+                    len(self._user_raw_fields_set) == user_last_raw_fields_count:
+                return  # Optimization. Note that this is true only if we don't delete fields!
+
+            self.logger.info("Persisting user my fields to DB")
+            user_fields = list(self._user_fields_set)  # copy
+            user_raw_fields = list(self._user_raw_fields_set)  # copy
+
+            # Upsert new fields
+            user_fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['user_fields']
+            user_fields_collection.update({'name': 'raw'},
+                                          {'$addToSet': {'raw': {'$each': user_raw_fields}}},
+                                          upsert=True)
+            if self._user_first_fields_change:
+                user_fields_collection.update({'name': 'parsed'},
+                                              {'name': 'parsed', 'schema': self.MyUser.get_fields_info()},
+                                              upsert=True)
+                self._user_first_fields_change = False
+
+            # Save last update count
+            self.user_last_fields_count = len(user_fields), len(user_raw_fields)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -772,17 +823,6 @@ class PluginBase(Feature):
     @property
     def plugin_subtype(self):
         return "Pre-Correlation"
-
-    @property
-    def devices_db(self):
-        """
-        Simply returns the collection of the devices db.
-        :return: A mongodb collection.
-        """
-
-        # This would throw an exception if we haven't found it, or found multiple aggregators for some reason.
-        aggregator = self.get_plugin_by_name('aggregator')
-        return self._get_collection("devices_db", db_name=aggregator[PLUGIN_UNIQUE_NAME])
 
     def __tag_many_device(self, device_identity_by_adapter, names, data, type):
         """ Function for tagging many adapter devices with many tags.

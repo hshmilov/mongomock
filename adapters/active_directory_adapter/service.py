@@ -1,5 +1,6 @@
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
+from axonius.fields import Field
 from datetime import datetime, timedelta
 import json
 import os
@@ -20,6 +21,8 @@ from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
+from axonius.users.user import User
+from axonius.parsing_utils import parse_date, bytes_image_to_base64
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -30,6 +33,9 @@ TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 class ActiveDirectoryAdapter(AdapterBase):
     class MyDevice(ADDevice):
         pass
+
+    class MyUser(User):
+        sid = Field(str, "AD User SID")
 
     def __init__(self):
 
@@ -207,14 +213,82 @@ class ActiveDirectoryAdapter(AdapterBase):
         :return:
         """
 
-        users_list = list(client_data.get_users_list())
-        # The format is a list of objects that look like {"sid": "S-1-5-...", "caption": "username@domain.name"}
-        # we gotta transfer that to the specific format requested by AdapterBase.clients()
-        users_list_in_specific_format = {}
-        for user in users_list:
-            users_list_in_specific_format[user['sid']] = {"raw": user}
+        return client_data.get_users_list()
 
-        return users_list_in_specific_format
+    def _parse_users_raw_data(self, raw_data):
+        """
+        Gets raw data and yields User objects.
+        :param user_raw_data: the raw data we get.
+        :return:
+        """
+
+        for user_raw in raw_data:
+            user = self._new_user()
+
+            username = user_raw.get("sAMAccountName")
+            domain = user_raw.get("distinguishedName")
+            if username is None:
+                self.logger.error(f"Error, could not get sAMAccountName for user.username, "
+                                  f"which is mandatory. Bypassing. raw_data: {user_raw}")
+                continue
+
+            if domain is None:
+                self.logger.error(f"Error, could not get distinguishedName for user.domain, "
+                                  f"which is mandatory. Bypassing. raw_data: {user_raw}")
+                continue
+
+            domain_name = ".".join([x[3:] for x in domain.strip().split(",") if x.startswith("DC=")])
+            if domain_name == "":
+                self.logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
+                continue
+
+            user.username = username
+            user.domain = domain
+            user.id = f"{username}@{domain}"    # Should be the unique identifier of that user.
+
+            user.sid = user_raw.get("objectSid")
+            memberof = user_raw.get("memberOf")
+            if memberof is not None:
+                # memberof is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
+                # so we take each string in the list and transform it to d.b.c.a
+                user.member_of = [".".join([x[3:] for x in memberof_entry.strip().split(",")])
+                                  for memberof_entry in memberof]
+
+            is_admin = user_raw.get("adminCount")
+            if is_admin is not None:
+                user.is_admin = bool(is_admin)
+
+            use_timestamps = []  # Last usage times
+            user.account_expires = parse_date(user_raw.get("accountExpires"))
+            user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
+            user.last_password_change = parse_date(user_raw.get("pwdLastSet"))
+            last_logoff = parse_date(user_raw.get("lastLogoff"))
+            if last_logoff is not None:
+                user.last_logoff = last_logoff
+                use_timestamps.append(last_logoff)
+
+            last_logon = parse_date(user_raw.get("lastLogon"))
+            if last_logon is not None:
+                user.last_logon = last_logon
+                use_timestamps.append(last_logon)
+
+            user.user_created = parse_date(user_raw.get("whenCreated"))
+
+            # Last seen is the latest timestamp of use we have.
+            use_timestamps = sorted(use_timestamps, reverse=True)
+            if len(use_timestamps) > 0:
+                user.last_seen = use_timestamps[0]
+
+            # I'm afraid this could cause exceptions, lets put it in try/except.
+            try:
+                thumbnail_photo = user_raw.get("thumbnailPhoto")
+                if thumbnail_photo is not None:
+                    user.image = bytes_image_to_base64(thumbnail_photo)
+            except:
+                self.logger.exception("Exception while setting thumbnailPhoto.")
+
+            user.set_raw(user_raw)
+            yield user
 
     def _resolve_hosts_addresses(self, hosts):
         resolved_hosts = []

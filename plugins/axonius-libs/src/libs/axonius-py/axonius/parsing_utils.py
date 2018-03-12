@@ -4,10 +4,13 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 
 import re
 import sys
+import base64
+import binascii
 from types import FunctionType
 from typing import NewType, Callable
 
 import dateutil.parser
+import datetime
 import ipaddress
 import binascii
 import base64
@@ -197,21 +200,12 @@ def format_ip(value):
         raise ValueError(f'Invalid IP address: {value}')
 
 
-def format_ip_raw(value):
-    try:
-        address = ipaddress.ip_address(value)
-        if isinstance(address, ipaddress.IPv4Address):
-            return address._ip
-        return None
-        # TODO: Add support to ipv6
-        # decimal128_ctx = create_decimal128_context()
-        # with decimal.localcontext(decimal128_ctx) as ctx:
-        # return Decimal128(ctx.create_decimal(str(address._ip)))
-    except:
-        raise ValueError(f'Invalid raw IP address: {value}')
-
-
-def format_image(value):
+def bytes_image_to_base64(value):
+    """
+    Takes a bytes list and returns a base64 str that will be shown right on <img src="">.
+    :param value:
+    :return:
+    """
     try:
         header = binascii.hexlify(value[:4])
         if header.startswith(b"ffd8ff"):
@@ -225,6 +219,20 @@ def format_image(value):
         return "data:image/{0};base64,{1}".format(header, base64.b64encode(value).decode("utf-8"))
     except:
         raise ValueError(f'Invalid Image. Exception is {get_exception_string()}')
+
+
+def format_ip_raw(value):
+    try:
+        address = ipaddress.ip_address(value)
+        if isinstance(address, ipaddress.IPv4Address):
+            return address._ip
+        return None
+        # TODO: Add support to ipv6
+        # decimal128_ctx = create_decimal128_context()
+        # with decimal.localcontext(decimal128_ctx) as ctx:
+        # return Decimal128(ctx.create_decimal(str(address._ip)))
+    except:
+        raise ValueError(f'Invalid raw IP address: {value}')
 
 
 def parse_date(datetime_to_parse):

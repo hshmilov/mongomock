@@ -155,18 +155,21 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _try_query_devices_by_client(self, *args, **kwargs):
-        with self._get_db_connection(True) as db:
-            aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
-            devices = aggregator_db['devices_db'].find()
-        scanner = self._get_scanner_correlator(self.logger, devices)
-        raw_devices, parsed_devices = super()._try_query_devices_by_client(*args, **kwargs)
-        for device in parsed_devices:
-            device['correlates'] = scanner.find_correlation({"data": device,
-                                                             PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                                                             PLUGIN_NAME: self.plugin_name,
-                                                             'plugin_type': self.plugin_type})
-        return raw_devices, parsed_devices
+    def _try_query_data_by_client(self, client_name, data_type):
+        raw_data, parsed_data = super()._try_query_data_by_client(client_name, data_type)
+
+        if data_type == "devices":
+            with self._get_db_connection(True) as db:
+                aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
+                devices = aggregator_db['devices_db'].find()
+            scanner = self._get_scanner_correlator(devices, self.plugin_unique_name)
+
+            for device in parsed_data:
+                device['correlates'] = scanner.find_correlation({"data": device,
+                                                                 PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                                                                 PLUGIN_NAME: self.plugin_name,
+                                                                 'plugin_type': self.plugin_type})
+        return raw_data, parsed_data
 
     @property
     def plugin_type(self):

@@ -185,7 +185,7 @@ class CoreService(PluginBase):
         roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
                  {'role': 'dbOwner', 'db': AGGREGATOR_PLUGIN_NAME},
                  {'role': 'insert_notification', 'db': 'core'},
-                 {'role': 'readAnyDatabase', 'db': 'admin'}]  # Grant read permissions to all db's
+                 {'role': 'readWriteAnyDatabase', 'db': 'admin'}]  # Grant read/write permissions to all db's
 
         # TODO: Consider a way of requesting roles other than read-only.
         db_connection[plugin_unique_name].add_user(db_user,

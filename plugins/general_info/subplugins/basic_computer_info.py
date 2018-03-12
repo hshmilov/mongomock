@@ -14,7 +14,6 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         :param plugin_base_delegate: the "self" of a relevant plugin base.
         """
         super().__init__(plugin_base_delegate)
-        self.users = {}  # a cache var for storing users from adapters.
 
     @staticmethod
     def get_wmi_smb_commands():

@@ -5,13 +5,14 @@ from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_co
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from axonius.devices.device import Device
 
-USERS_QUERY_TRESHOLD_HOURS = 1  # Hours to query users per each adapter
+USERS_QUERY_TRESHOLD_HOURS = 1  # Hours to query users_to_sids per each adapter
 
 
 class GetUserLogons(GeneralInfoSubplugin):
     """ Using wmi queries, determines who is the last user that logged into the machine. """
-    users = {}  # a cache var for storing users from adapters. Note that this is a class var.
-    users_query_lock = threading.Lock()
+    users_to_sids = None  # a cache var for storing users_to_sids from adapters. Note that this is a class var.
+    users_to_sids_last_query = None
+    users_to_sids_query_lock = threading.Lock()
 
     def __init__(self, plugin_base_delegate):
         """
@@ -20,32 +21,41 @@ class GetUserLogons(GeneralInfoSubplugin):
         """
         super().__init__(plugin_base_delegate)
 
-    def get_users(self, list_of_adapters):
-        # This whole thing is a temp solution until we implement 'users' in aggregator.
-        dict_of_users = {}
+    def get_sid_to_users_db(self):
+        """
+        Instead of querying the users_to_sids db for each device again and again, query it once and return it.
+        :return: sids_to_users[sid] -> ("name@domain", bool(is_local_user))
+        """
 
-        with GetUserLogons.users_query_lock:
-            for adap in list_of_adapters:
-                # Try to see if we already have it in our 'cache'
-                users = GetUserLogons.users.get(adap)
-                if users is not None \
-                        and (users['lastquery'] +
-                             datetime.timedelta(hours=USERS_QUERY_TRESHOLD_HOURS) > datetime.datetime.now()):
-                    dict_of_users[adap] = users['users']
-                else:
-                    # we have to get it
-                    try:
-                        resp = self.plugin_base.request_remote_plugin("users", adap)
-                        if resp.status_code == 200:
-                            users_json = resp.json()
-                            GetUserLogons.users[adap] = {'users': users_json, 'lastquery': datetime.datetime.now()}
-                            dict_of_users[adap] = users_json
-                        else:
-                            self.logger.error(f"Tried to reach /users of {adap} but got status {resp.status_code}")
-                    except requests.exceptions.RequestException:
-                        self.logger.exception("Got a requests exception in get_users")
+        with GetUserLogons.users_to_sids_query_lock:
+            if GetUserLogons.users_to_sids is None \
+                or GetUserLogons.users_to_sids_last_query + \
+                    datetime.timedelta(hours=USERS_QUERY_TRESHOLD_HOURS) < datetime.datetime.now():
 
-            return dict_of_users
+                # If we haven't queried users_to_sids, or if too much time has passed, Lets query and enrich.
+                GetUserLogons.users_to_sids = {}
+                list_of_users_from_users_db = self.plugin_base.users_db_view.find(
+                    filter={"specific_data.data.sid": {"$exists": True}},
+                    projection={"specific_data.data.sid": 1, "specific_data.data.username": 1,
+                                "specific_data.data.domain": 1}
+                )
+
+                for user in list_of_users_from_users_db:
+                    # we always take the first one. if that device has more than one adapter that reports sid, the name
+                    # is going to be the same - its the correlation rule for users_to_sids (its their id!)
+                    data = user["specific_data"][0]["data"]
+                    sid = data.get("sid")    # there because that is our filter.
+                    username = data.get("username")  # should always be there
+                    domain = data.get("domain")  # not necessarily there...
+                    if domain is not None:
+                        username = f"{username}@{domain}"
+
+                    self.logger.debug(f"enriching sids_to_users: {sid} -> {username}")
+                    GetUserLogons.users_to_sids[sid] = username, False  # False for is_local_user
+
+                    GetUserLogons.users_to_sids_last_query = datetime.datetime.now()
+
+            return GetUserLogons.users_to_sids.copy()
 
     @staticmethod
     def get_wmi_smb_commands():
@@ -61,13 +71,11 @@ class GetUserLogons(GeneralInfoSubplugin):
             self.logger.error("Not handling result, result has exception")
             return False
 
-        clients_used = [p['client_used'] for p in device['adapters']]
-
         user_profiles_data = result[0]["data"]
         user_accounts_data = result[1]["data"]
 
-        # First, lets build the sids_to_users table.
-        sids_to_users = {}
+        # Lets build the sids_to_users table. We get the base sids_to_users from the users db first.
+        sids_to_users = self.get_sid_to_users_db()
         for user in user_accounts_data:
             # a caption is domain + username.
             # Note! we can also get many more interesting info. like, is that user a local user, was is locked out,
@@ -79,43 +87,12 @@ class GetUserLogons(GeneralInfoSubplugin):
                 self.logger.error(f"Couldn't find Caption/SID/LocalAccount in user_accounts_data: {user} "
                                   f"not enriching")
             else:
-                sids_to_users[sid] = "@".join(caption.split("\\")[::-1]), bool(is_local_account)
-
-        """
-        We gotta enrich this array with the sid's we got from the adapter.
-        reminder: the format from self.get_users is as follows:
-        {
-          "plugin_unique_name":
-          {
-              "client_id":
-              {
-                  "user_unique_id":
-                  {
-                      "raw":
-                      {
-                          "sid": "the sid",
-                          "caption": "the caption"
-                       }
-                  }
-              }
-          }
-        }
-        """
-
-        list_of_users = self.get_users([p['plugin_unique_name'] for p in device['adapters']])
-        # Todo: make this look less terrible.
-        for clients_per_adapter in list_of_users.values():
-            # we are now in the adapter level
-            for client_used_name, client_used in clients_per_adapter.items():
-                # Now iterate through all clients of that adapter. If you found one that this device uses.
-                if client_used_name in clients_used:
-                    # In that case you gotta iterate through all users here.
-                    for unique_user_value in client_used.values():
-                        sid = unique_user_value["raw"]["sid"]
-                        caption = unique_user_value["raw"]["caption"]
-                        if sid not in sids_to_users:
-                            self.logger.debug(f"enriching sids_to_users: {sid} -> {caption}")
-                            sids_to_users[sid] = caption, False
+                if sid in sids_to_users:
+                    # If it exists it means we have seen it in the user db. Just change the is local account
+                    # which should be false but might be on weird circumstances true? (deleting user etc?)
+                    sids_to_users[1] = bool(is_local_account)
+                else:
+                    sids_to_users[sid] = "@".join(caption.split("\\")[::-1]), bool(is_local_account)
 
         # Now, go over all users, parse their last use time date and add them to the array.
         last_used_time_arr = []
@@ -189,6 +166,6 @@ class GetUserLogons(GeneralInfoSubplugin):
                 raise
 
         else:
-            self.logger.error("Did not find any users. That is very weird and should not happen.")
+            self.logger.error("Did not find any users_to_sids. That is very weird and should not happen.")
 
         return False

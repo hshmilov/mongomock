@@ -28,6 +28,7 @@ from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
 from axonius.devices.device import Device, LAST_SEEN_FIELD
+from axonius.users.user import User, USER_LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
 from axonius.parsing_utils import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -88,10 +89,12 @@ class AdapterBase(PluginBase, Feature, ABC):
         super().__init__(*args, **kwargs)
 
         device_alive_thresh = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS, -1)
+        user_alive_threshold = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_USER_ALIVE_THRESHOLD_DAYS, -1)
 
         self.logger.info(f"Setting last seen threshold to {device_alive_thresh}")
 
         self.last_seen_timedelta = timedelta(hours=device_alive_thresh)
+        self.user_last_seen_timedelta = timedelta(days=user_alive_threshold)
 
         self._clients_lock = RLock()
         self._clients = {}
@@ -106,22 +109,10 @@ class AdapterBase(PluginBase, Feature, ABC):
         self._prepare_parsed_clients_config(False)
 
         self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
-
-        self.devices_db_connection = self._get_db_connection(True)[AGGREGATOR_PLUGIN_NAME]
-        self.devices_db_actual_collection = self.devices_db_connection['devices_db']
-        self.device_id_db = self.devices_db_connection['current_devices_id']
+        self.device_id_db = self.aggregator_db_connection['current_devices_id']
 
         # An executor dedicated to inserting devices to the DB
-        self.__device_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
-
-    @property
-    def devices_db(self):
-        """
-        We override devices_db of pluginbase to be more efficient.
-        :return: A mongodb collection.
-        """
-
-        return self.devices_db_actual_collection
+        self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -168,7 +159,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         Accepts:
            GET - Finds all available devices, and returns them
         """
-        return to_json(dict(self._query_devices()))
+        return to_json(dict(self._query_data("devices")))
 
     @add_rule('devices_by_name', methods=['GET'])
     def devices_by_client(self):
@@ -179,8 +170,91 @@ class AdapterBase(PluginBase, Feature, ABC):
            GET - Finds all available devices from a specific client, and returns them
         """
         client_name = request.args.get('name')
-        return to_json(self._get_devices_by_client(client_name))
+        return to_json(self._get_data_by_client(client_name, "devices"))
 
+    # Users
+    @add_rule('users', methods=['GET'])
+    def users(self):
+        """ /users Query adapter to fetch all available users.
+        An "available" users is a device that is registered with the adapter source.
+
+        Accepts:
+           GET - Finds all available devices, and returns them
+        """
+        return to_json(dict(self._query_data("users")))
+
+    def _query_users_by_client(self, key, data):
+        """
+
+        :param key: the client key
+        :param data: the client data
+        :return: refer to users()
+        """
+
+        # This needs to be implemented by the adapter. However, if it is not implemented, we don't wanna
+        # crash the system. It is the same as _query_devices_by_client.
+        return []
+
+    def _parse_users_raw_data_hook(self, raw_users):
+        """
+        A hook before we call the real parse users.
+        :param raw_users: the raw data.
+        :return: a list of parsed user objects
+        """
+
+        skipped_count = 0
+        for parsed_user in self._parse_users_raw_data(raw_users):
+            assert isinstance(parsed_user, User)
+            parsed_user = parsed_user.to_dict()
+            parsed_user = self._remove_big_keys(parsed_user, parsed_user.get('id', 'unidentified user'))
+            if self.is_old_user(parsed_user):
+                skipped_count += 1
+                continue
+
+            yield parsed_user
+
+        self._save_user_field_names_to_db()
+
+        if skipped_count > 0:
+            self.logger.info(f"Skipped {skipped_count} old users")
+        else:
+            self.logger.warning("No old users filtered (did you choose ttl period on the config file?)")
+
+    def _parse_users_raw_data(self, user):
+        """
+        This needs to be implemented by the Adapter itself.
+        :return:
+        """
+
+        return []
+
+    def is_old_user(self, parsed_user):
+        """ Check if the user is considered "old".
+
+        :param parsed_user: A parsed data of the user
+        :return: True if the user is old else False.
+        """
+        if USER_LAST_SEEN_FIELD in parsed_user:
+            user_time = parsed_user[USER_LAST_SEEN_FIELD]
+            # Getting the time zone from the original device
+            now = datetime.now(tz=user_time.tzinfo)
+
+            return self.user_last_seen_timedelta.days != -1 and now - user_time > self.user_last_seen_timedelta
+        else:
+            return False
+
+    @add_rule('users_by_name', methods=['GET'])
+    def users_by_name(self):
+        """ /users_by_name?name= Query adapter to fetch all available users from a specific client.
+        An "available" users is a device that is registered with the adapter source.
+
+        Accepts:
+           GET - Finds all available users from a specific client, and returns them
+        """
+        client_name = request.args.get('name')
+        return to_json(self._get_data_by_client(client_name, "users"))
+
+    # End of users
     def _get_pretty_ids(self, count: int) -> Iterable[str]:
         """
         Returns fresh IDs from the DB. These are guaranteed to be unique.
@@ -235,17 +309,25 @@ class AdapterBase(PluginBase, Feature, ABC):
                 {'adapters.$.data.pretty_id': pretty_id_to_add}})
         return len(adapter_devices_ids_to_add)
 
-    def _save_devices_from_adapter(self, client_name, device_of_client) -> int:
+    def _save_data_from_adapter(self, client_name, data_of_client, collection_name) -> int:
         """
-        Saves all given devices into the DB for the given client name
+        Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
         """
 
-        def insert_device_to_db(device_to_update, parsed_to_insert):
+        def insert_data_to_db(data_to_update, parsed_to_insert):
             """
-            Insert a device into the DB
+            Insert data (devices/users/...) into the DB
             :return:
             """
+
+            if collection_name == "users":
+                db_to_use = self.users_db
+            elif collection_name == "devices":
+                db_to_use = self.devices_db
+            else:
+                raise ValueError(f"got {collection_name} but expected users/devices")
+
             correlates = parsed_to_insert['data'].get('correlates')
             if correlates == IGNORE_DEVICE:
                 # special case: this is a device we shouldn't handle
@@ -253,14 +335,14 @@ class AdapterBase(PluginBase, Feature, ABC):
                 return
 
             # trying to update the device if it is already in the DB
-            modified_count = self.devices_db.update_one({
+            modified_count = db_to_use.update_one({
                 'adapters': {
                     '$elemMatch': {
                         PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
                         'data.id': parsed_to_insert['data']['id']
                     }
                 }
-            }, {"$set": device_to_update}).modified_count
+            }, {"$set": data_to_update}).modified_count
 
             if modified_count == 0:
                 # if it's not in the db then,
@@ -269,7 +351,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                     # for scanner adapters this is case B - see "scanner_adapter_base.py"
                     # we need to add this device to the list of adapters in another device
                     correlate_plugin_unique_name, correlated_id = correlates
-                    modified_count = self.devices_db.update_one({
+                    modified_count = db_to_use.update_one({
                         'adapters': {
                             '$elemMatch': {
                                 PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
@@ -287,79 +369,82 @@ class AdapterBase(PluginBase, Feature, ABC):
                                           f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
                 else:
                     # this is regular first-seen device, make its own value
-                    self.devices_db.insert_one({
+                    db_to_use.insert_one({
                         "internal_axon_id": uuid.uuid4().hex,
                         "accurate_for_datetime": datetime.now(),
                         "adapters": [parsed_to_insert],
                         "tags": []
                     })
 
-        self.logger.info(f"Starting to fetch device for {client_name}")
+        self.logger.info(f"Starting to fetch data (devices/users) for {client_name}")
         promises = []
         try:
             time_before_client = datetime.now()
             # Saving the raw data on the historic db
             try:
-                self._save_data_in_history(device_of_client['raw'])
+                self._save_data_in_history(data_of_client['raw'])
             except pymongo.errors.DocumentTooLarge:
                 # wanna see my "something too large"?
                 self.logger.warn(f"Got DocumentTooLarge with client {client_name}.")
-            devices_count = 0
+            inserted_data_count = 0
 
             # Here we have all the devices a single client sees
-            for device in device_of_client['parsed']:
+            for data in data_of_client['parsed']:
                 parsed_to_insert = {
                     'client_used': client_name,
                     'plugin_type': self.plugin_type,
                     PLUGIN_NAME: self.plugin_name,
                     PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
                     'accurate_for_datetime': datetime.now(),
-                    'data': device
+                    'data': data
                 }
-                device_to_update = {f"adapters.$.{key}": value
-                                    for key, value in parsed_to_insert.items() if key != 'data'}
+                data_to_update = {f"adapters.$.{key}": value
+                                  for key, value in parsed_to_insert.items() if key != 'data'}
 
                 promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                          self.__device_inserter,
+                                                          self.__data_inserter,
                                                           self._save_parsed_in_db,
                                                           args=[dict(parsed_to_insert)])))
 
-                fields_to_update = device.keys() - ['id']
+                fields_to_update = data.keys() - ['id']
                 for field in fields_to_update:
-                    field_of_device = device.get(field, [])
+                    field_of_data = data.get(field, [])
                     try:
-                        if type(field_of_device) in [list, dict, str] and len(field_of_device) == 0:
+                        if type(field_of_data) in [list, dict, str] and len(field_of_data) == 0:
                             # We don't want to insert empty values, only one that has a valid data
                             continue
                         else:
-                            device_to_update[f"adapters.$.data.{field}"] = field_of_device
+                            data_to_update[f"adapters.$.data.{field}"] = field_of_data
                     except TypeError:
-                        self.logger.error(f"Got TypeError while getting field {field}")
+                        self.logger.error(f"Got TypeError while getting {collection_name} field {field}")
                         continue
-                device_to_update['accurate_for_datetime'] = datetime.now()
+                    data_to_update['accurate_for_datetime'] = datetime.now()
 
-                devices_count += 1
+                inserted_data_count += 1
                 promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                          self.__device_inserter,
-                                                          insert_device_to_db,
-                                                          args=[device_to_update, parsed_to_insert])))
+                                                          self.__data_inserter,
+                                                          insert_data_to_db,
+                                                          args=[data_to_update, parsed_to_insert])))
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
             if promise_all.is_rejected:
-                self.logger.error("Error in insertion to DB", exc_info=promise_all.reason)
-            added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
-            self.logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
+                self.logger.error(f"Error in insertion of {collection_name} to DB", exc_info=promise_all.reason)
+
+            if collection_name == "devices":
+                added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
+                self.logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
+
             time_for_client = datetime.now() - time_before_client
             self.logger.info(
-                f"Finished aggregating for client {client_name},"
-                f" aggregation took {time_for_client.seconds} seconds and returned {devices_count}.")
+                f"Finished aggregating {collection_name} for client {client_name},"
+                f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
 
         except Exception as e:
             self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info(f"Finished inserting {client_name}")
-        return devices_count
+        self.logger.info(f"Finished inserting {collection_name} of client {client_name}")
+        return inserted_data_count
 
     def _save_parsed_in_db(self, device, db_type='parsed'):
         """
@@ -368,7 +453,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         :param db_type: 'parsed' or 'raw
         :return: None
         """
-        self.devices_db_connection[db_type].insert_one(device)
+        self.aggregator_db_connection[db_type].insert_one(device)
 
     def _save_data_in_history(self, device):
         """ Function for saving raw data in history.
@@ -378,15 +463,15 @@ class AdapterBase(PluginBase, Feature, ABC):
         :param device: The raw data of the current device
         """
         try:
-            self.devices_db_connection['raw'].insert_one({'raw': device,
-                                                          PLUGIN_NAME: self.plugin_name,
-                                                          PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                                                          'plugin_type': self.plugin_type})
+            self.aggregator_db_connection['raw'].insert_one({'raw': device,
+                                                             PLUGIN_NAME: self.plugin_name,
+                                                             PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                                                             'plugin_type': self.plugin_type})
         except pymongo.errors.PyMongoError as e:
             self.logger.exception("Error in pymongo. details: {}".format(e))
 
     @add_rule('insert_to_db', methods=['PUT'])
-    def insert_devices_to_db(self):
+    def insert_data_to_db(self):
         """
         /insert_to_db?client_name=(None or Client name)
 
@@ -395,24 +480,32 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         client_name = request.args.get('client_name')
         if client_name:
-            return to_json(self._save_devices_from_adapter(client_name, self._get_devices_by_client(client_name)))
-        return to_json(sum(self._save_devices_from_adapter(*data) for data in self._query_devices()))
+            devices_count = self._save_data_from_adapter(
+                client_name, self._get_data_by_client(client_name, "devices"), "devices")
+            users_count = self._save_data_from_adapter(
+                client_name, self._get_data_by_client(client_name, "users"), "users")
+        else:
+            devices_count = sum(self._save_data_from_adapter(*data, "devices") for data in self._query_data("devices"))
+            users_count = sum(self._save_data_from_adapter(*data, "users") for data in self._query_data("users"))
 
-    def _get_devices_by_client(self, client_name: str):
+        return to_json({"devices_count": devices_count, "users_count": users_count})
+
+    def _get_data_by_client(self, client_name: str, data_type: str):
         """
         Get all devices, both raw and parsed, from the given client name
+        data_type is devices/users.
         """
-        self.logger.info(f"Trying to query devices from client {client_name}")
+        self.logger.info(f"Trying to query {data_type} from client {client_name}")
         with self._clients_lock:
             if client_name not in self._clients:
                 self.logger.error(f"client {client_name} does not exist")
                 return return_error("Client does not exist", 404)
         try:
             time_before_query = datetime.now()
-            raw_devices, parsed_devices = self._try_query_devices_by_client(client_name)
+            raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
             query_time = datetime.now() - time_before_query
             self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
-                             f"returned {len(parsed_devices)} devices")
+                             f"returned {len(parsed_data)} {data_type}")
         except adapter_exceptions.CredentialErrorException as e:
             self.logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
@@ -420,56 +513,14 @@ class AdapterBase(PluginBase, Feature, ABC):
             self.logger.exception(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
         except Exception as e:
-            self.logger.exception(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
-            return return_error(f"Error while trying to get devices for {client_name}. Details: {repr(e)}")
+            self.logger.exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
+            return return_error(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
             # TODO raise the error, after verifying all adapter return an expected error
         else:
-            devices_list = {'raw': [],  # AD-HOC: Not returning any raw values
-                            'parsed': parsed_devices}
+            data_list = {'raw': [],  # AD-HOC: Not returning any raw values
+                         'parsed': parsed_data}
 
-            return devices_list
-
-    @add_rule('users', methods=['GET'])
-    def users(self):
-        """
-        Some adapters can get a list of users (serve not only as inventory). Get a list of users.
-        # TODO Avidor: This has to be a well-defined format. currently there is no scheme for that,
-        # so i define my own here.
-        :return: an object in the following format
-
-        {
-        "client_id_1":
-            {
-            "user_id_1":{
-                        "some_parsed_key_name": "some_parsed_key_value"
-                        "raw": {}
-                        }
-            }
-        }
-
-        """
-
-        with self._clients_lock:
-            current_clients = self._clients.copy()
-        users_object = {}
-        try:
-            for key, value in current_clients.items():
-                data = self._query_users_by_client(key, value)
-                users_object[key] = data
-        except NotImplementedError:
-            return_error("/users is not implemented in this adapter.", 400)
-
-        return jsonify(users_object)
-
-    def _query_users_by_client(self, key, data):
-        """
-
-        :param key: the client key
-        :param data: the client data
-        :return: refer to users()
-        """
-
-        return NotImplementedError()
+            return data_list
 
     @add_rule('clients', methods=['GET', 'POST', 'PUT'])
     def clients(self):
@@ -727,7 +778,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         :param client_data: The data of the client, as returned from the _parse_clients_data function
         :return: adapter dependant
         """
-        pass
+        return []
 
     def is_old_device(self, parsed_device):
         """ Checking if a device has not seen for a long time
@@ -744,7 +795,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         else:
             return False
 
-    def _remove_big_keys(self, key_to_check, device_id):
+    def _remove_big_keys(self, key_to_check, entity_id):
         """ Function for removing big elements in data chanks.
 
         Function will recursively pass over known data types and remove big values
@@ -758,10 +809,10 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         # If we reached here it means that the key is too big, trying to clean known data types
         if type(key_to_check) == dict:
-            key_to_check = {key: self._remove_big_keys(value, device_id) for key, value in key_to_check.items()}
+            key_to_check = {key: self._remove_big_keys(value, entity_id) for key, value in key_to_check.items()}
 
         if type(key_to_check) == list:
-            key_to_check = [self._remove_big_keys(val, device_id) for val in key_to_check]
+            key_to_check = [self._remove_big_keys(val, entity_id) for val in key_to_check]
 
         # Checking if the key is small enough after the filtering big sub-keys
         if sys.getsizeof(key_to_check) < 1e5:  # Key smaller than ~100kb
@@ -769,10 +820,10 @@ class AdapterBase(PluginBase, Feature, ABC):
             return key_to_check
         else:
             # Data type not recognized or can't filter key, deleting the too big key
-            self.logger.warning(f"Found too big key on device {device_id}. Deleting")
+            self.logger.warning(f"Found too big key on entity (Device/User) {entity_id}. Deleting")
             return {'AXON_TOO_BIG_VALUE': sys.getsizeof(key_to_check)}
 
-    def parse_raw_data_hook(self, raw_devices):
+    def _parse_devices_raw_data_hook(self, raw_devices):
         """
         :param raw_devices: raw devices as fetched by adapter
         :return: iterator of processed raw device entries
@@ -795,16 +846,16 @@ class AdapterBase(PluginBase, Feature, ABC):
         else:
             self.logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
 
-    def _try_query_devices_by_client(self, client_id):
+    def _try_query_data_by_client(self, client_id, data_type):
         """
-        Try querying devices for given client. If fails, try reconnecting to client.
-        If successful, try querying devices with new connection to the original client, up to 3 times.
+        Try querying data for given client. If fails, try reconnecting to client.
+        If successful, try querying data with new connection to the original client, up to 3 times.
 
-        This is an attempt to resolve problems with fetching devices that may be caused by an outdated connection
+        This is an attempt to resolve problems with fetching data that may be caused by an outdated connection
         or to discover a real problem fetching devices, despite a working connection.
 
-        :return: Raw and parsed devices list if fetched successfully, whether immediately or with fresh connection
-        :raises Exception: If client connection or client devices query errored 3 times
+        :return: Raw and parsed data list if fetched successfully, whether immediately or with fresh connection
+        :raises Exception: If client connection or client data query errored 3 times
         """
 
         def _update_client_status(status):
@@ -823,8 +874,14 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:
-            raw_devices = self._query_devices_by_client(client_id, self._clients[client_id])
-            parsed_devices = list(self.parse_raw_data_hook(raw_devices))
+            if data_type == "devices":
+                raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
+                parsed_data = list(self._parse_devices_raw_data_hook(raw_data))
+            elif data_type == "users":
+                raw_data = self._query_users_by_client(client_id, self._clients[client_id])
+                parsed_data = list(self._parse_users_raw_data_hook(raw_data))
+            else:
+                raise ValueError(f"expected {data_type} to be devices/users.")
         except Exception as e:
             with self._clients_lock:
                 current_client = clients_collection.find_one({'client_id': client_id})
@@ -844,19 +901,25 @@ class AdapterBase(PluginBase, Feature, ABC):
                 raise
             else:
                 try:
-                    raw_devices = self._query_devices_by_client(client_id, self._clients[client_id])
-                    parsed_devices = list(self.parse_raw_data_hook(raw_devices))
+                    if data_type == "devices":
+                        raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
+                        parsed_data = list(self._parse_devices_raw_data_hook(raw_data))
+                    elif data_type == "users":
+                        raw_data = self._query_users_by_client(client_id, self._clients[client_id])
+                        parsed_data = list(self._parse_users_raw_data_hook(raw_data))
+                    else:
+                        raise ValueError(f"expected {data_type} to be devices/users.")
                 except:
                     # No devices despite a working connection
-                    self.logger.exception("Problem querying devices for client {0}".format(client_id))
+                    self.logger.exception(f"Problem querying {data_type} for client {0}".format(client_id))
                     _update_client_status("error")
                     raise
         _update_client_status("success")
-        return [], parsed_devices  # AD-HOC: Not returning any raw values
+        return [], parsed_data  # AD-HOC: Not returning any raw values
 
-    def _query_devices(self):
+    def _query_data(self, data_type):
         """
-        Synchronously returns all available devices from all clients.
+        Synchronously returns all available data types (devices/users) from all clients.
 
         :return: iterator([client_name, devices])
         """
@@ -869,7 +932,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         # Running query on each device
         for client_name in clients:
             try:
-                raw_devices, parsed_devices = self._try_query_devices_by_client(client_name)
+                raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
             except adapter_exceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
@@ -879,10 +942,10 @@ class AdapterBase(PluginBase, Feature, ABC):
             except Exception as e:
                 self.logger.exception(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             else:
-                devices_list = {'raw': raw_devices,
-                                'parsed': parsed_devices}
+                data_list = {'raw': raw_data,
+                             'parsed': parsed_data}
 
-                yield [client_name, devices_list]
+                yield [client_name, data_list]
 
     @abstractmethod
     def _clients_schema(self):

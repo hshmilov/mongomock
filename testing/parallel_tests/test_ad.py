@@ -36,19 +36,9 @@ class TestAdAdapter(AdapterTestBase):
     def some_device_id(self):
         return DEVICE_ID_FOR_CLIENT_1
 
-    def test_users(self):
-        """
-        Tests "/users" of active directory. We assume to have ad_client_1_details.
-        """
-
-        # We might not have the client yet, so add it. if we re-add it afterwards nothing happens.
-        client_id_1 = ad_client1_details['dc_name']
-        self.adapter_service.add_client(ad_client1_details)
-        users = self.adapter_service.users()
-
-        assert client_id_1 in users
-        assert CLIENT_ID_1_ADMIN_SID in users[client_id_1]
-        assert CLIENT_ID_1_ADMIN_CAPTION == users[client_id_1][CLIENT_ID_1_ADMIN_SID]["raw"]["caption"]
+    @property
+    def some_user_id(self):
+        return USER_ID_FOR_CLIENT_1
 
     def test_fetch_devices(self):
         # Adding first client
@@ -62,9 +52,20 @@ class TestAdAdapter(AdapterTestBase):
         # Checking that we have devices from both clients
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id_1, DEVICE_ID_FOR_CLIENT_1)])
         # Testing the ability to filter old devices
-        devices_list = self.axonius_system.get_devices_with_condition({"adapters.hostname": "nonExistance"})
+        devices_list = self.axonius_system.get_devices_with_condition({"adapters.data.hostname": "nonExistance"})
         assert len(devices_list) == 0, "Found device that should have been filtered"
         # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
+
+    def test_fetch_users(self):
+        # I'm going to assume this has already been aggregated. TODO: Change test_fetch_devices to test_fetch_data
+        # and check that there.
+        devices_list = self.axonius_system.get_users_with_condition(
+            {
+                "adapters.data.username": USER_ID_FOR_CLIENT_1,
+                "adapters.data.sid": USER_SID_FOR_CLIENT_1
+            }
+        )
+        assert len(devices_list) == 1, f"Did not find user {USER_ID_FOR_CLIENT_1}"
 
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()
