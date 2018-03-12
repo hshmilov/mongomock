@@ -109,7 +109,7 @@ class QcoreAdapter(AdapterBase):
     def populate_infusion_state(self, device, infusion):
         device.inf_is_bolus = infusion['is_bolus'] != 0
         if device.inf_is_bolus != 0:
-            device.inf_bolus_data = [f'{k}:{v}' for k, v in infusion['bolus_data'].items()]
+            device.inf_bolus_data = [f'{k}:{round(v,3)}' for k, v in infusion['bolus_data'].items()]
             device.inf_time_remaining = 'N/A'
             device.inf_volume_remaining = 'N/A'
             device.inf_volume_infused = 'N/A'
