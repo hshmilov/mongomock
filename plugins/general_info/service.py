@@ -206,7 +206,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             final_data = deep_merge_only_dict(new_data, final_data)
 
             # Add the final one
-            self.add_adapterdata_to_device(
+            self.devices.add_adapterdata(
                 (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]), final_data)
 
             # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
@@ -225,13 +225,13 @@ class GeneralInfoService(PluginBase, Triggerable):
 
         finally:
             # Disable execution failure tag if exists.
-            self.add_label_to_device(
+            self.devices.add_label(
                 (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
                 "Execution Failure", False
             )
 
             # Enable or disable execution exception
-            self.add_label_to_device(
+            self.devices.add_label(
                 (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
                 "Execution Exception", is_execution_exception
             )
@@ -239,7 +239,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # If there is debug data to add, add it.
             if last_execution_debug is not None:
                 last_execution_debug = last_execution_debug.replace("\\n", "\n")
-                self.add_data_to_device(
+                self.devices.add_data(
                     (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
                     "Last Execution Debug", last_execution_debug
                 )
@@ -265,14 +265,14 @@ class GeneralInfoService(PluginBase, Triggerable):
                 executer_info["adapter_unique_name"] = device["adapters"][0]["plugin_unique_name"]
                 executer_info["adapter_unique_id"] = device["adapters"][0]["data"]["id"]
 
-                self.add_label_to_device(
+                self.devices.add_label(
                     (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
                     "Execution Failure", True
                 )
 
                 ex_str = str(exc).replace("\\n", "\n")
 
-                self.add_data_to_device(
+                self.devices.add_data(
                     (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
                     "Last Execution Debug", f"Execution failed: {ex_str}"
                 )

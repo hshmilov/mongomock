@@ -85,8 +85,8 @@ def device_id(adapter):
 
 def assert_correlation(result, adapter1, adapter2):
     assert isinstance(result, CorrelationResult)
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert ((plugin_name(adapter1) == first_name and plugin_name(adapter2) == second_name) or
             (plugin_name(adapter1) == second_name and plugin_name(adapter2) == first_name))
     assert ((device_id(adapter1) == first_id and device_id(adapter2) == second_id) or

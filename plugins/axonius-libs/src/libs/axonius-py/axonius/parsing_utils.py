@@ -262,14 +262,14 @@ def remove_trailing(string, trailing):
     return string
 
 
-def get_device_id_for_plugin_name(associated_adapter_devices, plugin_name_key):
+def get_entity_id_for_plugin_name(associated_adapters, plugin_name_key):
     """
-    iterates over associated_adapter_devices and returns the device_id of the device info returned from
-        plugin_name_key or None if plugin_name_key is not one of the adapters which returned info on the device
-    :param associated_adapter_devices: the adapters containing all the info of the device
-    :param plugin_name_key: the plugin_unique_name for which to seek the device id
+    iterates over associated_adapters and returns the entity id of the entity info returned from
+        plugin_name_key or None if plugin_name_key is not one of the adapters which returned info on the entity
+    :param associated_adapters: the adapters containing all the info of the entity
+    :param plugin_name_key: the plugin_unique_name for which to seek the entity id
     """
-    return next((device_id for plugin_unique_name, device_id in associated_adapter_devices
+    return next((entity_id for plugin_unique_name, entity_id in associated_adapters
                  if plugin_name_key == plugin_unique_name), None)
 
 

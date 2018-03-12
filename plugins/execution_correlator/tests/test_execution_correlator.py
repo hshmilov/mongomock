@@ -234,8 +234,8 @@ def test_simple_logic_correlation():
     assert len(results) == 1
     result = results[0]
     assert isinstance(result, CorrelationResult)
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'ad_adapter_1' == first_name
     assert 'ad_adapter_2' == second_name
     assert first_id == second_id
@@ -264,8 +264,8 @@ def test_simple_logic_correlation():
     assert len(results) == 1
     result = results[0]
     assert isinstance(result, CorrelationResult)
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'ad_adapter_1' == first_name
     assert 'ad_adapter_2' == second_name
     assert first_id == second_id
@@ -336,8 +336,8 @@ def test_execution_correlation():
     assert len(results) == 1
     result = results[0]
     assert isinstance(result, CorrelationResult)
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'esx_adapter_1' == first_name
     assert 'ad_adapter_1' == second_name
     assert first_id == 'esx1'
@@ -493,8 +493,8 @@ def test_execution_nonexistent_device_deduction_correlation():
     result = results[0]
     assert isinstance(result, CorrelationResult)
     assert result.reason == "NonexistentDeduction"
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert ('esx_adapter_1' == first_name and 'ad_adapter_1' == second_name and
             first_id == 'esx1' and second_id == 'ad1') or \
            ('ad_adapter_1' == first_name and 'esx_adapter_1' == second_name and
@@ -589,8 +589,8 @@ def test_partial_cmds_execution_correlation():
     assert len(results) == 1
     result = results[0]
     assert isinstance(result, CorrelationResult)
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'ad_adapter_1' == first_name
     assert 'aws_adapter_1' == second_name
     assert first_id == 'ad1'
@@ -673,8 +673,8 @@ def test_multi_adapter_execution_correlation():
     assert len(results) == 1
     result = results[0]
     assert isinstance(result, CorrelationResult)
-    assert len(result.associated_adapter_devices) == 2
-    (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+    assert len(result.associated_adapters) == 2
+    (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'aws_adapter_1' == first_name
     assert 'ad_adapter_1' == second_name
     assert first_id == 'aws1'

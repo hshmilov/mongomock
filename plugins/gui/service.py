@@ -322,9 +322,9 @@ class GuiService(PluginBase):
             devices = [(device[PLUGIN_UNIQUE_NAME], device['data']['id'])
                        for device in devices]
 
-            response = self.add_many_labels_to_device(devices,
-                                                      labels=devices_and_labels['labels'],
-                                                      are_enabled=request.method == 'POST')
+            response = self.devices.add_many_labels(devices,
+                                                    labels=devices_and_labels['labels'],
+                                                    are_enabled=request.method == 'POST')
 
             if response.status_code != 200:
                 self.logger.error(f"Tagging did not complete. First {response.json()}")

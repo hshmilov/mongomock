@@ -27,8 +27,8 @@ def _compare_devices(devices_iterator: Iterable[device_pair], comparators: List[
 
         if all(compare(device1, device2) for compare in comparators):
             # If we reached here that means that we should join this two devices according to this rule.
-            yield CorrelationResult(associated_adapter_devices=[(device1[PLUGIN_UNIQUE_NAME], device1['data']['id']),
-                                                                (device2['plugin_name'], device2['data']['id'])],
+            yield CorrelationResult(associated_adapters=[(device1[PLUGIN_UNIQUE_NAME], device1['data']['id']),
+                                                         (device2['plugin_name'], device2['data']['id'])],
                                     data=data_dict,  # not copying as they all have the same data
                                     reason=reason)
 
@@ -193,8 +193,8 @@ class CorrelatorEngineBase(ABC):
             if a['plugin_name'] == b['plugin_name'] and a['data']['id'] == b['data']['id']:
                 assert a[PLUGIN_UNIQUE_NAME] != b[PLUGIN_UNIQUE_NAME], \
                     f"Two exact adapters were found, {a[PLUGIN_UNIQUE_NAME]} and {b[PLUGIN_UNIQUE_NAME]}"
-                yield CorrelationResult(associated_adapter_devices=[(a[PLUGIN_UNIQUE_NAME], a['data']['id']),
-                                                                    (b[PLUGIN_UNIQUE_NAME], b['data']['id'])],
+                yield CorrelationResult(associated_adapters=[(a[PLUGIN_UNIQUE_NAME], a['data']['id']),
+                                                             (b[PLUGIN_UNIQUE_NAME], b['data']['id'])],
                                         data={
                                             'Reason': 'The same device is viewed ' +
                                                       'by two instances of the same adapter'},
@@ -249,7 +249,7 @@ class CorrelatorEngineBase(ABC):
                 yield result  # only post process correlation results
                 continue
 
-            (first_name, first_id), (second_name, second_id) = result.associated_adapter_devices
+            (first_name, first_id), (second_name, second_id) = result.associated_adapters
 
             # "first" is always the device used for correlation
             # "second" is always the device found by execution or logic
@@ -273,7 +273,7 @@ class CorrelatorEngineBase(ABC):
                     # However, if we also see the *same* AD-ID from a different axonius-device, say
                     # from ESX, so we can deduce that the ESX device and the AWS device are the same,
                     # without actually "using" the AD device!
-                    correlations_with_unavailable_devices.append(result.associated_adapter_devices)
+                    correlations_with_unavailable_devices.append(result.associated_adapters)
                     continue
 
                 # figure out if the correlation violates a `strongly_unbound_with` rule
@@ -293,15 +293,15 @@ class CorrelatorEngineBase(ABC):
                     continue
 
                 second_name = correlated_adapter_device_from_db[PLUGIN_UNIQUE_NAME]
-                result.associated_adapter_devices = [(first_name, first_id), (second_name, second_id)]
-            sorted_associated_adapter_devices = sorted(result.associated_adapter_devices)
-            if sorted_associated_adapter_devices in correlations_done_already:
+                result.associated_adapters = [(first_name, first_id), (second_name, second_id)]
+            sorted_associated_adapters = sorted(result.associated_adapters)
+            if sorted_associated_adapters in correlations_done_already:
                 self.logger.debug(f"result is the same as old one : {result}")
                 # skip correlations done twice
                 continue
 
             else:
-                correlations_done_already.append(sorted_associated_adapter_devices)
+                correlations_done_already.append(sorted_associated_adapters)
                 yield result
 
         # sort all correlations src->dst ("src" - device used for correlation and "dst" - device found by

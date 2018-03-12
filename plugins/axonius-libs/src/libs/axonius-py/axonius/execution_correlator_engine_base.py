@@ -218,8 +218,8 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                                                if adapter[PLUGIN_UNIQUE_NAME] == responder_plugin_unique_name)
                 responder_adapter_id = responder_plugin_device['data']['id']
                 yield CorrelationResult(
-                    associated_adapter_devices=[(responder_plugin_unique_name, responder_adapter_id),
-                                                (correlation_plugin_name, response_id)],
+                    associated_adapters=[(responder_plugin_unique_name, responder_adapter_id),
+                                         (correlation_plugin_name, response_id)],
                     data={
                         'Reason': f"{responder_plugin_unique_name} executed code " +
                                   f"and found out it sees {correlation_plugin_name} " +

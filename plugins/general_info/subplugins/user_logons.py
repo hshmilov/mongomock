@@ -155,7 +155,7 @@ class GetUserLogons(GeneralInfoSubplugin):
 
                 # If the last user is local, we should tag this device.
                 if is_last_login_local is True:
-                    self.plugin_base.add_label_to_device(
+                    self.plugin_base.devices.add_label(
                         (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
                         "Last logon not from domain"
                     )

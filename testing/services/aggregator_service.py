@@ -18,37 +18,40 @@ class AggregatorService(PluginService):
             f"{str(response.content)}"
         return response
 
-    def add_label(self, name, unique_plugin_name, adapter_id):
-        # This code has to be the same as plugin_base.add_label_to_device
+    def add_label(self, name, unique_plugin_name, adapter_id, entity):
+        # This code has to be the same as plugin_base.devices.add_label
         response = requests.post(
             self.req_url + "/plugin_push", headers={API_KEY_HEADER: self.api_key}, json={
                 "association_type": "Tag",
-                "associated_adapter_devices": [
+                "associated_adapters": [
                     (unique_plugin_name, adapter_id)
                 ],
                 "name": name,
                 "data": True,   # is enabled
-                "type": "label"
+                "type": "label",
+                "entity": entity
             })
         assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"
         return response
 
-    def link(self, associated_adapter_devices):
+    def link(self, associated_adapters, entity):
         response = requests.post(
             self.req_url + "/plugin_push", headers={API_KEY_HEADER: self.api_key}, json={
                 "association_type": "Link",
-                "associated_adapter_devices": associated_adapter_devices,
+                "associated_adapters": associated_adapters,
+                "entity": entity
             })
         assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"
         return response
 
-    def unlink(self, associated_adapter_devices):
+    def unlink(self, associated_adapters, entity):
         response = requests.post(
             self.req_url + "/plugin_push", headers={API_KEY_HEADER: self.api_key}, json={
                 "association_type": "Unlink",
-                "associated_adapter_devices": associated_adapter_devices,
+                "associated_adapters": associated_adapters,
+                "entity": entity
             })
         assert response.status_code == 200, f"Error in response: {str(response.status_code)}, " \
                                             f"{str(response.content)}"

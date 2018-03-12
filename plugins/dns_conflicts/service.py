@@ -107,8 +107,8 @@ class DnsConflictsService(PluginBase, Triggerable):
             # If we have more than one key in available_ips that means that this device got two different IP's
             # i.e duplicate! we need to tag this device
             self.logger.info(f"Found ip conflict. details: {str(available_ips)}")
-            self.add_label_to_device((adapter_unique_name, device_id), "IP_CONFLICT")
-            self.add_data_to_device((adapter_unique_name, device_id), "Ip Conflicts", json.dumps(available_ips))
+            self.devices.add_label((adapter_unique_name, device_id), "IP_CONFLICT")
+            self.devices.add_data((adapter_unique_name, device_id), "Ip Conflicts", json.dumps(available_ips))
 
     @add_rule('find_conflicts', methods=['POST'], should_authenticate=False)
     def check_ip_conflict_now(self):

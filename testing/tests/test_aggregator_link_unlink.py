@@ -26,7 +26,7 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
     assert first_esx_device is not None, "No ESX device found"
 
     axonius_fixture.aggregator.add_label("ad_taggy", first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME],
-                                         first_ad_device['adapters'][0]['data']['id'])
+                                         first_ad_device['adapters'][0]['data']['id'], "devices")
     assert any(
         x['tags'] and x['tags'][0]['name'] == 'ad_taggy' and
         x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
@@ -34,7 +34,7 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
         for x in axonius_fixture.get_devices_with_condition({})), "Tagging AD failed"
 
     axonius_fixture.aggregator.add_label("esx_taggy", first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME],
-                                         first_esx_device['adapters'][0]['data']['id'])
+                                         first_esx_device['adapters'][0]['data']['id'], "devices")
 
     assert any(
         x['tags'] and x['tags'][0]['name'] == 'esx_taggy' and
@@ -45,7 +45,7 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
     axonius_fixture.aggregator.link([
         (first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_ad_device['adapters'][0]['data']['id']),
         (first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_esx_device['adapters'][0]['data']['id']),
-    ])
+    ], "devices")
 
     devices_response = axonius_fixture.get_devices_with_condition({})
     assert not any(
@@ -74,7 +74,7 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
     assert any(x['name'] == 'ad_taggy' for x in linked_device['tags']), "AD tag is gone"
     axonius_fixture.aggregator.unlink([
         (first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME], first_ad_device['adapters'][0]['data']['id'])
-    ])
+    ], "devices")
     devices_response = axonius_fixture.get_devices_with_condition({})
     assert not any(
         len(x['adapters']) == 2

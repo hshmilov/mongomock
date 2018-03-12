@@ -19,7 +19,7 @@ from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 """
 Represent a link that should take place.
 
-associated_adapter_devices  - tuple between unique adapter name and id, e.g.
+associated_adapters  - tuple between unique adapter name and id, e.g.
     (
         ("aws_adapter_30604", "i-0549ca2d6c2e42a70"),
         ("esx_adapter_14575", "527f5691-de18-6657-783e-56fd1a5322cd")
@@ -30,7 +30,7 @@ reason                      - 'Execution' or 'Logic' or whatever else correlator
                               'Execution' means the second part has plugin_name
                               'Logic' means the second part has plugin_unique_name
 """
-CorrelationResult = namedlist('CorrelationResult', ['associated_adapter_devices', 'data', ('reason', 'Execution')])
+CorrelationResult = namedlist('CorrelationResult', ['associated_adapters', 'data', ('reason', 'Execution')])
 
 """
 Represents a warning that should be passed on to the GUI.
@@ -172,12 +172,13 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
                 self.create_notification(result.title, result.content, result.notification_type)
 
             if isinstance(result, CorrelationResult):
-                self.logger.debug(f"Correlation: {result.data}, for {result.associated_adapter_devices}")
+                self.logger.debug(f"Correlation: {result.data}, for {result.associated_adapters}")
                 self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
                     "plugin_type": "Plugin",
                     "data": result.data,
-                    "associated_adapter_devices": result.associated_adapter_devices,
-                    "association_type": "Link"
+                    "associated_adapters": result.associated_adapters,
+                    "association_type": "Link",
+                    "entity": "devices"
                 })
 
     def _correlate_with_lock(self, devices: list):

@@ -12,6 +12,7 @@ import logging
 import socket
 import ssl
 import urllib3
+import functools
 
 from axonius.parsing_utils import get_exception_string
 from flask import Flask, request, jsonify
@@ -345,6 +346,10 @@ class PluginBase(Feature):
         self.users_db = self.aggregator_db_connection['users_db']
         self.devices_db_view = self.aggregator_db_connection['devices_db_view']
         self.users_db_view = self.aggregator_db_connection['users_db_view']
+
+        # Namespaces
+        self.devices = self.DevicesNamespace(self)
+        self.users = self.UsersNamespace(self)
 
         # Finished, Writing some log
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -824,19 +829,46 @@ class PluginBase(Feature):
     def plugin_subtype(self):
         return "Pre-Correlation"
 
-    def __tag_many_device(self, device_identity_by_adapter, names, data, type):
+    class EntityNamespace(object):
+        """ Just a namespace so that we could do self.devices.add_label or self.users.add_data"""
+
+        def __init__(self, pb, entity):
+            self.add_label = functools.partial(pb.add_label_to_entity, entity=entity)
+            self.add_many_labels = functools.partial(pb.add_many_labels_to_entity, entity=entity)
+            self.add_data = functools.partial(pb.add_data_to_entity, entity=entity)
+            self.add_adapterdata = functools.partial(pb.add_adapterdata_to_entity, entity=entity)
+            self.tag = functools.partial(pb._tag, entity=entity)
+            self.tag_many = functools.partial(pb._tag_many, entity=entity)
+
+    class DevicesNamespace(EntityNamespace):
+        """" Just a namespace for devices so that we could do self.devices.add_label """
+
+        def __init__(self, pb):
+            super().__init__(pb, "devices")
+
+    class UsersNamespace(EntityNamespace):
+        """" Just a namespace for users so that we could do self.devices.add_label """
+
+        def __init__(self, pb):
+            super().__init__(pb, "users")
+
+    def _tag_many(self, identity_by_adapter, names, data, type, entity):
         """ Function for tagging many adapter devices with many tags.
         This function will tag a wanted device. The tag will be related to all adapters in the device.
-        :param device_identity_by_adapter: a list of tuples of (adapter_unique_name, device_unique_id).
+        :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
                                            e.g. [("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D...."),...]
         :param names: a list of the tag. should be a list of strings.
         :param data: the data of the tag. could be any object. will be the same for all tags.
         :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
                      will be the same for all tags.
+        :param entity: "devices" or "users" -> what is the entity we are tagging.
         :return:
         """
+        assert entity == "devices" or entity == "users"
+
         tag_data = {'association_type': 'Multitag',
-                    'associated_adapter_devices': device_identity_by_adapter,
+                    'associated_adapters': identity_by_adapter,
+                    'entity': entity,
                     'tags': [{
                         "name": name,
                         "data": data,
@@ -852,24 +884,29 @@ class PluginBase(Feature):
 
         return response
 
-    def __tag_device(self, device_identity_by_adapter, name, data, type):
+    def _tag(self, identity_by_adapter, name, data, type, entity):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
-        :param device_identity_by_adapter: a tuple of (adapter_unique_name, device_unique_id).
+        :param identity_by_adapter: a tuple of (adapter_unique_name, unique_id).
                                            e.g. ("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")
         :param name: the name of the tag. should be a string.
         :param data: the data of the tag. could be any object.
         :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
+        :param entity: "devices" or "users" -> what is the entity we are tagging.
         :return:
         """
+
+        assert entity == "devices" or entity == "users"
+
         tag_data = {'association_type': 'Tag',
-                    'associated_adapter_devices':
+                    'associated_adapters':
                         [
-                            (device_identity_by_adapter[0], device_identity_by_adapter[1])
+                            (identity_by_adapter[0], identity_by_adapter[1])
                         ],
                     "name": name,
                     "data": data,
-                    "type": type}
+                    "type": type,
+                    "entity": entity}
         # Since datetime is often passed here, and it is not serializable, we use json_util.default
         # That automatically serializes it as a mongodb date object.
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
@@ -880,18 +917,18 @@ class PluginBase(Feature):
 
         return response
 
-    def add_many_labels_to_device(self, devices_identity_by_adapter, labels, are_enabled=True):
+    def add_many_labels_to_entity(self, identity_by_adapter, labels, are_enabled=True, entity=None):
         """ Tag many devices with many tags. if is_enabled = False, the labels are grayed out."""
-        return self.__tag_many_device(devices_identity_by_adapter, labels, are_enabled, "label")
+        return self._tag_many(identity_by_adapter, labels, are_enabled, "label", entity)
 
-    def add_label_to_device(self, device_identity_by_adapter, label, is_enabled=True):
-        """ A shortcut to _tag_device with type "label" . if is_enabled = False, the label is grayed out."""
-        return self.__tag_device(device_identity_by_adapter, label, is_enabled, "label")
+    def add_label_to_entity(self, identity_by_adapter, label, is_enabled=True, entity=None):
+        """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
+        return self._tag(identity_by_adapter, label, is_enabled, "label", entity)
 
-    def add_data_to_device(self, device_identity_by_adapter, name, data):
-        """ A shortcut to _tag_device with type "data" """
-        return self.__tag_device(device_identity_by_adapter, name, data, "data")
+    def add_data_to_entity(self, identity_by_adapter, name, data, entity=None):
+        """ A shortcut to __tag with type "data" """
+        return self._tag(identity_by_adapter, name, data, "data", entity)
 
-    def add_adapterdata_to_device(self, device_identity_by_adapter, data):
-        """ A shortcut to _tag_device with type "adapterdata" """
-        return self.__tag_device(device_identity_by_adapter, self.plugin_unique_name, data, "adapterdata")
+    def add_adapterdata_to_entity(self, identity_by_adapter, data, entity=None):
+        """ A shortcut to __tag with type "adapterdata" """
+        return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity)
