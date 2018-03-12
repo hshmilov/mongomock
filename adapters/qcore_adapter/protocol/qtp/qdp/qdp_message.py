@@ -4,9 +4,10 @@ from construct import Struct, Byte, Int32ul, Switch, OneOf, Pass, this, Enum, Co
 from qcore_adapter.protocol.consts import PUMP_SERIAL, UNFINISHED_PARSING_MARKER
 from qcore_adapter.protocol.qtp.qdp.clinical_status2 import ClinicalStatus2Message
 from qcore_adapter.protocol.qtp.qdp.qdp_device_notify import DeviceNotifyMessage
-from qcore_adapter.protocol.qtp.qdp.qdp_file_deployment import FileDeploymentInquiryRequestMessage
+from qcore_adapter.protocol.qtp.qdp.qdp_file_deployment_inquiry_request import FileDeploymentInquiryRequestMessage
 from qcore_adapter.protocol.qtp.qdp.qdp_log_download import LogDownloadRequestMessage, LogDownloadResponseMessage
 from qcore_adapter.protocol.qtp.qdp.qdp_message_types import QdpMessageTypes, QdpMessageTypesReverseMapping
+from qcore_adapter.protocol.qtp.qdp.qdp_package_deploy_request import PackageDeployRequestMessage
 from qcore_adapter.protocol.qtp.qdp.qdp_registration import RegistrationRequestMessage, RegistrationResponseMessage
 from qcore_adapter.protocol.qtp.qdp.qdp_time_sync import TimeSyncMessage
 from qcore_adapter.protocol.qtp.qdp.qdp_update_settings import UpdateSettingsRequestMessage
@@ -28,6 +29,7 @@ QdpHeader = Struct(
         QdpMessageTypes.FileDeploymentInquiryRequest.name: FileDeploymentInquiryRequestMessage,
         QdpMessageTypes.DeviceNotify.name: DeviceNotifyMessage,
         QdpMessageTypes.DeviceUpdate.name: UpdateSettingsRequestMessage,
+        QdpMessageTypes.FileDeploymentRequest.name: PackageDeployRequestMessage,
 
         QdpMessageTypes.ConnectionEstablished.name: Struct(
             'ConnectionEstablishedMessage' / Pass,

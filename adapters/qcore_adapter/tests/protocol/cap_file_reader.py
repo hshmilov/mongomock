@@ -12,39 +12,65 @@ def bytes_to_ip(bytes):
     return str(ipaddress.ip_address(bytes))
 
 
-path = Path(__file__).parent / 'caps' / 'SimpleInfusion.pcap'
+path = Path(__file__).parent / 'caps' / 'port_5100.pcap'
 
 streams = dict()
 
 f = open(path, "rb")
 pcap = dpkt.pcap.Reader(f)
+first_ts = None
 for ts, buff in pcap:
+
+    if first_ts is None:
+        first_ts = ts
+
+    current_ts = ts
     pk = dpkt.ethernet.Ethernet(buff)
     ip = pk.ip
     tcp = ip.tcp
     if 5100 not in [tcp.sport, tcp.dport]:
         continue
-    stream_name = f"{bytes_to_ip(ip.src)}:{tcp.sport}<->{bytes_to_ip(ip.dst)}:{tcp.dport}"
+    stream_name = f"{bytes_to_ip(ip.src)}:{ip.tcp.sport}=>{bytes_to_ip(ip.dst)}:{ip.tcp.dport}"
     tcp_payload = pk.ip.tcp.data
-    stream = streams.setdefault(stream_name, b'')
-    stream += tcp_payload
-    streams[stream_name] = stream
+    stream = streams.setdefault(stream_name, [QtpMessage()])
+    last_msg = stream[-1]
 
-for sid, data in streams.items():
+    for byte in tcp_payload:
 
-    print("Stream, ", sid, " ", data)
-    qtp = QtpMessage()
+        # try:
+        last_msg.append_byte(byte)
+        if last_msg.is_complete():
+            print(f'TIME={round(ts-first_ts,2)} # flow={stream_name}')
+            # print(last_msg.bytes)
+            print(last_msg.payload_root)
+            print("<==============================>")
+            last_msg = QtpMessage()
+            stream.append(last_msg)
+    # except ProtocolException as e:
+    #     last_msg = QtpMessage()
+    #     stream.append(last_msg)
+    #     print(e)
 
-    try:
-        for bt in data:
-            qtp.append_byte(bt)
-            if qtp.is_complete():
-
-                if not isinstance(qtp.payload_root, QtpKeepAliveMessage) and not qtp.has_field('QcaHeader'):
-                    print(qtp.payload_root)
-                    print('================================')
-                    print()
-
-                qtp = QtpMessage()
-    except ProtocolException as e:
-        print("Error:", e)
+#     if last_msg.is_complete():
+#         print(last_msg.payload_root)
+#         last_msg = QtpMessage()
+#         stream.append(last_msg)
+#     last_msg.extend_bytes(tcp_payload)
+#
+# for sid, stream in streams.items():
+#     print(f'Stream {sid} {stream["ts"]} {stream["data"]}')
+#     qtp = QtpMessage()
+#
+#     # try:
+#     #     for bt in data:
+#     #         qtp.append_byte(bt)
+#     #         if qtp.is_complete():
+#     #
+#     #             if not isinstance(qtp.payload_root, QtpKeepAliveMessage) and not qtp.has_field('QcaHeader'):
+#     #                 print(qtp.payload_root)
+#     #                 print('================================')
+#     #                 print()
+#     #
+#     #             qtp = QtpMessage()
+#     # except ProtocolException as e:
+#     #     print("Error:", e)

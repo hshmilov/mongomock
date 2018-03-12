@@ -1,9 +1,11 @@
 from enum import auto
 import binascii
-import construct
+from construct import Struct, Pass, Int32ul, Int16ul, Bytes, this, RawCopy, Byte, Check, Switch, Enum, Tell, Pointer, \
+    Checksum, Embedded, Sequence, Probe, Seek, Peek, Computed
 
 from qcore_adapter.protocol.consts import PUMP_SERIAL
-from qcore_adapter.protocol.qtp.common import enum_to_mapping, CStyleEnum
+from qcore_adapter.protocol.qtp.common import enum_to_mapping, CStyleEnum, ChecksumHeader
+from qcore_adapter.protocol.qtp.data_with_crc import DataWithCrcHeader
 from qcore_adapter.protocol.qtp.qdp.qdp_message_types import QdpMessageTypesReverseMapping
 from qcore_adapter.protocol.qtp.qtp_protocol_units import ProtocolUnit, ProtocolUnitReverseMapping
 
@@ -32,37 +34,19 @@ class AcknowledgeValues(CStyleEnum):
 
 AcknowledgeValuesReverseMapping = enum_to_mapping(AcknowledgeValues)
 
-
-def checksum256(st):
-    return sum(st) % 256
-
-
-QcaAck = construct.Struct(
-    'QcaAck' / construct.Pass,
-    'protocol' / construct.Enum(construct.Int16ul, **ProtocolUnitReverseMapping),
-    'operational_code' / construct.Enum(construct.Int16ul, **QdpMessageTypesReverseMapping),
-    'data' / construct.Enum(construct.Byte, **AcknowledgeValuesReverseMapping),
+DataWithCrcAck = Struct(
+    Embedded(DataWithCrcHeader),
+    'protocol' / Enum(Int16ul, **ProtocolUnitReverseMapping),
+    'operational_code' / Enum(Int16ul, **QdpMessageTypesReverseMapping),
+    'data' / Enum(Byte, **AcknowledgeValuesReverseMapping),
+    Check(this.size == 5)
 )
 
-DataWithCrc = construct.Struct(
-    'DataWithCrc' / construct.Pass,
-    'crc32' / construct.Int32ul,
-    'size' / construct.Const(5, construct.Int16ul),
-    construct.Embedded(construct.RawCopy(QcaAck)),  # TODO: flatten somehow?
-    construct.Check(lambda ctx: binascii.crc32(ctx.data) == ctx.crc32)  # todo - make this generated
-)
-
-QcaHeader = construct.Struct(
-    'QcaHeader' / construct.Pass,
-    'header' / construct.RawCopy(construct.Struct(  # TODO: flatten somehow?
-        'following_message_type' / construct.Byte,
-        PUMP_SERIAL / construct.Int32ul,
-        'protocol_version' / construct.Int32ul,
-    )),
-    'checksum' / construct.Byte,
-    construct.Check(lambda ctx: ctx.checksum == checksum256(ctx.header.data)),  # todo make this generated
-    'qca_protocol_unit' / construct.Enum(construct.Byte, **ProtocolUnitReverseMapping),
-    'qca_payload' / construct.Switch(construct.this.qca_protocol_unit, {
-        ProtocolUnit.DataWithCrc.name: DataWithCrc
-    })
+QcaHeader = Struct(
+    'QcaHeader' / Pass,
+    Embedded(ChecksumHeader),
+    'qca_protocol_unit' / Enum(Byte, **ProtocolUnitReverseMapping),
+    'qca_payload' / Switch(this.qca_protocol_unit, {
+        ProtocolUnit.DataWithCrc.name: DataWithCrcAck
+    }),
 )

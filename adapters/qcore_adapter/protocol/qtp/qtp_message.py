@@ -64,7 +64,11 @@ class QtpMessage(object):
         if self._complete:
             if self.bytes[-1] != QTP_END:
                 raise ProtocolException(f"Qtp last byte is not {self.bytes}")
-            self._inner_message = QtpDecoder.decode(self._payload())
+            try:
+                self._inner_message = QtpDecoder.decode(self._payload())
+            except Exception as e:
+                print(f'Error parsing {self.bytes}: {e}')
+                raise ProtocolException(str(e))
 
     def remaining_bytes(self):
         if self.is_complete():

@@ -1,6 +1,7 @@
 from enum import Enum, auto
 
-from qcore_adapter.protocol.qtp.common import CStyleEnum
+from qcore_adapter.protocol.qtp.common import CStyleEnum, enum_to_mapping
+from construct import Struct, Byte, Probe
 
 
 class OperationalCode(Enum):

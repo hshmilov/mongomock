@@ -1,6 +1,8 @@
-from construct import PascalString, Byte, StringsAsBytes, Struct, Int32ul
+from construct import PascalString, Byte, StringsAsBytes, Struct, Int32ul, Tell, Peek, Seek, this, Check, Bytes
 import enum
 from enum import auto
+
+from qcore_adapter.protocol.consts import PUMP_SERIAL
 
 QTP_START = 0xBB
 QTP_END = 0xCC
@@ -11,6 +13,25 @@ QcoreString = PascalString(lengthfield=Byte, encoding='utf8')
 QcoreInt64 = Struct(
     'high' / Int32ul,
     'low' / Int32ul
+)
+
+
+def checksum256(st):
+    return sum(st) % 256
+
+
+ChecksumHeader = Struct(
+    '_checksum_mark' / Tell,
+    'following_message_type' / Byte,
+    PUMP_SERIAL / Int32ul,
+    'protocol_version' / Int32ul,
+    'checksum_pos' / Tell,
+    'checksum' / Byte,
+    '_test_checksum' / Peek(Struct(
+        Seek(this._._checksum_mark),
+        'bytes' / Bytes(9),
+        Check(lambda ctx: checksum256(ctx.bytes) == ctx._.checksum),
+    )),
 )
 
 
