@@ -3,9 +3,7 @@
 client_details = {
     "Jamf_Domain": "https://axoniusdev.jamfcloud.com",
     "username": "axonius",
-    "password": "wBV8LgOP4uHrnKiq3VMQ",
-    'advanced_search_name': 'Axonius-Inventory-Search',
-    'create_search_privileges': False
+    "password": "wBV8LgOP4uHrnKiq3VMQ"
 }
 
 # Our office Mac mini (Axonius Printer)

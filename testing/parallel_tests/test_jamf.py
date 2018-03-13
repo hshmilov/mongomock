@@ -25,7 +25,3 @@ class TestJamfAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Asaf is revisioning the adapter...")
-    def test_fetch_devices(self):
-        pass

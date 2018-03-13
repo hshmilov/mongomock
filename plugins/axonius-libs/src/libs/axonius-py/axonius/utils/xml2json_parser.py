@@ -24,7 +24,7 @@ class Xml2Json:
         del self._parser
 
     def start(self, tag, attrs):
-        assert attrs == {}
+        # assert attrs == {}
         assert self._data.strip() == ''
         self._stack.append([tag])
         self._data = ''

@@ -6,9 +6,7 @@ import base64
 from axonius.fields import Field
 from axonius.parsing_utils import parse_date
 from jamf_adapter.exceptions import JamfConnectionError, JamfRequestException
-from jamf_adapter.search import JamfAdvancedSearch
 from jamf_adapter import consts
-import xml.etree.cElementTree as ET
 from axonius.utils.xml2json_parser import Xml2Json
 from axonius.smart_json_class import SmartJsonClass
 
@@ -23,7 +21,7 @@ class JamfPolicy(SmartJsonClass):
 
 
 class JamfConnection(object):
-    def __init__(self, logger, domain, search_name, all_permissions, num_of_simultaneous_devices,
+    def __init__(self, logger, domain, num_of_simultaneous_devices,
                  http_proxy=None, https_proxy=None):
         """ Initializes a connection to Jamf using its rest API
 
@@ -46,8 +44,6 @@ class JamfConnection(object):
         if https_proxy is not None:
             self.proxies['https'] = https_proxy
         self.logger.info(f"Proxies: {self.proxies}")
-        self.all_permissions = all_permissions
-        self.search_name = search_name
         self.num_of_simultaneous_devices = num_of_simultaneous_devices
 
     def set_credentials(self, username, password):
@@ -104,24 +100,6 @@ class JamfConnection(object):
             raise JamfRequestException(str(e))
         return response.json()
 
-    def jamf_request(self, request_method, url_addition, data, error_message):
-        response = request_method(self.get_url_request(url_addition),
-                                  headers=self.headers,
-                                  data=data,
-                                  proxies=self.proxies)
-        try:
-            response.raise_for_status()
-            response_tree = ET.fromstring(response.text)
-            int(response_tree.find("id").text)
-        except ValueError:
-            # conversion of the query id to int failed
-            self.logger.exception(error_message + f": {response.text}")
-            raise JamfRequestException(error_message + f": {response.text}")
-        except Exception as e:
-            # any other error during creation of the query or during the conversion
-            self.logger.exception(error_message)
-            raise JamfRequestException(error_message + str(e))
-
     def get(self, name, headers=None):
         """ Serves a POST request to Jamf API
 
@@ -137,24 +115,51 @@ class JamfConnection(object):
         except requests.HTTPError as e:
             raise JamfRequestException(str(e))
 
-    def _get_jamf_devices(self, url, data, xml_name, device_list_name, device_type):
-        """ Returns a list of all computers
+    def threaded_get_devices(self, url, device_list_name, device_type):
+        def get_device(device_id, device_number):
+            try:
+                device_details = self.get(url + '/id/' + device_id).get(device_type)
+                if device_number % print_modulo == 0:
+                    self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
+                device_list.append(device_details)
+            except:
+                self.logger.exception(f'error retrieving details of device id {device_id}')
+        devices = (self.get(url).get(device_list_name) or {})
+        num_of_devices = devices.get('size')
+        if num_of_devices:
+            num_of_devices = int(num_of_devices)
+        if not num_of_devices:
+            # for the edge case '0'
+            return
+        print_modulo = max(int(num_of_devices / 10), 1)
+        devices = devices.get(device_type)
+        devices = [devices] if type(devices) != list else devices
+        device_list = []
+        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
+        with ThreadPoolExecutor(max_workers=self.num_of_simultaneous_devices) as executor:
+            try:
+                device_counter = 0
+                futures = []
 
-        :return: the response
-        :rtype: list of computers
-        """
-        search = JamfAdvancedSearch(self, url, data, self.search_name, self.all_permissions)
-        # update has succeeded or an exception would have been raised
-        with search:
-            devices = search.search_results[xml_name][device_list_name].get(device_type, [])
+                # Creating a future for all the device summaries to be executed by the executors.
+                for device in devices:
+                    device_counter += 1
+                    futures.append(executor.submit(
+                        get_device, device['id'], device_counter))
 
-        return [devices] if type(devices) == dict else devices
+                wait(futures, timeout=None, return_when=ALL_COMPLETED)
+            except Exception as err:
+                self.logger.exception("An exception was raised while trying to get the data.")
+
+        self.logger.info("Finished getting all device data.")
+
+        return device_list
 
     def get_policy_history(self, devices):
         def get_history_worker(device, device_number):
             device_details = {}
             try:
-                device_details = self.get(consts.COMPUTER_HISTORY_URL + device.get('id'))
+                device_details = self.get(consts.COMPUTER_HISTORY_URL + (device.get('general') or {}).get('id'))
                 policies = device_details[consts.COMPUTER_HISTORY_XML_NAME][
                     consts.COMPUTER_HISTORY_POLICY_LIST_NAME].get(consts.COMPUTER_HISTORY_POLICY_INFO_TYPE, [])
                 device_policies = {}
@@ -182,7 +187,7 @@ class JamfConnection(object):
             except Exception as err:
                 self.logger.exception("An exception occured while getting and parsing device policies.")
 
-            if (num_of_devices / device_number) % 10 == 0:
+            if device_number % print_modulo == 0:
                 self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
             return device_details
 
@@ -191,6 +196,7 @@ class JamfConnection(object):
             try:
                 device_counter = 0
                 num_of_devices = len(devices)
+                print_modulo = max(int(num_of_devices / 10), 1)
                 futures = []
 
                 # Creating a future for all the device summaries to be executed by the executors.
@@ -207,27 +213,23 @@ class JamfConnection(object):
 
         return devices
 
-    def get_devices(self, alive_hours):
+    def get_devices(self):
         """ Returns a list of all agents
         :return: the response
         :rtype: list of computers and phones
         """
         # Getting all devices at once so no progress is logged
         # alive_hours/24 evaluates to an int on purpose
-        computers = self._get_jamf_devices(
-            url=consts.ADVANCED_COMPUTER_SEARCH_URL,
-            data=consts.ADVANCED_COMPUTER_SEARCH.format(self.search_name, int(alive_hours / 24)),
-            xml_name=consts.ADVANCED_COMPUTER_SEARCH_XML_NAME,
-            device_list_name=consts.ADVANCED_COMPUTER_SEARCH_DEVICE_LIST_NAME,
+        computers = self.threaded_get_devices(
+            url=consts.COMPUTERS_URL,
+            device_list_name=consts.COMPUTERS_DEVICE_LIST_NAME,
             device_type=consts.COMPUTER_DEVICE_TYPE)
 
         self.get_policy_history(computers)
 
-        mobile_devices = self._get_jamf_devices(
-            url=consts.ADVANCED_MOBILE_SEARCH_URL,
-            data=consts.ADVANCED_MOBILE_SEARCH.format(self.search_name, int(alive_hours / 24)),
-            xml_name=consts.ADVANCED_MOBILE_SEARCH_XML_NAME,
-            device_list_name=consts.ADVANCED_MOBILE_SEARCH_DEVICE_LIST_NAME,
+        mobile_devices = self.threaded_get_devices(
+            url=consts.MOBILE_DEVICE_URL,
+            device_list_name=consts.MOBILE_DEVICE_LIST_NAME,
             device_type=consts.MOBILE_DEVICE_TYPE)
 
         return computers + mobile_devices
