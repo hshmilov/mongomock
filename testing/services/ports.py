@@ -3,7 +3,7 @@ DOCKER_PORTS = {
     'execution':                        4999,
     'aggregator':                       5000,
     'active-directory-adapter':         5001,
-    'watch':                            5002,
+    'reports':                          5002,
     'epo-adapter':                      5003,
     'jamf-adapter':                     5004,
     'system-scheduler':                 5005,

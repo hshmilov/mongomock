@@ -25,8 +25,8 @@ Examples:
 # Start basic configuration in prod:
 ./axonius.sh system up --all --prod
 
-# Start basic configuration with ad-adpter and aws-adapter and watch plugin 
-./axonius.sh system up --services watch --adapters ad aws
+# Start basic configuration with ad-adpter and aws-adapter and reports plugin
+./axonius.sh system up --services reports --adapters ad aws
 
 # Shutdown system (the basic configuration)
 ./axonius.sh system down --all

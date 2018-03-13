@@ -4,12 +4,12 @@ from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
 
 
-class WatchService(PluginService):
+class ReportsService(PluginService):
     def __init__(self):
-        super().__init__('watch')
+        super().__init__('reports')
 
     def _request_watches(self, method, *vargs, **kwargs):
-        return getattr(self, method)('watch', api_key=self.api_key, *vargs, **kwargs)
+        return getattr(self, method)('reports', api_key=self.api_key, *vargs, **kwargs)
 
     def get_watches(self, *vargs, **kwargs):
         return self._request_watches('get', *vargs, **kwargs)
@@ -21,11 +21,11 @@ class WatchService(PluginService):
         return self._request_watches('delete', data=data, *vargs, **kwargs)
 
     def run_jobs(self):
-        self.get('trigger_watches', api_key=self.api_key)
+        self.get('trigger_reports', api_key=self.api_key)
 
 
 @pytest.fixture(scope="module")
-def watch_fixture(request):
-    service = WatchService()
+def reports_fixture(request):
+    service = ReportsService()
     initialize_fixture(request, service)
     return service

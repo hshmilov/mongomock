@@ -15,10 +15,16 @@ export const UPDATE_ALERT_QUERY = 'UPDATE_ALERT_QUERY'
 const newAlert = {
 	id: 'new',
 	name: '',
-	criteria: undefined,
+	triggers: {
+		increase: false,
+		decrease: false,
+		no_change: false,
+		above: 0,
+		below: 0
+	},
+	actions: [],
 	query: '',
-	alert_types: [],
-	retrigger: false,
+	retrigger: true,
 	triggered: false,
 	severity: 'info'
 }
@@ -30,8 +36,7 @@ export const alert = {
 		/* Statically defined fields that should be presented for each alert, in this order */
 		fields: [
 			{ path: 'name', name: 'Name', default: true, control: 'text'},
-			{ path: 'watch_time', name: 'Creation Time', type: 'timestamp', default: true, control: 'text' },
-			{ path: 'type', name: 'Source', default: true, type: 'type' },
+			{ path: 'report_creation_time', name: 'Creation Time', type: 'timestamp', default: true, control: 'text' },
 			{ path: 'message', name: 'Alert Info', default: true },
 			{ path: 'severity', name: 'Severity', default: true, type: 'status' }
 		],
@@ -63,23 +68,11 @@ export const alert = {
 				payload.data.forEach(function(alert) {
 					let message = 'No change detected'
 					if (alert.triggered) {
-						/* Condition was met - updating to informative message, according to criteria */
-						switch (alert.criteria) {
-							case 0:
-								message = 'Change'
-								break
-							case 1:
-								message = 'Increase'
-								break
-							case -1:
-								message = 'Decrease'
-								break
-						}
-						message += ' detected in query result'
+						/* Condition was met - updating to informative message, according to criterias */
+						message = 'Action triggered on last query result'
 					}
 					processedData.push({ ...alert,
 						id: alert.uuid,
-						type: 'User defined by: Administrator',
 						message: message
 					})
 				})
@@ -156,7 +149,7 @@ export const alert = {
 				param += `&filter=${JSON.stringify(payload.filter)}`
 			}
 			dispatch(REQUEST_API, {
-				rule: `alerts${param}`,
+				rule: `reports${param}`,
 				type: UPDATE_ALERTS
 			})
 		},
@@ -168,7 +161,7 @@ export const alert = {
 			 */
 			if (!alertId) { return }
 			dispatch(REQUEST_API, {
-				rule: `alerts/${alertId}`,
+				rule: `reports/${alertId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.data !== '') {
@@ -185,7 +178,7 @@ export const alert = {
 				controls, they are added to the alertList (instead of re-fetching), using a call to the mutation ADD_ALERT
 			 */
 			if (!payload || !payload.id) { return }
-			let rule = 'alerts'
+			let rule = 'reports'
 			let method = 'PUT'
 			if (payload.id !== 'new') {
 				rule += '/' + payload.id

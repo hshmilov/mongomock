@@ -22,6 +22,7 @@
     "vue-js-toggle-button": "^1.2.0",
     "vue-json-tree-view": "^2.1.1",
     "vue-media-queries": "0.0.3",
+    "vue-multiple-select": "^1.0.2",
     "vue-router": "^3.0.1",
     "vue-spinner": "^1.0.3",
     "vue-svgicon": "^2.1.0",

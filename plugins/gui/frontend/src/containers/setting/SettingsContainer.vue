@@ -22,15 +22,15 @@
             </tab>
             <tab title="Email Settings" id="email-settings-tab">
                 <div class="item">
-                    <label for="host" class="label">Host</label>
-                    <input id="host" type="text">
+                    <label for="host" class="label" >Host</label>
+                    <input id="host" type="text" v-model="emailHost">
                 </div>
                 <div class="item">
                     <label for="port" class="label">Port</label>
-                    <input id="port" type="text">
+                    <input id="port" type="text" v-model="emailPort">
                 </div>
                 <div class="item">
-                    <a id="save" class="btn">Save</a>
+                    <a id="save" class="btn" @click="setEmailServer">Save</a>
                 </div>
             </tab>
             <tab title="System Settings" id="system-settings-tab">
@@ -98,7 +98,9 @@
         },
         data() {
             return {
-            	lifecycle: {
+                emailHost: "",
+                emailPort: "",
+                lifecycle: {
                     executionEnabled: true,
                     researchRate: 0
                 }
@@ -145,6 +147,13 @@
                     method: 'POST',
                     data: {system_research_rate: this.lifecycle.researchRate * 60 * 60}
                 })
+            },
+            setEmailServer() {
+                this.fetchData({
+                    rule: `email_server`,
+                    method: 'POST',
+                    data: {host: this.emailHost, port: this.emailPort}
+                })
             }
         },
         created() {
@@ -159,6 +168,12 @@
                 rule: 'dashboard/lifecycle_rate'
             }).then((response) => {
                 this.lifecycle.researchRate = response.data / 60 / 60
+            })
+            this.fetchData({
+                rule: 'email_server'
+            }).then((response) => {
+                this.emailHost = response.data.host
+                this.emailPort = response.data.port
             })
         }
     }

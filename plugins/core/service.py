@@ -10,6 +10,8 @@ import string
 import threading
 import uritools
 import uuid
+import smtplib
+from email.mime.text import MIMEText
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.adapter_base import is_plugin_adapter
@@ -18,6 +20,7 @@ from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
+from core import consts
 
 
 CHUNK_SIZE = 1024
@@ -450,3 +453,55 @@ class CoreService(PluginBase):
         return {"plugin_ip": relevant_doc["plugin_ip"],
                 "plugin_port": str(relevant_doc["plugin_port"]),
                 "api_key": relevant_doc["api_key"]}
+
+    def _get_email_server(self):
+        """ Gets the saved email server config from the db.
+
+        :return: the email server config.
+        """
+        return self._get_collection('email_configs', limited_user=False).find_one({'type': 'email_server'})
+
+    @add_rule('email_server', ['POST', 'DELETE', 'GET'], should_authenticate=False)
+    def setup_mail_server(self):
+        """ Endpoint for getting, setting and deleting the mail_server.
+        """
+        if self.get_method() == 'GET':
+            return jsonify(self._get_email_server())
+        elif self.get_method() == 'POST':
+            data = self.get_request_data_as_object()
+            data['type'] = 'email_server'
+            self._get_collection('email_configs', limited_user=False).replace_one(
+                {'type': 'email_server'}, data, upsert=True)
+            return '', 201
+        elif self.get_method() == 'DELETE':
+            data = self.get_request_data_as_object()
+            delete_response = self._get_collection(
+                'email_configs', limited_user=False).delete_one({'host': data['host']})
+            if delete_response['deletedCount'] == 1:
+                return '', 204
+            else:
+                return return_error("EMail Server Wasn't Found.", 404)
+
+    @add_rule('send_email', ['POST'], should_authenticate=False)
+    def send_email_to_mailing_list(self):
+        """ Sends an email to a list of email address.
+        """
+        data = self.get_request_data_as_object()
+        mailing_list = data['recipient_list']
+        self.logger.info(f"Sending email: {data}")
+        mail_server = self._get_email_server()
+        self.logger.info(f"Sending email server: {mail_server}")
+        msg = MIMEText(data['content'], 'html')
+        msg['Subject'] = data['title']
+        msg['From'] = consts.mail_from_address
+        msg['To'] = ", ".join(mailing_list) if len(mailing_list) > 1 else mailing_list[0]
+        try:
+            server = smtplib.SMTP(mail_server['host'], mail_server['port'])
+            server.sendmail(consts.mail_from_address, mailing_list, msg.as_string())
+        except Exception as err:
+            self.logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
+        finally:
+            try:
+                server.quit()
+            except:
+                self.logger.exception("Exception was raised while trying to quit the e-mail server connection.")

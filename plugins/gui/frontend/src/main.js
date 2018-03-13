@@ -18,6 +18,9 @@ Vue.use(mediaQueries)
 import TreeView from 'vue-json-tree-view'
 Vue.use(TreeView)
 
+import VmSelect from 'vue-multiple-select'
+Vue.use(VmSelect)
+
 import ToggleButton from 'vue-js-toggle-button'
 Vue.use(ToggleButton)
 

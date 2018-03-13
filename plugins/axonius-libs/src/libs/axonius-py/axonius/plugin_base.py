@@ -587,6 +587,16 @@ class PluginBase(Feature):
                                                                content=content,
                                                                seen=False)).inserted_id
 
+    def send_email(self, title, emails, content='', severity_type='info'):
+        data = {
+            'title': title,
+            'content': content,
+            'severity_type': severity_type,
+            'recipient_list': emails
+        }
+        self.logger.info(f"Sent an email titled: {title}")
+        self.request_remote_plugin('send_email', None, 'post', json=data)
+
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
