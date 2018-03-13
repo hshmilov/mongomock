@@ -17,7 +17,7 @@ class SecdoConnection(object):
             url = 'https://' + url
         if not url.endswith('/'):
             url += '/'
-        url += "publicapi/agentmgmt/"
+        url += "publicapiv2/run/command/"
         self.url = url
         self.session = None
         self.company = None
@@ -50,10 +50,11 @@ class SecdoConnection(object):
         if self.is_connected:
             raise SecdoAlreadyConnected()
         session = requests.Session()
+        self.headers["COMMAND-NAME"] = "get_agents"
+        self.headers["API-KEY"] = self.api_key
         if self.company is not None and self.api_key is not None:
-            connection_dict = {'company': self.company,
-                               'apikey': self.api_key}
-            response = session.post(self._get_url_request('get/agents/'), json=connection_dict)
+            connection_dict = {'company': self.company}
+            response = session.post(self._get_url_request(''), json=connection_dict, headers=self.headers)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
@@ -96,9 +97,8 @@ class SecdoConnection(object):
         :return: the response
         :rtype: dict
         """
-        connection_dict = {'company': self.company,
-                           'apikey': self.api_key}
-        return self._post('get/agents/', params=connection_dict)["agents"]
+        connection_dict = {'company': self.company}
+        return self._post('', params=connection_dict)["agents"]
 
     def __enter__(self):
         self.connect()
