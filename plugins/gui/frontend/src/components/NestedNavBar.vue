@@ -1,19 +1,12 @@
 <template>
-    <ul class="nav-nest" :class="nestClass">
+    <ul class="nav-nest">
         <slot></slot>
     </ul>
 </template>
 
 <script>
     export default {
-        name: 'nested-nav-bar',
-        props: [ 'nestLevel' ],
-        computed: {
-            nestClass() {
-                let level = (!this.nestLevel)? 0 : this.nestLevel
-                return "nest-" + level
-            }
-        }
+        name: 'nested-nav-bar'
     }
 </script>
 
@@ -25,7 +18,7 @@
         padding: 0px;
     }
 
-    .nav-nest.nest-1 {
+    .nav-item > .nav-nest {
         margin-left: 42px;
         li {
             text-transform: capitalize;

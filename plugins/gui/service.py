@@ -211,9 +211,11 @@ class GuiService(PluginBase):
                 mongo_projection['internal_axon_id'] = 1
             device_list = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find(mongo_filter, mongo_projection)
             if mongo_filter and not skip:
-                db_connection[self.plugin_unique_name]['queries'].insert_one(
-                    {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
-                     'device_count': device_list.count() if device_list else 0, 'archived': False})
+                filter = request.args.get('filter')
+                db_connection[self.plugin_unique_name]['queries'].replace_one(
+                    {'name': {'$exists': False}, 'filter': filter},
+                    {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(),
+                     'device_count': device_list.count() if device_list else 0, 'archived': False}, upsert=True)
             return jsonify(beautify_db_entry(device) for device in
                            device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
 
@@ -413,7 +415,7 @@ class GuiService(PluginBase):
             mongo_filter['archived'] = False
             queries_collection = self._get_collection('queries', limited_user=False)
             return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
-                           .sort([('_id', pymongo.DESCENDING)])
+                           .sort([('timestamp', pymongo.DESCENDING)])
                            .skip(skip).limit(limit))
         if request.method == 'POST':
             query_to_add = request.get_json(silent=True)

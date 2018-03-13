@@ -4,7 +4,6 @@ import DashboardContainer from '../containers/dashboard/DashboardContainer.vue'
 import DevicesContainer from '../containers/device/DevicesContainer.vue'
 import DeviceConfigContainer from '../containers/device/DeviceConfigContainer.vue'
 import UsersContainer from '../containers/user/UsersContainer.vue'
-import ExecutedQueriesContainer from '../containers/device/query/ExecutedQueriesContainer.vue'
 import SavedQueriesContainer from '../containers/device/query/SavedQueriesContainer.vue'
 import PluginsContainer from '../containers/plugin/PluginsContainer.vue'
 import PluginViewContainer from '../containers/plugin/PluginConfigContainer.vue'
@@ -40,11 +39,6 @@ export default new Router({
 			path: '/device/query/saved',
 			name: 'Saved Queries',
 			component: SavedQueriesContainer
-		},
-		{
-			path: '/device/query/executed',
-			name: 'Queries History',
-			component: ExecutedQueriesContainer
 		},
 		{
 			path: '/user',
