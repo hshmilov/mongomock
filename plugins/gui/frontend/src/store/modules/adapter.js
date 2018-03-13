@@ -93,34 +93,31 @@ export const adapterStaticData = {
 	},
 	'desktop_central_adapter':{
 		name: 'ManageEngine Desktop Central',
-		description: 'Desktop Central is a Desktop Management and Mobile Device' +
-		' Management Software for managing desktops in LAN and across WAN and mobile devices from a central location\n'
+		description: 'Desktop Central is a Desktop Management and Mobile Device Management Software for managing desktops in LAN and across WAN and mobile devices from a central location'
 	},
 	'forcepoint_csv_adapter': {
 		name: 'Forcepoint Web Security Endpoint',
-		description: 'Forcepoint Web Security Endpoint enables end users to authenticate and' +
-		' receive policy enforcement via the Forcepoint Web Security Cloud cloud infrastructure.'
+		description: 'Forcepoint Web Security Endpoint enables end-users to authenticate and receive policy enforcement via the Forcepoint Web Security Cloud cloud infrastructure.'
 	},
 	'csv_adapter': {
-		name: 'Serials CSV Adapter',
+		name: 'CSV Serials',
 		description: 'The Serials CSV Adapter is able to import .csv files with inventory information including the serial number of a device and supplemental device data.'
 	},
 	'mobileiron_adapter': {
-		name: 'MobileIron Adapter',
+		name: 'MobileIron EMM',
 		description: 'The MobileIron EMM platform enables global enterprises to secure and manage modern operating systems in a world of mixed-use mobile devices and desktops.'
 	},
 	'minerva_adapter': {
 		name: 'Minerva Labs Endpoint Malware Vaccination',
-		description: 'Minerva Labs Endpoint Malware Vaccination enables incident response teams' +
-		' to immunize endpoints to neutralize attacks. By simulating infection markers, rather than creating them, Minerva contains outbreaks that bypass AV tools.'
+		description: 'Minerva Labs Endpoint Malware Vaccination enables incident response teams to immunize endpoints to neutralize attacks. This solution simulates infection markers, rather than creating them, to contain outbreaks that bypass AV tools.'
 	},
 	'juniper_adapter': {
         name: 'Juniper Junos Space',
         description: 'Junos Space Network Management Platform simplifies and automates management of Juniper’s switching, routing, and security devices.'
     },
 	'bomgar_adapter': {
-		name: 'Bomgar Adapter',
-		description: 'Bomgar is a remote support solution that allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile device.'
+		name: 'Bomgar Remote Support',
+		description: 'Bomgar Remote Support allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile device.'
 	},
 	'bigfix_adapter': {
 		name: 'IBM Bigfix',
@@ -132,7 +129,7 @@ export const adapterStaticData = {
 	},
 	'secdo_adapter': {
 		name: 'Secdo Endpoint Protection',
-		description: 'The SECDO Next Generation IR platform automates endpoint forensic analysis and cyber investigations to lower the skills barrier and make security teams more effective.'
+		description: 'The SECDO Next Generation IR platform automates endpoint forensic analysis and cyber investigations for security teams.'
 	}
 }
 

@@ -68,7 +68,7 @@
         props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}},
         data() {
 			return {
-				loading: true
+				loading: false
             }
         },
         computed: {
@@ -196,7 +196,6 @@
 			if (this.content.data.length) {
 				this.loading = false
 			} else {
-				this.loading = true
 				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})
             }
             if (this.refresh) {

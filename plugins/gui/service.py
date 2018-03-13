@@ -343,7 +343,7 @@ class GuiService(PluginBase):
         with self._get_db_connection(False) as db_connection:
             if mongo_projection:
                 mongo_projection['internal_axon_id'] = 1
-            user_list = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db'].find(mongo_filter, mongo_projection)
+            user_list = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db_view'].find(mongo_filter, mongo_projection)
             # if mongo_filter and not skip:
             #     db_connection[self.plugin_unique_name]['queries'].insert_one(
             #         {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
