@@ -41,6 +41,7 @@ DOCKER_PORTS = {
     'ensilo-adapter':                   6013,
     'secdo-adapter':                    6015,
     'mobileiron-adapter':               6016,
+    'juniper-adapter':                  6017,
     'mongo':                            27017,
 }
 

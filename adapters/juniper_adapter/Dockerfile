@@ -7,4 +7,4 @@ WORKDIR /home/axonius/app
 COPY ./ ./juniper/
 
 # installing the juniper space rest platform package.
-RUN pip3 install ./py-space-platform
+RUN pip3 install ./juniper/py-space-platform
