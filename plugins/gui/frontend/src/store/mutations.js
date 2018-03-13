@@ -58,6 +58,6 @@ export const addTableView = (state, payload) => {
 	if (!payload.module || !state[payload.module] || !state[payload.module].dataViews) return
 	const views = state[payload.module].dataViews
 	if (!views.data) views.data = []
-	views.data = [{ name: payload.name, view: payload.view }, ...views.data]
+	views.data = [{ name: payload.name, view: payload.view }, ...views.data.filter(item => item.name !== payload.name)]
 }
 

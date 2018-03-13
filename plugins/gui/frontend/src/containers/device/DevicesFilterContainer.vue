@@ -16,15 +16,15 @@
                 <nested-menu v-if="saved && saved.length">
                     <div class="title">Saved Queries</div>
                     <nested-menu-item v-for="query, index in saved" :key="index" :title="query.name"
-                                      @click="selectQuery(query.filter)"></nested-menu-item>
+                                      @click="selectQuery(query.filter)"/>
                 </nested-menu>
                 <nested-menu v-if="executed && executed.length">
                     <div class="title">History</div>
                     <nested-menu-item v-for="query, index in executed" :key="index" :title="query.filter"
-                                      @click="selectQuery(query.filter)"></nested-menu-item>
+                                      @click="selectQuery(query.filter)"/>
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
-                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"></nested-menu-item>
+                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"/>
                 </nested-menu>
                 <div v-if="noResults">No results</div>
             </div>
@@ -32,8 +32,8 @@
         <triggerable-dropdown class="form-control" align="right" size="xl">
             <div slot="dropdownTrigger" class="link" @click="recompile = true">Query</div>
             <div slot="dropdownContent">
-                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery" @error="filterValid = false"
-                                 :recompile="recompile" @recompiled="recompile = false"></x-schema-filter>
+                <x-schema-filter :schema="schema" v-model="filterExpressions" @change="updateQuery"
+                                 @error="filterValid = false" :recompile="recompile" @recompiled="recompile = false"/>
                 <div class="row">
                     <div class="form-group place-right">
                         <a class="btn btn-inverse" @click="emptyFilter">Clear</a>
@@ -113,6 +113,11 @@
                 recompile: false
 			}
 		},
+        watch: {
+			value(newValue) {
+				this.searchValue = newValue
+            }
+        },
 		methods: {
             ...mapMutations({ updateNewQuery: UPDATE_NEW_QUERY }),
 			...mapActions({
