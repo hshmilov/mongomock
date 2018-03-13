@@ -1,9 +1,8 @@
 import concurrent.futures
 import threading
 import dateutil.parser
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
-import pytz
 import requests
 from contextlib import contextmanager
 from flask import jsonify
@@ -164,6 +163,11 @@ class SystemSchedulerService(PluginBase, Triggerable):
 
         with self._start_research():
             self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
+
+            # Clean old devices.
+            _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices.name)
+            self._run_cleaning_phase()
+
             # Fetch Devices Data.
             _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices.name)
             self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
@@ -214,6 +218,13 @@ class SystemSchedulerService(PluginBase, Triggerable):
                     self.logger.info(f'{future_for_pre_correlation_plugin[future]} Finished Execution.')
                 except Exception:
                     self.logger.error(f'Executing {future_for_pre_correlation_plugin[future]} Plugin Failed.')
+
+    def _run_cleaning_phase(self):
+        """
+        Trigger cleaning all devices from all adapters
+        :return:
+        """
+        self._run_blocking_request('trigger/clean_db', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post')
 
     def _run_aggregator_phase(self, plugin_subtype):
         """

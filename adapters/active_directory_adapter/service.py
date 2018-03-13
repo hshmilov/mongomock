@@ -417,7 +417,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
                     device.network_interfaces = resolved_device[NETWORK_INTERFACES_FIELD]
                     device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
-                if not self.is_old_device(device_as_dict):
+                if not self._is_old_device_by_last_seen(device_as_dict):
                     # That means that the device is new (As determined in adapter_base code)
                     to_insert.append(device_as_dict)
 

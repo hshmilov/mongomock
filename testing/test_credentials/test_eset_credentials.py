@@ -7,4 +7,4 @@ eset_details = {
 }
 
 # windows8.testdomain.test
-SOME_DEVICE_ID = '00:0C:29:80:0E:60'
+SOME_DEVICE_ID = '00:50:56:91:A6:6B'

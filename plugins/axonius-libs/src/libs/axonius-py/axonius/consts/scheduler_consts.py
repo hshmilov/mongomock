@@ -14,6 +14,7 @@ class ResearchPhases(Enum):
     """
     Possible sub-phases of the Research phase, representing stages system goes through before completing the research.
     """
+    Clean_Devices = auto()
     Fetch_Devices = auto()
     Fetch_Scanners = auto()
     Pre_Correlation = auto()

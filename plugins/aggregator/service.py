@@ -172,15 +172,65 @@ class AggregatorService(PluginBase, Triggerable):
 
         adapters = adapters.json()
 
-        if job_name != 'fetch_filtered_adapters':
+        if job_name == 'clean_db':
+            return self._clean_db_devices_from_adapters(job_name, adapters.values())
+        elif job_name == 'fetch_filtered_adapters':
+            adapters = _filter_adapters_by_parameter(post_json, adapters)
+        else:
             adapters = [adapter for adapter in adapters.values()
                         if adapter[PLUGIN_UNIQUE_NAME] == job_name]
-        else:
-            adapters = _filter_adapters_by_parameter(post_json, adapters)
 
-        self.logger.debug("registered adapters = {}".format(adapters))
+        self.logger.debug("Fetching from registered adapters = {}".format(adapters))
 
         return self._fetch_data_from_adapters(job_name, adapters)
+
+    def _request_clean_db_from_adapter(self, plugin_unique_name):
+        """
+        calls /clean_devices on the given adapter unique name
+        :return:
+        """
+        response = self.request_remote_plugin(f'clean_devices', plugin_unique_name, method='POST')
+        if response.status_code != 200:
+            self.logger.warn(f"Failed cleaning db with adapter {plugin_unique_name}. " +
+                             f"Reason: {str(devices.content)}")
+            return None
+        return from_json(response.content)
+
+    def _clean_db_devices_from_adapters(self, job_name, current_adapters):
+        """ Function for cleaning the devices db.
+
+        This function runs on all adapters and requests them to clean the db from their devices.
+        """
+        try:
+            with self.fetch_lock.setdefault(job_name, threading.RLock()):
+                futures_for_adapter = {}
+
+                # let's add jobs for all adapters
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    num_of_adapters_to_fetch = len(current_adapters)
+                    for adapter in current_adapters:
+                        if not is_plugin_adapter(adapter['plugin_type']):
+                            # This is not an adapter, not running
+                            num_of_adapters_to_fetch -= 1
+                            continue
+
+                        futures_for_adapter[executor.submit(
+                            self._request_clean_db_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+
+                    for future in concurrent.futures.as_completed(futures_for_adapter):
+                        try:
+                            num_of_adapters_to_fetch -= 1
+                            future.result()
+                            self.logger.info(f"Finished adapter number {num_of_adapters_to_fetch}")
+                        except Exception as err:
+                            self.logger.exception("An exception was raised while trying to get a result.")
+
+                self.logger.info("Finished cleaning all device data.")
+
+                return ''  # raw_detailed_devices
+
+        except Exception as e:
+            self.logger.exception(f'Getting devices from all requested adapters failed, {repr(e)}')
 
     def _fetch_data_from_adapters(self, job_name, current_adapters=None):
         """ Function for fetching devices from adapters.

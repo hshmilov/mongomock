@@ -16,13 +16,13 @@ from promise import Promise
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from bson import ObjectId
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 from flask import jsonify, request
 import json
 import sys
 from threading import RLock, Thread, Event
-from typing import Iterable
+from typing import Iterable, Tuple
 
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
@@ -76,6 +76,26 @@ class DeviceRunningState(Enum):
     Unknown = auto()
 
 
+def is_adapter_device_old(adapter_device, device_age_cutoff) -> bool:
+    if LAST_SEEN_FIELD in adapter_device['data']:
+        adapter_date = adapter_device['data'][LAST_SEEN_FIELD]
+    else:
+        adapter_date = adapter_device['accurate_for_datetime']
+    adapter_date = adapter_date.astimezone(device_age_cutoff.tzinfo)
+
+    return adapter_date < device_age_cutoff
+
+
+def extract_old_adapter_devices_from_axonius_device(axonius_device, device_age_cutoff) -> Iterable[Tuple[str, str]]:
+    """
+    Finds all adapter devices that are old in an axonius device
+    :return:
+    """
+    for adapter in axonius_device['adapters']:
+        if is_adapter_device_old(adapter, device_age_cutoff):
+            yield adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']
+
+
 class AdapterBase(PluginBase, Feature, ABC):
     """
     Base abstract class for all adapters
@@ -88,7 +108,8 @@ class AdapterBase(PluginBase, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        device_alive_thresh = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS, -1)
+        device_alive_thresh = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS,
+                                                              24 * 14)
         user_alive_threshold = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_USER_ALIVE_THRESHOLD_DAYS, -1)
 
         self.logger.info(f"Setting last seen threshold to {device_alive_thresh}")
@@ -151,6 +172,120 @@ class AdapterBase(PluginBase, Feature, ABC):
             thread.start()
             event.wait()
 
+    def __find_old_axonius_devices(self, device_date_cutoff):
+        """
+        Scans the DB for devices that have at least one old adapter device
+        :return: devices cursor
+        """
+        return self.devices_db.find({
+            'adapters': {
+                '$elemMatch': {
+                    "$and": [
+                        {
+                            "$or": [
+                                {
+                                    # adapters that lack `last_seen` - we assume that if they're returned
+                                    # from the adapter, they are "currently" seen so we use accurate_for_datetime
+                                    # instead
+                                    'accurate_for_datetime': {
+                                        "$lt": device_date_cutoff
+                                    }
+                                },
+                                {
+                                    # adapters that have `last_seen` should never return a `last_seen` that
+                                    # is greater the "now", so `last_seen <= accurate_for_datetime`
+                                    # thus the OR condition is sufficient: if there's `last_seen` it is
+                                    'data.last_seen': {
+                                        "$lt": device_date_cutoff
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            # and the device must be from this adapter
+                            PLUGIN_NAME: self.plugin_name
+                        }
+                    ]
+                }
+            }})
+
+    def __archive_axonius_device(self, plugin_unique_name, device_id):
+        """
+        Finds the axonius device with the given plugin_unique_name and device id,
+        assumes that the axonius device has only this single adapter device.
+
+        writes the device to the archive db, then deletes it
+        """
+        axonius_device = self.devices_db.find_one_and_delete({
+            'adapters': {
+                '$elemMatch': {
+                    PLUGIN_UNIQUE_NAME: plugin_unique_name,
+                    'data.id': device_id
+                }
+            }
+        })
+        if axonius_device is None:
+            self.logger.error(f"Trying to archive nonexisting device: {plugin_unique_name}: {device_id}")
+            return False
+
+        axonius_device['archived_at'] = datetime.utcnow()
+        self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device)
+        return True
+
+    def clean_db(self):
+        """
+        Figures out which devices are too old and removes them from the db.
+        Unlinks devices first if necessary.
+        :return: Amount of deleted devices
+        """
+        device_age_cutoff = datetime.now(timezone.utc) - self.last_seen_timedelta
+        self.logger.info(f"Cleaning devices that are before {device_age_cutoff}")
+
+        deleted_adapter_devices_count = 0
+        for axonius_device in self.__find_old_axonius_devices(device_age_cutoff):
+
+            old_adapter_devices = list(
+                extract_old_adapter_devices_from_axonius_device(axonius_device, device_age_cutoff))
+
+            for index, adapter_device_to_remove in enumerate(old_adapter_devices):
+                if index < len(axonius_device['adapters']) - 1:
+                    self.logger.info(f"Unlinking device {adapter_device_to_remove}")
+                    # if the above condition isn't met it means
+                    # that the current adapter_device is the last one (or even the only one)
+                    # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
+                    response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
+                        "plugin_type": "Plugin",
+                        "data": {
+                            'Reason': 'The device is too old so it is going to be deleted'
+                        },
+                        "associated_adapters": [
+                            adapter_device_to_remove
+                        ],
+                        "association_type": "Unlink",
+                        "entity": "devices"
+                    })
+                    if response.status_code != 200:
+                        self.logger.error(f"Unlink failed for {adapter_device_to_remove}," +
+                                          "not removing the device for consistency." +
+                                          f"Error: {response.status_code}, {str(response.content)}")
+
+                        continue
+
+                self.logger.info(f"Deleting device {adapter_device_to_remove}")
+                if self.__archive_axonius_device(*adapter_device_to_remove):
+                    deleted_adapter_devices_count += 1
+
+        return deleted_adapter_devices_count
+
+    @add_rule("clean_devices", methods=["POST"])
+    def clean_devices(self):
+        """
+        Find and delete devices that are old and remove them.
+        This should only be called when fetching is not in progress.
+        :return:
+        """
+        return to_json(self.clean_db())
+
     @add_rule('devices', methods=['GET'])
     def devices(self):
         """ /devices Query adapter to fetch all available devices.
@@ -191,8 +326,8 @@ class AdapterBase(PluginBase, Feature, ABC):
         :return: refer to users()
         """
 
-        # This needs to be implemented by the adapter. However, if it is not implemented, we don't wanna
-        # crash the system. It is the same as _query_devices_by_client.
+        # This needs to be implemented by the adapter. However, if it is not implemented, don't
+        # crash the system.
         return []
 
     def _parse_users_raw_data_hook(self, raw_users):
@@ -778,9 +913,9 @@ class AdapterBase(PluginBase, Feature, ABC):
         :param client_data: The data of the client, as returned from the _parse_clients_data function
         :return: adapter dependant
         """
-        return []
+        pass
 
-    def is_old_device(self, parsed_device):
+    def _is_old_device_by_last_seen(self, parsed_device):
         """ Checking if a device has not seen for a long time
 
         :param parsed_device: A parsed data of the device
@@ -833,7 +968,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             assert isinstance(parsed_device, Device)
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device.get('id', 'unidentified device'))
-            if self.is_old_device(parsed_device):
+            if self._is_old_device_by_last_seen(parsed_device):
                 skipped_count += 1
                 continue
 

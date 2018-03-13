@@ -137,6 +137,10 @@ class PluginService(DockerService):
     def unique_name(self):
         return self.vol_conf.unique_name
 
+    @property
+    def plugin_name(self):
+        return self.conf.name
+
     def generate_debug_template(self):
         name = self.adapter_name.replace("-", "_") if isinstance(self, AdapterService) else self.package_name
         ports = '\n'.join([py_charm_debug_port_template.format(host_port=host_port, internal_port=internal_port)
@@ -164,6 +168,12 @@ class AdapterService(PluginService):
 
     def devices(self):
         response = requests.get(self.req_url + "/devices", headers={API_KEY_HEADER: self.api_key})
+
+        assert response.status_code == 200, str(response)
+        return from_json(response.content)
+
+    def trigger_clean_db(self):
+        response = requests.post(self.req_url + "/clean_devices", headers={API_KEY_HEADER: self.api_key})
 
         assert response.status_code == 200, str(response)
         return from_json(response.content)
