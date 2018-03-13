@@ -143,7 +143,7 @@
                 this.fetchData({
                     rule: `dashboard/lifecycle_rate`,
                     method: 'POST',
-                    data: {system_research_rate: this.researchRate * 60 * 60}
+                    data: {system_research_rate: this.lifecycle.researchRate * 60 * 60}
                 })
             }
         },

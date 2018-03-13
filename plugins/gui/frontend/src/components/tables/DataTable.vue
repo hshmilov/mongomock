@@ -14,7 +14,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in pageData" @click="onClickRow(item[idField])" class="x-row">
+                    <tr v-for="item in pageData" @click="onClickRow(item[idField])" class="x-row clickable">
                         <td v-if="value">
                             <checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)" />
                         </td>
@@ -224,8 +224,8 @@
             .x-striped-table {
                 .x-row {
                     height: 30px;
-                    cursor: pointer;
-                    &:hover {
+                    &.clickable:hover {
+                        cursor: pointer;
                         -webkit-box-shadow: 0px 2px 16px -4px $gray-dark;
                         -moz-box-shadow: 0px 2px 16px -4px $gray-dark;
                         box-shadow: 0px 2px 16px -4px $gray-dark;
