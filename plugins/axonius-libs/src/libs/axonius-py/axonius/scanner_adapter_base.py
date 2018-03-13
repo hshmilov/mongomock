@@ -162,7 +162,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             with self._get_db_connection(True) as db:
                 aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
                 devices = aggregator_db['devices_db'].find()
-            scanner = self._get_scanner_correlator(devices, self.plugin_unique_name)
+            scanner = self._get_scanner_correlator(self.logger, devices)
 
             for device in parsed_data:
                 device['correlates'] = scanner.find_correlation({"data": device,

@@ -25,15 +25,29 @@ class TestNessusAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip("Nessus returns only the nessus server and only its IP so no comparison is possible")
+    @property
+    def some_device_ip(self):
+        return SOME_DEVICE_IP
+
+    @pytest.mark.skip("Should rewrite test!")
     def test_fetch_devices(self):
-        super().test_fetch_devices()
-        devices_as_dict = self.adapter_service.devices()
+        # super().test_fetch_devices()
+        self.adapter_service.add_client(self.some_client_details)
+        devices_as_tuple = self.adapter_service.devices()
+        print(devices_as_tuple)
+        devices_list = devices_as_tuple[0][1]["parsed"]
 
         # check the device is read by adapter
-        devices_list = devices_as_dict[self.some_client_id]['parsed']
-        nessus_device = list(filter(lambda device: device['id'] == self.some_device_id, devices_list))
-        assert len(nessus_device[0]['raw']['vulnerabilities']) == NESSUS_TEST_VULNERABILITIES_FOUND
+        wanted_device_list = []
+        for device in devices_list:
+            network_interfaces = device['network_interfaces']
+            for network_interface in network_interfaces:
+                ips = network_interface.get('ips', [])
+                for one_ip in ips:
+                    if one_ip == self.some_device_ip:
+                        wanted_device_list.append(device)
+
+        assert len(wanted_device_list) == 1, str(devices_as_tuple)
 
 
 if __name__ == '__main__':
