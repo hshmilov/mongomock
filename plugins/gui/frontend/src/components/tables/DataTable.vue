@@ -20,7 +20,7 @@
                         </td>
                         <td v-for="field in viewFields" nowrap>
                             <component :is="`x-${field.type}-view`" :value="getData(item, field.name)" :schema="field"
-                                       :limit="2"/>
+                                       :limit="2" :multiline="multiline"/>
                         </td>
                     </tr>
                 <tr v-for="n in view.pageSize - pageData.length" class="x-row">
@@ -87,6 +87,10 @@
                 refresh(state) {
                 	if (!state['settings'] || !state['settings'].data || !state['settings'].data.refreshRate) return 0
                 	return state['settings'].data.refreshRate
+                },
+                multiline(state) {
+					if (!state['settings'] || !state['settings'].data || !state['settings'].data.multiLine) return false
+					return state['settings'].data.multiLine
                 }
 			}),
             fetching() {
