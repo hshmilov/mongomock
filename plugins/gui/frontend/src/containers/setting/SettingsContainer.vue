@@ -21,16 +21,13 @@
                                :labels="true" @change="toggleExecution"/>
             </tab>
             <tab title="Email Settings" id="email-settings-tab">
-                <div class="item">
-                    <label for="host" class="label" >Host</label>
+                <h3>Mail Server</h3>
+                <div class="grid grid-col-2 grid-row-3">
+                    <label for="host" class="label">Host</label>
                     <input id="host" type="text" v-model="emailHost">
-                </div>
-                <div class="item">
                     <label for="port" class="label">Port</label>
                     <input id="port" type="text" v-model="emailPort">
-                </div>
-                <div class="item">
-                    <a id="save" class="btn" @click="setEmailServer">Save</a>
+                    <div/><button class="btn confirm" @click="setEmailServer">Save</button>
                 </div>
             </tab>
             <tab title="System Settings" id="system-settings-tab">
@@ -41,7 +38,7 @@
                     <label for="single-adapter">Use Single Adapter View</label>
                     <checkbox id="single-adapter" v-model="singleAdapter" />
                     <div/>
-                    <button class="btn" @click="saveSettings">save</button>
+                    <button class="btn confirm" @click="saveSettings">save</button>
                 </div>
                 <div class="row">
                 </div>
@@ -186,8 +183,9 @@
             grid-row-gap: 12px;
             width: 600px;
             align-items: center;
+            margin-bottom: 24px;
             &.grid-col-2 {
-                grid-template-columns: 1fr 2fr;
+                grid-template-columns: 2fr 3fr;
             }
             &.grid-row-3 {
                 grid-template-rows: 1fr 1fr 1fr;
@@ -208,10 +206,8 @@
         label {
             margin-bottom: 0;
         }
-        #system-settings-tab {
-            .btn {
-                justify-self: end;
-            }
+        .btn.confirm {
+            justify-self: end;
         }
     }
 </style>

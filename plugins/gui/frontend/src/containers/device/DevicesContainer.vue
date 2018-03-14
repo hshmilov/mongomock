@@ -5,7 +5,7 @@
             <devices-filter-container slot="cardContent" :schema="filterFields" v-model="queryFilter"
                                       :selected="selectedFields" @submit="executeQuery"/>
         </card>
-        <card :title="`devices (${device.dataTable.count.data})`" class="devices-list">
+        <card :title="`devices (${device.data.count.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
 
                 <!-- Available actions for performing on currently selected group of devices --->
@@ -58,12 +58,12 @@
 	import DynamicPopover from '../../components/popover/DynamicPopover.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-	import { FETCH_DEVICE, FETCH_LABELS, FETCH_DEVICE_FIELDS } from '../../store/modules/device'
+	import { FETCH_DEVICE, FETCH_LABELS } from '../../store/modules/device'
 	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
     import { FETCH_SETTINGS } from '../../store/modules/settings'
-	import { FETCH_TABLE_VIEWS, SAVE_TABLE_VIEW } from '../../store/actions'
-	import { UPDATE_TABLE_VIEW } from '../../store/mutations'
+	import { FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS } from '../../store/actions'
+	import { UPDATE_DATA_VIEW } from '../../store/mutations'
 
 	export default {
 		name: 'devices-container',
@@ -84,41 +84,36 @@
 			},
 			selectedFields: {
 				get() {
-					return this.device.dataTable.view.fields
+					return this.device.data.view.fields
 				},
 				set(fieldList) {
                     this.updateModuleView({fields: fieldList})
 				}
 			},
+            deviceFields () {
+				return this.device.data.fields.data
+            },
 			genericFlatSchema () {
-				if (!this.device.deviceFields.data.generic) return []
+				if (!this.deviceFields.generic) return []
 				return [
 					{
-						name: 'adapters', title: 'Adapters', type: 'array',
-						items: {type: 'string', format: 'logo',
+						name: 'adapters', title: 'Adapters', type: 'array', items: {type: 'string', format: 'logo',
                             enum: Object.keys(adapterStaticData).map((name) => {
 								return {name, title: adapterStaticData[name].name}
                             })
 						}
-					},
-                    ...this.flattenSchema(this.device.deviceFields.data.generic),
+					}, ...this.deviceFields.generic,
 					{
-						name: 'labels', title: 'Tags', type: 'array',
-						items: {type: 'string', format: 'tag'}
+						name: 'labels', title: 'Tags', type: 'array', items: {type: 'string', format: 'tag'}
 					}
                 ]
 			},
 			specificFlatSchema () {
-				if (!this.device.deviceFields.data.specific) return []
-                let registeredAdapters = new Set(this.adapter.adapterList.data.map((adapter) => adapter.plugin_name.logo))
+				if (!this.deviceFields.specific) return {}
+                let registeredAdapters = this.adapter.adapterList.data.map((adapter) => adapter.plugin_name.logo)
 
-				return Object.keys(this.device.deviceFields.data.specific).reduce((map, pluginName) => {
-					if (!registeredAdapters.has(pluginName)) return map
-
-					let pluginFlatSchema = this.flattenSchema(this.device.deviceFields.data.specific[pluginName])
-					if (!pluginFlatSchema.length) return map
-                    let title = adapterStaticData[pluginName] ? adapterStaticData[pluginName].name : pluginName
-					map[title] = pluginFlatSchema
+				return registeredAdapters.reduce((map, name) => {
+					map[name] = this.deviceFields.specific[name]
                     return map
 				}, {})
 			},
@@ -129,8 +124,9 @@
 					{
 						title: 'Generic', fields: this.genericFlatSchema
 					},
-					...Object.keys(this.specificFlatSchema).map((title) => {
-						return { title, fields: this.specificFlatSchema[title] }
+					...Object.keys(this.specificFlatSchema).map((name) => {
+						let title = adapterStaticData[name] ? adapterStaticData[name].name : name
+						return { title, fields: this.specificFlatSchema[name] }
 					})
                 ]
             },
@@ -138,12 +134,12 @@
 				if (!this.genericFlatSchema.length) return []
 				return this.genericFlatSchema.filter((field) => {
                     return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
-				}).concat(Object.keys(this.specificFlatSchema).reduce((merged, title) => {
-					merged = [...merged, ...this.specificFlatSchema[title].map((field) => {
+				}).concat(Object.keys(this.specificFlatSchema).reduce((list, name) => {
+					list = [...list, ...this.specificFlatSchema[name].map((field) => {
 						if (this.settings.data.singleAdapter) return field
-						return { ...field, title: `${title} ${field.title}`}
+						return { ...field, logo: name}
                     })]
-					return merged
+					return list
 				}, []))
 			},
 			filterFields () {
@@ -160,7 +156,7 @@
 				]
 			},
             tableViews () {
-				return this.device.dataViews.data
+				return this.device.data.views.data
             }
 		},
 		data () {
@@ -176,17 +172,17 @@
 		methods: {
 			...mapMutations({
 				updateQuery: UPDATE_QUERY,
-				updateView: UPDATE_TABLE_VIEW,
+				updateView: UPDATE_DATA_VIEW,
 			}),
 			...mapActions({
-				fetchDeviceFields: FETCH_DEVICE_FIELDS,
+				fetchDataFields: FETCH_DATA_FIELDS,
 				fetchDevice: FETCH_DEVICE,
 				saveQuery: SAVE_QUERY,
 				fetchLabels: FETCH_LABELS,
 				fetchAdapters: FETCH_ADAPTERS,
 				fetchSavedQueries: FETCH_SAVED_QUERIES,
-                fetchTableViews: FETCH_TABLE_VIEWS,
-                saveTableView: SAVE_TABLE_VIEW,
+                fetchTableViews: FETCH_DATA_VIEWS,
+                saveTableView: SAVE_DATA_VIEW,
                 fetchSettings: FETCH_SETTINGS
 			}),
 			executeQuery () {
@@ -220,41 +216,6 @@
 				this.fetchDevice(deviceId)
 				this.$router.push({path: `device/${deviceId}`})
 			},
-			flattenSchema (schema, name = '') {
-				/*
-				    Recursion over schema to extract a flat map from field path to its schema
-				 */
-				if (schema.name) {
-					name = name ? `${name}.${schema.name}` : schema.name
-				}
-				if (schema.type === 'array' && schema.items) {
-					if (!Array.isArray(schema.items)) {
-						let childSchema = {...schema.items}
-						if (schema.items.type !== 'array') {
-							if (!schema.title) return []
-							return [{...schema, name}]
-						}
-						if (schema.title) {
-							childSchema.title = childSchema.title ? `${schema.title} ${childSchema.title}` : schema.title
-						}
-						return this.flattenSchema(childSchema, name)
-					}
-					let children = []
-					schema.items.forEach((item) => {
-						children = children.concat(this.flattenSchema({...item}, name))
-					})
-					return children
-				}
-				if (schema.type === 'object' && schema.properties) {
-					let children = []
-					Object.keys(schema.properties).forEach((key) => {
-						children = children.concat(this.flattenSchema({...schema.properties[key], name: key}, name))
-					})
-					return children
-				}
-				if (!schema.title) return []
-				return [{...schema, name}]
-			},
 			updateModuleView(view) {
 				this.updateView({module: 'device', view})
 			},
@@ -263,9 +224,7 @@
 			this.fetchAdapters()
             this.fetchSettings()
             this.fetchTableViews({module: 'device'})
-			if (!this.device.deviceFields.data || !this.device.deviceFields.data.generic) {
-				this.fetchDeviceFields()
-			}
+            this.fetchDataFields({module: 'device'})
 			if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
 				this.fetchSavedQueries()
 			}

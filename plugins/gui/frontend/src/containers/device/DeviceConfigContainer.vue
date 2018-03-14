@@ -4,44 +4,41 @@
     	{ title: deviceName }
     ]">
         <div class="row" v-if="deviceFields.generic">
-            <!--<named-section title="General Data" icon-name="action/add_field">-->
-                <tabs v-if="deviceData.generic_data && deviceData.generic_data.length">
-                    <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                        <x-schema-list :data="deviceDataGenericBasic" :schema="deviceFields.generic"/>
-                    </tab>
-                    <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.name" :id="i" :key="i">
-                        <x-custom-data :data="item.data"/>
-                    </tab>
-                    <tab title="Tags" id="tags" key="tags">
-                        <div @click="tag.isActive = true" class="link tag-edit">Edit Tags</div>
-                        <div v-for="label in deviceData.labels" class="col-4 d-flex tag-content">
-                            <div>{{ label }}</div>
-                            <div class="link" @click="removeTag(label)">Remove</div>
-                        </div>
-                    </tab>
-                </tabs>
-            <!--</named-section>-->
+            <tabs>
+                <tab title="Basic Info" id="basic" key="basic" :selected="true">
+                    <x-schema-list :data="deviceDataBasic" :schema="deviceFields.generic"/>
+                </tab>
+                <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.name" :id="i" :key="i">
+                    <x-custom-data :data="item.data"/>
+                </tab>
+                <tab title="Tags" id="tags" key="tags">
+                    <div @click="tag.isActive = true" class="link tag-edit">Edit Tags</div>
+                    <div v-for="label in deviceData.labels" class="col-4 d-flex tag-content">
+                        <div>{{ label }}</div>
+                        <div class="link" @click="removeTag(label)">Remove</div>
+                    </div>
+                </tab>
+            </tabs>
         </div>
         <div class="row" v-if="deviceFields.specific">
-            <!--<named-section title="Adapter Specific Data" icon-name="action/add_field">-->
-                <tabs>
-                    <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
-                         :key="item.data.id+item.plugin_unique_name"
-                         :selected="!i" :title="getAdapterName(item.plugin_name)"
-                         :logo="item.plugin_name" :outdated="item.outdated">
-                        <div class="d-flex tab-header">
-                            <div>Data From: {{ item.client_used }}</div>
-                            <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
-                            <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
-                        </div>
-                        <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]" :data="item.data"
-                                       :schema="deviceFields.specific[item.plugin_name]"/>
-                        <div v-if="!viewBasic">
-                            <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
-                        </div>
-                    </tab>
-                </tabs>
-            <!--</named-section>-->
+            <tabs>
+                <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
+                     :key="item.data.id+item.plugin_unique_name"
+                     :selected="!i" :title="getAdapterName(item.plugin_name)"
+                     :logo="item.plugin_name" :outdated="item.outdated">
+                    <div class="d-flex tab-header">
+                        <div>Data From: {{ item.client_used }}</div>
+                        <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
+                        <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
+                    </div>
+                    <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]"
+                                   :data="getDataForFieldList(deviceFields.specific[item.plugin_name])"
+                                   :schema="deviceFields.specific[item.plugin_name]"/>
+                    <div v-if="!viewBasic">
+                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
+                    </div>
+                </tab>
+            </tabs>
         </div>
         <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
             <searchable-checklist title="Tag as:" :items="device.labelList.data" :searchable="true"
@@ -60,20 +57,24 @@
 	import xCustomData from '../../components/data/CustomData.vue'
 	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
-    import TagsMixin from './tags'
+	import TagsMixin from '../../mixins/tags'
+	import DataMixin from '../../mixins/data'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
-	FETCH_DEVICE, UPDATE_DEVICE, FETCH_DEVICE_FIELDS,
-	CREATE_DEVICE_LABELS, DELETE_DEVICE_LABELS, FETCH_LABELS,
+		FETCH_DEVICE, UPDATE_DEVICE,
+		CREATE_DEVICE_LABELS, DELETE_DEVICE_LABELS, FETCH_LABELS,
 	} from '../../store/modules/device.js'
 	import { adapterStaticData } from '../../store/modules/adapter.js'
+    import { FETCH_DATA_FIELDS } from '../../store/actions'
 
 	export default {
 		name: 'device-config-container',
-		components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData,
-            FeedbackModal, SearchableChecklist },
-        mixins: [TagsMixin],
+		components: {
+			ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData,
+			FeedbackModal, SearchableChecklist
+		},
+		mixins: [TagsMixin, DataMixin],
 		computed: {
 			...mapState(['device']),
 			deviceId () {
@@ -103,52 +104,53 @@
 				return this.deviceData.specific_data
 			},
 			deviceName () {
-				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) {
+				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) {
 					return ''
 				}
-				return this.deviceData.generic_data[0].hostname || this.deviceData.generic_data[0].name
-					|| this.deviceData.generic_data[0].pretty_id
+                let name = this.getData(this.deviceData.specific_data, 'data.hostname')
+                    || this.getData(this.deviceData.specific_data, 'data.name')
+					|| this.getData(this.deviceData.specific_data, 'data.pretty_id')
+                if (Array.isArray(name) && name.length) {
+					return name[0]
+                } else if (!Array.isArray(name)) {
+					return name
+                }
 			},
 			deviceFields () {
-				return this.device.deviceFields.data
+				return this.device.data.fields.data
 			},
-            deviceFieldsGenericAdvanced() {
+			deviceFieldsGenericAdvanced () {
 				return ['installed_software', 'security_patches', 'users']
-            },
-            deviceDataGenericBasic() {
-				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) return {}
-
-				let genericBasic = { ...this.deviceData.generic_data[0] }
-                this.deviceFieldsGenericAdvanced.forEach((field) => {
-					delete genericBasic[field]
-                })
-                return genericBasic
-            },
-			deviceDataGenericAdvanced() {
-				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) return {}
-
-				return Object.keys(this.deviceData.generic_data[0]).filter((name) => {
-					return this.deviceFieldsGenericAdvanced.includes(name)
-                }).map((name) => {
-					return { name: name.split('_').join(' '), data: this.deviceData.generic_data[0][name] }
-                }).concat(this.deviceData.generic_data.slice(1))
 			},
-            currentTags() {
+			deviceDataBasic () {
+				return this.getDataForFieldList(this.deviceFields.generic
+                    .filter(field => !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item))))
+			},
+			deviceDataGenericAdvanced () {
+				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) return {}
+				return this.deviceFieldsGenericAdvanced.map((includeField) => {
+					return {
+						name: includeField.split('_').join(' '),
+                        data: this.getData(this.deviceData, `specific_data.data.${includeField}`)
+					}
+				}).concat(this.deviceData.generic_data)
+			},
+			currentTags () {
 				return this.deviceData.labels
-            }
+			}
 		},
 		data () {
 			return {
 				viewBasic: true,
-                devices: [ this.$route.params.id ]
+				devices: [this.$route.params.id]
 			}
 		},
 		methods: {
 			...mapMutations({updateDevice: UPDATE_DEVICE}),
 			...mapActions({
-				fetchDevice: FETCH_DEVICE, fetchDeviceFields: FETCH_DEVICE_FIELDS,
-                deleteDeviceTags: DELETE_DEVICE_LABELS, createDeviceTags: CREATE_DEVICE_LABELS,
-                fetchLabels: FETCH_LABELS
+				fetchDevice: FETCH_DEVICE, fetchDataFields: FETCH_DATA_FIELDS,
+				deleteDeviceTags: DELETE_DEVICE_LABELS, createDeviceTags: CREATE_DEVICE_LABELS,
+				fetchLabels: FETCH_LABELS
 			}),
 			getAdapterName (pluginName) {
 				if (!adapterStaticData[pluginName]) {
@@ -158,11 +160,17 @@
 			},
 			removeTag (label) {
 				this.deleteDeviceTags({devices: [this.deviceId], labels: [label]})
-			}
+			},
+            getDataForFieldList(fieldList) {
+				return fieldList.reduce((map, field) => {
+					map[field.name] = this.getData(this.deviceData, field.name)
+					return map
+				}, {})
+            }
 		},
 		created () {
 			if (!this.deviceFields || !this.deviceFields.generic) {
-				this.fetchDeviceFields()
+				this.fetchDataFields({module: 'device'})
 			}
 			if (!this.deviceData || this.deviceData.internal_axon_id !== this.deviceId) {
 				this.fetchDevice(this.deviceId)

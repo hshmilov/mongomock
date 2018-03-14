@@ -1,5 +1,5 @@
 <template>
-    <div v-show="isActive" class="tab-pane" :class="{'active': isActive}" role="tabpanel">
+    <div v-show="isActive" class="tab-pane" :class="{'active': isActive, [ id ]: true}" role="tabpanel">
         <slot></slot>
     </div>
 </template>

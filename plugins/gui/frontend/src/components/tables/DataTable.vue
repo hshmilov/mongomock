@@ -49,8 +49,8 @@
 </template>
 
 <script>
-	import { FETCH_TABLE_CONTENT } from '../../store/actions'
-    import { UPDATE_TABLE_VIEW} from '../../store/mutations'
+	import { FETCH_DATA_CONTENT } from '../../store/actions'
+    import { UPDATE_DATA_VIEW} from '../../store/mutations'
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
@@ -61,10 +61,12 @@
 	import xBoolView from '../../components/controls/boolean/BooleanView.vue'
     import xFileView from '../../components/controls/array/FileView.vue'
 	import xArrayView from '../../components/controls/array/ArrayInlineView.vue'
+    import DataMixin from '../../mixins/data'
 
 	export default {
 		name: 'x-data-table',
         components: {PulseLoader, Checkbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
+        mixins: [DataMixin],
         props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}},
         data() {
 			return {
@@ -74,13 +76,13 @@
         computed: {
 			...mapState({
                 content(state) {
-                	return state[this.module].dataTable.content
+                	return state[this.module].data.content
                 },
                 count(state) {
-                	return state[this.module].dataTable.count
+                	return state[this.module].data.count
                 },
                 view(state) {
-                	return state[this.module].dataTable.view
+                	return state[this.module].data.view
                 },
                 refresh(state) {
                 	if (!state['settings'] || !state['settings'].data || !state['settings'].data.refreshRate) return 0
@@ -138,45 +140,13 @@
             }
         },
         methods: {
-            ...mapMutations({updateView: UPDATE_TABLE_VIEW}),
-			...mapActions({fetchContent: FETCH_TABLE_CONTENT}),
+            ...mapMutations({updateView: UPDATE_DATA_VIEW}),
+			...mapActions({fetchContent: FETCH_DATA_CONTENT}),
             fetchLinkedPages() {
             	this.fetchContent({
 					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
                     limit: this.pageLinkNumbers.length * this.view.pageSize
 				})
-            },
-			getData(data, path) {
-				if (!data) return ''
-
-				if (!Array.isArray(data)) {
-					let firstDot = path.indexOf('.')
-					if (firstDot === -1) return data[path]
-					return this.getData(data[path.substring(0, firstDot)], path.substring(firstDot + 1))
-				}
-                if (data.length === 1) return this.getData(data[0], path)
-
-                let children = []
-                data.forEach((item) => {
-                    let child = this.getData(item, path)
-                    if (!child) return
-
-                    let basicChildren = children.map((child) => this.getDataBasic(child))
-                    if (Array.isArray(child)) {
-                        children = children.concat(child.filter(
-                            (childItem => !this.matchArrayPrefix(basicChildren, this.getDataBasic(childItem)))))
-                    } else if (!this.matchArrayPrefix(basicChildren, this.getDataBasic(child))) {
-                        children.push(child)
-                    }
-                })
-                return Array.from(children)
-			},
-            getDataBasic(data) {
-            	if (typeof data === 'string') return data.toLowerCase()
-                return data
-            },
-            matchArrayPrefix(array, prefix) {
-            	return array.some(item => (item.match(`^${prefix}`) !== null))
             },
             onClickRow(id) {
 				if (!document.getSelection().isCollapsed) return

@@ -3,18 +3,20 @@ import Vuex from 'vuex'
 
 import {
 	REQUEST_API, requestApi,
-	FETCH_TABLE_CONTENT, fetchTableContent,
-	FETCH_TABLE_COUNT, fetchTableCount,
-	FETCH_TABLE_VIEWS, fetchTableViews,
-	SAVE_TABLE_VIEW, saveTableView
+	FETCH_DATA_CONTENT, fetchTableContent,
+	FETCH_DATA_COUNT, fetchTableCount,
+	FETCH_DATA_VIEWS, fetchTableViews,
+	SAVE_DATA_VIEW, saveTableView,
+	FETCH_DATA_FIELDS, fetchDataFields
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
-	UPDATE_TABLE_CONTENT, updateTableContent,
-	UPDATE_TABLE_COUNT, updateTableCount,
-	UPDATE_TABLE_VIEW, updateTableView,
-	UPDATE_TABLE_VIEWS, updateTableViews,
-	ADD_TABLE_VIEW, addTableView
+	UPDATE_DATA_CONTENT, updateTableContent,
+	UPDATE_DATA_COUNT, updateTableCount,
+	UPDATE_DATA_VIEW, updateTableView,
+	UPDATE_DATA_VIEWS, updateTableViews,
+	ADD_DATA_VIEW, addTableView,
+	UPDATE_DATA_FIELDS, updateDataFields
 } from './mutations'
 import { settings } from '../store/modules/settings'
 import { device } from '../store/modules/device'
@@ -42,18 +44,20 @@ export default new Vuex.Store({
     },
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
-        [ UPDATE_TABLE_CONTENT ]: updateTableContent,
-		[ UPDATE_TABLE_COUNT ]: updateTableCount,
-		[ UPDATE_TABLE_VIEW ]: updateTableView,
-		[ UPDATE_TABLE_VIEWS ]: updateTableViews,
-		[ ADD_TABLE_VIEW ]: addTableView
+        [ UPDATE_DATA_CONTENT ]: updateTableContent,
+		[ UPDATE_DATA_COUNT ]: updateTableCount,
+		[ UPDATE_DATA_VIEW ]: updateTableView,
+		[ UPDATE_DATA_VIEWS ]: updateTableViews,
+		[ ADD_DATA_VIEW ]: addTableView,
+		[ UPDATE_DATA_FIELDS ]: updateDataFields
     },
     actions: {
         [ REQUEST_API ]: requestApi,
-        [ FETCH_TABLE_CONTENT ]: fetchTableContent,
-		[ FETCH_TABLE_COUNT ]: fetchTableCount,
-		[ FETCH_TABLE_VIEWS ]: fetchTableViews,
-		[ SAVE_TABLE_VIEW ]: saveTableView
+        [ FETCH_DATA_CONTENT ]: fetchTableContent,
+		[ FETCH_DATA_COUNT ]: fetchTableCount,
+		[ FETCH_DATA_VIEWS ]: fetchTableViews,
+		[ SAVE_DATA_VIEW ]: saveTableView,
+		[ FETCH_DATA_FIELDS ]: fetchDataFields
     },
     modules: {
         /*

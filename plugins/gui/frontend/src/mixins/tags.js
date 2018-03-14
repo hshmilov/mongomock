@@ -2,7 +2,7 @@ import { mapActions } from 'vuex'
 import {
 	CREATE_DEVICE_LABELS,
 	DELETE_DEVICE_LABELS
-} from '../../store/modules/device'
+} from '../store/modules/device'
 
 export default {
 	watch: {

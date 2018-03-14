@@ -15,7 +15,7 @@ export const UPDATE_NEW_QUERY = 'UPDATE_NEW_QUERY'
 export const UPDATE_QUICK_SAVED = 'UPDATE_QUICK_SAVED'
 export const UPDATE_QUICK_EXECUTED = 'UPDATE_QUICK_EXECUTED'
 
-import { UPDATE_TABLE_VIEW } from '../mutations'
+import { UPDATE_DATA_VIEW } from '../mutations'
 
 const updateQueries = (currentQueries, payload, restart) => {
 	/* Freshly fetched devices are added to currently stored devices */
@@ -134,7 +134,7 @@ export const query = {
 		[ UPDATE_NEW_QUERY ] (state, payload) {
 			state.newQuery = { ...state.newQuery, ...payload }
 		},
-		[ UPDATE_TABLE_VIEW ] (state, payload) {
+		[ UPDATE_DATA_VIEW ] (state, payload) {
 			if (payload.module !== 'device' || !payload.view.filter) return
 			state.newQuery.filter = payload.view.filter
 		}

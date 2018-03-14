@@ -1,6 +1,6 @@
 <template>
     <x-page title="users">
-        <card :title="`users (${user.dataTable.count.data})`" class="devices-list">
+        <card :title="`users (${user.data.count.data})`" class="devices-list">
             <div slot="cardActions" class="card-actions">
 
                 <!-- Dropdown for selecting fields to be presented in table, including adapter hierarchy -->
@@ -20,7 +20,7 @@
     import xDataTable from '../../components/tables/DataTable.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-	import { UPDATE_TABLE_VIEW } from '../../store/mutations'
+	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_USER_FIELDS } from '../../store/modules/user'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
 
@@ -31,7 +31,7 @@
             ...mapState(['user', 'adapter']),
             selectedFields: {
 				get() {
-					return this.user.dataTable.view.fields
+					return this.user.data.view.fields
 				},
 				set(fieldList) {
 					this.updateView({module: 'user', view: {fields: fieldList}})
@@ -85,7 +85,7 @@
             }
         },
         methods: {
-            ...mapMutations({updateView: UPDATE_TABLE_VIEW}),
+            ...mapMutations({updateView: UPDATE_DATA_VIEW}),
             ...mapActions({fetchFields: FETCH_USER_FIELDS, fetchAdapters: FETCH_ADAPTERS,}),
 			flattenSchema (schema, name = '') {
 				/*

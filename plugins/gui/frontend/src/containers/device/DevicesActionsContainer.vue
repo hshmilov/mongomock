@@ -57,7 +57,7 @@
 	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
 	import DynamicPopover from '../../components/popover/DynamicPopover.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
-    import TagsMixin from './tags'
+    import TagsMixin from '../../mixins/tags'
     import xSchemaForm from '../../components/data/SchemaForm.vue'
 	import { mapState } from 'vuex'
 
@@ -72,9 +72,9 @@
         computed: {
 			...mapState(['device']),
 			deviceById () {
-				if (!this.device.dataTable.content.data || !this.device.dataTable.content.data.length) return {}
+				if (!this.device.data.content.data || !this.device.data.content.data.length) return {}
 
-				return this.device.dataTable.content.data.filter((device) => {
+				return this.device.data.content.data.filter((device) => {
 					return this.devices.includes(device.id)
 				}).reduce(function (map, input) {
 					map[input.id] = input

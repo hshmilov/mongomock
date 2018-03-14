@@ -1,14 +1,16 @@
 
+import { validModule } from './actions'
+
 export const TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
 export const toggleSidebar = (state) => {
     state.interaction.collapseSidebar = !state.interaction.collapseSidebar
 }
 
 
-export const UPDATE_TABLE_COUNT = 'UPDATE_TABLE_COUNT'
+export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateTableCount = (state, payload) => {
-	if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
-	const count = state[payload.module].dataTable.count
+	if (!validModule(state, payload)) return
+	const count = state[payload.module].data.count
 	count.fetching = payload.fetching
 	count.error = payload.error
 	if (payload.data !== undefined) {
@@ -16,10 +18,10 @@ export const updateTableCount = (state, payload) => {
 	}
 }
 
-export const UPDATE_TABLE_CONTENT = 'UPDATE_TABLE_CONTENT'
+export const UPDATE_DATA_CONTENT = 'UPDATE_DATA_CONTENT'
 export const updateTableContent = (state, payload) => {
-	if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
-	const content = state[payload.module].dataTable.content
+	if (!validModule(state, payload)) return
+	const content = state[payload.module].data.content
 	content.fetching = payload.fetching
 	content.error = payload.error
 	if (payload.data) {
@@ -30,34 +32,75 @@ export const updateTableContent = (state, payload) => {
 	}
 }
 
-export const UPDATE_TABLE_VIEW = 'UPDATE_TABLE_VIEW'
+export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
 export const updateTableView = (state, payload) => {
-	if (!payload.module || !state[payload.module] || !state[payload.module].dataTable) return
-	let table = state[payload.module].dataTable
+	if (!validModule(state, payload)) return
+	let table = state[payload.module].data
 	if (payload.view.filter || payload.view.sort) {
 		table.content.data = []
 		table.count.data = 0
 	}
-	table.view = { ...state[payload.module].dataTable.view, ...payload.view }
+	table.view = { ...state[payload.module].data.view, ...payload.view }
 }
 
-export const UPDATE_TABLE_VIEWS = 'UPDATE_TABLE_VIEWS'
+export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
 export const updateTableViews = (state, payload) => {
-	if (!payload.module || !state[payload.module] || !state[payload.module].dataViews) return
-	const views = state[payload.module].dataViews
+	if (!validModule(state, payload)) return
+	const views = state[payload.module].data.views
 	views.fetching = payload.fetching
 	views.error = payload.error
 	if (payload.data) {
-		views.data = [ ]
-		payload.data.forEach((view) => views.data.push({ ...view }))
+		views.data = payload.data
 	}
 }
 
-export const ADD_TABLE_VIEW = 'ADD_TABLE_VIEW'
+export const ADD_DATA_VIEW = 'ADD_DATA_VIEW'
 export const addTableView = (state, payload) => {
-	if (!payload.module || !state[payload.module] || !state[payload.module].dataViews) return
-	const views = state[payload.module].dataViews
+	if (!validModule(state, payload)) return
+	const views = state[payload.module].data.views
 	if (!views.data) views.data = []
 	views.data = [{ name: payload.name, view: payload.view }, ...views.data.filter(item => item.name !== payload.name)]
 }
 
+const flattenSchema = (schema, name = '') => {
+	/*
+		Recursion over schema to extract a flat map from field path to its schema
+	 */
+	if (schema.name) {
+		name = name ? `${name}.${schema.name}` : schema.name
+	}
+	if (schema.type === 'array' && schema.items) {
+		if (!Array.isArray(schema.items)) {
+			if (schema.items.type !== 'array') {
+				if (!schema.title) return []
+				return [{...schema, name}]
+			}
+			let childSchema = {...schema.items}
+			if (schema.title) {
+				childSchema.title = childSchema.title ? `${schema.title} ${childSchema.title}` : schema.title
+			}
+			return flattenSchema(childSchema, name)
+		}
+		let children = []
+		schema.items.forEach((item) => {
+			children = children.concat(flattenSchema({...item}, name))
+		})
+		return children
+	}
+	if (!schema.title) return []
+	return [{...schema, name}]
+}
+
+export const UPDATE_DATA_FIELDS= 'UPDATE_DATA_FIELDS'
+export const updateDataFields = (state, payload) => {
+	if (!validModule(state, payload)) return
+	const fields = state[payload.module].data.fields
+	fields.fetching = payload.fetching
+	fields.error = payload.error
+	if (payload.data) {
+		fields.data = {generic: flattenSchema({ ...payload.data.generic, name: 'specific_data.data' }), specific: {}}
+		Object.keys(payload.data.specific).forEach((name) => {
+			fields.data.specific[name] = flattenSchema({ ...payload.data.specific[name], name: `adapters_data.${name}`})
+		})
+	}
+}

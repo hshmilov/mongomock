@@ -1,6 +1,6 @@
 <template>
     <div class="schema-list">
-        <x-array-view :value="data" :schema="schema"></x-array-view>
+        <x-array-view :value="data" :schema="{ type: 'array', items: schema}" />
     </div>
 </template>
 
@@ -21,8 +21,13 @@
 
 <style lang="scss">
     .schema-list {
-        .label, .index {
-            font-weight: 500;
+        .array {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-column-gap: 24px;
+            .label, .index {
+                font-weight: 500;
+            }
         }
     }
 </style>
