@@ -29,13 +29,10 @@ class TestNessusAdapter(AdapterTestBase):
     def some_device_ip(self):
         return SOME_DEVICE_IP
 
-    @pytest.mark.skip("Should rewrite test!")
     def test_fetch_devices(self):
-        # super().test_fetch_devices()
         self.adapter_service.add_client(self.some_client_details)
         devices_as_tuple = self.adapter_service.devices()
-        print(devices_as_tuple)
-        devices_list = devices_as_tuple[0][1]["parsed"]
+        devices_list = devices_as_tuple[self.some_client_id]["parsed"]
 
         # check the device is read by adapter
         wanted_device_list = []
