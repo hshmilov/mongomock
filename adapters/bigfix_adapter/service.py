@@ -95,7 +95,10 @@ class BigfixAdapter(AdapterBase):
                 device_raw = dict()
                 for xml_property in ET.fromstring(device_raw_xml)[0]:
                     if xml_property.tag == 'Property':
-                        device_raw[xml_property.attrib["Name"]] = xml_property.text
+                        if xml_property.attrib["Name"] in device_raw:
+                            device_raw[xml_property.attrib["Name"]] += "," + str(xml_property.text)
+                        else:
+                            device_raw[xml_property.attrib["Name"]] = str(xml_property.text)
                 device = self._new_device()
                 if not device_raw.get("ID"):
                     continue
@@ -103,8 +106,11 @@ class BigfixAdapter(AdapterBase):
                     device.id = str(device_raw.get("ID"))
                 device.hostname = device_raw.get("Computer Name", "")
                 device.figure_os(device_raw.get("OS", ""))
-                device.add_nic(None, device_raw.get("IP Address", "").split(",") +
-                               device_raw.get("IPv6 Address", "").split(","), self.logger)
+                try:
+                    device.add_nic(None, [device_raw.get("IP Address", "").split(",")[0]] +
+                                   [device_raw.get("IPv6 Address", "").split(",")[0]], self.logger)
+                except:
+                    self.logger.exception("Problem adding nic to Bigfix")
                 device.agent_version = device_raw.get("Agent Version", "")
                 device.last_used_users = device_raw.get("User Name", "").split(",")
                 device.last_seen = parse_date(device_raw.get("Last Report Time", ""))
