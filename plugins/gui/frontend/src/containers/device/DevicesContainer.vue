@@ -135,6 +135,7 @@
 				return this.genericFlatSchema.filter((field) => {
                     return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
 				}).concat(Object.keys(this.specificFlatSchema).reduce((list, name) => {
+					if (!this.specificFlatSchema[name]) return list
 					list = [...list, ...this.specificFlatSchema[name].map((field) => {
 						if (this.settings.data.singleAdapter) return field
 						return { ...field, logo: name}
