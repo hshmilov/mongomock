@@ -51,7 +51,7 @@ export default {
 	},
 	methods: {
 		empty (data) {
-			if (!data) { return true }
+			if (data === undefined) { return true }
 			if (typeof data !== 'object') { return false }
 			let hasValue = false
 			Object.values(data).forEach((value) => {

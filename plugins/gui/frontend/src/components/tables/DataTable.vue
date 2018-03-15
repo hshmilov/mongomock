@@ -9,8 +9,9 @@
                             <checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
                                       :value="ids" @change="$emit('input', $event)"/>
                         </th>
-                        <th v-for="field in viewFields" nowrap>
-                            <img v-if="field.logo" :src="`/src/assets/images/logos/${field.logo}.png`">{{ field.title }}</th>
+                        <th v-for="field in viewFields" nowrap><img v-if="field.logo" class="logo"
+                                                                    :src="`/src/assets/images/logos/${field.logo}.png`"
+                                                                    height="20">{{ field.title }}</th>
                     </tr>
                 </thead>
                 <tbody>
