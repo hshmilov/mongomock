@@ -600,7 +600,7 @@ class GuiService(PluginBase):
                 return return_error("Invalid query id {0} requested for creating report".format(report_to_add['query']))
 
             self.logger.info("About to generate a report for the filter: {0}".format(query['filter']))
-            report_to_add['query'] = pql.find(query['filter'])
+            report_to_add['query'] = query['filter']
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
             if response is not None and response.status_code == 201:
                 # Updating saved query with the created report's id, for reference when fetching alerts
@@ -638,7 +638,7 @@ class GuiService(PluginBase):
                 return return_error(
                     "Invalid query id {0} requested for creating alert".format(report_to_update['query']))
 
-            report_to_update['query'] = pql.find(query['filter'])
+            report_to_update['query'] = query['filter']
             response = self.request_remote_plugin("reports/{0}".format(report_id), "reports", method='post',
                                                   json=report_to_update)
             if response is None:
