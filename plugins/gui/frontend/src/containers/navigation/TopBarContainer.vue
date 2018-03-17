@@ -7,10 +7,10 @@
                 </a>
             </div>
             <div class="navbar-collapse">
-                <span class="mr-auto">
+                <div class="navbar-logo">
                     <svg-icon name="logo/logo" height="30" :original="true"></svg-icon>
                     <svg-icon name="logo/axonius" height="16" :original="true"></svg-icon>
-                </span>
+                </div>
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link">
@@ -25,7 +25,7 @@
                                     <div v-for="notification in notification.notificationUnseen.data.list"
                                          @click="navigateNotification(notification.uuid)" class="item row"
                                          v-bind:class="{ 'bold': !notification.seen }">
-                                        <status-icon :value="notification.severity"></status-icon>
+                                        <status-icon :value="notification.severity"/>
                                         <div class="col">{{ notification.title }}</div>
                                         <div>{{ relativeDate(notification.date_fetched) }}</div>
                                     </div>
@@ -116,7 +116,7 @@
     @import '../../scss/config';
 
     .topbar {
-        background: $color-light;
+        background: $gray-light;
         position: relative;
         z-index: 50;
         .top-navbar {
@@ -128,31 +128,25 @@
             flex-wrap: nowrap;
             -ms-flex-pack: start;
             justify-content: flex-start;
-            .navbar-brand {
-                margin-right: 0px;
-                padding-bottom: 0px;
-                padding-top: 0px;
-                cursor: default;
-                .navbar-logo {
-                    line-height: 62px;
-                    display: inline-block;
-                }
+            .navbar-logo {
+                flex: 1 0 auto;
             }
             .navbar-header {
-                background-color: $color-theme-dark;
+                background-color: $black;
                 line-height: 45px;
                 text-align: center;
                 width: 240px;
                 flex-shrink: 0;
                 transition: all ease-in 0.2s;
                 .sidebartoggler {
-                    color: $color-theme-light;
-                    text-align: right;
+                    text-align: left;
+                    color: $gray-dark;
+                    &:hover {
+                        color: $orange;
+                    }
                 }
             }
             .navbar-collapse {
-                -webkit-box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
-                box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
                 padding-left: 24px;
                 padding-right: 12px;
                 display: flex;
@@ -173,19 +167,16 @@
                 padding-left: .75rem;
                 padding-right: .75rem;
                 line-height: 40px;
-                color: $color-theme-dark;
+                color: $black;
                 &:hover {
-                    color: $color-theme-light;
+                    color: $orange;
                     .show {
-                        color: $color-theme-light;
+                        color: $orange;
                     }
                 }
             }
             .nav-item {
                 margin-bottom: 0;
-            }
-            .nav-link.nav-home.active, .nav-link.nav-home:hover {
-                color: $color-warning;
             }
         }
         &.collapse {
@@ -211,23 +202,23 @@
     }
 
     .preview-table {
-        color: $color-text-main;
+        color: $black;
         line-height: initial;
         font-size: 12px;
         .item {
-            border-bottom: 1px solid $border-color;
+            border-bottom: 1px solid $gray-dark;
             padding: 12px 12px;
             margin: 0 -12px;
             text-transform: none;
             letter-spacing: initial;
             &:first-of-type {
-                border-top: 1px solid $border-color;
+                border-top: 1px solid $gray-dark;
             }
             &:hover {
-                color: $color-theme-light
+                color: $orange;
             }
             &.empty {
-                color: $color-theme-light;
+                color: $orange;
                 cursor: default;
                 i {
                     margin: auto;

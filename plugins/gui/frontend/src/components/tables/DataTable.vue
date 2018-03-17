@@ -1,7 +1,11 @@
 <template>
     <div class="x-data-table">
+        <div class="x-table-header">
+            <div class="x-title">{{ title }} ({{count.data}})</div>
+            <slot name="tableActions"/>
+        </div>
         <pulse-loader :loading="loading" color="#FF7D46" />
-        <div class="x-data-table-container">
+        <div class="x-table-container">
             <table class="x-striped-table">
                 <thead>
                     <tr class="x-row">
@@ -9,9 +13,9 @@
                             <checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
                                       :value="ids" @change="$emit('input', $event)"/>
                         </th>
-                        <th v-for="field in viewFields" nowrap><img v-if="field.logo" class="logo"
-                                                                    :src="`/src/assets/images/logos/${field.logo}.png`"
-                                                                    height="20">{{ field.title }}</th>
+                        <th v-for="field in viewFields" nowrap>
+                            <img v-if="field.logo" class="logo" :src="`/src/assets/images/logos/${field.logo}.png`"
+                                 height="20">{{ field.title }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,7 +72,7 @@
 		name: 'x-data-table',
         components: {PulseLoader, Checkbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
         mixins: [DataMixin],
-        props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}},
+        props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
 				loading: false
@@ -191,18 +195,24 @@
     @import '../../scss/config';
 
     .x-data-table {
-        .x-data-table-container {
+        height: calc(100% - 40px);
+        .x-table-header {
+            display: flex;
+            padding: 8px;
+            line-height: 24px;
+            .x-title {
+                flex: 1 0 auto;
+            }
+        }
+        .x-table-container {
             overflow: auto;
-            height: 62vh;
-            border-bottom: 1px solid $gray-light;
+            max-height: calc(100% - 80px);
             .x-striped-table {
                 .x-row {
                     height: 30px;
                     &.clickable:hover {
                         cursor: pointer;
-                        -webkit-box-shadow: 0px 2px 16px -4px $gray-dark;
-                        -moz-box-shadow: 0px 2px 16px -4px $gray-dark;
-                        box-shadow: 0px 2px 16px -4px $gray-dark;
+                        box-shadow: 0 2px 16px -4px $gray-dark;
                     }
                 }
             }
@@ -220,13 +230,10 @@
                 display: flex;
                 width: 320px;
                 justify-content: space-between;
+                padding-top: 4px;
                 .active, .x-link:hover {
                     cursor: pointer;
                     color: $orange;
-                    -webkit-transition: color 0.4s;
-                    -moz-transition: color 0.4s;
-                    -ms-transition: color 0.4s;
-                    -o-transition: color 0.4s;
                     transition: color 0.4s;
                 }
                 .active:hover {
@@ -240,18 +247,12 @@
                 justify-content: space-evenly;
                 flex: 0 1 auto;
                 position: relative;
-                background: $gray-light;
-                border-bottom: 2px solid $gray-light;
-                -webkit-border-radius: 2px;
-                -moz-border-radius: 2px;
+                background: $white;
+                border-bottom: 2px solid $white;
                 border-radius: 2px;
                 .active, .x-link:hover {
                     cursor: pointer;
                     font-weight: 500;
-                    -webkit-transition: font-weight 0.4s;
-                    -moz-transition: font-weight 0.4s;
-                    -ms-transition: font-weight 0.4s;
-                    -o-transition: font-weight 0.4s;
                     transition: font-weight 0.4s;
                 }
                 .active:hover {
@@ -262,7 +263,7 @@
                     position: absolute;
                     transform: rotate(-45deg);
                     border: 20px solid transparent;
-                    border-left: 20px solid $gray-light;
+                    border-left: 20px solid $white;
                     border-radius: 2px;
                     left: -20px;
                     top: -20px;

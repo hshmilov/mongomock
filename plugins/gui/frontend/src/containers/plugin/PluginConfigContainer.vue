@@ -1,5 +1,5 @@
 <template>
-    <scrollable-page :breadcrumbs="[
+    <x-page :breadcrumbs="[
     	{ title: 'plugins', path: { name: 'Plugins'}},
     	{ title: pluginDisplayName }
     ]">
@@ -72,16 +72,14 @@
                 </table>
             </div>
         </div>
-    </scrollable-page>
+    </x-page>
 </template>
 
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import PaginatedTable from '../../components/tables/ScrollableTable.vue'
 	import InfoDialog from '../../components/popover/InfoDialog.vue'
-	import Vue from 'vue'
-	import axios from 'axios'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'
 	import { FETCH_PLUGIN, pluginStaticData, START_PLUGIN, STOP_PLUGIN } from '../../store/modules/plugin'
@@ -89,7 +87,7 @@
 
 	export default {
 		name: 'plugins-config-container',
-		components: {ScrollablePage, PaginatedTable, InfoDialog},
+		components: {xPage, PaginatedTable, InfoDialog},
 		data: function () {
 			return {
 				openResult: ''

@@ -1,12 +1,12 @@
 <template>
-    <scrollable-page title="adapters" class="adapters">
+    <x-page title="adapters" class="adapters">
         <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" @click-row="configAdapter"></scrollable-table>
-    </scrollable-page>
+    </x-page>
 </template>
 
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
     import Card from '../../components/Card.vue'
 	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
 	import SearchInput from '../../components/SearchInput.vue'
@@ -16,7 +16,7 @@
 
     export default {
         name: 'adapters-container',
-        components: { ScrollablePage, Card, ScrollableTable, SearchInput },
+        components: { xPage, Card, ScrollableTable, SearchInput },
         computed: { ...mapState(['adapter']) },
         data() {
         	return {

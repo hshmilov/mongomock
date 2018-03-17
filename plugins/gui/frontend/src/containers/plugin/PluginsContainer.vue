@@ -1,12 +1,12 @@
 <template>
-    <scrollable-page title="plugins" class="plugins">
+    <x-page title="plugins" class="plugins">
         <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :actions="actions" @click-row="configPlugin"></scrollable-table>
-    </scrollable-page>
+    </x-page>
 </template>
 
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
 	import InfoDialog from '../../components/popover/InfoDialog.vue'
 
@@ -15,7 +15,7 @@
 
 	export default {
 		name: 'plugins-container',
-		components: {ScrollablePage, ScrollableTable, InfoDialog},
+		components: {xPage, ScrollableTable, InfoDialog},
 		computed: {
 			...mapState(['plugin']),
             actions () {

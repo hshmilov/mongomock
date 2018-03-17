@@ -1,17 +1,15 @@
 <template>
     <x-page title="devices">
-        <a slot="pageAction" class="action mt-2" @click="openSaveModal(confirmSaveQuery)">Save Query</a>
-        <card class="devices-query">
-            <devices-filter-container slot="cardContent" :schema="filterFields" v-model="queryFilter"
-                                      :selected="selectedFields" @submit="executeQuery"/>
-        </card>
-        <card :title="`devices (${device.data.count.data})`" class="devices-list">
-            <div slot="cardActions" class="card-actions">
+        <a slot="pageAction" @click="openSaveModal(confirmSaveQuery)">Save Query</a>
+        <devices-filter-container :schema="filterFields" v-model="queryFilter" :selected="selectedFields" @submit="executeQuery"/>
 
+        <x-data-table module="device" :fields="tableFields" id-field="internal_axon_id"
+                      v-model="selectedDevices" @click-row="configDevice" title="Devices">
+            <template slot="tableActions">
                 <!-- Available actions for performing on currently selected group of devices --->
                 <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices"/>
 
-                <triggerable-dropdown>
+                <triggerable-dropdown :arrow="false">
                     <div slot="dropdownTrigger" class="link">View</div>
                     <nested-menu slot="dropdownContent">
                         <nested-menu-item title="Save" @click="openSaveModal(confirmSaveView)" />
@@ -29,12 +27,8 @@
 
                 <!-- Dropdown for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-graded-multi-select placeholder="Add Columns" :options="coloumnSelectionFields" v-model="selectedFields"/>
-            </div>
-            <div slot="cardContent">
-                <x-data-table module="device" :fields="tableFields" id-field="internal_axon_id"
-                              v-model="selectedDevices" @click-row="configDevice"/>
-            </div>
-        </card>
+            </template>
+        </x-data-table>
         <modal v-if="saveModal.open" @close="saveModal.open = false" approveText="save" @confirm="saveModal.handleConfirm">
             <div slot="body" class="form-group">
                 <label class="form-label" for="saveName">Save as:</label>
@@ -238,41 +232,5 @@
 
 
 <style lang="scss">
-    @import '../../scss/config';
-
-    .devices-list {
-        .card-actions {
-            .svg-icon {
-                margin-right: 24px;
-                margin-top: 4px;
-                padding: 2px;
-                .svg-stroke {
-                    stroke: $color-text-main;
-                    stroke-width: 20px;
-                }
-            }
-        }
-        .section-container {
-            margin-bottom: 24px;
-            &:last-of-type {
-                margin-bottom: 0;
-            }
-            .section-header {
-                border-bottom: 1px solid $border-color;
-            }
-        }
-        .dropdown-toggle {
-            .svg-icon, i, .link {
-                margin-right: 30px;
-            }
-            .link {
-                vertical-align: middle;
-                line-height: 30px;
-                &:hover {
-                    color: $color-text-link;
-                }
-            }
-        }
-    }
 
 </style>

@@ -56,18 +56,9 @@
                 display: none;
             }
             &.arrow:after {
-                display: inline-block;
-                position: absolute;
-                margin: 6px 12px;
-                top: 0;
-                right: 0;
-                width: 12px;
-                height: 12px;
-                border-top: 1px solid $color-text-main;
-                border-left: 1px solid $color-text-main;
-                border-right: 0;
-                transform: rotate(225deg);
-                transition: transform 0.2s;
+                right: 12px;
+                @include triangle('down');
+                transition: transform ease-in-out 0.5s;
             }
         }
     }
@@ -76,8 +67,7 @@
             display: block;
         }
         > .dropdown-toggle:after {
-            transform: rotate(45deg);
-            margin: 12px 12px;
+            transform: rotate(180deg);
         }
     }
 </style>

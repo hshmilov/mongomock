@@ -1,5 +1,5 @@
 <template>
-    <scrollable-page title="Settings" class="settings">
+    <x-page title="Settings" class="settings">
         <tabs>
             <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
                 <h3>Research Phase</h3>
@@ -46,11 +46,11 @@
                 </div>
             </tab>
         </tabs>
-    </scrollable-page>
+    </x-page>
 </template>
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import NamedSection from '../../components/NamedSection.vue'
 	import Card from '../../components/Card.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
@@ -71,7 +71,7 @@
 
 	export default {
 		name: 'settings-container',
-		components: {ScrollablePage, NamedSection, Card, Tabs, Tab, xDateEdit, Checkbox},
+		components: {xPage, NamedSection, Card, Tabs, Tab, xDateEdit, Checkbox},
 		computed: {
 			...mapState(['dashboard', 'settings']),
 			limit () {

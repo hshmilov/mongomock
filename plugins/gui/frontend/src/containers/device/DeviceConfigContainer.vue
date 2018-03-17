@@ -1,9 +1,9 @@
 <template>
-    <scrollable-page :breadcrumbs="[
+    <x-page :breadcrumbs="[
     	{ title: 'devices', path: { name: 'Devices'}},
     	{ title: deviceName }
     ]">
-        <div class="row" v-if="deviceFields.generic">
+        <template v-if="deviceFields.generic">
             <tabs>
                 <tab title="Basic Info" id="basic" key="basic" :selected="true">
                     <x-schema-list :data="deviceDataBasic" :schema="deviceFields.generic"/>
@@ -19,8 +19,8 @@
                     </div>
                 </tab>
             </tabs>
-        </div>
-        <div class="row" v-if="deviceFields.specific">
+        </template>
+        <template v-if="deviceFields.specific">
             <tabs>
                 <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
                      :key="item.data.id+item.plugin_unique_name"
@@ -39,16 +39,16 @@
                     </div>
                 </tab>
             </tabs>
-        </div>
+        </template>
         <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
             <searchable-checklist title="Tag as:" :items="device.labelList.data" :searchable="true"
                                   :extendable="true" v-model="tag.selected"/>
         </feedback-modal>
-    </scrollable-page>
+    </x-page>
 </template>
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import NamedSection from '../../components/NamedSection.vue'
 	import Card from '../../components/Card.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
@@ -71,7 +71,7 @@
 	export default {
 		name: 'device-config-container',
 		components: {
-			ScrollablePage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData,
+			xPage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData,
 			FeedbackModal, SearchableChecklist
 		},
 		mixins: [TagsMixin, DataMixin],
@@ -85,23 +85,21 @@
 			},
 			sortedSpecificData () {
 				if (!this.deviceData || !this.deviceData.specific_data) return []
-				this.deviceData.specific_data.sort((first, second) => {
+
+                let lastSeen = new Set()
+                return [ ...this.deviceData.specific_data].sort((first, second) => {
 					// Adapters with no last_seen field go first
 					if (!second.data.last_seen) return 1
 					if (!first.data.last_seen) return -1
 
 					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
 					return new Date(second.data.last_seen) - new Date(first.data.last_seen)
-				})
-				let lastSeen = new Set()
-				this.deviceData.specific_data.forEach((item) => {
-					if (lastSeen.has(item.plugin_name)) {
-						item.outdated = true
-						return
-					}
+				}).map((item) => {
+					if (lastSeen.has(item.plugin_name)) return { ...item, outdated: true }
+
 					lastSeen.add(item.plugin_name)
+                    return item
 				})
-				return this.deviceData.specific_data
 			},
 			deviceName () {
 				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) {
@@ -186,31 +184,32 @@
 
     .tabs {
         width: 100%;
+        height: 50%;
         margin-bottom: 12px;
-        .tab-pane {
-            font-size: 14px;
-            .tab-header {
-                border-bottom: 1px solid #ddd;
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-                margin-left: -12px;
-                margin-right: -12px;
-                padding-left: 12px;
-                padding-right: 12px;
-                .link {
-                    flex: 1 0 auto;
-                    text-align: right;
-                }
-            }
-            .tag-content {
-                .link {
-                    flex: 1 0 auto;
-                    text-align: right;
-                }
-            }
-            .tag-edit {
+        overflow: hidden;
+        .tab-header {
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            margin-left: -12px;
+            margin-right: -12px;
+            padding-left: 12px;
+            padding-right: 12px;
+            .link {
+                flex: 1 0 auto;
                 text-align: right;
             }
+        }
+        .tab-content {
+            overflow: auto;
+            height: calc(100% - 40px);
+            .link {
+                flex: 1 0 auto;
+                text-align: right;
+            }
+        }
+        .tag-edit {
+            text-align: right;
         }
     }
 </style>

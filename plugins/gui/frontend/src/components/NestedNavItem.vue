@@ -3,10 +3,10 @@
                  :active-class="(!disabled && !exact)? 'active': ''"
                  :exact-active-class="(!disabled && exact)? 'active': ''">
         <a class="nav-link" v-bind:class="{ 'has-arrow': hasSlot }" :title="routeName">
-            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" height="24" width="24" :original="true"></svg-icon>
+            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" height="24" width="24" :original="true"/>
             <span>{{ routeName }}</span>
         </a>
-        <slot></slot>
+        <slot/>
     </router-link>
 </template>
 
@@ -26,7 +26,7 @@
     @import '../scss/config';
 
     .nav-item {
-        text-transform: uppercase;
+        text-transform: capitalize;
         list-style: none;
         margin-bottom: 5px;
         .nav-link {

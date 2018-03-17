@@ -9,7 +9,6 @@ import PluginsContainer from '../containers/plugin/PluginsContainer.vue'
 import PluginViewContainer from '../containers/plugin/PluginConfigContainer.vue'
 import AdaptersContainer from '../containers/adapter/AdaptersContainer.vue'
 import AdapterConfigContainer from '../containers/adapter/AdapterConfigContainer.vue'
-import ControlContainer from '../containers/control/ControlContainer.vue'
 import AlertsContainer from '../containers/alert/AlertsContainer.vue'
 import AlertConfigContainer from '../containers/alert/AlertConfigContainer.vue'
 import SettingsContainer from '../containers/setting/SettingsContainer.vue'
@@ -63,11 +62,6 @@ export default new Router({
 			path: '/adapter/:id',
 			component: AdapterConfigContainer
 		},
-        {
-            path: '/control',
-            name: 'Tasks',
-            component: ControlContainer
-        },
         {
             path: '/alert',
             name: 'Alerts',

@@ -1,5 +1,5 @@
 <template>
-    <scrollable-page :breadcrumbs="[
+    <x-page :breadcrumbs="[
     	{ title: 'alerts', path: {name: 'Alerts'}},
     	{ title: (alertData.name? alertData.name : 'new alert')}
     ]">
@@ -90,11 +90,11 @@
                 </form>
             </template>
         </card>
-    </scrollable-page>
+    </x-page>
 </template>
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
     import Card from '../../components/Card.vue'
     import Checkbox from '../../components/Checkbox.vue'
     import StatusIcon from '../../components/StatusIcon.vue'
@@ -106,7 +106,7 @@
 	export default {
 		name: 'alert-config-container',
 		components: {
-            ScrollablePage, Card, Checkbox, StatusIcon },
+            xPage, Card, Checkbox, StatusIcon },
 		computed: {
             ...mapState({
                 alertData: state => state.alert.alertDetails.data

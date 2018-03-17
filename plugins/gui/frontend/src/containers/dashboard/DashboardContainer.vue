@@ -1,5 +1,5 @@
 <template>
-    <scrollable-page title="axonius dashboard" class="dashboard">
+    <x-page title="axonius dashboard" class="dashboard">
         <card title="Data Collection">
             <x-counter :data="adapterDevicesCounterData"></x-counter>
         </card>
@@ -10,12 +10,12 @@
             <x-cycle-chart :data="lifecycle.subPhases"></x-cycle-chart>
             <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div></div>
         </card>
-    </scrollable-page>
+    </x-page>
 </template>
 
 
 <script>
-    import ScrollablePage from '../../components/ScrollablePage.vue'
+    import xPage from '../../components/layout/Page.vue'
     import Card from '../../components/Card.vue'
 
     import xCounter from '../../components/charts/Counter.vue'
@@ -29,7 +29,7 @@
     export default {
         name: 'x-dashboard',
         components: {
-			ScrollablePage, Card, xCounter, xHistogram, xCycleChart },
+			xPage, Card, xCounter, xHistogram, xCycleChart },
         computed: {
             ...mapState(['dashboard']),
             lifecycle() {

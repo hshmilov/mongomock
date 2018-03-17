@@ -1,5 +1,5 @@
 <template>
-    <triggerable-dropdown size="sm" align="right" class="graded-multi-select">
+    <triggerable-dropdown size="sm" align="right" class="graded-multi-select" :arrow="false">
         <div slot="dropdownTrigger" class="link">{{ placeholder }}</div>
         <template slot="dropdownContent">
             <nested-menu>

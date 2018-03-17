@@ -1,5 +1,5 @@
 <template>
-    <scrollable-page title="alerts">
+    <x-page title="alerts">
         <card :title="`alerts (${alert.alertList.data.length})`">
             <span slot="cardActions">
                 <action-bar :actions="[{title: 'New', handler: createAlert}]"></action-bar>
@@ -9,12 +9,12 @@
                              :error="alert.alertList.error" :fields="alert.fields" :fetchData="fetchAlerts"
                              :filter="alertFilter" :actions="alertActions"></paginated-table>
         </card>
-    </scrollable-page>
+    </x-page>
 </template>
 
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
     import Card from '../../components/Card.vue'
     import GenericForm from '../../components/GenericForm.vue'
 	import ActionBar from '../../components/ActionBar.vue'
@@ -25,7 +25,7 @@
 
     export default {
         name: 'alert-container',
-        components: { ScrollablePage, Card, GenericForm, ActionBar, PaginatedTable },
+        components: { xPage, Card, GenericForm, ActionBar, PaginatedTable },
 		computed: {
             ...mapState(['alert']),
             ...mapGetters(['filterFields']),

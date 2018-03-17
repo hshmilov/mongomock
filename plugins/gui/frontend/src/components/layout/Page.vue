@@ -1,21 +1,20 @@
 <template>
-    <div class="page-content"
-         v-bind:class=" { 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
-        <div v-if="title || breadcrumbs" class="page-header">
-            <h2 v-if="title">{{ title }}</h2>
-            <h2 v-else>
+    <div class="x-page" :class="{ collapse: interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
+        <div v-if="title || breadcrumbs" class="x-header">
+            <h4 class="x-title" v-if="title">{{ title }}</h4>
+            <h4 class="x-title" v-else>
                 <!-- Adding title for each breadcrumb, linked to the page, except last one which is the viewed page -->
-                <span v-for="breadcrumb in breadcrumbs.splice(0, breadcrumbs.length - 1)">
-                    <router-link :to="breadcrumb.path" active-class="">{{ breadcrumb.title }}</router-link> &gt; </span>
+                <template v-for="breadcrumb in breadcrumbs.splice(0, breadcrumbs.length - 1)">
+                    <router-link :to="breadcrumb.path" active-class="" class="x-crumb">{{ breadcrumb.title }}</router-link>
+                </template>
                 <!-- Adding currently viewed page without a link -->
                 {{breadcrumbs[breadcrumbs.length - 1].title}}
-            </h2>
-            <slot name="pageAction"></slot>
+            </h4>
+            <div class="x-action"><slot name="pageAction"/></div>
         </div>
-        <div class="page-body">
-            <slot></slot>
+        <div class="x-body">
+            <slot/>
         </div>
-        <div class="clearfix"></div>
     </div>
 </template>
 
@@ -32,27 +31,31 @@
 <style lang="scss">
     @import '../../scss/config';
 
-    .page-content {
+    .x-page {
+        display: flex;
+        flex-direction: column;
         background: $gray-light;
-        padding: 62px 0 0 240px;
-        height: auto;
-        min-height: 100%;
+        padding: 72px 24px 24px 264px;
         position: relative;
         width: 100%;
+        height: 100vh;
         &.collapse {
-            display: block;
-            padding-left: 60px;
-            padding-top: 60px;
-        }
-        .page-header {
             display: flex;
-            height: 36px;
+            flex-direction: column;
+            padding: 72px 24px 24px 84px;
+        }
+        .x-header {
+            display: flex;
             width: 100%;
-            padding: 12px 24px;
-            text-transform: uppercase;
+            text-transform: capitalize;
             z-index: 100;
             color: $black;
-            h2 {
+            margin-bottom: 12px;
+            padding: 12px 8px;
+            border-top: 1px solid;
+            border-bottom: 1px solid;
+            border-color: rgba($orange, 0.2);
+            .x-title {
                 flex: 1 0 auto;
                 font-weight: 200;
                 letter-spacing: 1px;
@@ -60,9 +63,18 @@
                 vertical-align: middle;
                 line-height: 24px;
                 display: inline-block;
+                .x-crumb {
+                    position: relative;
+                    margin-right: 18px;
+                    &:after {
+                        right: -12px;
+                        @include triangle('right', 0.25rem, $black);
+                    }
+                }
             }
-            .action {
-                float: right;
+            .x-action {
+                vertical-align: middle;
+                line-height: 24px;
                 font-size: 12px;
                 text-transform: none;
                 color: $blue;
@@ -71,9 +83,10 @@
                 }
             }
         }
-        .page-body {
-            padding: 12px 24px;
-            height: 100%;
+        .x-body {
+            flex: 1 0 auto;
+            padding: 0;
+            height: calc(100vh - 160px);
         }
     }
 </style>

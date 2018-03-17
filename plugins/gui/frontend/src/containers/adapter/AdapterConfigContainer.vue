@@ -1,5 +1,5 @@
 <template>
-    <scrollable-page :breadcrumbs="[
+    <x-page :breadcrumbs="[
     	{ title: 'adapters', path: { name: 'Adapters'}},
     	{ title: adapterName }
     ]">
@@ -37,11 +37,11 @@
                 </modal>
             </template>
         </card>
-    </scrollable-page>
+    </x-page>
 </template>
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import Card from '../../components/Card.vue'
 	import DynamicTable from '../../components/tables/DynamicTable.vue'
 	import GenericForm from '../../components/GenericForm.vue'
@@ -57,7 +57,7 @@
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, StatusIconLogoText, GenericForm, ScrollablePage, Card, DynamicTable, xSchemaForm},
+		components: {Modal, StatusIconLogoText, GenericForm, xPage, Card, DynamicTable, xSchemaForm},
 		computed: {
 			...mapState(['adapter']),
 			adapterUniquePluginName () {

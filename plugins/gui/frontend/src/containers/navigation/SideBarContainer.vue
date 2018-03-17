@@ -1,33 +1,31 @@
 <template>
     <aside class="left-sidebar" v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
-            <div class="scroll-sidebar">
-                <div class="user">
-                    <div class="user-profile">
-                        <img :src="auth.data.pic_name" />
-                        <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
-                    </div>
-                    <div class="user-actions">
-                        <a @click="logout" class="" data-toggle="tooltip" title="Logout">
-                            <i class="icon-logout"></i>
-                        </a>
-                    </div>
+        <div class="scroll-sidebar">
+            <div class="user">
+                <div class="user-profile">
+                    <img :src="auth.data.pic_name" />
+                    <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
                 </div>
-                <nav class="sidebar-nav">
-                    <nested-nav-bar>
-                        <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"/>
-                        <nested-nav-item routeName="Devices" iconName="device">
-                            <nested-nav-bar nestLevel="1" class="collapse">
-                                <nested-nav-item routeName="Saved Queries"/>
-                            </nested-nav-bar>
-                        </nested-nav-item>
-                        <nested-nav-item routeName="Users" iconName="user"/>
-                        <nested-nav-item routeName="Alerts" iconName="alert"/>
-                        <nested-nav-item routeName="Adapters" iconName="adapter"/>
-                    </nested-nav-bar>
-                </nav>
+                <div class="user-actions">
+                    <a @click="logout" class="" data-toggle="tooltip" title="Logout">
+                        <i class="icon-logout"></i>
+                    </a>
+                </div>
             </div>
-        <footer class="footer">
-            <div class="content">© {{ (new Date()).getFullYear() }} Axonius</div></footer>
+            <nav class="sidebar-nav">
+                <nested-nav-bar>
+                    <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"/>
+                    <nested-nav-item routeName="Devices" iconName="device">
+                        <nested-nav-bar nestLevel="1" class="collapse">
+                            <nested-nav-item routeName="Saved Queries"/>
+                        </nested-nav-bar>
+                    </nested-nav-item>
+                    <nested-nav-item routeName="Users" iconName="user"/>
+                    <nested-nav-item routeName="Alerts" iconName="alert"/>
+                    <nested-nav-item routeName="Adapters" iconName="adapter"/>
+                </nested-nav-bar>
+            </nav>
+        </div>
     </aside>
 </template>
 
@@ -57,7 +55,7 @@
         height: 100%;
         z-index: 20;
         padding-top: 60px;
-        background: $color-theme-dark;
+        background: $black;
         .scroll-sidebar {
             padding-bottom: 60px;
             display: flex;
@@ -78,13 +76,14 @@
                     border-radius: 100%;
                     width: 240px;
                     img {
-                        width: 50px;
-                        padding: 4px;
+                        width: 60px;
+                        margin-bottom: 8px;
                         border-radius: 100%;
                     }
                     h5 {
-                        color: $color-btn;
-                        display: inline-block;
+                        color: $white;
+                        margin-bottom: 0;
+                        trasition: all ease-in 0.2s;
                     }
                 }
                 .user-actions {
@@ -92,16 +91,17 @@
                     position: relative;
                     text-align: center;
                     > a {
-                        color: $color-btn;
+                        color: $gray-dark;
                         padding: 0 4px;
-                        &:hover {  color: $color-btn-hover;  }
+                        &:hover {  color: $white;  }
                         &:after {  display: none;  }
                     }
                 }
             }
             .sidebar-nav {
-                overflow: hidden;
-                background: $color-theme-dark;
+                overflow: auto;
+                flex: 1 0 auto;
+                background: $black;
                 padding: 0px;
                 padding-top: 30px;
                 .nav-nest {
@@ -113,21 +113,6 @@
                 }
             }
         }
-        .footer {
-            position: absolute;
-            width: 100%;
-            bottom: 0;
-            color: $color-btn;
-            padding: 12px 4px;
-            border-top: 1px solid $color-btn;
-            background: $color-theme-dark;
-            transition: all ease-in 0.2s;
-            overflow-x: hidden;
-            .content {
-                width: 240px;
-                overflow-x: visible;
-            }
-        }
     }
 
     .fix-sidebar .left-sidebar {  position: fixed;  }
@@ -136,13 +121,15 @@
         display: block;
         width: 60px;
         .scroll-sidebar {
-            padding-bottom: 0px;
+            padding-bottom: 0;
             position: absolute;
             width: 60px;
             .user {
                 .user-profile {
                     text-align: left;
-                    margin-left: 4px;
+                    h5 {
+                        opacity: 0;
+                    }
                 }
             }
             .sidebar-nav {
@@ -164,7 +151,7 @@
                             margin-left: 0;
                             top: 0;
                             position: absolute;
-                            background-color: $color-theme-dark;
+                            background-color: $black;
                             display: block;
                             .nav-link span {
                                 transition: all ease-in 0.5s;

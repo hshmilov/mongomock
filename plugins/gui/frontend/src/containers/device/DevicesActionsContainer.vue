@@ -1,6 +1,6 @@
 <template>
     <div>
-        <triggerable-dropdown size="sm" align="right">
+        <triggerable-dropdown size="sm" align="right" :arrow="false">
             <div slot="dropdownTrigger" class="link">Actions</div>
             <nested-menu slot="dropdownContent">
                 <nested-menu-item title="Tag..." @click="activate(tag)"></nested-menu-item>

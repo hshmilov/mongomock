@@ -1,17 +1,17 @@
 <template>
-    <scrollable-page title="saved queries" class="query">
+    <x-page title="saved queries" class="query">
         <card :title="`queries (${query.savedQueries.data.length})`">
             <paginated-table slot="cardContent" :fetching="query.savedQueries.fetching"
                              :data="query.savedQueries.data" :error="query.savedQueries.error"
                              :fields="query.savedFields" :fetchData="fetchQueries"
                              :actions="queryActions"></paginated-table>
         </card>
-    </scrollable-page>
+    </x-page>
 </template>
 
 
 <script>
-	import ScrollablePage from '../../../components/ScrollablePage.vue'
+	import xPage from '../../../components/layout/Page.vue'
 	import Card from '../../../components/Card.vue'
 	import ActionBar from '../../../components/ActionBar.vue'
 	import GenericForm from '../../../components/GenericForm.vue'
@@ -26,7 +26,7 @@
 		name: 'saved-queries-container',
 		components: {
 			SearchInput,
-			ScrollablePage, Card, ActionBar, GenericForm, PaginatedTable
+			xPage, Card, ActionBar, GenericForm, PaginatedTable
 		},
 		computed: {
 			...mapState(['query']),

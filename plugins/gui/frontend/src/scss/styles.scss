@@ -54,6 +54,7 @@ table {
 /* Common Components */
 
 .x-striped-table {
+  background: $white;
   thead {
     tr {
       border-bottom: 2px dashed $gray-light;

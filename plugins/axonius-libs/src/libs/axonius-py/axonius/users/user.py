@@ -22,13 +22,14 @@ class UserDevice(SmartJsonClass):
 class User(SmartJsonClass):
     """ A definition for the json-scheme for a User """
 
+    image = Field(str, "Image", json_format=JsonStringFormat.image)
     id = Field(str, "ID")  # Usually username@domain.
     username = Field(str, 'User Name')  # Only username, no domain
     domain = Field(str, "Domain")   # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
+    is_admin = Field(bool, "Is Admin")
     last_seen = Field(datetime.datetime, 'Last Seen')
     associated_devices = ListField(UserDevice, "Associated Devices")
     member_of = ListField(str, "Member Of")
-    is_admin = Field(bool, "Is Admin")
     is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
     account_expires = Field(datetime.datetime, "Account Expiration Date")
     last_bad_logon = Field(datetime.datetime, "Last Bad Logon Date")
@@ -36,7 +37,6 @@ class User(SmartJsonClass):
     last_logoff = Field(datetime.datetime, "Last Logoff Date")
     last_logon = Field(datetime.datetime, "Last Logon Date")
     user_created = Field(datetime.datetime, "User Creation Date")
-    image = Field(str, "Image", json_format=JsonStringFormat.image)
 
     required = ['id', 'username', 'domain']
 

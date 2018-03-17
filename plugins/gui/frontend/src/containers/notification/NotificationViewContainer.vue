@@ -1,16 +1,16 @@
 <template>
-    <scrollable-page :breadcrumbs="[
+    <x-page :breadcrumbs="[
     	{title: 'notifications', path: {'name': 'Notifications'}},
         {title: notification.notificationDetails.data.title}
         ]">
         <card>
             <div slot="cardContent">{{notification.notificationDetails.data.content}}</div>
         </card>
-    </scrollable-page>
+    </x-page>
 </template>
 
 <script>
-	import ScrollablePage from '../../components/ScrollablePage.vue'
+	import xPage from '../../components/layout/Page.vue'
 	import Card from '../../components/Card.vue'
 
 	import { mapState, mapActions } from 'vuex'
@@ -18,7 +18,7 @@
 
 	export default {
 		name: 'notification-view-container',
-		components: {ScrollablePage, Card},
+		components: {xPage, Card},
 		computed: {
 			...mapState(['notification']),
 			notificationId () {
