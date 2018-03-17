@@ -11,11 +11,11 @@ import {
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
-	UPDATE_DATA_CONTENT, updateTableContent,
-	UPDATE_DATA_COUNT, updateTableCount,
-	UPDATE_DATA_VIEW, updateTableView,
-	UPDATE_DATA_VIEWS, updateTableViews,
-	ADD_DATA_VIEW, addTableView,
+	UPDATE_DATA_CONTENT, updateDataContent,
+	UPDATE_DATA_COUNT, updateDataCount,
+	UPDATE_DATA_VIEW, updateDataView,
+	UPDATE_DATA_VIEWS, updateDataViews,
+	ADD_DATA_VIEW, addDataView,
 	UPDATE_DATA_FIELDS, updateDataFields
 } from './mutations'
 import { settings } from '../store/modules/settings'
@@ -44,11 +44,11 @@ export default new Vuex.Store({
     },
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
-        [ UPDATE_DATA_CONTENT ]: updateTableContent,
-		[ UPDATE_DATA_COUNT ]: updateTableCount,
-		[ UPDATE_DATA_VIEW ]: updateTableView,
-		[ UPDATE_DATA_VIEWS ]: updateTableViews,
-		[ ADD_DATA_VIEW ]: addTableView,
+        [ UPDATE_DATA_CONTENT ]: updateDataContent,
+		[ UPDATE_DATA_COUNT ]: updateDataCount,
+		[ UPDATE_DATA_VIEW ]: updateDataView,
+		[ UPDATE_DATA_VIEWS ]: updateDataViews,
+		[ ADD_DATA_VIEW ]: addDataView,
 		[ UPDATE_DATA_FIELDS ]: updateDataFields
     },
     actions: {

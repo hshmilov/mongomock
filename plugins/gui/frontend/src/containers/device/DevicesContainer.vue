@@ -73,7 +73,7 @@
 				},
 				set (newFilter) {
 					this.updateQuery(newFilter)
-                    this.updateModuleView({module: 'device', view: {filter: newFilter}})
+                    this.updateModuleView({filter: newFilter})
 				}
 			},
 			selectedFields: {

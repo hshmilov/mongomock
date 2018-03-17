@@ -8,7 +8,7 @@ export const toggleSidebar = (state) => {
 
 
 export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
-export const updateTableCount = (state, payload) => {
+export const updateDataCount = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const count = state[payload.module].data.count
 	count.fetching = payload.fetching
@@ -19,7 +19,7 @@ export const updateTableCount = (state, payload) => {
 }
 
 export const UPDATE_DATA_CONTENT = 'UPDATE_DATA_CONTENT'
-export const updateTableContent = (state, payload) => {
+export const updateDataContent = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const content = state[payload.module].data.content
 	content.fetching = payload.fetching
@@ -33,18 +33,18 @@ export const updateTableContent = (state, payload) => {
 }
 
 export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
-export const updateTableView = (state, payload) => {
+export const updateDataView = (state, payload) => {
 	if (!validModule(state, payload)) return
-	let table = state[payload.module].data
+	let data = state[payload.module].data
 	if (payload.view.filter || payload.view.sort) {
-		table.content.data = []
-		table.count.data = 0
+		data.content.data = []
+		data.count.data = 0
 	}
-	table.view = { ...state[payload.module].data.view, ...payload.view }
+	data.view = { ...state[payload.module].data.view, ...payload.view }
 }
 
 export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
-export const updateTableViews = (state, payload) => {
+export const updateDataViews = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const views = state[payload.module].data.views
 	views.fetching = payload.fetching
@@ -55,7 +55,7 @@ export const updateTableViews = (state, payload) => {
 }
 
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW'
-export const addTableView = (state, payload) => {
+export const addDataView = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const views = state[payload.module].data.views
 	if (!views.data) views.data = []

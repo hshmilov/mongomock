@@ -3,13 +3,13 @@
         <template v-if="isObject && isArray">
             <div v-for="item, i in data">
                 <div v-if="data.length > 1" class="index">{{ i + 1 }}.</div>
-                <x-custom-data :data="item"></x-custom-data>
+                <x-custom-data :data="item"/>
             </div>
         </template>
         <template v-else-if="isObject">
             <div v-for="key in Object.keys(data)">
                 <x-type-wrap :title="key" :class="{title: (typeof data[key] === 'object')}">
-                    <x-custom-data :data="data[key]"></x-custom-data>
+                    <x-custom-data :data="data[key]"/>
                 </x-type-wrap>
             </div>
         </template>

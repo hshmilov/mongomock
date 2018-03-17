@@ -125,13 +125,14 @@
                     .filter(field => !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item))))
 			},
 			deviceDataGenericAdvanced () {
-				if (!this.deviceData.generic_data || !this.deviceData.generic_data.length) return {}
+				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) return {}
 				return this.deviceFieldsGenericAdvanced.map((includeField) => {
 					return {
 						name: includeField.split('_').join(' '),
                         data: this.getData(this.deviceData, `specific_data.data.${includeField}`)
 					}
-				}).concat(this.deviceData.generic_data)
+				}).filter(item => item.data && (!Array.isArray(item.data) || item.data.length)
+                ).concat(this.deviceData.generic_data)
 			},
 			currentTags () {
 				return this.deviceData.labels

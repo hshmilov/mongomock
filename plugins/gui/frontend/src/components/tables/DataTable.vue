@@ -75,7 +75,7 @@
         props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
-				loading: false
+				loading: true
             }
         },
         computed: {

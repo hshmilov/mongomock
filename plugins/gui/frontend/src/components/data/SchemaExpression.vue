@@ -13,7 +13,7 @@
             <input type="checkbox" v-model="expression.not">NOT</label>
 
         <x-graded-select v-model="expression.field" @change="compileExpression" placeholder="FIELD..."
-                         :options="fields"></x-graded-select>
+                         :options="fields"/>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
             <select v-model="expression.compOp" v-if="fieldOpsList.length">
@@ -22,7 +22,7 @@
             </select>
             <template v-if="showValue">
                 <component :is="`x-${valueSchema.type}-edit`" :schema="valueSchema" v-model="expression.value"
-                           class="fill" :class="{'grid-span2': !fieldOpsList.length}"></component>
+                           class="fill" :class="{'grid-span2': !fieldOpsList.length}"/>
             </template>
             <template v-else>
                 <!-- No need for value, since function is boolean, not comparison -->
@@ -90,18 +90,18 @@
 				return this.fieldSchema
 			},
 			fieldOps () {
-				if (!this.fieldSchema) return {}
+				if (!this.fieldSchema || !this.fieldSchema.type) return {}
+                let ops = (this.fieldSchema.type === 'array')? this.compOps['array'] : {}
+				let schema = (this.fieldSchema.type === 'array')? this.fieldSchema.items : this.fieldSchema
+                if (schema.enum && schema.format !== 'predefined') {
+                    ops = { ...ops, equals: this.compOps[schema.type].equals }
+                } else if (schema.format) {
+					ops = { ...ops, ...this.compOps[schema.format] }
+                } else {
+					ops = { ...ops, ...this.compOps[schema.type] }
+                }
 
-				if (this.fieldSchema.enum && this.fieldSchema.format !== 'predefined') {
-					return this.compOps['enum'] || {}
-				}
-				if (this.fieldSchema.format) {
-					return this.compOps[this.fieldSchema.format] || {}
-				}
-				if (this.fieldSchema.type) {
-					return this.compOps[this.fieldSchema.type] || {}
-				}
-				return {}
+				return ops
 			},
 			fieldOpsList () {
 				return Object.keys(this.fieldOps)
@@ -162,7 +162,7 @@
 					let exists = this.fieldSchema.enum.filter((item) => {
 						return (item.name) ? (item.name === this.expression.value) : item === this.expression.value
 					})
-					if (!exists || !exists.length) this.expression.value = ''
+					if (!exists || !exists.length) return 'Specify a valid value for enum field'
 				}
 				return ''
 			},

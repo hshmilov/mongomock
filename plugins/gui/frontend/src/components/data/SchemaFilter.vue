@@ -4,7 +4,7 @@
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
                              v-model="expressions[i]" :fields="schema" :comp-ops="compOps"
                              :recompile="recompile" @recompiled="handleRecompiled"
-                             @change="compileFilter(i, $event)" @remove="removeExpression(i)"></x-schema-expression>
+                             @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
             <div @click="addExpression" class="btn-light">+</div>
             <div v-if="error" class="error-text">{{ error }}</div>
@@ -47,11 +47,21 @@
 					notPattern: '{field} == regex("^(?!.*{val})", "i")'
 				}
 				const numerical = {
-					'==': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
+					'equals': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
 					'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
 					'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
 				}
 				return {
+					'array': {
+						'size': {
+							pattern: '{field} == size({val})',
+							notPattern: 'not {field} == size({val})'
+						},
+						'exists': {
+							pattern: '({field} == exists(true) and {field} > [])',
+							notPattern: '({field} == exists(false) or {field} == [])'
+						}
+					},
 					'date-time': {
 						'<': {pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")'},
 						'>': {pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")'}
@@ -71,19 +81,6 @@
 							notPattern: '{field} == regex("^(?!.*:)")'
 						},
 						exists
-					},
-                    'enum': { equals },
-					'array': {
-						'size': {
-							pattern: '{field} == size({val})',
-							notPattern: 'not {field} == size({val})'
-						},
-						'exists': {
-							pattern: '({field} == exists(true) and {field} > [])',
-							notPattern: '({field} == exists(false) or {field} == [])'
-						},
-                        equals,
-                        contains
 					},
 					'string': {
 						contains,
