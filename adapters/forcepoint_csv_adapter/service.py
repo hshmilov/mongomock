@@ -4,6 +4,7 @@ from axonius.adapter_base import AdapterBase
 from axonius.devices.device import Device
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
+from axonius.parsing_utils import parse_date
 
 
 class ForcepointCsvAdapter(AdapterBase):
@@ -68,6 +69,7 @@ class ForcepointCsvAdapter(AdapterBase):
             device.client_version = version
             device.add_nic(None, ip_address.split(','), self.logger)
             device.last_used_users = [logged_in_users]
+            device.last_seen = parse_date(last_update)
             device.set_raw({"last_update": last_update,
                             "logged_in_users": logged_in_users,
                             "host_name": host_name,
