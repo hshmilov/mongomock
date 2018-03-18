@@ -106,7 +106,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                     dc_details["dc_name"], str(e))
             else:
                 message = "Missing dc name for configuration line"
-            self.logger.error(message)
+            self.logger.exception(message)
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -500,8 +500,8 @@ class ActiveDirectoryAdapter(AdapterBase):
                 try:
                     device_ip = self._resolve_device_name(
                         device_data['data']['hostname'], client_config)
-                except Exception as e:
-                    self.logger.error(f"Could not resolve ip for execution. reason: {str(e)}")
+                except Exception:
+                    self.logger.exception(f"Could not resolve ip for execution.")
                     raise IpResolveError("Cant Resolve Ip")
 
                 # Putting the file using wmi_smb_path.

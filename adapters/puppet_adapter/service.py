@@ -48,7 +48,7 @@ class PuppetAdapter(AdapterBase):
                 message = f"Key error for Puppet {0}. details: {1}".format(client_config["puppet_server_name"], str(e))
             else:
                 message = "Missing Puppet name for configuration line"
-            self.logger.error(message)
+            self.logger.exception(message)
         raise ClientConnectionException
 
     def _clients_schema(self):

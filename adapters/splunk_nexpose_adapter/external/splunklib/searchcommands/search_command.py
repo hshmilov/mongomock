@@ -274,7 +274,7 @@ class SearchCommand(object):
                 values = next(reader)
         except IOError as error:
             if error.errno == 2:
-                self.logger.error('Search results info file {} does not exist.'.format(json_encode_string(path)))
+                self.logger.exception('Search results info file {} does not exist.'.format(json_encode_string(path)))
                 return
             raise
 

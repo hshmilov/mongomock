@@ -217,7 +217,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
                     future.result()
                     self.logger.info(f'{future_for_pre_correlation_plugin[future]} Finished Execution.')
                 except Exception:
-                    self.logger.error(f'Executing {future_for_pre_correlation_plugin[future]} Plugin Failed.')
+                    self.logger.exception(f'Executing {future_for_pre_correlation_plugin[future]} Plugin Failed.')
 
     def _run_cleaning_phase(self):
         """

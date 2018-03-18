@@ -551,7 +551,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                         else:
                             data_to_update[f"adapters.$.data.{field}"] = field_of_data
                     except TypeError:
-                        self.logger.error(f"Got TypeError while getting {collection_name} field {field}")
+                        self.logger.exception(f"Got TypeError while getting {collection_name} field {field}")
                         continue
                     data_to_update['accurate_for_datetime'] = datetime.now()
 
