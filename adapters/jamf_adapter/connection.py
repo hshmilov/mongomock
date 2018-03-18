@@ -115,9 +115,29 @@ class JamfConnection(object):
         except requests.HTTPError as e:
             raise JamfRequestException(str(e))
 
-    def threaded_get_devices(self, url, device_list_name, device_type):
-        def get_device(device_id, device_number):
+    def _run_in_thread_pool_per_device(self, devices, func):
+        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
+        with ThreadPoolExecutor(max_workers=self.num_of_simultaneous_devices) as executor:
             try:
+                device_counter = 0
+                futures = []
+
+                # Creating a future for all the device summaries to be executed by the executors.
+                for device in devices:
+                    device_counter += 1
+                    futures.append(executor.submit(
+                        func, device, device_counter))
+
+                wait(futures, timeout=None, return_when=ALL_COMPLETED)
+            except Exception as err:
+                self.logger.exception("An exception was raised while trying to get the data.")
+
+        self.logger.info("Finished getting all device data.")
+
+    def threaded_get_devices(self, url, device_list_name, device_type):
+        def get_device(device, device_number):
+            try:
+                device_id = device['id']
                 device_details = self.get(url + '/id/' + device_id).get(device_type)
                 if device_number % print_modulo == 0:
                     self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
@@ -135,27 +155,11 @@ class JamfConnection(object):
         devices = devices.get(device_type)
         devices = [devices] if type(devices) != list else devices
         device_list = []
-        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
-        with ThreadPoolExecutor(max_workers=self.num_of_simultaneous_devices) as executor:
-            try:
-                device_counter = 0
-                futures = []
-
-                # Creating a future for all the device summaries to be executed by the executors.
-                for device in devices:
-                    device_counter += 1
-                    futures.append(executor.submit(
-                        get_device, device['id'], device_counter))
-
-                wait(futures, timeout=None, return_when=ALL_COMPLETED)
-            except Exception as err:
-                self.logger.exception("An exception was raised while trying to get the data.")
-
-        self.logger.info("Finished getting all device data.")
+        self._run_in_thread_pool_per_device(devices, get_device)
 
         return device_list
 
-    def get_policy_history(self, devices):
+    def threaded_get_policy_history(self, devices):
         def get_history_worker(device, device_number):
             device_details = {}
             try:
@@ -191,25 +195,10 @@ class JamfConnection(object):
                 self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
             return device_details
 
+        num_of_devices = len(devices)
+        print_modulo = max(int(num_of_devices / 10), 1)
         self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
-        with ThreadPoolExecutor(max_workers=self.num_of_simultaneous_devices) as executor:
-            try:
-                device_counter = 0
-                num_of_devices = len(devices)
-                print_modulo = max(int(num_of_devices / 10), 1)
-                futures = []
-
-                # Creating a future for all the device summaries to be executed by the executors.
-                for device in devices:
-                    device_counter += 1
-                    futures.append(executor.submit(
-                        get_history_worker, device, device_counter))
-
-                wait(futures, timeout=None, return_when=ALL_COMPLETED)
-            except Exception as err:
-                self.logger.exception("An exception was raised while trying to get the data.")
-
-        self.logger.info("Finished getting all device data.")
+        self._run_in_thread_pool_per_device(devices, get_history_worker)
 
         return devices
 
@@ -225,7 +214,7 @@ class JamfConnection(object):
             device_list_name=consts.COMPUTERS_DEVICE_LIST_NAME,
             device_type=consts.COMPUTER_DEVICE_TYPE)
 
-        self.get_policy_history(computers)
+        self.threaded_get_policy_history(computers)
 
         mobile_devices = self.threaded_get_devices(
             url=consts.MOBILE_DEVICE_URL,
