@@ -164,11 +164,17 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
                 devices = aggregator_db['devices_db'].find()
             scanner = self._get_scanner_correlator(self.logger, devices)
 
+            num_of_devices = len(parsed_data)
+            print_modulo = max(int(num_of_devices / 10), 1)
+            device_number = 0
             for device in parsed_data:
                 device['correlates'] = scanner.find_correlation({"data": device,
                                                                  PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
                                                                  PLUGIN_NAME: self.plugin_name,
                                                                  'plugin_type': self.plugin_type})
+                if device_number % print_modulo == 0:
+                    self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
+                device_number += 1
         return raw_data, parsed_data
 
     @property
