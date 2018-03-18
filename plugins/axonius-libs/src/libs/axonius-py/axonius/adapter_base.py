@@ -533,6 +533,9 @@ class AdapterBase(PluginBase, Feature, ABC):
                     'accurate_for_datetime': datetime.now(),
                     'data': data
                 }
+
+                # Note that this updates fields that are present. If some fields are not present but are present
+                # in the db they will stay there.
                 data_to_update = {f"adapters.$.{key}": value
                                   for key, value in parsed_to_insert.items() if key != 'data'}
 

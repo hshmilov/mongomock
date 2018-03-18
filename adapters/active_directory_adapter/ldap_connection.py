@@ -25,7 +25,7 @@ class LdapConnection:
 
     def __init__(self, logger, ldap_page_size, server_addr, domain_name,
                  user_name, user_password, dns_server,
-                 use_ssl: SSLState=SSLState.Unverified, ca_file_data: bytes=None, cert_file: bytes=None,
+                 use_ssl: SSLState = SSLState.Unverified, ca_file_data: bytes = None, cert_file: bytes = None,
                  private_key: bytes = None):
         """Class initialization.
 
@@ -76,8 +76,33 @@ class LdapConnection:
                 ldap_server, user=self.user_name, password=self.user_password,
                 raise_exceptions=True, receive_timeout=10)
             self.ldap_connection.bind()
+
+            # Get the domain properties (usually contains its policy)
+            self.domain_properties = self.__get_domain_properties()
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise LdapException(str(ldap_error))
+
+    def __get_domain_properties(self):
+        """
+        Queries for the specific domain properties. We use this to get domain-based policy variables
+        like the maximum time for password until it expires.
+        :return: a dict of attributes
+        """
+        # we do not try / except here, this function should only be called from _connect_to_server.
+        # To understand how paged search works, look at get_device_list.
+        entry_generator = self.ldap_connection.extend.standard.paged_search(
+            search_base=self.domain_name,
+            search_filter='(objectClass=domainDNS)',  # "domainDNS" and not "domain" (corresponds to "DC="..)
+            attributes=['distinguishedName', 'maxPwdAge', 'name'],
+            paged_size=self.ldap_page_size,
+            generator=True)
+
+        for domain in entry_generator:
+            if 'attributes' in domain:
+                # There should be only 1 domain in our search. But if, for some reason, we have a couple,
+                # lets return the specific one. (it would be only one, there's no point in yielding)
+                if domain['attributes']['distinguishedName'] == self.domain_name:
+                    return dict(domain['attributes'])
 
     @retry(stop_max_attempt_number=3, wait_fixed=1000 * 3)
     def get_device_list(self):
@@ -160,6 +185,7 @@ class LdapConnection:
 
             for user in entry_generator:
                 if 'attributes' in user:
+                    user['attributes']['axonius_extended'] = {"maxPwdAge": self.domain_properties['maxPwdAge']}
                     yield dict(user['attributes'])
 
         except ldap3.core.exceptions.LDAPException as ldap_error:

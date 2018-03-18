@@ -31,6 +31,11 @@ class User(SmartJsonClass):
     associated_devices = ListField(UserDevice, "Associated Devices")
     member_of = ListField(str, "Member Of")
     is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
+    is_locked = Field(bool, "Is Locked")  # If true, account is locked, and the time of lockout is last_lockout_time
+    last_lockout_time = Field(datetime.datetime, "Last Lockout time")
+    password_expiration_date = Field(datetime.datetime, "Password Expiration Date")
+    password_never_expires = Field(bool, "Password Never Expires")
+    password_not_required = Field(bool, "Password Is Not Required")
     account_expires = Field(datetime.datetime, "Account Expiration Date")
     last_bad_logon = Field(datetime.datetime, "Last Bad Logon Date")
     last_password_change = Field(datetime.datetime, "Last Password Change")

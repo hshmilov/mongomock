@@ -22,10 +22,12 @@ from axonius.dns_utils import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 from axonius.users.user import User
-from axonius.parsing_utils import parse_date, bytes_image_to_base64
+from axonius.parsing_utils import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, is_date_real
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
+LDAP_DONT_EXPIRE_PASSWORD = 0x10000
+LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 
 # TODO ofir: Change the return values protocol
 
@@ -244,7 +246,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
             user.username = username
             user.domain = domain
-            user.id = f"{username}@{domain}"    # Should be the unique identifier of that user.
+            user.id = f"{username}@{domain}"  # Should be the unique identifier of that user.
 
             user.sid = user_raw.get("objectSid")
             memberof = user_raw.get("memberOf")
@@ -261,7 +263,13 @@ class ActiveDirectoryAdapter(AdapterBase):
             use_timestamps = []  # Last usage times
             user.account_expires = parse_date(user_raw.get("accountExpires"))
             user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
-            user.last_password_change = parse_date(user_raw.get("pwdLastSet"))
+            pwd_last_set = parse_date(user_raw.get("pwdLastSet"))
+            if pwd_last_set is not None:
+                user.last_password_change = pwd_last_set
+                # parse maxPwdAge
+                max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
+                if max_pwd_age is not None:
+                    user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
             last_logoff = parse_date(user_raw.get("lastLogoff"))
             if last_logoff is not None:
                 user.last_logoff = last_logoff
@@ -278,6 +286,28 @@ class ActiveDirectoryAdapter(AdapterBase):
             use_timestamps = sorted(use_timestamps, reverse=True)
             if len(use_timestamps) > 0:
                 user.last_seen = use_timestamps[0]
+
+            lockout_time = user_raw.get("lockoutTime")
+            if is_date_real(lockout_time):
+                user.is_locked = True
+                user.last_lockout_time = parse_date(lockout_time)
+            else:
+                user.is_locked = False
+
+            # Parse the bit-field that is called userAccountControl.
+            # For future reference: the list of all bits is here
+            # http://jackstromberg.com/2013/01/useraccountcontrol-attributeflag-values/
+            userAccountControl = user_raw.get("userAccountControl")
+            if userAccountControl is not None and type(userAccountControl) == int:
+                if userAccountControl & LDAP_DONT_EXPIRE_PASSWORD:
+                    user.password_never_expires = True
+                else:
+                    user.password_never_expires = False
+
+                if userAccountControl & LDAP_PASSWORD_NOT_REQUIRED:
+                    user.password_not_required = True
+                else:
+                    user.password_not_required = False
 
             # I'm afraid this could cause exceptions, lets put it in try/except.
             try:

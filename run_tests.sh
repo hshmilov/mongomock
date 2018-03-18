@@ -20,7 +20,7 @@ docker ps rm -f `docker ps -a -q`
 docker volume rm `docker volume ls -q`
 
 echo "Running unitests"
-pytest --ignore=testing --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform --junitxml=testing/reporting/ut_report.xml
+pytest -v -s --ignore=testing --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform --junitxml=testing/reporting/ut_report.xml
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"

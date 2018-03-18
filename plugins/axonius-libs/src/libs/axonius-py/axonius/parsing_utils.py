@@ -10,7 +10,6 @@ from types import FunctionType
 from typing import NewType, Callable
 
 import dateutil.parser
-import datetime
 import ipaddress
 import binascii
 import base64
@@ -200,6 +199,20 @@ def format_ip(value):
         raise ValueError(f'Invalid IP address: {value}')
 
 
+def ad_integer8_to_timedelta(i8):
+    """
+    The syntax is Integer8, also called LargeInteger. The value is a 64-bit integer representing time intervals
+    in 100-nanosecond ticks.  The value is always negative. For example, if the maximum password age in the domain
+    is 10 days, then maxPwdAge will have the value:
+    maxPwdAge = (-1) x 10 days x 24 hours/day x 60 minutes/hour x 60 seconds/minute x 10,000,000 ticks/second
+    = -8,640,000,000,000 ticks
+    :param i8: integer8 value
+    :return: timedelta object
+    """
+
+    return datetime.timedelta(seconds=(-1 * i8) / 1e+7)
+
+
 def bytes_image_to_base64(value):
     """
     Takes a bytes list and returns a base64 str that will be shown right on <img src="">.
@@ -233,6 +246,23 @@ def format_ip_raw(value):
         # return Decimal128(ctx.create_decimal(str(address._ip)))
     except:
         raise ValueError(f'Invalid raw IP address: {value}')
+
+
+def is_date_real(datetime_to_parse):
+    """
+    Often we might encounter a situation where a datetime is valid, but actually represents
+    an empty value. for that case we have this function.
+    :param datetime_to_parse: 
+    :return: True if real, False otherwise.
+    """
+
+    # 1/1/1970 - Unix epoch
+    # 1/1/1601 - Windows NT epoch(The FILETIME structure records time in the form
+    #            of 100-nanosecond intervals since January 1, 1601.)
+
+    return type(datetime_to_parse) == datetime.datetime and \
+        datetime_to_parse.replace(tzinfo=None) != datetime.datetime(1601, 1, 1) and \
+        datetime_to_parse.replace(tzinfo=None) != datetime.datetime(1970, 1, 1)
 
 
 def parse_date(datetime_to_parse):
