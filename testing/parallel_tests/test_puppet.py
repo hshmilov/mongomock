@@ -24,7 +24,3 @@ class TestPuppetAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Test took 8 minutes. Need to fix it")
-    def test_fetch_devices(self):
-        pass

@@ -5,6 +5,7 @@ from axonius.utils.files import get_local_config_file
 from puppet_adapter.connection import PuppetConnection
 from puppet_adapter.exceptions import PuppetException
 from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.parsing_utils import parse_date
 
 # TODO ofir: Change the return values protocol
 
@@ -139,13 +140,21 @@ class PuppetAdapter(AdapterBase):
                 self.logger.exception("Cannot parse os release number")
 
             device.id = device_raw[u'certname']
-            for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
-                device.add_nic(inet.get(MAC_FIELD, ''),
-                               [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
-                               [x['address'] for x in inet.get('bindings6', []) if x.get('address')], self.logger)
+            try:
+                for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
+                    device.add_nic(inet.get(MAC_FIELD, ''),
+                                   [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
+                                   [x['address'] for x in inet.get('bindings6', []) if x.get('address')], self.logger)
+            except:
+                self.logger.exception("Problem adding nic to puppte")
             device.version = device_raw.get("puppetversion", '')
             device.number_of_processes = device_raw.get("processors", {}).get("count")
-
+            try:
+                for software_name in device_raw.get("apt_package_dist_updates", []):
+                    device.add_installed_software(name=software_name)
+            except:
+                self.logger.exception("Problemn adding software to Puppet")
+            device.last_seen = parse_date(str(device_raw.get("facts_timestamp", "")))
             device.set_raw(device_raw)
             yield device
 

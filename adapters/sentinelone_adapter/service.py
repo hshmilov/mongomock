@@ -7,6 +7,8 @@ from axonius.utils.files import get_local_config_file
 
 from sentinelone_adapter.connection import SentinelOneConnection
 from sentinelone_adapter.exceptions import SentinelOneException
+from axonius.fields import Field
+from axonius.parsing_utils import parse_date
 
 
 """
@@ -29,7 +31,7 @@ sentinelone_ID_Matcher = {
 class SentineloneAdapter(AdapterBase):
 
     class MyDevice(Device):
-        pass
+        agent_version = Field(str, 'Agent Version')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -117,10 +119,13 @@ class SentineloneAdapter(AdapterBase):
             net_info = device_raw['network_information']
             device = self._new_device()
             device.hostname = net_info['computer_name'] + '.' + net_info['domain']
+            device.domain = net_info['domain']
             device.figure_os(' '.join([soft_info['os_name'], soft_info['os_arch'], soft_info['os_revision']]))
             for interface in net_info['interfaces']:
                 device.add_nic(interface['physical'], interface['inet6'] + interface['inet'], self.logger)
+            device.agent_version = device_raw['agent_version']
             device.id = device_raw['id']
+            device.last_seen = parse_date(str(device_raw['last_active_date']))
             device.set_raw(device_raw)
             yield device
 
