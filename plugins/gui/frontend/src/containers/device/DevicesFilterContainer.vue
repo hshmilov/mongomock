@@ -97,8 +97,9 @@
                     && (!this.executed || !this.executed.length)
             },
             textSearchPattern() {
+				if (!this.schema || this.schema.length < 2) return ''
 				let patternParts = []
-                this.schema.forEach((field) => {
+                this.schema[1].fields.forEach((field) => {
 					if (field.type === 'string' && this.selected.includes(field.name)) {
 						patternParts.push(field.name + ' == regex("{val}", "i")')
 					}

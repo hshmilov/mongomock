@@ -18,17 +18,17 @@ export default {
 				let basicChildren = children.map((child) => this.getDataBasic(child))
 				if (Array.isArray(child)) {
 					children = children.concat(child.filter(
-						(childItem => !this.matchArrayPrefix(basicChildren, this.getDataBasic(childItem)))))
-				} else if (!this.matchArrayPrefix(basicChildren, this.getDataBasic(child))) {
+						(childItem => !this.arrayContains(basicChildren, this.getDataBasic(childItem)))))
+				} else if (!this.arrayContains(basicChildren, this.getDataBasic(child))) {
 					children.push(child)
 				}
 			})
 			return Array.from(children)
 		},
-		matchArrayPrefix(array, prefix) {
+		arrayContains(array, prefix) {
 			if (!prefix || typeof prefix !== 'string') return false
 			prefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-			return array.some(item => (item.match(`^${prefix}`) !== null))
+			return array.some(item => (item.match(`^${prefix}`) !== null || prefix.match(`^${item}`)))
 		},
 		getDataBasic(data) {
 			if (typeof data === 'string') return data.toLowerCase()

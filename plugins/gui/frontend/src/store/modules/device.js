@@ -48,7 +48,7 @@ export const device = {
 		[ ADD_DEVICE_LABELS ] (state, payload) {
 			state.data.content.data = [...state.data.content.data]
 			state.data.content.data.forEach(function (device) {
-				if (!payload.devices.includes(device.id)) return
+				if (!payload.devices.includes(device.internal_axon_id)) return
 				if (!device.labels) device.labels = []
 
 				device.labels = Array.from(new Set([ ...device.labels, ...payload.labels ]))
@@ -67,7 +67,7 @@ export const device = {
 		[ REMOVE_DEVICE_LABELS ] (state, payload) {
 			state.data.content.data = [...state.data.content.data]
 			state.data.content.data.forEach((device) => {
-				if (!payload.devices.includes(device.id)) return
+				if (!payload.devices.includes(device.internal_axon_id)) return
 				if (!device.labels) { return }
 
 				device.labels = device.labels.filter((label) => {
