@@ -55,7 +55,7 @@
         height: 100%;
         z-index: 20;
         padding-top: 60px;
-        background: $black;
+        background: $theme-black;
         .scroll-sidebar {
             padding-bottom: 60px;
             display: flex;
@@ -81,7 +81,7 @@
                         border-radius: 100%;
                     }
                     h5 {
-                        color: $white;
+                        color: $theme-white;
                         margin-bottom: 0;
                         trasition: all ease-in 0.2s;
                     }
@@ -91,9 +91,9 @@
                     position: relative;
                     text-align: center;
                     > a {
-                        color: $gray-dark;
+                        color: $theme-gray-dark;
                         padding: 0 4px;
-                        &:hover {  color: $white;  }
+                        &:hover {  color: $theme-white;  }
                         &:after {  display: none;  }
                     }
                 }
@@ -101,7 +101,7 @@
             .sidebar-nav {
                 overflow: auto;
                 flex: 1 0 auto;
-                background: $black;
+                background: $theme-black;
                 padding: 0px;
                 padding-top: 30px;
                 .nav-nest {
@@ -151,7 +151,7 @@
                             margin-left: 0;
                             top: 0;
                             position: absolute;
-                            background-color: $black;
+                            background-color: $theme-black;
                             display: block;
                             .nav-link span {
                                 transition: all ease-in 0.5s;

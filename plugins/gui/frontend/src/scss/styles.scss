@@ -1,27 +1,30 @@
 @import 'config';
 
+
+/* Colouring */
+
 .blue {
-    color: $blue;
+    color: $theme-blue;
 }
 
 .orange {
-  color: $orange;
+  color: $theme-orange;
 }
 
 .success {
-  color: $success-colour;
+  color: $indicator-green;
 }
 
 .info {
-  color: $info-colour;
+  color: $indicator-blue;
 }
 
 .warning {
-  color: $warning-colour;
+  color: $indicator-orange;
 }
 
 .error {
-  color: $error-colour;
+  color: $indicator-red;
 }
 
 /* Basic Styles */
@@ -54,15 +57,24 @@ table {
 /* Common Components */
 
 .x-striped-table {
-  background: $white;
+  background: $theme-white;
   thead {
     tr {
-      border-bottom: 2px dashed $gray-light;
+      border-bottom: 2px dashed $theme-gray-light;
     }
   }
   tbody {
     tr:nth-child(odd) {
-      background: rgba($gray-light, 0.6);
+      background: rgba($theme-gray-light, 0.6);
     }
+  }
+}
+
+.x-grid {
+  display: grid;
+  grid-row-gap: 16px;
+  grid-auto-rows: auto;
+  &.x-grid-col-2 {
+    grid-template-columns: 1fr 2fr;
   }
 }

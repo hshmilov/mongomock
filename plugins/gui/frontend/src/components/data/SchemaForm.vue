@@ -61,9 +61,9 @@
                 width: 240px;
                 input, select {
                     width: 100%;
-                    border: 1px solid $gray-light;
+                    border: 1px solid $theme-gray-light;
                     &.invalid {
-                        border-color: $error-colour;
+                        border-color: $indicator-red;
                     }
                 }
             }

@@ -9,10 +9,15 @@ export const UPDATE_LIFECYCLE_RATE = 'UPDATE_LIFECYCLE_RATE'
 export const FETCH_ADAPTER_DEVICES = 'FETCH_ADAPTER_DEVICES'
 export const UPDATE_ADAPTER_DEVICES = 'UPDATE_ADAPTER_DEVICES'
 
+export const FETCH_DASHBOARD = 'FETCH_DASHBOARD'
+export const UPDATE_DASHBOARD = 'UPDATE_DASHBOARD'
+export const SAVE_DASHBOARD = 'SAVE_DASHBOARD'
+
 export const dashboard = {
 	state: {
 		lifecycle: { data: {}, fetching: false, error: '' },
-		adapterDevices: { data: {}, fetching: false, error: '' }
+		adapterDevices: { data: {}, fetching: false, error: '' },
+		charts: { data: [], fetching: false, error: ''}
 	},
 	mutations: {
 		[ UPDATE_LIFECYCLE ] (state, payload) {
@@ -30,6 +35,13 @@ export const dashboard = {
 			state.adapterDevices.error = payload.error
 			if (payload.data && Object.keys(payload.data).length) {
 				state.adapterDevices.data = { ...payload.data }
+			}
+		},
+		[ UPDATE_DASHBOARD ] (state, payload) {
+			state.charts.fetching = payload.fetching
+			state.charts.error = payload.error
+			if (payload.data && payload.data.length) {
+				state.charts.data = payload.data
 			}
 		}
 	},
@@ -56,6 +68,19 @@ export const dashboard = {
 			dispatch(REQUEST_API, {
 				rule: 'dashboard/adapter_devices',
 				type: UPDATE_ADAPTER_DEVICES
+			})
+		},
+		[ FETCH_DASHBOARD ] ({dispatch}) {
+			dispatch(REQUEST_API, {
+				rule: 'dashboard',
+				type: UPDATE_DASHBOARD
+			})
+		},
+		[ SAVE_DASHBOARD ] ({dispatch}, payload) {
+			return dispatch(REQUEST_API, {
+				rule: 'dashboard',
+				method: 'POST',
+				data: payload
 			})
 		}
 	}

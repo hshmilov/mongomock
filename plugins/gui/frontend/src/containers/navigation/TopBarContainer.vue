@@ -116,7 +116,7 @@
     @import '../../scss/config';
 
     .topbar {
-        background: $gray-light;
+        background: $theme-gray-light;
         position: relative;
         z-index: 50;
         .top-navbar {
@@ -132,7 +132,7 @@
                 flex: 1 0 auto;
             }
             .navbar-header {
-                background-color: $black;
+                background-color: $theme-black;
                 line-height: 45px;
                 text-align: center;
                 width: 240px;
@@ -140,9 +140,9 @@
                 transition: all ease-in 0.2s;
                 .sidebartoggler {
                     text-align: left;
-                    color: $gray-dark;
+                    color: $theme-gray-dark;
                     &:hover {
-                        color: $orange;
+                        color: $theme-orange;
                     }
                 }
             }
@@ -167,11 +167,11 @@
                 padding-left: .75rem;
                 padding-right: .75rem;
                 line-height: 40px;
-                color: $black;
+                color: $theme-black;
                 &:hover {
-                    color: $orange;
+                    color: $theme-orange;
                     .show {
-                        color: $orange;
+                        color: $theme-orange;
                     }
                 }
             }
@@ -202,23 +202,23 @@
     }
 
     .preview-table {
-        color: $black;
+        color: $theme-black;
         line-height: initial;
         font-size: 12px;
         .item {
-            border-bottom: 1px solid $gray-dark;
+            border-bottom: 1px solid $theme-gray-dark;
             padding: 12px 12px;
             margin: 0 -12px;
             text-transform: none;
             letter-spacing: initial;
             &:first-of-type {
-                border-top: 1px solid $gray-dark;
+                border-top: 1px solid $theme-gray-dark;
             }
             &:hover {
-                color: $orange;
+                color: $theme-orange;
             }
             &.empty {
-                color: $orange;
+                color: $theme-orange;
                 cursor: default;
                 i {
                     margin: auto;

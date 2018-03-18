@@ -37,7 +37,7 @@
 
     .modal-mask {
         position: fixed;
-        z-index: 10001;
+        z-index: 1001;
         top: 0;
         left: 0;
         width: 100%;

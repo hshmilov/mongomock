@@ -75,7 +75,7 @@
         props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
-				loading: true
+				loading: false
             }
         },
         computed: {
@@ -138,12 +138,6 @@
 			fetching(newFetching) {
                 this.loading = newFetching
             },
-            pageData(newPageData) {
-				if (!newPageData.length && this.count.data) {
-					this.loading = true
-                    this.fetchLinkedPages()
-				}
-            },
             pageLinkNumbers() {
 				this.fetchLinkedPages()
             }
@@ -172,9 +166,7 @@
             }
         },
 		created() {
-			if (this.content.data.length) {
-				this.loading = false
-			} else {
+			if (!this.content.data.length) {
 				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})
             }
             if (this.refresh) {
@@ -212,7 +204,7 @@
                     height: 30px;
                     &.clickable:hover {
                         cursor: pointer;
-                        box-shadow: 0 2px 16px -4px $gray-dark;
+                        box-shadow: 0 2px 16px -4px $theme-gray-dark;
                     }
                 }
             }
@@ -233,7 +225,7 @@
                 padding-top: 4px;
                 .active, .x-link:hover {
                     cursor: pointer;
-                    color: $orange;
+                    color: $theme-orange;
                     transition: color 0.4s;
                 }
                 .active:hover {
@@ -247,8 +239,8 @@
                 justify-content: space-evenly;
                 flex: 0 1 auto;
                 position: relative;
-                background: $white;
-                border-bottom: 2px solid $white;
+                background: $theme-white;
+                border-bottom: 2px solid $theme-white;
                 border-radius: 2px;
                 .active, .x-link:hover {
                     cursor: pointer;
@@ -263,7 +255,7 @@
                     position: absolute;
                     transform: rotate(-45deg);
                     border: 20px solid transparent;
-                    border-left: 20px solid $white;
+                    border-left: 20px solid $theme-white;
                     border-radius: 2px;
                     left: -20px;
                     top: -20px;

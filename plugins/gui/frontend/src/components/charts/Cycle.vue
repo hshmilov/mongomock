@@ -1,36 +1,31 @@
 <template>
-        <svg class="cycle" width="200" height="212">
+        <svg class="cycle">
             <!-- Basis for the cycle - full circle, not coloured -->
             <circle class="pre" :r="radius" cx="50%" cy="50%"></circle>
 
             <template v-for="item, index in data">
                 <!-- Slice filled according to complete portion of current item -->
-                <circle class="slice" :r="radius" cx="50%" cy="50%" v-bind:style="{
+                <circle :class="`slice extra-stroke-${(index % 6) + 1}`" :r="radius" cx="50%" cy="50%" v-bind:style="{
                     strokeDasharray: `${sliceLength * item.status} ${circleLength}`,
                     strokeDashoffset: -(index * sliceLength)
                 }"></circle>
                 <!-- Marker of 1px in the start of the slice -->
                 <circle class="marker" :r="radius" cx="50%" cy="50%" v-bind:style="{
-                    strokeDasharray: `1 ${circleLength}`,
+                    strokeDasharray: `4 ${circleLength}`,
                     strokeDashoffset: -(index * sliceLength)
                 }"></circle>
-                <!-- Path tracing the entire slice, slightly wider, for placing text around it -->
-                <path :d="calculateArc(index)" :id="item.name" transform="rotate(4 100 108)"></path>
-                <!-- Text with the name of the item, clung to the arc path -->
-                <text><textPath :xlink:href="`#${item.name}`">{{item.name.split('_').join(' ')}}</textPath></text>
             </template>
-
-            <!-- Closure for the cycle - fill surface white, to hide markers' edges -->
-            <circle class="post" :r="radius - 6" cx="50%" cy="50%"></circle>
 
             <template v-if="status < 100">
                 <!-- Percentage of completion of the cycle, updating while cycle proceeds -->
-                <text x="50%" y="50%" text-anchor="middle" dy=".5em" class="title">{{parseInt(status)}}%</text>
+                <text v-if="stageName" x="50%" y="50%" text-anchor="middle"
+                      :class="`extra-fill-${(stageIndex % 6) + 1}`">{{stageName}}...</text>
+                <text x="50%" y="50%" text-anchor="middle" dy="2em" class="subtitle">{{parseInt(status)}}%</text>
             </template>
             <template v-else>
                 <!-- Cycle is complete, namely status is stable -->
                 <text x="50%" y="50%" text-anchor="middle" class="title">STABLE</text>
-                <path d="M124 124 L96 148 L84 134" stroke-width="4" class="check"></path>
+                <path d="M170 130 L140 160 L130 150" stroke-width="4" class="check"></path>
             </template>
         </svg>
 </template>
@@ -38,7 +33,7 @@
 <script>
 	export default {
 		name: 'x-cycle-chart',
-        props: {data: {required: true}, radius: {default: 80}},
+        props: {data: {required: true}, radius: {default: 100}},
         computed: {
 			circleLength() {
                 return 2 * Math.PI * this.radius
@@ -51,32 +46,23 @@
 				if (!this.circleLength|| !this.sliceCount) return 0
                 return this.circleLength / this.sliceCount
             },
-            sliceAngle() {
-				if (!this.sliceCount) return 0
-				return 360 / this.sliceCount
-            },
             status() {
 				if (!this.data || !this.data.length) return 100
 				return this.data.reduce((sum, item) => sum + item.status, 0) * 100 / this.sliceCount
-            }
-        },
-        methods: {
-			polarToCartesian(angleInDegrees) {
-				let angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0
-				return {
-					x: 100 + ((this.radius + 8) * Math.cos(angleInRadians)),
-					y: 108 + ((this.radius + 8) * Math.sin(angleInRadians))
-				}
             },
-			calculateArc(index) {
-				/* Calculate d sequence for an arc, parallel to the cycle slice of given index */
-				const start = this.polarToCartesian(90 + (index * this.sliceAngle))
-                const end = this.polarToCartesian(90 + ((index + 1) * this.sliceAngle))
-
-				return [
-					"M", start.x, start.y,
-					"A", this.radius, this.radius, 0, 0, 1, end.x, end.y
-				].join(" ")
+            stageName() {
+				if (!this.data || !this.data.length) return ''
+                return this.data.filter(item => (item.status > 0) && (item.status < 1))[0].name.split('_').join(' ')
+            },
+            stageIndex() {
+				if (!this.data || !this.data.length) return -1
+                let currentStage = -1
+				this.data.forEach((item, index) => {
+					if (item.status > 0 && item.status < 1) {
+						currentStage = index
+                    }
+                })
+                return currentStage
             }
         }
 	}
@@ -92,34 +78,34 @@
             fill: none;
             stroke-width: 12;
             &.pre {
-                stroke: $gray-light;
-            }
-            &.slice {
-                stroke: $success-colour;
+                stroke: $theme-gray-light;
             }
             &.marker {
-                stroke: $gray-dark;
-                stroke-width: 36;
+                stroke: $theme-white;
+                stroke-width: 16;
             }
             &.post {
                 stroke-width: 0;
-                fill: $white;
+                fill: $theme-white;
             }
         }
         text {
             stroke: none;
-            fill: $gray-dark;
+            fill: $theme-gray-dark;
             font-size: 10px;
             &.title {
-                fill: $blue;
-                font-size: 36px;
+                fill: $theme-blue;
+                font-size: 18px;
+            }
+            &.subtitle {
+                font-size: 24px;
             }
         }
         path {
             fill: none;
             stroke: none;
             &.check {
-                stroke: $success-colour;
+                stroke: $indicator-green;
                 stroke-dasharray: 60;
                 stroke-dashoffset: -60;
                 animation: check-stroke ease-in-out .8s forwards;

@@ -65,24 +65,43 @@ $media-break-lg: "(min-width : 992px)";
 $media-break-xl: "(min-width : 1200px)";
 
 
-/* Main Colours */
-$orange: #FF7D46;
-$black: #1D222C;
-$blue: #0076FF;
-$white: #FFFFFF;
-$gray-light: #F3F3F3;
-$gray-dark: #727272;
+/* Theme Colours */
+$theme-orange: #FF7D46;
+$theme-black: #1D222C;
+$theme-blue: #0076FF;
+$theme-white: #FFFFFF;
+$theme-gray-light: #F3F3F3;
+$theme-gray-dark: #727272;
 
-/* Info Colours */
-$error-colour: #D0011B;
-$warning-colour: #F6A623;
-$info-colour: #4796E4;
-$success-colour: #0FBC18;
+/* Indicator Colours */
+$indicator-red: #D0011B;
+$indicator-orange: #F6A623;
+$indicator-blue: #4796E4;
+$indicator-green: #0FBC18;
 
+/* Extra Colours */
+$extra-cyan: #15C59E;
+$extra-turquoise: #15ACB2;
+$extra-blue: #1593C5;
+$extra-pink: #B932BB;
+$extra-mauve: #8A32BB;
+$extra-purple: #5A32BB;
+$extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-mauve, $extra-purple;
+
+@for $i from 1 through length($extra-colours) {
+  .extra-stroke-#{$i} {
+    stroke: nth($extra-colours, $i);
+  }
+}
+@for $i from 1 through length($extra-colours) {
+  .extra-fill-#{$i} {
+    fill: nth($extra-colours, $i);
+  }
+}
 
 /* Mixins */
 
-@mixin triangle($direction, $size: 0.375rem, $color: $gray-dark){
+@mixin triangle($direction, $size: 0.375rem, $color: $theme-gray-dark){
   content: '';
   display: block;
   position: absolute;

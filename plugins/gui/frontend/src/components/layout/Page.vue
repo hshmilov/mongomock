@@ -34,7 +34,7 @@
     .x-page {
         display: flex;
         flex-direction: column;
-        background: $gray-light;
+        background: $theme-gray-light;
         padding: 72px 24px 24px 264px;
         position: relative;
         width: 100%;
@@ -49,12 +49,12 @@
             width: 100%;
             text-transform: capitalize;
             z-index: 100;
-            color: $black;
+            color: $theme-black;
             margin-bottom: 12px;
             padding: 12px 8px;
             border-top: 1px solid;
             border-bottom: 1px solid;
-            border-color: rgba($orange, 0.2);
+            border-color: rgba($theme-orange, 0.2);
             .x-title {
                 flex: 1 0 auto;
                 font-weight: 200;
@@ -68,7 +68,7 @@
                     margin-right: 18px;
                     &:after {
                         right: -12px;
-                        @include triangle('right', 0.25rem, $black);
+                        @include triangle('right', 0.25rem, $theme-black);
                     }
                 }
             }
@@ -77,9 +77,9 @@
                 line-height: 24px;
                 font-size: 12px;
                 text-transform: none;
-                color: $blue;
+                color: $theme-blue;
                 &:hover {
-                    color: $orange;
+                    color: $theme-orange;
                 }
             }
         }

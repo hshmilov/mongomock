@@ -1,101 +1,169 @@
 <template>
     <x-page title="axonius dashboard" class="dashboard">
         <card title="Data Collection">
-            <x-counter :data="adapterDevicesCounterData"></x-counter>
+            <x-counter-chart :data="adapterDevicesCounterData"/>
         </card>
         <card title="Devices per Adapter">
-            <x-histogram :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"></x-histogram>
+            <x-histogram-chart :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"/>
         </card>
         <card title="System Lifecycle" class="lifecycle">
-            <x-cycle-chart :data="lifecycle.subPhases"></x-cycle-chart>
-            <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div></div>
+            <x-cycle-chart :data="lifecycle.subPhases"/>
+            <div class="cycle-time">Next cycle starts in
+                <div class="blue">{{ nextRunTime }}</div>
+            </div>
         </card>
+        <card v-for="chart in dashboard.charts.data" :title="chart.name" :key="chart.name" v-if="chart.data">
+            <x-results-chart :data="chart.data" />
+        </card>
+        <card title="New Chart..." class="build-chart">
+            <div class="link" @click="createNewDashboard">+</div>
+        </card>
+        <feedback-modal :launch="newDashboard.isActive" :handle-save="saveNewDashboard" @change="finishNewDashboard">
+            <h3>Create a Dashboard Chart</h3>
+            <div class="x-grid x-grid-col-2">
+                <label>Chart Title</label>
+                <input type="text" v-model="newDashboard.data.name">
+                <vm-select v-model="newDashboard.data.queries" multiple filterable
+                           no-data-text="No saved queries" placeholder="Select saved queries...">
+                    <vm-option v-for="savedQuery in savedQueries" :key="savedQuery.name"
+                               :value="savedQuery.name" :label="savedQuery.name"/>
+                </vm-select>
+            </div>
+        </feedback-modal>
     </x-page>
 </template>
 
 
 <script>
-    import xPage from '../../components/layout/Page.vue'
-    import Card from '../../components/Card.vue'
+  import xPage from '../../components/layout/Page.vue'
+  import Card from '../../components/Card.vue'
+  import FeedbackModal from '../../components/popover/FeedbackModal.vue'
 
-    import xCounter from '../../components/charts/Counter.vue'
-    import xHistogram from '../../components/charts/Histogram.vue'
-    import xCycleChart from '../../components/charts/Cycle.vue'
+	import xCounterChart from '../../components/charts/Counter.vue'
+	import xHistogramChart from '../../components/charts/Histogram.vue'
+	import xCycleChart from '../../components/charts/Cycle.vue'
+	import xResultsChart from '../../components/charts/Results.vue'
 
-    import { FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES } from '../../store/modules/dashboard'
-    import { UPDATE_NEW_QUERY } from '../../store/modules/query'
-    import { mapState, mapMutations, mapActions } from 'vuex'
+	import {
+		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD, SAVE_DASHBOARD
+	} from '../../store/modules/dashboard'
+	import { UPDATE_NEW_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
+	import { mapState, mapMutations, mapActions } from 'vuex'
 
-    export default {
-        name: 'x-dashboard',
-        components: {
-			xPage, Card, xCounter, xHistogram, xCycleChart },
-        computed: {
-            ...mapState(['dashboard']),
-            lifecycle() {
+	export default {
+		name: 'x-dashboard',
+		components: {
+			xPage, Card, FeedbackModal,
+            xCounterChart, xHistogramChart, xCycleChart, xResultsChart
+		},
+		computed: {
+			...mapState({
+                dashboard(state) {
+                	return state['dashboard']
+                },
+                savedQueries(state) {
+                	return state['query'].savedQueries.data
+                }
+			}),
+			lifecycle () {
 				if (!this.dashboard.lifecycle.data) return {}
 
 				return this.dashboard.lifecycle.data
-            },
-            adapterDevices() {
-            	if (!this.dashboard.adapterDevices.data) return {}
+			},
+			adapterDevices () {
+				if (!this.dashboard.adapterDevices.data) return {}
 
-            	return this.dashboard.adapterDevices.data
-            },
-            adapterDevicesCount() {
-            	return this.adapterDevices.adapter_count
-            },
-            adapterDevicesCounterData() {
-            	return [
-                    {count: this.adapterDevices.total_gross, title: 'Managed Devices Collected', highlight: true},
-					{count: this.adapterDevices.total_net, title: 'Actual Devices Discovered'},
-                ]
-            },
-            nextRunTime() {
+				return this.dashboard.adapterDevices.data
+			},
+			adapterDevicesCount () {
+				return this.adapterDevices.adapter_count
+			},
+			adapterDevicesCounterData () {
+				return [
+					{count: this.adapterDevices.total_gross || 0, title: 'Managed Devices Collected', highlight: true},
+					{count: this.adapterDevices.total_net || 0, title: 'Actual Devices Discovered'},
+				]
+			},
+			nextRunTime () {
 				let leftToRun = new Date(parseInt(this.lifecycle.nextRunTime) * 1000) - Date.now()
-                let thresholds = [1000, 60 * 1000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
-                let units = ['seconds', 'minutes', 'hours', 'days']
-                for (let i = 1; i < thresholds.length; i++) {
+				let thresholds = [1000, 60 * 1000, 60 * 60 * 1000, 24 * 60 * 60 * 1000]
+				let units = ['seconds', 'minutes', 'hours', 'days']
+				for (let i = 1; i < thresholds.length; i++) {
 					if (leftToRun < thresholds[i]) {
-						return `${parseInt(leftToRun / thresholds[i - 1])} ${units[i-1]}`
+						return `${Math.round(leftToRun / thresholds[i - 1])} ${units[i - 1]}`
 					}
-                }
-				return `${parseInt(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
+				}
+				return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
 			}
-        },
-        methods: {
-			...mapMutations({ updateQuery: UPDATE_NEW_QUERY}),
-			...mapActions({ fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES }),
-            getDashboardData() {
-            	this.fetchLifecycle()
-                this.fetchAdapterDevices()
-            },
-			runAdapterDevicesFilter(adapterName) {
-                this.updateQuery({filter: `adapters == '${adapterName}'`})
-				this.$router.push({name: 'Devices'})
+		},
+        data() {
+			return {
+                newDashboard: {
+                	isActive: false,
+                    data: {
+                		name: '', queries: []
+                    }
+                },
             }
         },
-        created() {
-        	this.getDashboardData()
-            this.interval = setInterval(function () {
+		methods: {
+			...mapMutations({updateQuery: UPDATE_NEW_QUERY}),
+			...mapActions({
+                fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
+                fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD,
+                fetchQueries: FETCH_SAVED_QUERIES
+			}),
+			getDashboardData () {
 				this.fetchLifecycle()
-			}.bind(this), 500)
+				this.fetchAdapterDevices()
+                this.fetchDashboard()
+			},
+			runAdapterDevicesFilter (adapterName) {
+				this.updateQuery({filter: `adapters == '${adapterName}'`})
+				this.$router.push({name: 'Devices'})
+			},
+            createNewDashboard() {
+				this.newDashboard.isActive = true
+            },
+            saveNewDashboard() {
+                return this.saveDashboard(this.newDashboard.data)
+            },
+            finishNewDashboard() {
+				this.newDashboard.isActive = false
+                this.newDashboard.data = { name: '', queries: [] }
+            }
 		},
-		beforeDestroy() {
-        	clearInterval(this.interval)
+		created () {
+			if (!this.savedQueries || !this.savedQueries.length) this.fetchQueries()
+            
+			this.getDashboardData()
+			this.intervals = []
+            this.intervals.push(setInterval(function () {
+				this.fetchLifecycle()
+			}.bind(this), 500))
+			this.intervals.push(setInterval(function () {
+				this.fetchDashboard()
+			}.bind(this), 1000))
+			this.intervals.push(setInterval(function () {
+				this.fetchAdapterDevices()
+			}.bind(this), 10000))
+		},
+		beforeDestroy () {
+			this.intervals.forEach(interval => clearInterval(interval))
 		}
-    }
+	}
 </script>
 
 
 <style lang="scss">
 
     .dashboard {
-        .page-body {
+        .x-body {
             display: flex;
             flex-wrap: wrap;
             .card {
                 width: 360px;
+                height: 320px;
                 margin-right: 24px;
                 &.lifecycle .card-body {
                     text-align: center;
@@ -105,24 +173,28 @@
                         flex: 100%;
                     }
                     .cycle-time {
-                        font-size: 14px;
+                        font-size: 12px;
+                        text-align: right;
                         .blue {
                             display: inline-block;
-                            margin-left: 8px;
                         }
                     }
                 }
-                &.patches {
-                    .info {
-                        font-size: 20px;
-                        margin-bottom: 8px;
+                &.build-chart {
+                    .link {
+                        font-size: 144px;
+                        text-align: center;
                     }
-                    .row {
-                        margin-left: 0;
-                        .col-4 {
-                            text-align: center;
-                            font-size: 20px;
-                        }
+                }
+            }
+            .modal-body {
+                h3 {
+                    margin-bottom: 24px;
+                }
+                .vm-select {
+                    grid-column: span 2;
+                    .vm-select-input__inner {
+                         width: 100%;
                     }
                 }
             }

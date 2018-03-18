@@ -180,6 +180,10 @@ def beautify_db_entry(entry):
     return tmp
 
 
+def filter_archived():
+    return {'$or': [{}, {'archived': {'$exists': False}}, {'archived': False}]}
+
+
 class GuiService(PluginBase):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
@@ -279,7 +283,7 @@ class GuiService(PluginBase):
         """
         device_views_collection = self._get_collection('device_views', limited_user=False)
         if request.method == 'GET':
-            mongo_filter = {'$or': [{}, {'archived': {'$exists': False}}, {'archived': False}]}
+            mongo_filter = filter_archived()
             return jsonify(beautify_db_entry(entry) for entry in device_views_collection.find(mongo_filter)
                            .sort([('_id', pymongo.DESCENDING)]))
         # Handle POST request
@@ -412,7 +416,7 @@ class GuiService(PluginBase):
         :return:
         """
         if request.method == 'GET':
-            mongo_filter['archived'] = False
+            mongo_filter['$or'] = filter_archived()['$or']
             queries_collection = self._get_collection('queries', limited_user=False)
             return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
                            .sort([('timestamp', pymongo.DESCENDING)])
@@ -932,43 +936,70 @@ class GuiService(PluginBase):
     # DASHBOARD #
     #############
 
-    @add_rule_unauthenticated("research_phase", methods=['POST'])
-    def schedule_research_phase(self):
+    @add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
+    def get_dashboard(self):
         """
-        Schedules or initiates research phase.
+        GET Fetch current dashboard chart definitions. For each definition, fetch each of it's queries and
+        fetch devices_db_view with their view. Amount of results is mapped to each queries' name, under 'data' key,
+        to be returned with the dashboard definition.
 
-        :return: Map between each adapter and the number of devices it has, unless no devices
+        POST Save a new dashboard chart definition, given it has a name and at least one query attached
+
+        :return:
         """
-        data = self.get_request_data_as_object()
-        self.logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
-        response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+        with self._get_db_connection(False) as db_connection:
+            dashboard_collection = self._get_collection('dashboard', limited_user=False)
+            queries_collection = self._get_collection('queries', limited_user=False)
+            devices_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
+            if request.method == 'GET':
+                dashboard_list = []
+                for dashboard_object in dashboard_collection.find(filter_archived()):
+                    if not dashboard_object.get('name'):
+                        self.logger.info(f'No name for dashboard {dashboard_object["_id"]}')
+                    elif not dashboard_object.get('queries'):
+                        self.logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
+                    else:
+                        # Let's fetch and run them query filters
+                        for query_name in dashboard_object['queries']:
+                            query_object = queries_collection.find_one({'name': query_name})
+                            if not query_object or not query_object.get('filter'):
+                                self.logger.info(f'No filter found for query {query_name}')
+                            else:
+                                if not dashboard_object.get('data'):
+                                    dashboard_object['data'] = {}
+                                dashboard_object['data'][query_name] = devices_collection.find(
+                                    pql.find(query_object['filter']), {'_id': 1}).count()
 
-        if response.status_code != 200:
-            self.logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
-            return return_error(f"Could not schedule research phase to: {data if data else 'Now'}",
-                                response.status_code)
+                        dashboard_list.append(beautify_db_entry(dashboard_object))
+                return jsonify(dashboard_list)
 
+        # Handle 'POST' request method - save dashboard configuration
+        dashboard_object = self.get_request_data_as_object()
+        if not dashboard_object.get('name'):
+            return return_error('Name required in order to save Dashboard Chart', 400)
+        if not dashboard_object.get('queries'):
+            return return_error('At least one query required in order to save Dashboard Chart', 400)
+        update_result = dashboard_collection.replace_one({'name': dashboard_object['name']}, dashboard_object,
+                                                         upsert=True)
+        if not update_result.upserted_id and not update_result.modified_count:
+            return return_error('Error saving dashboard chart', 400)
         return ''
 
-    @add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
-    def system_lifecycle_rate(self):
+    @add_rule_unauthenticated("dashboard/<dashboard_name>", methods=['GET'])
+    def dashboard_chart(self, dashboard_name):
         """
-        Fetches and build data needed for presenting current status of the system's lifecycle in a graph
+        Fetches data, according to definition saved for the dashboard named by given name
 
-        :return: Data containing:
-         - All research phases names, for showing the whole picture
-         - Current research sub-phase, which is empty if system is not stable
-         - Portion of work remaining for the current sub-phase
-         - The time next cycle is scheduled to run
+        :param dashboard_name: Name of the dashboard to fetch data for
+        :return:
         """
-        if self.get_method() == 'GET':
-            response = self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
-            return response.content
-        elif self.get_method() == 'POST':
-            response = self.request_remote_plugin(
-                'research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
-            self.logger.info(f"response code: {response.status_code} response crap: {response.content}")
-            return ''
+        dashboard_object = self._get_collection('dashboard', limited_user=False).find({'name': dashboard_name})
+        if not dashboard_object:
+            self.logger.info(f'No dashboard by the name {dashboard_name} found')
+            return jsonify([])
+        if not dashboard_object.get('queries'):
+            self.logger.info(f'No queries found for dashboard {dashboard_name}')
+            return jsonify([])
 
     @add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
     def get_system_lifecycle(self):
@@ -1009,6 +1040,20 @@ class GuiService(PluginBase):
 
         return jsonify({'sub_phases': sub_phases, 'next_run_time': run_time_response.text})
 
+    @add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
+    def system_lifecycle_rate(self):
+        """
+
+        """
+        if self.get_method() == 'GET':
+            response = self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
+            return response.content
+        elif self.get_method() == 'POST':
+            response = self.request_remote_plugin(
+                'research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
+            self.logger.info(f"response code: {response.status_code} response crap: {response.content}")
+            return ''
+
     @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
     def get_adapter_devices(self):
         """
@@ -1035,6 +1080,24 @@ class GuiService(PluginBase):
             adapter_devices['total_net'] = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find({}).count()
 
         return jsonify(adapter_devices)
+
+    @add_rule_unauthenticated("research_phase", methods=['POST'])
+    def schedule_research_phase(self):
+        """
+        Schedules or initiates research phase.
+
+        :return: Map between each adapter and the number of devices it has, unless no devices
+        """
+        data = self.get_request_data_as_object()
+        self.logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
+        response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+
+        if response.status_code != 200:
+            self.logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
+            return return_error(f"Could not schedule research phase to: {data if data else 'Now'}",
+                                response.status_code)
+
+        return ''
 
     #############
     # SETTINGS #

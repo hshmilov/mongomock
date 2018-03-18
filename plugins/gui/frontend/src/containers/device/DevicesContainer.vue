@@ -9,7 +9,7 @@
                 <!-- Available actions for performing on currently selected group of devices --->
                 <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices"/>
 
-                <triggerable-dropdown :arrow="false">
+                <triggerable-dropdown :arrow="false" align="right">
                     <div slot="dropdownTrigger" class="link">View</div>
                     <nested-menu slot="dropdownContent">
                         <nested-menu-item title="Save" @click="openSaveModal(confirmSaveView)" />

@@ -99,7 +99,7 @@ export const fetchTableContent = ({state, dispatch}, payload) => {
 	if (view.filter && view.filter.length) {
 		param += `&filter=${view.filter}`
 	}
-	dispatch(REQUEST_API, {
+	return dispatch(REQUEST_API, {
 		rule: payload.module + param,
 		type: UPDATE_DATA_CONTENT,
 		payload: {module: payload.module, restart: (payload.skip === 0)}

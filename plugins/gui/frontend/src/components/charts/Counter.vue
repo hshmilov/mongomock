@@ -1,16 +1,42 @@
 <template>
-    <div>
-        <div v-for="item in data" class="counter">
+    <div class="x-grid x-grid-col-2 counter" :class="{updating: enumerating}">
+        <template v-for="item in displayData">
             <div class="count" :class="{highlight: item.highlight}">{{ item.count }}</div>
             <div class="title">{{ item.title }}</div>
-        </div>
+        </template>
     </div>
 </template>
 
 <script>
 	export default {
-		name: 'x-counter',
-        props: { data: {required: true}}
+		name: 'x-counter-chart',
+        props: { data: {required: true}},
+        data() {
+			return {
+			    displayData: [ ...this.data ],
+                enumerating: false
+            }
+        },
+        watch: {
+			data() {
+                this.enumerating = true
+            }
+        },
+        updated() {
+			if (!this.enumerating) return
+            setTimeout(() => {
+                this.enumerating = false
+                this.displayData = this.displayData.map((item, index) => {
+                    if (item.count === this.data[index].count) return item
+                    this.enumerating = true
+                    if (this.data[index].count > item.count) {
+                        return { ...item, count: Math.min(item.count + 10,  this.data[index].count)}
+                    }
+                    // Smaller - need to subtract
+					return { ...item, count: Math.max(item.count - 10,  this.data[index].count)}
+                })
+            }, 10)
+        }
 	}
 </script>
 
@@ -19,18 +45,18 @@
 
     .counter {
         .count {
-            font-size: 72px;
+            font-size: 60px;
             display: inline;
-            color: $blue;
+            color: $theme-blue;
             &.highlight {
-                color: $orange;
+                color: $theme-orange;
             }
         }
         .title {
             display: inline-block;
-            max-width: 180px;
+            max-width: 160px;
             text-align: left;
-            line-height: 36px;
+            margin: auto;
             margin-left: 12px;
         }
     }
