@@ -53,7 +53,7 @@ class MobileironAdapter(AdapterBase):
         :return: A json with all the attributes returned from the MobileIron Server
         """
         with client_data:
-            return json.dumps(client_data.get_device_list())
+            return client_data.get_device_list()
 
     def _clients_schema(self):
         """
@@ -89,11 +89,11 @@ class MobileironAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in json.loads(devices_raw_data):
+        for device_raw in devices_raw_data:
             try:
                 device = self._new_device()
                 device.id = device_raw.get("common.id")
-                if device.id == None:
+                if device.id is None:
                     continue
                 device.uuid = device_raw.get("common.uuid")
                 device.hostname = device_raw.get("ios.DeviceName",  "")

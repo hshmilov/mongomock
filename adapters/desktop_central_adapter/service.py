@@ -43,7 +43,7 @@ class DesktopCentralAdapter(AdapterBase):
         :return: A json with all the attributes returned from the DesktopCentral Server
         """
         with client_data:
-            return json.dumps(client_data.get_device_list())
+            return client_data.get_device_list()
 
     def _clients_schema(self):
         """
@@ -79,7 +79,7 @@ class DesktopCentralAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in json.loads(devices_raw_data):
+        for device_raw in devices_raw_data:
             try:
                 # 2 represents live_status is down
                 if device_raw.get("computer_live_status", device_raw.get("live_status")) == 2:

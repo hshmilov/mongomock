@@ -15,6 +15,10 @@ export const adapterStaticData = {
 		name: 'Active Directory',
 		description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticate and authorizes all users and computers.'
 	},
+	'gotoassist_adapter': {
+		name: 'GoToAssist',
+		description: 'GoToAssist is a cloud-based toolset for IT and customer support teams an includes remote support, IT monitoring and service desk management. '
+	},
 	'aws_adapter': {
 		name: 'Amazon Elastic',
 		description: 'Amazon Elastic Compute Cloud (Amazon EC2) provides scalable computing capacity in the Amazon Web Services (AWS) cloud.'
