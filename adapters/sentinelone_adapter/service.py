@@ -40,13 +40,25 @@ class SentineloneAdapter(AdapterBase):
         return client_config['SentinelOne_Domain']
 
     def _connect_client(self, client_config):
+        has_token = bool(client_config.get('token'))
+        maybe_has_user = bool(client_config.get('username')) or bool(client_config.get('password'))
+        has_user = bool(client_config.get('username')) and bool(client_config.get('password'))
+        if has_token and maybe_has_user:
+            msg = f"Different logins for SentinelOne domain " \
+                  f"{client_config.get('SentinelOne_Domain')}, user: {client_config.get('username', '')}"
+            self.logger.error(msg)
+            raise ClientConnectionException(msg)
+        elif maybe_has_user and not has_user:
+            msg = f"Missing credentials for SentinelOne domain " \
+                  f"{client_config.get('SentinelOne_Domain')}, user: {client_config.get('username', '')}"
+            self.logger.error(msg)
+            raise ClientConnectionException(msg)
         try:
-            domain = client_config["SentinelOne_Domain"]
-            if domain in client_config:
-                self.logger.info("Different logins for SentinelOne domain {0}, user: {1}",
-                                 client_config["SentinelOne_Domain"], client_config["username"])
             connection = SentinelOneConnection(logger=self.logger, domain=client_config["SentinelOne_Domain"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            if has_token:
+                connection.set_token(client_config['token'])
+            else:
+                connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -101,12 +113,15 @@ class SentineloneAdapter(AdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
-                }
+                },
+                {
+                    "name": "token",
+                    "title": "API token",
+                    "type": "string"
+                },
             ],
             "required": [
-                "SentinelOne_Domain",
-                "username",
-                "password"
+                "SentinelOne_Domain"
             ],
             "type": "array"
         }

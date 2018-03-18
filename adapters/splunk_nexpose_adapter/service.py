@@ -18,6 +18,19 @@ class SplunkNexposeAdapter(AdapterBase):
         return '{}:{}'.format(client_config['host'], client_config['port'])
 
     def _connect_client(self, client_config):
+        has_token = bool(client_config.get('token'))
+        maybe_has_user = bool(client_config.get('username')) or bool(client_config.get('password'))
+        has_user = bool(client_config.get('username')) and bool(client_config.get('password'))
+        if has_token and maybe_has_user:
+            msg = f"Different logins for Splunk [Nexpose] domain " \
+                  f"{client_config.get('host')}, user: {client_config.get('username', '')}"
+            self.logger.error(msg)
+            raise ClientConnectionException(msg)
+        elif maybe_has_user and not has_user:
+            msg = f"Missing credentials for Splunk [Nexpose] domain " \
+                  f"{client_config.get('host')}, user: {client_config.get('username', '')}"
+            self.logger.error(msg)
+            raise ClientConnectionException(msg)
         try:
             connection = SplunkConnection(self.logger, **client_config)
             with connection:
@@ -68,13 +81,16 @@ class SplunkNexposeAdapter(AdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
+                },
+                {
+                    "name": "token",
+                    "title": "API Token",
+                    "type": "string"
                 }
             ],
             "required": [
                 "host",
-                "port",
-                "username",
-                "password"
+                "port"
             ],
             "type": "array"
         }

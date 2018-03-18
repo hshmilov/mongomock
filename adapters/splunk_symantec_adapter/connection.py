@@ -6,8 +6,10 @@ from splunklib.results import ResultsReader
 
 
 class SplunkConnection(object):
-    def __init__(self, host, port, username, password, logger):
+    def __init__(self, logger, host, port, username, password, token):
         self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password}
+        if token:
+            self.conn_details['token'] = token
         self.conn = None
         self.logger = logger
 

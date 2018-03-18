@@ -9,6 +9,7 @@ SPLUNK_HOST = 'host'
 SPLUNK_PORT = 'port'
 SPLUNK_USER = 'username'
 SPLUNK_PASSWORD = 'password'
+SPLUNK_TOKEN = 'token'
 SPLUNK_ONLINE_HOURS = 'online_hours'
 
 
@@ -25,13 +26,26 @@ class SplunkSymantecAdapter(AdapterBase):
         return '{0}:{1}'.format(client_config[SPLUNK_HOST], client_config[SPLUNK_PORT])
 
     def _connect_client(self, client_config):
+        has_token = bool(client_config.get(SPLUNK_TOKEN))
+        maybe_has_user = bool(client_config.get(SPLUNK_USER)) or bool(client_config.get(SPLUNK_PASSWORD))
+        has_user = bool(client_config.get(SPLUNK_USER)) and bool(client_config.get(SPLUNK_PASSWORD))
+        if has_token and maybe_has_user:
+            msg = f"Different logins for Splunk [Symantec] domain " \
+                  f"{client_config.get(SPLUNK_HOST)}, user: {client_config.get(SPLUNK_USER, '')}"
+            self.logger.error(msg)
+            raise ClientConnectionException(msg)
+        elif maybe_has_user and not has_user:
+            msg = f"Missing credentials for Splunk [Symantec] domain " \
+                  f"{client_config.get(SPLUNK_HOST)}, user: {client_config.get(SPLUNK_USER, '')}"
+            self.logger.error(msg)
+            raise ClientConnectionException(msg)
         try:
             self._online_hours = int(client_config[SPLUNK_ONLINE_HOURS] or self._online_hours)
             assert self._online_hours > 0, "You entered an invalid amount of hours as online hours"
             # copying as otherwise we would pop it from the client saved in the gui
             client_con = client_config.copy()
             client_con.pop(SPLUNK_ONLINE_HOURS)
-            connection = SplunkConnection(**client_con, logger=self.logger)
+            connection = SplunkConnection(self.logger, **client_con)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -119,6 +133,11 @@ class SplunkSymantecAdapter(AdapterBase):
                     "format": "password"
                 },
                 {
+                    "name": SPLUNK_TOKEN,
+                    "title": "API Token",
+                    "type": "string"
+                },
+                {
                     "name": SPLUNK_ONLINE_HOURS,
                     "title": "Online Hours Threshold",
                     "description": "Hours for device to be considered online (default = 24)",
@@ -127,9 +146,7 @@ class SplunkSymantecAdapter(AdapterBase):
             ],
             "required": [
                 SPLUNK_HOST,
-                SPLUNK_PORT,
-                SPLUNK_USER,
-                SPLUNK_PASSWORD
+                SPLUNK_PORT
             ],
             "type": "array"
         }
