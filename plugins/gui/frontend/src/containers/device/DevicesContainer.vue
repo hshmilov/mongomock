@@ -1,7 +1,7 @@
 <template>
     <x-page title="devices">
         <a slot="pageAction" @click="openSaveModal(confirmSaveQuery)">Save Query</a>
-        <devices-filter-container :schema="filterFields" v-model="queryFilter" :selected="selectedFields" @submit="executeQuery"/>
+        <x-data-query module="device" :schema="coloumnSelectionFields" :selected="selectedFields"/>
 
         <x-data-table module="device" :fields="tableFields" id-field="internal_axon_id"
                       v-model="selectedDevices" @click-row="configDevice" title="Devices">
@@ -44,7 +44,7 @@
 	import Card from '../../components/Card.vue'
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import DevicesActionsContainer from './DevicesActionsContainer.vue'
-	import DevicesFilterContainer from './DevicesFilterContainer.vue'
+	import xDataQuery from '../../components/data/DataQuery.vue'
     import xGradedMultiSelect from '../../components/GradedMultiSelect.vue'
     import xDataTable from '../../components/tables/DataTable.vue'
 	import NestedMenu from '../../components/menus/NestedMenu.vue'
@@ -53,29 +53,21 @@
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import { FETCH_DEVICE, FETCH_LABELS } from '../../store/modules/device'
-	import { UPDATE_QUERY, SAVE_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
     import { FETCH_SETTINGS } from '../../store/modules/settings'
-	import { FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS } from '../../store/actions'
+	import {
+		FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS, SAVE_DATA_QUERY
+	} from '../../store/actions'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
 
 	export default {
 		name: 'devices-container',
 		components: {
-			xPage, DevicesFilterContainer, DevicesActionsContainer, Card, DynamicPopover,
+			xPage, xDataQuery, DevicesActionsContainer, Card, DynamicPopover,
 			Modal, TriggerableDropdown, xGradedMultiSelect, xDataTable, NestedMenu, NestedMenuItem
 		},
 		computed: {
-			...mapState(['device', 'query', 'adapter', 'settings']),
-			queryFilter: {
-				get () {
-					return this.query.newQuery.filter
-				},
-				set (newFilter) {
-					this.updateQuery(newFilter)
-                    this.updateModuleView({filter: newFilter})
-				}
-			},
+			...mapState(['device', 'adapter', 'settings']),
 			selectedFields: {
 				get() {
 					return this.device.data.view.fields
@@ -137,19 +129,6 @@
 					return list
 				}, []))
 			},
-			filterFields () {
-				if (!this.genericFlatSchema.length) return []
-
-				return [
-					{
-						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-						enum: this.query.savedQueries.data.map((query) => {
-							return {name: query.filter, title: query.name}
-						})
-					},
-                    ...this.coloumnSelectionFields
-				]
-			},
             tableViews () {
 				return this.device.data.views.data
             }
@@ -166,25 +145,18 @@
 		},
 		methods: {
 			...mapMutations({
-				updateQuery: UPDATE_QUERY,
 				updateView: UPDATE_DATA_VIEW,
 			}),
 			...mapActions({
 				fetchDataFields: FETCH_DATA_FIELDS,
 				fetchDevice: FETCH_DEVICE,
-				saveQuery: SAVE_QUERY,
+				saveQuery: SAVE_DATA_QUERY,
 				fetchLabels: FETCH_LABELS,
 				fetchAdapters: FETCH_ADAPTERS,
-				fetchSavedQueries: FETCH_SAVED_QUERIES,
-                fetchTableViews: FETCH_DATA_VIEWS,
-                saveTableView: SAVE_DATA_VIEW,
+                fetchDataViews: FETCH_DATA_VIEWS,
+                saveDataView: SAVE_DATA_VIEW,
                 fetchSettings: FETCH_SETTINGS
 			}),
-			executeQuery () {
-				this.updateQuery(this.queryFilter)
-				this.updateModuleView({page: 0, filter: this.queryFilter})
-				this.$parent.$el.click()
-			},
             openSaveModal(confirmHandler) {
 				this.saveModal.open = true
                 this.saveModal.handleConfirm = confirmHandler
@@ -193,14 +165,14 @@
 				if (!this.saveModal.name) return
 
 				this.saveQuery({
-					filter: this.queryFilter,
+                    module: 'device',
 					name: this.saveModal.name
 				}).then(() => this.saveModal.open = false)
 			},
             confirmSaveView () {
 				if (!this.saveModal.name) return
 
-                this.saveTableView({
+                this.saveDataView({
                     module: 'device', name: this.saveModal.name
                 }).then(() => this.saveModal.open = false)
             },
@@ -218,11 +190,8 @@
 		created () {
 			this.fetchAdapters()
             this.fetchSettings()
-            this.fetchTableViews({module: 'device'})
+            this.fetchDataViews({module: 'device'})
             this.fetchDataFields({module: 'device'})
-			if (!this.query.savedQueries.data || !this.query.savedQueries.data.length) {
-				this.fetchSavedQueries()
-			}
             if (!this.device.labelList.data || !this.device.labelList.data.length) {
 				this.fetchLabels()
 			}

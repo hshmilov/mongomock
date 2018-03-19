@@ -58,7 +58,7 @@
 	import DynamicPopover from '../../components/popover/DynamicPopover.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
     import TagsMixin from '../../mixins/tags'
-    import xSchemaForm from '../../components/data/SchemaForm.vue'
+    import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import { mapState } from 'vuex'
 
 	export default {

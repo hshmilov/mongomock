@@ -1,6 +1,6 @@
 <template>
     <x-page title="adapters" class="adapters">
-        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" @click-row="configAdapter"></scrollable-table>
+        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" @click-row="configAdapter"/>
     </x-page>
 </template>
 

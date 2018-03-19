@@ -47,7 +47,7 @@ const fetchQueries = (dispatch, payload, queryType) => {
 	}
 	param += '&filter=' + encodeURI(filter)
 	dispatch(REQUEST_API, {
-		rule: `queries${param}`,
+		rule: `device/queries${param}`,
 		type: payload.type
 	})
 }
@@ -100,7 +100,7 @@ export const query = {
 				'timestamp': new Date().getTime()
 			}
 			state.savedQueries.data = [ savedQuery, ...state.savedQueries.data ]
-			state.quickQuery.savedQueries.data = [ savedQuery, ...state.savedQueries.slice(0, 4)]
+			state.quickQuery.savedQueries.data = [ savedQuery, ...state.quickQuery.savedQueries.data.slice(0, 4)]
 		},
 		[REMOVE_SAVED_QUERY] (state, payload) {
 			state.savedQueries.data = [ ...state.savedQueries.data ].filter(function(query) {
@@ -128,7 +128,7 @@ export const query = {
 				return savedQuery.id === payload
 			})
 			state.newQuery.filter = requestedQuery[0].filter
-			state.newQuery.filterExpressions = []
+			state.newQuery.queryExpressions = []
 			state.executedQueries.data = []
 		},
 		[ UPDATE_NEW_QUERY ] (state, payload) {
@@ -158,7 +158,7 @@ export const query = {
 			if (!payload.filter) { return }
 			if (!payload.name) { payload.name = payload.filter }
 			return dispatch(REQUEST_API, {
-				rule: 'queries',
+				rule: 'device/queries',
 				method: 'POST',
 				data: payload
 			}).then((response) => {
@@ -172,7 +172,7 @@ export const query = {
 		[ ARCHIVE_SAVED_QUERY ] ({dispatch, commit}, queryId) {
 			if (!queryId) { return }
 			dispatch(REQUEST_API, {
-				rule: `queries/${queryId}`,
+				rule: `device/queries/${queryId}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.data !== '') {

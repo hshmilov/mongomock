@@ -25,10 +25,7 @@ export const updateDataContent = (state, payload) => {
 	content.fetching = payload.fetching
 	content.error = payload.error
 	if (payload.data) {
-		content.data = payload.restart? []: [ ...content.data ]
-		payload.data.forEach((device) => {
-			content.data.push({ ...device })
-		})
+		content.data = content.data.slice(0, payload.skip).concat(payload.data)
 	}
 }
 
@@ -36,10 +33,6 @@ export const UPDATE_DATA_VIEW = 'UPDATE_DATA_VIEW'
 export const updateDataView = (state, payload) => {
 	if (!validModule(state, payload)) return
 	let data = state[payload.module].data
-	if (payload.view.filter || payload.view.sort) {
-		data.content.data = []
-		data.count.data = 0
-	}
 	data.view = { ...state[payload.module].data.view, ...payload.view }
 }
 
@@ -91,7 +84,7 @@ const flattenSchema = (schema, name = '') => {
 	return [{...schema, name}]
 }
 
-export const UPDATE_DATA_FIELDS= 'UPDATE_DATA_FIELDS'
+export const UPDATE_DATA_FIELDS = 'UPDATE_DATA_FIELDS'
 export const updateDataFields = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const fields = state[payload.module].data.fields
@@ -103,4 +96,26 @@ export const updateDataFields = (state, payload) => {
 			fields.data.specific[name] = flattenSchema({ ...payload.data.specific[name], name: `adapters_data.${name}`})
 		})
 	}
+}
+
+export const UPDATE_DATA_QUERIES = 'UPDATE_DATA_QUERIES'
+export const updateDataQueries = (state, payload) => {
+	if (!validModule(state, payload) || !payload.type) return
+	const queries = state[payload.module].data.queries[payload.type]
+	queries.fetching = payload.fetching
+	queries.error = payload.error
+	if (payload.data) {
+		queries.data = queries.data.slice(0, payload.skip).concat(payload.data)
+	}
+}
+
+export const ADD_DATA_QUERY = 'ADD_DATA_QUERY'
+export const addDataQuery = (state, payload) => {
+	if (!validModule(state, payload)) return
+	const savedQueries = state[payload.module].data.queries.saved
+	if (!savedQueries.data) savedQueries.data = []
+	savedQueries.data = [
+		{ ...payload.query, timestamp: new Date() },
+		...savedQueries.data.filter(item => item.name !== payload.query.name)
+	]
 }

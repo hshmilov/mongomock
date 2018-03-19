@@ -3,11 +3,13 @@ import Vuex from 'vuex'
 
 import {
 	REQUEST_API, requestApi,
-	FETCH_DATA_CONTENT, fetchTableContent,
-	FETCH_DATA_COUNT, fetchTableCount,
-	FETCH_DATA_VIEWS, fetchTableViews,
-	SAVE_DATA_VIEW, saveTableView,
-	FETCH_DATA_FIELDS, fetchDataFields
+	FETCH_DATA_CONTENT, fetchDataContent,
+	FETCH_DATA_COUNT, fetchDataCount,
+	FETCH_DATA_VIEWS, fetchDataViews,
+	SAVE_DATA_VIEW, saveDataView,
+	FETCH_DATA_FIELDS, fetchDataFields,
+	FETCH_DATA_QUERIES, fetchDataQueries,
+	SAVE_DATA_QUERY, saveDataQuery
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
@@ -16,7 +18,9 @@ import {
 	UPDATE_DATA_VIEW, updateDataView,
 	UPDATE_DATA_VIEWS, updateDataViews,
 	ADD_DATA_VIEW, addDataView,
-	UPDATE_DATA_FIELDS, updateDataFields
+	UPDATE_DATA_FIELDS, updateDataFields,
+	UPDATE_DATA_QUERIES, updateDataQueries,
+	ADD_DATA_QUERY, addDataQuery
 } from './mutations'
 import { settings } from '../store/modules/settings'
 import { device } from '../store/modules/device'
@@ -49,15 +53,19 @@ export default new Vuex.Store({
 		[ UPDATE_DATA_VIEW ]: updateDataView,
 		[ UPDATE_DATA_VIEWS ]: updateDataViews,
 		[ ADD_DATA_VIEW ]: addDataView,
-		[ UPDATE_DATA_FIELDS ]: updateDataFields
+		[ UPDATE_DATA_FIELDS ]: updateDataFields,
+		[ UPDATE_DATA_QUERIES ]: updateDataQueries,
+		[ ADD_DATA_QUERY ]: addDataQuery
     },
     actions: {
         [ REQUEST_API ]: requestApi,
-        [ FETCH_DATA_CONTENT ]: fetchTableContent,
-		[ FETCH_DATA_COUNT ]: fetchTableCount,
-		[ FETCH_DATA_VIEWS ]: fetchTableViews,
-		[ SAVE_DATA_VIEW ]: saveTableView,
-		[ FETCH_DATA_FIELDS ]: fetchDataFields
+        [ FETCH_DATA_CONTENT ]: fetchDataContent,
+		[ FETCH_DATA_COUNT ]: fetchDataCount,
+		[ FETCH_DATA_VIEWS ]: fetchDataViews,
+		[ SAVE_DATA_VIEW ]: saveDataView,
+		[ FETCH_DATA_FIELDS ]: fetchDataFields,
+		[ FETCH_DATA_QUERIES ]: fetchDataQueries,
+		[ SAVE_DATA_QUERY ]: saveDataQuery
     },
     modules: {
         /*

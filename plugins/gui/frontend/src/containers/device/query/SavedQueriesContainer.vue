@@ -1,11 +1,9 @@
 <template>
     <x-page title="saved queries" class="query">
-        <card :title="`queries (${query.savedQueries.data.length})`">
-            <paginated-table slot="cardContent" :fetching="query.savedQueries.fetching"
-                             :data="query.savedQueries.data" :error="query.savedQueries.error"
-                             :fields="query.savedFields" :fetchData="fetchQueries"
-                             :actions="queryActions"></paginated-table>
-        </card>
+        <div>queries ({{query.savedQueries.data.length}})</div>
+        <paginated-table :fetching="query.savedQueries.fetching" :data="query.savedQueries.data"
+                         :error="query.savedQueries.error" :fields="query.savedFields" :fetchData="fetchQueries"
+                         :actions="queryActions"/>
     </x-page>
 </template>
 
@@ -19,8 +17,9 @@
 	import SearchInput from '../../../components/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-	import { FETCH_SAVED_QUERIES, USE_SAVED_QUERY, ARCHIVE_SAVED_QUERY } from '../../../store/modules/query'
+	import { FETCH_SAVED_QUERIES, ARCHIVE_SAVED_QUERY } from '../../../store/modules/query'
     import { UPDATE_ALERT_QUERY } from '../../../store/modules/alert'
+    import { UPDATE_DATA_VIEW } from '../../../store/mutations'
 
 	export default {
 		name: 'saved-queries-container',
@@ -45,7 +44,7 @@
 		},
 		methods: {
             ...mapMutations({
-				useQuery: USE_SAVED_QUERY,
+				updateDataView: UPDATE_DATA_VIEW,
                 updateAlertQuery: UPDATE_ALERT_QUERY
             }),
 			...mapActions({
@@ -63,7 +62,8 @@
                 this.$router.push({ path: '/alert/new'})
             },
             runQuery(queryId) {
-            	this.useQuery(queryId)
+            	let query = this.query.savedQueries.data.filter(query => query.id === queryId)[0]
+            	this.updateDataView({module: 'device', view: {query: {filter: query.filter, expressions: query.expressions}}})
                 this.$router.push({name: 'Devices'})
             },
 			removeQuery (queryId) {

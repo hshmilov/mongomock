@@ -47,7 +47,7 @@
 	import GenericForm from '../../components/GenericForm.vue'
 	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
 	import Modal from '../../components/popover/Modal.vue'
-    import xSchemaForm from '../../components/data/SchemaForm.vue'
+    import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import '../../components/icons/navigation'
 
 	import { mapState, mapGetters, mapActions } from 'vuex'

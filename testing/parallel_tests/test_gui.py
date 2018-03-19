@@ -33,7 +33,7 @@ def test_default_queries():
     gui_service = axonius_system.gui
 
     assert gui_service.is_up()  # default queries are inserted when the GUI service is starting, make sure it is up...
-    queries = axonius_system.db.get_collection(gui_service.unique_name, 'queries')
+    queries = axonius_system.db.get_collection(gui_service.unique_name, 'device_queries')
 
     # A sample Default Query as set in default_queries.ini under gui/src
     name = 'Active Directory'

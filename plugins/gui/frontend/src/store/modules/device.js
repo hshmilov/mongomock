@@ -20,10 +20,14 @@ export const device = {
 				page: 0, pageSize: 20, fields: [
 					'adapters', 'specific_data.data.hostname', 'specific_data.data.name',
 					'specific_data.data.network_interfaces.ips', 'specific_data.data.os.type', 'labels'
-				], coloumnSizes: [], filter: '', sort: {field: '', desc: true}
+				], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
 			},
 			views: { data: [], fetching: false, error: '' },
-			fields: { data: {}, fetching: false, error: ''}
+			fields: { data: {}, fetching: false, error: ''},
+			queries: {
+				saved: { data: [], fetching: false, error: ''},
+				history: { data: [], fetching: false, error: ''}
+			}
 		},
 
 		/* Currently selected devices, without censoring */

@@ -200,7 +200,11 @@ class GuiService(PluginBase):
                                                                   'pic_name': 'avatar.png',
                                                                   'password': bcrypt.hash('bestadminpassword')},
                                                                  upsert=True)
-        self.add_default_queries()
+        self.add_default_device_queries()
+
+    ##########
+    # DEVICE #
+    ##########
 
     @paginated()
     @filtered()
@@ -216,7 +220,7 @@ class GuiService(PluginBase):
             device_list = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find(mongo_filter, mongo_projection)
             if mongo_filter and not skip:
                 filter = request.args.get('filter')
-                db_connection[self.plugin_unique_name]['queries'].replace_one(
+                db_connection[self.plugin_unique_name]['device_queries'].replace_one(
                     {'name': {'$exists': False}, 'filter': filter},
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(),
                      'device_count': device_list.count() if device_list else 0, 'archived': False}, upsert=True)
@@ -274,6 +278,16 @@ class GuiService(PluginBase):
                         fields['specific'][plugin[PLUGIN_NAME]] = _censor_fields(plugin_fields_record['schema'])
 
         return jsonify(fields)
+
+    @paginated()
+    @filtered()
+    @add_rule_unauthenticated("device/queries", methods=['POST', 'GET'])
+    def device_queries(self, limit, skip, mongo_filter):
+        return self._queries('device', limit, skip, mongo_filter)
+
+    @add_rule_unauthenticated("device/queries/<query_id>", methods=['DELETE'])
+    def device_delete_query(self, query_id):
+        return self._delete_query('device', query_id)
 
     @add_rule_unauthenticated("device/views", methods=['GET', 'POST'])
     def device_views(self):
@@ -337,6 +351,10 @@ class GuiService(PluginBase):
                 return_error(f'Tagging did not complete. First error: {response.json()}', 400)
 
             return '', 200
+
+    #########
+    # USER #
+    #########
 
     @paginated()
     @filtered()
@@ -405,19 +423,28 @@ class GuiService(PluginBase):
 
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("queries", methods=['POST', 'GET'])
-    def queries(self, limit, skip, mongo_filter):
+    @add_rule_unauthenticated("user/queries", methods=['POST', 'GET'])
+    def user_queries(self, limit, skip, mongo_filter):
+        return self._queries('user', limit, skip, mongo_filter)
+
+    @add_rule_unauthenticated("user/queries/<query_id>", methods=['DELETE'])
+    def user_delete_query(self, query_id):
+        return self._delete_query('user', query_id)
+
+    def _queries(self, module_name, limit, skip, mongo_filter):
         """
-        Get and create saved filters.
-        A filter is a query to run on the devices.
-        Only helps the UI show "last queries", doesn't perform any action.
+        GET Fetch all queries saved for given module, answering give filter
+        POST Save a new query for given module
+             Data with a name for the query and a string filter is expected for saving
+
         :param limit: limit for pagination
         :param skip: start index for pagination
-        :return:
+        :return: GET - List of query names and filters
+                 POST - Id of inserted document saving given query
         """
         if request.method == 'GET':
             mongo_filter['$or'] = filter_archived()['$or']
-            queries_collection = self._get_collection('queries', limited_user=False)
+            queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
             return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
                            .sort([('timestamp', pymongo.DESCENDING)])
                            .skip(skip).limit(limit))
@@ -425,22 +452,24 @@ class GuiService(PluginBase):
             query_to_add = request.get_json(silent=True)
             if query_to_add is None:
                 return return_error("Invalid query", 400)
-            inserted_id = self._insert_query(query_to_add.get('name'), query_to_add.get('filter'))
+            inserted_id = self._insert_query(module_name, query_to_add.get('name'), query_to_add.get('filter'),
+                                             query_to_add.get('expressions'))
             return str(inserted_id), 200
 
-    def _insert_query(self, name, query_filter):
-        queries_collection = self._get_collection('queries', limited_user=False)
+    def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
+        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
         if existed_query is not None:
             self.logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
             return existed_query['_id']
-        result = queries_collection.update({'name': name}, {'$set': {'filter': query_filter, 'name': name,
+        result = queries_collection.update({'name': name}, {'$set': {'name': name, 'filter': query_filter,
+                                                                     'expressions': query_expressions,
                                                                      'query_type': 'saved', 'timestamp': datetime.now(),
                                                                      'archived': False}}, upsert=True)
         self.logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
         return result.get('inserted_id', '')
 
-    def add_default_queries(self):
+    def add_default_device_queries(self):
         # Load default queries and save them to the DB
         try:
             config = configparser.ConfigParser()
@@ -452,15 +481,14 @@ class GuiService(PluginBase):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_query(name, query['query'])
+                    self._insert_query('device', name, query['query'])
                 except:
                     self.logger.exception(f'Error adding default query {name}')
         except:
             self.logger.exception(f'Error adding default queries')
 
-    @add_rule_unauthenticated("queries/<query_id>", methods=['DELETE'])
-    def delete_query(self, query_id):
-        queries_collection = self._get_collection('queries', limited_user=False)
+    def _delete_query(self, module_name, query_id):
+        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
         queries_collection.update({'_id': ObjectId(query_id)},
                                   {
                                       '$set': {
@@ -578,7 +606,7 @@ class GuiService(PluginBase):
 
         :return:
         """
-        queries_collection = self._get_collection('queries', limited_user=False)
+        queries_collection = self._get_collection('device_queries', limited_user=False)
         if request.method == 'GET':
             with self._get_db_connection(False) as db_connection:
                 reports_to_return = []
@@ -619,7 +647,7 @@ class GuiService(PluginBase):
         :param alert_id:
         :return:
         """
-        queries_collection = self._get_collection('queries', limited_user=False)
+        queries_collection = self._get_collection('device_queries', limited_user=False)
         if request.method == 'DELETE':
             response = self.request_remote_plugin("reports/{0}".format(report_id), "reports", method='delete')
             if response is None:
@@ -920,7 +948,7 @@ class GuiService(PluginBase):
         """
         with self._get_db_connection(False) as db_connection:
             dashboard_collection = self._get_collection('dashboard', limited_user=False)
-            queries_collection = self._get_collection('queries', limited_user=False)
+            queries_collection = self._get_collection('device_queries', limited_user=False)
             devices_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
             if request.method == 'GET':
                 dashboard_list = []

@@ -5,7 +5,7 @@ import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW,
-	UPDATE_DATA_FIELDS
+	UPDATE_DATA_FIELDS, UPDATE_DATA_QUERIES
 } from './mutations'
 
 let host = ''
@@ -69,11 +69,11 @@ export const validModule = (state, payload) => {
 }
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT'
-export const fetchTableCount = ({state, dispatch}, payload) => {
+export const fetchDataCount = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
 	const view = state[payload.module].data.view
 
-	let param = (view && view.filter) ? `?filter=${view.filter}` : ''
+	let param = (view.query && view.query.filter) ? `?filter=${view.query.filter}` : ''
 	dispatch(REQUEST_API, {
 		rule: `${payload.module}/count${param}`,
 		type: UPDATE_DATA_COUNT,
@@ -82,7 +82,7 @@ export const fetchTableCount = ({state, dispatch}, payload) => {
 }
 
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
-export const fetchTableContent = ({state, dispatch}, payload) => {
+export const fetchDataContent = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
 	const view = state[payload.module].data.view
 
@@ -90,24 +90,24 @@ export const fetchTableContent = ({state, dispatch}, payload) => {
 		payload.skip = 0
 		dispatch(FETCH_DATA_COUNT, {module: payload.module})
 	}
-	if (!payload.limit) payload.limit = 0
+	if (!payload.limit) payload.limit = 1000
 
 	let param = `?limit=${payload.limit}&skip=${payload.skip}`
 	if (view.fields && view.fields.length) {
 		param += `&fields=${view.fields}`
 	}
-	if (view.filter && view.filter.length) {
-		param += `&filter=${view.filter}`
+	if (view.query && view.query.filter) {
+		param += `&filter=${encodeURI(view.query.filter)}`
 	}
 	return dispatch(REQUEST_API, {
 		rule: payload.module + param,
 		type: UPDATE_DATA_CONTENT,
-		payload: {module: payload.module, restart: (payload.skip === 0)}
+		payload: {module: payload.module, skip: payload.skip}
 	})
 }
 
 export const FETCH_DATA_VIEWS = 'FETCH_DATA_VIEWS'
-export const fetchTableViews = ({state, dispatch}, payload) => {
+export const fetchDataViews = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/views',
@@ -117,7 +117,7 @@ export const fetchTableViews = ({state, dispatch}, payload) => {
 }
 
 export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW'
-export const saveTableView = ({state, dispatch, commit}, payload) => {
+export const saveDataView = ({state, dispatch, commit}, payload) => {
 	if (!validModule(state, payload)) return
 	let viewObj = {name: payload.name, view: state[payload.module].data.view}
 	dispatch(REQUEST_API, {
@@ -128,7 +128,7 @@ export const saveTableView = ({state, dispatch, commit}, payload) => {
 		if (response.status === 200) {
 			commit(ADD_DATA_VIEW, {module: payload.module, ...viewObj})
 		}
-	})
+	}).catch(console.log.bind(console))
 }
 
 export const FETCH_DATA_FIELDS = 'FETCH_DATA_FIELDS'
@@ -139,4 +139,37 @@ export const fetchDataFields = ({state, dispatch}, payload) => {
 		type: UPDATE_DATA_FIELDS,
 		payload: {module: payload.module}
 	})
+}
+
+export const FETCH_DATA_QUERIES = 'FETCH_DATA_QUERIES'
+export const fetchDataQueries = ({state, dispatch}, payload) => {
+	if (!validModule(state, payload) || !payload.type) return
+	if (!payload.skip) payload.skip = 0
+	if (!payload.limit) payload.limit = 1000
+
+	let filter = `query_type=='${payload.type}'`
+	if (payload.filter) {
+		filter += ` and ${payload.filter}`
+	}
+	let param = `?limit=${payload.limit}&skip=${payload.skip}&filter=${encodeURI(filter)}`
+	dispatch(REQUEST_API, {
+		rule: `${payload.module}/queries${param}`,
+		type: UPDATE_DATA_QUERIES,
+		payload: {module: payload.module, type: payload.type, skip: payload.skip}
+	})
+}
+
+export const SAVE_DATA_QUERY = 'SAVE_DATA_QUERY'
+export const saveDataQuery = ({state, dispatch, commit}, payload) => {
+	if (!validModule(state, payload) || !payload.name) return
+	let queryObj = {name: payload.name, ...state[payload.module].data.view.query }
+	return dispatch(REQUEST_API, {
+		rule: payload.module + '/queries',
+		method: 'POST',
+		data: queryObj
+	}).then((response) => {
+		if (response.status === 200) {
+			commit(ADD_DATA_VIEW, {module: payload.module, query: queryObj})
+		}
+	}).catch(console.log.bind(console))
 }

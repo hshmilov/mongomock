@@ -1,5 +1,6 @@
 <template>
     <x-page title="users">
+        <x-data-query module="user" :schema="coloumnSelectionFields" :selected="selectedFields"/>
         <x-data-table module="user" :fields="tableFields" id-field="internal_axon_id" title="Users">
             <template slot="tableActions">
             <!-- Dropdown for selecting fields to be presented in table, including adapter hierarchy -->
@@ -11,7 +12,7 @@
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-    import Card from '../../components/Card.vue'
+    import xDataQuery from '../../components/data/DataQuery.vue'
     import GradedMultiSelect from '../../components/GradedMultiSelect.vue'
     import xDataTable from '../../components/tables/DataTable.vue'
 
@@ -22,7 +23,7 @@
 
 	export default {
 		name: 'users-container',
-        components: { xPage, Card, GradedMultiSelect, xDataTable },
+        components: { xPage, xDataQuery, GradedMultiSelect, xDataTable },
         computed: {
             ...mapState(['user', 'adapter']),
             selectedFields: {
