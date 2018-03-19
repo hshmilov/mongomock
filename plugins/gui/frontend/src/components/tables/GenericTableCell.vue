@@ -8,7 +8,7 @@
             <span>{{ prettyTimestamp(value) }}</span>
         </template>
         <template v-else-if="type === 'error'">
-            <a @click.stop @click="showError = !showError" class="error-toggle">
+            <a v-if="value" @click.stop @click="showError = !showError" class="error-toggle">
                 <svg-icon name="action/error_msg" :original="true" height="20"></svg-icon>
             </a>
             <modal v-if="showError"

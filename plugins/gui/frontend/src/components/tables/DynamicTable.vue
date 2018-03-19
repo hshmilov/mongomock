@@ -15,7 +15,7 @@
                         <!--<checkbox class="mr-2"></checkbox>-->
                     </td>
                     <generic-table-cell class="table-data" v-for="field in visibleFields" :key="field.path"
-                                        :value="record[field.path]" :type="field.type"></generic-table-cell>
+                                        :value="record[field.path]" :type="field.type"/>
                     <td class="table-data action">
                         <a @click.stop="$emit('delete', record['id'])"><i class="icon-minus-square"></i></a>
                     </td>

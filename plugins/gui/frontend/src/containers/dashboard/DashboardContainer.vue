@@ -13,7 +13,7 @@
             </div>
         </card>
         <card v-for="chart in dashboard.charts.data" :title="chart.name" :key="chart.name" v-if="chart.data">
-            <x-results-chart :data="chart.data" />
+            <x-results-chart :data="chart.data"/>
         </card>
         <card title="New Chart..." class="build-chart">
             <div class="link" @click="createNewDashboard">+</div>
@@ -35,9 +35,9 @@
 
 
 <script>
-  import xPage from '../../components/layout/Page.vue'
-  import Card from '../../components/Card.vue'
-  import FeedbackModal from '../../components/popover/FeedbackModal.vue'
+	import xPage from '../../components/layout/Page.vue'
+	import Card from '../../components/Card.vue'
+	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
 
 	import xCounterChart from '../../components/charts/Counter.vue'
 	import xHistogramChart from '../../components/charts/Histogram.vue'
@@ -47,23 +47,25 @@
 	import {
 		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD, SAVE_DASHBOARD
 	} from '../../store/modules/dashboard'
-	import { UPDATE_NEW_QUERY, FETCH_SAVED_QUERIES } from '../../store/modules/query'
+	import { FETCH_DATA_QUERIES } from '../../store/actions'
+    import { UPDATE_DATA_VIEW } from '../../store/mutations'
+
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
 		name: 'x-dashboard',
 		components: {
 			xPage, Card, FeedbackModal,
-            xCounterChart, xHistogramChart, xCycleChart, xResultsChart
+			xCounterChart, xHistogramChart, xCycleChart, xResultsChart
 		},
 		computed: {
 			...mapState({
-                dashboard(state) {
-                	return state['dashboard']
-                },
-                savedQueries(state) {
-                	return state['query'].savedQueries.data
-                }
+				dashboard (state) {
+					return state['dashboard']
+				},
+				savedQueries (state) {
+					return state['query'].savedQueries.data
+				}
 			}),
 			lifecycle () {
 				if (!this.dashboard.lifecycle.data) return {}
@@ -96,49 +98,51 @@
 				return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
 			}
 		},
-        data() {
+		data () {
 			return {
-                newDashboard: {
-                	isActive: false,
-                    data: {
-                		name: '', queries: []
-                    }
-                },
-            }
-        },
+				newDashboard: {
+					isActive: false,
+					data: {
+						name: '', queries: []
+					}
+				},
+			}
+		},
 		methods: {
-			...mapMutations({updateQuery: UPDATE_NEW_QUERY}),
+			...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({
-                fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
-                fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD,
-                fetchQueries: FETCH_SAVED_QUERIES
+				fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
+				fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD,
+				fetchQueries: FETCH_DATA_QUERIES
 			}),
 			getDashboardData () {
 				this.fetchLifecycle()
 				this.fetchAdapterDevices()
-                this.fetchDashboard()
+				this.fetchDashboard()
 			},
 			runAdapterDevicesFilter (adapterName) {
-				this.updateQuery({filter: `adapters == '${adapterName}'`})
+				this.updateView({module: 'device', view: {
+					page: 0, query: {filter: `adapters == '${adapterName}'`, expressions: []}
+				}})
 				this.$router.push({name: 'Devices'})
 			},
-            createNewDashboard() {
+			createNewDashboard () {
 				this.newDashboard.isActive = true
-            },
-            saveNewDashboard() {
-                return this.saveDashboard(this.newDashboard.data)
-            },
-            finishNewDashboard() {
+			},
+			saveNewDashboard () {
+				return this.saveDashboard(this.newDashboard.data)
+			},
+			finishNewDashboard () {
 				this.newDashboard.isActive = false
-                this.newDashboard.data = { name: '', queries: [] }
-            }
+				this.newDashboard.data = {name: '', queries: []}
+			}
 		},
 		created () {
-			if (!this.savedQueries || !this.savedQueries.length) this.fetchQueries()
-            
+			if (!this.savedQueries || !this.savedQueries.length) this.fetchQueries({module: 'device', type: 'saved'})
+
 			this.getDashboardData()
 			this.intervals = []
-            this.intervals.push(setInterval(function () {
+			this.intervals.push(setInterval(function () {
 				this.fetchLifecycle()
 			}.bind(this), 500))
 			this.intervals.push(setInterval(function () {
@@ -194,7 +198,7 @@
                 .vm-select {
                     grid-column: span 2;
                     .vm-select-input__inner {
-                         width: 100%;
+                        width: 100%;
                     }
                 }
             }
