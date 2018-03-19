@@ -1,6 +1,6 @@
 <template>
     <x-page title="adapters" class="adapters">
-        <scrollable-table :data="adapter.adapterList.data" :fields="adapter.adapterFields" @click-row="configAdapter"/>
+        <scrollable-table :data="sortedSpecificData" :fields="adapter.adapterFields" @click-row="configAdapter"/>
     </x-page>
 </template>
 
@@ -17,7 +17,18 @@
     export default {
         name: 'adapters-container',
         components: { xPage, Card, ScrollableTable, SearchInput },
-        computed: { ...mapState(['adapter']) },
+        computed: {
+            ...mapState(['adapter']),
+            sortedSpecificData () {
+                if (!this.adapter.adapterList || !this.adapter.adapterList.data) return []
+                return [...this.adapter.adapterList.data].sort((first, second) => {
+                    // Sort by adapter plugin name (the one that is shown in the gui).
+                    if (first.plugin_name.text < second.plugin_name.text) return -1
+                    if (first.plugin_name.text > second.plugin_name.text) return 1
+                    return 0
+                })
+            }
+        },
         data() {
         	return {
         		filter: {
