@@ -13,7 +13,9 @@
         computed: {
 			processedData() {
 				if (Array.isArray(this.value)) {
-					return this.value.map(item => this.format(item)).join(', ')
+					let remainder = this.value.length - 2
+					return this.value.slice(0, 2).map(item => this.format(item))
+                        .join(', ') + (remainder > 0? ` +${remainder}`: '')
                 }
                 return this.format(this.value)
             }
