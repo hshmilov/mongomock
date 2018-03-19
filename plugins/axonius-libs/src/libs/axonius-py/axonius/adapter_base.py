@@ -724,12 +724,14 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         client_id = None
         status = "error"
+        error_msg = None
         try:
             client_id = self._get_client_id(client_config)
             self._clients[client_id] = self._connect_client(client_config)
             # Got here only if connection succeeded
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
+            error_msg = get_exception_string()
             id_for_log = client_id if client_id else (id if id else '')
             self.logger.exception(
                 f"Got error while handling client {id_for_log} - \
@@ -744,7 +746,8 @@ class AdapterBase(PluginBase, Feature, ABC):
                                                                  {
                                                                      'client_id': client_id,
                                                                      'client_config': client_config,
-                                                                     'status': status
+                                                                     'status': status,
+                                                                     'error': error_msg[0] if error_msg else None
             }, upsert=True)
         elif id is not None:
             # Client id was not found due to some problem in given config data
@@ -757,7 +760,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         # Verifying update succeeded and returning the matched id and final status
         if not result.modified_count and result.upserted_id:
-            return {"id": str(result.upserted_id), "status": status}
+            return {"id": str(result.upserted_id), "status": status, "error": error_msg}
 
         return {}
 

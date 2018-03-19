@@ -1,4 +1,4 @@
-import { REQUEST_API } from '../actions'
+import {REQUEST_API} from '../actions'
 
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
@@ -125,7 +125,7 @@ export const adapterStaticData = {
 	},
 	'bigfix_adapter': {
 		name: 'IBM Bigfix',
-    description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
+        description: 'IBM BigFix provides remote control, patch management, software distribution, operating system deployment, network access protection and hardware and software inventory functionality.'
 	},
 	'ensilo_adapter': {
 		name: 'enSilo Endpoint Protection',
@@ -253,7 +253,7 @@ export const adapter = {
 				type: SET_ADAPTER_SERVERS
 			})
 		},
-		[ SAVE_ADAPTER_SERVER ] ({dispatch}, payload) {
+		[ SAVE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
 			/*
 				Call API to save given server controls to adapter by the given adapter id,
 				either adding a new server or updating and existing one, if id is provided with the controls
@@ -263,6 +263,20 @@ export const adapter = {
 			if (payload.uuid !== 'new') {
 				rule += '/' + payload.uuid
 			}
+
+            commit(SET_ADAPTER_SERVERS, {
+                fetching: true,
+                error: false,
+                data: {
+                    clients: [
+                        {
+                            status: 'warning',
+                            client_config: payload.serverData
+                        }
+                    ]
+                }
+            })
+
 			dispatch(REQUEST_API, {
 				rule: rule,
 				method: 'PUT',

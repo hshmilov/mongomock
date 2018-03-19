@@ -78,7 +78,8 @@
 					return {
 						id: client.uuid,
 						status: client.status,
-                        ...client.client_config
+                        ...client.client_config,
+                        error: client.error
                     }
                 })
             },
@@ -106,7 +107,8 @@
             tableFields () {
 				return [
 					{path: 'status', name: '', type: 'status'},
-                    ...this.schemaFields
+                    ...this.schemaFields,
+                    {path: 'error', name: 'Error', control: 'text', type: 'error'}
                 ]
             }
 		},
