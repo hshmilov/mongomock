@@ -2,7 +2,8 @@
     <div class="array">
         <label v-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
         <div v-for="item in schemaItems" class="item">
-            <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description">
+            <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
+                         :required="item.required">
                 <component :is="`x-${item.type}-edit`" :schema="item" v-model="data[item.name]"
                            @input="$emit('input', data)" :validator="validator" @focusout="emitFocus" />
             </x-type-wrap>

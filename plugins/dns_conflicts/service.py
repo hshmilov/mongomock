@@ -1,15 +1,28 @@
 from datetime import datetime
-import json
 import time
 import threading
 
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.devices.device import Device
 from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns, NoIpFoundError
+from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.mixins.triggerable import Triggerable
+from axonius.parsing_utils import format_ip
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
+
+
+class AvailableIp(SmartJsonClass):
+    """ A definition for the json-scheme for an available IP and its origin"""
+    ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
+    source_dns = Field(str, 'DNS server that gave the result')
+
+
+class AvailableIps(SmartJsonClass):
+    available_ips = ListField(AvailableIp, "Map between IPs and their origin")
 
 
 class DnsConflictsService(PluginBase, Triggerable):
@@ -38,7 +51,7 @@ class DnsConflictsService(PluginBase, Triggerable):
             for ad_adapter in ad_adapters:
                 ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
                 self.logger.info(f"looking for ip conflicts from ad_adapter {ad_adapter_unique_name}")
-                hosts = self._get_collection(DEVICES_DATA, db_name=ad_adapter_unique_name).\
+                hosts = self._get_collection(DEVICES_DATA, db_name=ad_adapter_unique_name). \
                     find({DNS_RESOLVE_STATUS: DNSResolveStatus.Resolved.name},
                          projection={'_id': True,
                                      'id': True,
@@ -107,10 +120,21 @@ class DnsConflictsService(PluginBase, Triggerable):
             # If we have more than one key in available_ips that means that this device got two different IP's
             # i.e duplicate! we need to tag this device
             self.logger.info(f"Found ip conflict. details: {str(available_ips)}")
-            self.devices.add_label((adapter_unique_name, device_id), "IP_CONFLICT")
-            self.devices.add_data((adapter_unique_name, device_id), "Ip Conflicts", json.dumps(available_ips))
+            self.devices.add_label((adapter_unique_name, device_id), "IP Conflicts")
+
+            serialized_available_ips = AvailableIps(
+                available_ips=[AvailableIp(ip=ip, source_dns=dns)
+                               for ip, dns in available_ips.items()]
+            )
+            self.devices.add_data((adapter_unique_name, device_id), "IP Conflicts",
+                                  serialized_available_ips.to_dict())
+        else:
+            # no conflicts - let's reflect that
+            self.devices.add_label((adapter_unique_name, device_id), "IP Conflicts", False)
+            self.devices.add_data((adapter_unique_name, device_id), "IP Conflicts", False)
 
     @add_rule('find_conflicts', methods=['POST'], should_authenticate=False)
     def check_ip_conflict_now(self):
         self._find_all_dns_conflicts()
+        self._save_field_names_to_db()
         return ""

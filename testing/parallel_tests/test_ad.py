@@ -1,4 +1,6 @@
 import pytest
+from retrying import retry
+
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
 from test_credentials.test_ad_credentials import *
@@ -9,7 +11,6 @@ from services.adapters.ad_service import AdService, ad_fixture
 from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fixture
 from services.general_info_service import general_info_fixture
 from services.execution_service import execution_fixture
-
 
 CLIENT_ID_1_ADMIN_SID = "S-1-5-21-4050441107-50035988-2732102988-500"
 CLIENT_ID_1_ADMIN_CAPTION = "Administrator@TestDomain.test"
@@ -83,11 +84,25 @@ class TestAdAdapter(AdapterTestBase):
         dns_conflicts_fixture.triggerable_execute_enable()
         dns_conflicts_fixture.find_conflicts()
 
+        @retry(wait_fixed=500,
+               stop_max_delay=15000)
         def has_ip_conflict_tag():
             dns_conflicts_fixture.find_conflicts()
-            assert len(self.axonius_system.get_devices_with_condition({"tags.name": "IP_CONFLICT"})) > 0
+            assert len(self.axonius_system.get_devices_with_condition(
+                {"tags.name": "IP Conflicts", "tags.type": "label"})) > 0
+            assert len(self.axonius_system.get_devices_with_condition(
+                {
+                    "tags": {
+                        '$elemMatch': {
+                            "name": "IP Conflicts",
+                            "type": "data",
+                            "data": {"$ne": "False"}
+                        }
+                    }
+                }
+            )) > 0
 
-        try_until_not_thrown(100, 5, has_ip_conflict_tag)
+        has_ip_conflict_tag()
 
     def test_ad_execute_wmi_smb(self):
         device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
@@ -117,9 +132,9 @@ class TestAdAdapter(AdapterTestBase):
                 sids.append(user["SID"])
 
             # Lets validate we have the special SID's...
-            assert "S-1-5-18" in sids   # Local System
-            assert "S-1-5-19" in sids   # NT Authority - Local Service
-            assert "S-1-5-20" in sids   # NT Authority - Network Service
+            assert "S-1-5-18" in sids  # Local System
+            assert "S-1-5-19" in sids  # NT Authority - Local Service
+            assert "S-1-5-20" in sids  # NT Authority - Network Service
 
         try_until_not_thrown(15, 5, check_execute_wmi_results)
 

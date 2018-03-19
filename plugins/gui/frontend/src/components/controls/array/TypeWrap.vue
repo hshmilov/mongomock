@@ -1,6 +1,7 @@
 <template>
     <div class="object">
-        <label v-if="label" :title="description" class="label" :for="name">{{label}}</label>
+        <label v-if="label" :title="description" class="label"
+               :for="name">{{label}}<div v-if="!required" class="hint">optional</div></label>
         <slot></slot>
     </div>
 </template>
@@ -8,7 +9,7 @@
 <script>
 	export default {
 		name: 'x-type-wrap',
-        props: ['name', 'type', 'description', 'title'],
+        props: ['name', 'type', 'description', 'title', 'required'],
         computed: {
 			label() {
 				if (this.type === 'array') { return '' }
@@ -21,6 +22,8 @@
 <style lang="scss">
     .object {
         display: inline-block;
-        .label {  margin-bottom: 0;  }
+        .label {
+            margin-bottom: 0;
+        }
     }
 </style>

@@ -2,11 +2,11 @@
     <x-page title="Settings" class="settings">
         <tabs>
             <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
-                <h3>Research Phase</h3>
+                <h3>Discovery Phase</h3>
                 <div class="grid grid-col-2">
-                    <label for="start">Trigger Run</label>
+                    <label for="start">Run Trigger</label>
                     <div class="grid-item">
-                        <a id="start" class="btn" @click="startResearch">Start</a>
+                        <a id="start" class="btn" @click="startResearch">Start Discovery Now</a>
                     </div>
                     <label for="schedule" class="label">Next Scheduled Time:</label>
                     <x-date-edit id="schedule" :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>

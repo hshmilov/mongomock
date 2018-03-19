@@ -705,33 +705,6 @@ class GuiService(PluginBase):
 
             return jsonify(plugins_to_return)
 
-    @add_rule_unauthenticated("plugins/<plugin_unique_name>", methods=['GET'])
-    def get_plugin(self, plugin_unique_name):
-        """
-        Gather all data needed to present a single plugin, according to plugin_unique_name given in url
-
-        Currently implemented only for dns-conflicts plugin
-
-        :return: Dict containing the data according to plugin's schema for UI presentation
-        """
-        if "dns_conflicts" not in plugin_unique_name:
-            return return_error("Requested plugin not found or not yet implemented", 404)
-        state = "Disabled"
-        response = self.request_remote_plugin("state", plugin_unique_name)
-        if response.status_code == 200:
-            state = response.json()
-
-        with self._get_db_connection(False) as db_connection:
-            return jsonify({
-                PLUGIN_UNIQUE_NAME: plugin_unique_name,
-                'state': state,
-                'results': [beautify_db_entry(device) for device in
-                            db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find(
-                                {'tags.name': "Ip Conflicts", 'tags.type': "data"},
-                                projection={'adapters.data.pretty_id': 1, 'tags': 1, 'adapters.data.hostname': 1}).sort(
-                                [('_id', pymongo.ASCENDING)])]
-            })
-
     @add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
         """

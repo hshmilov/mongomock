@@ -27,11 +27,21 @@
   color: $indicator-red;
 }
 
+
 /* Basic Styles */
+
 .logo {
   margin-bottom: 4px;
   margin-right: 4px;
 }
+
+.hint {
+  font-size: 80%;
+  color: rgba($theme-gray-dark, 0.6);
+  display: inline-block;
+  margin-left: 4px;
+}
+
 
 /* Basic Components */
 
