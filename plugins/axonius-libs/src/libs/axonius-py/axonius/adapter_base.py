@@ -238,6 +238,9 @@ class AdapterBase(PluginBase, Feature, ABC):
         Unlinks devices first if necessary.
         :return: Amount of deleted devices
         """
+        if self.last_seen_timedelta < timedelta(0):
+            return 0
+
         device_age_cutoff = datetime.now(timezone.utc) - self.last_seen_timedelta
         self.logger.info(f"Cleaning devices that are before {device_age_cutoff}")
 
@@ -374,7 +377,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             # Getting the time zone from the original device
             now = datetime.now(tz=user_time.tzinfo)
 
-            return self.user_last_seen_timedelta.days != -1 and now - user_time > self.user_last_seen_timedelta
+            return self.user_last_seen_timedelta > timedelta(0) and now - user_time > self.user_last_seen_timedelta
         else:
             return False
 
@@ -929,7 +932,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             # Getting the time zone from the original device
             now = datetime.now(tz=device_time.tzinfo)
 
-            return self.last_seen_timedelta.days != -1 and now - device_time > self.last_seen_timedelta
+            return self.last_seen_timedelta > timedelta(0) and now - device_time > self.last_seen_timedelta
         else:
             return False
 

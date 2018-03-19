@@ -130,7 +130,13 @@ class GetUserLogons(GeneralInfoSubplugin):
 
         # Update our adapterdata_device.
         for u in last_used_time_arr:
-            adapterdata_device.add_users(username=u["User"], last_use_date=u["Last Use"], is_local=u["Is Local"])
+            adapterdata_device.add_users(
+                username=u["User"],
+                last_use_date=u["Last Use"],
+                is_local=u["Is Local"],
+                origin_unique_adapter_name=executer_info["adapter_unique_name"],
+                origin_unique_adapter_data_id=executer_info["adapter_unique_id"]
+            )
 
         # Now we have a sorted list of sid's, users, and last_use_time.
         # We could have a couple of last logged users. Usually, if a user is logged in, and then we remotely
@@ -156,7 +162,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                 # If the last user is local, we should tag this device.
                 if is_last_login_local is True:
                     self.plugin_base.devices.add_label(
-                        (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                        [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                         "Last logon not from domain"
                     )
 

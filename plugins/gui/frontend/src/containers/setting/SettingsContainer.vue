@@ -176,7 +176,7 @@
 			this.fetchData({
 				rule: 'execution'
 			}).then((response) => {
-				this.executionEnabled = (response.data === 'enabled')
+				this.lifecycle.executionEnabled = (response.data === 'enabled')
 			})
 			this.fetchData({
 				rule: 'dashboard/lifecycle_rate'

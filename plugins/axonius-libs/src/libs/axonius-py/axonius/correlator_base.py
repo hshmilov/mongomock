@@ -122,8 +122,8 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         Post data is a list of axon-ids. Otherwise, will query DB-wise.
         :return:
         """
-        if job_name == 'execute':
-            return self.__correlate()
+        if job_name != 'execute':
+            raise ValueError("The only job name supported is execute")
 
         devices_to_correlate = None
         if post_json is not None:

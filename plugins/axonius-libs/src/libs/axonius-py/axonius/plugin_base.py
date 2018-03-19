@@ -12,7 +12,6 @@ import logging
 import socket
 import ssl
 import urllib3
-import functools
 
 from axonius.parsing_utils import get_exception_string
 from flask import Flask, request, jsonify
@@ -27,6 +26,7 @@ from retrying import retry
 from pathlib import Path
 from promise import Promise
 
+import axonius.entities
 from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -348,8 +348,8 @@ class PluginBase(Feature):
         self.users_db_view = self.aggregator_db_connection['users_db_view']
 
         # Namespaces
-        self.devices = self.DevicesNamespace(self)
-        self.users = self.UsersNamespace(self)
+        self.devices = axonius.entities.DevicesNamespace(self)
+        self.users = axonius.entities.UsersNamespace(self)
 
         # Finished, Writing some log
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -837,32 +837,12 @@ class PluginBase(Feature):
 
     @property
     def plugin_subtype(self):
+        # TODO: This is bad, since pre-correlation plugins are being constantly triggered by the system scheduler
+        # TODO: for "execute" trigger. but PluginBase isn't triggerable! so we better make it also triggerable
+        # TODO: and make it not do anything.
         return "Pre-Correlation"
 
-    class EntityNamespace(object):
-        """ Just a namespace so that we could do self.devices.add_label or self.users.add_data"""
-
-        def __init__(self, pb, entity):
-            self.add_label = functools.partial(pb.add_label_to_entity, entity=entity)
-            self.add_many_labels = functools.partial(pb.add_many_labels_to_entity, entity=entity)
-            self.add_data = functools.partial(pb.add_data_to_entity, entity=entity)
-            self.add_adapterdata = functools.partial(pb.add_adapterdata_to_entity, entity=entity)
-            self.tag = functools.partial(pb._tag, entity=entity)
-            self.tag_many = functools.partial(pb._tag_many, entity=entity)
-
-    class DevicesNamespace(EntityNamespace):
-        """" Just a namespace for devices so that we could do self.devices.add_label """
-
-        def __init__(self, pb):
-            super().__init__(pb, "devices")
-
-    class UsersNamespace(EntityNamespace):
-        """" Just a namespace for users so that we could do self.devices.add_label """
-
-        def __init__(self, pb):
-            super().__init__(pb, "users")
-
-    def _tag_many(self, identity_by_adapter, names, data, type, entity):
+    def _tag_many(self, identity_by_adapter, names, data, type, entity, action_if_exists):
         """ Function for tagging many adapter devices with many tags.
         This function will tag a wanted device. The tag will be related to all adapters in the device.
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
@@ -872,14 +852,17 @@ class PluginBase(Feature):
         :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
                      will be the same for all tags.
         :param entity: "devices" or "users" -> what is the entity we are tagging.
+        :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
         :return:
         """
         assert entity == "devices" or entity == "users"
+        assert action_if_exists == "replace" or (action_if_exists == "update" and type == "adapterdata")
 
         tag_data = {'association_type': 'Multitag',
                     'associated_adapters': identity_by_adapter,
                     'entity': entity,
                     'tags': [{
+                        "action_if_exists": action_if_exists,
                         "name": name,
                         "data": data,
                         "type": type} for name in names]
@@ -894,29 +877,29 @@ class PluginBase(Feature):
 
         return response
 
-    def _tag(self, identity_by_adapter, name, data, type, entity):
+    def _tag(self, identity_by_adapter, name, data, type, entity, action_if_exists):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
-        :param identity_by_adapter: a tuple of (adapter_unique_name, unique_id).
-                                           e.g. ("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")
+        :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
+                                           e.g. [("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")]
         :param name: the name of the tag. should be a string.
         :param data: the data of the tag. could be any object.
         :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
         :param entity: "devices" or "users" -> what is the entity we are tagging.
+        :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
         :return:
         """
 
         assert entity == "devices" or entity == "users"
+        assert action_if_exists == "replace" or (action_if_exists == "update" and type == "adapterdata")
 
         tag_data = {'association_type': 'Tag',
-                    'associated_adapters':
-                        [
-                            (identity_by_adapter[0], identity_by_adapter[1])
-                        ],
+                    'associated_adapters': identity_by_adapter,
                     "name": name,
                     "data": data,
                     "type": type,
-                    "entity": entity}
+                    "entity": entity,
+                    "action_if_exists": action_if_exists}
         # Since datetime is often passed here, and it is not serializable, we use json_util.default
         # That automatically serializes it as a mongodb date object.
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
@@ -929,16 +912,16 @@ class PluginBase(Feature):
 
     def add_many_labels_to_entity(self, identity_by_adapter, labels, are_enabled=True, entity=None):
         """ Tag many devices with many tags. if is_enabled = False, the labels are grayed out."""
-        return self._tag_many(identity_by_adapter, labels, are_enabled, "label", entity)
+        return self._tag_many(identity_by_adapter, labels, are_enabled, "label", entity, "replace")
 
     def add_label_to_entity(self, identity_by_adapter, label, is_enabled=True, entity=None):
         """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
-        return self._tag(identity_by_adapter, label, is_enabled, "label", entity)
+        return self._tag(identity_by_adapter, label, is_enabled, "label", entity, "replace")
 
     def add_data_to_entity(self, identity_by_adapter, name, data, entity=None):
         """ A shortcut to __tag with type "data" """
-        return self._tag(identity_by_adapter, name, data, "data", entity)
+        return self._tag(identity_by_adapter, name, data, "data", entity, "replace")
 
-    def add_adapterdata_to_entity(self, identity_by_adapter, data, entity=None):
+    def add_adapterdata_to_entity(self, identity_by_adapter, data, entity=None, action_if_exists="replace"):
         """ A shortcut to __tag with type "adapterdata" """
-        return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity)
+        return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity, action_if_exists)

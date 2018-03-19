@@ -41,6 +41,10 @@ class TestAdAdapter(AdapterTestBase):
     def some_user_id(self):
         return USER_ID_FOR_CLIENT_1
 
+    @pytest.mark.skip("Currently ad's device_alive_thresh is -1 which makes it fail.")
+    def test_devices_cleaning(self):
+        pass
+
     def test_fetch_devices(self):
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']
@@ -53,8 +57,9 @@ class TestAdAdapter(AdapterTestBase):
         # Checking that we have devices from both clients
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id_1, DEVICE_ID_FOR_CLIENT_1)])
         # Testing the ability to filter old devices
-        devices_list = self.axonius_system.get_devices_with_condition({"adapters.data.hostname": "nonExistance"})
-        assert len(devices_list) == 0, "Found device that should have been filtered"
+        # Currently disabling the old devices test since we set it to -1.
+        # devices_list = self.axonius_system.get_devices_with_condition({"adapters.data.hostname": "nonExistance"})
+        # assert len(devices_list) == 0, "Found device that should have been filtered"
         # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
     def test_fetch_users(self):
@@ -89,7 +94,7 @@ class TestAdAdapter(AdapterTestBase):
         def has_ip_conflict_tag():
             dns_conflicts_fixture.find_conflicts()
             assert len(self.axonius_system.get_devices_with_condition(
-                {"tags.name": "IP Conflicts", "tags.type": "label"})) > 0
+                {"$and": [{"tags.name": "IP Conflicts"}, {"tags.type": "label"}]})) > 0
             assert len(self.axonius_system.get_devices_with_condition(
                 {
                     "tags": {

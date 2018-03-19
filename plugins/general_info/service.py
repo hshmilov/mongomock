@@ -2,9 +2,9 @@ import time
 import threading
 import functools
 
-from axonius.devices import deep_merge_only_dict
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device import Device
+from axonius.users.user import User
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_exception_string
 from axonius.utils.files import get_local_config_file
@@ -18,12 +18,21 @@ from datetime import datetime
 MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 50
 SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
+# The maximum time we wait for new execution answers. If no sent execution request comes back we bail out.
+MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 120
+
+# The maximum time we wait until all active execution threads
+MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 120
+
 subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo]
 
 
 class GeneralInfoService(PluginBase, Triggerable):
     class MyDevice(Device):
         general_info_last_success_execution = Field(datetime, "Last General Info Success")
+
+    class MyUser(User):
+        pass
 
     def __init__(self, *args, **kargs):
         super().__init__(get_local_config_file(__file__), *args, **kargs)
@@ -79,63 +88,172 @@ class GeneralInfoService(PluginBase, Triggerable):
     def _gather_general_info(self):
         """
         Runs wmi queries on windows devices to understand important stuff.
+        Afterwards, adds more information to users.
         """
 
         self.logger.info("Gathering General info started.")
         with self.work_lock:
             self.logger.debug("acquired work lock")
-            """
-            1. Get a list of windows devices
-            2. Get wmi queries to run from all subplugins
-            2. Execute a wmi queries on them
-            3. Pass the result to the subplugins
-            """
 
-            windows_devices = self.devices_db.find(
-                {"adapters.data.os.type": "Windows"},
-                projection={'internal_axon_id': True,
-                            'adapters.data.id': True,
-                            'adapters.plugin_unique_name': True,
-                            'adapters.client_used': True,
-                            'tags': True})
+            # First, gather general info about devices
+            self._gather_windows_devices_general_info()
 
-            windows_devices = list(windows_devices)  # no cursors needed.
-            self.logger.info(f"Found {len(windows_devices)} windows devices to run queries on.")
+            # Second, go over all devices we have, and try to associate them with users.
+            self._associate_users_with_devices()
 
-            # We don't wanna burst thousands of queries here, so we are going to have a thread that always
-            # keeps count of the number of requests, and shoot new ones in case needed.
-            self.number_of_active_execution_requests = 0
+    def _gather_windows_devices_general_info(self):
+        """
+        Runs wmi queries on windows devices to understand important stuff.
+        :returns: true if successful, false otherwise.
+        """
 
-            for device in windows_devices:
-                if self.number_of_active_execution_requests >= MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS:
-                    # Wait a few sec to re-check again.
-                    time.sleep(SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS)
+        self.logger.info("Gathering General info about windows devices - started.")
+        """
+        1. Get a list of windows devices
+        2. Get wmi queries to run from all subplugins
+        2. Execute a wmi queries on them
+        3. Pass the result to the subplugins
+        """
 
-                else:
-                    # shoot another one!
-                    self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
-                    internal_axon_id = device["internal_axon_id"]
+        windows_devices = self.devices_db.find(
+            {"adapters.data.os.type": "Windows"},
+            projection={'internal_axon_id': True,
+                        'adapters.data.id': True,
+                        'adapters.plugin_unique_name': True,
+                        'adapters.client_used': True,
+                        'adapters.data.hostname': True,
+                        'adapters.data.name': True,
+                        'tags': True})
 
-                    self.logger.debug(f"Going to request action on {internal_axon_id}")
+        windows_devices = list(windows_devices)  # no cursors needed.
+        self.logger.info(f"Found {len(windows_devices)} windows devices to run queries on.")
 
-                    # Get all wmi queries from all subadapters.
-                    wmi_smb_commands = []
-                    for subplugin in subplugins_objects:
-                        wmi_smb_commands.extend(subplugin.get_wmi_smb_commands())
+        # We don't wanna burst thousands of queries here, so we are going to have a thread that always
+        # keeps count of the number of requests, and shoot new ones in case needed.
+        self.number_of_active_execution_requests = 0
 
-                    # Now run all queries you have got on that device.
-                    p = self.request_action(
-                        "execute_wmi_smb",
-                        internal_axon_id,
-                        {
-                            "wmi_smb_commands": wmi_smb_commands
-                        }
-                    )
+        for device in windows_devices:
+            # a number that increases if we don't shoot any new requests. If we are stuck too much time,
+            # we might have an error in the execution. in such a case we bail out.
+            self.seconds_stuck = 0
 
-                    p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
-                           did_reject=functools.partial(self._handle_wmi_execution_failure, device))
+            while self.number_of_active_execution_requests >= MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS:
+                # Wait a few sec to re-check again.
+                time.sleep(SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS)
+                self.seconds_stuck = self.seconds_stuck + SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS
+
+                if self.seconds_stuck > MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS:
+                    # The current execution requests sent will still be handled, everything in general will
+                    # still continue to work, but this thread will finish. It is important because if the system
+                    # waits for us to finish we wanna avoid getting stuck forever.
+                    self.logger.error(f"Waited {self.seconds_stuck} seconds to continue sending more execution "
+                                      f"requests but we still have {self.number_of_active_execution_requests} "
+                                      f"threads active")
+                    return False
+
+            # shoot another one!
+            self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
+            internal_axon_id = device["internal_axon_id"]
+
+            self.logger.debug(f"Going to request action on {internal_axon_id}")
+
+            # Get all wmi queries from all subadapters.
+            wmi_smb_commands = []
+            for subplugin in subplugins_objects:
+                wmi_smb_commands.extend(subplugin.get_wmi_smb_commands())
+
+            # Now run all queries you have got on that device.
+            p = self.request_action(
+                "execute_wmi_smb",
+                internal_axon_id,
+                {
+                    "wmi_smb_commands": wmi_smb_commands
+                }
+            )
+
+            p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
+                   did_reject=functools.partial(self._handle_wmi_execution_failure, device))
+
+        # execution answer threads should finish immediately because they don't do anything
+        # that takes time excpet tagging that should be extra fast. but in the future we might
+        # have some more complex things there, so we wait here until everything is finished.
+        self.seconds_stuck = 0
+        while self.number_of_active_execution_requests > 0:
+            time.sleep(1)
+            self.seconds_stuck = self.seconds_stuck + 1
+            if self.seconds_stuck > MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS:
+                self.logger.error(f"Waited {self.seconds_stuck} seconds for all execution threads to "
+                                  f"finish, bailing out with {self.number_of_active_execution_requests} threads still"
+                                  f"active.")
+                return False
 
         return True
+
+    def _associate_users_with_devices(self):
+        """
+        Assuming devices were assocaited with users, now we associate users with devices.
+        :return:
+        """
+        self.logger.info("Associating users with devices")
+
+        # 1. Get all devices which have users associations, and map all these devices to one global users object.
+        devices_with_users_association = self.devices.get(data={"users": {"$exists": True}})
+        users = {}
+        for device in devices_with_users_association:
+            # Get a list of all users associated for this device.
+            for sd_users in [d['data']['users'] for d in device.specific_data if d['data'].get('users') is not None]:
+                # for each user associated, add a (device, user) tuple.
+                for user in sd_users:
+                    if users.get(user['username']) is None:
+                        users[user['username']] = []
+
+                    # users, is a dict of all users, ordered by the key string 'username'.
+                    # the dict is a mapping of the username to a list of tuples (user, device).
+                    # (user, device) is a specific user + last_use_time + more info of that specific device.
+                    # so we might have user1 and user2 objects which have the same username, but have other data
+                    # different.
+                    users[user['username']].append((user, device))
+
+        # 2. Go over all users. for each user, associate all known devices.
+        for username, linked_devices_and_users_list in users.items():
+            # Create the new adapterdata for that user
+            adapterdata_user = self._new_user()
+
+            # Find that user
+            user = list(self.users.get(data={"id": username}))
+
+            # Do we have it? or do we need to create it?
+            if len(user) > 1:
+                # Can't be! how can we have a user with the same id? should have been correlated.
+                self.logger.error(f"Found a couple of users (expected one) with same id: {username} -> {user}")
+                continue
+            elif len(user) == 0:
+                # user does not exists, TODO: create a new user.
+                self.logger.info(f"username {username} needs to be created, this is a todo task. continuing")
+                continue
+            else:
+                # the user exists, go over all associated devices and add them.
+                user = user[0]
+
+                for linked_user, linked_device in linked_devices_and_users_list:
+                    device_caption = linked_device.get_first_data("name") or \
+                        linked_device.get_first_data("hostname") or \
+                        linked_device.get_first_data("id")
+
+                    self.logger.debug(f"Associating {device_caption} with user {username}")
+                    adapterdata_user.add_associated_device(
+                        device_caption=device_caption,
+                        last_use_date=linked_user['last_use_date'],
+                        adapter_unique_name=linked_user['origin_unique_adapter_name'],
+                        adapter_data_id=linked_user['origin_unique_adapter_data_id']
+                    )
+
+            # we have a new adapterdata_user, lets add it. we do not give any specific identity
+            # since this tag isn't associated to a specific adapter.
+
+            user.add_adapterdata(adapterdata_user.to_dict())
+
+        self._save_user_field_names_to_db()
 
     def _handle_wmi_execution_success(self, device, data):
         try:
@@ -191,23 +309,10 @@ class GeneralInfoService(PluginBase, Triggerable):
             adapterdata_device.general_info_last_success_execution = datetime.now()
             new_data = adapterdata_device.to_dict()
 
-            # But! It might be that this time we brought less info than before. So we should merge the data, instead
-            # of replacing it.
-            final_data = [tag["data"] for tag in device["tags"]
-                          if tag["plugin_unique_name"] == self.plugin_unique_name and tag["type"] == "adapterdata"]
-            if len(final_data) > 0:
-                final_data = final_data[0]
-            else:
-                final_data = {}
-
-            # Merge. Note that we deep merge dicts but not lists, since lists are like fields
-            # for us (for example ip). Usually when we get some list variable we get all of it so we don't need
-            # any update things
-            final_data = deep_merge_only_dict(new_data, final_data)
-
             # Add the final one
             self.devices.add_adapterdata(
-                (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]), final_data)
+                [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])], new_data,
+                action_if_exists="update")  # If the tag exists, we update it using deep merge (and not replace it).
 
             # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
             # Fixme: running all queries.
@@ -226,13 +331,13 @@ class GeneralInfoService(PluginBase, Triggerable):
         finally:
             # Disable execution failure tag if exists.
             self.devices.add_label(
-                (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                 "Execution Failure", False
             )
 
             # Enable or disable execution exception
             self.devices.add_label(
-                (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                 "Execution Exception", is_execution_exception
             )
 
@@ -240,7 +345,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             if last_execution_debug is not None:
                 last_execution_debug = last_execution_debug.replace("\\n", "\n")
                 self.devices.add_data(
-                    (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                    [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                     "Last Execution Debug", last_execution_debug
                 )
 
@@ -266,14 +371,14 @@ class GeneralInfoService(PluginBase, Triggerable):
                 executer_info["adapter_unique_id"] = device["adapters"][0]["data"]["id"]
 
                 self.devices.add_label(
-                    (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                    [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                     "Execution Failure", True
                 )
 
                 ex_str = str(exc).replace("\\n", "\n")
 
                 self.devices.add_data(
-                    (executer_info["adapter_unique_name"], executer_info["adapter_unique_id"]),
+                    [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                     "Last Execution Debug", f"Execution failed: {ex_str}"
                 )
         except Exception:

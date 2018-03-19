@@ -11,12 +11,11 @@ from axonius.utils.mongo_escaping import escape_dict
 
 class UserDevice(SmartJsonClass):
     """ A definition for the json-scheme for a device that is associated to a user. """
-    device_caption = Field(str, "Name")  # The name of the device to be shown in the gui
+    device_caption = Field(str, "Associated Device Name")  # The name of the device to be shown in the gui
 
-    plugin_unique_name = Field(str)
-    adapter_name = Field(str, "Adapter Name")  # TODO: An enum of all adapters here.
-    adapter_id = Field(str, "Unique ID By Adapter")
-    axonius_id = Field(str, "Axonius ID")
+    adapter_unique_name = Field(str)  # the adapter unique name of the device
+    adapter_data_id = Field(str)
+    last_use_date = Field(datetime.datetime)
 
 
 class User(SmartJsonClass):
@@ -28,7 +27,7 @@ class User(SmartJsonClass):
     domain = Field(str, "Domain")   # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     is_admin = Field(bool, "Is Admin")
     last_seen = Field(datetime.datetime, 'Last Seen')
-    associated_devices = ListField(UserDevice, "Associated Devices")
+    associated_devices = ListField(UserDevice, "Associated Devices", json_format=JsonStringFormat.associated_device)
     member_of = ListField(str, "Member Of")
     is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
     is_locked = Field(bool, "Is Locked")  # If true, account is locked, and the time of lockout is last_lockout_time
@@ -60,6 +59,9 @@ class User(SmartJsonClass):
         else:
             target_field_list = self._user_fields
         target_field_list.add(name)
+
+    def add_associated_device(self, **kwargs):
+        self.associated_devices.append(UserDevice(**kwargs))
 
     def set_raw(self, raw_data: dict):
         """ Sets the raw fields associated with this device and also updates user_raw_fields.

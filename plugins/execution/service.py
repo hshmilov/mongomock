@@ -29,6 +29,10 @@ class ExecutionService(PluginBase):
         # Threadpool for creating new actions
         self._actions_thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=20)
 
+    @property
+    def plugin_subtype(self):
+        return "execution"
+
     def _restore_actions_from_db(self):
         """ Restores actions from db.
 

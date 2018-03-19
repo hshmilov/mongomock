@@ -19,6 +19,7 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_N
 from axonius.threading_utils import LazyMultiLocker
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
+from axonius.devices import deep_merge_only_dict
 
 get_devices_job_name = "Get device job"
 
@@ -426,23 +427,23 @@ class AggregatorService(PluginBase, Triggerable):
         for adapter_to_remove_from_old in new_axonius_entity['adapters']:
             entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
                                     {
-                "$pull": {
-                    'adapters': {
-                        PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
-                            PLUGIN_UNIQUE_NAME],
-                    }
-                }
+                                        "$pull": {
+                                            'adapters': {
+                                                PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
+                                                    PLUGIN_UNIQUE_NAME],
+                                            }
+                                        }
             })
         for tag_to_remove_from_old in new_axonius_entity['tags']:
             (tag_plugin_unique_name,
              tag_adapter_id), = tag_to_remove_from_old['associated_adapters']
             entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
                                     {
-                "$pull": {
-                    'tags': {
-                        f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
-                    }
-                }})
+                                        "$pull": {
+                                            'tags': {
+                                                f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
+                                            }
+                                        }})
 
     def _link_entities(self, entities_candidates, entities_db):
         """
@@ -520,15 +521,41 @@ class AggregatorService(PluginBase, Triggerable):
         :return: None
         """
 
-        if any((x['name'] == tag['name'] and x['plugin_unique_name'] == tag['plugin_unique_name'])
+        if any((x['name'] == tag['name'] and x['plugin_unique_name'] == tag['plugin_unique_name'] and x['type'] == tag['type'])
                for x in axonius_entity['tags']):
-            entities_db.update_one({
+
+            # We found the tag. If action_if_exists is replace just replace it. but if its update, lets
+            # make a deep merge here. Note that the access to the db should be locked (happens in the calling function)
+            if tag['action_if_exists'] == "update" and tag["type"] == "adapterdata":
+                # Take the old value of this tag.
+                final_data = [
+                    x["data"] for x in axonius_entity["tags"] if x["plugin_unique_name"] == tag["plugin_unique_name"]
+                    and x["type"] == "adapterdata"
+                    and x["name"] == tag["name"]
+                ]
+
+                if len(final_data) != 1:
+                    msg = f"Got tag {tag['plugin_unique_name']}/{tag['name']}/{tag['type']} with " \
+                          f"action_if_exists=update, but final_data is not of length 1: {final_data}"
+                    self.logger.error(msg)
+                    raise ValueError(msg)
+
+                final_data = final_data[0]
+
+                # Merge. Note that we deep merge dicts but not lists, since lists are like fields
+                # for us (for example ip). Usually when we get some list variable we get all of it so we don't need
+                # any update things
+                tag["data"] = deep_merge_only_dict(tag["data"], final_data)
+                self.logger.info("action if exists on tag!")
+
+            result = entities_db.update_one({
                 "internal_axon_id": axonius_entity['internal_axon_id'],
                 "tags": {
                     "$elemMatch":
                         {
                             "name": tag['name'],
-                            "plugin_unique_name": tag['plugin_unique_name']
+                            "plugin_unique_name": tag['plugin_unique_name'],
+                            "type": tag['type']
                         }
                 }
             }, {
@@ -536,14 +563,24 @@ class AggregatorService(PluginBase, Triggerable):
                     "tags.$": tag
                 }
             })
+
+            if result.modified_count != 1:
+                msg = f"tried to update tag {tag}. expected modified_count == 1 but got {result.modified_count}"
+                self.logger.error(msg)
+                raise ValueError(msg)
         else:
-            entities_db.update_one({
-                "internal_axon_id": axonius_entity['internal_axon_id'],
-            }, {
-                "$addToSet": {
-                    "tags": tag
-                }
-            })
+            result = entities_db.update_one(
+                {"internal_axon_id": axonius_entity['internal_axon_id']},
+                {
+                    "$addToSet": {
+                        "tags": tag
+                    }
+                })
+
+            if result.modified_count != 1:
+                msg = f"tried to add tag {tag}. expected modified_count == 1 but got {result.modified_count}"
+                self.logger.error(msg)
+                raise ValueError(msg)
 
     @property
     def plugin_subtype(self):

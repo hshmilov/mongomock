@@ -69,6 +69,10 @@ class DeviceUser(SmartJsonClass):
     last_use_date = Field(datetime.datetime)
     is_local = Field(bool, "Is User Local")
 
+    # Where did this user really come from?
+    origin_unique_adapter_name = Field(str)
+    origin_unique_adapter_data_id = Field(str)
+
 
 class DeviceSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""

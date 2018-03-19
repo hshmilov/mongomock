@@ -224,6 +224,8 @@ class Triggerable(Feature, ABC):
             trigger_response = "Didn't run yet"
             try:
                 trigger_response = self._triggered(job_name, request.get_json(silent=True))
+                if trigger_response is None:
+                    trigger_response = ""
                 on_success(trigger_response)
             except Exception as err:
                 self.logger.exception(f'An exception was raised while triggering job: {job_name}')
