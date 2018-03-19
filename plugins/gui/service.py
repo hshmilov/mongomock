@@ -221,7 +221,7 @@ class GuiService(PluginBase):
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(),
                      'device_count': device_list.count() if device_list else 0, 'archived': False}, upsert=True)
             return jsonify(beautify_db_entry(device) for device in
-                           device_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+                           device_list.skip(skip).limit(limit))
 
     @filtered()
     @add_rule_unauthenticated("device/count", methods=['GET'])
@@ -284,8 +284,8 @@ class GuiService(PluginBase):
         device_views_collection = self._get_collection('device_views', limited_user=False)
         if request.method == 'GET':
             mongo_filter = filter_archived()
-            return jsonify(beautify_db_entry(entry) for entry in device_views_collection.find(mongo_filter)
-                           .sort([('_id', pymongo.DESCENDING)]))
+            return jsonify(beautify_db_entry(entry) for entry in device_views_collection.find(mongo_filter))
+
         # Handle POST request
         view_data = self.get_request_data_as_object()
         if not view_data.get('name'):
@@ -355,7 +355,7 @@ class GuiService(PluginBase):
             #         {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
             #          'device_count': user_list.count() if user_list else 0, 'archived': False})
             return jsonify(beautify_db_entry(user) for user in
-                           user_list.sort([('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+                           user_list.skip(skip).limit(limit))
 
     @filtered()
     @add_rule_unauthenticated("user/count", methods=['GET'])
@@ -533,8 +533,7 @@ class GuiService(PluginBase):
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
-                                client_collection.find().sort([('_id', pymongo.ASCENDING)])
-                                .skip(skip).limit(limit)]
+                                client_collection.find().skip(skip).limit(limit)]
                 })
             if request.method == 'PUT':
                 client_to_add = request.get_json(silent=True)
@@ -762,8 +761,7 @@ class GuiService(PluginBase):
                                    "type": 1,
                                    "title": 1,
                                    "seen": 1,
-                                   "severity": 1}).sort(
-                                   [('_id', pymongo.DESCENDING)]).skip(skip).limit(limit))
+                                   "severity": 1}).skip(skip).limit(limit))
             elif request.method == 'POST':
                 notifications_to_see = request.get_json(silent=True)
                 if notifications_to_see is None:
