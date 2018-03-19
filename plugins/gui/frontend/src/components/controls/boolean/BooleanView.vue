@@ -1,6 +1,6 @@
 <template>
-    <div v-if="typeof value !== 'boolean'"></div>
-    <div v-else-if="value">
+    <div v-if="typeof processedData !== 'boolean'"></div>
+    <div v-else-if="processedData">
         <div class="checkmark"></div>
     </div>
     <div class="d-flex flex-column" v-else>
@@ -13,9 +13,15 @@
 	export default {
 		name: 'x-bool-view',
         props: ['schema', 'value'],
-        data() {
-			return {
-				data: this.value
+        computed: {
+			processedData() {
+				if (Array.isArray(this.value)) {
+					if (!this.value.length) return ''
+					return this.value.reduce((current, accumulator) => {
+						return current && accumulator
+                    }, true)
+                }
+                return this.value
             }
         }
 	}
