@@ -87,6 +87,7 @@
             flex: 1 0 auto;
             padding: 0;
             height: calc(100vh - 160px);
+            overflow: auto;
         }
     }
 </style>

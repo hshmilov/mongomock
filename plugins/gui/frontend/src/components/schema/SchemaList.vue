@@ -20,14 +20,12 @@
 </script>
 
 <style lang="scss">
-    .schema-list {
-        .array {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            grid-column-gap: 24px;
-            .label, .index {
-                font-weight: 500;
-            }
+    .schema-list > .array {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        grid-column-gap: 24px;
+        .label, .index {
+            font-weight: 500;
         }
     }
 </style>

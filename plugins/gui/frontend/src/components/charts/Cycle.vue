@@ -66,7 +66,7 @@
             },
             stageColourIndex() {
 				if (!this.currentStage) return 1
-                return (this.currentStage.index % 6) + 1
+                return (this.currentStage.index % 6)
             }
         }
 	}

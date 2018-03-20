@@ -8,7 +8,7 @@
         </template>
         <template v-else-if="isObject">
             <div v-for="key in Object.keys(data)">
-                <x-type-wrap :title="key" :class="{title: (typeof data[key] === 'object')}">
+                <x-type-wrap :title="key" :class="{title: (typeof data[key] === 'object')}" :required="true">
                     <x-custom-data :data="data[key]"/>
                 </x-type-wrap>
             </div>

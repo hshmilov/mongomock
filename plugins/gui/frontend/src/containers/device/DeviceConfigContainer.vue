@@ -185,9 +185,8 @@
 
     .tabs {
         width: 100%;
-        height: 50%;
+        height: 48%;
         margin-bottom: 12px;
-        overflow: hidden;
         .tab-header {
             border-bottom: 1px solid #ddd;
             margin-bottom: 12px;

@@ -1,9 +1,10 @@
 <template>
     <div class="array" :title="allItems">
         <div class="item" :class="{inline: !multiline}" v-for="item in limitedItems" v-if="!empty(data[item.name])">
-            <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]"></component>
+            <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]"/>
         </div>
-        <div class="item" v-if="limit && schemaItems.length > limit">+{{schemaItems.length - limit}}</div>
+        <div class="item" :class="{inline: !multiline}" v-if="limit && schemaItems.length > limit"
+        >+{{schemaItems.length - limit}}</div>
     </div>
 </template>
 

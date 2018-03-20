@@ -27,8 +27,11 @@ export default {
 		},
 		arrayContains(array, prefix) {
 			if (!prefix || typeof prefix !== 'string') return false
-			prefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-			return array.some(item => (item.match(`^${prefix}`) !== null || prefix.match(`^${item}`)))
+			let escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+			return array.some(item => {
+				let escapedItem = item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+				return (item.match(`^${escapedPrefix}`) !== null || prefix.match(`^${escapedItem}`))
+			})
 		},
 		getDataBasic(data) {
 			if (typeof data === 'string') return data.toLowerCase()
