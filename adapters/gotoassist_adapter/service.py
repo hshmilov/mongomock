@@ -107,7 +107,7 @@ class GotoassistAdapter(AdapterBase):
                 device.name = device_raw.get("machineName")
 
                 try:
-                    ip_address = device_raw.get("ipAddress")
+                    ip_address = device_raw.get("ipAddresses")
                     if ip_address is not None:
                         device.add_nic(None, ip_address, self.logger)
                 except:

@@ -107,8 +107,8 @@ class BigfixAdapter(AdapterBase):
                 device.hostname = device_raw.get("Computer Name", "")
                 device.figure_os(device_raw.get("OS", ""))
                 try:
-                    device.add_nic(None, [device_raw.get("IP Address", "").split(",")[0]] +
-                                   [device_raw.get("IPv6 Address", "").split(",")[0]], self.logger)
+                    device.add_nic(None, device_raw.get("IP Address", "").split(",") +
+                                   device_raw.get("IPv6 Address", "").split(","), self.logger)
                 except:
                     self.logger.exception("Problem adding nic to Bigfix")
                 device.agent_version = device_raw.get("Agent Version", "")
