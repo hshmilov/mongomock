@@ -731,7 +731,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             # Got here only if connection succeeded
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
-            error_msg = get_exception_string()
+            error_msg = e.args
             id_for_log = client_id if client_id else (id if id else '')
             self.logger.exception(
                 f"Got error while handling client {id_for_log} - \
