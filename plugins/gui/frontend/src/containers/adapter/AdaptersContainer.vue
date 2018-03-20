@@ -23,8 +23,10 @@
                 if (!this.adapter.adapterList || !this.adapter.adapterList.data) return []
                 return [...this.adapter.adapterList.data].sort((first, second) => {
                     // Sort by adapter plugin name (the one that is shown in the gui).
-                    if (first.plugin_name.text < second.plugin_name.text) return -1
-                    if (first.plugin_name.text > second.plugin_name.text) return 1
+                    let firstText = first.plugin_name.text.toLowerCase()
+                    let secondText = second.plugin_name.text.toLowerCase()
+                    if (firstText < secondText) return -1
+                    if (firstText > secondText) return 1
                     return 0
                 })
             }

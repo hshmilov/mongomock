@@ -18,9 +18,9 @@
 
             <template v-if="status < 100">
                 <!-- Percentage of completion of the cycle, updating while cycle proceeds -->
-                <text v-if="stageName" x="50%" y="50%" text-anchor="middle"
-                      :class="`extra-fill-${(stageIndex % 6) + 1}`">{{stageName}}...</text>
-                <text x="50%" y="50%" text-anchor="middle" dy="2em" class="subtitle">{{parseInt(status)}}%</text>
+                <text v-if="currentStageName" x="50%" y="50%" text-anchor="middle"
+                      :class="`extra-fill-${stageColourIndex} subtitle`">{{ currentStageName }}...</text>
+                <text x="50%" y="50%" text-anchor="middle" dy="2em" class="title">{{ parseInt(status) }}%</text>
             </template>
             <template v-else>
                 <!-- Cycle is complete, namely status is stable -->
@@ -50,19 +50,23 @@
 				if (!this.data || !this.data.length) return 100
 				return this.data.reduce((sum, item) => sum + item.status, 0) * 100 / this.sliceCount
             },
-            stageName() {
-				if (!this.data || !this.data.length) return ''
-                return this.data.filter(item => (item.status > 0) && (item.status < 1))[0].name.split('_').join(' ')
+            currentStage() {
+				if (!this.data || !this.data.length) return null
+				let stage = this.data[0]
+                let i = 1
+                while (i < this.data.length && stage.status === 1) {
+					stage = this.data[i]
+					i++
+                }
+                return { ...stage, index: i }
             },
-            stageIndex() {
-				if (!this.data || !this.data.length) return -1
-                let currentStage = -1
-				this.data.forEach((item, index) => {
-					if (item.status > 0 && item.status < 1) {
-						currentStage = index
-                    }
-                })
-                return currentStage
+            currentStageName() {
+				if (!this.currentStage) return ''
+                return this.currentStage.name.split('_').join(' ')
+            },
+            stageColourIndex() {
+				if (!this.currentStage) return 1
+                return (this.currentStage.index % 6) + 1
             }
         }
 	}
@@ -91,14 +95,13 @@
         }
         text {
             stroke: none;
-            fill: $theme-gray-dark;
             font-size: 10px;
             &.title {
-                fill: $theme-blue;
-                font-size: 18px;
+                fill: $theme-gray-dark;
+                font-size: 24px;
             }
             &.subtitle {
-                font-size: 24px;
+                font-size: 18px;
             }
         }
         path {

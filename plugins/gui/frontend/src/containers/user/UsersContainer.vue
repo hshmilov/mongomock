@@ -46,7 +46,9 @@
 				let registeredAdapters = this.adapter.adapterList.data.map((adapter) => adapter.plugin_name.logo)
 
 				return registeredAdapters.reduce((map, name) => {
-					map[name] = this.userFields.specific[name]
+					if (this.userFields.specific[name] && this.userFields.specific[name].length) {
+					    map[name] = this.userFields.specific[name]
+                    }
 					return map
 				}, {})
 			},
@@ -57,8 +59,9 @@
 					{
 						title: 'Generic', fields: this.genericFlatSchema
 					},
-					...Object.keys(this.specificFlatSchema).map((title) => {
-						return { title, fields: this.specificFlatSchema[title] }
+					...Object.keys(this.specificFlatSchema).map((name) => {
+						let title = adapterStaticData[name] ? adapterStaticData[name].name : name
+						return { title, fields: this.specificFlatSchema[name] }
 					})
 				]
 			},

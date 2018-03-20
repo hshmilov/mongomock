@@ -32,9 +32,8 @@ export default {
 					schema.type = 'file'
 				}
 				// Primitive children are required if appear in schema.required list
-				if (schema.type !== 'array' && this.schema.required && this.schema.required.includes(schema.name)) {
-					schema.required = true
-				}
+				schema.required = (schema.type !== 'array' && this.schema.required
+					&& this.schema.required.includes(schema.name))
 			})
 			return schemaItems
 		}

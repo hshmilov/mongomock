@@ -20,7 +20,7 @@
     .status-icon {
         display: inline-block;
         color: $color-light;
-        border-radius: 4px;
+        border-radius: 4px 0 0 4px;
         background-color: $background-color-hover;
         &.empty-fill {
             background-color: transparent;

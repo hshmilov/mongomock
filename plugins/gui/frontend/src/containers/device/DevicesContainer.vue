@@ -99,7 +99,9 @@
                 let registeredAdapters = this.adapter.adapterList.data.map((adapter) => adapter.plugin_name.logo)
 
 				return registeredAdapters.reduce((map, name) => {
-					map[name] = this.deviceFields.specific[name]
+					if (this.deviceFields.specific[name] && this.deviceFields.specific[name].length) {
+					    map[name] = this.deviceFields.specific[name]
+                    }
                     return map
 				}, {})
 			},

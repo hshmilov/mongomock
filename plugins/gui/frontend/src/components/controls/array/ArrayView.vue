@@ -3,7 +3,8 @@
         <label v-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
         <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
             <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
-            <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description">
+            <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
+                         :required="true">
                 <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]" @input="$emit('input', data)"/>
             </x-type-wrap>
         </div>

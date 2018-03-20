@@ -6,7 +6,7 @@
                 <div class="grid grid-col-2">
                     <label for="start">Run Trigger</label>
                     <div class="grid-item">
-                        <a id="start" class="btn" @click="startResearch">Start Discovery Now</a>
+                        <a id="start" class="btn" @click="startResearch">Discover Now</a>
                     </div>
                     <label for="schedule" class="label">Next Scheduled Time:</label>
                     <x-date-edit id="schedule" :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
@@ -114,7 +114,7 @@
 				emailHost: '',
 				emailPort: '',
 				lifecycle: {
-					executionEnabled: true,
+					executionEnabled: false,
 					researchRate: 0
 				}
 			}
