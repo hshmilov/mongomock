@@ -19,6 +19,10 @@ export const adapterStaticData = {
 		name: 'GoToAssist',
 		description: 'GoToAssist is a cloud-based toolset for IT and customer support teams an includes remote support, IT monitoring and service desk management. '
 	},
+	'airwatch_adapter': {
+		name: 'VMWare Airwatch',
+		description: 'AirWatch provides of enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
+	},
 	'aws_adapter': {
 		name: 'Amazon Elastic',
 		description: 'Amazon Elastic Compute Cloud (Amazon EC2) provides scalable computing capacity in the Amazon Web Services (AWS) cloud.'

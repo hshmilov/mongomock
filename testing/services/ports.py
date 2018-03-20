@@ -23,6 +23,7 @@ DOCKER_PORTS = {
     'bomgar-adapter':                   5115,
     'gotoassist-adapter':               5200,
     'puppet-adapter':                   5222,
+    'airwatch-adapter':                 5228,
     'nessus-adapter':                   5555,
     'general-info':                     5556,
     'symantec-adapter':                 5676,
