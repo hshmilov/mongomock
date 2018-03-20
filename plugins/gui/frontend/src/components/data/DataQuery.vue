@@ -167,6 +167,7 @@
             },
             submitQuery () {
             	if (!this.filterValid) return
+				this.queryFilter = this.searchValue
             	this.executeQuery()
 				this.$refs.greatInput.parentElement.click()
             },

@@ -75,7 +75,7 @@
         props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
-				loading: false
+				loading: true
             }
         },
         computed: {
@@ -99,8 +99,7 @@
                 }
 			}),
             fetching() {
-				return (!this.fields.length || this.content.fetching || this.count.fetching)
-                    && (!this.content.data.length && this.count.data > 0)
+				return (!this.fields.length || this.content.fetching || this.count.fetching) && !this.pageData.length
             },
             viewFields() {
 				return this.fields.filter((field) => field.name && this.view.fields.includes(field.name))
@@ -149,7 +148,7 @@
             	this.fetchContent({
 					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
                     limit: this.pageLinkNumbers.length * this.view.pageSize
-				})
+				}).then(() => this.loading = false)
             },
             onClickRow(id) {
 				if (!document.getSelection().isCollapsed) return
@@ -168,6 +167,7 @@
 		created() {
 			if (!this.content.data.length) {
 				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})
+                    .then(() => this.loading = false)
             }
             if (this.refresh) {
                 this.interval = setInterval(function () {
