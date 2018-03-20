@@ -13,6 +13,7 @@ class DesktopCentralAdapter(AdapterBase):
 
     class MyDevice(Device):
         agent_version = Field(str, 'Agent Version')
+        installation_status = Field(str, 'Installation Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -86,8 +87,6 @@ class DesktopCentralAdapter(AdapterBase):
                     continue
                 # 22 Means installed
                 # In case there is no such field we don't want to miss the device
-                if device_raw.get("installation_status", 22) != 22:
-                    continue
                 device = self._new_device()
                 device.domain = device_raw.get("domain_netbios_name", "")
                 device.hostname = device_raw.get("full_name", "")
@@ -108,6 +107,12 @@ class DesktopCentralAdapter(AdapterBase):
                 device.os.major = int(os_version_list[0])
                 if len(os_version_list) > 1:
                     device.os.minor = int(os_version_list[1])
+                device.installation_status = device_raw.get("installation_status")
+                installation_status = device_raw.get("installation_status")
+                if installation_status is not None:
+                    device.installation_status = {21: "Yet to install", 22: "Installed",
+                                                  23: "uninstalled", 24: "yet to uninstall",
+                                                  29: "installation failure"}.get(installation_status)
                 device.last_used_users = device_raw.get("agent_logged_on_users", "").split(",")
                 device.set_raw(device_raw)
                 yield device

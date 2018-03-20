@@ -105,10 +105,11 @@ class AirwatchAdapter(AdapterBase):
                 device.figure_os(device_raw.get("Platform", "") + " " + device_raw.get("OperatingSystem", ""))
                 device.phone_number = device_raw.get("PhoneNumber", "")
                 try:
-                    mac_address = device_raw.get("MacAddress")
+                    network_raw = device_raw.get("Network", {})
+                    wifi_info = network_raw.get("WifiInfo", {})
+                    mac_address = wifi_info.get("WifiMacAddress", device_raw.get("MacAddress"))
                     if mac_address == "" or mac_address == "0.0.0.0":
                         mac_address = None
-                    network_raw = device_raw.get("Network", {})
                     ipaddresses_raw = network_raw.get("IPAddress")
                     ipaddresses = []
                     falsed_ips = ["0.0.0.0", "127.0.0.1", "", None]

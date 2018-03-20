@@ -97,7 +97,18 @@ class EnsiloConnection(object):
         :return: the response
         :rtype: dict
         """
-        return self._get('inventory/list-collectors')
+        devices_list = []
+        try:
+            devices_list += self._get('inventory/list-collectors?itemsPerPage=2000&pageNumber=0')
+        except:
+            self.logger.exception("Page 0 Unsopported in Ensilo")
+        try:
+            # If we won't get error, let's stop after million devices
+            for page_number in range(1, 500):
+                devices_list += self._get('inventory/list-collectors?itemsPerPage=2000&pageNumber=' + str(page_number))
+        except:
+            pass
+        return devices_list
 
     def __enter__(self):
         self.connect()

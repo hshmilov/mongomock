@@ -2,15 +2,17 @@ from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
-
+from axonius.fields import Field
 from symantec_adapter.connection import SymantecConnection
 from symantec_adapter.exceptions import SymantecException
+import datetime
 
 
 class SymantecAdapter(AdapterBase):
 
     class MyDevice(Device):
-        pass
+        online_status = Field(str, 'Online Status')
+        agent_version = Field(str, 'Agent Version')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -94,8 +96,6 @@ class SymantecAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            if 0 == device_raw['onlineStatus']:
-                continue
             device = self._new_device()
             if device_raw.get('domainOrWorkgroup', '') == 'WORKGROUP' or device_raw.get('domainOrWorkgroup', '') == '':
                 # Special case for workgroup
@@ -109,7 +109,10 @@ class SymantecAdapter(AdapterBase):
                                        str(device_raw.get("osminor", ''))]))
             for mac, ips in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', ''))):
                 device.add_nic(mac, ips, self.logger)
-
+            device.online_status = str(device_raw.get('onlineStatus'))
+            device.agent_version = device_raw.get("agentVersion")
+            device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get("lastScanTime", 0)),
+                                                                   int(device_raw.get("lastUpdateTime", 0))))
             device.id = device_raw['agentId']
             device.set_raw(device_raw)
             yield device

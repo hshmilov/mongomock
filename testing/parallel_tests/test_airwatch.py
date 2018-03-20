@@ -25,8 +25,3 @@ class TestAirwatchAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Airwatch License expired")
-    def test_fetch_devices(self):
-        # Our license expires on 19/3/2018 Waiting for a new trial
-        pass

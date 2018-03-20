@@ -32,6 +32,7 @@ class SentineloneAdapter(AdapterBase):
 
     class MyDevice(Device):
         agent_version = Field(str, 'Agent Version')
+        active_state = Field(str, 'Active State')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -128,19 +129,28 @@ class SentineloneAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            if not device_raw['is_active']:
-                continue
-            soft_info = device_raw['software_information']
-            net_info = device_raw['network_information']
+            soft_info = device_raw.get('software_information', {})
+            net_info = device_raw.get('network_information', {})
             device = self._new_device()
-            device.hostname = net_info['computer_name'] + '.' + net_info['domain']
-            device.domain = net_info['domain']
-            device.figure_os(' '.join([soft_info['os_name'], soft_info['os_arch'], soft_info['os_revision']]))
-            for interface in net_info['interfaces']:
-                device.add_nic(interface['physical'], interface['inet6'] + interface['inet'], self.logger)
-            device.agent_version = device_raw['agent_version']
+            computer_name, domain = net_info.get('computer_name'), net_info.get('domain')
+            if computer_name is not None:
+                hostname = computer_name
+                if domain is not None:
+                    hostname = f"{hostname}.{domain}"
+                device.hostname = hostname
+            device.domain = net_info.get('domain')
+            device.figure_os(' '.join([soft_info.get('os_name', ''), soft_info.get(
+                'os_arch', ''), soft_info.get('os_revision', '')]))
+            try:
+                for interface in net_info.get('interfaces', []):
+                    device.add_nic(interface.get('physical'), interface.get(
+                        'inet6', []) + interface.get('inet', []), self.logger)
+            except:
+                self.logger.exception(f"Problem adding nic {str(interfaces)} to SentinelOne")
+            device.agent_version = device_raw.get('agent_version')
             device.id = device_raw['id']
-            device.last_seen = parse_date(str(device_raw['last_active_date']))
+            device.last_seen = parse_date(str(device_raw.get('last_active_date', '')))
+            device.active_state = device_raw.get('is_active')
             device.set_raw(device_raw)
             yield device
 

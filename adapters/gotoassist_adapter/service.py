@@ -14,6 +14,7 @@ class GotoassistAdapter(AdapterBase):
 
     class MyDevice(Device):
         company_id = Field(str, 'Company ID')
+        machine_status = Field(str, 'Machine Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -95,8 +96,6 @@ class GotoassistAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                if device_raw.get("machineStatus", "Online") != "Online":
-                    continue
                 device = self._new_device()
                 device_id = device_raw.get("machineUuid")
                 if device_id is None:
@@ -105,7 +104,7 @@ class GotoassistAdapter(AdapterBase):
                 device.id = device_id
                 device.hostname = device_raw.get("dnsName")
                 device.name = device_raw.get("machineName")
-
+                device.machine_status = device_raw.get("machineStatus")
                 try:
                     ip_address = device_raw.get("ipAddresses")
                     if ip_address is not None:

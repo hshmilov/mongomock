@@ -14,6 +14,7 @@ class SecdoAdapter(AdapterBase):
 
     class MyDevice(Device):
         agent_version = Field(str, 'Agent Version')
+        agent_state = Field(str, 'Agent State')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -81,8 +82,6 @@ class SecdoAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                if device_raw.get("agentState", "connected") != "connected":
-                    continue
                 device = self._new_device()
                 device.id = device_raw.get("agentId")
                 if device.id is None:
@@ -95,6 +94,7 @@ class SecdoAdapter(AdapterBase):
                 except:
                     self.logger.exception("Problem with fetching Secdo Device nic")
                 device.agent_version = device_raw.get("version", "")
+                device.agent_state = device_raw.get("agentState")
                 device.last_used_users = device_raw.get("users", "").split(",")
                 device.last_seen = datetime.datetime.fromtimestamp(max(device_raw.get("lastWatchdog", 0),
                                                                        device_raw.get("lastKeepAlive", 0), device_raw.get("lastTransmission", 0)))

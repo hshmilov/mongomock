@@ -14,6 +14,7 @@ class MinervaAdapter(AdapterBase):
 
     class MyDevice(Device):
         agent_version = Field(str, 'Agent Version')
+        agent_status = Field(str, 'Agent Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -89,8 +90,6 @@ class MinervaAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                if device_raw.get("agentStatus", "Online") != "Online":
-                    continue
                 device = self._new_device()
                 device.id = device_raw.get("id")
                 if device.id is None:
@@ -103,6 +102,7 @@ class MinervaAdapter(AdapterBase):
                 except:
                     self.logger.exception("Problem with adding nic to Minerva device")
                 device.agent_version = device_raw.get("armorVersion", "")
+                device.agent_status = device_raw.get("agentStatus")
                 device.last_used_users = device_raw.get("loggedOnUsers", "").split(",")
                 device.last_seen = parse_date(device_raw.get("lastSeenOnline", ""))
                 device.set_raw(device_raw)

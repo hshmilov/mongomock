@@ -91,8 +91,6 @@ class EnsiloAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                if device_raw.get("state", "Running") != "Running":
-                    continue
                 device = self._new_device()
                 device.id = device_raw.get("name")
                 if device.id is None:
@@ -101,11 +99,19 @@ class EnsiloAdapter(AdapterBase):
                 device.hostname = device_raw.get("name")
                 device.figure_os(device_raw.get("operatingSystem", ""))
                 try:
-                    mac_addresses = device_raw.get("macAddresses", [None])
-                    for mac_address in mac_addresses:
-                        if mac_address or device_raw.get("ipAddress"):
-                            device.add_nic(mac_address, device_raw.get(
-                                "ipAddress", "").split(","), self.logger)
+                    mac_addresses = list(device_raw.get("macAddresses", []))
+                    ip_addresses = device_raw.get("ipAddress")
+                    if ip_addresses is not None:
+                        ip_addresses = ip_addresses.split(",")
+                    if mac_addresses == []:
+                        if ip_addresses is not None:
+                            device.add_nic(None, ip_addresses, self.logger)
+                    else:
+                        for mac_address in mac_addresses:
+                            if ip_addresses is not None:
+                                device.add_nic(mac_address, ip_addresses, self.logger)
+                            else:
+                                device.add_nic(mac_address, None, self.logger)
                 except:
                     self.logger.exception("Problem with adding nic to ensilo device")
                 device.agent_version = device_raw.get("version", "")

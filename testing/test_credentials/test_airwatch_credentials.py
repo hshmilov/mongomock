@@ -5,4 +5,4 @@ client_details = {
     "apikey": "iLLKgzU43gDnQ+RsGDeITH46/wJIvKUVFPwclE70m1g=",
 }
 
-SOME_DEVICE_ID = '18915'
+SOME_DEVICE_ID = '18937'

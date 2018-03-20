@@ -30,6 +30,7 @@ class QualysAdapter(AdapterBase):
     class MyDevice(Device):
         agent_version = Field(str, "Qualys agent version")
         location = Field(str, "Qualys agent location")
+        agent_status = Field(str, "Agent Status")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -110,8 +111,6 @@ class QualysAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device_raw = device_raw.get('HostAsset', '')
-            if device_raw.get('agentInfo', {}).get('status', '') != 'STATUS_ACTIVE':
-                continue
             device = self._new_device()
             device.hostname = device_raw.get('name', '')
             device.figure_os(device_raw.get('os', ''))
@@ -127,6 +126,7 @@ class QualysAdapter(AdapterBase):
             device.agent_version = device_raw.get('agentInfo', {}).get("agentVersion", "")
             device.location = device_raw.get('agentInfo', {}).get("location", "")
             device.boot_time = parse_date(str(device_raw.get("lastSystemBoot", "")))
+            device.agent_status = device_raw.get('agentInfo', {}).get('status')
             try:
                 for software_raw in device_raw.get("software", {}).get("list", []):
                     device.add_installed_software(name=software_raw["HostAssetSoftware"]["name"],
