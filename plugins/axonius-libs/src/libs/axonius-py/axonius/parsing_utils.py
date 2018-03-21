@@ -147,6 +147,9 @@ def figure_out_os(s):
     elif 'freebsd' in s:
         os_type = "FreeBSD"
         distribution = "FreeBSD"
+    elif 'Junos OS' in s:
+        os_type = "FreeBSD"
+        distribution = "Junos OS"
     elif s.startswith('vmware'):
         os_type = "VMWare"
         esx_distributions = ['ESX 4.0',

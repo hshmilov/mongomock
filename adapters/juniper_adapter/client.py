@@ -33,6 +33,7 @@ class JuniperClient(object):
         try:
             task_ids = []
             for current_device in devices:
+                raw_data.append(('juniper_device', current_device))
                 self.logger.info(
                     f"Getting arp from {current_device.name}, {current_device.ipAddr}, {current_device.platform}")
                 result = current_device.exec_rpc_async.post(
@@ -49,12 +50,13 @@ class JuniperClient(object):
             # Wait for all tasks to complete
             pu_list = tm.wait_for_tasks(task_ids)
             for pu in pu_list:
-                if pu.state not in ("DONE", "SUCCESS", "100.0"):
+                if (pu.state != "DONE" or pu.status != "SUCCESS" or
+                        str(pu.percentage) != "100.0"):
                     self.logger.error(
                         f"Async RPC execution Failed. Failed to get arp table from device. The process state was {pu.state}")
 
                 # Print the RPC result for each
-                raw_data.append(pu.data)
+                raw_data.append(('arp_device', pu.data))
         finally:
             tm.delete()
 
