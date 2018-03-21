@@ -94,7 +94,16 @@ class TestAdAdapter(AdapterTestBase):
         def has_ip_conflict_tag():
             dns_conflicts_fixture.find_conflicts()
             assert len(self.axonius_system.get_devices_with_condition(
-                {"$and": [{"tags.name": "IP Conflicts"}, {"tags.type": "label"}]})) > 0
+                {
+                    "tags": {
+                        '$elemMatch': {
+                            "name": "IP Conflicts",
+                            "type": "label",
+                            "data": {"$ne": "False"}
+                        }
+                    }
+                }
+            )) > 0
             assert len(self.axonius_system.get_devices_with_condition(
                 {
                     "tags": {
