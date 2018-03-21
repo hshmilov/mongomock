@@ -9,7 +9,8 @@ import {
 	SAVE_DATA_VIEW, saveDataView,
 	FETCH_DATA_FIELDS, fetchDataFields,
 	FETCH_DATA_QUERIES, fetchDataQueries,
-	SAVE_DATA_QUERY, saveDataQuery
+	SAVE_DATA_QUERY, saveDataQuery,
+    START_RESEARCH_PHASE, startResearch
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
@@ -65,7 +66,8 @@ export default new Vuex.Store({
 		[ SAVE_DATA_VIEW ]: saveDataView,
 		[ FETCH_DATA_FIELDS ]: fetchDataFields,
 		[ FETCH_DATA_QUERIES ]: fetchDataQueries,
-		[ SAVE_DATA_QUERY ]: saveDataQuery
+		[ SAVE_DATA_QUERY ]: saveDataQuery,
+		[ START_RESEARCH_PHASE ]: startResearch
     },
     modules: {
         /*

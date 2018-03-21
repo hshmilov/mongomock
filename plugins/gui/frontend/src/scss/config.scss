@@ -129,3 +129,15 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
     border-left: $size solid $color;
   }
 }
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rotating {
+  animation: rotating 2s linear infinite;
+}

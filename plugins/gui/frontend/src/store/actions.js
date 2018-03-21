@@ -173,3 +173,11 @@ export const saveDataQuery = ({state, dispatch, commit}, payload) => {
 		}
 	}).catch(console.log.bind(console))
 }
+
+export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE'
+export const startResearch= ({dispatch}) => {
+    dispatch(REQUEST_API, {
+        rule: `research_phase`,
+        method: 'POST'
+    })
+}

@@ -13,6 +13,14 @@
                 </div>
                 <ul class="navbar-nav">
                     <li class="nav-item">
+                        <a v-if="!isRunning" @click="startResearch" class="nav-link">
+                            <svg-icon name="action/lifecycle/run" :original="true" height="20"></svg-icon>
+                        </a>
+                        <a v-if="isRunning"  class="nav-link">
+                            <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"></svg-icon>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link">
                             <triggerable-dropdown size="lg" align="right" :arrow="false">
                                 <div slot="dropdownTrigger">
@@ -53,8 +61,10 @@
 <script>
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import StatusIcon from '../../components/StatusIcon.vue'
+    import '../../components/icons'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
+    import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
 	import { TOGGLE_SIDEBAR } from '../../store/mutations'
 	import {
 		FETCH_NOTIFICATIONS_UNSEEN,
@@ -62,11 +72,22 @@
 		FETCH_NOTIFICATION
 	} from '../../store/modules/notifications'
 	import '../../components/icons/logo'
+    import { START_RESEARCH_PHASE } from '../../store/actions'
 
 	export default {
 		components: {TriggerableDropdown, StatusIcon},
 		name: 'top-bar-container',
-		computed: mapState(['interaction', 'notification']),
+		computed: {
+            ...mapState(['interaction', 'notification', 'dashboard']),
+            lifecycle () {
+                if (!this.dashboard.lifecycle.data.subPhases) return []
+
+                return this.dashboard.lifecycle.data.subPhases
+            },
+            isRunning () {
+                return this.lifecycle.reduce((sum, item) => sum + item.status, 0) !== this.lifecycle.length
+            }
+        },
         data() {
 			return {
 				interval: null
@@ -77,7 +98,10 @@
 			...mapActions({
 				fetchNotificationsUnseen: FETCH_NOTIFICATIONS_UNSEEN,
 				fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
-				fetchNotification: FETCH_NOTIFICATION
+				fetchNotification: FETCH_NOTIFICATION,
+                fetchLifecycle: FETCH_LIFECYCLE,
+                startResearch: START_RESEARCH_PHASE,
+
 			}),
 			navigateNotification (notificationId) {
 				this.fetchNotification(notificationId)
@@ -98,16 +122,22 @@
                 this.fetchNotificationsUnseen({
                     skip: 0, limit: 5
                 })
-            }
+            },
+
 		},
-		mounted() {
+		created () {
             this.loadNotifications()
-            this.interval = setInterval(function () {
+            this.intervals = []
+            this.intervals.push(setInterval(function () {
                 this.loadNotifications()
-            }.bind(this), 60000);
+            }.bind(this), 60000))
+            this.fetchLifecycle()
+            this.intervals.push(setInterval(function () {
+                this.fetchLifecycle()
+            }.bind(this), 500))
 		},
-		beforeDestroy() {
-			clearInterval(this.interval);
+		beforeDestroy () {
+            this.intervals.forEach(interval => clearInterval(interval))
 		}
 	}
 </script>
@@ -168,10 +198,23 @@
                 padding-right: .75rem;
                 line-height: 40px;
                 color: $theme-black;
+                .svg-stroke {
+                    stroke: $theme-black;
+                    stroke-width: 6px;
+                }
+                .svg-fill {
+                    fill: $theme-black;
+                }
                 &:hover {
                     color: $theme-orange;
                     .show {
                         color: $theme-orange;
+                    }
+                    .svg-stroke {
+                        stroke: $theme-orange;
+                    }
+                    .svg-fill {
+                        fill: $theme-orange;
                     }
                 }
             }

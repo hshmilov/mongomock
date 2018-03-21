@@ -116,7 +116,6 @@
 				fetchQueries: FETCH_DATA_QUERIES
 			}),
 			getDashboardData () {
-				this.fetchLifecycle()
 				this.fetchAdapterDevices()
 				this.fetchDashboard()
 			},
@@ -142,9 +141,6 @@
 
 			this.getDashboardData()
 			this.intervals = []
-			this.intervals.push(setInterval(function () {
-				this.fetchLifecycle()
-			}.bind(this), 500))
 			this.intervals.push(setInterval(function () {
 				this.fetchDashboard()
 			}.bind(this), 1000))

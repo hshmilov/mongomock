@@ -66,7 +66,7 @@
 		UPDATE_MULTI_LINE,
 		SAVE_SETTINGS
 	} from '../../store/modules/settings'
-	import { REQUEST_API } from '../../store/actions'
+	import { REQUEST_API, START_RESEARCH_PHASE } from '../../store/actions'
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
@@ -129,14 +129,9 @@
 				fetchLifecycle: FETCH_LIFECYCLE,
 				fetchSettings: FETCH_SETTINGS,
 				fetchData: REQUEST_API,
-				saveSettings: SAVE_SETTINGS
+				saveSettings: SAVE_SETTINGS,
+                startResearch: START_RESEARCH_PHASE
 			}),
-			startResearch () {
-				this.fetchData({
-					rule: `research_phase`,
-					method: 'POST'
-				})
-			},
 			toggleExecution (executionEnabled) {
 				let param = `enable`
 				if (!executionEnabled.value) {
