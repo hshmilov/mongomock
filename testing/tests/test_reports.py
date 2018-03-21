@@ -4,7 +4,7 @@ import datetime
 import time
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from services.reports_service import reports_fixture
+from tests.conftest import axonius_fixture
 
 NO_RESULT_WATCH_DB_DOC = {
     "alert_types": [
@@ -405,7 +405,7 @@ def test_retrigger_multiple_changes(axonius_fixture, watch_fixture):
     axonius_fixture.get_devices_db().drop()
 
 
-def wait_for_notification(reports_fixture, notification_db, notification, interval=5, num_intervals=3):
+def wait_for_notification(axonius_fixture, notification_db, notification, interval=5, num_intervals=3):
     def got_notified(starting_num_of_notifications):
         return len(list(notification_db.find({'title': notification['title']}))) == starting_num_of_notifications + 1
 
@@ -413,7 +413,7 @@ def wait_for_notification(reports_fixture, notification_db, notification, interv
     success = False
     for x in range(1, num_intervals):
         try:
-            reports_fixture.run_jobs()
+            axonius_fixture.reports.run_jobs()
             assert got_notified(curent_num_of_notifications)
             success = True
             break

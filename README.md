@@ -31,7 +31,8 @@ Examples:
 # Shutdown system (the basic configuration)
 ./axonius.sh system down --all
 
-# All system commands start and stop the system [mongo, core, aggregator, gui, execution] plus any other specified containers
+# All system commands start and stop the system plus any other specified containers
+# see member axonius_services under class AxoniusService for all basic system components
 
 # In order to start and stop a specific *container*:
 ./axonius.sh adapter ad up [--prod]

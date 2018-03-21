@@ -73,8 +73,10 @@ class ParallelRunner(object):
     def pump_std(self, name, proc):
         print(name, f"{COLOR.get('light_magenta', '')}STDOUT{COLOR.get('reset', '')}")
         print(open(self.std_file(name), "rb").read().decode("utf-8"))
-        print(name, f"{COLOR.get('light_red', '')}STDERR{COLOR.get('reset', '')}")
-        print(open(self.err_file(name), "rb").read().decode("utf-8"))
+        error = open(self.err_file(name), "rb").read().decode("utf-8")
+        if error.strip():
+            print(name, f"{COLOR.get('light_red', '')}STDERR{COLOR.get('reset', '')}")
+            print(error)
 
     def __del__(self):
         self.clean()

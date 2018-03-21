@@ -15,6 +15,8 @@ from services.aggregator_service import AggregatorService
 from services.axon_service import TimeoutException
 from services.core_service import CoreService
 from services.gui_service import GuiService
+from services.reports_service import ReportsService
+from services.static_correlator_service import StaticCorrelatorService
 from services.system_scheduler_service import SystemSchedulerService
 from services.mongo_service import MongoService
 from services.plugin_service import AdapterService, PluginService
@@ -34,8 +36,11 @@ class AxoniusService(object):
         self.scheduler = SystemSchedulerService()
         self.gui = GuiService()
         self.execution = ExecutionService()
+        self.static_correlator = StaticCorrelatorService()
+        self.reports = ReportsService()
 
-        self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution]
+        self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution,
+                                 self.static_correlator, self.reports]
 
     def stop(self, should_delete):
         # Not critical but lets stop in reverse order

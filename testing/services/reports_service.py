@@ -1,7 +1,4 @@
-import pytest
-
 from services.plugin_service import PluginService
-from services.simple_fixture import initialize_fixture
 
 
 class ReportsService(PluginService):
@@ -22,10 +19,3 @@ class ReportsService(PluginService):
 
     def run_jobs(self):
         self.get('trigger_reports', api_key=self.api_key)
-
-
-@pytest.fixture(scope="module")
-def reports_fixture(request):
-    service = ReportsService()
-    initialize_fixture(request, service)
-    return service

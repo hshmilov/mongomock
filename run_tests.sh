@@ -16,8 +16,14 @@ fi
 # We must delete old data, or else tests will fail.
 # In order to delete them, we must stop the current containers first. We are going to do that anyway
 # in the integration tests.
-docker ps rm -f `docker ps -a -q`
-docker volume rm `docker volume ls -q`
+RUNNING_DOCKERS=$( docker ps -a -q )
+if [ "$RUNNING_DOCKERS" != "" ]; then
+    docker rm -f ${RUNNING_DOCKERS}
+fi
+AVAILABLE_VOLUMES=$( docker volume ls -q )
+if [ "$AVAILABLE_VOLUMES" != "" ]; then
+    docker volume rm ${AVAILABLE_VOLUMES}
+fi
 
 echo "Running unitests"
 pytest -v -s --ignore=testing --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform --junitxml=testing/reporting/ut_report.xml

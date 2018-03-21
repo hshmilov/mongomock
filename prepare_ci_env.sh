@@ -2,9 +2,18 @@
 
 echo "Removing all containers, volumes, networks, and axonius images"
 docker network rm axonius
-docker rm -f $(docker ps -a -q)
-docker volume rm $(docker volume ls -q)
-docker rmi $(docker images -q --filter=reference='axonius/*')
+RUNNING_DOCKERS=$( docker ps -a -q )
+if [ "$RUNNING_DOCKERS" != "" ]; then
+    docker rm -f ${RUNNING_DOCKERS}
+fi
+AVAILABLE_VOLUMES=$( docker volume ls -q )
+if [ "$AVAILABLE_VOLUMES" != "" ]; then
+    docker volume rm ${AVAILABLE_VOLUMES}
+fi
+AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
+if [ "$AVAILABLE_IMAGES" != "" ]; then
+    docker rmi ${AVAILABLE_IMAGES}
+fi
 
 echo "Logging to docker hub and pulling axonius-base-image"
 source testing/test_credentials/docker_login.sh
