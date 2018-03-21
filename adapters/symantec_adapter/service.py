@@ -107,12 +107,22 @@ class SymantecAdapter(AdapterBase):
                                        str(device_raw.get("osversion", '')),
                                        str(device_raw.get("osmajor", '')),
                                        str(device_raw.get("osminor", ''))]))
-            for mac, ips in list(zip(device_raw.get('macAddresses', ''), device_raw.get('ipAddresses', ''))):
-                device.add_nic(mac, ips, self.logger)
+            try:
+                mac_addresses = device_raw.get('macAddresses', [])
+                ip_addresses = device_raw.get('ipAddresses')
+                if mac_addresses == []:
+                    device.add_nic(None, ip_addresses, self.logger)
+                for mac_address in mac_addresses:
+                    device.add_nic(mac_address, ip_addresses, self.logger)
+            except:
+                self.logger.exception("Problem adding nic to Symantec")
             device.online_status = str(device_raw.get('onlineStatus'))
             device.agent_version = device_raw.get("agentVersion")
-            device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get("lastScanTime", 0)),
-                                                                   int(device_raw.get("lastUpdateTime", 0))))
+            try:
+                device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get("lastScanTime", 0)),
+                                                                       int(device_raw.get("lastUpdateTime", 0))) / 1000)
+            except:
+                self.logger.exception("Problem adding last seen to Symantec")
             device.id = device_raw['agentId']
             device.set_raw(device_raw)
             yield device

@@ -85,10 +85,10 @@ class GotoassistAdapter(AdapterBase):
             ],
             "required": [
                 "Gotoassist_Domain",
-                "username",
-                "password",
+                "client_id",
                 "client_secret",
-                "client_id"
+                "username",
+                "password"
             ],
             "type": "array"
         }
