@@ -4,7 +4,7 @@ FROM axonius/axonius-libs
 WORKDIR /home/axonius/app
 
 # Copy the current directory contents into the container at /app
-COPY ./ ./juniper/
+COPY ./ ./juniper_adapter/
 
 # installing the juniper space rest platform package.
-RUN pip3 install ./juniper/py-space-platform
+RUN pip3 install ./juniper_adapter/py-space-platform

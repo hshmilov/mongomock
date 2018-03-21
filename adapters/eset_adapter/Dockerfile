@@ -4,7 +4,7 @@ FROM axonius/axonius-libs
 WORKDIR /home/axonius/app
 
 # Copy the current directory contents into the container at /app
-COPY ./ ./eset/
+COPY ./ ./eset_adapter/
 
 # Copying needed shared library /usr/bin for debugging and /usr/local/bin for prod.
 COPY ./ERAApi/Network.so /usr/bin/
