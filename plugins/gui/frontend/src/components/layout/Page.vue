@@ -68,7 +68,7 @@
                     margin-right: 18px;
                     &:after {
                         right: -12px;
-                        @include triangle('right', 0.25rem, $theme-black);
+                        @include triangle('right', $color: $theme-black);
                     }
                 }
             }

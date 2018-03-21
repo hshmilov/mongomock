@@ -121,7 +121,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
-    Decorator stating that the view supports ?filter={"plugin_name":"aws_adapter" ,"data.name": ["WINDOWS8", "Blah"]}
+    Decorator stating that the view supports ?filter='adapters == "ad_adapter"'
     """
 
     def wrap(func):
@@ -130,13 +130,39 @@ def filtered():
             try:
                 filter_expr = request.args.get('filter')
                 if filter_expr:
-                    self.logger.info("Parsing filter: {0}".format(filter_expr))
+                    self.logger.debug("Parsing filter: {0}".format(filter_expr))
                     filter_obj = pql.find(filter_expr)
             except pql.matching.ParseError as e:
                 return return_error("Could not parse given expression. Details: {0}".format(e), 400)
             except Exception as e:
                 return return_error("Could not create mongo filter. Details: {0}".format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
+def sorted():
+    """
+    Decorator stating that the view supports ?sort=<field name><'-'/'+'>
+    The field name must match a field in the collection to sort by
+    and the -/+ determines whether sort is descending or ascending
+    """
+
+    def wrap(func):
+        def actual_wrapper(self, *args, **kwargs):
+            sort_obj = {}
+            try:
+                sort_param = request.args.get('sort')
+                if sort_param:
+                    self.logger.debug(f'Parsing sort: {sort_param}')
+                    sort_field = sort_param[:-1]
+                    sort_direction = sort_param[-1]
+                    sort_obj[sort_field] = pymongo.DESCENDING if (sort_direction == '-') else pymongo.ASCENDING
+            except Exception as e:
+                return return_error("Could not create mongo sort. Details: {0}".format(e), 400)
+            return func(self, mongo_sort=sort_obj, *args, **kwargs)
 
         return actual_wrapper
 
@@ -202,60 +228,137 @@ class GuiService(PluginBase):
                                                                  upsert=True)
         self.add_default_device_queries()
 
-    ##########
-    # DEVICE #
-    ##########
+    def add_default_device_queries(self):
+        # Load default queries and save them to the DB
+        try:
+            config = configparser.ConfigParser()
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), 'default_queries.ini')))
 
-    @paginated()
-    @filtered()
-    @projectioned()
-    @add_rule_unauthenticated("device")
-    def current_devices(self, limit, skip, mongo_filter, mongo_projection):
+            # Save default queries
+            for name, query in config.items():
+                if name == 'DEFAULT':
+                    # ConfigParser always has a fake DEFAULT key, skip it
+                    continue
+                try:
+                    self._insert_query('device', name, query['query'])
+                except:
+                    self.logger.exception(f'Error adding default query {name}')
+        except:
+            self.logger.exception(f'Error adding default queries')
+
+    def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
+        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
+        existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
+        if existed_query is not None:
+            self.logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
+            return existed_query['_id']
+        result = queries_collection.update({'name': name}, {'$set': {'name': name, 'filter': query_filter,
+                                                                     'expressions': query_expressions,
+                                                                     'query_type': 'saved', 'timestamp': datetime.now(),
+                                                                     'archived': False}}, upsert=True)
+        self.logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
+        return result.get('inserted_id', '')
+
+    ########
+    # DATA #
+    ########
+
+    def _get_entities(self, limit, skip, filter, sort, projection, module_name):
         """
-        Get Axonius devices from the aggregator
+        Get Axonius data of type <module_name>, from the aggregator which is expected to store them.
         """
+        self.logger.debug(f'Fetching data for module {module_name}')
         with self._get_db_connection(False) as db_connection:
-            if mongo_projection:
-                mongo_projection['internal_axon_id'] = 1
-            device_list = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find(mongo_filter, mongo_projection)
-            if mongo_filter and not skip:
+            pipeline = [{'$match': filter}]
+            if projection:
+                projection['internal_axon_id'] = 1
+                projection['adapters'] = 1
+                pipeline.append({'$project': projection})
+            if sort:
+                self.logger.info(f'HERE IS SORT {sort}')
+                pipeline.append({'$sort': sort})
+            else:
+                # Default sort by adapters list size and then Mongo id (giving order of insertion)
+                pipeline.append({'$addFields': {'adapters_size': {'$size': '$adapters'}}})
+                pipeline.append({'$sort': {'adapters_size': pymongo.DESCENDING, '_id': pymongo.DESCENDING}})
+            if skip:
+                pipeline.append({'$skip': skip})
+            if limit:
+                pipeline.append({'$limit': limit})
+
+            # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
+            # The reason is that sorting without the flag, causes exceeding of the memory limit.
+            data_list = db_connection[AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].aggregate(
+                pipeline, allowDiskUse=True)
+
+            if filter and not skip:
                 filter = request.args.get('filter')
-                db_connection[self.plugin_unique_name]['device_queries'].replace_one(
+                db_connection[self.plugin_unique_name][f'{module_name}_queries'].replace_one(
                     {'name': {'$exists': False}, 'filter': filter},
-                    {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(),
-                     'device_count': device_list.count() if device_list else 0, 'archived': False}, upsert=True)
-            return jsonify(beautify_db_entry(device) for device in
-                           device_list.skip(skip).limit(limit))
+                    {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
+                    upsert=True)
+            return jsonify(beautify_db_entry(entity) for entity in data_list)
 
-    @filtered()
-    @add_rule_unauthenticated("device/count", methods=['GET'])
-    def current_devices_count(self, mongo_filter):
-        """
-        Count total number of devices answering given mongo_filter
-
-        :param mongo_filter: Object defining a Mongo query
-        :return: Number of devices
-        """
-        with self._get_db_connection(False) as db_connection:
-            device_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
-            return str(device_collection.find(mongo_filter, {'_id': 1}).count())
-
-    @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
-    def current_device_by_id(self, device_id):
+    def _entity_by_id(self, module_name, entity_id):
         """
         Retrieve device by the given id, from current devices DB or update it
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            device = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view'].find_one(
-                {'internal_axon_id': device_id})
-            if device is None:
-                return return_error("Device ID wasn't found", 404)
-            return jsonify(device)
+            entity = db_connection[AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].find_one(
+                {'internal_axon_id': entity_id})
+            if entity is None:
+                return return_error("Entity ID wasn't found", 404)
+            return jsonify(entity)
 
-    @add_rule_unauthenticated("device/fields")
-    def device_fields(self):
+    def _entity_queries(self, limit, skip, filter, module_name):
+        """
+                GET Fetch all queries saved for given module, answering give filter
+                POST Save a new query for given module
+                     Data with a name for the query and a string filter is expected for saving
+
+                :param limit: limit for pagination
+                :param skip: start index for pagination
+                :return: GET - List of query names and filters
+                         POST - Id of inserted document saving given query
+                """
+        if request.method == 'GET':
+            filter['$or'] = filter_archived()['$or']
+            queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
+            return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(filter)
+                           .sort([('timestamp', pymongo.DESCENDING)])
+                           .skip(skip).limit(limit))
+        if request.method == 'POST':
+            query_to_add = request.get_json(silent=True)
+            if query_to_add is None:
+                return return_error("Invalid query", 400)
+            inserted_id = self._insert_query(module_name, query_to_add.get('name'), query_to_add.get('filter'),
+                                             query_to_add.get('expressions'))
+            return str(inserted_id), 200
+
+    def _entity_queries_delete(self, module_name, query_id):
+        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
+        queries_collection.update({'_id': ObjectId(query_id)},
+                                  {
+                                      '$set': {
+                                          'archived': True
+                                      }}
+                                  )
+        return ""
+
+    def _get_entities_count(self, filter, module_name):
+        """
+        Count total number of devices answering given mongo_filter
+
+        :param filter: Object defining a Mongo query
+        :return: Number of devices
+        """
+        with self._get_db_connection(False) as db_connection:
+            data_collection = db_connection[AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view']
+            return str(data_collection.find(filter, {'_id': 1}).count())
+
+    def _entity_fields(self, module_name):
         """
         Get generic fields schema as well as adapter-specific parsed fields schema.
         Together these are all fields that any device may have data for and should be presented in UI accordingly.
@@ -269,25 +372,51 @@ class GuiService(PluginBase):
 
         fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}
         with self._get_db_connection(False) as db_connection:
-            plugins_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            plugins_from_db = db_connection['core']['configs'].find({}).sort(
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             for plugin in plugins_from_db:
                 if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields']:
-                    plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields'].find_one(
+                    plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{module_name}_fields'].find_one(
                         {'name': 'parsed'}, projection={'schema': 1})
                     if plugin_fields_record:
                         fields['specific'][plugin[PLUGIN_NAME]] = _censor_fields(plugin_fields_record['schema'])
 
         return jsonify(fields)
 
+    ##########
+    # DEVICE #
+    ##########
+
+    @paginated()
+    @filtered()
+    @sorted()
+    @projectioned()
+    @add_rule_unauthenticated("device")
+    def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        return self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'device')
+
+    @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
+    def _device_by_id(self, device_id):
+        return self._entity_by_id('device', device_id)
+
     @paginated()
     @filtered()
     @add_rule_unauthenticated("device/queries", methods=['POST', 'GET'])
     def device_queries(self, limit, skip, mongo_filter):
-        return self._queries('device', limit, skip, mongo_filter)
+        return self._entity_queries(limit, skip, mongo_filter, 'device')
 
     @add_rule_unauthenticated("device/queries/<query_id>", methods=['DELETE'])
-    def device_delete_query(self, query_id):
-        return self._delete_query('device', query_id)
+    def device_queries_delete(self, query_id):
+        return self._entity_queries_delete('device', query_id)
+
+    @filtered()
+    @add_rule_unauthenticated("device/count")
+    def get_devices_count(self, mongo_filter):
+        return self._get_entities_count(mongo_filter, 'device')
+
+    @add_rule_unauthenticated("device/fields")
+    def device_fields(self):
+        return self._entity_fields('device')
 
     @add_rule_unauthenticated("device/views", methods=['GET', 'POST'])
     def device_views(self):
@@ -358,144 +487,38 @@ class GuiService(PluginBase):
 
     @paginated()
     @filtered()
+    @sorted()
     @projectioned()
     @add_rule_unauthenticated("user")
-    def current_users(self, limit, skip, mongo_filter, mongo_projection):
-        """
-        Get Axonius users from the aggregator
-        """
-        with self._get_db_connection(False) as db_connection:
-            if mongo_projection:
-                mongo_projection['internal_axon_id'] = 1
-            user_list = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db_view'].find(mongo_filter, mongo_projection)
-            # if mongo_filter and not skip:
-            #     db_connection[self.plugin_unique_name]['queries'].insert_one(
-            #         {'filter': request.args.get('filter'), 'query_type': 'history', 'timestamp': datetime.now(),
-            #          'device_count': user_list.count() if user_list else 0, 'archived': False})
-            return jsonify(beautify_db_entry(user) for user in
-                           user_list.skip(skip).limit(limit))
-
-    @filtered()
-    @add_rule_unauthenticated("user/count", methods=['GET'])
-    def current_users_count(self, mongo_filter):
-        """
-        Count total number of users answering given mongo_filter
-
-        :param mongo_filter: Object defining a Mongo query
-        :return: Number of devices
-        """
-        with self._get_db_connection(False) as db_connection:
-            user_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db']
-            return str(user_collection.find(mongo_filter, {'_id': 1}).count())
+    def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        return self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'user')
 
     @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
-    def current_user_by_id(self, user_id):
-        """
-        Retrieve user by the given id, from current users DB
-        :return:
-        """
-        with self._get_db_connection(False) as db_connection:
-            user = db_connection[AGGREGATOR_PLUGIN_NAME]['users_db'].find_one(
-                {'internal_axon_id': user_id})
-            if user is None:
-                return return_error("User ID wasn't found", 404)
-            return jsonify(user)
-
-    @add_rule_unauthenticated("user/fields")
-    def user_fields(self):
-        """
-        Get generic fields schema as well as adapter-specific parsed fields schema.
-        Together these are all fields that any user may have data for and should be presented in UI accordingly.
-        :return:
-        """
-
-        fields = {'generic': User.get_fields_info(), 'specific': {}}
-        with self._get_db_connection(False) as db_connection:
-            plugins_from_db = db_connection['core']['configs'].find({}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
-            for plugin in plugins_from_db:
-                if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['user_fields']:
-                    plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]]['user_fields'].find_one(
-                        {'name': 'parsed'}, projection={'schema': 1})
-                    if plugin_fields_record:
-                        fields['specific'][plugin[PLUGIN_NAME]] = plugin_fields_record['schema']
-
-        return jsonify(fields)
+    def user_by_id(self, user_id):
+        return self._entity_by_id('user', user_id)
 
     @paginated()
     @filtered()
     @add_rule_unauthenticated("user/queries", methods=['POST', 'GET'])
     def user_queries(self, limit, skip, mongo_filter):
-        return self._queries('user', limit, skip, mongo_filter)
+        return self._entity_queries(limit, skip, mongo_filter, 'user')
 
     @add_rule_unauthenticated("user/queries/<query_id>", methods=['DELETE'])
-    def user_delete_query(self, query_id):
-        return self._delete_query('user', query_id)
+    def user_queries_delete(self, query_id):
+        return self._entity_queries_delete('user', query_id)
 
-    def _queries(self, module_name, limit, skip, mongo_filter):
-        """
-        GET Fetch all queries saved for given module, answering give filter
-        POST Save a new query for given module
-             Data with a name for the query and a string filter is expected for saving
+    @filtered()
+    @add_rule_unauthenticated("user/count")
+    def get_users_count(self, mongo_filter):
+        return self._get_entities_count(mongo_filter, 'user')
 
-        :param limit: limit for pagination
-        :param skip: start index for pagination
-        :return: GET - List of query names and filters
-                 POST - Id of inserted document saving given query
-        """
-        if request.method == 'GET':
-            mongo_filter['$or'] = filter_archived()['$or']
-            queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
-            return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(mongo_filter)
-                           .sort([('timestamp', pymongo.DESCENDING)])
-                           .skip(skip).limit(limit))
-        if request.method == 'POST':
-            query_to_add = request.get_json(silent=True)
-            if query_to_add is None:
-                return return_error("Invalid query", 400)
-            inserted_id = self._insert_query(module_name, query_to_add.get('name'), query_to_add.get('filter'),
-                                             query_to_add.get('expressions'))
-            return str(inserted_id), 200
+    @add_rule_unauthenticated("user/fields")
+    def user_fields(self):
+        return self._entity_fields('user')
 
-    def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
-        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
-        existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
-        if existed_query is not None:
-            self.logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
-            return existed_query['_id']
-        result = queries_collection.update({'name': name}, {'$set': {'name': name, 'filter': query_filter,
-                                                                     'expressions': query_expressions,
-                                                                     'query_type': 'saved', 'timestamp': datetime.now(),
-                                                                     'archived': False}}, upsert=True)
-        self.logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
-        return result.get('inserted_id', '')
-
-    def add_default_device_queries(self):
-        # Load default queries and save them to the DB
-        try:
-            config = configparser.ConfigParser()
-            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), 'default_queries.ini')))
-
-            # Save default queries
-            for name, query in config.items():
-                if name == 'DEFAULT':
-                    # ConfigParser always has a fake DEFAULT key, skip it
-                    continue
-                try:
-                    self._insert_query('device', name, query['query'])
-                except:
-                    self.logger.exception(f'Error adding default query {name}')
-        except:
-            self.logger.exception(f'Error adding default queries')
-
-    def _delete_query(self, module_name, query_id):
-        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
-        queries_collection.update({'_id': ObjectId(query_id)},
-                                  {
-                                      '$set': {
-                                          'archived': True
-                                      }}
-                                  )
-        return ""
+    ###########
+    # ADAPTER #
+    ###########
 
     def _get_plugin_schemas(self, db_connection, plugin_unique_name):
         """

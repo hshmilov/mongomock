@@ -72,7 +72,7 @@
 				}).concat(Object.keys(this.specificFlatSchema).reduce((merged, title) => {
 					if (!this.specificFlatSchema[title]) return merged
 					merged = [...merged, ...this.specificFlatSchema[title].map((field) => {
-						return { ...field, title: `${title} ${field.title}`}
+						return { ...field, logo: title}
 					})]
 					return merged
 				}, []))

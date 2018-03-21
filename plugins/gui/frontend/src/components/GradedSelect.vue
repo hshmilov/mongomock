@@ -2,9 +2,9 @@
     <triggerable-dropdown size="sm" align="left" class="graded-select">
         <div slot="dropdownTrigger" class="">{{ selectedTitle? selectedTitle: placeholder }}</div>
         <nested-menu slot="dropdownContent">
-            <nested-menu-item v-for="option, ind in options" v-if="option.fields" :title="option.title"
-                              @click="onSelect(option.name)" :key="ind">
-                <dynamic-popover size="sm" left="236" :alignBottom="ind > 6">
+            <nested-menu-item v-for="option, ind in options" v-if="!option.fields || option.fields.length"
+                              :title="option.title" :key="ind" @click="onSelect(option.name)">
+                <dynamic-popover v-if="option.fields" size="sm" left="236" :alignBottom="ind > 6">
                     <nested-menu class="inner">
                         <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
                             <div>

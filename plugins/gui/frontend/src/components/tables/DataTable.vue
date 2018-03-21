@@ -8,14 +8,15 @@
         <div class="x-table-container">
             <table class="x-striped-table">
                 <thead>
-                    <tr class="x-row">
+                    <tr class="x-row clickable">
                         <th v-if="value">
                             <checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
                                       :value="ids" @change="$emit('input', $event)"/>
                         </th>
-                        <th v-for="field in viewFields" nowrap>
+                        <th v-for="field in viewFields" nowrap @click="onClickSort(field.name)" class="sortable">
                             <img v-if="field.logo" class="logo" :src="`/src/assets/images/logos/${field.logo}.png`"
-                                 height="20">{{ field.title }}</th>
+                                 height="20">{{ field.title }}<div :class="`x-sort ${sortClass(field.name)}`"></div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -112,7 +113,7 @@
                     (this.view.page + 1) * this.view.pageSize)
             },
             pageCount() {
-				return Math.floor(this.count.data / this.view.pageSize)
+				return Math.ceil(this.count.data / this.view.pageSize) - 1
             },
             pageLinkNumbers() {
                 let numbers = []
@@ -156,12 +157,32 @@
             },
             onClickSize(size) {
             	if (size === this.view.pageSize) return
-                this.updateView({module: this.module, view: { pageSize: size }})
+                this.updateModuleView({ pageSize: size })
             },
             onClickPage(page) {
             	if (page === this.view.page) return
                 if (page < 0 || page > this.pageCount) return
-				this.updateView({module: this.module, view: { page: page }})
+				this.updateModuleView({ page: page })
+            },
+            onClickSort(fieldName) {
+            	let sort = { ...this.view.sort }
+            	if (sort.field !== fieldName) {
+            		sort.field = fieldName
+                    sort.desc = true
+                } else if (sort.desc) {
+            		sort.desc = false
+                } else {
+            		sort.field = ''
+                }
+                this.updateModuleView({ sort, page: 0 })
+            },
+            sortClass(fieldName) {
+            	if (this.view.sort.field !== fieldName) return ''
+                if (this.view.sort.desc) return 'down'
+				return 'up'
+            },
+            updateModuleView(view) {
+            	this.updateView({module: this.module, view})
             }
         },
 		created() {

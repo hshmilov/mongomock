@@ -88,3 +88,32 @@ table {
     grid-template-columns: 1fr 2fr;
   }
 }
+
+.sortable {
+  .x-sort {
+    position: relative;
+    display: inline-block;
+    height: 4px;
+    margin-left: 8px;
+    &.up:before {
+      @include triangle('up', $color: $theme-gray-dark);
+      top: -2px;
+    }
+    &.down:after {
+      @include triangle('down', $color: $theme-gray-dark);
+      top: 4px;
+    }
+  }
+  &:hover {
+    .x-sort {
+      &.down:before {
+        @include triangle('up', $color: rgba($theme-gray-dark, 0.6));
+        top: -2px;
+      }
+      &:not(.down):not(.up):after {
+        @include triangle('down', $color: rgba($theme-gray-dark, 0.6));
+        top: 4px;
+      }
+    }
+  }
+}

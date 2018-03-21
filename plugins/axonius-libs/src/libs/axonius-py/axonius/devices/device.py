@@ -92,21 +92,19 @@ class DeviceInstalledSoftware(SmartJsonClass):
 class Device(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
-    pretty_id = Field(str, 'Axonius Name')
-    id = Field(str, 'ID')
     name = Field(str, 'Asset Name')
     hostname = Field(str, 'Host Name')
-    os = Field(DeviceOS)
     last_seen = Field(datetime.datetime, 'Last Seen')
     network_interfaces = ListField(NetworkInterface, 'Network Interfaces')
-    scanner = Field(bool, 'Scanner')
+    os = Field(DeviceOS)
+    last_used_users = ListField(str, "Last Used User")
+    installed_software = ListField(DeviceInstalledSoftware, "Installed Software")
+    security_patches = ListField(DeviceSecurityPatch, "Security Patch")
+    id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")
-    last_used_users = ListField(str, "Last Used User")
-    current_logged_user = Field(str, "Currently Logged User")
-    installed_software = ListField(DeviceInstalledSoftware, "Installed Software")
     users = ListField(DeviceUser, "Users")
-    security_patches = ListField(DeviceSecurityPatch, "Security Patch")
+    pretty_id = Field(str, 'Axonius Name')
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
     device_model_family = Field(str, "Device Model Family")
@@ -127,6 +125,8 @@ class Device(SmartJsonClass):
     total_number_of_physical_processors = Field(int, "Total Physical Processors")
     total_number_of_cores = Field(int, "Total Cores")
     batteries = ListField(DeviceBattery, "Battery")
+    current_logged_user = Field(str, "Currently Logged User")
+    scanner = Field(bool, 'Scanner')
 
     required = ['name', 'hostname', 'os', 'network_interfaces']
 

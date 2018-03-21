@@ -57,7 +57,7 @@
             }
             &.arrow:after {
                 right: 12px;
-                @include triangle('down');
+                @include triangle('down', 0.35rem);
                 transition: transform ease-in-out 0.5s;
             }
         }

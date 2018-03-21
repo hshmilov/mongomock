@@ -99,6 +99,9 @@ export const fetchDataContent = ({state, dispatch}, payload) => {
 	if (view.query && view.query.filter) {
 		param += `&filter=${encodeURI(view.query.filter)}`
 	}
+	if (view.sort && view.sort.field) {
+		param += `&sort=${view.sort.field}${view.sort.desc? '-' : '+'}`
+	}
 	return dispatch(REQUEST_API, {
 		rule: payload.module + param,
 		type: UPDATE_DATA_CONTENT,

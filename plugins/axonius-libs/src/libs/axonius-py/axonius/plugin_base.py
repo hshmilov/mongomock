@@ -368,7 +368,7 @@ class PluginBase(Feature):
             raw_fields = list(self._raw_fields_set)  # copy
 
             # Upsert new fields
-            fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['fields']
+            fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['device_fields']
             fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
             if self._first_fields_change:
                 fields_collection.update({'name': 'parsed'},
