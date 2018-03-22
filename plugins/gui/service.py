@@ -18,8 +18,8 @@ import configparser
 import pymongo
 from bson import ObjectId
 import json
-import pql
 from datetime import datetime
+from axonius.parsing_utils import parse_filter
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -130,10 +130,9 @@ def filtered():
             try:
                 filter_expr = request.args.get('filter')
                 if filter_expr:
-                    self.logger.debug("Parsing filter: {0}".format(filter_expr))
-                    filter_obj = pql.find(filter_expr)
-            except pql.matching.ParseError as e:
-                return return_error("Could not parse given expression. Details: {0}".format(e), 400)
+                    self.logger.info("Parsing filter: {0}".format(filter_expr))
+                    filter_obj = parse_filter(filter_expr)
+                    self.logger.info("Got filter: {0}".format(filter_obj))
             except Exception as e:
                 return return_error("Could not create mongo filter. Details: {0}".format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
@@ -990,7 +989,7 @@ class GuiService(PluginBase):
                                 if not dashboard_object.get('data'):
                                     dashboard_object['data'] = {}
                                 dashboard_object['data'][query_name] = devices_collection.find(
-                                    pql.find(query_object['filter']), {'_id': 1}).count()
+                                    parse_filter(query_object['filter']), {'_id': 1}).count()
 
                         dashboard_list.append(beautify_db_entry(dashboard_object))
                 return jsonify(dashboard_list)

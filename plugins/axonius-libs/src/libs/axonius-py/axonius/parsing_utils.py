@@ -14,6 +14,7 @@ import ipaddress
 import binascii
 import base64
 import datetime
+import pql
 
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
@@ -533,3 +534,24 @@ def and_function(*functions) -> FunctionType:
         return True
 
     return tmp
+
+
+def parse_filter(filter):
+    """
+    Translates a string representing
+    :param filter:
+    :return:
+    """
+    matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter)
+    if not matches:
+        return pql.find(filter)
+
+    # Handle predefined sequence that should be replaced before translation
+    computed_date = datetime.datetime.now()
+    if matches.group(2) == 'h':
+        computed_date -= datetime.timedelta(hours=int(matches.group(1)))
+    elif matches.group(2) == 'd':
+        computed_date -= datetime.timedelta(days=int(matches.group(1)))
+    elif matches.group(2) == 'w':
+        computed_date -= datetime.timedelta(days=int(matches.group(1)) * 7)
+    return pql.find(filter.replace(matches.group(0), computed_date.strftime("%m/%d/%Y %I:%M %p")))

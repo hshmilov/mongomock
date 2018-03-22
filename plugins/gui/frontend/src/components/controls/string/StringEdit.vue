@@ -3,7 +3,7 @@
            @input="input" @focusout.stop="validate"/>
     <div v-else-if="schema.format === 'date-time'">
         <!-- Date Picker -->
-        <x-date-edit v-model="data" @input="input"></x-date-edit>
+        <x-date-edit v-model="data" @input="input" />
     </div>
     <div v-else-if="schema.enum">
         <!-- Select from enum values -->

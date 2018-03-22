@@ -87,6 +87,10 @@
 					&& ['contains', 'equals', 'subnet'].includes(this.expression.compOp)) {
 					return this.fieldSchema.items
 				}
+                if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
+                    && ['past days'].includes(this.expression.compOp)) {
+					return { type: 'integer' }
+                }
 				return this.fieldSchema
 			},
 			fieldOps () {
@@ -115,12 +119,18 @@
 		},
 		data () {
 			return {
-				expression: {...this.value},
+				expression: { ...this.value },
 				processedValue: ''
 			}
 		},
 		watch: {
+			value (newValue) {
+                if (newValue.field !== this.expression.field) {
+                	this.expression = { ...newValue }
+                }
+            },
 			valueSchema (newSchema, oldSchema) {
+				if (!oldSchema.type || !oldSchema.format) return
 				if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
 					this.expression.value = null
 				}

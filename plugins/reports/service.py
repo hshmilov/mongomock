@@ -2,8 +2,7 @@
 import concurrent.futures
 import threading
 import datetime
-import pql
-from deepdiff import DeepDiff
+
 from bson.objectid import ObjectId
 from axonius.mixins.triggerable import Triggerable
 
@@ -14,6 +13,7 @@ from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_N
 from axonius.consts import report_consts
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
+from axonius.parsing_utils import parse_filter
 
 
 class ReportsService(PluginBase, Triggerable):
@@ -166,7 +166,7 @@ class ReportsService(PluginBase, Triggerable):
         :param query: The query to use.
         :return: The results of the query.
         """
-        return list(self._get_collection('devices_db_view', db_name=AGGREGATOR_PLUGIN_NAME).find(pql.find(query)))
+        return list(self._get_collection('devices_db_view', db_name=AGGREGATOR_PLUGIN_NAME).find(parse_filter(query)))
 
     def update_report(self, report_data):
         """update a report data.

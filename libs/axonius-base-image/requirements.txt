@@ -23,8 +23,6 @@ funcy==1.10
 uritools==2.1.0
 passlib==1.7.1
 bcrypt==3.1.4
-pql==0.4.3
-deepdiff==3.3.0
 netstruct==1.1.2
 construct==2.9.25
 netmiko==2.0.1
@@ -32,4 +30,5 @@ pyodbc==4.0.22
 dpkt==1.9.1
 ipython==6.2.1
 pychef==0.3.0
+pql==0.4.3
 openstacksdk==0.12.0

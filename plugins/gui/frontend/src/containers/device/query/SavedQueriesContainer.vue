@@ -1,6 +1,6 @@
 <template>
     <x-page title="saved queries" class="query">
-        <div>queries ({{query.savedQueries.data.length}})</div>
+        <div>Queries ({{query.savedQueries.data.length}})</div>
         <paginated-table :fetching="query.savedQueries.fetching" :data="query.savedQueries.data"
                          :error="query.savedQueries.error" :fields="query.savedFields" :fetchData="fetchQueries"
                          :actions="queryActions"/>

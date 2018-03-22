@@ -50,7 +50,7 @@
             text-transform: capitalize;
             z-index: 100;
             color: $theme-black;
-            margin-bottom: 12px;
+            margin-bottom: 24px;
             padding: 12px 8px;
             border-top: 1px solid;
             border-bottom: 1px solid;
@@ -86,7 +86,7 @@
         .x-body {
             flex: 1 0 auto;
             padding: 0;
-            height: calc(100vh - 160px);
+            height: calc(100vh - 172px);
             overflow: auto;
         }
     }

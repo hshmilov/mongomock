@@ -137,6 +137,11 @@
                 recompile: false
 			}
 		},
+        watch: {
+			queryFilter(newFilter) {
+				this.searchValue = newFilter
+            }
+        },
 		methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
 			...mapActions({

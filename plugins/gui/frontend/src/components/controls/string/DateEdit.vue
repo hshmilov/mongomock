@@ -1,5 +1,5 @@
 <template>
-    <date-picker :date="date" :option="dateTimeOption" @change="$emit('input', date.time)" :limit="limit"></date-picker>
+    <date-picker :date="date" :option="dateTimeOption" @change="$emit('input', date.time)" :limit="limit"/>
 </template>
 
 <script>
@@ -16,7 +16,7 @@
 					week: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
 					month: ['January', 'February', 'March', 'April', 'May', 'June',
 						'July', 'August', 'September', 'October', 'November', 'December'],
-					format: (navigator.language === 'en-US') ? 'MM/DD/YYYY h:mm A' : 'DD/MM/YYYY HH:mm',
+					format: /*(navigator.language === 'en-US') ?*/ 'MM/DD/YYYY h:mm A' /*: 'DD/MM/YYYY HH:mm'*/,
 					placeholder: '',
 					inputStyle: {},
 					color: {

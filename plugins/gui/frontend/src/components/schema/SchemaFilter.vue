@@ -63,8 +63,12 @@
 						}
 					},
 					'date-time': {
-						'<': {pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")'},
-						'>': {pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")'}
+						'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
+						'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' },
+                        'past days': {
+							pattern: '{field} >= date("NOW - {val}d")',
+                            notPattern: '{field} < date("NOW - {val}d")'
+						}
 					},
 					'ip': {
 						'subnet': {
@@ -115,15 +119,8 @@
 		},
 		watch: {
 			value (newValue) {
-				if (newValue.length === this.expressions.length) return
 				this.expressions = [...newValue]
 			},
-			expressions (newExpressions) {
-				if (!newExpressions.length) {
-					this.filters = []
-                }
-				this.$emit('input', newExpressions)
-			}
 		},
 		methods: {
 			compileFilter (index, payload) {
@@ -172,8 +169,8 @@
 		},
 		created () {
 			if (!this.expressions.length) {
-				this.addExpression()
-				this.addExpression()
+				// this.addExpression()
+				// this.addExpression()
 			}
 		}
 	}
