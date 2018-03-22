@@ -32,3 +32,4 @@ pyodbc==4.0.22
 dpkt==1.9.1
 ipython==6.2.1
 pychef==0.3.0
+openstacksdk==0.12.0
