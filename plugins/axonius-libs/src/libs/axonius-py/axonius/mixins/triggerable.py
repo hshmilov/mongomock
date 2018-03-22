@@ -140,7 +140,7 @@ class Triggerable(Feature, ABC):
         :param job_name: the job to Deactivate.
         :return:
         """
-        self._deactivate(job_name)
+        return self._deactivate(job_name)
 
     def _deactivate(self, job_name):
         """

@@ -252,7 +252,7 @@ class AggregatorService(PluginBase, Triggerable):
                             continue
 
                         futures_for_adapter[executor.submit(
-                            self._save_data_from_adapter, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
+                            self._save_data_from_adapters, adapter[PLUGIN_UNIQUE_NAME])] = adapter['plugin_name']
 
                     for future in concurrent.futures.as_completed(futures_for_adapter):
                         try:
@@ -272,7 +272,7 @@ class AggregatorService(PluginBase, Triggerable):
             self.logger.exception('Getting devices from all requested adapters failed.')
 
     @add_rule("plugin_push", methods=["POST"])
-    def save_data_from_plugin(self):
+    def plugin_push(self):
         """
         Digests 'Link', 'Unlink' and 'Tag' requests from plugin
         Link - links two or more adapter devices/users
@@ -298,8 +298,10 @@ class AggregatorService(PluginBase, Triggerable):
             return return_error("associated_adapters must be a list", 400)
 
         if association_type == 'Tag':
-            if len(associated_adapters) != 1:
-                return return_error("Tag must only be associated with a single adapter")
+            # If a tag is associated with more than one adapter we will simply search for devices that have one of them.
+            # But still we will be able to store these adapters in the "associated_adapters" field in the db.
+            if len(associated_adapters) == 0:
+                return return_error("Tag must be associated with at least one adapter")
             if not _is_tag_valid(sent_plugin):
                 return return_error("tag name and type must be provided as a string")
 
@@ -481,7 +483,7 @@ class AggregatorService(PluginBase, Triggerable):
                                  ]
                                  })
 
-    def _save_data_from_adapter(self, adapter_unique_name):
+    def _save_data_from_adapters(self, adapter_unique_name):
         """
         Requests from the given adapter to insert its devices into the DB.
         :param str adapter_unique_name: The unique name of the adapter
@@ -502,15 +504,6 @@ class AggregatorService(PluginBase, Triggerable):
             raise
 
         self.logger.info(f"Finished for {adapter_unique_name}")
-
-    def _save_parsed_in_db(self, device, db_type='parsed'):
-        """
-        Save axonius device in DB
-        :param device: AxoniusDevice or device list
-        :param db_type: 'parsed' or 'raw
-        :return: None
-        """
-        self.aggregator_db_connection[db_type].insert_one(device)
 
     def _update_entity_with_tag(self, tag, axonius_entity, entities_db):
         """

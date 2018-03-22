@@ -106,8 +106,8 @@ class AxoniusEntity(object):
         return self.data['specific_data']
 
     def __get_all_identities(self):
-        return [(adapter["plugin_unique_name"], adapter["data"]["id"])
-                for adapter in self.data['specific_data'] if adapter.get('plugin_type') == 'Adapter']
+        return [(plugin["plugin_unique_name"], plugin["data"]["id"])
+                for plugin in self.data['specific_data'] if plugin.get('type') == 'entitydata']
 
     def flush(self):
         """

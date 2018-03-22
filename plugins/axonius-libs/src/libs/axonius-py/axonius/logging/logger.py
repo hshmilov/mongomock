@@ -37,13 +37,14 @@ def create_logger(plugin_unique_name, log_level, logstash_host, log_path):
     file_handler.setFormatter(formatter)
 
     # Creating logstash file handler (implemeted above)
-    logstash_handler = LogstashHttpServer(logstash_host, fatal_logger)
-    logstash_handler.setFormatter(formatter)
+    # Currently, it is disabled, since we do not have a logstash instance.
+    # logstash_handler = LogstashHttpServer(logstash_host, fatal_logger)
+    # logstash_handler.setFormatter(formatter)
 
     # Building the logger object
     logger = logging.getLogger('axonius_plugin_log')
     logger.addHandler(file_handler)
-    logger.addHandler(logstash_handler)
+    # logger.addHandler(logstash_handler)
     logger.setLevel(log_level)
 
     return logger

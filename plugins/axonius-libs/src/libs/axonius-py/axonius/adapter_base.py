@@ -2,17 +2,8 @@
 AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
-import concurrent
 import threading
-import uuid
 from abc import ABC, abstractmethod
-
-import functools
-import pymongo
-from pymongo import ReturnDocument
-
-from axonius.consts.adapter_consts import IGNORE_DEVICE
-from promise import Promise
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from bson import ObjectId
@@ -33,7 +24,6 @@ from axonius.mixins.feature import Feature
 from axonius.parsing_utils import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.threading_utils import run_in_executor_helper
 from axonius.utils.json import to_json
 
 
@@ -130,10 +120,6 @@ class AdapterBase(PluginBase, Feature, ABC):
         self._prepare_parsed_clients_config(False)
 
         self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
-        self.device_id_db = self.aggregator_db_connection['current_devices_id']
-
-        # An executor dedicated to inserting devices to the DB
-        self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -393,216 +379,6 @@ class AdapterBase(PluginBase, Feature, ABC):
         return to_json(self._get_data_by_client(client_name, "users"))
 
     # End of users
-    def _get_pretty_ids(self, count: int) -> Iterable[str]:
-        """
-        Returns fresh IDs from the DB. These are guaranteed to be unique.
-        :param count: Amount of IDs to find
-        :return:
-        """
-        new_id = self.device_id_db.find_one_and_update(
-            filter={},
-            update={'$inc': {'number': count}},
-            upsert=True,
-            return_document=ReturnDocument.AFTER
-        )['number']
-        return (f'AX-{index}' for index in range(int(new_id - count), int(new_id)))
-
-    def _add_pretty_id_to_missing_adapter_devices(self):
-        """
-        Generates a unique pretty ID to all devices that don't have them for the current adapter
-        :return: int - count of devices added
-        """
-        devices = self.devices_db.find(filter={'adapters': {
-            '$elemMatch': {
-                PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                'data.pretty_id': {"$exists": False}
-            }
-        }},
-            projection={
-                '_id': 1,
-                'adapters.data.id': 1,
-                'adapters.data.pretty_id': 1
-        })
-
-        adapter_devices_ids_to_add = []
-
-        for device in devices:
-            for adapter_device in device['adapters']:
-                adapter_data = adapter_device['data']
-                if 'pretty_id' not in adapter_data:
-                    adapter_devices_ids_to_add.append((device['_id'], adapter_data['id']))
-
-        pretty_ids_to_distribute = list(self._get_pretty_ids(len(adapter_devices_ids_to_add)))
-
-        for (_id, adapter_id), pretty_id_to_add in zip(adapter_devices_ids_to_add, pretty_ids_to_distribute):
-            res = self.devices_db.update_one({
-                '_id': _id,
-                'adapters': {
-                    '$elemMatch': {
-                        PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                        'data.id': adapter_id
-                    }
-                }
-            }, {"$set":
-                {'adapters.$.data.pretty_id': pretty_id_to_add}})
-        return len(adapter_devices_ids_to_add)
-
-    def _save_data_from_adapter(self, client_name, data_of_client, collection_name) -> int:
-        """
-        Saves all given data from adapter (devices, users) into the DB for the given client name
-        :return: Device count saved
-        """
-
-        def insert_data_to_db(data_to_update, parsed_to_insert):
-            """
-            Insert data (devices/users/...) into the DB
-            :return:
-            """
-
-            if collection_name == "users":
-                db_to_use = self.users_db
-            elif collection_name == "devices":
-                db_to_use = self.devices_db
-            else:
-                raise ValueError(f"got {collection_name} but expected users/devices")
-
-            correlates = parsed_to_insert['data'].get('correlates')
-            if correlates == IGNORE_DEVICE:
-                # special case: this is a device we shouldn't handle
-                self._save_parsed_in_db(parsed_to_insert, db_type='ignored_scanner_devices')
-                return
-
-            # trying to update the device if it is already in the DB
-            modified_count = db_to_use.update_one({
-                'adapters': {
-                    '$elemMatch': {
-                        PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                        'data.id': parsed_to_insert['data']['id']
-                    }
-                }
-            }, {"$set": data_to_update}).modified_count
-
-            if modified_count == 0:
-                # if it's not in the db then,
-
-                if correlates:
-                    # for scanner adapters this is case B - see "scanner_adapter_base.py"
-                    # we need to add this device to the list of adapters in another device
-                    correlate_plugin_unique_name, correlated_id = correlates
-                    modified_count = db_to_use.update_one({
-                        'adapters': {
-                            '$elemMatch': {
-                                PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
-                                'data.id': correlated_id
-                            }
-                        }},
-                        {
-                            "$addToSet": {
-                                "adapters": parsed_to_insert
-                            }
-                    })
-                    if modified_count == 0:
-                        self.logger.error("No devices update for case B for scanner device "
-                                          f"{parsed_to_insert['data']['id']} from "
-                                          f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
-                else:
-                    # this is regular first-seen device, make its own value
-                    db_to_use.insert_one({
-                        "internal_axon_id": uuid.uuid4().hex,
-                        "accurate_for_datetime": datetime.now(),
-                        "adapters": [parsed_to_insert],
-                        "tags": []
-                    })
-
-        self.logger.info(f"Starting to fetch data (devices/users) for {client_name}")
-        promises = []
-        try:
-            time_before_client = datetime.now()
-            # Saving the raw data on the historic db
-            try:
-                self._save_data_in_history(data_of_client['raw'])
-            except pymongo.errors.DocumentTooLarge:
-                # wanna see my "something too large"?
-                self.logger.warn(f"Got DocumentTooLarge with client {client_name}.")
-            inserted_data_count = 0
-
-            # Here we have all the devices a single client sees
-            for data in data_of_client['parsed']:
-                parsed_to_insert = {
-                    'client_used': client_name,
-                    'plugin_type': self.plugin_type,
-                    PLUGIN_NAME: self.plugin_name,
-                    PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                    'accurate_for_datetime': datetime.now(),
-                    'data': data
-                }
-
-                # Note that this updates fields that are present. If some fields are not present but are present
-                # in the db they will stay there.
-                data_to_update = {f"adapters.$.{key}": value
-                                  for key, value in parsed_to_insert.items() if key != 'data'}
-
-                promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                          self.__data_inserter,
-                                                          self._save_parsed_in_db,
-                                                          args=[dict(parsed_to_insert)])))
-
-                fields_to_update = data.keys() - ['id']
-                for field in fields_to_update:
-                    field_of_data = data.get(field, [])
-                    data_to_update[f"adapters.$.data.{field}"] = field_of_data
-
-                data_to_update['accurate_for_datetime'] = datetime.now()
-
-                inserted_data_count += 1
-                promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                          self.__data_inserter,
-                                                          insert_data_to_db,
-                                                          args=[data_to_update, parsed_to_insert])))
-            promise_all = Promise.all(promises)
-            Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
-            if promise_all.is_rejected:
-                self.logger.error(f"Error in insertion of {collection_name} to DB", exc_info=promise_all.reason)
-
-            if collection_name == "devices":
-                added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
-                self.logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
-
-            time_for_client = datetime.now() - time_before_client
-            self.logger.info(
-                f"Finished aggregating {collection_name} for client {client_name},"
-                f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
-
-        except Exception as e:
-            self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
-            raise
-
-        self.logger.info(f"Finished inserting {collection_name} of client {client_name}")
-        return inserted_data_count
-
-    def _save_parsed_in_db(self, device, db_type='parsed'):
-        """
-        Save axonius device in DB
-        :param device: AxoniusDevice or device list
-        :param db_type: 'parsed' or 'raw
-        :return: None
-        """
-        self.aggregator_db_connection[db_type].insert_one(device)
-
-    def _save_data_in_history(self, device):
-        """ Function for saving raw data in history.
-
-        This function will save the data on mongodb. The db name is 'devices' and the collection is 'raw' always!
-
-        :param device: The raw data of the current device
-        """
-        try:
-            self.aggregator_db_connection['raw'].insert_one({'raw': device,
-                                                             PLUGIN_NAME: self.plugin_name,
-                                                             PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                                                             'plugin_type': self.plugin_type})
-        except pymongo.errors.PyMongoError as e:
-            self.logger.exception("Error in pymongo. details: {}".format(e))
 
     @add_rule('insert_to_db', methods=['PUT'])
     def insert_data_to_db(self):
@@ -614,13 +390,13 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         client_name = request.args.get('client_name')
         if client_name:
-            devices_count = self._save_data_from_adapter(
+            devices_count = self._save_data_from_plugin(
                 client_name, self._get_data_by_client(client_name, "devices"), "devices")
-            users_count = self._save_data_from_adapter(
+            users_count = self._save_data_from_plugin(
                 client_name, self._get_data_by_client(client_name, "users"), "users")
         else:
-            devices_count = sum(self._save_data_from_adapter(*data, "devices") for data in self._query_data("devices"))
-            users_count = sum(self._save_data_from_adapter(*data, "users") for data in self._query_data("users"))
+            devices_count = sum(self._save_data_from_plugin(*data, "devices") for data in self._query_data("devices"))
+            users_count = sum(self._save_data_from_plugin(*data, "users") for data in self._query_data("users"))
 
         return to_json({"devices_count": devices_count, "users_count": users_count})
 

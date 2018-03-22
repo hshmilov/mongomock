@@ -228,25 +228,41 @@ class GeneralInfoService(PluginBase, Triggerable):
                 self.logger.error(f"Found a couple of users (expected one) with same id: {username} -> {user}")
                 continue
             elif len(user) == 0:
-                # user does not exists, TODO: create a new user.
+                # user does not exists, create it.
                 self.logger.info(f"username {username} needs to be created, this is a todo task. continuing")
-                continue
-            else:
-                # the user exists, go over all associated devices and add them.
-                user = user[0]
+                user_dict = self._new_user()
+                user_dict.id = username  # Should be the unique identifier of that user.
+                user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
+                user_dict.is_local = True
+                self._save_data_from_plugin(
+                    self.plugin_unique_name,
+                    {"raw": [], "parsed": [user_dict.to_dict()]},
+                    "users")
+                # At this point we must have it.
+                user = list(self.users.get(data={"id": username}))
+                assert len(user) == 1, f"We just created the user {username} but the length is reported as {len(user)}."
 
-                for linked_user, linked_device in linked_devices_and_users_list:
-                    device_caption = linked_device.get_first_data("name") or \
-                        linked_device.get_first_data("hostname") or \
-                        linked_device.get_first_data("id")
+            # at this point the user exists, go over all associated devices and add them.
+            user = user[0]
 
-                    self.logger.debug(f"Associating {device_caption} with user {username}")
-                    adapterdata_user.add_associated_device(
-                        device_caption=device_caption,
-                        last_use_date=linked_user['last_use_date'],
-                        adapter_unique_name=linked_user['origin_unique_adapter_name'],
-                        adapter_data_id=linked_user['origin_unique_adapter_data_id']
-                    )
+            for linked_user, linked_device in linked_devices_and_users_list:
+                device_caption = linked_device.get_first_data("name") or \
+                    linked_device.get_first_data("hostname") or \
+                    linked_device.get_first_data("id")
+
+                self.logger.debug(f"Associating {device_caption} with user {username}")
+                try:
+                    adapterdata_user.last_seen = max(linked_user['last_use_date'], adapterdata_user.last_seen)
+                except:
+                    # Last seen does not exist
+                    adapterdata_user.last_seen = linked_user['last_use_date']
+
+                adapterdata_user.add_associated_device(
+                    device_caption=device_caption,
+                    last_use_date=linked_user['last_use_date'],
+                    adapter_unique_name=linked_user['origin_unique_adapter_name'],
+                    adapter_data_id=linked_user['origin_unique_adapter_data_id']
+                )
 
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.

@@ -21,6 +21,12 @@ class LogstashHttpServer(logging.Handler):
         self.fatal_logger = fatal_logger
         self.logs_array_lock = Lock()
 
+        # TODO: Why having an executor instead of having a single thread running forever?
+        # TODO: fix that to a single thread.
+        # TODO: Also, if the thread gets stuck (happens all the time), the following message will spam our log:
+        # TODO: Execution of job "logstash_sender_thread (trigger: interval[0:00:03],
+        # TODO: next run at: 2018-03-20 10:39:35 UTC)" skipped: maximum number of running instances reached (1)
+
         # Creating thread for sending logs to logstash
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._log_sender_scheduler = BackgroundScheduler(executors=executors)

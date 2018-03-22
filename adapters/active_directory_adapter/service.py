@@ -245,7 +245,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 continue
 
             user.username = username
-            user.domain = domain
+            user.domain = domain_name
             user.id = f"{username}@{domain}"  # Should be the unique identifier of that user.
 
             user.sid = user_raw.get("objectSid")
