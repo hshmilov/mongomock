@@ -9,7 +9,6 @@ from axonius.parsing_utils import parse_date
 from axonius.utils.files import get_local_config_file
 from esx_adapter.vcenter_api import vCenterApi, rawify_vcenter_data
 
-
 # translation table between ESX values to parsed values
 POWER_STATE_MAP = {
     'poweredOff': DeviceRunningState.TurnedOff,
@@ -134,6 +133,9 @@ class EsxAdapter(AdapterBase):
 
         for hwdevice in details.get('hardware_networking', {}):
             device.add_nic(**hwdevice)
+
+        if len(device.network_interfaces) == 0:
+            device.network_interfaces = None
 
         device.esx_host = details.get('esx_host_name', None)
         device.hostname = guest.get('hostName', '')

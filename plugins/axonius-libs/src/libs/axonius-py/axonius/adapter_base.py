@@ -550,16 +550,9 @@ class AdapterBase(PluginBase, Feature, ABC):
                 fields_to_update = data.keys() - ['id']
                 for field in fields_to_update:
                     field_of_data = data.get(field, [])
-                    try:
-                        if type(field_of_data) in [list, dict, str] and len(field_of_data) == 0:
-                            # We don't want to insert empty values, only one that has a valid data
-                            continue
-                        else:
-                            data_to_update[f"adapters.$.data.{field}"] = field_of_data
-                    except TypeError:
-                        self.logger.exception(f"Got TypeError while getting {collection_name} field {field}")
-                        continue
-                    data_to_update['accurate_for_datetime'] = datetime.now()
+                    data_to_update[f"adapters.$.data.{field}"] = field_of_data
+
+                data_to_update['accurate_for_datetime'] = datetime.now()
 
                 inserted_data_count += 1
                 promises.append(Promise(functools.partial(run_in_executor_helper,
