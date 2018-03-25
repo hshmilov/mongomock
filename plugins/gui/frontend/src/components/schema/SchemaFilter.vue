@@ -139,6 +139,7 @@
 				}
 				// No compilation error - propagating
 				this.error = ''
+				this.$emit('input', this.expressions)
 				this.$emit('change', this.filters.join(' '))
 			},
 			addExpression () {

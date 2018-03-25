@@ -369,7 +369,14 @@ class GuiService(PluginBase):
             fields['items'] = filter(lambda x: x.get('name', '') not in ['scanner'], fields['items'])
             return fields
 
-        fields = {'generic': _censor_fields(Device.get_fields_info()), 'specific': {}}
+        def _get_generic_fields():
+            if module_name == 'device':
+                return Device.get_fields_info()
+            elif module_name == 'user':
+                return User.get_fields_info()
+            return dict()
+
+        fields = {'generic': _censor_fields(_get_generic_fields()), 'specific': {}}
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({}).sort(
                 [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])

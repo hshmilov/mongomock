@@ -63,7 +63,9 @@
             },
             runQuery(queryId) {
             	let query = this.query.savedQueries.data.filter(query => query.id === queryId)[0]
-            	this.updateDataView({module: 'device', view: {query: {filter: query.filter, expressions: query.expressions}}})
+            	this.updateDataView({module: 'device', view: {
+            		query: {filter: query.filter, expressions: query.expressions}, page: 0
+            	}})
                 this.$router.push({name: 'Devices'})
             },
 			removeQuery (queryId) {

@@ -6,7 +6,8 @@ export default {
 			if (!Array.isArray(data)) {
 				let firstDot = path.indexOf('.')
 				if (firstDot === -1) return data[path]
-				return this.getData(data[path.substring(0, firstDot)], path.substring(firstDot + 1))
+				let prefix = path.substring(0, firstDot)
+				return this.getData((data[prefix]? data[prefix] : data), path.substring(firstDot + 1))
 			}
 			if (data.length === 1) return this.getData(data[0], path)
 
@@ -26,12 +27,17 @@ export default {
 			return Array.from(children)
 		},
 		arrayContains(array, prefix) {
-			if (!prefix || typeof prefix !== 'string') return false
-			let escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-			return array.some(item => {
-				let escapedItem = item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-				return (item.match(`^${escapedPrefix}`) !== null || prefix.match(`^${escapedItem}`))
-			})
+			if (prefix && typeof prefix === 'string') {
+				let escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+				return array.some(item => {
+					let escapedItem = item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+					return (item.match(`^${escapedPrefix}`) !== null || prefix.match(`^${escapedItem}`))
+				})
+			}
+			if (prefix && typeof prefix === 'number') {
+				return array.includes(prefix)
+			}
+			return false
 		},
 		getDataBasic(data) {
 			if (typeof data === 'string') return data.toLowerCase()

@@ -186,7 +186,7 @@
             }
         },
 		created() {
-			if (this.content.data.length) {
+			if (this.content.data.length && this.view.page !== 0) {
 				this.loading = false
 			} else {
 				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})

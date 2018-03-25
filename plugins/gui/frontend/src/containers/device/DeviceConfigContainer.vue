@@ -32,7 +32,7 @@
                         <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                     </div>
                     <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]"
-                                   :data="getDataForFieldList(deviceFields.specific[item.plugin_name])"
+                                   :data="getDataForFieldList(deviceFields.specific[item.plugin_name], item.data)"
                                    :schema="deviceFields.specific[item.plugin_name]"/>
                     <div v-if="!viewBasic">
                         <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
@@ -105,9 +105,9 @@
 				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) {
 					return ''
 				}
-                let name = this.getData(this.deviceData.specific_data, 'data.hostname')
-                    || this.getData(this.deviceData.specific_data, 'data.name')
-					|| this.getData(this.deviceData.specific_data, 'data.pretty_id')
+                let name = this.getData(this.deviceData.specific_data, 'data.hostname').concat(
+                	this.getData(this.deviceData.specific_data, 'data.name')).concat(
+                		this.getData(this.deviceData.specific_data, 'data.pretty_id'))
                 if (Array.isArray(name) && name.length) {
 					return name[0]
                 } else if (!Array.isArray(name)) {
@@ -121,8 +121,9 @@
 				return ['installed_software', 'security_patches', 'users']
 			},
 			deviceDataBasic () {
-				return this.getDataForFieldList(this.deviceFields.generic
-                    .filter(field => !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item))))
+				return this.getDataForFieldList(this.deviceFields.generic.filter((field) => {
+					return !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item))
+				}), this.deviceData)
 			},
 			deviceDataGenericAdvanced () {
 				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) return {}
@@ -160,9 +161,9 @@
 			removeTag (label) {
 				this.deleteDeviceTags({devices: [this.deviceId], labels: [label]})
 			},
-            getDataForFieldList(fieldList) {
+            getDataForFieldList(fieldList, data) {
 				return fieldList.reduce((map, field) => {
-					map[field.name] = this.getData(this.deviceData, field.name)
+					map[field.name] = this.getData(data, field.name)
 					return map
 				}, {})
             }

@@ -16,12 +16,12 @@
                 <nested-menu v-if="savedQueries && savedQueries.length">
                     <div class="title">Saved Queries</div>
                     <nested-menu-item v-for="query, index in savedQueries.slice(0, limit)" :key="index"
-                                      :title="query.name" @click="selectQuery(query.filter)"/>
+                                      :title="query.name" @click="selectQuery(query.filter, query.expressions)"/>
                 </nested-menu>
                 <nested-menu v-if="historyQueries && historyQueries.length">
                     <div class="title">History</div>
                     <nested-menu-item v-for="query, index in historyQueries.slice(0, limit)" :key="index"
-                                      :title="query.filter" @click="selectQuery(query.filter)"/>
+                                      :title="query.filter" @click="selectQuery(query.filter, [])"/>
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
                     <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"/>
@@ -176,7 +176,8 @@
             	this.executeQuery()
 				this.$refs.greatInput.parentElement.click()
             },
-			selectQuery (filter) {
+			selectQuery (filter, expressions) {
+            	this.queryExpressions = expressions
 				this.updateQuery(filter)
 				this.$refs.greatInput.focus()
 				this.$refs.greatInput.parentElement.click()
