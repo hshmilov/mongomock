@@ -24,6 +24,9 @@ Vue.use(VmSelect)
 import ToggleButton from 'vue-js-toggle-button'
 Vue.use(ToggleButton)
 
+import VTooltip from 'v-tooltip'
+Vue.use(VTooltip)
+
 new Vue({
 	el: '#app',
 	template: '<App />',

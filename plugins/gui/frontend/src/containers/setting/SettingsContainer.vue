@@ -4,10 +4,6 @@
             <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
                 <h3>Discovery Phase</h3>
                 <div class="grid grid-col-2">
-                    <label for="start">Run Trigger</label>
-                    <div class="grid-item">
-                        <a id="start" class="btn" @click="startResearch">Discover Now</a>
-                    </div>
                     <label for="schedule" class="label">Next Scheduled Time:</label>
                     <x-date-edit id="schedule" :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
                     <label for="research_rate" class="label">Schedule Rate (hours)</label>

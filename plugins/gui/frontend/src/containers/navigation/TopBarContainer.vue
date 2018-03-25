@@ -13,10 +13,10 @@
                 </div>
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a v-if="!isRunning" @click="startResearch" class="nav-link">
+                        <a v-if="!isRunning" v-tooltip.bottom="'Discover Now'" @click="startResearch" class="nav-link">
                             <svg-icon name="action/lifecycle/run" :original="true" height="20"></svg-icon>
                         </a>
-                        <a v-if="isRunning"  class="nav-link">
+                        <a v-if="isRunning" class="nav-link">
                             <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"></svg-icon>
                         </a>
                     </li>
@@ -220,6 +220,9 @@
             }
             .nav-item {
                 margin-bottom: 0;
+                .svg-icon{
+                    margin: auto;
+                }
             }
         }
         &.collapse {
@@ -282,6 +285,55 @@
             margin-bottom: -12px;
             line-height: 36px;
         }
+    }
+
+    .tooltip {
+        display: block !important;
+        z-index: 10000;
+    }
+
+    .tooltip .tooltip-inner {
+        background: $theme-black;
+        color: $theme-orange;
+        border-radius: 16px;
+        padding: 5px 10px 4px;
+    }
+
+    .tooltip .tooltip-arrow {
+        width: 0;
+        height: 0;
+        border-style: solid;
+        position: absolute;
+        margin: 5px;
+        border-color: $theme-black;
+    }
+
+    .tooltip[x-placement^="bottom"] {
+        margin-top: 5px;
+    }
+
+    .tooltip[x-placement^="bottom"] .tooltip-arrow {
+        border-width: 0 5px 5px 5px;
+        border-left-color: transparent !important;
+        border-right-color: transparent !important;
+        border-top-color: transparent !important;
+        top: -5px;
+        left: calc(50% - 5px);
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+
+    .tooltip[aria-hidden='true'] {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity .15s, visibility .15s;
+    }
+
+    .tooltip[aria-hidden='false'] {
+        visibility: visible;
+        opacity: 1;
+        transition: opacity .15s;
     }
 
 </style>
