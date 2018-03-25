@@ -76,7 +76,7 @@ export const alert = {
 						message: message
 					})
 				})
-				state.alertList.data = [ ...state.alertList.data, ...processedData ]
+				state.alertList.data = payload.restart? processedData : [ ...state.alertList.data, ...processedData ]
 			}
 			if (payload.error) {
 				state.alertList.error = payload.error
@@ -141,7 +141,6 @@ export const alert = {
 				The mutation UPDATE_ALERTS is called with the returned controls or error, to fill it in the state
 			*/
 			if (!payload.skip) {
-				commit(RESTART_ALERTS)
 				payload.skip = 0
 			}
 			let param = `?limit=${payload.limit}&skip=${payload.skip}`
@@ -150,7 +149,10 @@ export const alert = {
 			}
 			dispatch(REQUEST_API, {
 				rule: `reports${param}`,
-				type: UPDATE_ALERTS
+				type: UPDATE_ALERTS,
+				payload: {
+					restart: payload.skip === 0
+				}
 			})
 		},
 		[ ARCHIVE_ALERT ] ({dispatch, commit}, alertId) {

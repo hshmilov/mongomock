@@ -130,9 +130,8 @@ def filtered():
             try:
                 filter_expr = request.args.get('filter')
                 if filter_expr:
-                    self.logger.info("Parsing filter: {0}".format(filter_expr))
+                    self.logger.debug("Parsing filter: {0}".format(filter_expr))
                     filter_obj = parse_filter(filter_expr)
-                    self.logger.info("Got filter: {0}".format(filter_obj))
             except Exception as e:
                 return return_error("Could not create mongo filter. Details: {0}".format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
@@ -647,9 +646,9 @@ class GuiService(PluginBase):
             with self._get_db_connection(False) as db_connection:
                 reports_to_return = []
                 report_service = self.get_plugin_by_name('reports')
-                for report in db_connection[report_service[PLUGIN_UNIQUE_NAME]][
-                        'reports'].find().sort(
-                        [('report_creation_time', pymongo.DESCENDING)]):
+                for report in db_connection[report_service[PLUGIN_UNIQUE_NAME]]['reports'].find(projection={
+                    'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1, 'retrigger': 1
+                }).sort([('report_creation_time', pymongo.DESCENDING)]):
                     # Fetching query in order to replace the string saved for aler
                     #  with the corresponding id that the UI can recognize the query as
                     query = queries_collection.find_one({'alertIds': {'$in': [str(report['_id'])]}})

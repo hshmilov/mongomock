@@ -148,7 +148,7 @@
     .topbar {
         background: $theme-gray-light;
         position: relative;
-        z-index: 50;
+        z-index: 101;
         .top-navbar {
             min-height: 50px;
             padding: 0;

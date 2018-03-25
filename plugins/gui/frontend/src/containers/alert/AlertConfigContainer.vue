@@ -68,13 +68,13 @@
                                 <i class="icon-bell-o"></i><span class="form-group-title">Action</span>
                             </div>
                             <checkbox class="ml-4 mt-2" label="Push a system notification" v-model="actions.notification"></checkbox>
-                            <checkbox class="ml-4 mt-2 inline" label="Send an Email" v-model="actions.mail"></checkbox>
+                            <checkbox class="ml-4 mt-2 inline" label="Send an Email" v-model="actions.mail"/>
                             <template v-if="actions.mail">
                                 <vm-select v-model="mailList" multiple filterable allow-create
-                                           no-data-text="Type mail addresses..." placeholder=""></vm-select>
+                                           no-data-text="Type mail addresses..." placeholder=""/>
                             </template>
                             <template v-if="alert.triggers.increase">
-                                <checkbox class="ml-4 mt-2 inline" label="Tag Devices" v-model="actions.tag"></checkbox>
+                                <checkbox class="ml-4 mt-2 inline" label="Tag Devices" v-model="actions.tag"/>
                                 <template v-if="actions.tag">
                                     <input class="form-control" id="tagName" v-model="tagName">
                                 </template>
@@ -193,9 +193,7 @@
             }
 
 			/* Fetch all saved queries for offering user to base alert upon */
-			if (!this.savedQueryOptions || !this.savedQueryOptions.length) {
-				this.fetchQueries({})
-            }
+            this.fetchQueries({})
         }
 	}
 </script>
