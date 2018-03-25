@@ -53,6 +53,9 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 # Can wait up to 5 minutes if core didnt answer yet
 TIME_WAIT_FOR_REGISTER = 60 * 5
 
+# After this time, the execution promise will be rejected.
+TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 60 * 2
+
 # Removing ssl_verify false warnings from appearing in the logs on all the plugins.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 try:
@@ -335,6 +338,7 @@ class PluginBase(Feature):
         # Creating open actions dict. This dict will hold all of the open actions issued by this plugin.
         # We will use this dict in order to determine what is the right callback for the action update retrieved.
         self._open_actions = dict()
+        self._open_actions_lock = threading.Lock()
 
         # Add some more changes to the app.
         AXONIUS_REST.json_encoder = IteratorJSONEncoder
@@ -361,6 +365,17 @@ class PluginBase(Feature):
         # An executor dedicated to inserting devices to the DB
         self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
+
+        # An executor dedicated to deleting forgotten execution requests
+        self.execution_monitor_scheduler = LoggedBackgroundScheduler(
+            self.logger, executors={'default': ThreadPoolExecutor(1)})
+        self.execution_monitor_scheduler.add_job(func=self.execution_monitor_thread,
+                                                 trigger=IntervalTrigger(seconds=30),
+                                                 next_run_time=datetime.now(),
+                                                 name='execution_monitor_thread',
+                                                 id='execution_monitor_thread',
+                                                 max_instances=1)
+        self.execution_monitor_scheduler.start()
 
         # Finished, Writing some log
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -721,7 +736,7 @@ class PluginBase(Feature):
     def action_callback(self, action_id):
         """ A function for receiving updates from the executor (Adapter or EC).
 
-        This function will listen on updates, and if the update is on a relevant action_id it will call the 
+        This function will listen on updates, and if the update is on a relevant action_id it will call the
         Callback registered for this action.
 
         :param str action_id: The id of the wanted action
@@ -729,28 +744,37 @@ class PluginBase(Feature):
         Accepts:
             POST - For posting a status update (or sending results) on a specific action
         """
-        if self.plugin_name == "execution":
-            # This is a special case for the execution_controller plugin. In that case, The EC plugin knows how to
-            # handle other actions such as reset_update. In case of ec plugin, we know for sure what is the
-            # callback, we use this fact to just call the callback and not search for it on the _open_actions
-            # list (because the current action id will not be there)
-            self.ec_callback(action_id)
-            return ''
+        try:
+            if self.plugin_name == "execution":
+                # This is a special case for the execution_controller plugin. In that case, The EC plugin knows how to
+                # handle other actions such as reset_update. In case of ec plugin, we know for sure what is the
+                # callback, we use this fact to just call the callback and not search for it on the _open_actions
+                # list (because the current action id will not be there)
+                self.ec_callback(action_id)
+                return ''
 
-        if action_id in self._open_actions:
-            # We recognize this action id, should call its callback
-            action_promise = self._open_actions[action_id]
-            # Calling the needed function
-            request_content = self.get_request_data_as_object()
+            with self._open_actions_lock:
+                if action_id in self._open_actions:
+                    # We recognize this action id, should call its callback
+                    action_promise, started_time = self._open_actions[action_id]
+                    # self.logger.info(f"action id {action_id} returned after time {datetime.now() - started_time}")
+                    # Calling the needed function
+                    request_content = self.get_request_data_as_object()
 
-            if request_content['status'] == 'failed':
-                action_promise.do_reject(Exception(request_content))
-            elif request_content['status'] == 'finished':
-                action_promise.do_resolve(request_content)
-            return ''
-        else:
-            self.logger.error('Got unrecognized action_id update. Action ID: {0}'.format(action_id))
-            return return_error('Unrecognized action_id {0}'.format(action_id), 404)
+                    if request_content['status'] == 'failed':
+                        action_promise.do_reject(Exception(request_content))
+                        self._open_actions.pop(action_id)
+                    elif request_content['status'] == 'finished':
+                        action_promise.do_resolve(request_content)
+                        self._open_actions.pop(action_id)
+
+                    return ''
+                else:
+                    self.logger.error(f'Got unrecognized action_id update. Action ID: {action_id}. Was it resolved?')
+                    return return_error('Unrecognized action_id {action_id}. Was it resolved?', 404)
+        except Exception as e:
+            self.logger.exception("General exception in action callback")
+            raise e
 
     def request_action(self, action_type, axon_id, data_for_action=None):
         """ A function for requesting action.
@@ -779,9 +803,28 @@ class PluginBase(Feature):
 
         promise_for_action = Promise()
 
-        self._open_actions[action_id] = promise_for_action
+        with self._open_actions_lock:
+            self._open_actions[action_id] = promise_for_action, datetime.now()
 
         return promise_for_action
+
+    def execution_monitor_thread(self):
+        """
+        Monitors the _open_actions dict to reject actions that did not return after a certain time.
+        :return:
+        """
+
+        with self._open_actions_lock:
+            # copy it just to be able to change the dict size in the for loop
+            open_actions_lock_copy = self._open_actions.copy()
+            for action_id, (action_promise, time_started) in open_actions_lock_copy.items():
+                if time_started + timedelta(seconds=TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS) < datetime.now():
+                    err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS } reached for " \
+                              f"action_id {action_id}, rejecting the promise."
+                    self.logger.error(err_msg)
+                    action_promise.do_reject(Exception(err_msg))
+
+                    self._open_actions.pop(action_id)
 
     def _get_db_connection(self, limited_user=True):
         """
@@ -853,7 +896,7 @@ class PluginBase(Feature):
         # TODO: and make it not do anything.
         return "Pre-Correlation"
 
-    def _save_data_from_plugin(self, client_name, data_of_client, collection_name) -> int:
+    def _save_data_from_plugin(self, client_name, data_of_client, collection_name, should_log_info=True) -> int:
         """
         Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
@@ -920,7 +963,8 @@ class PluginBase(Feature):
                         "tags": []
                     })
 
-        self.logger.info(f"Starting to fetch data (devices/users) for {client_name}")
+        if should_log_info is True:
+            self.logger.info(f"Starting to fetch data (devices/users) for {client_name}")
         promises = []
         try:
             time_before_client = datetime.now()
@@ -983,15 +1027,17 @@ class PluginBase(Feature):
                 self.logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
 
             time_for_client = datetime.now() - time_before_client
-            self.logger.info(
-                f"Finished aggregating {collection_name} for client {client_name},"
-                f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
+            if should_log_info is True:
+                self.logger.info(
+                    f"Finished aggregating {collection_name} for client {client_name},"
+                    f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
 
         except Exception as e:
             self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info(f"Finished inserting {collection_name} of client {client_name}")
+        if should_log_info is True:
+            self.logger.info(f"Finished inserting {collection_name} of client {client_name}")
         return inserted_data_count
 
     def _add_pretty_id_to_missing_adapter_devices(self):

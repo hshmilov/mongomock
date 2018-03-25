@@ -22,12 +22,14 @@ from axonius.dns_utils import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 from axonius.users.user import User
-from axonius.parsing_utils import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, is_date_real
+from axonius.parsing_utils import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
+    is_date_real, get_exception_string
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
 LDAP_PASSWORD_NOT_REQUIRED = 0x0020
+MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 90
 
 # TODO ofir: Change the return values protocol
 
@@ -246,9 +248,10 @@ class ActiveDirectoryAdapter(AdapterBase):
 
             user.username = username
             user.domain = domain_name
-            user.id = f"{username}@{domain}"  # Should be the unique identifier of that user.
+            user.id = f"{username}@{domain_name}"  # Should be the unique identifier of that user.
 
             user.sid = user_raw.get("objectSid")
+            user.is_local = False
             memberof = user_raw.get("memberOf")
             if memberof is not None:
                 # memberof is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
@@ -285,7 +288,7 @@ class ActiveDirectoryAdapter(AdapterBase):
             # Last seen is the latest timestamp of use we have.
             use_timestamps = sorted(use_timestamps, reverse=True)
             if len(use_timestamps) > 0:
-                user.last_seen = use_timestamps[0]
+                user.last_seen_in_domain = use_timestamps[0]
 
             lockout_time = user_raw.get("lockoutTime")
             if is_date_real(lockout_time):
@@ -596,23 +599,42 @@ class ActiveDirectoryAdapter(AdapterBase):
         if wmi_smb_commands is None:
             return {"result": 'Failure', "product": 'No WMI/SMB queries/commands list supplied'}
 
-        single_command = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
-        self.logger.debug("running wmi {0}".format(single_command))
+        command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
+        self.logger.debug("running wmi {0}".format(command_list))
 
-        # Running the command
-        command_result = subprocess.run(single_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Running the command.
+        subprocess_handle = subprocess.Popen(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Checking if return code is zero, if not, it will raise an exception
         try:
-            command_result.check_returncode()
-        except subprocess.CalledProcessError as e:
-            raise ValueError("command: {0}, stdout: {1}, stderr: {2}, exception: {3}"
-                             .format(single_command,
-                                     str(command_result.stdout),
-                                     str(command_result.stderr),
-                                     str(e)))
+            command_stdout, command_stderr = subprocess_handle.communicate(
+                timeout=MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS)
+        except subprocess.TimeoutExpired:
+            # The child process is not killed if the timeout expires, so in order to cleanup properly a well-behaved
+            # application should kill the child process and finish communication (from python documentation)
+            subprocess_handle.kill()
+            command_stdout, command_stderr = subprocess_handle.communicate()
+            err_log = "Execution Timeout after {4} seconds!! command {0}, stdout: {1}, " \
+                      "stderr: {2}, exception: {3}".format(command_list,
+                                                           str(command_stdout),
+                                                           str(command_stderr),
+                                                           get_exception_string(),
+                                                           MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS)
+            self.logger.error(err_log)
+            raise ValueError(err_log)
+        except subprocess.SubprocessError:
+            # This is a base class for all the rest of subprocess excpetions.
+            err_log = f"General Execution error! command {command_list}, exception: {get_exception_string()}"
+            self.logger.error(err_log)
+            raise ValueError(err_log)
 
-        product = json.loads(command_result.stdout.strip())
+        if subprocess_handle.returncode != 0:
+            err_log = f"Execution Error! command {command_list} returned returncode " \
+                      f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
+            self.logger.error(err_log)
+            raise ValueError(err_log)
+
+        product = json.loads(command_stdout.strip())
         self.logger.debug("command returned with return code 0 (successfully).")
 
         # Optimization if all failed

@@ -8,6 +8,7 @@ from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREG
 from axonius.plugin_base import PluginBase, add_rule
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.files import get_local_config_file
+from datetime import datetime
 
 PLUGIN_TYPE = 'execution_controller'
 
@@ -369,7 +370,8 @@ class ExecutionService(PluginBase):
         if not action_id:
             action_id = result.json()['action_id']
 
-        self._open_actions[action_id] = callback_function
+        with self._open_actions_lock:
+            self._open_actions[action_id] = callback_function, datetime.now()
 
         return result
 

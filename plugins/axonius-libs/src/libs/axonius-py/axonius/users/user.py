@@ -26,7 +26,8 @@ class User(SmartJsonClass):
     username = Field(str, 'User Name')  # Only username, no domain
     domain = Field(str, "Domain")   # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     is_admin = Field(bool, "Is Admin")
-    last_seen = Field(datetime.datetime, 'Last Seen')
+    last_seen_in_devices = Field(datetime.datetime, 'Last Seen In Devices')
+    last_seen_in_domain = Field(datetime.datetime, 'Last Seen In Domain')
     associated_devices = ListField(UserDevice, "Associated Devices", json_format=JsonStringFormat.associated_device)
     member_of = ListField(str, "Member Of")
     is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
@@ -36,10 +37,10 @@ class User(SmartJsonClass):
     password_never_expires = Field(bool, "Password Never Expires")
     password_not_required = Field(bool, "Password Is Not Required")
     account_expires = Field(datetime.datetime, "Account Expiration Date")
-    last_bad_logon = Field(datetime.datetime, "Last Bad Logon Date")
+    last_bad_logon = Field(datetime.datetime, "Domain Last Bad Logon Date")
     last_password_change = Field(datetime.datetime, "Last Password Change")
-    last_logoff = Field(datetime.datetime, "Last Logoff Date")
-    last_logon = Field(datetime.datetime, "Last Logon Date")
+    last_logoff = Field(datetime.datetime, "Domain Last Logoff Date")
+    last_logon = Field(datetime.datetime, "Domain Last Logon Date")
     user_created = Field(datetime.datetime, "User Creation Date")
 
     required = ['id', 'username', 'domain']
@@ -74,4 +75,4 @@ class User(SmartJsonClass):
         self._extend_names('raw', raw_data)
 
 
-USER_LAST_SEEN_FIELD = User.last_seen.name
+USER_LAST_SEEN_FIELD = User.last_seen_in_domain.name

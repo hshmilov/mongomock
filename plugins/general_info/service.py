@@ -15,14 +15,16 @@ from axonius.fields import Field
 from datetime import datetime
 
 
-MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 50
+MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 100
 SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 # The maximum time we wait for new execution answers. If no sent execution request comes back we bail out.
-MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 120
+# note that this timeout shouldn't be met since the execution request will be rejected before (plugin base execution
+# monitor will reject the promise if an update wasn't done)
+MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 180
 
 # The maximum time we wait until all active execution threads
-MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 120
+MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 180
 
 subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo]
 
@@ -41,7 +43,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         self.is_enabled = False  # Are we enabled?
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
-
+        self._number_of_triggers = 0
         self._activate('execute')
 
     def _triggered(self, job_name: str, post_json: dict, *args):
@@ -53,16 +55,15 @@ class GeneralInfoService(PluginBase, Triggerable):
             self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
 
-        acquired = False
-        try:
-            if self.work_lock.acquire(False):
-                acquired = True
-                self._gather_general_info()
-            else:
-                raise RuntimeError("General info gathering is already taking place, try again later")
-        finally:
-            if acquired:
-                self.work_lock.release()
+        self._number_of_triggers = self._number_of_triggers + 1
+        if self._number_of_triggers == 1:
+            # first trigger is blocking.
+            self.logger.info(f"Running gather_general_info sync (number of triggers: {self._number_of_triggers})")
+            self._gather_general_info()
+        else:
+            # Run it in a different thread
+            self.logger.info(f"Running gather_general_info async (number of triggers: {self._number_of_triggers})")
+            threading.Thread(target=self._run_gather_general_info_async).start()
 
     @property
     def number_of_active_execution_requests(self):
@@ -85,6 +86,17 @@ class GeneralInfoService(PluginBase, Triggerable):
         with self._execution_manager_lock:
             self._number_of_active_execution_requests_var = value
 
+    def _run_gather_general_info_async(self):
+        """
+        Simply runs _gather_general_info but also try/excepts it to log everything.
+        :return:
+        """
+
+        try:
+            self._gather_general_info()
+        except:
+            self.logger.exception("Run gather_general_info asynchronously: Got an exception.")
+
     def _gather_general_info(self):
         """
         Runs wmi queries on windows devices to understand important stuff.
@@ -92,14 +104,23 @@ class GeneralInfoService(PluginBase, Triggerable):
         """
 
         self.logger.info("Gathering General info started.")
-        with self.work_lock:
-            self.logger.debug("acquired work lock")
+        acquired = False
+        try:
+            if self.work_lock.acquire(False):
+                acquired = True
+                self.logger.debug("acquired work lock")
 
-            # First, gather general info about devices
-            self._gather_windows_devices_general_info()
+                # First, gather general info about devices
+                self._gather_windows_devices_general_info()
 
-            # Second, go over all devices we have, and try to associate them with users.
-            self._associate_users_with_devices()
+                # Second, go over all devices we have, and try to associate them with users.
+                self._associate_users_with_devices()
+
+            else:
+                raise RuntimeError("General info gathering is already taking place, try again later")
+        finally:
+            if acquired:
+                self.work_lock.release()
 
     def _gather_windows_devices_general_info(self):
         """
@@ -132,7 +153,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         # keeps count of the number of requests, and shoot new ones in case needed.
         self.number_of_active_execution_requests = 0
 
-        for device in windows_devices:
+        for device_i, device in enumerate(windows_devices):
             # a number that increases if we don't shoot any new requests. If we are stuck too much time,
             # we might have an error in the execution. in such a case we bail out.
             self.seconds_stuck = 0
@@ -141,6 +162,9 @@ class GeneralInfoService(PluginBase, Triggerable):
                 # Wait a few sec to re-check again.
                 time.sleep(SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS)
                 self.seconds_stuck = self.seconds_stuck + SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS
+
+                if self.seconds_stuck % 60 == 0:
+                    self.logger.info(f"Execution progress: {device_i} out of {len(windows_devices)} devices executed")
 
                 if self.seconds_stuck > MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS:
                     # The current execution requests sent will still be handled, everything in general will
@@ -229,7 +253,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 continue
             elif len(user) == 0:
                 # user does not exists, create it.
-                self.logger.info(f"username {username} needs to be created, this is a todo task. continuing")
+                self.logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
                 user_dict = self._new_user()
                 user_dict.id = username  # Should be the unique identifier of that user.
                 user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
@@ -237,7 +261,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 self._save_data_from_plugin(
                     self.plugin_unique_name,
                     {"raw": [], "parsed": [user_dict.to_dict()]},
-                    "users")
+                    "users", False)
                 # At this point we must have it.
                 user = list(self.users.get(data={"id": username}))
                 assert len(user) == 1, f"We just created the user {username} but the length is reported as {len(user)}."
@@ -252,10 +276,11 @@ class GeneralInfoService(PluginBase, Triggerable):
 
                 self.logger.debug(f"Associating {device_caption} with user {username}")
                 try:
-                    adapterdata_user.last_seen = max(linked_user['last_use_date'], adapterdata_user.last_seen)
+                    adapterdata_user.last_seen_in_devices = \
+                        max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
                 except:
                     # Last seen does not exist
-                    adapterdata_user.last_seen = linked_user['last_use_date']
+                    adapterdata_user.last_seen_in_devices = linked_user['last_use_date']
 
                 adapterdata_user.add_associated_device(
                     device_caption=device_caption,
@@ -364,6 +389,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                     [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
                     "Last Execution Debug", last_execution_debug
                 )
+
+            self.logger.info(f"Finished with device {device['internal_axon_id']}.")
 
     def _handle_wmi_execution_failure(self, device, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1

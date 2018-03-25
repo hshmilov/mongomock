@@ -30,7 +30,7 @@ from contextlib import contextmanager
 MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
 MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
-SMB_CONNECTION_TIMEOUT = 60 * 2  # 2 min timeout. if there are large files which take more time to transfer change that.
+SMB_CONNECTION_TIMEOUT = 60 * 1  # 1 min timeout. if there are large files which take more time to transfer change that.
 MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
 MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 30  # The amount of seconds we wait for the created shell process to finish
 DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
