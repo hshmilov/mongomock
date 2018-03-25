@@ -45,6 +45,7 @@ DOCKER_PORTS = {
     'secdo-adapter':                    6015,
     'mobileiron-adapter':               6016,
     'juniper-adapter':                  6017,
+    'openstack-adapter':                6018,
     'mongo':                            27017,
 }
 

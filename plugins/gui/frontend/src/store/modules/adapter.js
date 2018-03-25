@@ -139,10 +139,14 @@ export const adapterStaticData = {
 		name: 'Secdo Endpoint Protection',
 		description: 'The SECDO Next Generation IR platform automates endpoint forensic analysis and cyber investigations for security teams.'
 	},
+	'openstack_adapter': {
+		name: 'OpenStack',
+		description: 'OpenStack is an open source software for creating private and public clouds.'
+  },
 	'chef_adapter': {
 		name: 'Chef',
 		description: 'Continuous automation for building, deploying, and managing infrastructure, compliance, and applications in modern, legacy, and hybrid environments.'
-	}
+  },
 }
 
 export const adapter = {

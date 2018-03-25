@@ -283,3 +283,6 @@ logs/*
 projectFilesBackup/*
 .idea/codeStyles/*
 Dockerfile.autogen
+
+# Vim 
+*.swp
