@@ -3,7 +3,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device import Device
 from axonius.users.user import User
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, \
-    SYSTEM_SCHEDULER_PLUGIN_NAME
+    SYSTEM_SCHEDULER_PLUGIN_NAME, STATIC_CORRELATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 
 import tarfile
@@ -606,6 +606,13 @@ class GuiService(PluginBase):
                 # if there's no aggregator, that's fine
                 try:
                     self.request_remote_plugin(f"trigger/{adapter_unique_name}", AGGREGATOR_PLUGIN_NAME, method='post')
+                    research_state = self.request_remote_plugin(f"state",
+                                                                SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
+                    if research_state[StateLevels.Phase.name] == Phases.Stable.name:
+                        self.logger.info('System is stable, triggering static correlator')
+                        self.request_remote_plugin(f"trigger/execute", STATIC_CORRELATOR_PLUGIN_NAME, method='post')
+                    else:
+                        self.logger.info('System is in research phase, not triggering static correlator')
                 except Exception:
                     # if there's no aggregator, there's nothing we can do
                     pass
