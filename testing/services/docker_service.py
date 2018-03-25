@@ -56,6 +56,9 @@ WORKDIR /home/axonius/app
 
 # Copy the current directory contents into the container at /app
 COPY ./ ./{self.package_name}/
+
+# Link to libcrypto for RSA keys (originally was a problem for chef adapter)
+RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so
 """[1:]
 
     def get_main_file(self):

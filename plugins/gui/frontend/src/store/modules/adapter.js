@@ -138,6 +138,10 @@ export const adapterStaticData = {
 	'secdo_adapter': {
 		name: 'Secdo Endpoint Protection',
 		description: 'The SECDO Next Generation IR platform automates endpoint forensic analysis and cyber investigations for security teams.'
+	},
+	'chef_adapter': {
+		name: 'Chef',
+		description: 'Continuous automation for building, deploying, and managing infrastructure, compliance, and applications in modern, legacy, and hybrid environments.'
 	}
 }
 
