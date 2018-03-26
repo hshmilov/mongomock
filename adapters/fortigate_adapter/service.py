@@ -107,5 +107,7 @@ class FortigateAdapter(AdapterBase):
         try:
             return FortigateClient(self.logger, **client_config)
         except Exception as err:
-            self.logger.exception(f'Failed to connect to Fortigate client using this config {client_config}')
-            raise ClientConnectionException(f'Failed to connect to Fortigate client using this config {client_config}')
+            self.logger.exception(
+                f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
+            raise ClientConnectionException(
+                f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
