@@ -1,6 +1,6 @@
 from itertools import groupby
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
@@ -156,3 +156,7 @@ class QualysAdapter(AdapterBase):
         """
         self.logger.error("_parse_correlation_results is not implemented for qualys adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for qualys adapter")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Vulnerability_Assessment, AdapterProperty.Agent, AdapterProperty.Manager]

@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
@@ -72,3 +72,7 @@ class CiscoAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config[HOST]
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network]

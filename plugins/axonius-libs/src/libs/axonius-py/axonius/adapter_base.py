@@ -13,7 +13,7 @@ from flask import jsonify, request
 import json
 import sys
 from threading import RLock, Thread, Event
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, List
 
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
@@ -22,7 +22,7 @@ from axonius.devices.device import Device, LAST_SEEN_FIELD
 from axonius.users.user import User, USER_LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
 from axonius.parsing_utils import get_exception_string
-from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.json import to_json
 
@@ -64,6 +64,27 @@ class DeviceRunningState(Enum):
     State is unknown
     """
     Unknown = auto()
+
+
+class AdapterProperty(Enum):
+    """
+    Possible properties of the adapter
+    """
+
+    def _generate_next_value_(name, *args):
+        return name
+
+    # Naming scheme: Underscore is replaced with space for the facade, so "Antivirus_System" will show
+    # as "Antivirus System" (see above _generate_next_value_)
+    # Otherwise - provide a name: `AVSystem = "Antivirus System"`
+    # TODO: Make the GUI actually support this
+    Agent = auto()
+    Endpoint_Protection_Platform = auto()
+    Network = auto()
+    Firewall = auto()
+    Manager = auto()
+    Vulnerability_Assessment = auto()
+    Assets = auto()
 
 
 def is_adapter_device_old(adapter_device, device_age_cutoff) -> bool:
@@ -283,7 +304,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         Accepts:
            GET - Finds all available devices, and returns them
         """
-        return to_json(dict(self._query_data("devices")))
+        return to_json(dict(self._query_data(EntityType.Devices)))
 
     @add_rule('devices_by_name', methods=['GET'])
     def devices_by_client(self):
@@ -305,7 +326,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         Accepts:
            GET - Finds all available devices, and returns them
         """
-        return to_json(dict(self._query_data("users")))
+        return to_json(dict(self._query_data(EntityType.Users)))
 
     def _query_users_by_client(self, key, data):
         """
@@ -376,7 +397,7 @@ class AdapterBase(PluginBase, Feature, ABC):
            GET - Finds all available users from a specific client, and returns them
         """
         client_name = request.args.get('name')
-        return to_json(self._get_data_by_client(client_name, "users"))
+        return to_json(self._get_data_by_client(client_name, EntityType.Users))
 
     # End of users
 
@@ -391,16 +412,18 @@ class AdapterBase(PluginBase, Feature, ABC):
         client_name = request.args.get('client_name')
         if client_name:
             devices_count = self._save_data_from_plugin(
-                client_name, self._get_data_by_client(client_name, "devices"), "devices")
+                client_name, self._get_data_by_client(client_name, EntityType.Devices), EntityType.Devices)
             users_count = self._save_data_from_plugin(
-                client_name, self._get_data_by_client(client_name, "users"), "users")
+                client_name, self._get_data_by_client(client_name, EntityType.Users), EntityType.Users)
         else:
-            devices_count = sum(self._save_data_from_plugin(*data, "devices") for data in self._query_data("devices"))
-            users_count = sum(self._save_data_from_plugin(*data, "users") for data in self._query_data("users"))
+            devices_count = sum(
+                self._save_data_from_plugin(*data, EntityType.Devices) for data in self._query_data(EntityType.Devices))
+            users_count = sum(
+                self._save_data_from_plugin(*data, EntityType.Users) for data in self._query_data(EntityType.Users))
 
         return to_json({"devices_count": devices_count, "users_count": users_count})
 
-    def _get_data_by_client(self, client_name: str, data_type: str):
+    def _get_data_by_client(self, client_name: str, data_type: EntityType):
         """
         Get all devices, both raw and parsed, from the given client name
         data_type is devices/users.
@@ -759,7 +782,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         else:
             self.logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
 
-    def _try_query_data_by_client(self, client_id, data_type):
+    def _try_query_data_by_client(self, client_id, entity_type: EntityType):
         """
         Try querying data for given client. If fails, try reconnecting to client.
         If successful, try querying data with new connection to the original client, up to 3 times.
@@ -787,14 +810,14 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
         try:
-            if data_type == "devices":
+            if entity_type == EntityType.Devices:
                 raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
                 parsed_data = list(self._parse_devices_raw_data_hook(raw_data))
-            elif data_type == "users":
+            elif entity_type == EntityType.Users:
                 raw_data = self._query_users_by_client(client_id, self._clients[client_id])
                 parsed_data = list(self._parse_users_raw_data_hook(raw_data))
             else:
-                raise ValueError(f"expected {data_type} to be devices/users.")
+                raise ValueError(f"expected {entity_type} to be devices/users.")
         except Exception as e:
             with self._clients_lock:
                 current_client = clients_collection.find_one({'client_id': client_id})
@@ -814,27 +837,25 @@ class AdapterBase(PluginBase, Feature, ABC):
                 raise
             else:
                 try:
-                    if data_type == "devices":
+                    if entity_type == EntityType.Devices:
                         raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
                         parsed_data = list(self._parse_devices_raw_data_hook(raw_data))
-                    elif data_type == "users":
+                    elif entity_type == EntityType.Users:
                         raw_data = self._query_users_by_client(client_id, self._clients[client_id])
                         parsed_data = list(self._parse_users_raw_data_hook(raw_data))
                     else:
-                        raise ValueError(f"expected {data_type} to be devices/users.")
+                        raise ValueError(f"expected {entity_type} to be devices/users.")
                 except:
                     # No devices despite a working connection
-                    self.logger.exception(f"Problem querying {data_type} for client {0}".format(client_id))
+                    self.logger.exception(f"Problem querying {entity_type} for client {0}".format(client_id))
                     _update_client_status("error")
                     raise
         _update_client_status("success")
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
-    def _query_data(self, data_type):
+    def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[str, str]]:
         """
         Synchronously returns all available data types (devices/users) from all clients.
-
-        :return: iterator([client_name, devices])
         """
         with self._clients_lock:
             if len(self._clients) == 0:
@@ -845,7 +866,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         # Running query on each device
         for client_name in clients:
             try:
-                raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
+                raw_data, parsed_data = self._try_query_data_by_client(client_name, entity_type)
             except adapter_exceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
@@ -858,7 +879,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                 data_list = {'raw': raw_data,
                              'parsed': parsed_data}
 
-                yield [client_name, data_list]
+                yield (client_name, data_list)
 
     @abstractmethod
     def _clients_schema(self):
@@ -925,6 +946,15 @@ class AdapterBase(PluginBase, Feature, ABC):
                                        'schema': schema
             }, upsert=True)
 
+    def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
+        """
+        See doc for super class
+        """
+        parsed_to_insert = super()._create_axonius_entity(client_name, data, entity_type)
+        if entity_type == EntityType.Devices:
+            parsed_to_insert['adpater_properties'] = [x.name for x in self.adapter_properties()]
+        return parsed_to_insert
+
     @property
     def plugin_type(self):
         return adapter_consts.ADAPTER_PLUGIN_TYPE
@@ -936,3 +966,11 @@ class AdapterBase(PluginBase, Feature, ABC):
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)
         register_doc[adapter_consts.DEFAULT_SAMPLE_RATE] = int(config.default_sample_rate)
+
+    @classmethod
+    @abstractmethod
+    def adapter_properties(cls) -> List[AdapterProperty]:
+        """
+        Returns a list of all properties of the adapter, they will be displayed in GUI
+        """
+        pass

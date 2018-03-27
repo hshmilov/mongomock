@@ -3,7 +3,7 @@ import botocore.exceptions
 from botocore.config import Config
 import re
 
-from axonius.adapter_base import AdapterBase, DeviceRunningState
+from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException, AdapterException
 from axonius.devices.device import Device
 from axonius.fields import Field, ListField
@@ -264,3 +264,7 @@ class AwsAdapter(AdapterBase):
         :return:
         """
         return next(iter(aws_ec2_id_matcher.findall(correlation_cmd_result.strip())), None)
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets]

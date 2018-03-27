@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timedelta
 import sys
 import traceback
+from enum import Enum, auto
+
 import requests
 import configparser
 import os
@@ -91,16 +93,17 @@ def after_request(response):
 ROUTED_FUNCTIONS = list()
 
 
-def add_rule(rule, methods=['GET'], should_authenticate=True):
+def add_rule(rule, methods=['GET'], should_authenticate: bool = True, allow_on_disabled: bool = False):
     """ Decorator for adding function to URL.
 
     This decorator will add a flask rule to a wanted method from a class derived
     From PluginBase
 
-    :param str rule: The address. for example, if rule='device' 
+    :param str rule: The address. for example, if rule='device'
             This function will be accessed when browsing '/device'
     :param methods: Methods that this function will handle
-    :param bool should_authenticate: Whether to check api key or not. True by default
+    :param should_authenticate: Whether to check api key or not. True by default
+    :param allow_on_disabled: Whether to allow this call on disabled plugins
 
     :type methods: list of str
     """
@@ -123,8 +126,7 @@ def add_rule(rule, methods=['GET'], should_authenticate=True):
 
             if self.plugin_state == 'disabled':
                 request_url = str(request.url_rule)
-                if request_url != '/api/version' and request_url != '/api/plugin_state' and \
-                        request_url != '/api/supported_features':
+                if not allow_on_disabled:
                     logger.warning(f"Tried to access disabled plugin {request_url}")
                     return return_error(f"Plugin disabled for url {request_url}. ", 405)
 
@@ -185,6 +187,15 @@ def return_error(error_message, http_status=500):
     return jsonify({'status': 'error', 'message': error_message}), http_status
 
 
+class EntityType(Enum):
+    """
+    Possible axonius entities
+    """
+
+    Users = auto()
+    Devices = auto()
+
+
 class PluginBase(Feature):
     """ This is an abstract class containing the implementation
     For the base capabilities of the Plugin.
@@ -208,6 +219,7 @@ class PluginBase(Feature):
 
         :raise KeyError: In case of environment variables missing
         """
+        super().__init__(*args, **kwargs)
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
         # No need to put such a small thing in a version.ini file, the CI changes this string everywhere.
@@ -349,14 +361,17 @@ class PluginBase(Feature):
 
         self.logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
 
-        super().__init__(*args, **kwargs)
-
         # DB's
         self.aggregator_db_connection = self._get_db_connection(True)[AGGREGATOR_PLUGIN_NAME]
         self.devices_db = self.aggregator_db_connection['devices_db']
         self.users_db = self.aggregator_db_connection['users_db']
         self.devices_db_view = self.aggregator_db_connection['devices_db_view']
         self.users_db_view = self.aggregator_db_connection['users_db_view']
+
+        self.__entity_db_map = {
+            EntityType.Users: self.users_db,
+            EntityType.Devices: self.devices_db,
+        }
 
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
@@ -498,12 +513,14 @@ class PluginBase(Feature):
         :param str api_key: Api key to use in case we want a certain plugin_unique_name
         :return requests.response: The register response from the core
         """
-        register_doc = {"plugin_name": self.plugin_name,
-                        "plugin_type": self.plugin_type,
-                        "plugin_subtype": self.plugin_subtype,
-                        "plugin_port": self.port,
-                        "is_debug": is_debug_attached()
-                        }
+        register_doc = {
+            "plugin_name": self.plugin_name,
+            "plugin_type": self.plugin_type,
+            "plugin_subtype": self.plugin_subtype,
+            "plugin_port": self.port,
+            "is_debug": is_debug_attached(),
+            "supported_features": list(self.supported_features)
+        }
 
         self.populate_register_doc(register_doc, self.config_file_path)
 
@@ -651,11 +668,11 @@ class PluginBase(Feature):
                     "There is no plugin {0} currently registered".format(plugin_name))
             return found_plugins
 
-    @add_rule('supported_features', should_authenticate=False)
+    @add_rule('supported_features', should_authenticate=False, allow_on_disabled=True)
     def get_supported_features(self):
         return jsonify(self.supported_features)
 
-    @add_rule('plugin_state', should_authenticate=False, methods=['GET', 'POST'])
+    @add_rule('plugin_state', should_authenticate=False, methods=['GET', 'POST'], allow_on_disabled=True)
     def state(self):
         if self.get_method() == 'GET':
             return jsonify({"state": self.plugin_state})
@@ -678,7 +695,7 @@ class PluginBase(Feature):
             self.temp_config.write(self.temp_config_file)
         return ''
 
-    @add_rule('version', methods=['GET'], should_authenticate=False)
+    @add_rule('version', methods=['GET'], should_authenticate=False, allow_on_disabled=True)
     def _get_version(self):
         """ /version - Get the version of the app.
 
@@ -896,7 +913,7 @@ class PluginBase(Feature):
         # TODO: and make it not do anything.
         return "Pre-Correlation"
 
-    def _save_data_from_plugin(self, client_name, data_of_client, collection_name, should_log_info=True) -> int:
+    def _save_data_from_plugin(self, client_name, data_of_client, entity_type: EntityType, should_log_info=True) -> int:
         """
         Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
@@ -907,13 +924,8 @@ class PluginBase(Feature):
             Insert data (devices/users/...) into the DB
             :return:
             """
-
-            if collection_name == "users":
-                db_to_use = self.users_db
-            elif collection_name == "devices":
-                db_to_use = self.devices_db
-            else:
-                raise ValueError(f"got {collection_name} but expected users/devices")
+            db_to_use = self.__entity_db_map.get(entity_type)
+            assert db_to_use, f"got unexpected {entity_type}"
 
             correlates = parsed_to_insert['data'].get('correlates')
             if correlates == IGNORE_DEVICE:
@@ -978,15 +990,7 @@ class PluginBase(Feature):
 
             # Here we have all the devices a single client sees
             for data in data_of_client['parsed']:
-                parsed_to_insert = {
-                    'client_used': client_name,
-                    'plugin_type': self.plugin_type,
-                    "plugin_name": self.plugin_name,
-                    "plugin_unique_name": self.plugin_unique_name,
-                    "type": "entitydata",
-                    'accurate_for_datetime': datetime.now(),
-                    'data': data
-                }
+                parsed_to_insert = self._create_axonius_entity(client_name, data, entity_type)
 
                 # Note that this updates fields that are present. If some fields are not present but are present
                 # in the db they will stay there.
@@ -1008,7 +1012,7 @@ class PluginBase(Feature):
                         else:
                             data_to_update[f"adapters.$.data.{field}"] = field_of_data
                     except TypeError:
-                        self.logger.exception(f"Got TypeError while getting {collection_name} field {field}")
+                        self.logger.exception(f"Got TypeError while getting {entity_type} field {field}")
                         continue
                     data_to_update['accurate_for_datetime'] = datetime.now()
 
@@ -1020,25 +1024,45 @@ class PluginBase(Feature):
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
             if promise_all.is_rejected:
-                self.logger.error(f"Error in insertion of {collection_name} to DB", exc_info=promise_all.reason)
+                self.logger.error(f"Error in insertion of {entity_type} to DB", exc_info=promise_all.reason)
 
-            if collection_name == "devices":
+            if entity_type == "devices":
                 added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
                 self.logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
 
             time_for_client = datetime.now() - time_before_client
             if should_log_info is True:
                 self.logger.info(
-                    f"Finished aggregating {collection_name} for client {client_name},"
+                    f"Finished aggregating {entity_type} for client {client_name}, "
                     f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
 
         except Exception as e:
             self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
+        self.logger.info(f"Finished inserting {entity_type} of client {client_name}")
         if should_log_info is True:
-            self.logger.info(f"Finished inserting {collection_name} of client {client_name}")
+            self.logger.info(f"Finished inserting {entity_type} of client {client_name}")
         return inserted_data_count
+
+    def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
+        """
+        Creates an axonius entity ("Parsed data")
+        :param client_name: the name of the client
+        :param data: the parsed data
+        :param entity_type: the type of the entity (see EntityType)
+        :return: dict
+        """
+        parsed_to_insert = {
+            'client_used': client_name,
+            'plugin_type': self.plugin_type,
+            "plugin_name": self.plugin_name,
+            "plugin_unique_name": self.plugin_unique_name,
+            "type": "entitydata",
+            'accurate_for_datetime': datetime.now(),
+            'data': data
+        }
+        return parsed_to_insert
 
     def _add_pretty_id_to_missing_adapter_devices(self):
         """

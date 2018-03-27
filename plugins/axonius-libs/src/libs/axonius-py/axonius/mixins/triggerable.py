@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, auto
 from threading import RLock
 
@@ -6,7 +7,6 @@ from flask import jsonify, request
 
 from axonius.mixins.feature import Feature
 from axonius.plugin_base import add_rule, return_error
-from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
 
 class TriggerStates(Enum):
@@ -41,7 +41,7 @@ class Triggerable(Feature, ABC):
         self.__trigger_lock = RLock()
         self.__state = {}
         # this executor executes the trigger function
-        self.__executor = LoggedThreadPoolExecutor(self.logger, max_workers=20)
+        self.__executor = ThreadPoolExecutor(max_workers=20)
         self.__last_error = ""
         self._default_activity = False
 

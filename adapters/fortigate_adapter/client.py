@@ -34,8 +34,8 @@ class FortigateClient(object):
             raise axonius.adapter_exceptions.ClientConnectionException("Failed to connect to fortigate.")
 
     def _make_request(self, session, method, resource, payload=None):
-        response = getattr(session, method)(f'https://{self.host}:{self.port}/{resource}',
-                                            data=payload, verify=self.verify_ssl, params={'vdom': self.vdom})
+        response = session.request(method, f'https://{self.host}:{self.port}/{resource}',
+                                   data=payload, verify=self.verify_ssl, params={'vdom': self.vdom})
         response.raise_for_status()
         try:
             return response.json()

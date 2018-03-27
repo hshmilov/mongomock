@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
@@ -146,3 +146,7 @@ class SymantecAdapter(AdapterBase):
         """
         self.logger.error("_parse_correlation_results is not implemented for symantec adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for symantec adapter")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]

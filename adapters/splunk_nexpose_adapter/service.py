@@ -1,5 +1,5 @@
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from splunk_nexpose_adapter.connection import SplunkConnection
@@ -105,3 +105,7 @@ class SplunkNexposeAdapter(AdapterBase):
             device.scanner = True
             device.set_raw(device_raw)
             yield device
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]

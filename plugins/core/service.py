@@ -22,7 +22,6 @@ from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
 from core import consts
 
-
 CHUNK_SIZE = 1024
 
 
@@ -233,6 +232,7 @@ class CoreService(PluginBase):
             plugin_type = data['plugin_type']
             plugin_subtype = data['plugin_subtype']
             plugin_port = data['plugin_port']
+            supported_features = data['supported_features']
             plugin_is_debug = data.get('is_debug', False)
 
             self.logger.info(f"Got registration request : {data} from {request.remote_addr}")
@@ -295,6 +295,7 @@ class CoreService(PluginBase):
                     'plugin_port': plugin_port,
                     'plugin_type': plugin_type,
                     'plugin_subtype': plugin_subtype,
+                    'supported_features': supported_features,
                     'api_key': uuid.uuid4().hex,
                     'db_addr': self.db_host,
                     'db_user': plugin_user,
@@ -354,10 +355,13 @@ class CoreService(PluginBase):
     def _get_online_plugins(self):
         online_devices = dict()
         for plugin_name, plugin in self.online_plugins.items():
-            online_devices[plugin_name] = {'plugin_type': plugin['plugin_type'],
-                                           'plugin_subtype': plugin['plugin_subtype'],
-                                           PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
-                                           'plugin_name': plugin['plugin_name']}
+            online_devices[plugin_name] = {
+                'plugin_type': plugin['plugin_type'],
+                'plugin_subtype': plugin['plugin_subtype'],
+                PLUGIN_UNIQUE_NAME: plugin[PLUGIN_UNIQUE_NAME],
+                'plugin_name': plugin['plugin_name'],
+                'supported_features': plugin['supported_features']
+            }
 
             if is_plugin_adapter(plugin['plugin_type']):
                 online_devices[plugin_name][adapter_consts.DEVICE_SAMPLE_RATE] = int(

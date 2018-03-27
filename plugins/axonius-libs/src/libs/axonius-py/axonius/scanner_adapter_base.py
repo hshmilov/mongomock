@@ -155,10 +155,10 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _try_query_data_by_client(self, client_name, data_type):
-        raw_data, parsed_data = super()._try_query_data_by_client(client_name, data_type)
+    def _try_query_data_by_client(self, client_name, entity_type):
+        raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
 
-        if data_type == "devices":
+        if entity_type == "devices":
             with self._get_db_connection(True) as db:
                 aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
                 devices = aggregator_db['devices_db'].find()

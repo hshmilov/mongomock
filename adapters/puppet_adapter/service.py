@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device, MAC_FIELD
 from axonius.utils.files import get_local_config_file
@@ -159,3 +159,7 @@ class PuppetAdapter(AdapterBase):
             yield device
 
     # Exported API functions - None for now
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]

@@ -1,5 +1,6 @@
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.scanner_adapter_base import ScannerAdapterBase
+from axonius.adapter_base import AdapterProperty
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
@@ -145,3 +146,7 @@ class NessusAdapter(ScannerAdapterBase):
             device.scanner = True
             device.set_raw(device_raw)
             yield device
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]

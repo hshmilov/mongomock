@@ -2,7 +2,7 @@ import time
 import threading
 import functools
 
-from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device import Device
 from axonius.users.user import User
 from axonius.mixins.triggerable import Triggerable
@@ -261,7 +261,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 self._save_data_from_plugin(
                     self.plugin_unique_name,
                     {"raw": [], "parsed": [user_dict.to_dict()]},
-                    "users", False)
+                    EntityType.Users, False)
                 # At this point we must have it.
                 user = list(self.users.get(data={"id": username}))
                 assert len(user) == 1, f"We just created the user {username} but the length is reported as {len(user)}."

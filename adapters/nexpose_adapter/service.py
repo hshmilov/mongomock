@@ -8,6 +8,7 @@ from axonius.devices.device import Device
 from axonius.parsing_utils import normalize_adapter_device, is_different_plugin, compare_ips, macs_do_not_contradict, \
     hostnames_do_not_contradict, and_function, or_function
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
+from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
 import nexpose_adapter.clients as nexpose_clients
 
@@ -149,3 +150,7 @@ class NexposeAdapter(ScannerAdapterBase):
     @property
     def _get_scanner_correlator(self):
         return NexposeScannerCorrelator
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]

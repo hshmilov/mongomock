@@ -23,6 +23,7 @@ COPY requirements2.txt .
 RUN pip2 install -r requirements2.txt
 
 # Install more gui dependencies.
+
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
     apt-get install -y nodejs && nodejs -v && node -v && npm -v
 

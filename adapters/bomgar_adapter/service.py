@@ -1,6 +1,6 @@
 import datetime
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.fields import Field, JsonStringFormat
@@ -95,3 +95,7 @@ class BomgarAdapter(AdapterBase):
             device.public_ip = device_raw['public_ip']
             device.set_raw(device_raw)
             yield device
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]

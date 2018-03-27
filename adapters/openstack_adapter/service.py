@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device import Device, Field
 from axonius.utils.files import get_local_config_file
 from openstack_adapter.client import OpenStackClient
@@ -109,5 +109,9 @@ class OpenstackAdapter(AdapterBase):
             try:
                 device = self.create_device(raw_device_data)
                 yield device
-            except Exception as e:
-                logging.log(f'got expetion for raw_device_data: {raw_device_data} exception: {e}')
+            except Exception:
+                self.logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets]

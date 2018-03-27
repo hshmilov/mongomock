@@ -1,6 +1,6 @@
 import datetime
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.parsing_utils import format_mac
 from axonius.devices.device import Device
@@ -102,3 +102,7 @@ class JuniperAdapter(AdapterBase):
         except Exception as err:
             self.logger.exception(f'Failed to connect to Juniper provider using this config {client_config}')
             raise ClientConnectionException(f'Failed to connect to Juniper provider using this config {client_config}')
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network]

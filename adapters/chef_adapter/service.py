@@ -2,7 +2,7 @@ from itertools import groupby
 import datetime
 import pytz
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
@@ -193,3 +193,7 @@ class ChefAdapter(AdapterBase):
 
             device.set_raw(device_raw)
             yield device
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]

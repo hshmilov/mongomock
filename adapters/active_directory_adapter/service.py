@@ -12,7 +12,7 @@ import subprocess
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.devices.device import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
@@ -669,4 +669,6 @@ class ActiveDirectoryAdapter(AdapterBase):
         """
         return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell"]
 
-        # Exported API functions - None for now
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets, AdapterProperty.Manager]

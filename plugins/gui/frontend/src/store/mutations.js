@@ -90,9 +90,9 @@ export const updateDataFields = (state, payload) => {
 	fields.fetching = payload.fetching
 	fields.error = payload.error
 	if (payload.data) {
-		fields.data = {generic: flattenSchema({ ...payload.data.generic, name: 'specific_data.data' }), specific: {}}
+		fields.data = {generic: flattenSchema(payload.data.generic), specific: {}}
 		Object.keys(payload.data.specific).forEach((name) => {
-			fields.data.specific[name] = flattenSchema({ ...payload.data.specific[name], name: `adapters_data.${name}`})
+			fields.data.specific[name] = flattenSchema(payload.data.specific[name])
 		})
 	}
 }

@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.consts import adapter_consts
 from axonius.devices.device import Device
@@ -253,3 +253,7 @@ class JamfAdapter(AdapterBase):
         """
         self.logger.error("_parse_correlation_results is not implemented for jamf adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for jamf adapter")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Agent, AdapterProperty.Manager]

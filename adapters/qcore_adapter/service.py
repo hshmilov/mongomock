@@ -175,3 +175,7 @@ class QcoreAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         return client_config['mediator']
+
+    @classmethod
+    def adapter_properties(cls):
+        return []

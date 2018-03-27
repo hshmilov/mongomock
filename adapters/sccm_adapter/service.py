@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase, adapter_consts
+from axonius.adapter_base import AdapterBase, adapter_consts, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.ad_device import ADDevice
 from axonius.utils.files import get_local_config_file
@@ -135,3 +135,7 @@ class SccmAdapter(AdapterBase):
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
         self.logger.error("_parse_correlation_results is not implemented for sccm adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for sccm adapter")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]

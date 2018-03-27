@@ -91,3 +91,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
             device.add_nic('', [device_raw.get("ip")] if device_raw.get("ip") else [], self.logger)
             device.set_raw(device_raw)
             yield device
+
+    @classmethod
+    def adapter_properties(cls):
+        return []

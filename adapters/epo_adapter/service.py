@@ -1,7 +1,7 @@
 import json
 import ipaddress
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.fields import ListField, Field
@@ -223,4 +223,6 @@ class EpoAdapter(AdapterBase):
             raise ClientConnectionException(message)
         return client_config
 
-    # Exported API functions - None for now
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]

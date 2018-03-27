@@ -1,6 +1,6 @@
 import csv
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
 
@@ -71,3 +71,7 @@ class CsvAdapter(AdapterBase):
             return correlation_cmd_result.splitlines()[1].strip()
         elif os_type == 'OS X':
             return correlation_cmd_result[correlation_cmd_result.index(':') + 1:].strip()
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets]

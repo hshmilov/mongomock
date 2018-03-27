@@ -192,3 +192,7 @@ class StressTestAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         return client_config['device_count']
+
+    @classmethod
+    def adapter_properties(cls):
+        return []

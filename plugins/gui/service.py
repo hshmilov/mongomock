@@ -1,3 +1,5 @@
+from axonius.adapter_base import is_plugin_adapter, AdapterProperty
+
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device import Device
@@ -363,9 +365,14 @@ class GuiService(PluginBase):
         :return:
         """
 
-        def _censor_fields(fields):
+        def guify_fields(fields, name_prefix=""):
             # Remove fields from data that are not relevant to UI
-            fields['items'] = filter(lambda x: x.get('name', '') not in ['scanner'], fields['items'])
+            if 'items' in fields:
+                fields['items'] = [x for x in fields['items'] if x.get('name', '') not in ['scanner']]
+            if name_prefix:
+                for field in fields['items']:
+                    if 'name' in field:
+                        field['name'] = name_prefix + field['name']
             return fields
 
         def _get_generic_fields():
@@ -375,16 +382,31 @@ class GuiService(PluginBase):
                 return User.get_fields_info()
             return dict()
 
-        fields = {'generic': _censor_fields(_get_generic_fields()), 'specific': {}}
+        fields = {
+            'generic': guify_fields(_get_generic_fields(), name_prefix='specific_data.data.'),
+            'specific': {}
+        }
+
+        all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
+
+        # insert at index 0 to be first
+        fields['generic']['items'].insert(0, {
+            'name': 'specific_data.adpater_properties',
+            'title': 'Adapter Properties',
+            'type': 'string',
+            "enum": all_supported_properties,
+        })
         with self._get_db_connection(False) as db_connection:
-            plugins_from_db = db_connection['core']['configs'].find({}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            plugins_from_db = list(db_connection['core']['configs'].find({}).
+                                   sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
                 if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields']:
                     plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{module_name}_fields'].find_one(
                         {'name': 'parsed'}, projection={'schema': 1})
                     if plugin_fields_record:
-                        fields['specific'][plugin[PLUGIN_NAME]] = _censor_fields(plugin_fields_record['schema'])
+                        fields['specific'][plugin[PLUGIN_NAME]] = \
+                            guify_fields(plugin_fields_record['schema'],
+                                         name_prefix=f'adapters_data.{PLUGIN_NAME}.data')
 
         return jsonify(fields)
 

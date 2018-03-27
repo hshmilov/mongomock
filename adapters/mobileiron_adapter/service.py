@@ -1,4 +1,4 @@
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
@@ -126,3 +126,7 @@ class MobileironAdapter(AdapterBase):
                 yield device
             except:
                 self.logger.exception("Problem with fetching MobileIron Device")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]

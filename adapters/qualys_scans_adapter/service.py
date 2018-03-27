@@ -4,6 +4,7 @@ from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.scanner_adapter_base import ScannerAdapterBase
+from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.utils.xml2json_parser import Xml2Json
 from qualys_scans_adapter.connection import QualysScansConnection
@@ -186,3 +187,7 @@ class QualysScansAdapter(ScannerAdapterBase):
         """
         self.logger.error("_parse_correlation_results is not implemented for qualys adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for qualys adapter")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]

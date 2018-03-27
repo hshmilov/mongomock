@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from pyVmomi import vim
 
-from axonius.adapter_base import AdapterBase, DeviceRunningState
+from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.fields import Field
@@ -188,3 +188,7 @@ class EsxAdapter(AdapterBase):
                 yield from self._parse_raw_data(child, _curr_path + "/" + node['Name'])
         else:
             raise RuntimeError("Found weird type of node: {}".format(node['Type']))
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Assets]

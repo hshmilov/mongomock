@@ -46,11 +46,11 @@ class PluginService(DockerService):
 
         if session:
             with session:
-                return getattr(session, method)(url='{0}/{1}'.format(self.req_url, endpoint),
-                                                headers=headers, *vargs, **kwargs)
+                return session.request(method, url='{0}/{1}'.format(self.req_url, endpoint),
+                                       headers=headers, *vargs, **kwargs)
 
-        return getattr(requests, method)(url='{0}/{1}'.format(self.req_url, endpoint),
-                                         headers=headers, *vargs, **kwargs)
+        return requests.request(method, url='{0}/{1}'.format(self.req_url, endpoint),
+                                headers=headers, *vargs, **kwargs)
 
     def get(self, endpoint, *vargs, **kwargs):
         return self.request('get', endpoint, *vargs, **kwargs)

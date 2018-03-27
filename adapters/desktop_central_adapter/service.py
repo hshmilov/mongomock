@@ -1,6 +1,6 @@
 import json
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
@@ -118,3 +118,7 @@ class DesktopCentralAdapter(AdapterBase):
                 yield device
             except:
                 self.logger.exception("Problem with fetching Desktop Central Device")
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]

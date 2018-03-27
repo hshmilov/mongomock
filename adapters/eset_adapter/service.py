@@ -1,7 +1,7 @@
 import threading
 import ctypes
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.parsing_utils import format_mac, parse_date
 from axonius.devices.device import Device
 import axonius.adapter_exceptions
@@ -127,3 +127,7 @@ class EsetAdapter(AdapterBase):
         return EsetClient(self.eset_session_lock, self.eset_connection_library, self.logger,
                           host=client_config[ESET_HOST], username=client_config[USER],
                           password=client_config[PASSWORD], port=client_config.get(ESET_PORT, 2223))
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]

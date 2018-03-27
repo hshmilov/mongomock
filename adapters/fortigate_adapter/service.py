@@ -1,7 +1,7 @@
 import datetime
 
-from axonius.adapter_base import AdapterBase
-from axonius.adapter_exceptions import AdapterException, ClientConnectionException
+from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException, GetDevicesError
 from axonius.parsing_utils import format_mac
 from axonius.devices.device import Device
 from axonius.utils.files import get_local_config_file
@@ -97,8 +97,7 @@ class FortigateAdapter(AdapterBase):
             return client_data.get_all_devices()
         except Exception as err:
             self.logger.exception(f'Failed to get all the devices from the client: {client_data}')
-            # TODO: Change to GetDevicesError after nexpose refactor is merged.
-            raise AdapterException(f'Failed to get all the devices from the client: {client_data}')
+            raise GetDevicesError(f'Failed to get all the devices from the client: {client_data}')
 
     def _get_client_id(self, client_config):
         return f"{client_config[consts.FORTIGATE_HOST]}:{client_config.get(consts.FORTIGATE_PORT, consts.DEFAULT_FORTIGATE_PORT)}"
@@ -111,3 +110,7 @@ class FortigateAdapter(AdapterBase):
                 f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
             raise ClientConnectionException(
                 f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Network, AdapterProperty.Firewall]

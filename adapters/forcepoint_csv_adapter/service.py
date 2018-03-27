@@ -1,6 +1,6 @@
 import csv
 
-from axonius.adapter_base import AdapterBase
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device import Device
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
@@ -78,3 +78,7 @@ class ForcepointCsvAdapter(AdapterBase):
                             "synced": synced, "discovery_status": discovery_status,
                             "client_status": client_status, "client_installation version": version})
             yield device
+
+    @classmethod
+    def adapter_properties(cls):
+        return [AdapterProperty.Manager, AdapterProperty.Agent]
