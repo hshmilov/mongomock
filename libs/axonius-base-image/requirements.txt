@@ -29,6 +29,7 @@ netmiko==2.0.1
 pyodbc==4.0.22
 dpkt==1.9.1
 ipython==6.2.1
+jwt==0.5.2
 pychef==0.3.0
 pql==0.4.3
 openstacksdk==0.12.0
