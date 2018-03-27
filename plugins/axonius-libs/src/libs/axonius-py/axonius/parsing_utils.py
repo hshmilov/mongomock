@@ -16,6 +16,7 @@ import base64
 import datetime
 import pql
 
+osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
 ubuntu_full = re.compile(r'([Uu]buntu \d\d\.\d\d(?:\.\d+)?)')
@@ -126,7 +127,7 @@ def figure_out_os(s):
                     assert isinstance(found_values[0], str)
                     distribution = found_values[0]
                     break
-    elif 'os x' in s:
+    elif 'os x' in s or 'osx' in s:
         os_type = 'OS X'
         version = osx_version_full.findall(s)
         if len(version) > 0:
@@ -135,6 +136,10 @@ def figure_out_os(s):
             version = osx_version.findall(s)
             if len(version) > 0:
                 distribution = version[0]
+            else:
+                version = osx_version_fallback.findall(s)
+                if len(version) > 0:
+                    distribution = version[0]
     elif any(x in s for x in ios_names):
         os_type = 'iOS'
         version = mobile_version.findall(s)
