@@ -24,8 +24,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
-
     .search-input.input-group {
         display: inline-block;
         .search-value.form-control {

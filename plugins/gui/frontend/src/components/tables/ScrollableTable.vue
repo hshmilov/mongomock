@@ -43,8 +43,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .scrollable-table {
         height: calc(100vh - 160px);
         overflow: auto;

@@ -49,8 +49,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .schema-form {
         font-size: 14px;
         .array {

@@ -14,8 +14,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
-
     .action-bar {
         margin-bottom: 0;
         line-height: 30px;

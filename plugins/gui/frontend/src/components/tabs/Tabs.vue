@@ -39,8 +39,6 @@
 </script>
 
 <style scoped lang="scss">
-    @import '../../scss/config';
-
     .nav-item:hover > .nav-link {
         color: $color-theme-light;
     }

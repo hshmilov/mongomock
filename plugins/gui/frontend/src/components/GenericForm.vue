@@ -96,7 +96,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
 
     .form {
         .row > .form-group {

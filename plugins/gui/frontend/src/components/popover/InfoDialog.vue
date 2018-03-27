@@ -27,8 +27,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .info-dialog {
         overflow: hidden;
         position: absolute;

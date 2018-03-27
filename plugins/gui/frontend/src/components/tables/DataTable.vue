@@ -207,8 +207,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .x-data-table {
         height: calc(100% - 40px);
         .x-table-header {

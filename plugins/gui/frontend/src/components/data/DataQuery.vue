@@ -99,7 +99,7 @@
 			},
             complexSearch() {
 				if (!this.searchValue) return false
-                let simpleMatch = this.searchValue.match('[a-zA-Z0-9 ]*')
+                let simpleMatch = this.searchValue.match('[a-zA-Z0-9 -\._]*')
                 return !simpleMatch || simpleMatch.length !== 1 || simpleMatch[0] !== this.searchValue
             },
             noResults() {

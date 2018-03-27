@@ -73,8 +73,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .wide {
         height: 3.5em;
         line-height: 1.2em;

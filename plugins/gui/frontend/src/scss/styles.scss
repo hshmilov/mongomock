@@ -1,6 +1,34 @@
 @import 'config';
 
 
+/* Font */
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype');
+  font-weight: 200;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Medium.ttf') format('truetype');
+  font-weight: 300;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/src/assets/plugins/fonts/poppins/Poppins-Bold.ttf') format('truetype');
+  font-weight: 600;
+}
+
 /* Colouring */
 
 .blue {
@@ -27,6 +55,10 @@
   color: $indicator-red;
 }
 
+.theme-fill-gray-light {
+  fill: $theme-gray-light;
+}
+
 
 /* Basic Styles */
 
@@ -40,6 +72,24 @@
   color: rgba($theme-gray-dark, 0.6);
   display: inline-block;
   margin-left: 4px;
+}
+
+@for $i from 1 through length($indicator-colours) {
+  .indicator-fill-#{$i} {
+    fill: nth($indicator-colours, $i);
+  }
+  .indicator-border-#{$i} {
+    border-color: nth($indicator-colours, $i);
+  }
+}
+
+@for $i from 1 through length($extra-colours) {
+  .extra-stroke-#{$i} {
+    stroke: nth($extra-colours, $i);
+  }
+  .extra-fill-#{$i} {
+    fill: nth($extra-colours, $i);
+  }
 }
 
 
@@ -116,4 +166,16 @@ table {
       }
     }
   }
+}
+
+.rotating {
+  animation: rotating 2s linear infinite;
+}
+
+.filling {
+  animation: filling 1s ease-in-out;
+}
+
+.scaling {
+  animation: scaling 1s ease-in-out forwards;
 }

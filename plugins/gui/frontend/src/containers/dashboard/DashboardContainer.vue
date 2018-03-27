@@ -1,5 +1,8 @@
 <template>
     <x-page title="axonius dashboard" class="dashboard">
+        <x-coverage-card v-for="item in dashboard.coverage.data" :portion="item.portion" :name="item.property"
+                         @click="runAdapterPropertyFilter" :key="item.property">
+        </x-coverage-card>
         <card title="Data Collection">
             <x-counter-chart :data="adapterDevicesCounterData"/>
         </card>
@@ -43,9 +46,10 @@
 	import xHistogramChart from '../../components/charts/Histogram.vue'
 	import xCycleChart from '../../components/charts/Cycle.vue'
 	import xResultsChart from '../../components/charts/Results.vue'
+    import xCoverageCard from '../../components/cards/CoverageCard.vue'
 
 	import {
-		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD, SAVE_DASHBOARD
+		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD, SAVE_DASHBOARD, FETCH_DASHBOARD_COVERAGE
 	} from '../../store/modules/dashboard'
 	import { FETCH_DATA_QUERIES } from '../../store/actions'
     import { UPDATE_DATA_VIEW } from '../../store/mutations'
@@ -56,7 +60,7 @@
 		name: 'x-dashboard',
 		components: {
 			xPage, Card, FeedbackModal,
-			xCounterChart, xHistogramChart, xCycleChart, xResultsChart
+			xCounterChart, xHistogramChart, xCycleChart, xResultsChart, xCoverageCard
 		},
 		computed: {
 			...mapState({
@@ -113,18 +117,19 @@
 			...mapActions({
 				fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
 				fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD,
-				fetchQueries: FETCH_DATA_QUERIES
+				fetchQueries: FETCH_DATA_QUERIES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE
 			}),
 			getDashboardData () {
 				this.fetchAdapterDevices()
 				this.fetchDashboard()
+                this.fetchDashboardCoverage()
 			},
 			runAdapterDevicesFilter (adapterName) {
-				this.updateView({module: 'device', view: {
-					page: 0, query: {filter: `adapters == '${adapterName}'`, expressions: []}
-				}})
-				this.$router.push({name: 'Devices'})
+				this.runFilter(`adapters == '${adapterName}'`)
 			},
+            runAdapterPropertyFilter(adapterProperty) {
+                this.runFilter(`specific_data.adapter_properties != '${adapterProperty}'`)
+            },
 			createNewDashboard () {
 				this.newDashboard.isActive = true
 			},
@@ -134,7 +139,13 @@
 			finishNewDashboard () {
 				this.newDashboard.isActive = false
 				this.newDashboard.data = {name: '', queries: []}
-			}
+			},
+            runFilter(filter) {
+				this.updateView({module: 'device', view: {
+						page: 0, query: { filter, expressions: [] }
+					}})
+				this.$router.push({name: 'Devices'})
+            }
 		},
 		created () {
 			if (!this.savedQueries || !this.savedQueries.length) this.fetchQueries({module: 'device', type: 'saved'})
@@ -146,6 +157,9 @@
 			}.bind(this), 1000))
 			this.intervals.push(setInterval(function () {
 				this.fetchAdapterDevices()
+			}.bind(this), 10000))
+			this.intervals.push(setInterval(function () {
+				this.fetchDashboardCoverage()
 			}.bind(this), 10000))
 		},
 		beforeDestroy () {
@@ -165,8 +179,10 @@
                 width: 360px;
                 height: 320px;
                 margin-right: 24px;
-                &.lifecycle .card-body {
+                .card-body {
                     text-align: center;
+                }
+                &.lifecycle .card-body {
                     display: flex;
                     flex-direction: column;
                     .cycle {

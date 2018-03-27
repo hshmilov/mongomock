@@ -36,8 +36,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
-
     .object-list {
         display: inline-block;
         vertical-align: middle;

@@ -23,8 +23,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
-
     .nav-item {
         text-transform: capitalize;
         list-style: none;

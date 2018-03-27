@@ -42,8 +42,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .login {
         padding: 200px;
         height: 100vh;

@@ -32,8 +32,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
-
     .multiple-select {
         .dropdown-toggle {
             height: 30px;

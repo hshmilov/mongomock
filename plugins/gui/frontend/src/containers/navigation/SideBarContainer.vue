@@ -46,8 +46,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .left-sidebar {
         position: absolute;
         width: 240px;

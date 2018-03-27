@@ -16,7 +16,10 @@ module.exports = {
                 test: /\.vue$/,
                 loader: 'vue-loader',
                 options: {
-                    extractCSS: true
+                    extractCSS: true,
+					loaders: {
+						scss: 'vue-style-loader!css-loader!sass-loader?data=@import "./src/scss/config.scss";'
+					}
                 },
             },
             {

@@ -231,8 +231,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .paginated-table {
         .table {
             border-collapse: separate;

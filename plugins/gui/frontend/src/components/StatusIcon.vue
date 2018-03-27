@@ -15,7 +15,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
 
     .status-icon {
         display: inline-block;

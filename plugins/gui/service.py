@@ -1003,31 +1003,29 @@ class GuiService(PluginBase):
 
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
-            dashboard_collection = self._get_collection('dashboard', limited_user=False)
+        dashboard_collection = self._get_collection('dashboard', limited_user=False)
+        if request.method == 'GET':
             queries_collection = self._get_collection('device_queries', limited_user=False)
-            devices_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db_view']
-            if request.method == 'GET':
-                dashboard_list = []
-                for dashboard_object in dashboard_collection.find(filter_archived()):
-                    if not dashboard_object.get('name'):
-                        self.logger.info(f'No name for dashboard {dashboard_object["_id"]}')
-                    elif not dashboard_object.get('queries'):
-                        self.logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
-                    else:
-                        # Let's fetch and run them query filters
-                        for query_name in dashboard_object['queries']:
-                            query_object = queries_collection.find_one({'name': query_name})
-                            if not query_object or not query_object.get('filter'):
-                                self.logger.info(f'No filter found for query {query_name}')
-                            else:
-                                if not dashboard_object.get('data'):
-                                    dashboard_object['data'] = {}
-                                dashboard_object['data'][query_name] = devices_collection.find(
-                                    parse_filter(query_object['filter']), {'_id': 1}).count()
+            dashboard_list = []
+            for dashboard_object in dashboard_collection.find(filter_archived()):
+                if not dashboard_object.get('name'):
+                    self.logger.info(f'No name for dashboard {dashboard_object["_id"]}')
+                elif not dashboard_object.get('queries'):
+                    self.logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
+                else:
+                    # Let's fetch and run them query filters
+                    for query_name in dashboard_object['queries']:
+                        query_object = queries_collection.find_one({'name': query_name})
+                        if not query_object or not query_object.get('filter'):
+                            self.logger.info(f'No filter found for query {query_name}')
+                        else:
+                            if not dashboard_object.get('data'):
+                                dashboard_object['data'] = {}
+                            dashboard_object['data'][query_name] = self.aggregator_db_connection[
+                                'devices_db_view'].find(parse_filter(query_object['filter']), {'_id': 1}).count()
 
-                        dashboard_list.append(beautify_db_entry(dashboard_object))
-                return jsonify(dashboard_list)
+                    dashboard_list.append(beautify_db_entry(dashboard_object))
+            return jsonify(dashboard_list)
 
         # Handle 'POST' request method - save dashboard configuration
         dashboard_object = self.get_request_data_as_object()
@@ -1136,6 +1134,20 @@ class GuiService(PluginBase):
             adapter_devices['total_net'] = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find({}).count()
 
         return jsonify(adapter_devices)
+
+    @add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
+    def get_dashboard_coverage(self):
+        """
+
+        :return:
+        """
+        devices_count = self.devices_db_view.find({}).count()
+        coverage_list = []
+        for property in ['Manager', 'Endpoint_Protection_Platform', 'Vulnerability_Assessment']:
+            coverage_list.append({'property': ' '.join(property.split('_')),
+                                  'portion': self.aggregator_db_connection['devices_db_view'].find(
+                                      {'specific_data.adapter_properties': property}).count() / devices_count})
+        return jsonify(coverage_list)
 
     @add_rule_unauthenticated("research_phase", methods=['POST'])
     def schedule_research_phase(self):

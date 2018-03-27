@@ -178,8 +178,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .filter {
         .btn-light {
             cursor: pointer;

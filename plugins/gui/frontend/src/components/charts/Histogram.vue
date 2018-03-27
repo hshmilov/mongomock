@@ -38,8 +38,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .histogram {
         display: flex;
         align-items: flex-end;

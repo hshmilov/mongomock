@@ -2,10 +2,10 @@
     <div :class="`${customClass? customClass: ''} card`">
         <div v-if="title" class="card-header">
             <span class="card-header-title">{{ title }}</span>
-            <slot v-if="$slots['cardActions']" name="cardActions"></slot>
+            <slot v-if="$slots['cardActions']" name="cardActions"/>
         </div>
         <div class="card-body">
-            <slot name="cardContent"></slot>
+            <slot name="cardContent"/>
             <slot></slot>
         </div>
     </div>
@@ -19,7 +19,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
 
     .card {
         margin-bottom: 12px;

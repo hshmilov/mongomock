@@ -29,8 +29,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .menu-item {
         color: $color-text-main;
         cursor: pointer;

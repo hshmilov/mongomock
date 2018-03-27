@@ -33,8 +33,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .modal-mask {
         position: fixed;
         z-index: 1001;

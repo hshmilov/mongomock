@@ -19,7 +19,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
 
     .section-title {
         padding: 8px 16px;

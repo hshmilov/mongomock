@@ -73,12 +73,11 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
 
     .cycle {
         margin: auto;
         circle {
-            transition: stroke-dasharray 0.3s ease-in-out,stroke-dashoffset 0.3s ease-in-out;
+            transition: stroke-dasharray 0.3s ease-in-out, stroke-dashoffset 0.3s ease-in-out;
             fill: none;
             stroke-width: 12;
             &.pre {

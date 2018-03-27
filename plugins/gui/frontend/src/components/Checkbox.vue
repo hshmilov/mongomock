@@ -22,7 +22,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
 
     .checkbox {
         position: relative;

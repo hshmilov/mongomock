@@ -107,8 +107,6 @@
 </script>
 
 <style lang="scss">
-    @import '../scss/config';
-
     .checklist {
         .scrollbar-container {
             max-height: 480px;

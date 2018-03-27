@@ -59,8 +59,6 @@
 </script>
 
 <style lang="scss" scoped>
-    @import '../../scss/config';
-
     .x-checkbox {
         cursor: pointer;
         .x-checkbox-container {

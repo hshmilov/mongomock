@@ -29,8 +29,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .x-page {
         display: flex;
         flex-direction: column;

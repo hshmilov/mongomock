@@ -31,8 +31,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .dropdown {
         .dropdown-menu {
             &.right {

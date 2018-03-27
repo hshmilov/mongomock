@@ -130,8 +130,6 @@
 
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .plugin-config {
         display: flex;
         .container {

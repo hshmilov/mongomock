@@ -15,8 +15,6 @@
 </script>
 
 <style lang="scss" scoped>
-    @import '../../scss/config';
-
     @for $i from 1 through length($extra-colours) {
         .count:nth-child(#{$i * 2}) {
             color: nth($extra-colours, $i);

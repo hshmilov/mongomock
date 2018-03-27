@@ -143,8 +143,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .topbar {
         background: $theme-gray-light;
         position: relative;

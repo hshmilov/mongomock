@@ -71,7 +71,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
     .feedback-modal-body {
         min-height: 120px;
         .success-icon {

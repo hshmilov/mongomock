@@ -52,8 +52,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .dynamic-table {
         border-collapse: separate;
         border-spacing: 0 4px;

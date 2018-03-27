@@ -228,8 +228,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../scss/config';
-
     .expression {
         display: grid;
         grid-template-columns: 60px 30px 30px 180px 90px 200px 30px 30px;

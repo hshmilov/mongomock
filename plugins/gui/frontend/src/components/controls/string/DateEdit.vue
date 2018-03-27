@@ -40,8 +40,6 @@
 </script>
 
 <style lang="scss">
-    @import '../../../scss/config';
-
     .cov-vue-date {
         width: 100%;
         position: relative;

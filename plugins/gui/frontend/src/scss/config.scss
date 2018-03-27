@@ -1,29 +1,3 @@
-@font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Light.ttf') format('truetype');
-  font-weight: 200;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Medium.ttf') format('truetype');
-  font-weight: 300;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Regular.ttf') format('truetype');
-  font-weight: 400;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-SemiBold.ttf') format('truetype');
-  font-weight: 500;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/src/assets/plugins/fonts/poppins/Poppins-Bold.ttf') format('truetype');
-  font-weight: 600;
-}
-
 $font-stack: 'Poppins', sans-serif;
 $font-size: 100%;
 $font-size-title: 112.5%;
@@ -73,11 +47,13 @@ $theme-white: #FFFFFF;
 $theme-gray-light: #F3F3F3;
 $theme-gray-dark: #727272;
 
+
 /* Indicator Colours */
 $indicator-red: #D0011B;
 $indicator-orange: #F6A623;
 $indicator-blue: #4796E4;
 $indicator-green: #0FBC18;
+$indicator-colours: $indicator-red, $indicator-orange, $indicator-blue, $indicator-green;
 
 
 /* Extra Colours */
@@ -90,16 +66,6 @@ $extra-mauve: #8A32BB;
 $extra-purple: #5A32BB;
 $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-mauve, $extra-purple;
 
-@for $i from 1 through length($extra-colours) {
-  .extra-stroke-#{$i} {
-    stroke: nth($extra-colours, $i);
-  }
-}
-@for $i from 1 through length($extra-colours) {
-  .extra-fill-#{$i} {
-    fill: nth($extra-colours, $i);
-  }
-}
 
 /* Mixins */
 
@@ -132,6 +98,9 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
   }
 }
 
+
+/* Animations */
+
 @keyframes rotating {
   from {
     transform: rotate(0deg);
@@ -140,6 +109,24 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
     transform: rotate(360deg);
   }
 }
-.rotating {
-  animation: rotating 2s linear infinite;
+
+@keyframes filling {
+  from {
+    fill-opacity: 0;
+  }
+  to {
+    fill-opacity: 1;
+  }
+}
+
+@keyframes scaling {
+  0% {
+    transform: scale(0.2);
+  }
+  80% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }

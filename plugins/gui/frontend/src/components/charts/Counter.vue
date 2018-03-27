@@ -41,8 +41,6 @@
 </script>
 
 <style lang="scss" scoped>
-    @import '../../scss/config';
-
     .counter {
         .count {
             font-size: 60px;
