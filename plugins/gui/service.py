@@ -391,7 +391,7 @@ class GuiService(PluginBase):
 
         # insert at index 0 to be first
         fields['generic']['items'].insert(0, {
-            'name': 'specific_data.adpater_properties',
+            'name': 'specific_data.adapter_properties',
             'title': 'Adapter Properties',
             'type': 'string',
             "enum": all_supported_properties,
@@ -1141,9 +1141,15 @@ class GuiService(PluginBase):
 
         :return:
         """
-        devices_count = self.devices_db_view.find({}).count()
+        devices_count = self.aggregator_db_connection['devices_db_view'].find({}).count()
+        if not devices_count:
+            return jsonify([])
         coverage_list = []
-        for property in ['Manager', 'Endpoint_Protection_Platform', 'Vulnerability_Assessment']:
+        partial_property_list = [AdapterProperty.Manager.name,
+                                 AdapterProperty.Endpoint_Protection_Platform.name,
+                                 AdapterProperty.Vulnerability_Assessment.name
+                                 ]
+        for property in partial_property_list:
             coverage_list.append({'property': ' '.join(property.split('_')),
                                   'portion': self.aggregator_db_connection['devices_db_view'].find(
                                       {'specific_data.adapter_properties': property}).count() / devices_count})

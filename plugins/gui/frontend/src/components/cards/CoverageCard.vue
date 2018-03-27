@@ -1,6 +1,6 @@
 <template>
     <x-card :title="`${name} Coverage`" :key="name" class="coverage">
-        <div slot="cardActions" :class="`coverage-status indicator-border-${quarter}`">{{quarterText[quarter - 1]}}</div>
+        <div slot="cardActions" :class="`coverage-status indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
         <x-pie-chart :data="pieSlices" @click-slice="$emit('click', name)" :title="title" />
     </x-card>
 </template>
@@ -18,7 +18,7 @@
 				return Math.ceil(this.portion * 4)
             },
             quarterText() {
-				return ['Poor', 'Low', 'Average', 'Good']
+				return ['None', 'Poor', 'Low', 'Average', 'Good']
             },
 			pieSlices() {
                 return [{

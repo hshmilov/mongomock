@@ -952,7 +952,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         parsed_to_insert = super()._create_axonius_entity(client_name, data, entity_type)
         if entity_type == EntityType.Devices:
-            parsed_to_insert['adpater_properties'] = [x.name for x in self.adapter_properties()]
+            parsed_to_insert['adapter_properties'] = [x.name for x in self.adapter_properties()]
         return parsed_to_insert
 
     @property
