@@ -595,6 +595,32 @@ class GuiService(PluginBase):
 
             return jsonify(adapters_to_return)
 
+    def _query_client_for_devices(self, request, adapter_unique_name):
+        client_to_add = request.get_json(silent=True)
+        if client_to_add is None:
+            return return_error("Invalid client", 400)
+
+        # adding client to specific adapter
+        response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
+        if response.status_code != 200:
+            # failed, return immediately
+            return response.text, response.status_code
+
+        # if there's no aggregator, that's fine
+        try:
+            self.request_remote_plugin(f"trigger/{adapter_unique_name}", AGGREGATOR_PLUGIN_NAME, method='post')
+            research_state = self.request_remote_plugin(f"state",
+                                                        SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
+            if research_state[StateLevels.Phase.name] == Phases.Stable.name:
+                self.logger.info('System is stable, triggering static correlator')
+                self.request_remote_plugin(f"trigger/execute", STATIC_CORRELATOR_PLUGIN_NAME, method='post')
+            else:
+                self.logger.info('System is in research phase, not triggering static correlator')
+        except Exception:
+            # if there's no aggregator, there's nothing we can do
+            pass
+        return response.text, response.status_code
+
     @paginated()
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'])
     def adapters_clients(self, adapter_unique_name, limit, skip):
@@ -614,30 +640,7 @@ class GuiService(PluginBase):
                                 client_collection.find().skip(skip).limit(limit)]
                 })
             if request.method == 'PUT':
-                client_to_add = request.get_json(silent=True)
-                if client_to_add is None:
-                    return return_error("Invalid client", 400)
-
-                # adding client to specific adapter
-                response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
-                if response.status_code != 200:
-                    # failed, return immediately
-                    return response.text, response.status_code
-
-                # if there's no aggregator, that's fine
-                try:
-                    self.request_remote_plugin(f"trigger/{adapter_unique_name}", AGGREGATOR_PLUGIN_NAME, method='post')
-                    research_state = self.request_remote_plugin(f"state",
-                                                                SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
-                    if research_state[StateLevels.Phase.name] == Phases.Stable.name:
-                        self.logger.info('System is stable, triggering static correlator')
-                        self.request_remote_plugin(f"trigger/execute", STATIC_CORRELATOR_PLUGIN_NAME, method='post')
-                    else:
-                        self.logger.info('System is in research phase, not triggering static correlator')
-                except Exception:
-                    # if there's no aggregator, there's nothing we can do
-                    pass
-                return response.text, response.status_code
+                return self._query_client_for_devices(request, adapter_unique_name)
 
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id):
@@ -649,9 +652,7 @@ class GuiService(PluginBase):
         """
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
-            client_to_update = request.get_json(silent=True)
-            response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_update)
-            return response.text, response.status_code
+            return self._query_client_for_devices(request, adapter_unique_name)
         if request.method == 'DELETE':
             return '', 200
 
