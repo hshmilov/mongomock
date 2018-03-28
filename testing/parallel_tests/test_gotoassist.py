@@ -16,7 +16,7 @@ class TestGotoassistAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['Gotoassist_Domain']
+        return client_details['user_name']
 
     @property
     def some_client_details(self):

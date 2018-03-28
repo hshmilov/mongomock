@@ -5,18 +5,13 @@ from gotoassist_adapter.exceptions import GotoassistAlreadyConnected, Gotoassist
 
 
 class GotoassistConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, logger):
         """ Initializes a connection to Gotoassist using its rest API
 
         :param obj logger: Logger object of the system
-        :param str domain: domain address for Gotoassist
         """
         self.logger = logger
-        self.domain = domain
-        url = domain
-        if not url.lower().startswith('https://'):
-            url = 'https://' + url
-        self.url = url
+        self.url = "https://api.getgo.com"
         self.session = None
         self.username = None
         self.password = None
@@ -67,9 +62,12 @@ class GotoassistConnection(object):
                                      headers=login_headers, data=data_params)
             # To understand this code please check "https://goto-developer.logmeininc.com/how-get-access-token-and-organizer-key"
             # From this page: "IMPORTANT: You may see an error on the page such as 404 NOT FOUND. This is not a problem."
-            if response.status_code != 404:
+            if response.status_code != 404 and response.status_code != 200:
                 raise GotoassistConnectionError(f"Couldn't get code. Status code is {response.status_code}")
-            self.gotoassist_code = response.url.split('=')[-1]
+            if '?' not in response.url or 'code=' not in response.url:
+                raise GotoassistConnectionError(f"Couldn't get Code. url is: {response.url}")
+            self.gotoassist_code = [query_node.split('=')[1] for query_node in response.url.split('?')[
+                1].split('&') if query_node.split('=')[0] == 'code'][0]
         else:
             raise GotoassistConnectionError("Missing arguement")
         if self.gotoassist_code is not None:

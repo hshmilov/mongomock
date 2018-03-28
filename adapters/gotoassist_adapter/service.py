@@ -24,15 +24,15 @@ class GotoassistAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = GotoassistConnection(logger=self.logger, domain=client_config["Gotoassist_Domain"])
+            connection = GotoassistConnection(logger=self.logger)
             connection.set_credentials(client_id=client_config["client_id"], client_secret=client_config["client_secret"],
                                        username=client_config["user_name"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
         except GotoassistException as e:
-            message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Gotoassist_Domain'], str(e))
+            message = "Error connecting to client with user {0}, reason: {1}".format(
+                client_config['user_name'], str(e))
             self.logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -57,11 +57,6 @@ class GotoassistAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Gotoassist_Domain",
-                    "title": "Gotoassist Domain",
-                    "type": "string"
-                },
-                {
                     "name": "client_id",
                     "title": "Client Id",
                     "type": "string"
@@ -84,10 +79,9 @@ class GotoassistAdapter(AdapterBase):
                 }
             ],
             "required": [
-                "Gotoassist_Domain",
                 "client_id",
                 "client_secret",
-                "username",
+                "user_name",
                 "password"
             ],
             "type": "array"

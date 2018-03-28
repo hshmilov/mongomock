@@ -1,8 +1,8 @@
 client_details = {
-    "Airwatch_Domain": "https://airwatch.vmtestdrive.com",
-    "username": "vmwdemo\OfirShur",
-    "password": "Yard4addition",
-    "apikey": "iLLKgzU43gDnQ+RsGDeITH46/wJIvKUVFPwclE70m1g=",
+    "Airwatch_Domain": "https://techp.awmdm.com",
+    "username": "nathan@axonius.com",
+    "password": "H15cnsz4M7BV6aC9kbdF",
+    "apikey": "LTsXS00jvRqNhak28W88+6uUUnGU/YzHXGiS69W4QGI=",
 }
 
-SOME_DEVICE_ID = '18937'
+SOME_DEVICE_ID = '6820'

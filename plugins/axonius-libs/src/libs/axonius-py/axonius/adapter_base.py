@@ -441,14 +441,15 @@ class AdapterBase(PluginBase, Feature, ABC):
                              f"returned {len(parsed_data)} {data_type}")
         except adapter_exceptions.CredentialErrorException as e:
             self.logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
-            return return_error(f"Credentials error for {client_name} on {self.plugin_unique_name}", 500)
+            raise adapter_exceptions.CredentialErrorException(
+                f"Credentials error for {client_name} on {self.plugin_unique_name}")
         except adapter_exceptions.AdapterException as e:
             self.logger.exception(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
-            return return_error(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}", 500)
+            raise adapter_exceptions.AdapterException(
+                f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
         except Exception as e:
             self.logger.exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
-            return return_error(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
-            # TODO raise the error, after verifying all adapter return an expected error
+            raise Exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
         else:
             data_list = {'raw': [],  # AD-HOC: Not returning any raw values
                          'parsed': parsed_data}

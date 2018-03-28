@@ -1,6 +1,5 @@
 
 client_details = {
-    "Gotoassist_Domain": "https://api.getgo.com",
     "user_name": "ofri@axonius.com",
     "password": "15UY0pKGtsxj27OEDw6D",
     "client_id": "0lfb98ZZ3mUCZWmFh2YTn4uKLFpuubpM",

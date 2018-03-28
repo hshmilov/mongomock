@@ -101,8 +101,10 @@ class LdapConnection:
             if 'attributes' in domain:
                 # There should be only 1 domain in our search. But if, for some reason, we have a couple,
                 # lets return the specific one. (it would be only one, there's no point in yielding)
-                if domain['attributes']['distinguishedName'] == self.domain_name:
+                if domain['attributes']['distinguishedName'].lower() == self.domain_name.lower():
                     return dict(domain['attributes'])
+
+        raise ValueError(f"Error - couldn't find domain (objectClass=domainDNS) in client {self.domain_name}!")
 
     @retry(stop_max_attempt_number=3, wait_fixed=1000 * 3)
     def get_device_list(self):

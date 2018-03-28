@@ -23,7 +23,7 @@ from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 from axonius.users.user import User
 from axonius.parsing_utils import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
-    is_date_real, get_exception_string
+    is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -241,7 +241,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   f"which is mandatory. Bypassing. raw_data: {user_raw}")
                 continue
 
-            domain_name = ".".join([x[3:] for x in domain.strip().split(",") if x.startswith("DC=")])
+            domain_name = convert_ldap_searchpath_to_domain_name(domain)
             if domain_name == "":
                 self.logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
                 continue
@@ -528,7 +528,12 @@ class ActiveDirectoryAdapter(AdapterBase):
             client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
                 # We have found the correct client. Getting credentials
-                domain_name, user_name = client_config['user'].split('\\')
+                if '\\' in client_config['user']:
+                    domain_name, user_name = client_config['user'].split('\\')
+                else:
+                    # This is a legitimate flow. Do not try to build the domain name from the configurations.
+                    domain_name, user_name = "", client_config['user']
+
                 password = client_config['password']
                 try:
                     device_ip = self._resolve_device_name(

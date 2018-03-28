@@ -183,6 +183,17 @@ def figure_out_os(s):
             "bitness": bitness}
 
 
+def convert_ldap_searchpath_to_domain_name(ldap_search_path):
+    """
+    Converts LDAP search path to DC.
+    e.g. 'CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test' -> "TestDomain.test"
+    :param ldap_search_path: the str
+    :return:
+    """
+
+    return ".".join([x[3:] for x in ldap_search_path.strip().split(",") if x.lower().startswith("dc=")])
+
+
 def is_valid_ip(ip):
     try:
         ipaddress.ip_address(ip)
