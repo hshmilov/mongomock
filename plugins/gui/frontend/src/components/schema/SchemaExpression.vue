@@ -12,8 +12,7 @@
         <label class="btn-light checkbox-label" :class="{'active': expression.not}">
             <input type="checkbox" v-model="expression.not">NOT</label>
 
-        <x-graded-select v-model="expression.field" @change="compileExpression" placeholder="FIELD..."
-                         :options="fields"/>
+        <x-graded-select v-model="expression.field" placeholder="FIELD..." :options="fields"/>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
             <select v-model="expression.compOp" v-if="fieldOpsList.length">
@@ -58,8 +57,7 @@
 		},
 		name: 'x-schema-expression',
 		props: {
-			value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false},
-			recompile: {default: false}
+			value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false}
 		},
 		computed: {
 			logicOps () {
@@ -134,13 +132,7 @@
 				if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
 					this.expression.value = null
 				}
-			},
-            recompile (newRecompile) {
-				if (!newRecompile) return
-
-                this.compileExpression()
-                this.$emit('recompiled')
-            }
+			}
 		},
 		methods: {
 			checkErrors () {

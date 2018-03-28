@@ -406,7 +406,7 @@ class GuiService(PluginBase):
                     if plugin_fields_record:
                         fields['specific'][plugin[PLUGIN_NAME]] = \
                             guify_fields(plugin_fields_record['schema'],
-                                         name_prefix=f'adapters_data.{PLUGIN_NAME}.data')
+                                         name_prefix=f'adapters_data.{plugin[PLUGIN_NAME]}.')
 
         return jsonify(fields)
 

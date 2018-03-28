@@ -84,7 +84,7 @@
 				return [
 					{
 						name: 'adapters', title: 'Adapters', type: 'array', items: {type: 'string', format: 'logo',
-                            enum: Object.keys(adapterStaticData).map((name) => {
+                            enum: Object.keys(this.specificFlatSchema).map((name) => {
 								return {name, title: adapterStaticData[name].name}
                             })
 						}

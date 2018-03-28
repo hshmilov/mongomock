@@ -125,15 +125,15 @@ Formatting
 }
 
 .error-fill {
-  background-color: $indicator-red;
+  background-color: $indicator-red !important;
 }
 
 .warning-fill {
-  background-color: $color-warning;
+  background-color: $color-warning !important;
 }
 
 .info-fill {
-  background-color: $color-info;
+  background-color: $color-info !important;
 }
 
 .success-fill {

@@ -4,7 +4,7 @@
         <triggerable-dropdown :arrow="false">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
             <input slot="dropdownTrigger" class="form-control" v-model="searchValue" ref="greatInput"
-                   @input="searchQuery" @keyup.enter.stop="submitQuery"
+                   @input="searchQuery" @keyup.enter.stop="submitFilter"
                    placeholder="Insert your query or start typing to filter recent Queries">
             <!--
             Content is a list composed of 3 sections:
@@ -30,20 +30,20 @@
             </div>
         </triggerable-dropdown>
         <triggerable-dropdown class="form-control" align="right" size="xl">
-            <div slot="dropdownTrigger" class="link" @click="recompile = true">Query</div>
+            <div slot="dropdownTrigger" class="link">Query</div>
             <div slot="dropdownContent">
-                <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateQuery"
-                                 @error="filterValid = false" :recompile="recompile" @recompiled="recompile = false"/>
+                <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
+                                 @error="filterValid = false" :rebuild="rebuild"/>
                 <div class="row">
                     <div class="form-group place-right">
                         <a class="btn btn-inverse" @click="emptyFilter">Clear</a>
-                        <a class="btn" @click="submitQuery">Search</a>
+                        <a class="btn" @click="rebuildFilter">Search</a>
                     </div>
                 </div>
             </div>
         </triggerable-dropdown>
         <!-- Button controlling the execution of currently filled query -->
-        <a class="btn btn-adjoined" @click="submitQuery">go</a>
+        <a class="btn btn-adjoined" @click="submitFilter(searchValue)">go</a>
     </div>
 </template>
 
@@ -134,7 +134,7 @@
 			return {
 				searchValue: '',
                 filterValid: true,
-                recompile: false
+                rebuild: false
 			}
 		},
         watch: {
@@ -161,35 +161,37 @@
 			},
             searchText() {
                 this.searchValue = this.textSearchPattern.replace(/{val}/g, this.searchValue)
-				this.queryFilter = this.searchValue
-                this.submitQuery()
+                this.submitFilter()
             },
             emptyFilter() {
 				this.queryExpressions = []
                 this.searchValue = ''
-                this.queryFilter = ''
-                this.submitQuery()
+                this.submitFilter()
             },
-            submitQuery () {
+			rebuildFilter() {
+                this.rebuild = true
+				this.$refs.greatInput.parentElement.click()
+            },
+            submitFilter () {
             	if (!this.filterValid) return
-				this.queryFilter = this.searchValue
-            	this.executeQuery()
+                this.queryFilter = this.searchValue
+            	this.executeFilter()
 				this.$refs.greatInput.parentElement.click()
             },
 			selectQuery (filter, expressions) {
             	this.queryExpressions = expressions
-				this.updateQuery(filter)
+				this.updateFilter(filter)
 				this.$refs.greatInput.focus()
 				this.$refs.greatInput.parentElement.click()
 			},
-            updateQuery (filter) {
-				this.searchValue = filter
+            updateFilter (filter) {
+            	this.rebuild = false
+            	if (this.queryFilter === filter) return
 				this.queryFilter = filter
                 this.filterValid = true
-            	if (this.recompile) return
-                this.executeQuery()
+                this.executeFilter()
             },
-            executeQuery () {
+            executeFilter () {
 				this.updateView({ module: this.module, view: { page: 0 } })
             }
 		},

@@ -3,7 +3,6 @@
         <div class="mb-4">Show only Devices:</div>
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
                              v-model="expressions[i]" :fields="schema" :comp-ops="compOps"
-                             :recompile="recompile" @recompiled="handleRecompiled"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
             <div @click="addExpression" class="btn-light">+</div>
@@ -20,7 +19,7 @@
 	export default {
 		name: 'x-schema-filter',
 		components: {xSchemaExpression},
-		props: {'schema': {required: true}, 'value': {}, recompile: {default: false}},
+		props: {schema: {required: true}, value: {}, rebuild: {}},
 		computed: {
 			expression () {
 				return {
@@ -86,9 +85,11 @@
 						},
 						exists
 					},
+                    'tag': {
+						contains, equals
+                    },
 					'string': {
-						contains,
-						equals,
+						contains, equals,
 						'starts': {
 							pattern: '{field} == regex("^{val}", "i")',
 							notPattern: '{field} == regex("^^(?!{val})", "i")'
@@ -113,14 +114,18 @@
 				expressions: [...this.value],
 				filters: [],
 				bracketWeights: [],
-				error: '',
-                recompiledCounter: 0
+				error: ''
 			}
 		},
 		watch: {
 			value (newValue) {
 				this.expressions = [...newValue]
 			},
+            rebuild (newRebuild) {
+				if (newRebuild) {
+					this.$emit('change', this.filters.join(' '))
+                }
+            }
 		},
 		methods: {
 			compileFilter (index, payload) {
@@ -157,21 +162,6 @@
 					}
 				}
 				this.$emit('change', this.filters.join(' '))
-			},
-            handleRecompiled() {
-				if (!this.recompile) return
-
-                this.recompiledCounter += 1
-				if (this.recompiledCounter === this.expressions.length) {
-					this.$emit('recompiled')
-                    this.recompiledCounter = 0
-				}
-            }
-		},
-		created () {
-			if (!this.expressions.length) {
-				// this.addExpression()
-				// this.addExpression()
 			}
 		}
 	}

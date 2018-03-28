@@ -44,7 +44,7 @@
 
 <style lang="scss">
     .scrollable-table {
-        height: calc(100vh - 160px);
+        height: calc(100vh - 170px);
         overflow: auto;
         .table {
             border-collapse: separate;
