@@ -25,7 +25,7 @@ class SccmAdapter(AdapterBase):
             connection = SccmConnection(logger=self.logger,
                                         database=client_config[consts.SCCM_DATABASE],
                                         server=client_config[consts.SCCM_HOST],
-                                        port=client_config[consts.SCCM_PORT],
+                                        port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
                                         devices_paging=self.devices_fetched_at_a_time)
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
@@ -52,7 +52,8 @@ class SccmAdapter(AdapterBase):
                 {
                     "name": consts.SCCM_PORT,
                     "title": "Port",
-                    "type": "integer"
+                    "type": "integer",
+                    "default": consts.DEFAULT_SCCM_PORT
                 },
                 {
                     "name": consts.SCCM_DATABASE,

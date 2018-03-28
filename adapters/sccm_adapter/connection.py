@@ -1,15 +1,13 @@
 import pyodbc
 
 from sccm_adapter.exceptions import SccmAlreadyConnected
-from sccm_adapter.consts import DEFAULT_SCCM_PORT, TDS_DRIVER, TDS_VERSION
+from sccm_adapter.consts import TDS_DRIVER, TDS_VERSION
 
 
 class SccmConnection(object):
     def __init__(self, logger, database, server, port, devices_paging):
         self.logger = logger
         self.database = database
-        server = server
-        port = port if port is not None else DEFAULT_SCCM_PORT
         assert type(port) == int, "the port {self.port} is not a valid int!"
         self.server = server + ',' + str(port)
         self.devices_paging = devices_paging
