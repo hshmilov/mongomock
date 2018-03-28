@@ -6,15 +6,21 @@ from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
+from pathlib import Path
 
 
 class DockerService(AxonService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__()
         self.container_name = container_name
+        self.cortex_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+        if not (Path(self.cortex_root_dir) / 'venv').is_dir:
+            raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
+
+        self.log_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'logs', self.container_name))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
         self.package_name = os.path.basename(self.service_dir)
-        self.log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'logs', self.container_name))
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
 
@@ -77,13 +83,17 @@ else:
     wsgi_app = init_wsgi(CurrentService)
 """[1:]
 
+    @property
+    def docker_network(self):
+        return 'axonius'
+
     def start(self, mode='', allow_restart=False, rebuild=False, hard=False):
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
 
-        docker_up = ['docker', 'run', '--name', self.container_name, '--network=axonius', '--detach']
+        docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
 
         for exposed in self.exposed_ports:
             docker_up.extend(['--publish', f'{exposed[0]}:{exposed[1]}'])
@@ -144,7 +154,8 @@ else:
         # Append the main.py file creation
         main_file_data = self.get_main_file().replace('\n', '\\n')
         assert '"' not in main_file_data
-        dockerfile += f'\nRUN echo "{main_file_data}" > ./main.py'
+        if len(main_file_data) > 0:
+            dockerfile += f'\nRUN echo "{main_file_data}" > ./main.py'
 
         # dump Dockerfile.autogen to local folder
         autogen_path = dockerfile_path + '.autogen'

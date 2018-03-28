@@ -10,6 +10,7 @@ import services
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.devices.device import NETWORK_INTERFACES_FIELD
 from services import adapters
+from services.diagnostics_service import DiagnosticsService
 from services.execution_service import ExecutionService
 from services.aggregator_service import AggregatorService
 from services.axon_service import TimeoutException
@@ -144,7 +145,8 @@ class AxoniusService(object):
         for variable_name in dir(module):
             variable = getattr(module, variable_name)
             if isinstance(variable, type) and ((issubclass(variable, PluginService) and variable != PluginService) or
-                                               (issubclass(variable, MongoService))):
+                                               issubclass(variable, MongoService) or
+                                               issubclass(variable, DiagnosticsService)):
                 return variable()
         raise ValueError('Plugin not found')
 
@@ -215,7 +217,7 @@ class AxoniusService(object):
 
         for plugin_path in glob.glob(plugin_regex):
             module_name = os.path.basename(plugin_path)[:-3]
-            if module_name == '__init__':
+            if module_name == '__init__' or module_name == 'axonius_service':
                 continue
             module = importlib.import_module(f'services.{module_name}')
             # Iterate variables and look for the service
@@ -223,7 +225,8 @@ class AxoniusService(object):
                 variable = getattr(module, variable_name)
                 if isinstance(variable, type) and ((issubclass(variable, PluginService) and variable != PluginService
                                                     and variable != AdapterService) or
-                                                   (issubclass(variable, MongoService))):
+                                                   (issubclass(variable, MongoService)) or
+                                                   (issubclass(variable, DiagnosticsService))):
                     not_internal = True
                     for service in self.axonius_services:
                         if isinstance(service, variable):
