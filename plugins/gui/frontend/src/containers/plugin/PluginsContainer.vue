@@ -1,6 +1,6 @@
 <template>
     <x-page title="plugins" class="plugins">
-        <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :actions="actions" @click-row="configPlugin"></scrollable-table>
+        <scrollable-table :data="plugin.pluginList.data" :fields="plugin.fields" :actions="actions"/>
     </x-page>
 </template>
 
@@ -8,14 +8,13 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
-	import InfoDialog from '../../components/popover/InfoDialog.vue'
 
 	import { mapState, mapActions } from 'vuex'
 	import { FETCH_PLUGINS, FETCH_PLUGIN, START_PLUGIN, STOP_PLUGIN } from '../../store/modules/plugin'
 
 	export default {
 		name: 'plugins-container',
-		components: {xPage, ScrollableTable, InfoDialog},
+		components: {xPage, ScrollableTable},
 		computed: {
 			...mapState(['plugin']),
             actions () {
@@ -32,14 +31,7 @@
 		},
 		methods: {
 			...mapActions({fetchPlugins: FETCH_PLUGINS, fetchPlugin: FETCH_PLUGIN,
-                startPlugin: START_PLUGIN, stopPlugin: STOP_PLUGIN}),
-			configPlugin (plugin) {
-				if (!plugin.configurable) {
-					return
-                }
-				this.fetchPlugin(plugin['id'])
-				this.$router.push({path: `plugin/${plugin['id']}`})
-			}
+                startPlugin: START_PLUGIN, stopPlugin: STOP_PLUGIN})
 		},
 		created () {
 			this.fetchPlugins()

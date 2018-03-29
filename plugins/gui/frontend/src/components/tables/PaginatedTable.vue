@@ -1,13 +1,12 @@
 <template>
     <div class="paginated-table">
-        <pulse-loader :loading="(fetching && !data.length) || !fields.length" color="#26dad2"></pulse-loader>
-        <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
+        <pulse-loader :loading="(fetching && !data.length) || !fields.length" color="#26dad2"/>
+        <div class="table-container">
             <table class="table table-responsive">
                 <thead>
                     <tr>
                         <th class="table-head checkbox-container" v-if="value">
-                            <checkbox v-if="value !== undefined" v-model="selectAllRecords"
-                                      @change="updateSelectedAll()"></checkbox>
+                            <checkbox v-if="value !== undefined" v-model="selectAllRecords" @change="updateSelectedAll()"/>
                         </th>
                         <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
                         <th class="table-head" v-if="actions !== undefined"></th>
@@ -20,8 +19,7 @@
                         v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
                         @click="handleRowClick(record[idField])">
                         <td class="table-row-data" v-if="value">
-                            <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]"
-                                      @change="updateSelected"></checkbox>
+                            <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]" @change="updateSelected"/>
                         </td>
                         <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
                                             v-if="!field.hidden" :type="field.type" :value="record[field.path]">
@@ -29,8 +27,7 @@
                         <td class="table-row-data table-row-actions" v-if="actions !== undefined">
                             <a v-for="action in actions" class="table-row-action" @click="action.handler(record[idField])">
                                 <i v-if="action.triggerFont" :class="action.triggerFont"></i>
-                                <svg-icon :name="action.triggerIcon" height="24" width="24"
-                                          :original="true" v-else></svg-icon>
+                                <svg-icon :name="action.triggerIcon" height="24" width="24" :original="true" v-else></svg-icon>
                             </a>
                         </td>
                     </tr>
@@ -42,7 +39,7 @@
                     </tr>
                 </tbody>
             </table>
-        </vue-scrollbar>
+        </div>
         <div v-if="error" class="info alert-error">Problem occured while fetching data: {{ error }}</div>
         <div class="pagination">
             <a @click="firstPage" class="btn" :class="{ 'disabled': isFirstPage}">&lt;&lt;</a>
@@ -61,7 +58,6 @@
     import GenericTableCell from '../tables/GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
     import '../icons'
-	import VueScrollbar from 'vue2-scrollbar'
 	import xStringView from '../../components/controls/string/StringView.vue'
 	import xNumberView from '../../components/controls/numerical/NumberView.vue'
 	import xIntegerView from '../../components/controls/numerical/IntegerView.vue'
@@ -71,7 +67,7 @@
 
 	export default {
 		name: 'paginated-table',
-		components: { Checkbox, GenericTableCell, PulseLoader, VueScrollbar,
+		components: { Checkbox, GenericTableCell, PulseLoader,
             xStringView, xNumberView, xIntegerView, xBoolView, xFileView, xArrayView},
 		props: {
 			'fetching': {}, 'data': {}, 'error': {}, 'fetchData': {}, 'filter': {}, 'value': {},
@@ -232,10 +228,12 @@
 
 <style lang="scss">
     .paginated-table {
+        .table-container {
+            max-height: calc(100% - 40px);
+        }
         .table {
             border-collapse: separate;
             border-spacing: 0;
-            /*overflow-x: auto;*/
             font-size: 14px;
             .table-head {
                 border: 0;

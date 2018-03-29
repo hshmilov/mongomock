@@ -354,18 +354,3 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
     width: 120px;
   }
 }
-
-/*******************
-Scrollbar
-*******************/
-.scrollbar-container {
-  width: 100%;
-  .vue-scrollbar__scrollbar-vertical {
-    width: 4px;
-    left: 0;
-    .scrollbar {
-      width: 4px;
-      background-color: $border-color;
-    }
-  }
-}

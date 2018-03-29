@@ -6,12 +6,8 @@
                               :title="option.title" :key="ind" @click="onSelect(option.name)">
                 <dynamic-popover v-if="option.fields" size="sm" left="236" :alignBottom="ind > 6">
                     <nested-menu class="inner">
-                        <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
-                            <div>
-                                <nested-menu-item v-for="field in option.fields" :key="field.name" :title="field.title"
-                                                  @click="onSelect(field.name)"/>
-                            </div>
-                        </vue-scrollbar>
+                        <nested-menu-item v-for="field in option.fields" :key="field.name" :title="field.title"
+                                          @click="onSelect(field.name)"/>
                     </nested-menu>
                 </dynamic-popover>
             </nested-menu-item>
@@ -24,11 +20,10 @@
 	import NestedMenu from './menus/NestedMenu.vue'
 	import NestedMenuItem from './menus/NestedMenuItem.vue'
 	import DynamicPopover from './popover/DynamicPopover.vue'
-	import VueScrollbar from 'vue2-scrollbar'
 
 	export default {
 		name: 'x-graded-select',
-		components: { TriggerableDropdown, NestedMenu, NestedMenuItem, DynamicPopover, VueScrollbar },
+		components: { TriggerableDropdown, NestedMenu, NestedMenuItem, DynamicPopover },
 		props: ['value', 'options', 'placeholder'],
 		model: {
             prop: 'value',
@@ -75,11 +70,8 @@
         }
         .dropdown-menu {
             .menu.inner {
-                max-height: 360px;
-                overflow: hidden;
-                .scrollbar-container {
-                    height: 360px;
-                }
+                max-height: 30vh;
+                overflow: auto;
             }
         }
     }

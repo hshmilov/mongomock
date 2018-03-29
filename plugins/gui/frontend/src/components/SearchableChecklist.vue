@@ -1,29 +1,26 @@
 <template>
     <div class="checklist" @keyup.enter="$emit('submit')">
         <div v-if="title" class="title-sm">{{ title }}</div>
-        <search-input v-if="searchable" v-model="searchValue" ref="searchInput"></search-input>
-        <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
-            <div class="checklist-list">
-                <template v-for="item, index in filteredItems">
-                    <checkbox v-if="item.name" :key="index" :label="prepareLabel(item.title)"
-                              v-model="itemSelection[item.name]" @change="updateSelected"></checkbox>
-                    <div v-else class="title">{{ item.title }}</div>
-                </template>
-                <checkbox v-if="extendable && searchValue && isNew(searchValue)" :label="`${searchValue} (New tag)`"
-                          class="checklist-new" v-model="searchValueSelected" @change="createSelected"></checkbox>
-            </div>
-        </vue-scrollbar>
+        <search-input v-if="searchable" v-model="searchValue" ref="searchInput"/>
+        <div class="checklist-list">
+            <template v-for="item, index in filteredItems">
+                <checkbox v-if="item.name" :key="index" :label="prepareLabel(item.title)"
+                          v-model="itemSelection[item.name]" @change="updateSelected"/>
+                <div v-else class="title">{{ item.title }}</div>
+            </template>
+            <checkbox v-if="extendable && searchValue && isNew(searchValue)" :label="`${searchValue} (New tag)`"
+                      class="checklist-new" v-model="searchValueSelected" @change="createSelected"/>
+        </div>
     </div>
 </template>
 
 <script>
-    import VueScrollbar from 'vue2-scrollbar'
     import SearchInput from './SearchInput.vue'
     import Checkbox from './Checkbox.vue'
 
     export default {
         name: 'searchable-checklist',
-        components: { VueScrollbar, SearchInput, Checkbox },
+        components: { SearchInput, Checkbox },
         props: [ 'title', 'searchable', 'extendable', 'items', 'value' ],
         computed: {
             totalItems() {
@@ -108,26 +105,21 @@
 
 <style lang="scss">
     .checklist {
-        .scrollbar-container {
-            max-height: 480px;
-            .checklist-list {
-                height: 100%;
-                .checkbox {
-                    margin-top: 8px;
-                    width: 100%;
-                    &:first-of-type {
-                        margin-top: 0;
-                    }
-                }
-                .title {
-                    font-weight: 300;
-                    text-transform: uppercase;
-                    margin-top: 8px;
+        .checklist-list {
+            max-height: 40vh;
+            overflow: auto;
+            height: 100%;
+            .checkbox {
+                margin-top: 8px;
+                width: 100%;
+                &:first-of-type {
+                    margin-top: 0;
                 }
             }
-            .vue-scrollbar__scrollbar-vertical {
-                left: auto;
-                right: 0;
+            .title {
+                font-weight: 300;
+                text-transform: uppercase;
+                margin-top: 8px;
             }
         }
     }

@@ -207,7 +207,7 @@ def beautify_db_entry(entry):
 
 
 def filter_archived():
-    return {'$or': [{}, {'archived': {'$exists': False}}, {'archived': False}]}
+    return {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
 
 
 class GuiService(PluginBase):

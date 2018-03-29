@@ -2,12 +2,12 @@
     <x-page title="alerts">
         <card :title="`alerts (${alert.alertList.data.length})`">
             <span slot="cardActions">
-                <action-bar :actions="[{title: 'New', handler: createAlert}]"></action-bar>
+                <action-bar :actions="[{title: 'New', handler: createAlert}]"/>
             </span>
             <!-- Table containing access to all the alerts in the system and showing one page of it at a time -->
             <paginated-table slot="cardContent" :fetching="alert.alertList.fetching" :data="alert.alertList.data"
                              :error="alert.alertList.error" :fields="alert.fields" :fetchData="fetchAlerts"
-                             :filter="alertFilter" :actions="alertActions"></paginated-table>
+                             :filter="alertFilter" :actions="alertActions"/>
         </card>
     </x-page>
 </template>

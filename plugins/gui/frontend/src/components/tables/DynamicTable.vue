@@ -1,45 +1,41 @@
 <template>
-    <vue-scrollbar class="scrollbar-container" ref="Scrollbar">
-        <table class="dynamic-table">
-            <thead>
-                <tr class="table-row">
-                    <th class="table-head"></th>
-                    <th class="table-head" v-for="field in visibleFields">{{ field.name }}</th>
-                    <th>&nbsp;</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="record in data" class="table-row" @click="$emit('select', record['id'])">
-                    <td>&nbsp;
-                        <!-- Check for connecting to server and uncheck to stop connection -->
-                        <!--<checkbox class="mr-2"></checkbox>-->
-                    </td>
-                    <generic-table-cell class="table-data" v-for="field in visibleFields" :key="field.path"
-                                        :value="record[field.path]" :type="field.type"/>
-                    <td class="table-data action">
-                        <a @click.stop="$emit('delete', record['id'])"><i class="icon-minus-square"></i></a>
-                    </td>
-                </tr>
-                <tr class="table-row" @click="$emit('select', 'new')">
-                    <!-- Entire row for clicking in order to add a newly configured row -->
-                    <td></td>
-                    <td class="table-data table-btn" :colspan="visibleFields.length + 1">{{ addNewDataLabel }}<i
-                            class="icon-plus-square"></i></td>
-                </tr>
-            </tbody>
-        </table>
-        <div class="clearfix"></div>
-    </vue-scrollbar>
+    <table class="dynamic-table">
+        <thead>
+            <tr class="table-row">
+                <th class="table-head"></th>
+                <th class="table-head" v-for="field in visibleFields">{{ field.name }}</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="record in data" class="table-row" @click="$emit('select', record['id'])">
+                <td>&nbsp;
+                    <!-- Check for connecting to server and uncheck to stop connection -->
+                    <!--<checkbox class="mr-2"></checkbox>-->
+                </td>
+                <generic-table-cell class="table-data" v-for="field in visibleFields" :key="field.path"
+                                    :value="record[field.path]" :type="field.type"/>
+                <td class="table-data action">
+                    <a @click.stop="$emit('delete', record['id'])"><i class="icon-minus-square"></i></a>
+                </td>
+            </tr>
+            <tr class="table-row" @click="$emit('select', 'new')">
+                <!-- Entire row for clicking in order to add a newly configured row -->
+                <td></td>
+                <td class="table-data table-btn" :colspan="visibleFields.length + 1">{{ addNewDataLabel }}<i
+                        class="icon-plus-square"></i></td>
+            </tr>
+        </tbody>
+    </table>
 </template>
 
 <script>
     import Checkbox from '../Checkbox.vue'
     import GenericTableCell from './GenericTableCell.vue'
-	import VueScrollbar from 'vue2-scrollbar'
 
 	export default {
 		name: 'dynamic-table',
-        components: { Checkbox, GenericTableCell, VueScrollbar },
+        components: { Checkbox, GenericTableCell },
         props: ['data', 'fields', 'addNewDataLabel', 'value'],
         computed: {
 			visibleFields() {

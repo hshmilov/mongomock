@@ -163,7 +163,6 @@
                 }
             }
         }
-        .scrollbar-container, .sidebar-nav {  background: transparent;  }
     }
 
 
