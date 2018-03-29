@@ -1040,21 +1040,19 @@ class GuiService(PluginBase):
             return return_error('Error saving dashboard chart', 400)
         return ''
 
-    @add_rule_unauthenticated("dashboard/<dashboard_name>", methods=['GET'])
-    def dashboard_chart(self, dashboard_name):
+    @add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
+    def remove_dashboard(self, dashboard_id):
         """
         Fetches data, according to definition saved for the dashboard named by given name
 
         :param dashboard_name: Name of the dashboard to fetch data for
         :return:
         """
-        dashboard_object = self._get_collection('dashboard', limited_user=False).find({'name': dashboard_name})
-        if not dashboard_object:
-            self.logger.info(f'No dashboard by the name {dashboard_name} found')
-            return jsonify([])
-        if not dashboard_object.get('queries'):
-            self.logger.info(f'No queries found for dashboard {dashboard_name}')
-            return jsonify([])
+        update_result = self._get_collection('dashboard', limited_user=False).replace_one(
+            {'_id': ObjectId(dashboard_id)}, {'archived': True})
+        if not update_result.modified_count:
+            return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
+        return ''
 
     @add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
     def get_system_lifecycle(self):
@@ -1151,7 +1149,7 @@ class GuiService(PluginBase):
                                  AdapterProperty.Vulnerability_Assessment.name
                                  ]
         for property in partial_property_list:
-            coverage_list.append({'property': ' '.join(property.split('_')),
+            coverage_list.append({'property': property,
                                   'portion': self.aggregator_db_connection['devices_db_view'].find(
                                       {'specific_data.adapter_properties': property}).count() / devices_count})
         return jsonify(coverage_list)

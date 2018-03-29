@@ -10,7 +10,6 @@
 
 <script>
 	import xPage from '../../../components/layout/Page.vue'
-	import Card from '../../../components/Card.vue'
 	import ActionBar from '../../../components/ActionBar.vue'
 	import GenericForm from '../../../components/GenericForm.vue'
 	import PaginatedTable from '../../../components/tables/PaginatedTable.vue'
@@ -25,7 +24,7 @@
 		name: 'saved-queries-container',
 		components: {
 			SearchInput,
-			xPage, Card, ActionBar, GenericForm, PaginatedTable
+			xPage, ActionBar, GenericForm, PaginatedTable
 		},
 		computed: {
 			...mapState(['query']),

@@ -1,12 +1,12 @@
 <template>
-    <x-card :title="`${name} Coverage`" :key="name" class="coverage">
-        <div slot="cardActions" :class="`coverage-status indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
+    <x-card :title="`${nameText} Coverage`" :key="name" class="coverage">
+        <div :class="`coverage-status indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
         <x-pie-chart :data="pieSlices" @click-slice="$emit('click', name)" :title="title" />
     </x-card>
 </template>
 
 <script>
-	import xCard from '../../components/Card.vue'
+	import xCard from '../../components/cards/Card.vue'
     import xPieChart from '../charts/Pie.vue'
 
 	export default {
@@ -20,6 +20,9 @@
             quarterText() {
 				return ['None', 'Poor', 'Low', 'Average', 'Good']
             },
+            nameText() {
+				return this.name.split('_').join(' ')
+            },
 			pieSlices() {
                 return [{
 					portion: 1 - this.portion, class: 'theme-fill-gray-light'
@@ -28,7 +31,7 @@
                 }]
 			},
 			title() {
-				return `Click to view devices without ${this.name} and consider aligning them`
+				return `Click to view devices without ${this.nameText} and consider aligning them`
             }
         }
 	}
@@ -37,6 +40,7 @@
 <style lang="scss">
     .coverage {
         .coverage-status {
+            align-self: flex-end;
             line-height: 30px;
             padding: 0 4px;
             border-width: 1px;

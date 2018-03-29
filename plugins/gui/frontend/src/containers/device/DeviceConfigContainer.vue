@@ -50,7 +50,6 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import NamedSection from '../../components/NamedSection.vue'
-	import Card from '../../components/Card.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
 	import xSchemaList from '../../components/schema/SchemaList.vue'
@@ -71,7 +70,7 @@
 	export default {
 		name: 'device-config-container',
 		components: {
-			xPage, NamedSection, Card, Tabs, Tab, xSchemaList, xCustomData,
+			xPage, NamedSection, Tabs, Tab, xSchemaList, xCustomData,
 			FeedbackModal, SearchableChecklist
 		},
 		mixins: [TagsMixin, DataMixin],

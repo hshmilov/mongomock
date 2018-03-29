@@ -41,7 +41,6 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import Modal from '../../components/popover/Modal.vue'
-	import Card from '../../components/Card.vue'
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import DevicesActionsContainer from './DevicesActionsContainer.vue'
 	import xDataQuery from '../../components/data/DataQuery.vue'
@@ -63,7 +62,7 @@
 	export default {
 		name: 'devices-container',
 		components: {
-			xPage, xDataQuery, DevicesActionsContainer, Card, DynamicPopover,
+			xPage, xDataQuery, DevicesActionsContainer, DynamicPopover,
 			Modal, TriggerableDropdown, xGradedMultiSelect, xDataTable, NestedMenu, NestedMenuItem
 		},
 		computed: {

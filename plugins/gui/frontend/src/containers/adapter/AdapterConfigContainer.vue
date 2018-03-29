@@ -3,46 +3,41 @@
     	{ title: 'adapters', path: { name: 'Adapters'}},
     	{ title: adapterName }
     ]">
-        <card title="configure">
-            <template slot="cardContent">
-                <div class="server-list-container row">
-                    <div class="form-group">
-                        <!-- Container for list of configured servers - both enabled and disabled -->
-                        <div class="form-group-header">
-                            <svg-icon name="navigation/device" width="24" height="24" :original="true"></svg-icon>
-                            <span class="form-group-title">Add / update Servers</span>
-                        </div>
-                        <dynamic-table v-if="schemaFields" :data="adapterClients" :fields="tableFields" class="mt-3"
-                                       add-new-data-label="Add a server" @select="configServer" @delete="deleteServer">
-                        </dynamic-table>
+            <div class="server-list-container row">
+                <div class="form-group">
+                    <!-- Container for list of configured servers - both enabled and disabled -->
+                    <div class="form-group-header">
+                        <svg-icon name="navigation/device" width="24" height="24" :original="true"></svg-icon>
+                        <span class="form-group-title">Add / update Servers</span>
+                    </div>
+                    <dynamic-table v-if="schemaFields" :data="adapterClients" :fields="tableFields" class="mt-3"
+                                   add-new-data-label="Add a server" @select="configServer" @delete="deleteServer">
+                    </dynamic-table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group place-right">
+                    <a class="btn btn-inverse" @click="returnToAdapters">back</a>
+                </div>
+            </div>
+            <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
+                   class="config-server" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
+                <div slot="body">
+                    <!-- Container for configuration of a single selected / added server -->
+                    <status-icon-logo-text :logoValue="adapterPluginName" status-icon-value="empty"
+                                           :textValue="serverModal.serverName" />
+                    <div class="mt-3">
+                        <div class="mb-2">Basic system credentials</div>
+                        <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
+                                       @submit="saveServer" @validate="serverModal.valid = $event"/>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="form-group place-right">
-                        <a class="btn btn-inverse" @click="returnToAdapters">back</a>
-                    </div>
-                </div>
-                <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
-                       class="config-server" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
-                    <div slot="body">
-                        <!-- Container for configuration of a single selected / added server -->
-                        <status-icon-logo-text :logoValue="adapterPluginName" status-icon-value="empty"
-                                               :textValue="serverModal.serverName" />
-                        <div class="mt-3">
-                            <div class="mb-2">Basic system credentials</div>
-                            <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
-                                           @submit="saveServer" @validate="serverModal.valid = $event"/>
-                        </div>
-                    </div>
-                </modal>
-            </template>
-        </card>
+            </modal>
     </x-page>
 </template>
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-	import Card from '../../components/Card.vue'
 	import DynamicTable from '../../components/tables/DynamicTable.vue'
 	import GenericForm from '../../components/GenericForm.vue'
 	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
@@ -50,14 +45,14 @@
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import '../../components/icons/navigation'
 
-	import { mapState, mapGetters, mapActions } from 'vuex'
+	import { mapState, mapActions } from 'vuex'
 	import {
 		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER, adapterStaticData
 	} from '../../store/modules/adapter'
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, StatusIconLogoText, GenericForm, xPage, Card, DynamicTable, xSchemaForm},
+		components: {Modal, StatusIconLogoText, GenericForm, xPage, DynamicTable, xSchemaForm},
 		computed: {
 			...mapState(['adapter']),
 			adapterUniquePluginName () {

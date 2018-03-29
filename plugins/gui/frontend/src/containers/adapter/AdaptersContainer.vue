@@ -7,7 +7,6 @@
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-    import Card from '../../components/Card.vue'
 	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
 	import SearchInput from '../../components/SearchInput.vue'
 
@@ -16,7 +15,7 @@
 
     export default {
         name: 'adapters-container',
-        components: { xPage, Card, ScrollableTable, SearchInput },
+        components: { xPage, ScrollableTable, SearchInput },
         computed: {
             ...mapState(['adapter']),
             sortedSpecificData () {

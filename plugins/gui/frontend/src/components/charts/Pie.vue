@@ -44,7 +44,10 @@
 
 <style lang="scss">
     .pie {
-        cursor: pointer;
+        margin: auto;
+        path, text {
+            cursor: pointer;
+        }
         .clickable {
             opacity: 0.6;
             transition: opacity ease-in 0.4s;

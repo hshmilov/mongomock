@@ -12,6 +12,7 @@ export const UPDATE_ADAPTER_DEVICES = 'UPDATE_ADAPTER_DEVICES'
 export const FETCH_DASHBOARD = 'FETCH_DASHBOARD'
 export const UPDATE_DASHBOARD = 'UPDATE_DASHBOARD'
 export const SAVE_DASHBOARD = 'SAVE_DASHBOARD'
+export const REMOVE_DASHBOARD = 'REMOVE_DASHBOARD'
 
 export const FETCH_DASHBOARD_COVERAGE = 'FETCH_DASHBOARD_COVERAGE'
 export const UPDATE_DASHBOARD_COVERAGE = 'UPDATE_DASHBOARD_COVERAGE'
@@ -44,7 +45,7 @@ export const dashboard = {
 		[ UPDATE_DASHBOARD ] (state, payload) {
 			state.charts.fetching = payload.fetching
 			state.charts.error = payload.error
-			if (payload.data && payload.data.length) {
+			if (payload.data) {
 				state.charts.data = payload.data
 			}
 		},
@@ -94,7 +95,14 @@ export const dashboard = {
 				data: payload
 			})
 		},
-		[ FETCH_DASHBOARD_COVERAGE ] ({dispatch}, payload) {
+		[ REMOVE_DASHBOARD ] ({dispatch}, dashboardId) {
+			if (!dashboardId) return
+			return dispatch(REQUEST_API, {
+				rule: `dashboard/${dashboardId}`,
+				method: 'DELETE'
+			})
+		},
+		[ FETCH_DASHBOARD_COVERAGE ] ({dispatch}) {
 			return dispatch(REQUEST_API, {
 				rule: 'dashboard/coverage',
 				type: UPDATE_DASHBOARD_COVERAGE

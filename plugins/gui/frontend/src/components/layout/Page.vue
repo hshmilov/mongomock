@@ -42,7 +42,7 @@
             flex-direction: column;
             padding: 72px 24px 24px 84px;
         }
-        .x-header {
+        > .x-header {
             display: flex;
             width: 100%;
             text-transform: capitalize;
