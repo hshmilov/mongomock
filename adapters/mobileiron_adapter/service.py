@@ -32,7 +32,8 @@ class MobileironAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = MobileironConnection(logger=self.logger, domain=client_config["Mobileiron_Domain"])
+            connection = MobileironConnection(
+                logger=self.logger, domain=client_config["Mobileiron_Domain"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
@@ -78,12 +79,18 @@ class MobileironAdapter(AdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
+                },
+                {
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
+                    "type": "bool"
                 }
             ],
             "required": [
                 "Mobileiron_Domain",
                 "username",
-                "password"
+                "password",
+                "verify_ssl"
             ],
             "type": "array"
         }

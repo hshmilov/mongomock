@@ -4,7 +4,7 @@ from secdo_adapter.exceptions import SecdoAlreadyConnected, SecdoConnectionError
 
 
 class SecdoConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, logger, domain, verify_ssl):
         """ Initializes a connection to Secdo using its rest API
 
         :param obj logger: Logger object of the system
@@ -19,6 +19,7 @@ class SecdoConnection(object):
             url += '/'
         url += "publicapiv2/run/command/"
         self.url = url
+        self.verify_ssl = verify_ssl
         self.session = None
         self.company = None
         self.api_key = None
@@ -54,7 +55,8 @@ class SecdoConnection(object):
         self.headers["API-KEY"] = self.api_key
         if self.company is not None and self.api_key is not None:
             connection_dict = {'company': self.company}
-            response = session.post(self._get_url_request(''), json=connection_dict, headers=self.headers)
+            response = session.post(self._get_url_request(''), json=connection_dict,
+                                    headers=self.headers, verify=self.verify_ssl)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
@@ -83,7 +85,8 @@ class SecdoConnection(object):
         if not self.is_connected:
             raise SecdoNotConnected()
         params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers)
+        response = self.session.post(self._get_url_request(name), json=params,
+                                     headers=self.headers, verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

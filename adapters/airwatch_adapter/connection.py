@@ -6,12 +6,13 @@ from airwatch_adapter.exceptions import AirwatchAlreadyConnected, AirwatchConnec
 
 
 class AirwatchConnection(object):
-    def __init__(self, logger, domain, apikey):
+    def __init__(self, logger, domain, apikey, verify_ssl):
         """ Initializes a connection to Airwatch using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Airwatch
         :param str apikey: API key of Airwatch
+        :param bool verify_ssl
         """
         self.logger = logger
         self.domain = domain
@@ -28,6 +29,7 @@ class AirwatchConnection(object):
         self.password = None
         self.headers = None
         self.apikey = None
+        self.verify_ssl = verify_ssl
 
     def set_credentials(self, username, password, apikey):
         """ Set the connection credentials
@@ -62,7 +64,7 @@ class AirwatchConnection(object):
             self.headers["aw-tenant-code"] = self.apikey
             self.headers["Accept"] = "application/xml"
             response = session.get(self._get_url_request('system/info'), headers=self.headers,
-                                   auth=(self.username, self.password))
+                                   auth=(self.username, self.password), verify=self.verify_ssl)
             self.headers["Accept"] = "application/json"
             try:
                 response.raise_for_status()
@@ -96,7 +98,8 @@ class AirwatchConnection(object):
             full_url = name
         else:
             full_url = self._get_url_request(name)
-        response = self.session.get(full_url, params=params, headers=self.headers, auth=(self.username, self.password))
+        response = self.session.get(full_url, params=params, headers=self.headers,
+                                    auth=(self.username, self.password), verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

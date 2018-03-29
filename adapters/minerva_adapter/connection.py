@@ -5,11 +5,12 @@ from minerva_adapter.exceptions import MinervaAlreadyConnected, MinervaConnectio
 
 
 class MinervaConnection(object):
-    def __init__(self, logger, domain, is_ssl):
+    def __init__(self, logger, domain, is_ssl, verify_ssl):
         """ Initializes a connection to Minerva using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Minerva
+        :param bool verify_ssl Verify the ssl
         """
         self.logger = logger
         self.domain = domain
@@ -27,6 +28,7 @@ class MinervaConnection(object):
         self.session = None
         self.username = None
         self.password = None
+        self.verify_ssl = verify_ssl
         self.headers = {'Content-Type': 'application/json'}
 
     def set_credentials(self, username, password):
@@ -58,7 +60,7 @@ class MinervaConnection(object):
         if self.username is not None and self.password is not None:
             connection_dict = {'username': self.username,
                                'password': self.password}
-            response = session.post(self._get_url_request('login'), json=connection_dict)
+            response = session.post(self._get_url_request('login'), json=connection_dict, verify=self.verify_ssl)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
@@ -87,7 +89,8 @@ class MinervaConnection(object):
         if not self.is_connected:
             raise MinervaNotConnected()
         params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers)
+        response = self.session.post(self._get_url_request(name), json=params,
+                                     headers=self.headers, verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -105,7 +108,8 @@ class MinervaConnection(object):
         if not self.is_connected:
             raise MinervaNotConnected()
         params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params, headers=self.headers)
+        response = self.session.get(self._get_url_request(name), params=params,
+                                    headers=self.headers, verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

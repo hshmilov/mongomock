@@ -5,11 +5,12 @@ from mobileiron_adapter.exceptions import MobileironAlreadyConnected, Mobileiron
 
 
 class MobileironConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, logger, domain, verify_ssl):
         """ Initializes a connection to Mobileiron using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Mobileiron
+        :param bool verify_ssl Verify the ssl
         """
         self.logger = logger
         self.domain = domain
@@ -21,6 +22,7 @@ class MobileironConnection(object):
         self.session = None
         self.username = None
         self.password = None
+        self.verify_ssl = verify_ssl
         self.headers = {'Content-Type': 'application/json'}
 
     def set_credentials(self, username, password):
@@ -50,7 +52,8 @@ class MobileironConnection(object):
             raise MobileironAlreadyConnected()
         session = requests.Session()
         if self.username is not None and self.password is not None:
-            response = session.get(self._get_url_request('ping'), auth=(self.username, self.password))
+            response = session.get(self._get_url_request('ping'), auth=(
+                self.username, self.password), verify=self.verify_ssl)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
@@ -80,7 +83,7 @@ class MobileironConnection(object):
             raise MobileironNotConnected()
         params = params or {}
         response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, auth=(self.username, self.password))
+                                    headers=self.headers, auth=(self.username, self.password), verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

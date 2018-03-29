@@ -25,7 +25,7 @@ class MinervaAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = MinervaConnection(logger=self.logger, domain=client_config["Minerva_Domain"],
-                                           is_ssl=client_config["is_ssl"])
+                                           is_ssl=client_config["is_ssl"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
@@ -76,13 +76,19 @@ class MinervaAdapter(AdapterBase):
                     "name": "is_ssl",
                     "title": "Is SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
+                    "type": "bool"
                 }
             ],
             "required": [
                 "Minerva_Domain",
                 "username",
                 "password",
-                "is_ssl"
+                "is_ssl",
+                "verify_ssl"
             ],
             "type": "array"
         }
@@ -103,7 +109,7 @@ class MinervaAdapter(AdapterBase):
                     self.logger.exception("Problem with adding nic to Minerva device")
                 device.agent_version = device_raw.get("armorVersion", "")
                 device.agent_status = device_raw.get("agentStatus")
-                device.last_used_users = device_raw.get("loggedOnUsers", "").split(",")
+                device.last_used_users = device_raw.get("loggedOnUsers", "").split(";")
                 device.last_seen = parse_date(device_raw.get("lastSeenOnline", ""))
                 device.set_raw(device_raw)
                 yield device

@@ -24,7 +24,8 @@ class SecdoAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = SecdoConnection(logger=self.logger, domain=client_config["Secdo_Domain"])
+            connection = SecdoConnection(
+                logger=self.logger, domain=client_config["Secdo_Domain"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(company=client_config["company"], api_key=client_config["api_key"])
             with connection:
                 pass  # check that the connection credentials are valid
@@ -69,12 +70,18 @@ class SecdoAdapter(AdapterBase):
                     "name": "api_key",
                     "title": "API Key",
                     "type": "string"
+                },
+                {
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
+                    "type": "bool"
                 }
             ],
             "required": [
                 "Secdo_Domain",
                 "company",
-                "api_key"
+                "api_key",
+                "verify_ssl"
             ],
             "type": "array"
         }

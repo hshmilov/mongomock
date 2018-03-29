@@ -30,7 +30,7 @@ class AirwatchAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = AirwatchConnection(logger=self.logger, domain=client_config["Airwatch_Domain"],
-                                            apikey=client_config["apikey"])
+                                            apikey=client_config["apikey"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"], password=client_config["password"],
                                        apikey=client_config["apikey"])
             with connection:
@@ -81,13 +81,19 @@ class AirwatchAdapter(AdapterBase):
                     "name": "apikey",
                     "title": "API Key",
                     "type": "string"
+                },
+                {
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
+                    "type": "bool"
                 }
             ],
             "required": [
                 "Airwatch_Domain",
                 "username",
                 "password",
-                "apikey"
+                "apikey",
+                "verify_ssl"
             ],
             "type": "array"
         }

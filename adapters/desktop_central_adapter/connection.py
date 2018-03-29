@@ -7,11 +7,12 @@ from desktop_central_adapter.exceptions import DesktopCentralAlreadyConnected, D
 
 
 class DesktopCentralConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, logger, domain, verify_ssl):
         """ Initializes a connection to DesktopCentral using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for DesktopCentral
+        :param bool verify_ssl
         """
         self.logger = logger
         self.domain = domain
@@ -25,6 +26,7 @@ class DesktopCentralConnection(object):
         self.username = None
         self.password = None
         self.headers = {'Content-Type': 'application/json'}
+        self.verify_ssl = verify_ssl
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -64,7 +66,8 @@ class DesktopCentralConnection(object):
             connection_dict = {'username': self.username,
                                'password': str(base64.b64encode(bytes(self.password, "utf-8")), encoding="utf-8"),
                                "auth_type": "local_authentication"}
-            response = session.post(self._get_url_request('desktop/authentication'), json=connection_dict)
+            response = session.post(self._get_url_request('desktop/authentication'),
+                                    json=connection_dict, verify=self.verify_ssl)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
@@ -100,7 +103,8 @@ class DesktopCentralConnection(object):
         if not self.is_connected:
             raise DesktopCentralNotConnected()
         params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers)
+        response = self.session.post(self._get_url_request(name), json=params,
+                                     headers=self.headers, verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -118,7 +122,8 @@ class DesktopCentralConnection(object):
         if not self.is_connected:
             raise DesktopCentralNotConnected()
         params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params, headers=self.headers)
+        response = self.session.get(self._get_url_request(name), params=params,
+                                    headers=self.headers, verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
