@@ -36,7 +36,7 @@
                                  @error="filterValid = false" :rebuild="rebuild"/>
                 <div class="row">
                     <div class="form-group place-right">
-                        <a class="btn btn-inverse" @click="emptyFilter">Clear</a>
+                        <a class="btn btn-inverse" @click="clearFilter">Clear</a>
                         <a class="btn" @click="rebuildFilter">Search</a>
                     </div>
                 </div>
@@ -54,12 +54,9 @@
     import xSchemaFilter from '../schema/SchemaFilter.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-    import {
-		UPDATE_DATA_VIEW
-    } from '../../store/mutations'
-    import {
-		FETCH_DATA_QUERIES
-    } from '../../store/actions'
+    import { UPDATE_DATA_VIEW } from '../../store/mutations'
+    import { FETCH_DATA_QUERIES } from '../../store/actions'
+	import { expression } from '../../mixins/filter'
 
 	export default {
 		name: 'x-data-query',
@@ -163,8 +160,8 @@
                 this.searchValue = this.textSearchPattern.replace(/{val}/g, this.searchValue)
                 this.submitFilter()
             },
-            emptyFilter() {
-				this.queryExpressions = []
+            clearFilter() {
+				this.queryExpressions = [ {...expression} ]
                 this.searchValue = ''
                 this.submitFilter()
             },

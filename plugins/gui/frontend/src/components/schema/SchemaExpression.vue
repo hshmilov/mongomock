@@ -45,6 +45,7 @@
 	import xArrayEdit from '../controls/array/ArrayFilter.vue'
 	import xGradedSelect from '../GradedSelect.vue'
 	import IP from 'ip'
+	import { compOps } from '../../mixins/filter'
 
 	export default {
 		components: {
@@ -57,7 +58,7 @@
 		},
 		name: 'x-schema-expression',
 		props: {
-			value: {}, fields: {required: true}, compOps: {required: true}, first: {default: false}
+			value: {}, fields: {required: true}, first: {default: false}
 		},
 		computed: {
 			logicOps () {
@@ -93,14 +94,14 @@
 			},
 			fieldOps () {
 				if (!this.fieldSchema || !this.fieldSchema.type) return {}
-                let ops = (this.fieldSchema.type === 'array')? this.compOps['array'] : {}
+                let ops = (this.fieldSchema.type === 'array')? compOps['array'] : {}
 				let schema = (this.fieldSchema.type === 'array')? this.fieldSchema.items : this.fieldSchema
                 if (schema.enum && schema.format !== 'predefined') {
-                    ops = { ...ops, equals: this.compOps[schema.type].equals }
+                    ops = { ...ops, equals: compOps[schema.type].equals }
                 } else if (schema.format) {
-					ops = { ...ops, ...this.compOps[schema.format] }
+					ops = { ...ops, ...compOps[schema.format] }
                 } else {
-					ops = { ...ops, ...this.compOps[schema.type] }
+					ops = { ...ops, ...compOps[schema.type] }
                 }
 
 				return ops
@@ -118,20 +119,23 @@
 		data () {
 			return {
 				expression: { ...this.value },
-				processedValue: ''
+				processedValue: '',
+                newExpression: false
 			}
 		},
 		watch: {
 			value (newValue) {
                 if (newValue.field !== this.expression.field) {
                 	this.expression = { ...newValue }
+                	this.newExpression = true
                 }
             },
 			valueSchema (newSchema, oldSchema) {
 				if (!oldSchema.type || !oldSchema.format) return
-				if (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format) {
+				if (!this.newExpression && (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format)) {
 					this.expression.value = null
 				}
+				this.newExpression = false
 			}
 		},
 		methods: {
@@ -215,7 +219,12 @@
 		},
 		updated () {
 			this.compileExpression()
-		}
+		},
+        created() {
+			if (this.expression.field) {
+				this.compileExpression()
+            }
+        }
 	}
 </script>
 

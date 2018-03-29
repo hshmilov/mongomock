@@ -2,7 +2,7 @@
     <div class="filter">
         <div class="mb-4">Show only Devices:</div>
         <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
-                             v-model="expressions[i]" :fields="schema" :comp-ops="compOps"
+                             v-model="expressions[i]" :fields="schema"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
             <div @click="addExpression" class="btn-light">+</div>
@@ -13,102 +13,12 @@
 
 <script>
 	import xSchemaExpression from './SchemaExpression.vue'
-
-	import { mapState, mapMutations, mapActions } from 'vuex'
+    import { expression } from '../../mixins/filter'
 
 	export default {
 		name: 'x-schema-filter',
 		components: {xSchemaExpression},
-		props: {schema: {required: true}, value: {}, rebuild: {}},
-		computed: {
-			expression () {
-				return {
-					logicOp: '',
-					not: false,
-					leftBracket: false,
-					field: '',
-					compOp: '',
-					value: null,
-					rightBracket: false
-				}
-			},
-			compOps () {
-				const exists = {
-					pattern: '({field} == exists(true) and {field} != "")',
-					notPattern: '({field} == exists(false) or {field} == "")'
-				}
-				const equals = {
-					pattern: '{field} == "{val}"',
-					notPattern: '{field} != "{val}"'
-				}
-				const contains = {
-					pattern: '{field} == regex("{val}", "i")',
-					notPattern: '{field} == regex("^(?!.*{val})", "i")'
-				}
-				const numerical = {
-					'equals': {pattern: '{field} == {val}', notPattern: '{field} != {val}'},
-					'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
-					'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
-				}
-				return {
-					'array': {
-						'size': {
-							pattern: '{field} == size({val})',
-							notPattern: 'not {field} == size({val})'
-						},
-						'exists': {
-							pattern: '({field} == exists(true) and {field} > [])',
-							notPattern: '({field} == exists(false) or {field} == [])'
-						}
-					},
-					'date-time': {
-						'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
-						'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' },
-                        'past days': {
-							pattern: '{field} >= date("NOW - {val}d")',
-                            notPattern: '{field} < date("NOW - {val}d")'
-						}
-					},
-					'ip': {
-						'subnet': {
-							pattern: '({field}_raw >= {val} and {field}_raw <= {val})',
-							notPattern: '({field}_raw < {val} or {field}_raw > {val})'
-						},
-						equals,
-						'isIPv4': {
-							pattern: '{field} == regex("\.")',
-							notPattern: '{field} == regex("^(?!.*\.)")'
-						},
-						'isIPv6': {
-							pattern: '{field} == regex(":")',
-							notPattern: '{field} == regex("^(?!.*:)")'
-						},
-						exists
-					},
-                    'tag': {
-						contains, equals
-                    },
-					'string': {
-						contains, equals,
-						'starts': {
-							pattern: '{field} == regex("^{val}", "i")',
-							notPattern: '{field} == regex("^^(?!{val})", "i")'
-						},
-						'ends': {
-							pattern: '{field} == regex("{val}$", "i")',
-							notPattern: '{field} == regex("^(?!{val})$", "i")'
-						},
-						exists
-					},
-					'bool': {
-						'true': {pattern: '{field} == true', notPattern: '{field} == false'},
-						'false': {pattern: '{field} == false', notPattern: '{field} == true'}
-					},
-					'number': numerical,
-					'integer': numerical
-				}
-			}
-		},
+		props: {schema: {required: true}, value: {}, rebuild: {default: false}},
 		data () {
 			return {
 				expressions: [...this.value],
@@ -134,12 +44,16 @@
 					this.$emit('error')
 					return
 				}
-
 				this.filters[index] = payload.filter
+                if (!this.filters[0]) {
+					this.$emit('error')
+                    return
+                }
 				this.bracketWeights[index] = payload.bracketWeight
 				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
 				if (totalBrackets !== 0) {
 					this.error = (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket'
+					this.$emit('error')
 					return
 				}
 				// No compilation error - propagating
@@ -148,7 +62,7 @@
 				this.$emit('change', this.filters.join(' '))
 			},
 			addExpression () {
-				this.expressions.push({...this.expression, i: this.expressions.length})
+				this.expressions.push({...expression, i: this.expressions.length})
 				this.$emit('input', this.expressions)
 			},
 			removeExpression (index) {
@@ -162,6 +76,11 @@
 					}
 				}
 				this.$emit('change', this.filters.join(' '))
+			}
+		},
+		created () {
+			if (!this.expressions.length) {
+				this.addExpression()
 			}
 		}
 	}
