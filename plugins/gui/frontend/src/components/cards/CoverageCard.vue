@@ -1,7 +1,10 @@
 <template>
-    <x-card :title="`${nameText} Coverage`" :key="name" class="coverage">
-        <div :class="`coverage-status indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
-        <x-pie-chart :data="pieSlices" @click-slice="$emit('click', name)" :title="title" />
+    <x-card :title="`${title} Coverage`" :key="title" class="coverage">
+        <div class="coverage-status">
+            <div class="text">Consider installing {{title}} system on uncovered devices</div>
+            <div :class="`mark indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
+        </div>
+        <x-pie-chart :data="pieSlices" @click-slice="$emit('click-slice', $event)" :tooltip="tooltip" />
     </x-card>
 </template>
 
@@ -12,7 +15,7 @@
 	export default {
 		name: 'coverage-pie',
         components: { xCard, xPieChart },
-        props: {portion: {required: true}, name: {}},
+        props: {portion: {required: true}, title: {}},
         computed: {
 			quarter() {
 				return Math.ceil(this.portion * 4)
@@ -20,19 +23,14 @@
             quarterText() {
 				return ['None', 'Poor', 'Low', 'Average', 'Good']
             },
-            nameText() {
-				return this.name.split('_').join(' ')
-            },
 			pieSlices() {
                 return [{
 					portion: 1 - this.portion, class: 'theme-fill-gray-light'
                 }, {
-					name: this.name, portion: this.portion, class: `indicator-fill-${this.quarter}`
+					portion: this.portion, percentage: Math.round(this.portion * 100),
+                    class: `indicator-fill-${this.quarter}`
                 }]
-			},
-			title() {
-				return `Click to view devices without ${this.nameText} and consider aligning them`
-            }
+			}
         }
 	}
 </script>
@@ -40,14 +38,22 @@
 <style lang="scss">
     .coverage {
         .coverage-status {
-            align-self: flex-end;
-            line-height: 30px;
-            padding: 0 4px;
-            border-width: 1px;
-            border-style: solid;
-            border-radius: 12px;
-            background-color: $theme-gray-light;
-            text-transform: uppercase;
+            display: flex;
+            flex-direction: row;
+            .text {
+                font-size: 12px;
+            }
+            .mark {
+                align-self: center;
+                margin-left: 8px;
+                line-height: 30px;
+                padding: 0 4px;
+                border-width: 1px;
+                border-style: solid;
+                border-radius: 12px;
+                background-color: $theme-gray-light;
+                text-transform: uppercase;
+            }
         }
         .pie {
             height: 240px;

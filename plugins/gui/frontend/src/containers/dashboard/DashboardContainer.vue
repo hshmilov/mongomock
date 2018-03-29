@@ -1,9 +1,7 @@
 <template>
     <x-page title="axonius dashboard" class="dashboard">
-        <x-coverage-card :portion="0.9" name="Great"/>
-        <x-coverage-card v-for="item in dashboard.coverage.data" :portion="item.portion" :name="item.property"
-                         @click="runAdapterPropertyFilter" :key="item.property">
-        </x-coverage-card>
+        <x-coverage-card v-for="item in dashboard.coverage.data" :portion="item.portion" :title="item.title" :key="item.title"
+                         @click-slice="runCoverageFilter(item.properties, $event)" />
         <x-card title="Data Collection">
             <x-counter-chart :data="adapterDevicesCounterData"/>
         </x-card>
@@ -131,8 +129,15 @@
 			runAdapterDevicesFilter (adapterName) {
 				this.runFilter(`adapters == '${adapterName}'`)
 			},
-            runAdapterPropertyFilter(adapterProperty) {
-                this.runFilter(`specific_data.adapter_properties != '${adapterProperty}'`)
+            runCoverageFilter(properties, covered) {
+				if (!properties || !properties.length) return
+                if (covered) {
+                    this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`)
+                } else {
+					this.runFilter(properties.map((property) => {
+						return `specific_data.adapter_properties != '${property}'`
+                    }).join(' and '))
+                }
             },
 			createNewDashboard () {
 				this.newDashboard.isActive = true

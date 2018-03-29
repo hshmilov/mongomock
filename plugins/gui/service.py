@@ -1137,21 +1137,26 @@ class GuiService(PluginBase):
     @add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
     def get_dashboard_coverage(self):
         """
+        Measures the coverage portion, according to sets of properties that devices' adapters may have.
+        Portion is calculated out of total devices amount.
+        Currently returns coverage for devices composed of adapters that are:
+        - Managed ('Manager' or 'Agent')
+        - Endpoint Protected
+        - Vulnerability Assessed
 
         :return:
         """
         devices_count = self.aggregator_db_connection['devices_db_view'].find({}).count()
         if not devices_count:
             return jsonify([])
-        coverage_list = []
-        partial_property_list = [AdapterProperty.Manager.name,
-                                 AdapterProperty.Endpoint_Protection_Platform.name,
-                                 AdapterProperty.Vulnerability_Assessment.name
-                                 ]
-        for property in partial_property_list:
-            coverage_list.append({'property': property,
-                                  'portion': self.aggregator_db_connection['devices_db_view'].find(
-                                      {'specific_data.adapter_properties': property}).count() / devices_count})
+        coverage_list = [
+            {'title': 'Managed', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name]},
+            {'title': 'EPP', 'properties': [AdapterProperty.Endpoint_Protection_Platform.name]},
+            {'title': 'Vulnerability', 'properties': [AdapterProperty.Vulnerability_Assessment.name]}
+        ]
+        for item in coverage_list:
+            item['portion'] = self.aggregator_db_connection['devices_db_view'].find(
+                {'specific_data.adapter_properties': {'$in': item['properties']}}).count() / devices_count
         return jsonify(coverage_list)
 
     @add_rule_unauthenticated("research_phase", methods=['POST'])

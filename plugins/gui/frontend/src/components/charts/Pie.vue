@@ -1,9 +1,8 @@
 <template>
     <svg class="pie" viewBox="-1 -1 2 2">
-        <g v-for="item, index in slices" @click="$emit('click-slice', item.name)" v-tooltip.right="title">
+        <g v-for="item, index in slices" @click="$emit('click-slice', index)">
             <path :d="item.path" :class="item.class" class="filling clickable"></path>
-            <text dx="1.5em" dy="1em" text-anchor="middle" class="scaling"
-                  v-if="item.name">{{Math.round(item.portion * 100)}}%</text>
+            <text dx="1.5em" dy="1em" text-anchor="middle" class="scaling" v-if="item.percentage">{{item.percentage}}%</text>
         </g>
     </svg>
 </template>
@@ -11,7 +10,7 @@
 <script>
 	export default {
 		name: 'x-pie-chart',
-        props: {data: {required: true}, title: {}},
+        props: {data: {required: true}},
         computed: {
 			slices() {
 				let cumulativePortion = 0
