@@ -7,9 +7,9 @@
         </select>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
-        <label class="btn-light checkbox-label" :class="{'active': expression.leftBracket}">
+        <label class="x-btn light checkbox-label" :class="{'active': expression.leftBracket}">
             <input type="checkbox" v-model="expression.leftBracket">(</label>
-        <label class="btn-light checkbox-label" :class="{'active': expression.not}">
+        <label class="x-btn light checkbox-label" :class="{'active': expression.not}">
             <input type="checkbox" v-model="expression.not">NOT</label>
 
         <x-graded-select v-model="expression.field" placeholder="FIELD..." :options="fields"/>
@@ -30,7 +30,7 @@
         </template>
         <template v-else><select></select><input disabled></template>
         <!-- Option to add ')' and to remove the expression -->
-        <label class="btn-light checkbox-label" :class="{'active': expression.rightBracket}">
+        <label class="x-btn light checkbox-label" :class="{'active': expression.rightBracket}">
             <input type="checkbox" v-model="expression.rightBracket">)</label>
         <div class="link" @click="$emit('remove')">x</div>
     </div>
@@ -252,13 +252,9 @@
                 margin: 0;
             }
         }
-        .btn-light {
+        .x-btn.light {
             input {
                 display: none;
-            }
-            &.active {
-                background-color: #555;
-                color: $border-color;
             }
         }
         .link {

@@ -139,6 +139,48 @@ table {
   }
 }
 
+.x-btn {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease-in;
+  color: $theme-white;
+  background-color: $theme-blue;
+  line-height: 30px;
+  padding: 4px;
+  text-align: center;
+  &:hover { box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2); }
+  &.light {
+    background-color: $theme-gray-light;
+    color: $theme-black;
+    width: 30px;
+    height: 30px;
+    line-height: 24px;
+    &.active {
+      background-color: $theme-black;
+      color: $theme-gray-light;
+    }
+  }
+  &.right {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  &.link {
+    margin: auto;
+    background-color: transparent;
+    color: $theme-black;
+    .svg-fill { fill: $theme-black; }
+    .svg-stroke { stroke: $theme-black; }
+    &:hover {
+      box-shadow: none;
+      text-shadow: 1px 1px rgba(0, 0, 0, 0.2);
+      .svg-fill { fill: $theme-orange; }
+      .svg-stroke { stroke: $theme-orange; }
+    }
+  }
+  .svg-fill { fill: $theme-white; }
+  .svg-stroke { stroke: $theme-white; }
+}
+
 .sortable {
   .x-sort {
     position: relative;

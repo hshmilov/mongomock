@@ -19,7 +19,8 @@ module.exports = {
                     extractCSS: true,
 					loaders: {
 						scss: 'vue-style-loader!css-loader!sass-loader?data=@import "./src/scss/config.scss";'
-					}
+					},
+
                 },
             },
             {

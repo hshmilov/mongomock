@@ -36,14 +36,25 @@
                                  @error="filterValid = false" :rebuild="rebuild"/>
                 <div class="row">
                     <div class="form-group place-right">
-                        <a class="btn btn-inverse" @click="clearFilter">Clear</a>
-                        <a class="btn" @click="rebuildFilter">Search</a>
+                        <a class="x-btn link" @click="clearFilter">Clear</a>
+                        <a class="x-btn" @click="rebuildFilter">Search</a>
                     </div>
                 </div>
             </div>
         </triggerable-dropdown>
         <!-- Button controlling the execution of currently filled query -->
-        <a class="btn btn-adjoined" @click="submitFilter(searchValue)">go</a>
+        <a class="x-btn right" @click="submitFilter">
+            <svg-icon name="action/search" :original="true" height="24"></svg-icon>
+        </a>
+        <a class="x-btn link" @click="openSaveQuery">
+            <svg-icon name="action/save" :original="true" height="18"></svg-icon>
+        </a>
+        <modal v-if="saveModal.isActive" @close="closeSaveQuery" approveText="save" @confirm="confirmSaveQuery">
+            <div slot="body" class="form-group">
+                <label class="form-label" for="saveName">Save as:</label>
+                <input class="form-control" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveQuery">
+            </div>
+        </modal>
     </div>
 </template>
 
@@ -52,15 +63,16 @@
     import NestedMenu from '../menus/NestedMenu.vue'
     import NestedMenuItem from '../menus/NestedMenuItem.vue'
     import xSchemaFilter from '../schema/SchemaFilter.vue'
+	import Modal from '../../components/popover/Modal.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { UPDATE_DATA_VIEW } from '../../store/mutations'
-    import { FETCH_DATA_QUERIES } from '../../store/actions'
+    import { FETCH_DATA_QUERIES, SAVE_DATA_QUERY } from '../../store/actions'
 	import { expression } from '../../mixins/filter'
 
 	export default {
 		name: 'x-data-query',
-		components: {TriggerableDropdown, NestedMenu, NestedMenuItem, xSchemaFilter},
+		components: { TriggerableDropdown, NestedMenu, NestedMenuItem, xSchemaFilter, Modal },
 		props: {module: {required: true}, schema: {}, selected: {}, limit: {default: 5}},
 		computed: {
 			...mapState({
@@ -131,7 +143,11 @@
 			return {
 				searchValue: '',
                 filterValid: true,
-                rebuild: false
+                rebuild: false,
+                saveModal: {
+					isActive: false,
+                    name: ''
+                }
 			}
 		},
         watch: {
@@ -142,7 +158,7 @@
 		methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
 			...mapActions({
-				fetchQueries: FETCH_DATA_QUERIES,
+				fetchQueries: FETCH_DATA_QUERIES, saveQuery: SAVE_DATA_QUERY,
 			}),
 			searchQuery () {
 				if (this.complexSearch) return
@@ -190,6 +206,20 @@
             },
             executeFilter () {
 				this.updateView({ module: this.module, view: { page: 0 } })
+            },
+            openSaveQuery() {
+            	this.saveModal.isActive = true
+            },
+            closeSaveQuery() {
+            	this.saveModal.isActive = false
+            },
+            confirmSaveQuery() {
+				if (!this.saveModal.name) return
+
+				this.saveQuery({
+					module: this.module,
+					name: this.saveModal.name
+				}).then(() => this.saveModal.isActive = false)
             }
 		},
         created() {
@@ -202,7 +232,6 @@
 </script>
 
 <style lang="scss">
-
     .data-query {
         display: flex;
         width: 100%;
@@ -240,10 +269,6 @@
                     }
                 }
             }
-        }
-        .btn.btn-adjoined {
-            vertical-align: middle;
-            line-height: 30px;
         }
     }
 </style>

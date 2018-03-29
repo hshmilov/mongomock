@@ -5,7 +5,7 @@
                              v-model="expressions[i]" :fields="schema"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
-            <div @click="addExpression" class="btn-light">+</div>
+            <div @click="addExpression" class="x-btn light">+</div>
             <div v-if="error" class="error-text">{{ error }}</div>
         </div>
     </div>
@@ -88,22 +88,6 @@
 
 <style lang="scss">
     .filter {
-        .btn-light {
-            cursor: pointer;
-            background-color: $border-color;
-            border-radius: 4px;
-            -webkit-transition: 0.2s ease-in;
-            -o-transition: 0.2s ease-in;
-            transition: 0.2s ease-in;
-            text-align: center;
-            width: 30px;
-            line-height: 30px;
-            height: 30px;
-            &:hover {
-                -webkit-box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
-                box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
-            }
-        }
         .expression-container {
             display: grid;
             grid-template-columns: auto 20px;

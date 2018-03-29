@@ -11,6 +11,7 @@ export const user = {
 					'specific_data.data.last_seen', 'specific_data.data.is_admin',
 				], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
 			},
+			views: { data: [], fetching: false, error: '' },
 			fields:  {data: [], fetching: false, error: ''},
 			queries: {
 				saved: { data: [], fetching: false, error: ''},

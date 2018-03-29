@@ -5,7 +5,7 @@ import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW,
-	UPDATE_DATA_FIELDS, UPDATE_DATA_QUERIES
+	UPDATE_DATA_FIELDS, UPDATE_DATA_QUERIES, ADD_DATA_QUERY
 } from './mutations'
 
 let host = ''
@@ -172,7 +172,7 @@ export const saveDataQuery = ({state, dispatch, commit}, payload) => {
 		data: queryObj
 	}).then((response) => {
 		if (response.status === 200) {
-			commit(ADD_DATA_VIEW, {module: payload.module, query: queryObj})
+			commit(ADD_DATA_QUERY, {module: payload.module, query: queryObj})
 		}
 	}).catch(console.log.bind(console))
 }

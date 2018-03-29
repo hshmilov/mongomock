@@ -1,6 +1,5 @@
 <template>
     <x-page title="devices">
-        <a slot="pageAction" @click="openSaveModal(confirmSaveQuery)">Save Query</a>
         <x-data-query module="device" :schema="coloumnSelectionFields" :selected="selectedFields"/>
 
         <x-data-table module="device" :fields="tableFields" id-field="internal_axon_id"
@@ -55,7 +54,7 @@
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
     import { FETCH_SETTINGS } from '../../store/modules/settings'
 	import {
-		FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS, SAVE_DATA_QUERY
+		FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS
 	} from '../../store/actions'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
 
@@ -151,7 +150,6 @@
 			...mapActions({
 				fetchDataFields: FETCH_DATA_FIELDS,
 				fetchDevice: FETCH_DEVICE,
-				saveQuery: SAVE_DATA_QUERY,
 				fetchLabels: FETCH_LABELS,
 				fetchAdapters: FETCH_ADAPTERS,
                 fetchDataViews: FETCH_DATA_VIEWS,
@@ -162,14 +160,6 @@
 				this.saveModal.open = true
                 this.saveModal.handleConfirm = confirmHandler
             },
-			confirmSaveQuery () {
-				if (!this.saveModal.name) return
-
-				this.saveQuery({
-                    module: 'device',
-					name: this.saveModal.name
-				}).then(() => this.saveModal.open = false)
-			},
             confirmSaveView () {
 				if (!this.saveModal.name) return
 
