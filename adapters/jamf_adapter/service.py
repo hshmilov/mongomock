@@ -1,7 +1,7 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.consts import adapter_consts
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.parsing_utils import format_ip
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
@@ -27,7 +27,7 @@ class JamfProfile(SmartJsonClass):
 
 
 class JamfAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         public_ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
         policies = ListField(JamfPolicy, "Jamf Policies")
         profiles = ListField(JamfProfile, "Jamf Profiles")
@@ -116,7 +116,7 @@ class JamfAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             general_info = device_raw['general']
             device.hostname = general_info.get('name', '')
             device.id = general_info.get('udid', '')

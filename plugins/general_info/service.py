@@ -3,8 +3,8 @@ import threading
 import functools
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
-from axonius.devices.device import Device
-from axonius.users.user import User
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.mixins.triggerable import Triggerable
 from axonius.parsing_utils import get_exception_string
 from axonius.utils.files import get_local_config_file
@@ -30,10 +30,10 @@ subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo
 
 
 class GeneralInfoService(PluginBase, Triggerable):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         general_info_last_success_execution = Field(datetime, "Last General Info Success")
 
-    class MyUser(User):
+    class MyUserAdapter(UserAdapter):
         pass
 
     def __init__(self, *args, **kargs):
@@ -241,7 +241,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         # 2. Go over all users. for each user, associate all known devices.
         for username, linked_devices_and_users_list in users.items():
             # Create the new adapterdata for that user
-            adapterdata_user = self._new_user()
+            adapterdata_user = self._new_user_adapter()
 
             # Find that user
             user = list(self.users.get(data={"id": username}))
@@ -254,7 +254,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             elif len(user) == 0:
                 # user does not exists, create it.
                 self.logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
-                user_dict = self._new_user()
+                user_dict = self._new_user_adapter()
                 user_dict.id = username  # Should be the unique identifier of that user.
                 user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
                 user_dict.is_local = True
@@ -294,7 +294,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             user.add_adapterdata(adapterdata_user.to_dict())
 
-        self._save_user_field_names_to_db()
+        self._save_field_names_to_db("users")
 
     def _handle_wmi_execution_success(self, device, data):
         try:
@@ -318,7 +318,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             queries_response_index = 0
 
             # Create a new device, since these subplugins will have some generic info enrichments.
-            adapterdata_device = self._new_device()
+            adapterdata_device = self._new_device_adapter()
             all_error_logs = []
 
             for subplugin in subplugins_list:
@@ -357,7 +357,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
             # Fixme: running all queries.
-            self._save_field_names_to_db()
+            self._save_field_names_to_db("devices")
 
             if len(all_error_logs) > 0:
                 is_execution_exception = True

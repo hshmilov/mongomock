@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 
@@ -12,7 +12,7 @@ from axonius.parsing_utils import parse_date
 
 class GotoassistAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         company_id = Field(str, 'Company ID')
         machine_status = Field(str, 'Machine Status')
 
@@ -90,7 +90,7 @@ class GotoassistAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                device = self._new_device()
+                device = self._new_device_adapter()
                 device_id = device_raw.get("machineUuid")
                 if device_id is None:
                     self.logger.warning("Warning! machineUuid is None..")

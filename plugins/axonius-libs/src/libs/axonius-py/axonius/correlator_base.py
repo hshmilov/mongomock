@@ -7,7 +7,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from namedlist import namedlist
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.devices.device import MAC_FIELD, OS_FIELD, NETWORK_INTERFACES_FIELD
+from axonius.devices.device_adapter import MAC_FIELD, OS_FIELD, NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import PluginBase
 from axonius.mixins.activatable import Activatable
 from axonius.mixins.triggerable import Triggerable

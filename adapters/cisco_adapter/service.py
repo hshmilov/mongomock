@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from cisco_adapter.client import CiscoClient
 
@@ -11,7 +11,7 @@ PASSWORD = 'password'
 
 class CiscoAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self):
@@ -63,7 +63,7 @@ class CiscoAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.id = device_raw['ip']
             device.add_nic(device_raw['mac'], [device_raw['ip']], self.logger)
             device.scanner = True

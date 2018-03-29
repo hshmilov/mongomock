@@ -56,7 +56,7 @@ def get_exception_string():
     return ex_str
 
 
-class WMIRunner(object):
+class WmiSmbRunner(object):
     """
     Runs WMI queries and methods on a given host.
     """
@@ -64,7 +64,7 @@ class WMIRunner(object):
     def __init__(self, address, username, password, domain='', dc_ip=None, lmhash='', nthash='', aes_key=None,
                  use_kerberos=False, rpc_auth_level="default", namespace="//./root/cimv2"):
         """
-        Initializes a WMIRunner object.
+        Initializes a WmiSmbRunner object.
         :param address: the ip of the host we are connecting to.
         :param username: The username we use.
         :param password: The password of that username.
@@ -517,7 +517,7 @@ if __name__ == '__main__':
         for _ in range(MAX_NUM_OF_TRIES_OVERALL):
             # If we have something left, lets connect and run it.
             if any(queries_left):
-                with WMIRunner(address, username, password, domain=domain) as w:
+                with WmiSmbRunner(address, username, password, domain=domain) as w:
                     # First, add every one needed.
                     for i, is_left in enumerate(queries_left):
                         if is_left is True:

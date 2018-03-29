@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from symantec_adapter.connection import SymantecConnection
@@ -10,7 +10,7 @@ import datetime
 
 class SymantecAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         online_status = Field(str, 'Online Status')
         agent_version = Field(str, 'Agent Version')
 
@@ -96,7 +96,7 @@ class SymantecAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             if device_raw.get('domainOrWorkgroup', '') == 'WORKGROUP' or device_raw.get('domainOrWorkgroup', '') == '':
                 # Special case for workgroup
                 device.hostname = device_raw.get('computerName', '')

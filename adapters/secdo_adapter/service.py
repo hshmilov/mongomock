@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 
@@ -12,7 +12,7 @@ import datetime
 
 class SecdoAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         agent_state = Field(str, 'Agent State')
 
@@ -89,7 +89,7 @@ class SecdoAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                device = self._new_device()
+                device = self._new_device_adapter()
                 device.id = device_raw.get("agentId")
                 if device.id is None:
                     continue

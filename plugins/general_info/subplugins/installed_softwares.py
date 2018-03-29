@@ -1,6 +1,6 @@
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_query_commands, smb_shell_commands, is_wmi_answer_ok
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 
 
 GET_INSTALLED_SOFTWARE_COMMANDS = [
@@ -28,7 +28,7 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         return wmi_query_commands(["select Vendor, Name, Version, InstallState from Win32_Product"]) + \
             smb_shell_commands(GET_INSTALLED_SOFTWARE_COMMANDS)
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
 
         installed_software = set()

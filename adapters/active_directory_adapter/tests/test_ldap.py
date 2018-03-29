@@ -16,7 +16,8 @@ DOMAIN_NAME, USERNAME = ad_client1_details["user"].split("\\")
 PASSWORD = ad_client1_details["password"]
 ADDRESS = ad_client1_details["dc_name"]
 
-WMI_RUNNER_LOCATION = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "wmirunner", "wmi_runner.py"))
+WMI_SMB_RUNNER_LOCATION = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "wmi_smb_runner", "wmi_smb_runner.py"))
 
 
 @pytest.fixture(scope="module")
@@ -71,7 +72,7 @@ def test_wmi():
     ]
 
     p = subprocess.Popen(
-        ["/usr/bin/python2", WMI_RUNNER_LOCATION, DOMAIN, USERNAME, PASSWORD, ADDRESS,
+        ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, DOMAIN, USERNAME, PASSWORD, ADDRESS,
          json.dumps(commands)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     start = time.time()

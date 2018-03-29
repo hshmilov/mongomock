@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device, MAC_FIELD
+from axonius.devices.device_adapter import DeviceAdapter, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from puppet_adapter.connection import PuppetConnection
 from puppet_adapter.exceptions import PuppetException
@@ -17,7 +17,7 @@ class PuppetAdapter(AdapterBase):
 
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         version = Field(str, "Puppet Version")
 
     def __init__(self):
@@ -121,7 +121,7 @@ class PuppetAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = device_raw['hostname']
             device.figure_os(' '.join([device_raw["operatingsystem"],
                                        device_raw["architecture"],

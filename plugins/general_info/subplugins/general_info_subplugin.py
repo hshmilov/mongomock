@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.logger_wrapper import LoggerWrapper
 from axonius.plugin_base import PluginBase
 from general_info.subplugins.wmi_utils import check_wmi_answers_integrity
@@ -34,7 +34,7 @@ class GeneralInfoSubplugin(ABC):
         """
         pass
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         """
         Parses the result of the wmi queries.
 

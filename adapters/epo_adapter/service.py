@@ -3,7 +3,7 @@ import ipaddress
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import ListField, Field
 from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
 from axonius.utils.files import get_local_config_file
@@ -74,7 +74,7 @@ class EpoAdapter(AdapterBase):
     Connects axonius to mcafee epo
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         epo_products = ListField(str, "EPO Products")
         epo_agent_version = Field(str, "EPO Agent Version")
 
@@ -131,7 +131,7 @@ class EpoAdapter(AdapterBase):
                 self.logger.warning(f"Found device with no date. Not inserting to db. device name: {hostname}")
                 continue
 
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = hostname
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
             device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32

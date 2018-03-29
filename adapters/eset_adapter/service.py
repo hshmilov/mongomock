@@ -3,7 +3,7 @@ import ctypes
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.parsing_utils import format_mac, parse_date
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 import axonius.adapter_exceptions
 from axonius.utils.files import get_local_config_file
 from eset_adapter.client import EsetClient
@@ -22,7 +22,7 @@ class EsetAdapter(AdapterBase):
     Connects axonius to Eset Remote Administrator (ERA)
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self, **kwargs):
@@ -97,7 +97,7 @@ class EsetAdapter(AdapterBase):
 
     def _parse_raw_data(self, raw_data):
         for entry in raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = entry.get('Computer name', '')
             mac_address = format_mac(entry.get('MAC address', ''))
             device.id = mac_address

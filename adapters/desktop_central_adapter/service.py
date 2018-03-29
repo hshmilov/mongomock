@@ -2,7 +2,7 @@ import json
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from desktop_central_adapter.connection import DesktopCentralConnection
@@ -11,7 +11,7 @@ from desktop_central_adapter.exceptions import DesktopCentralException
 
 class DesktopCentralAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         installation_status = Field(str, 'Installation Status')
 
@@ -94,7 +94,7 @@ class DesktopCentralAdapter(AdapterBase):
                     continue
                 # 22 Means installed
                 # In case there is no such field we don't want to miss the device
-                device = self._new_device()
+                device = self._new_device_adapter()
                 device.domain = device_raw.get("domain_netbios_name", "")
                 device.hostname = device_raw.get("full_name", "")
                 device.figure_os(' '.join([device_raw.get("os_name", ""),

@@ -18,8 +18,8 @@ from typing import Iterable, Tuple, List
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
-from axonius.devices.device import Device, LAST_SEEN_FIELD
-from axonius.users.user import User, USER_LAST_SEEN_FIELD
+from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
+from axonius.users.user_adapter import UserAdapter, USER_LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
 from axonius.parsing_utils import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
@@ -349,7 +349,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         skipped_count = 0
         for parsed_user in self._parse_users_raw_data(raw_users):
-            assert isinstance(parsed_user, User)
+            assert isinstance(parsed_user, UserAdapter)
             parsed_user = parsed_user.to_dict()
             parsed_user = self._remove_big_keys(parsed_user, parsed_user.get('id', 'unidentified user'))
             if self.is_old_user(parsed_user):
@@ -358,7 +358,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
             yield parsed_user
 
-        self._save_user_field_names_to_db()
+        self._save_field_names_to_db("users")
 
         if skipped_count > 0:
             self.logger.info(f"Skipped {skipped_count} old users")
@@ -767,7 +767,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         skipped_count = 0
         for parsed_device in self._parse_raw_data(raw_devices):
-            assert isinstance(parsed_device, Device)
+            assert isinstance(parsed_device, DeviceAdapter)
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device.get('id', 'unidentified device'))
             if self._is_old_device_by_last_seen(parsed_device):
@@ -776,7 +776,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
             yield parsed_device
 
-        self._save_field_names_to_db()
+        self._save_field_names_to_db("devices")
 
         if skipped_count > 0:
             self.logger.info(f"Skipped {skipped_count} old devices")
@@ -871,11 +871,14 @@ class AdapterBase(PluginBase, Feature, ABC):
             except adapter_exceptions.CredentialErrorException as e:
                 self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
+                raise
             except adapter_exceptions.AdapterException as e:
                 self.logger.exception(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
+                raise
             except Exception as e:
                 self.logger.exception(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                raise
             else:
                 data_list = {'raw': raw_data,
                              'parsed': parsed_data}
@@ -893,7 +896,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         pass
 
     @abstractmethod
-    def _parse_raw_data(self, devices_raw_data) -> Iterable[Device]:
+    def _parse_raw_data(self, devices_raw_data) -> Iterable[DeviceAdapter]:
         """
         To be implemented by inheritors
         Will convert 'raw data' of one device (as the inheritor pleases to refer to it) to 'parsed'

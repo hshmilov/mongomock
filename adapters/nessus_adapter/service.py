@@ -1,7 +1,7 @@
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_base import AdapterProperty
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
 from nessus_adapter.exceptions import NessusException
@@ -17,7 +17,7 @@ PASSWORD = 'password'
 class NessusAdapter(ScannerAdapterBase):
     """ An adapter for Tenable's Nessus Vulnerability scanning platform. """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self):
@@ -138,7 +138,7 @@ class NessusAdapter(ScannerAdapterBase):
         :return: Data structured as expected by adapters
         """
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
                            [device_raw.get('info', {}).get('host-ip', '')], self.logger)

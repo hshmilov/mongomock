@@ -1,12 +1,12 @@
 import csv
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 
 
 class CsvAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self):
@@ -50,7 +50,7 @@ class CsvAdapter(AdapterBase):
 
     def _parse_raw_data(self, raw_data):
         for asset_name, serial in raw_data['data']:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.name = asset_name
             device.id = serial
             device.set_raw({"name": asset_name, "id": serial})

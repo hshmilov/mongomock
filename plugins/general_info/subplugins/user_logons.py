@@ -3,7 +3,7 @@ import datetime
 import threading
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, is_wmi_answer_ok
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 
 USERS_QUERY_TRESHOLD_HOURS = 1  # Hours to query users_to_sids per each adapter
 
@@ -65,7 +65,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                 "select SID,Caption, LocalAccount from Win32_UserAccount"
             ])
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
         if not all(is_wmi_answer_ok(a) for a in result):
             self.logger.error("Not handling result, result has exception")

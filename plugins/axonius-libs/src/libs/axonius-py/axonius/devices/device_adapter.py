@@ -11,7 +11,7 @@ from axonius.utils.mongo_escaping import escape_dict
 """
 
 
-class DeviceOS(SmartJsonClass):
+class DeviceAdapterOS(SmartJsonClass):
     """ A definition for the json-scheme for an OS (of a device) """
     type = Field(str, 'OS', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare'])
     distribution = Field(str, 'OS Distribution')
@@ -23,7 +23,7 @@ class DeviceOS(SmartJsonClass):
     minor = Field(int, 'OS Minor')
 
 
-class NetworkInterface(SmartJsonClass):
+class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     mac = Field(str, 'Mac', converter=format_mac)
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
@@ -31,7 +31,7 @@ class NetworkInterface(SmartJsonClass):
                         converter=format_ip_raw)
 
 
-class DeviceHD(SmartJsonClass):
+class DeviceAdapterHD(SmartJsonClass):
     """ A definition for hard drives on that device. On windows, that would be a drive.
     On linux and mac, we need to think what it is (not sure its mounts...) """
 
@@ -42,7 +42,7 @@ class DeviceHD(SmartJsonClass):
     file_system = Field(str, "HD Filesystem")
 
 
-class DeviceCPU(SmartJsonClass):
+class DeviceAdapterCPU(SmartJsonClass):
     """ A definition for cpu's """
 
     name = Field(str, "CPU Description")
@@ -53,7 +53,7 @@ class DeviceCPU(SmartJsonClass):
     ghz = Field(float, "CPU Clockspeed (GHZ)")
 
 
-class DeviceBattery(SmartJsonClass):
+class DeviceAdapterBattery(SmartJsonClass):
     """ A definition for a battery"""
 
     percentage = Field(int, "Battery Percentage")
@@ -62,7 +62,7 @@ class DeviceBattery(SmartJsonClass):
                                                 "Charging and Critical", "Undefined", "Partially Charged"])
 
 
-class DeviceUser(SmartJsonClass):
+class DeviceAdapterUser(SmartJsonClass):
     """ A definition for users known by this device"""
 
     username = Field(str, "Known User")
@@ -74,14 +74,14 @@ class DeviceUser(SmartJsonClass):
     origin_unique_adapter_data_id = Field(str)
 
 
-class DeviceSecurityPatch(SmartJsonClass):
+class DeviceAdapterSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
     security_patch_id = Field(str, "Security Patch Name")
     installed_on = Field(datetime.datetime)
 
 
-class DeviceInstalledSoftware(SmartJsonClass):
+class DeviceAdapterInstalledSoftware(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
     vendor = Field(str, "Software Vendor")
@@ -89,21 +89,21 @@ class DeviceInstalledSoftware(SmartJsonClass):
     version = Field(str)
 
 
-class Device(SmartJsonClass):
+class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
     name = Field(str, 'Asset Name')
     hostname = Field(str, 'Host Name')
     last_seen = Field(datetime.datetime, 'Last Seen')
-    network_interfaces = ListField(NetworkInterface, 'Network Interfaces')
-    os = Field(DeviceOS)
+    network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces')
+    os = Field(DeviceAdapterOS)
     last_used_users = ListField(str, "Last Used User")
-    installed_software = ListField(DeviceInstalledSoftware, "Installed Software")
-    security_patches = ListField(DeviceSecurityPatch, "Security Patch")
+    installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
+    security_patches = ListField(DeviceAdapterSecurityPatch, "Security Patch")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")
-    users = ListField(DeviceUser, "Users")
+    users = ListField(DeviceAdapterUser, "Users")
     pretty_id = Field(str, 'Axonius Name')
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
@@ -113,8 +113,8 @@ class Device(SmartJsonClass):
                                           "Enterprise Server", "SOHO Server", "Appliance PC", "Performance Server",
                                           "Maximum"])
     number_of_processes = Field(int, "Number Of Processes")
-    hard_drives = ListField(DeviceHD, "Hard Drives")
-    cpus = ListField(DeviceCPU, "CPUs")
+    hard_drives = ListField(DeviceAdapterHD, "Hard Drives")
+    cpus = ListField(DeviceAdapterCPU, "CPUs")
     boot_time = Field(datetime.datetime, 'Boot Time')
     time_zone = Field(str, 'Time Zone')
     bios_version = Field(str, "Bios Version")
@@ -124,7 +124,7 @@ class Device(SmartJsonClass):
     physical_memory_percentage = Field(float, "RAM Usage (%)")
     total_number_of_physical_processors = Field(int, "Total Physical Processors")
     total_number_of_cores = Field(int, "Total Cores")
-    batteries = ListField(DeviceBattery, "Battery")
+    batteries = ListField(DeviceAdapterBattery, "Battery")
     current_logged_user = Field(str, "Currently Logged User")
     scanner = Field(bool, 'Scanner')
 
@@ -163,7 +163,7 @@ class Device(SmartJsonClass):
         :param ips: an IP list
         :param logger: a python logger, if provided will record and suppress all parsing exceptions
         """
-        nic = NetworkInterface()
+        nic = DeviceAdapterNetworkInterface()
         if mac is not None:
             try:
                 nic.mac = mac
@@ -193,31 +193,31 @@ class Device(SmartJsonClass):
         os_dict = figure_out_os(os_string)
         if os_dict is None:
             return
-        self.os = DeviceOS(**os_dict)
+        self.os = DeviceAdapterOS(**os_dict)
 
     def add_battery(self, **kwargs):
-        self.batteries.append(DeviceBattery(**kwargs))
+        self.batteries.append(DeviceAdapterBattery(**kwargs))
 
     def add_hd(self, **kwargs):
-        self.hard_drives.append(DeviceHD(**kwargs))
+        self.hard_drives.append(DeviceAdapterHD(**kwargs))
 
     def add_cpu(self, **kwargs):
-        self.cpus.append(DeviceCPU(**kwargs))
+        self.cpus.append(DeviceAdapterCPU(**kwargs))
 
     def add_users(self, **kwargs):
-        self.users.append(DeviceUser(**kwargs))
+        self.users.append(DeviceAdapterUser(**kwargs))
 
     def add_security_patch(self, **kwargs):
-        self.security_patches.append(DeviceSecurityPatch(**kwargs))
+        self.security_patches.append(DeviceAdapterSecurityPatch(**kwargs))
 
     def add_installed_software(self, **kwargs):
-        self.installed_software.append(DeviceInstalledSoftware(**kwargs))
+        self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))
 
 
-NETWORK_INTERFACES_FIELD = Device.network_interfaces.name
-SCANNER_FIELD = Device.scanner.name
-LAST_SEEN_FIELD = Device.last_seen.name
-OS_FIELD = Device.os.name
+NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name
+SCANNER_FIELD = DeviceAdapter.scanner.name
+LAST_SEEN_FIELD = DeviceAdapter.last_seen.name
+OS_FIELD = DeviceAdapter.os.name
 
-MAC_FIELD = NetworkInterface.mac.name
-IPS_FIELD = NetworkInterface.ips.name
+MAC_FIELD = DeviceAdapterNetworkInterface.mac.name
+IPS_FIELD = DeviceAdapterNetworkInterface.ips.name

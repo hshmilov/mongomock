@@ -4,7 +4,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME
 
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.parsing_utils import normalize_adapter_device, is_different_plugin, compare_ips, macs_do_not_contradict, \
     hostnames_do_not_contradict, and_function, or_function
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
@@ -71,7 +71,7 @@ class NexposeScannerCorrelator(ScannerCorrelatorBase):
 class NexposeAdapter(ScannerAdapterBase):
     """ Adapter for Rapid7's nexpose """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         risk_score = Field(float, 'Risk score')
 
     def __init__(self):
@@ -126,7 +126,7 @@ class NexposeAdapter(ScannerAdapterBase):
 
             for device_raw in devices_raw_data:
                 try:
-                    yield api_client_class.parse_raw_device(device_raw, self._new_device, self.logger)
+                    yield api_client_class.parse_raw_device(device_raw, self._new_device_adapter, self.logger)
                 except Exception as err:
                     self.logger.exception(f"Caught exception from parsing using the {api_client_class.__name__}.")
                     failed_to_parse += 1

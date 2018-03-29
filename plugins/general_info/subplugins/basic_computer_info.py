@@ -1,4 +1,4 @@
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.parsing_utils import parse_date
 from axonius.utils import str2bool
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
@@ -35,7 +35,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         ]
         )
 
-    def handle_result(self, device, executer_info, result, adapterdata_device: Device):
+    def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
         # Put Results
         win32_processor = result[0]["data"]

@@ -1,13 +1,13 @@
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from splunk_nexpose_adapter.connection import SplunkConnection
 
 
 class SplunkNexposeAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self):
@@ -97,7 +97,7 @@ class SplunkNexposeAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = device_raw.get('hostname', '')
             device.figure_os(device_raw.get('version', device_raw.get('os')))
             device.add_nic(device_raw.get('mac'), [device_raw.get('ip')], self.logger)

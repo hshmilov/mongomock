@@ -2,7 +2,7 @@ import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 
 from sentinelone_adapter.connection import SentinelOneConnection
@@ -30,7 +30,7 @@ sentinelone_ID_Matcher = {
 
 class SentineloneAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         active_state = Field(str, 'Active State')
 
@@ -131,7 +131,7 @@ class SentineloneAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             soft_info = device_raw.get('software_information', {})
             net_info = device_raw.get('network_information', {})
-            device = self._new_device()
+            device = self._new_device_adapter()
             computer_name, domain = net_info.get('computer_name'), net_info.get('domain')
             if computer_name is not None:
                 hostname = computer_name

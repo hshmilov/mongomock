@@ -5,7 +5,7 @@ import sys
 
 from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.devices.device import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
+from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 from static_correlator.engine import StaticCorrelatorEngine
 
 

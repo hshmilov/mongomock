@@ -3,7 +3,7 @@ from pyVmomi import vim
 
 from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.parsing_utils import parse_date
 from axonius.utils.files import get_local_config_file
@@ -28,7 +28,7 @@ class ESXDeviceType(Enum):
 
 
 class EsxAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
         vm_physical_path = Field(str, 'VM physical path')
         power_state = Field(DeviceRunningState, 'VM Power state')
@@ -108,7 +108,7 @@ class EsxAdapter(AdapterBase):
         guest = details.get('guest', {})
         config = details.get('config', {})
 
-        device = self._new_device()
+        device = self._new_device_adapter()
         device.name = node.get('Name', '')
         device.figure_os(config.get('guestFullName', ''))
         try:

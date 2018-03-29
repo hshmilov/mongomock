@@ -328,7 +328,7 @@ def extract_all_ips(network_ifs):
     :param network_ifs: the network_ifs as appear in the axonius device scheme
     :return: yields every ip in the network interfaces
     """
-    from axonius.devices.device import IPS_FIELD
+    from axonius.devices.device_adapter import IPS_FIELD
     if network_ifs is None:
         return
     for network_if in network_ifs:
@@ -341,7 +341,7 @@ def extract_all_macs(network_ifs):
     :param network_ifs: the network_ifs as appear in the axonius device scheme
     :return: yields every mac in the network interfaces
     """
-    from axonius.devices.device import MAC_FIELD
+    from axonius.devices.device_adapter import MAC_FIELD
     if network_ifs is None:
         return
     for network_if in network_ifs:
@@ -362,7 +362,7 @@ def is_one_subset_of_the_other(first_set, second_set):
 
 
 def compare_os_type(adapter_device1, adapter_device2):
-    from axonius.devices.device import OS_FIELD
+    from axonius.devices.device_adapter import OS_FIELD
     return adapter_device1['data'][OS_FIELD]['type'] == adapter_device2['data'][OS_FIELD]['type']
 
 
@@ -375,7 +375,7 @@ def is_a_scanner(adapter_device):
     checks if the adapters is the result of a scanner device
     :param adapter_device: an adapter device to check
     """
-    from axonius.devices.device import SCANNER_FIELD
+    from axonius.devices.device_adapter import SCANNER_FIELD
     if adapter_device['data'].get(SCANNER_FIELD, False):
         return True
     return False
@@ -390,7 +390,7 @@ def is_from_ad(adapter_device):
 
 
 def get_os_type(adapter_device):
-    from axonius.devices.device import OS_FIELD
+    from axonius.devices.device_adapter import OS_FIELD
     return (adapter_device['data'].get(OS_FIELD) or {}).get('type')
 
 
@@ -404,7 +404,7 @@ def has_mac_or_ip(adapter_data):
     :param adapter_data: the data of the adapter to test
     :return: True if there's at least one MAC or IP
     """
-    from axonius.devices.device import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
+    from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
     return any(x.get(IPS_FIELD) or x.get(MAC_FIELD) for x in (adapter_data.get(NETWORK_INTERFACES_FIELD) or []))
 
 
@@ -498,7 +498,7 @@ def normalize_adapter_device(adapter_device):
     """
     See normalize_adapter_devices
     """
-    from axonius.devices.device import OS_FIELD, NETWORK_INTERFACES_FIELD
+    from axonius.devices.device_adapter import OS_FIELD, NETWORK_INTERFACES_FIELD
     adapter_data = adapter_device['data']
     if has_mac_or_ip(adapter_data):
         ips = set(extract_all_ips(adapter_data[NETWORK_INTERFACES_FIELD]))

@@ -40,8 +40,8 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
-from axonius.devices.device import Device
-from axonius.users.user import User
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
 from axonius.mixins.feature import Feature
 from axonius.utils.debug import is_debug_attached
@@ -207,8 +207,8 @@ class PluginBase(Feature):
     The user request.
 
     """
-    MyDevice = None
-    MyUser = None
+    MyDeviceAdapter = None
+    MyUserAdapter = None
 
     def __init__(self, config_file_path: str, core_data=None, requested_unique_plugin_name=None, *args, **kwargs):
         """ Initialize the class.
@@ -238,19 +238,17 @@ class PluginBase(Feature):
         self.plugin_unique_name = None
         self.api_key = None
 
-        # MyDevice things.
-        self._fields_set = set()  # contains an Adapter specific list of field names.
-        self._raw_fields_set = set()  # contains an Adapter specific list of raw-fields names.
-        self._last_fields_count = (0, 0)  # count of _fields_set and _raw_fields_set when performed the last save to DB
-        self._first_fields_change = True
-        self._fields_db_lock = threading.RLock()
-
-        # MyUser things.
-        self._user_fields_set = set()  # contains an User specific list of field names.
-        self._user_raw_fields_set = set()  # contains a User specific list of raw-fields names.
-        self._user_last_fields_count = (0, 0)  # Count when db save is preformed.
-        self._user_first_fields_change = True
-        self._user_fields_db_lock = threading.RLock()
+        # MyDeviceAdapter things.
+        self._entity_adapter_fields = {}
+        for name in ["devices", "users"]:
+            self._entity_adapter_fields[name] = \
+                {
+                    "fields_set": set(),
+                    "raw_fields_set": set(),
+                    "last_fields_count": (0, 0),
+                    "first_fields_change": True,
+                    "fields_db_lock": threading.RLock()
+            }
 
         print(f"{self.plugin_name} is starting")
 
@@ -397,67 +395,55 @@ class PluginBase(Feature):
                                                                                               self.version,
                                                                                               self.lib_version))
 
-    def _save_field_names_to_db(self):
+    def _save_field_names_to_db(self, entity):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """
-        with self._fields_db_lock:
-            last_fields_count, last_raw_fields_count = self._last_fields_count
-            if len(self._fields_set) == last_fields_count and len(self._raw_fields_set) == last_raw_fields_count:
+        if entity == "devices":
+            entity_fields = self._entity_adapter_fields["devices"]
+            collection_name = "device_fields"
+            my_entity = self.MyDeviceAdapter
+        elif entity == "users":
+            entity_fields = self._entity_adapter_fields["users"]
+            collection_name = "user_fields"
+            my_entity = self.MyUserAdapter
+        else:
+            raise ValueError(f"got entity {entity} but expected devices/users!")
+
+        with entity_fields['fields_db_lock']:
+            last_fields_count, last_raw_fields_count = entity_fields['last_fields_count']
+            if len(entity_fields['fields_set']) == last_fields_count and \
+                    len(entity_fields['raw_fields_set']) == last_raw_fields_count:
                 return  # Optimization. Note that this is true only if we don't delete fields!
 
-            self.logger.info("Persisting my fields to DB")
-            fields = list(self._fields_set)  # copy
-            raw_fields = list(self._raw_fields_set)  # copy
+            self.logger.info(f"Persisting {entity} fields to DB")
+            fields = list(entity_fields['fields_set'])  # copy
+            raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
             # Upsert new fields
-            fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['device_fields']
+            fields_collection = self._get_db_connection(True)[self.plugin_unique_name][collection_name]
             fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
-            if self._first_fields_change:
+            if entity_fields['first_fields_change']:
                 fields_collection.update({'name': 'parsed'},
-                                         {'name': 'parsed', 'schema': self.MyDevice.get_fields_info()},
+                                         {'name': 'parsed', 'schema': my_entity.get_fields_info()},
                                          upsert=True)
-                self._first_fields_change = False
+                entity_fields['first_fields_change'] = False
 
             # Save last update count
-            self._last_fields_count = len(fields), len(raw_fields)
+            entity_fields['last_fields_count'] = len(fields), len(raw_fields)
 
-    def _new_device(self) -> Device:
+    def _new_device_adapter(self) -> DeviceAdapter:
         """ Returns a new empty device associated with this adapter. """
-        if self.MyDevice is None:
-            raise ValueError('class MyDevice(Device) class was not declared inside this Adapter class')
-        return self.MyDevice(self._fields_set, self._raw_fields_set)
+        if self.MyDeviceAdapter is None:
+            raise ValueError('class MyDeviceAdapter(Device) class was not declared inside this Adapter class')
+        return self.MyDeviceAdapter(self._entity_adapter_fields['devices']['fields_set'],
+                                    self._entity_adapter_fields['devices']['raw_fields_set'])
 
     # Users.
-    def _new_user(self) -> User:
+    def _new_user_adapter(self) -> UserAdapter:
         """ Returns a new empty User associated with this adapter. """
-        if self.MyUser is None:
-            raise ValueError('class MyUser(user) class was not declared inside this Adapter class')
-        return self.MyUser(self._user_fields_set, self._user_raw_fields_set)
-
-    def _save_user_field_names_to_db(self):
-        """ Saves user_fields_set and user_raw_fields_set to the Plugin's DB """
-        with self._user_fields_db_lock:
-            user_last_fields_count, user_last_raw_fields_count = self._user_last_fields_count
-            if len(self._user_fields_set) == user_last_fields_count and \
-                    len(self._user_raw_fields_set) == user_last_raw_fields_count:
-                return  # Optimization. Note that this is true only if we don't delete fields!
-
-            self.logger.info("Persisting user my fields to DB")
-            user_fields = list(self._user_fields_set)  # copy
-            user_raw_fields = list(self._user_raw_fields_set)  # copy
-
-            # Upsert new fields
-            user_fields_collection = self._get_db_connection(True)[self.plugin_unique_name]['user_fields']
-            user_fields_collection.update({'name': 'raw'},
-                                          {'$addToSet': {'raw': {'$each': user_raw_fields}}},
-                                          upsert=True)
-            if self._user_first_fields_change:
-                user_fields_collection.update({'name': 'parsed'},
-                                              {'name': 'parsed', 'schema': self.MyUser.get_fields_info()},
-                                              upsert=True)
-                self._user_first_fields_change = False
-
-            # Save last update count
-            self.user_last_fields_count = len(user_fields), len(user_raw_fields)
+        if self.MyUserAdapter is None:
+            raise ValueError('class MyUserAdapter(user) class was not declared inside this Adapter class')
+        return self.MyUserAdapter(self._entity_adapter_fields['users']['fields_set'],
+                                  self._entity_adapter_fields['users']['raw_fields_set'])
 
     @classmethod
     def specific_supported_features(cls) -> list:

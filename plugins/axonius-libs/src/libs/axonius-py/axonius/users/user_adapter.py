@@ -9,7 +9,7 @@ from axonius.utils.mongo_escaping import escape_dict
 """
 
 
-class UserDevice(SmartJsonClass):
+class UserAdapterDevice(SmartJsonClass):
     """ A definition for the json-scheme for a device that is associated to a user. """
     device_caption = Field(str, "Associated Device Name")  # The name of the device to be shown in the gui
 
@@ -18,7 +18,7 @@ class UserDevice(SmartJsonClass):
     last_use_date = Field(datetime.datetime)
 
 
-class User(SmartJsonClass):
+class UserAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a User """
 
     image = Field(str, "Image", json_format=JsonStringFormat.image)
@@ -28,7 +28,8 @@ class User(SmartJsonClass):
     is_admin = Field(bool, "Is Admin")
     last_seen_in_devices = Field(datetime.datetime, 'Last Seen In Devices')
     last_seen_in_domain = Field(datetime.datetime, 'Last Seen In Domain')
-    associated_devices = ListField(UserDevice, "Associated Devices", json_format=JsonStringFormat.associated_device)
+    associated_devices = ListField(UserAdapterDevice, "Associated Devices",
+                                   json_format=JsonStringFormat.associated_device)
     member_of = ListField(str, "Member Of")
     is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
     is_locked = Field(bool, "Is Locked")  # If true, account is locked, and the time of lockout is last_lockout_time
@@ -62,7 +63,7 @@ class User(SmartJsonClass):
         target_field_list.add(name)
 
     def add_associated_device(self, **kwargs):
-        self.associated_devices.append(UserDevice(**kwargs))
+        self.associated_devices.append(UserAdapterDevice(**kwargs))
 
     def set_raw(self, raw_data: dict):
         """ Sets the raw fields associated with this device and also updates user_raw_fields.
@@ -75,4 +76,4 @@ class User(SmartJsonClass):
         self._extend_names('raw', raw_data)
 
 
-USER_LAST_SEEN_FIELD = User.last_seen_in_domain.name
+USER_LAST_SEEN_FIELD = UserAdapter.last_seen_in_domain.name

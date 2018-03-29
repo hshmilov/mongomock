@@ -3,7 +3,7 @@ import datetime
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.parsing_utils import format_mac
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from juniper_adapter import consts
 from juniper_adapter.client import JuniperClient
@@ -15,7 +15,7 @@ class JuniperAdapter(AdapterBase):
     Connects axonius to Juniper devices
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         interface = Field(str, 'Interface')
         device_type = Field(str, 'Device Type')
         serial = Field(str, 'Serial')
@@ -56,7 +56,7 @@ class JuniperAdapter(AdapterBase):
             if device_type == 'arp_device':
                 for arp_item in juno_device:
                     try:
-                        device = self._new_device()
+                        device = self._new_device_adapter()
                         device.device_type = device_type
                         device.id = arp_item['mac_address']
                         ip_address = arp_item.get('ipAddr', None)
@@ -69,7 +69,7 @@ class JuniperAdapter(AdapterBase):
                     except Exception as err:
                         self.logger.exception("Got bad arp item with missing data.")
             elif device_type == 'juniper_device':
-                device = self._new_device()
+                device = self._new_device_adapter()
                 device.device_type = device_type
                 device.id = juno_device.get('deviceId')
                 device.name = juno_device.get('name')

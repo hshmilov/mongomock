@@ -1,7 +1,7 @@
 from epo_adapter import service
 import pytest
 
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.parsing_utils import figure_out_os
 from axonius.utils.mongo_escaping import escape_dict
 from unittest.mock import MagicMock
@@ -92,7 +92,7 @@ def test_os():
 
 
 def test_parse_network_positive():
-    device = Device(set(), set())
+    device = DeviceAdapter(set(), set())
     device.network_interfaces = []
     service.parse_network(raw_device_data, device, MagicMock())
     assert len(device.network_interfaces) == 1
@@ -102,7 +102,7 @@ def test_parse_network_positive():
 
 def test_only_mac():
     raw = {'EPOComputerProperties.NetAddress': '06f417360ed8'}
-    device = Device(set(), set())
+    device = DeviceAdapter(set(), set())
     device.network_interfaces = []
     service.parse_network(raw, device, MagicMock())
     assert device.network_interfaces[0].mac == "06:f4:17:36:0e:d8".upper()
@@ -110,7 +110,7 @@ def test_only_mac():
 
 def test_parse_network_no_ipv6_no_mac():
     raw = {'EPOComputerProperties.IPV4x': -1979646028}
-    device = Device(set(), set())
+    device = DeviceAdapter(set(), set())
     device.network_interfaces = []
     service.parse_network(raw, device, MagicMock())
     assert device.network_interfaces[0].ips == ['10.0.255.180']
@@ -118,7 +118,7 @@ def test_parse_network_no_ipv6_no_mac():
 
 def test_parse_network_no_ipv4_no_mac():
     raw = {'EPOComputerProperties.IPV6': '0:0:0:0:0:FFFF:AC1F:154A'}
-    device = Device(set(), set())
+    device = DeviceAdapter(set(), set())
     device.network_interfaces = []
     service.parse_network(raw, device, MagicMock())
     assert sorted(device.network_interfaces[0].ips) == sorted(['172.31.21.74', '::ffff:ac1f:154a'])
@@ -127,7 +127,7 @@ def test_parse_network_no_ipv4_no_mac():
 def test_ip_of_zeroes():
     raw = {'EPOComputerProperties.IPV4x': -2147483648,
            'EPOComputerProperties.IPV6': 'FE80:0:0:0:ECC1:22FF:FED6:AAD4'}
-    device = Device(set(), set())
+    device = DeviceAdapter(set(), set())
     service.parse_network(raw, device, MagicMock())
     assert sorted(device.network_interfaces[0].ips) == sorted(['fe80::ecc1:22ff:fed6:aad4', '0.0.0.0'])
 

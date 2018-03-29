@@ -2,7 +2,7 @@ import requests
 
 from axonius.adapter_base import AdapterBase
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 
 
@@ -12,7 +12,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
     The following is based on https://axonius.atlassian.net/wiki/spaces/AX/pages/398819329/Traiana+17-01-2018
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self):
@@ -84,7 +84,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         devices_raw = raw_data['data']
         for device_raw in devices_raw:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.name = device_raw.get("name", "unknown")
             device.id = device_raw['id']
             device.figure_os(device_raw.get("os", ""))

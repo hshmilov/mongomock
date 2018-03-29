@@ -2,7 +2,7 @@ import dateutil.parser
 
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
@@ -34,7 +34,7 @@ VM_HOST_OUTPUT = 'HOST_LIST_VM_DETECTION_OUTPUT'
 
 
 class QualysScansAdapter(ScannerAdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         qualys_scan_id = Field(str, 'Scan ID given by Qualys')
 
     def __init__(self):
@@ -150,7 +150,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                 self.logger.exception("An Exception was raised while getting and parsing the last_seen field.")
                 continue
 
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = device_raw.get('DNS', device_raw.get('NETBIOS', ''))
             device.figure_os(device_raw.get('OS', ''))
             device.last_seen = last_seen

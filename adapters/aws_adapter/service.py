@@ -5,7 +5,7 @@ import re
 
 from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException, AdapterException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
@@ -69,7 +69,7 @@ class AWSTagKeyValue(SmartJsonClass):
 
 
 class AwsAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         power_state = Field(DeviceRunningState, 'Power state')
         aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
         instance_type = Field(str, "AWS EC2 Instance Type")
@@ -205,7 +205,7 @@ class AwsAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for reservation in devices_raw_data.get('Reservations', []):
             for device_raw in reservation.get('Instances', []):
-                device = self._new_device()
+                device = self._new_device_adapter()
                 tags_dict = {i['Key']: i['Value'] for i in device_raw.get('Tags', {})}
                 for key, value in tags_dict.items():
                     device.add_aws_ec2_tag(key=key, value=value)

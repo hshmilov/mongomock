@@ -8,8 +8,7 @@ from sccm_adapter.exceptions import SccmException
 
 
 class SccmAdapter(AdapterBase):
-
-    class MyDevice(ADDevice):
+    class MyDeviceAdapter(ADDevice):
         pass
 
     def __init__(self):
@@ -87,7 +86,7 @@ class SccmAdapter(AdapterBase):
             if not device_id:
                 self.logger.error(f'Got a device with no distinguished name {device_raw}')
                 continue
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.id = device_id
             device.add_organizational_units(device_id)
             domain = device_raw.get('Full_Domain_Name0')

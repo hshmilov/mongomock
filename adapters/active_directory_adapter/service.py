@@ -15,13 +15,13 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
-from axonius.devices.device import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
+from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
 from axonius.devices.ad_device import ADDevice
 from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
-from axonius.users.user import User
+from axonius.users.user_adapter import UserAdapter
 from axonius.parsing_utils import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
     is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name
 
@@ -35,10 +35,10 @@ MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 90
 
 
 class ActiveDirectoryAdapter(AdapterBase):
-    class MyDevice(ADDevice):
+    class MyDeviceAdapter(ADDevice):
         pass
 
-    class MyUser(User):
+    class MyUserAdapter(UserAdapter):
         sid = Field(str, "AD User SID")
 
     def __init__(self):
@@ -227,7 +227,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         """
 
         for user_raw in raw_data:
-            user = self._new_user()
+            user = self._new_user_adapter()
 
             username = user_raw.get("sAMAccountName")
             domain = user_raw.get("distinguishedName")
@@ -430,7 +430,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   f"Got type {type(last_seen)} instead of datetime")
                 continue
 
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
             device.figure_os(device_raw.get('operatingSystem', ''))
             device.network_interfaces = []
@@ -596,7 +596,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         """
         executes a list of wmi + smb possible queries. (look at wmi_smb_runner.py)
         :param device_data: the device data.
-        :param wmi_smb_commands: a list of dicts, each list in the format of wmirunner.py.
+        :param wmi_smb_commands: a list of dicts, each list in the format of wmi_smb_runner.py.
                             e.g. [{"type": "query", "args": ["select * from Win32_Account"]}]
         :return: axonius-execution result.
         """

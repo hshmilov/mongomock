@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 
@@ -14,7 +14,7 @@ from axonius.parsing_utils import parse_date
 
 class BigfixAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         bigfix_device_type = Field(str, "Device type")
         bigfix_computre_type = Field(str, "Computer type")
@@ -99,7 +99,7 @@ class BigfixAdapter(AdapterBase):
                             device_raw[xml_property.attrib["Name"]] += "," + str(xml_property.text)
                         else:
                             device_raw[xml_property.attrib["Name"]] = str(xml_property.text)
-                device = self._new_device()
+                device = self._new_device_adapter()
                 if not device_raw.get("ID"):
                     continue
                 else:

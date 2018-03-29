@@ -3,7 +3,7 @@ import datetime
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException, GetDevicesError
 from axonius.parsing_utils import format_mac
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from fortigate_adapter import consts
 from fortigate_adapter.client import FortigateClient
@@ -15,7 +15,7 @@ class FortigateAdapter(AdapterBase):
     Connects axonius to Fortigate devices
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         interface = Field(str, "Interface")
 
     def __init__(self):
@@ -74,7 +74,7 @@ class FortigateAdapter(AdapterBase):
         for current_interface in raw_data.get('results', []):
             for raw_device in current_interface.get('list', [current_interface]):  # If current interface does'nt hold
                 # list, than its a device itself
-                device = self._new_device()
+                device = self._new_device_adapter()
                 device.hostname = raw_device.get('hostname', '')
                 mac_address = format_mac(raw_device.get('mac', ''))
                 device.id = mac_address

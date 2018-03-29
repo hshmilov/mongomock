@@ -2,7 +2,7 @@ import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, JsonStringFormat
 from axonius.parsing_utils import format_ip
 from axonius.utils.files import get_local_config_file
@@ -12,7 +12,7 @@ from bomgar_adapter.exceptions import BomgarException
 
 class BomgarAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Bomgar Device Type')
         public_display_name = Field(str, 'Bomgar public display name')
         user_id = Field(int, 'Bomgar User ID')
@@ -76,7 +76,7 @@ class BomgarAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for hostname, device_raw in devices_raw_data.items():
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = device_raw['hostname']
             device.id = device_raw['hostname']
             device.figure_os(device_raw['operating_system'])

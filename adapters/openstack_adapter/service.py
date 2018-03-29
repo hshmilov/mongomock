@@ -1,5 +1,5 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device import Device, Field
+from axonius.devices.device_adapter import DeviceAdapter, Field
 from axonius.utils.files import get_local_config_file
 from openstack_adapter.client import OpenStackClient
 from urllib3.util.url import parse_url
@@ -7,7 +7,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 
 
 class OpenstackAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         status = Field(str, "Status")
         image_name = Field(str, "Image name")
 
@@ -81,7 +81,7 @@ class OpenstackAdapter(AdapterBase):
     def create_device(self, raw_device_data):
         raw_device, flavor, image = raw_device_data
         # add basic info
-        device = self._new_device()
+        device = self._new_device_adapter()
         device.id = raw_device['id']
         device.name = raw_device['name']
         device.status = raw_device['status']

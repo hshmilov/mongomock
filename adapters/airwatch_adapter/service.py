@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 
@@ -14,7 +14,7 @@ from axonius.parsing_utils import parse_date
 
 class AirwatchAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         imei = Field(str, 'IMEI')
         phone_number = Field(str, 'Phone Number')
         serial_number = Field(str, 'Serial Number')
@@ -101,7 +101,7 @@ class AirwatchAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                device = self._new_device()
+                device = self._new_device_adapter()
                 if not device_raw.get("Id"):
                     continue
                 else:

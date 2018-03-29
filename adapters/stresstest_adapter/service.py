@@ -3,7 +3,7 @@ import time
 import random
 
 from axonius.adapter_base import AdapterBase
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 
@@ -25,7 +25,7 @@ class StressTestAdapter(AdapterBase):
     this is an imaginary adapter.
     """
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
 
     def __init__(self):
@@ -174,7 +174,7 @@ class StressTestAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.id = f"{device_raw['sa_name']}-{device_raw['index']}"
             device.name = f"avigdor no# {device_raw['index']}"
             device.figure_os(device_raw['config']['guestFullName'])

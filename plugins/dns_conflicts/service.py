@@ -4,7 +4,7 @@ import threading
 
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.dns_utils import query_dns, NoIpFoundError
 from axonius.fields import Field, JsonStringFormat, ListField
@@ -136,5 +136,5 @@ class DnsConflictsService(PluginBase, Triggerable):
     @add_rule('find_conflicts', methods=['POST'], should_authenticate=False)
     def check_ip_conflict_now(self):
         self._find_all_dns_conflicts()
-        self._save_field_names_to_db()
+        self._save_field_names_to_db("devices")
         return ""

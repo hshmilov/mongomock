@@ -2,8 +2,8 @@ from axonius.adapter_base import is_plugin_adapter, AdapterProperty
 
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.devices.device import Device
-from axonius.users.user import User
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, \
     SYSTEM_SCHEDULER_PLUGIN_NAME, STATIC_CORRELATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
@@ -377,9 +377,9 @@ class GuiService(PluginBase):
 
         def _get_generic_fields():
             if module_name == 'device':
-                return Device.get_fields_info()
+                return DeviceAdapter.get_fields_info()
             elif module_name == 'user':
-                return User.get_fields_info()
+                return UserAdapter.get_fields_info()
             return dict()
 
         fields = {

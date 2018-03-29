@@ -4,7 +4,7 @@ import pytz
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
 from axonius.utils.files import get_local_config_file
 from chef_adapter.exceptions import ChefException
@@ -20,7 +20,7 @@ SSL_VERIFY = 'ssl_verify'
 
 class ChefAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         client_name = Field(str, "Chef client name")
         environment = Field(str, "Chef environment")
         instance_id = Field(str, "AWS instance ID")
@@ -108,7 +108,7 @@ class ChefAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.client_name = device_raw.get('name')
             device.environment = device_raw.get('chef_environment')
             device_raw_data = device_raw.get('automatic')

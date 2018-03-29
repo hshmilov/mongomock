@@ -1,14 +1,14 @@
 import csv
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.parsing_utils import parse_date
 
 
 class ForcepointCsvAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         client_version = Field(str, 'Client Version')
         client_status = Field(str, 'Client Status')
 
@@ -62,7 +62,7 @@ class ForcepointCsvAdapter(AdapterBase):
                 synced, discovery_status,\
                 client_status,\
                 version in raw_data['data'][1:]:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = host_name
             device.id = host_name
             device.client_status = client_status

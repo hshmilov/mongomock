@@ -1,6 +1,6 @@
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device import Device, IPS_FIELD, MAC_FIELD
+from axonius.devices.device_adapter import DeviceAdapter, IPS_FIELD, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from splunk_symantec_adapter.connection import SplunkConnection
 
@@ -15,7 +15,7 @@ SPLUNK_ONLINE_HOURS = 'online_hours'
 
 class SplunkSymantecAdapter(AdapterBase):
 
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self):
@@ -154,7 +154,7 @@ class SplunkSymantecAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             host = device_raw.get('host', '')
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.hostname = host.get('name', '')
             if host.get('type', '') == 'symantec_mac':
                 device.figure_os('OS X')

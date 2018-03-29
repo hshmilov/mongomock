@@ -4,7 +4,7 @@ from threading import Thread
 import time
 
 from axonius.adapter_base import AdapterBase
-from axonius.devices.device import Device
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from qcore_adapter.protocol.build_helpers.construct_dict import dict_filter
@@ -20,7 +20,7 @@ PERIODIC = ClinicalStatusItemType.Infusion.name
 
 
 class QcoreAdapter(AdapterBase):
-    class MyDevice(Device):
+    class MyDeviceAdapter(DeviceAdapter):
         pump_serial = Field(str, 'pump serial number')
         connection_status = Field(str, 'connection status')
         pump_name = Field(str, 'pump name')
@@ -145,7 +145,7 @@ class QcoreAdapter(AdapterBase):
         now = time.time()
 
         for pump_document in devices_raw_data:
-            device = self._new_device()
+            device = self._new_device_adapter()
             device.id = pump_document[PUMP_SERIAL]
             device.connection_status = 'online' if now - pump_document[KEEPALIVE_TS] < 60 else 'offline'
             self.populate_nic(device, pump_document)
