@@ -68,10 +68,9 @@ def fast_axonius():
                             print('A Client Already exists')
                         if isinstance(services[name].test.some_client_details, list):
                             for client in services[name].test.some_client_details:
-                                services[name].add_client(client[0], axonius_system.core.vol_conf.password_secret())
+                                services[name].add_client(client[0])
                         else:
-                            services[name].add_client(services[name].test.some_client_details,
-                                                      axonius_system.core.vol_conf.password_secret())
+                            services[name].add_client(services[name].test.some_client_details)
 
                     def refresh_devices():
                         if not services[name].get_is_container_up():
