@@ -22,7 +22,7 @@ class AxonService(ABC):
     def is_up(self):
         pass
 
-    def wait_for_service(self, timeout=30):
+    def wait_for_service(self, timeout=70):
         success = False
         start = time.time()
         while time.time() - start < timeout:
