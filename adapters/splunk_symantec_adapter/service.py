@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, IPS_FIELD, MAC_FIELD
@@ -18,8 +20,8 @@ class SplunkSymantecAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self._online_hours = 24
 
     def _get_client_id(self, client_config):
@@ -32,12 +34,12 @@ class SplunkSymantecAdapter(AdapterBase):
         if has_token and maybe_has_user:
             msg = f"Different logins for Splunk [Symantec] domain " \
                   f"{client_config.get(SPLUNK_HOST)}, user: {client_config.get(SPLUNK_USER, '')}"
-            self.logger.error(msg)
+            logger.error(msg)
             raise ClientConnectionException(msg)
         elif maybe_has_user and not has_user:
             msg = f"Missing credentials for Splunk [Symantec] domain " \
                   f"{client_config.get(SPLUNK_HOST)}, user: {client_config.get(SPLUNK_USER, '')}"
-            self.logger.error(msg)
+            logger.error(msg)
             raise ClientConnectionException(msg)
         try:
             self._online_hours = int(client_config[SPLUNK_ONLINE_HOURS] or self._online_hours)
@@ -46,13 +48,13 @@ class SplunkSymantecAdapter(AdapterBase):
             client_con = client_config.copy()
             client_con.pop(SPLUNK_ONLINE_HOURS)
             client_con['password'] = self.decrypt_password(client_con['password'])
-            connection = SplunkConnection(self.logger, **client_con)
+            connection = SplunkConnection(**client_con)
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def get_last_query_ts(self, name):
@@ -161,14 +163,14 @@ class SplunkSymantecAdapter(AdapterBase):
                 device.figure_os('OS X')
                 if host.get('local mac', '') != '000000000000':
                     device.add_nic(':'.join([host.get('local mac', '')[index:index + 2] for index in range(0, 12, 2)]),
-                                   host.get('local ips', '').split(' '), self.logger)
+                                   host.get('local ips', '').split(' '))
                 if host.get('remote mac', '') != '000000000000':
                     device.add_nic(':'.join([host.get('remote mac', '')[index:index + 2] for index in range(0, 12, 2)]),
-                                   host['remote ips'].split(' '), self.logger)
+                                   host['remote ips'].split(' '))
             else:
                 device.figure_os(host.get('os', ''))
                 for iface in host.get('network', []):
-                    device.add_nic(iface.get(MAC_FIELD, ''), iface.get(IPS_FIELD, '').split(' '), self.logger)
+                    device.add_nic(iface.get(MAC_FIELD, ''), iface.get(IPS_FIELD, '').split(' '))
             device.id = host['name']
             device.set_raw(device_raw)
             yield device

@@ -4,7 +4,6 @@ import pytest
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.parsing_utils import figure_out_os
 from axonius.utils.mongo_escaping import escape_dict
-from unittest.mock import MagicMock
 
 list_tables = {
     'columns': '\r\n    Name                         Type          Select? Condition? GroupBy? Order? Number? \r\n    ---------------------------- ------------- ------- ---------- -------- ------ -------\r\n    AutoID                       int           False   False      False    True   True   \r\n    Tags                         string        True    False      False    True   False  \r\n    ExcludedTags                 string        True    False      False    True   False  \r\n    AppliedTags                  applied_tags  False   True       False    False  False  \r\n    LastUpdate                   timestamp     True    True       True     True   False  \r\n    os                           string        True    False      False    False  False  \r\n    products                     string        False   False      False    False  False  \r\n    NodeName                     string        True    True       True     True   False  \r\n    ManagedState                 enum          True    True       False    True   False  \r\n    AgentVersion                 string_lookup True    True       True     True   False  \r\n    AgentGUID                    string        True    False      False    True   False  \r\n    Type                         int           False   False      False    True   False  \r\n    ParentID                     int           False   False      False    True   True   \r\n    ResortEnabled                boolean       True    True       False    True   False  \r\n    ServerKeyHash                string        True    True       False    True   False  \r\n    NodePath                     string_lookup False   False      False    True   False  \r\n    TransferSiteListsID          isNotNull     True    True       False    True   False  \r\n    SequenceErrorCount           int           True    True       False    True   True   \r\n    SequenceErrorCountLastUpdate timestamp     True    True       False    True   False  \r\n    LastCommSecure               string_enum   True    True       True     True   False  \r\n    TenantId                     int           False   False      False    True   True   \r\n',
@@ -94,7 +93,7 @@ def test_os():
 def test_parse_network_positive():
     device = DeviceAdapter(set(), set())
     device.network_interfaces = []
-    service.parse_network(raw_device_data, device, MagicMock())
+    service.parse_network(raw_device_data, device)
     assert len(device.network_interfaces) == 1
     assert device.network_interfaces[0].mac == "06:f4:17:36:0e:d8".upper()
     assert sorted(device.network_interfaces[0].ips) == sorted(["10.0.255.180", "::ffff:ac1f:154a", "172.31.21.74"])
@@ -104,7 +103,7 @@ def test_only_mac():
     raw = {'EPOComputerProperties.NetAddress': '06f417360ed8'}
     device = DeviceAdapter(set(), set())
     device.network_interfaces = []
-    service.parse_network(raw, device, MagicMock())
+    service.parse_network(raw, device)
     assert device.network_interfaces[0].mac == "06:f4:17:36:0e:d8".upper()
 
 
@@ -112,7 +111,7 @@ def test_parse_network_no_ipv6_no_mac():
     raw = {'EPOComputerProperties.IPV4x': -1979646028}
     device = DeviceAdapter(set(), set())
     device.network_interfaces = []
-    service.parse_network(raw, device, MagicMock())
+    service.parse_network(raw, device)
     assert device.network_interfaces[0].ips == ['10.0.255.180']
 
 
@@ -120,7 +119,7 @@ def test_parse_network_no_ipv4_no_mac():
     raw = {'EPOComputerProperties.IPV6': '0:0:0:0:0:FFFF:AC1F:154A'}
     device = DeviceAdapter(set(), set())
     device.network_interfaces = []
-    service.parse_network(raw, device, MagicMock())
+    service.parse_network(raw, device)
     assert sorted(device.network_interfaces[0].ips) == sorted(['172.31.21.74', '::ffff:ac1f:154a'])
 
 
@@ -128,7 +127,7 @@ def test_ip_of_zeroes():
     raw = {'EPOComputerProperties.IPV4x': -2147483648,
            'EPOComputerProperties.IPV6': 'FE80:0:0:0:ECC1:22FF:FED6:AAD4'}
     device = DeviceAdapter(set(), set())
-    service.parse_network(raw, device, MagicMock())
+    service.parse_network(raw, device)
     assert sorted(device.network_interfaces[0].ips) == sorted(['fe80::ecc1:22ff:fed6:aad4', '0.0.0.0'])
 
 

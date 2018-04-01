@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import threading
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -164,15 +166,15 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         :return:
         """
         devices_to_correlate = self.get_devices_from_ids(devices_ids)
-        self.logger.info(
+        logger.info(
             f"Correlator {self.plugin_unique_name} started to correlate {len(devices_to_correlate)} devices")
         for result in self._correlate_with_lock(devices_to_correlate):
             if isinstance(result, WarningResult):
-                self.logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
+                logger.warn(f"{result.title}, {result.content}: {result.notification_type}")
                 self.create_notification(result.title, result.content, result.notification_type)
 
             if isinstance(result, CorrelationResult):
-                self.logger.debug(f"Correlation: {result.data}, for {result.associated_adapters}")
+                logger.debug(f"Correlation: {result.data}, for {result.associated_adapters}")
                 self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
                     "plugin_type": "Plugin",
                     "data": result.data,

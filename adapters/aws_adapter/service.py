@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import boto3
 import botocore.exceptions
 from botocore.config import Config
@@ -80,8 +82,8 @@ class AwsAdapter(AdapterBase):
         def add_aws_ec2_tag(self, **kwargs):
             self.aws_tags.append(AWSTagKeyValue(**kwargs))
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config[AWS_ACCESS_KEY_ID]
@@ -95,7 +97,7 @@ class AwsAdapter(AdapterBase):
 
             proxies = dict()
             if PROXY in client_config:
-                self.logger.info(f"Setting proxy {client_config[PROXY]}")
+                logger.info(f"Setting proxy {client_config[PROXY]}")
                 proxies['https'] = client_config[PROXY]
 
             config = Config(proxies=proxies)
@@ -114,11 +116,11 @@ class AwsAdapter(AdapterBase):
         except botocore.exceptions.BotoCoreError as e:
             message = "Error creating EC2 client for account {0}, reason: {1}".format(
                 client_config[AWS_ACCESS_KEY_ID], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
         except botocore.exceptions.ClientError as e:
             message = "Error connecting to client with account {0}, reason: {1}".format(
                 client_config[AWS_ACCESS_KEY_ID], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
         raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -143,13 +145,13 @@ class AwsAdapter(AdapterBase):
                 described_images = _describe_images_from_client_by_id(client_data, amis)
             except:
                 described_images = {}
-                self.logger.exception("Couldn't describe aws images")
+                logger.exception("Couldn't describe aws images")
 
             try:
                 described_vpcs = _describe_vpcs_from_client(client_data)
             except:
                 described_vpcs = {}
-                self.logger.exception("Couldn't describe aws vpcs")
+                logger.exception("Couldn't describe aws vpcs")
 
             # add image and vpc information to each instance
             for reservation in instances['Reservations']:
@@ -227,10 +229,9 @@ class AwsAdapter(AdapterBase):
                     if assoc is not None:
                         public_ip = assoc.get('PublicIp')
                         if public_ip is not None:
-                            device.add_nic(iface.get("MacAddress"), [public_ip], self.logger)
+                            device.add_nic(iface.get("MacAddress"), [public_ip])
                     device.add_nic(iface.get("MacAddress"), [addr.get('PrivateIpAddress')
-                                                             for addr in iface.get("PrivateIpAddresses", [])],
-                                   self.logger)
+                                                             for addr in iface.get("PrivateIpAddresses", [])])
                 device.power_state = POWER_STATE_MAP.get(device_raw.get('State', {}).get('Name'),
                                                          DeviceRunningState.Unknown)
                 device.set_raw(device_raw)

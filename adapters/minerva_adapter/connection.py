@@ -5,14 +5,12 @@ from minerva_adapter.exceptions import MinervaAlreadyConnected, MinervaConnectio
 
 
 class MinervaConnection(object):
-    def __init__(self, logger, domain, is_ssl, verify_ssl):
+    def __init__(self, domain, is_ssl, verify_ssl):
         """ Initializes a connection to Minerva using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Minerva
         :param bool verify_ssl Verify the ssl
         """
-        self.logger = logger
         self.domain = domain
         self._is_ssl = is_ssl
         url = domain

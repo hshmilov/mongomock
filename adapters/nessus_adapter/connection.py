@@ -1,4 +1,7 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
+
 from nessus_adapter.exceptions import NessusNotConnected, NessusAlreadyConnected, NessusCredentialMissing, \
     NessusConnectionError, NessusRequestError
 
@@ -16,8 +19,7 @@ HOST_DETAILS_ENDPOINT = "scans/{0}/hosts/{1}"
 
 
 class NessusConnection(object):
-    def __init__(self, logger, host, port):
-        self.logger = logger
+    def __init__(self, host, port):
         self.host = host
         self.port = port if port is not None else DEFAULT_NESSUS_PORT
         self.url = host + ':' + str(self.port)
@@ -98,7 +100,7 @@ class NessusConnection(object):
         """
         scans = self._get(SCANS_ENDPOINT, kwargs)
         if not scans or not scans.get(SCANS_ENDPOINT):
-            self.logger.info("GET {0} returned no scans".format(SCANS_ENDPOINT))
+            logger.info("GET {0} returned no scans".format(SCANS_ENDPOINT))
             return []
         return scans[SCANS_ENDPOINT]
 
@@ -111,11 +113,11 @@ class NessusConnection(object):
         :return: List of hosts found by given scan
         """
         if not scan_id:
-            self.logger.info("Missing required parameter for GET {0}".format(SCAN_DETAILS_ENDPOINT.format("<scan_id>")))
+            logger.info("Missing required parameter for GET {0}".format(SCAN_DETAILS_ENDPOINT.format("<scan_id>")))
             return []
         hosts = self._get(SCAN_DETAILS_ENDPOINT.format(scan_id), kwargs)
         if not hosts or not hosts.get("hosts"):
-            self.logger.info("GET {0} returned no hosts".format(SCAN_DETAILS_ENDPOINT.format(scan_id)))
+            logger.info("GET {0} returned no hosts".format(SCAN_DETAILS_ENDPOINT.format(scan_id)))
             return []
         return hosts["hosts"]
 
@@ -129,7 +131,7 @@ class NessusConnection(object):
         :return: Expanded details of given host as found by given scan
         """
         if not scan_id or not host_id:
-            self.logger.info(
+            logger.info(
                 "Missing required parameter for GET {0}".format(HOST_DETAILS_ENDPOINT.format("<scan_id>", "<host_id")))
             return {}
         return self._get(HOST_DETAILS_ENDPOINT.format(scan_id, host_id), kwargs)

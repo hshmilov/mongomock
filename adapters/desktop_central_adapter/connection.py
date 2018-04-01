@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 import base64
 
@@ -7,14 +9,12 @@ from desktop_central_adapter.exceptions import DesktopCentralAlreadyConnected, D
 
 
 class DesktopCentralConnection(object):
-    def __init__(self, logger, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl):
         """ Initializes a connection to DesktopCentral using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for DesktopCentral
         :param bool verify_ssl
         """
-        self.logger = logger
         self.domain = domain
         url = domain
         if not url.endswith('/'):

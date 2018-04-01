@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -6,7 +8,6 @@ from axonius.fields import Field
 
 from mobileiron_adapter.connection import MobileironConnection
 from mobileiron_adapter.exceptions import MobileironException
-import json
 from axonius.parsing_utils import parse_date
 
 
@@ -24,15 +25,15 @@ class MobileironAdapter(AdapterBase):
         current_phone_number = Field(str, "Current phone number")
         android_security_patch = Field(str, "Android Security Patch")
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['Mobileiron_Domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = MobileironConnection(logger=self.logger, domain=client_config["Mobileiron_Domain"],
+            connection = MobileironConnection(domain=client_config["Mobileiron_Domain"],
                                               verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]))
@@ -42,7 +43,7 @@ class MobileironAdapter(AdapterBase):
         except MobileironException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Mobileiron_Domain'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -111,9 +112,9 @@ class MobileironAdapter(AdapterBase):
                 try:
                     if device_raw.get("common.ethernet_mac") or device_raw.get("common.ip_address"):
                         device.add_nic(device_raw.get("common.wifi_mac_address"), device_raw.get(
-                            "common.ip_address", "").split(","), self.logger)
+                            "common.ip_address", "").split(","))
                 except:
-                    self.logger.exception("Problem adding nic to a device")
+                    logger.exception("Problem adding nic to a device")
                 device.agent_version = device_raw.get("common.client_version", "")
                 device.device_model = device_raw.get("common.model")
                 device.android_security_patch = device_raw.get("android.security_patch")
@@ -128,12 +129,12 @@ class MobileironAdapter(AdapterBase):
                     for app in device_raw.get("appInventory", []):
                         device.add_installed_software(name=app["name"], version=app["version"])
                 except:
-                    self.logger.exception("Problem adding apps to a decvice")
+                    logger.exception("Problem adding apps to a decvice")
 
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching MobileIron Device")
+                logger.exception("Problem with fetching MobileIron Device")
 
     @classmethod
     def adapter_properties(cls):

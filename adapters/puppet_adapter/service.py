@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, MAC_FIELD
@@ -6,6 +8,7 @@ from puppet_adapter.connection import PuppetConnection
 from puppet_adapter.exceptions import PuppetException
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.parsing_utils import parse_date
+
 
 # TODO ofir: Change the return values protocol
 
@@ -20,11 +23,11 @@ class PuppetAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         version = Field(str, "Puppet Version")
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
-        self.logger.error("_parse_correlation_results is not implemented for puppet adapter")
+        logger.error("_parse_correlation_results is not implemented for puppet adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for puppet adapter")
 
     def _get_client_id(self, client_config):
@@ -33,7 +36,6 @@ class PuppetAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             return PuppetConnection(
-                self.logger,
                 client_config['puppet_server_name'],
                 bytes(client_config['ca_file']),
                 bytes(client_config['cert_file']),
@@ -42,13 +44,13 @@ class PuppetAdapter(AdapterBase):
             message = "Error getting information from puppet server {0}. reason: {1}".format(
                 client_config["puppet_server_name"],
                 str(e))
-            self.logger.exception(message)
+            logger.exception(message)
         except KeyError as e:
             if "puppet_server_name" in client_config:
                 message = f"Key error for Puppet {0}. details: {1}".format(client_config["puppet_server_name"], str(e))
             else:
                 message = "Missing Puppet name for configuration line"
-            self.logger.exception(message)
+            logger.exception(message)
         raise ClientConnectionException
 
     def _clients_schema(self):
@@ -137,23 +139,23 @@ class PuppetAdapter(AdapterBase):
                         # In case major contains minor also
                         device.os.minor = int(temp_release[1])
             except Exception as e:
-                self.logger.exception("Cannot parse os release number")
+                logger.exception("Cannot parse os release number")
 
             device.id = device_raw[u'certname']
             try:
                 for inet in device_raw.get('networking', {}).get('interfaces', {}).values():
                     device.add_nic(inet.get(MAC_FIELD, ''),
                                    [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
-                                   [x['address'] for x in inet.get('bindings6', []) if x.get('address')], self.logger)
+                                   [x['address'] for x in inet.get('bindings6', []) if x.get('address')])
             except:
-                self.logger.exception("Problem adding nic to puppte")
+                logger.exception("Problem adding nic to puppte")
             device.version = device_raw.get("puppetversion", '')
             device.number_of_processes = device_raw.get("processors", {}).get("count")
             try:
                 for software_name in device_raw.get("apt_package_dist_updates", []):
                     device.add_installed_software(name=software_name)
             except:
-                self.logger.exception("Problemn adding software to Puppet")
+                logger.exception("Problemn adding software to Puppet")
             device.last_seen = parse_date(str(device_raw.get("facts_timestamp", "")))
             device.set_raw(device_raw)
             yield device

@@ -1,4 +1,5 @@
-from itertools import groupby
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 import pytz
 
@@ -33,7 +34,7 @@ class ChefAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = ChefConnection(self.logger, client_config[CHEF_DOMAIN], client_config[ORGANIZATION],
+            connection = ChefConnection(client_config[CHEF_DOMAIN], client_config[ORGANIZATION],
                                         bytes(client_config[CLIENT_KEY]), client_config[CLIENT],
                                         client_config[SSL_VERIFY])
             with connection:
@@ -42,7 +43,7 @@ class ChefAdapter(AdapterBase):
         except ChefException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config[CHEF_DOMAIN], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -124,13 +125,13 @@ class ChefAdapter(AdapterBase):
             try:
                 device.last_seen = datetime.datetime.fromtimestamp(device_raw_data['ohai_time'])
             except:
-                self.logger.warn("something is really wrong with the device - chef doesn't have a last check-in for it")
+                logger.warn("something is really wrong with the device - chef doesn't have a last check-in for it")
             device.time_zone = (device_raw_data.get('time') or {}).get('timezone')
             try:
                 if device.time_zone:
                     device.last_seen = pytz.timezone(device.time_zone).localize(device.last_seen).astimezone(pytz.UTC)
             except:
-                self.logger.exception("Error adjusting client's timezone")
+                logger.exception("Error adjusting client's timezone")
             # domain assign won't work for cloud clients (but hostname will contain the domain)
             device.domain = device_raw_data.get('domain')
             try:
@@ -139,14 +140,14 @@ class ChefAdapter(AdapterBase):
                                                   version=' '.join([(software_params.get('version') or ''),
                                                                     (software_params.get('release') or '')]))
             except:
-                self.logger.exception("Problem with adding software to Chef client")
+                logger.exception("Problem with adding software to Chef client")
             try:
                 for software_name, software_params in (device_raw_data.get("chef_packages") or {}).items():
                     device.add_installed_software(name=software_name,
                                                   vendor='chef',
                                                   version=(software_params.get('version') or ''))
             except:
-                self.logger.exception("Problem with adding software to Chef client")
+                logger.exception("Problem with adding software to Chef client")
             dmi = device_raw_data.get('dmi') or {}
             systeminfo = dmi.get('system')
             device.device_manufacturer = systeminfo.get('manufacturer')
@@ -162,7 +163,7 @@ class ChefAdapter(AdapterBase):
                         device.add_cpu(name=cpu.get('model_name'),
                                        ghz=float(cpu.get('mhz') or 0) / 1000.0)
             except:
-                self.logger.exception("Problem with adding CPU to Chef client")
+                logger.exception("Problem with adding CPU to Chef client")
             device.boot_time = device.last_seen - \
                 datetime.timedelta(seconds=(device_raw_data.get('uptime_seconds') or 0))
             biosinfo = dmi.get('bios') or {}
@@ -184,9 +185,9 @@ class ChefAdapter(AdapterBase):
                             ip_addrs.append(addr)
                         else:
                             mac = format_mac(addr)
-                    device.add_nic(mac=mac, ips=ip_addrs, logger=self.logger)
+                    device.add_nic(mac=mac, ips=ip_addrs)
             except:
-                self.logger.exception("Problem with adding nic to Chef client")
+                logger.exception("Problem with adding nic to Chef client")
 
             # MongoDB can only store up to 8-byte ints :(
             ((device_raw.get('automatic') or {}).get('sysconf') or {}).pop('ULONG_MAX')

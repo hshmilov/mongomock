@@ -1,5 +1,7 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import json
 from datetime import datetime, timedelta
 import sys
@@ -10,7 +12,6 @@ import requests
 import configparser
 import os
 import threading
-import logging
 import socket
 import ssl
 import urllib3
@@ -119,11 +120,7 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True, allow_on_d
             the exception name with the Exception string.
             In case of exception, a detailed traceback will be sent to log
             """
-            # We expect the first argument to be a PluginBase object (which have a logger object)
-            logger = getattr(self, "logger", None)
-
-            if logger:
-                logger.debug(f"Rule={rule} request={request}")
+            logger.debug(f"Rule={rule} request={request}")
 
             if self.plugin_state == 'disabled':
                 request_url = str(request.url_rule)
@@ -317,7 +314,7 @@ class PluginBase(Feature):
         self.log_level = logging.INFO
 
         # Creating logger
-        self.logger = create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, self.log_path)
+        create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, self.log_path)
 
         # Adding rules to flask
         for routed in ROUTED_FUNCTIONS:
@@ -330,15 +327,15 @@ class PluginBase(Feature):
                                           local_function,
                                           methods=wanted_methods)
             else:
-                self.logger.info(f"Skipped rule {rule}, {wanted_function.__qualname__}, {wanted_methods}")
+                logger.info(f"Skipped rule {rule}, {wanted_function.__qualname__}, {wanted_methods}")
 
         # Adding "keepalive" thread
         if self.plugin_unique_name != "core":
             self.comm_failure_counter = 0
             executors = {'default': ThreadPoolExecutor(1)}
-            self.online_plugins_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
+            self.online_plugins_scheduler = LoggedBackgroundScheduler(executors=executors)
             if is_debug_attached():
-                self.logger.info(f'Plugin is under debug mode, disabling keep alive thread')
+                logger.info(f'Plugin is under debug mode, disabling keep alive thread')
             else:
                 self.online_plugins_scheduler.add_job(func=self._check_registered_thread,
                                                       trigger=IntervalTrigger(seconds=30),
@@ -358,9 +355,9 @@ class PluginBase(Feature):
         self.wsgi_app = AXONIUS_REST
 
         for section in self.config.sections():
-            self.logger.info(f"Config {section}: {dict(self.config[section])}")
+            logger.info(f"Config {section}: {dict(self.config[section])}")
 
-        self.logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
+        logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
 
         # DB's
         self.aggregator_db_connection = self._get_db_connection(True)[AGGREGATOR_PLUGIN_NAME]
@@ -386,8 +383,7 @@ class PluginBase(Feature):
         # since it will try to reject functions and not promises.
         if self.plugin_name != "execution":
             # An executor dedicated to deleting forgotten execution requests
-            self.execution_monitor_scheduler = LoggedBackgroundScheduler(
-                self.logger, executors={'default': ThreadPoolExecutor(1)})
+            self.execution_monitor_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(1)})
             self.execution_monitor_scheduler.add_job(func=self.execution_monitor_thread,
                                                      trigger=IntervalTrigger(seconds=30),
                                                      next_run_time=datetime.now(),
@@ -397,9 +393,9 @@ class PluginBase(Feature):
             self.execution_monitor_scheduler.start()
 
         # Finished, Writing some log
-        self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
-                                                                                              self.version,
-                                                                                              self.lib_version))
+        logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
+                                                                                         self.version,
+                                                                                         self.lib_version))
 
     def _save_field_names_to_db(self, entity):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """
@@ -420,7 +416,7 @@ class PluginBase(Feature):
                     len(entity_fields['raw_fields_set']) == last_raw_fields_count:
                 return  # Optimization. Note that this is true only if we don't delete fields!
 
-            self.logger.info(f"Persisting {entity} fields to DB")
+            logger.info(f"Persisting {entity} fields to DB")
             fields = list(entity_fields['fields_set'])  # copy
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
@@ -477,14 +473,14 @@ class PluginBase(Feature):
                 return  # No need to check on core itself
             response = self.request_remote_plugin("register?unique_name={0}".format(self.plugin_unique_name), timeout=5)
             if response.status_code in [404, 499, 502]:  # Fault values
-                self.logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
+                logger.error(f"Not registered to core (got response {response.status_code}), Exiting")
                 # TODO: Think about a better way for exiting this process
                 os._exit(1)
         except Exception as e:
             self.comm_failure_counter += 1
             if self.comm_failure_counter > retries:  # Two minutes
-                self.logger.exception(("Error communicating with Core for more than 2 minutes, "
-                                       "exiting. Reason: {0}").format(e))
+                logger.exception(("Error communicating with Core for more than 2 minutes, "
+                                  "exiting. Reason: {0}").format(e))
                 os._exit(1)
 
     def populate_register_doc(self, register_doc, config_plugin_path):
@@ -629,7 +625,7 @@ class PluginBase(Feature):
             'severity_type': severity_type,
             'recipient_list': emails
         }
-        self.logger.info(f"Sent an email titled: {title}")
+        logger.info(f"Sent an email titled: {title}")
         self.request_remote_plugin('send_email', None, 'post', json=data)
 
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
@@ -671,16 +667,16 @@ class PluginBase(Feature):
         # Else its POST
         wanted_state = str(self.get_url_param('wanted'))
         if wanted_state == 'disable':
-            self.logger.info("Changing plugin state to disabled")
+            logger.info("Changing plugin state to disabled")
             self.plugin_state = 'disabled'
         elif wanted_state == 'enable':
             self.plugin_state = 'enabled'
-            self.logger.info("Changing plugin state to enabled")
+            logger.info("Changing plugin state to enabled")
         else:
             return return_error(f"Unrecognized state {wanted_state}", 400)
 
         if 'registration' not in self.temp_config:
-            self.logger.info("Making new configuration")
+            logger.info("Making new configuration")
             self.temp_config['registration'] = {}
         self.temp_config['registration']['plugin_state'] = self.plugin_state
         with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
@@ -733,7 +729,7 @@ class PluginBase(Feature):
             wanted_level = wanted_level.lower()
             if wanted_level in logging_types.keys():
                 self.log_level = logging_types[wanted_level]
-                self.logger.setLevel(self.log_level)
+                logger.setLevel(self.log_level)
                 return ''
             else:
                 error_string = "Unsupported log level \"{wanted_level}\", available log levels are {levels}"
@@ -766,7 +762,7 @@ class PluginBase(Feature):
                 if action_id in self._open_actions:
                     # We recognize this action id, should call its callback
                     action_promise, started_time = self._open_actions[action_id]
-                    # self.logger.info(f"action id {action_id} returned after time {datetime.now() - started_time}")
+                    # logger.info(f"action id {action_id} returned after time {datetime.now() - started_time}")
                     # Calling the needed function
                     request_content = self.get_request_data_as_object()
 
@@ -779,10 +775,10 @@ class PluginBase(Feature):
 
                     return ''
                 else:
-                    self.logger.error(f'Got unrecognized action_id update. Action ID: {action_id}. Was it resolved?')
+                    logger.error(f'Got unrecognized action_id update. Action ID: {action_id}. Was it resolved?')
                     return return_error('Unrecognized action_id {action_id}. Was it resolved?', 404)
         except Exception as e:
-            self.logger.exception("General exception in action callback")
+            logger.exception("General exception in action callback")
             raise e
 
     def request_action(self, action_type, axon_id, data_for_action=None):
@@ -830,7 +826,7 @@ class PluginBase(Feature):
                 if time_started + timedelta(seconds=TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS) < datetime.now():
                     err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS } reached for " \
                               f"action_id {action_id}, rejecting the promise."
-                    self.logger.error(err_msg)
+                    logger.error(err_msg)
                     action_promise.do_reject(Exception(err_msg))
 
                     self._open_actions.pop(action_id)
@@ -882,7 +878,7 @@ class PluginBase(Feature):
             schema_func = getattr(self, schema_type)
             return jsonify(schema_func())
         else:
-            self.logger.warning("Someone tried to get wrong schema '{0}'".format(schema_type))
+            logger.warning("Someone tried to get wrong schema '{0}'".format(schema_type))
             return return_error("No such schema. should implement {0}".format(schema_type), 400)
 
     def _general_schema(self):
@@ -955,9 +951,9 @@ class PluginBase(Feature):
                             }
                     })
                     if modified_count == 0:
-                        self.logger.error("No devices update for case B for scanner device "
-                                          f"{parsed_to_insert['data']['id']} from "
-                                          f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
+                        logger.error("No devices update for case B for scanner device "
+                                     f"{parsed_to_insert['data']['id']} from "
+                                     f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
                 else:
                     # this is regular first-seen device, make its own value
                     db_to_use.insert_one({
@@ -968,7 +964,7 @@ class PluginBase(Feature):
                     })
 
         if should_log_info is True:
-            self.logger.info(f"Starting to fetch data (devices/users) for {client_name}")
+            logger.info(f"Starting to fetch data (devices/users) for {client_name}")
         promises = []
         try:
             time_before_client = datetime.now()
@@ -977,7 +973,7 @@ class PluginBase(Feature):
                 self._save_raw_data_in_history(data_of_client['raw'])
             except pymongo.errors.DocumentTooLarge:
                 # wanna see my "something too large"?
-                self.logger.warn(f"Got DocumentTooLarge with client {client_name}.")
+                logger.warn(f"Got DocumentTooLarge with client {client_name}.")
             inserted_data_count = 0
 
             # Here we have all the devices a single client sees
@@ -1004,7 +1000,7 @@ class PluginBase(Feature):
                         else:
                             data_to_update[f"adapters.$.data.{field}"] = field_of_data
                     except TypeError:
-                        self.logger.exception(f"Got TypeError while getting {entity_type} field {field}")
+                        logger.exception(f"Got TypeError while getting {entity_type} field {field}")
                         continue
                     data_to_update['accurate_for_datetime'] = datetime.now()
 
@@ -1016,25 +1012,25 @@ class PluginBase(Feature):
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
             if promise_all.is_rejected:
-                self.logger.error(f"Error in insertion of {entity_type} to DB", exc_info=promise_all.reason)
+                logger.error(f"Error in insertion of {entity_type} to DB", exc_info=promise_all.reason)
 
             if entity_type == "devices":
                 added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
-                self.logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
+                logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
 
             time_for_client = datetime.now() - time_before_client
             if should_log_info is True:
-                self.logger.info(
+                logger.info(
                     f"Finished aggregating {entity_type} for client {client_name}, "
                     f" aggregation took {time_for_client.seconds} seconds and returned {inserted_data_count}.")
 
         except Exception as e:
-            self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
+            logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info(f"Finished inserting {entity_type} of client {client_name}")
+        logger.info(f"Finished inserting {entity_type} of client {client_name}")
         if should_log_info is True:
-            self.logger.info(f"Finished inserting {entity_type} of client {client_name}")
+            logger.info(f"Finished inserting {entity_type} of client {client_name}")
         return inserted_data_count
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
@@ -1130,10 +1126,10 @@ class PluginBase(Feature):
                                                              "plugin_unique_name": self.plugin_unique_name,
                                                              'plugin_type': self.plugin_type})
         except pymongo.errors.PyMongoError as e:
-            self.logger.exception("Error in pymongo. details: {}".format(e))
+            logger.exception("Error in pymongo. details: {}".format(e))
         except pymongo.errors.DocumentTooLarge:
             # wanna see my "something too large"?
-            self.logger.warn(f"Got DocumentTooLarge with client.")
+            logger.warn(f"Got DocumentTooLarge with client.")
 
     def _tag_many(self, identity_by_adapter, names, data, type, entity, action_if_exists):
         """ Function for tagging many adapter devices with many tags.
@@ -1165,7 +1161,7 @@ class PluginBase(Feature):
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
                                               data=json.dumps(tag_data, default=json_util.default))
         if response.status_code != 200:
-            self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+            logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
 
         return response
@@ -1198,7 +1194,7 @@ class PluginBase(Feature):
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
                                               data=json.dumps(tag_data, default=json_util.default))
         if response.status_code != 200:
-            self.logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+            logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
             raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
 
         return response

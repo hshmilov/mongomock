@@ -1,16 +1,16 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 
 from secdo_adapter.exceptions import SecdoAlreadyConnected, SecdoConnectionError, SecdoNotConnected, SecdoRequestException
 
 
 class SecdoConnection(object):
-    def __init__(self, logger, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl):
         """ Initializes a connection to Secdo using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Secdo
         """
-        self.logger = logger
         self.domain = domain
         url = domain
         if not url.lower().startswith('https://'):

@@ -1,20 +1,23 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
+
 import requests
 import xml.etree.ElementTree as ET
+
 
 from airwatch_adapter.exceptions import AirwatchAlreadyConnected, AirwatchConnectionError, AirwatchNotConnected, \
     AirwatchRequestException
 
 
 class AirwatchConnection(object):
-    def __init__(self, logger, domain, apikey, verify_ssl):
+    def __init__(self, domain, apikey, verify_ssl):
         """ Initializes a connection to Airwatch using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Airwatch
         :param str apikey: API key of Airwatch
         :param bool verify_ssl
         """
-        self.logger = logger
+        super().__init__()
         self.domain = domain
         self.apikey = apikey
         url = domain
@@ -130,7 +133,7 @@ class AirwatchConnection(object):
             try:
                 device_raw["Network"] = self._get('/mdm/devices/' + str(device_id) + '/network')
             except:
-                self.logger.exception("Problem fetching network")
+                logger.exception("Problem fetching network")
 
             try:
                 device_apps_list = []
@@ -146,7 +149,7 @@ class AirwatchConnection(object):
                 device_raw["DeviceApps"] = device_apps_list
 
             except:
-                self.logger.exception("Problem fetching apps")
+                logger.exception("Problem fetching apps")
         return devices_raw_list
 
     def __enter__(self):

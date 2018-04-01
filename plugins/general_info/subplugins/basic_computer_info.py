@@ -264,8 +264,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                 if ip_enabled is not None and bool(ip_enabled) is True:
                     adapterdata_device.add_nic(
                         mac=nic.get("MACAddress"),
-                        ips=nic.get("IPAddress"),
-                        logger=self.logger
+                        ips=nic.get("IPAddress")
                     )
         except Exception:
             self.logger.exception(f"Win32_NetworkAdapterConfiguration {win32_networkadapterconfiguration}")

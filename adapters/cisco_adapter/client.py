@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from netmiko import ConnectHandler
 
 from axonius.adapter_exceptions import AdapterException
@@ -6,8 +8,8 @@ from axonius.parsing_utils import format_mac
 
 class CiscoClient(object):
 
-    def __init__(self, logger, host, username, password, port=22):
-        self.logger = logger
+    def __init__(self, host, username, password, port=22):
+
         self.host = host
         self.username = username
         self.password = password
@@ -24,7 +26,7 @@ class CiscoClient(object):
                 line = line.split()
                 yield {'ip': line[1], 'mac': format_mac(line[3]), 'Interface': line[5]}
         except Exception:
-            self.logger.exception("Running shell arp command failed")
+            logger.exception("Running shell arp command failed")
             raise AdapterException()
 
     def _get_arp_lines(self):

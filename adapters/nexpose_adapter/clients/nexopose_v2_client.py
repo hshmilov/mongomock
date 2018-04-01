@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from retrying import retry
@@ -65,19 +67,19 @@ class NexposeV2Client(NexposeClient):
                 device_details = self._parse_nexpose_asset_details_to_dict(device_details)
                 device_details['API'] = '2'
             except Exception as err:
-                self.logger.exception("An exception occured while getting and parsing device details from nexpose.")
+                logger.exception("An exception occured while getting and parsing device details from nexpose.")
 
             # Writing progress logs in a logarithm (10's then 100's then 1000's).
             # Because of lack of sum of devices.
             device_number_to_notify = 10 ** (len(str(device_number)) - 1)
             if device_number % device_number_to_notify == 0:
-                self.logger.info("Got {0} devices.".format(device_number))
+                logger.info("Got {0} devices.".format(device_number))
 
             return device_details
 
         raw_detailed_devices = []
 
-        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
+        logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
         with ThreadPoolExecutor(max_workers=self.num_of_simultaneous_devices) as executor:
             try:
                 with self._get_session() as session:
@@ -90,17 +92,17 @@ class NexposeV2Client(NexposeClient):
                         future_to_device.append(executor.submit(
                             get_details_worker, device_summary, device_counter, session))
 
-                    self.logger.info("Getting data for {0} devices.".format(device_counter))
+                    logger.info("Getting data for {0} devices.".format(device_counter))
 
                     for future in as_completed(future_to_device):
                         try:
                             raw_detailed_devices.append(future.result())
                         except Exception as err:
-                            self.logger.exception("An exception was raised while trying to get a result.")
+                            logger.exception("An exception was raised while trying to get a result.")
             except Exception as err:
-                self.logger.exception("An exception was raised while trying to get the data.")
+                logger.exception("An exception was raised while trying to get the data.")
 
-        self.logger.info("Finished getting all device data.")
+        logger.info("Finished getting all device data.")
 
         return raw_detailed_devices
 
@@ -110,7 +112,7 @@ class NexposeV2Client(NexposeClient):
         return successfully_connected
 
     @staticmethod
-    def parse_raw_device(device_raw, device_class, logger):
+    def parse_raw_device(device_raw, device_class):
         # We do not use data with no timestamp.
         last_seen = device_raw.get('last_scan_date')
         last_seen = super(NexposeV2Client, NexposeV2Client).parse_raw_device_last_seen(last_seen)
@@ -121,7 +123,7 @@ class NexposeV2Client(NexposeClient):
         device.figure_os(device_raw.get('os_name'))
         device.last_seen = last_seen
         device.id = str(device_raw['id'])
-        device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []), logger)
+        device.add_nic(device_raw.get('mac_address', ''), device_raw.get('addresses', []))
         device.hostname = device_raw['host_names'][0] if len(device_raw.get('host_names', [])) > 0 else ''
         risk_score = device_raw.get('riskScore')
         if risk_score is not None:

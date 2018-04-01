@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 import urllib3
 
@@ -24,14 +26,14 @@ class NexposeV3Client(NexposeClient):
                     devices.extend(current_page_response_as_json.get('resources', []))
                     num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                 except Exception:
-                    self.logger.exception(f"Got exception while fetching page {current_page_num+1} "
-                                          f"(api page {current_page_num}).")
+                    logger.exception(f"Got exception while fetching page {current_page_num+1} "
+                                     f"(api page {current_page_num}).")
                     continue
 
                 # num_of_asset_pages might be something that dividing by 100 could lead us to no prints at all like
                 # 188 pages.
                 if current_page_num % (max(1, round(num_of_asset_pages / 100))) == 0:
-                    self.logger.info(
+                    logger.info(
                         f"Got {current_page_num} out of {num_of_asset_pages} pages. "
                         f"({(current_page_num / max(num_of_asset_pages, 1)) * 100}% of device pages).")
 
@@ -42,7 +44,7 @@ class NexposeV3Client(NexposeClient):
 
             return devices
         except Exception as err:
-            self.logger.exception("Error getting the nexpose devices.")
+            logger.exception("Error getting the nexpose devices.")
             raise GetDevicesError("Error getting the nexpose devices.")
 
     def _send_get_request(self, resource, params=None):
@@ -77,7 +79,7 @@ class NexposeV3Client(NexposeClient):
         return True
 
     @staticmethod
-    def parse_raw_device(device_raw, device_class, logger):
+    def parse_raw_device(device_raw, device_class):
         last_seen = device_raw.get('history', [])[-1].get('date')
 
         last_seen = super(NexposeV3Client, NexposeV3Client).parse_raw_device_last_seen(last_seen)
@@ -88,7 +90,7 @@ class NexposeV3Client(NexposeClient):
         device.last_seen = last_seen
         device.id = str(device_raw['id'])
         for address in device_raw.get('addresses', []):
-            device.add_nic(address.get('mac'), [address.get('ip')] if 'ip' in address else [], logger)
+            device.add_nic(address.get('mac'), [address.get('ip')] if 'ip' in address else [])
         device.hostname = device_raw.get('hostName', '')
         risk_score = device_raw.get('riskScore')
         if risk_score is not None:

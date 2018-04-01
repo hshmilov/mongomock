@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import dateutil.parser
 
 from axonius.fields import Field
@@ -37,15 +39,15 @@ class QualysScansAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_scan_id = Field(str, 'Scan ID given by Qualys')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config[QUALYS_SCANS_DOMAIN]
 
     def _connect_client(self, client_config):
         try:
-            connection = QualysScansConnection(logger=self.logger, domain=client_config[QUALYS_SCANS_DOMAIN])
+            connection = QualysScansConnection(domain=client_config[QUALYS_SCANS_DOMAIN])
             connection.set_credentials(username=client_config[USERNAME],
                                        password=self.decrypt_password(client_config[PASSWORD]))
             with connection:
@@ -58,7 +60,7 @@ class QualysScansAdapter(ScannerAdapterBase):
         except QualysScansException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config[QUALYS_SCANS_DOMAIN], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _get_qualys_scan_results(self, client_data, url, params, output_key):
@@ -66,7 +68,7 @@ class QualysScansAdapter(ScannerAdapterBase):
             client_list = []
             devices_count = 0
             while params:
-                self.logger.info(f"Got {devices_count*1000} devices so far")
+                logger.info(f"Got {devices_count*1000} devices so far")
                 devices_count += 1
                 response = client_data.get(url + '?' + params, auth=client_data.auth, headers=client_data.headers)
                 current_clients_page = Xml2Json(response.text).result
@@ -75,7 +77,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                     response_json = current_clients_page[output_key]['RESPONSE']
                     client_list.extend(response_json.get('HOST_LIST', {}).get('HOST'))
                 except KeyError:
-                    self.logger.warn(f"No devices found: {response.text}")
+                    logger.warn(f"No devices found: {response.text}")
                     return client_list
                 params = response_json.get('WARNING', {}).get('URL', "?").split("?")[1]
             return client_list
@@ -89,11 +91,11 @@ class QualysScansAdapter(ScannerAdapterBase):
 
         :return: A json with all the attributes returned from the QualysScans Server
         """
-        self.logger.info(f"Getting all qualys scannable hosts")
+        logger.info(f"Getting all qualys scannable hosts")
         all_hosts = {device['ID']: device for device in self._get_qualys_scan_results(client_data, url=ALL_HOSTS_URL,
                                                                                       params=ALL_HOSTS_PARAMS,
                                                                                       output_key=ALL_HOSTS_OUTPUT)}
-        self.logger.info(f"Getting all vulnerable hosts")
+        logger.info(f"Getting all vulnerable hosts")
         vm_hosts = self._get_qualys_scan_results(client_data, url=VM_HOST_URL,
                                                  params=VM_HOST_PARAMS, output_key=VM_HOST_OUTPUT)
 
@@ -148,7 +150,7 @@ class QualysScansAdapter(ScannerAdapterBase):
                 # Parsing the timestamp.
                 last_seen = dateutil.parser.parse(last_seen)
             except:
-                self.logger.exception("An Exception was raised while getting and parsing the last_seen field.")
+                logger.exception("An Exception was raised while getting and parsing the last_seen field.")
                 continue
 
             device = self._new_device_adapter()
@@ -156,17 +158,17 @@ class QualysScansAdapter(ScannerAdapterBase):
             device.figure_os(device_raw.get('OS', ''))
             device.last_seen = last_seen
             if 'IP' in device_raw:
-                device.add_nic('', [device_raw['IP']], self.logger)
+                device.add_nic('', [device_raw['IP']])
             device.qualys_scan_id = device_raw.get('ID')
             device.scanner = True
             device.set_raw(device_raw)
             yield device
 
         if no_timestamp_count != 0:
-            self.logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
+            logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
 
         if no_hostname_count != 0:
-            self.logger.warning(f"Got {no_hostname_count} with no hostname while parsing data")
+            logger.warning(f"Got {no_hostname_count} with no hostname while parsing data")
 
     def _correlation_cmds(self):
         """
@@ -174,7 +176,7 @@ class QualysScansAdapter(ScannerAdapterBase):
         :return: shell commands that help correlations
         """
 
-        self.logger.error("correlation_cmds is not implemented for qualys adapter")
+        logger.error("correlation_cmds is not implemented for qualys adapter")
         raise NotImplementedError("correlation_cmds is not implemented for qualys adapter")
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
@@ -186,7 +188,7 @@ class QualysScansAdapter(ScannerAdapterBase):
         :param os_type: the type of machine ran upon
         :return:
         """
-        self.logger.error("_parse_correlation_results is not implemented for qualys adapter")
+        logger.error("_parse_correlation_results is not implemented for qualys adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for qualys adapter")
 
     @classmethod

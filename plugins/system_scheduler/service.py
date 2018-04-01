@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import concurrent.futures
 import threading
 import dateutil.parser
@@ -30,7 +32,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         self._research_phase_scheduler = None
 
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
-        self._research_phase_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
+        self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._research_phase_thread,
                                                trigger=IntervalTrigger(seconds=self.system_research_rate),
                                                next_run_time=datetime.now(),
@@ -69,7 +71,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
 
             self.system_research_rate = data['system_research_rate']
 
-            self.logger.info(f"Setting research rate to: {self.system_research_rate}")
+            logger.info(f"Setting research rate to: {self.system_research_rate}")
 
             self._research_phase_scheduler.reschedule_job(
                 scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(seconds=self.system_research_rate))
@@ -85,7 +87,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         :return:
         """
         received_update = self.get_request_data_as_object()
-        self.logger.info(
+        logger.info(
             f"{self.get_caller_plugin_name()} notified that {received_update['adapter_name']} finished fetching data. f{received_update['portion_of_adapters_left']} left.")
         self.state[scheduler_consts.StateLevels.SubPhaseStatus.name] = received_update['portion_of_adapters_left']
         return ''
@@ -100,7 +102,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         :return:
         """
         if job_name != 'execute':
-            self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
 
         time_to_research = datetime.now()
@@ -109,10 +111,10 @@ class SystemSchedulerService(PluginBase, Triggerable):
             try:
                 time_to_research = dateutil.parser.parse(post_json["timestamp"])
                 if time_to_research < datetime.now():
-                    self.logger.info("Received an  earlier date to schedule a research phase.")
+                    logger.info("Received an  earlier date to schedule a research phase.")
                     return return_error("The specified time as already occurred", 400)
             except Exception as err:
-                self.logger.exception("Received a bad timestamp for scheduling a research phase.")
+                logger.exception("Received a bad timestamp for scheduling a research phase.")
                 return return_error("Failed to parse timestamp", 400)
 
         return self._schedule_research_phase(time_to_research)
@@ -129,15 +131,15 @@ class SystemSchedulerService(PluginBase, Triggerable):
         else:
             with self.research_phase_lock:
                 # Change current phase
-                self.logger.info(f"Entered {scheduler_consts.Phases.Research.name} Phase.")
+                logger.info(f"Entered {scheduler_consts.Phases.Research.name} Phase.")
                 self.current_phase = scheduler_consts.Phases.Research.name
                 try:
                     yield
                 except Exception:
-                    self.logger.exception(f"Failed {scheduler_consts.Phases.Research.name} Phase.")
+                    logger.exception(f"Failed {scheduler_consts.Phases.Research.name} Phase.")
                 finally:
                     self.current_phase = scheduler_consts.Phases.Stable.name
-                    self.logger.info(f"Back to {scheduler_consts.Phases.Stable.name} Phase.")
+                    logger.info(f"Back to {scheduler_consts.Phases.Stable.name} Phase.")
                     self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
 
     def _schedule_research_phase(self, time_to_run):
@@ -148,7 +150,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         research_job = self._research_phase_scheduler.get_job(scheduler_consts.RESEARCH_THREAD_ID)
         research_job.modify(next_run_time=time_to_run)
         self._research_phase_scheduler.wakeup()
-        self.logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase for {time_to_run}.")
+        logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase for {time_to_run}.")
         return ""
 
     def _research_phase_thread(self):
@@ -159,7 +161,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
 
         def _change_subphase(subphase_name):
             self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase_name
-            self.logger.info(f'Started Subphase {subphase_name}')
+            logger.info(f'Started Subphase {subphase_name}')
 
         with self._start_research():
             self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
@@ -187,7 +189,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation.name)
             self._run_plugins('Post-Correlation')
 
-            self.logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfuly.")
+            logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfuly.")
 
     def _get_plugins(self, plugin_subtype):
         """
@@ -215,9 +217,9 @@ class SystemSchedulerService(PluginBase, Triggerable):
             for future in concurrent.futures.as_completed(future_for_pre_correlation_plugin):
                 try:
                     future.result()
-                    self.logger.info(f'{future_for_pre_correlation_plugin[future]} Finished Execution.')
+                    logger.info(f'{future_for_pre_correlation_plugin[future]} Finished Execution.')
                 except Exception:
-                    self.logger.exception(f'Executing {future_for_pre_correlation_plugin[future]} Plugin Failed.')
+                    logger.exception(f'Executing {future_for_pre_correlation_plugin[future]} Plugin Failed.')
 
     def _run_cleaning_phase(self):
         """
@@ -245,7 +247,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         response = self.request_remote_plugin(*args, **kwargs)
         # 403 is a disabled plugin.
         if response.status_code not in (200, 403):
-            self.logger.exception(
+            logger.exception(
                 f"Executing {args[1]} failed as part of {self.state[scheduler_consts.StateLevels.SubPhase.name]} subphase failed.")
             raise axonius.plugin_exceptions.PhaseExecutionException(
                 f"Executing {args[1]} failed as part of {self.state[scheduler_consts.StateLevels.SubPhase.name]} subphase failed.")

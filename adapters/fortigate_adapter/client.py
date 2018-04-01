@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 from contextlib import contextmanager
 from json.decoder import JSONDecodeError
@@ -8,13 +10,13 @@ from fortigate_adapter.consts import DEFAULT_FORTIGATE_PORT, DEFAULT_DHCP_LEASE_
 
 class FortigateClient(object):
 
-    def __init__(self, logger, host, username, password, verify_ssl=False, port=DEFAULT_FORTIGATE_PORT,
+    def __init__(self, host, username, password, verify_ssl=False, port=DEFAULT_FORTIGATE_PORT,
                  vdom=None, dhcp_lease_time=DEFAULT_DHCP_LEASE_TIME):
         if port is None:
             port = DEFAULT_FORTIGATE_PORT
         if dhcp_lease_time is None:
             dhcp_lease_time = DEFAULT_DHCP_LEASE_TIME
-        self.logger = logger
+
         self.host = host
         self.username = username
         self.password = password
@@ -30,7 +32,7 @@ class FortigateClient(object):
                 pass
 
         except Exception as err:
-            self.logger.exception("Failed connecting to fortigate")
+            logger.exception("Failed connecting to fortigate")
             raise axonius.adapter_exceptions.ClientConnectionException("Failed to connect to fortigate.")
 
     def _make_request(self, session, method, resource, payload=None):

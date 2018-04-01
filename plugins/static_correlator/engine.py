@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.parsing_utils import get_hostname, is_different_plugin, compare_hostname, is_from_ad, get_normalized_mac, \
     ips_do_not_contradict, compare_macs, get_normalized_ip, compare_device_normalized_hostname, \
@@ -61,7 +63,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         6. 'StaticAnalysis' - the analysis used to discover the correlation
         """
-        self.logger.info("Starting to correlate on MAC-IP")
+        logger.info("Starting to correlate on MAC-IP")
         filtered_adapters_list = filter(get_normalized_mac, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [],
@@ -72,7 +74,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       'StaticAnalysis')
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
-        self.logger.info("Starting to correlate on Hostname-IP")
+        logger.info("Starting to correlate on Hostname-IP")
         filtered_adapters_list = filter(get_hostname,
                                         filter(get_normalized_ip, adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
@@ -88,7 +90,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         AD correlation is a little more loose - we allow correlation based on hostname alone.
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
-        self.logger.info("Starting to correlate on Hostname-AD")
+        logger.info("Starting to correlate on Hostname-AD")
         filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
@@ -119,7 +121,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             if second_name == first_name:
                 # this means that some logic in the correlator logic is wrong, because
                 # such correlations should have reason == "Logic"
-                self.logger.error(
+                logger.error(
                     f"{first_name} correlated to itself, id: '{first_id}' and '{second_id}' via static analysis")
                 return False
         return True

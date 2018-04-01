@@ -1,8 +1,9 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 import puppet_adapter.consts as consts
 from axonius.utils.files import create_temp_file
 from puppet_adapter.exceptions import PuppetException
-import tempfile
 
 
 def _parse_json_request(response):
@@ -15,15 +16,13 @@ def _parse_json_request(response):
         raise PuppetException(f"Query failed: {response.status_code}")
 
 
-class PuppetConnection:
+class PuppetConnection(object):
 
-    def __init__(self, logger, puppet_server_address: str, ca_file_data: bytes, cert_file: bytes, private_key: bytes):
+    def __init__(self, puppet_server_address: str, ca_file_data: bytes, cert_file: bytes, private_key: bytes):
         """
-        :param obj logger: Logger object of the system
         :param str puppet_server_address: Server address
         """
         self.puppet_server_address = puppet_server_address
-        self.logger = logger
 
         self.__ca_file = create_temp_file(ca_file_data)
         self.__cert_file = create_temp_file(cert_file)
@@ -43,8 +42,8 @@ class PuppetConnection:
         try:
             query_response = self._session.get(f"{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes")
         except requests.RequestException as err:
-            self.logger.exception("Error in querying the nodes from the puppet server." +
-                                  " Error information:{0}".format(str(err)))
+            logger.exception("Error in querying the nodes from the puppet server." +
+                             " Error information:{0}".format(str(err)))
             raise
 
         parsed_query_nodes_json = _parse_json_request(query_response)
@@ -54,10 +53,10 @@ class PuppetConnection:
             try:
                 devices_count += 1
                 if devices_count % 1000 == 0:
-                    self.logger.info(f"Got {devices_count} devices out of {num_of_devices}")
+                    logger.info(f"Got {devices_count} devices out of {num_of_devices}")
                 yield self._query_fact_device(json_node)
             except PuppetException as err:
-                self.logger.exception(f"Error in getting information about node:{str(json_node)}. Error:{str(err)}")
+                logger.exception(f"Error in getting information about node:{str(json_node)}. Error:{str(err)}")
 
     def _query_fact_device(self, basic_json_node: dict=None):
         """ This function gets a json with basic information about a node (or nothing if not needed),

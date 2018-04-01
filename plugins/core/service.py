@@ -1,4 +1,5 @@
-import os
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 import configparser
@@ -90,7 +91,7 @@ class CoreService(PluginBase):
 
         # Create plugin cleaner thread
         executors = {'default': ThreadPoolExecutor(1)}
-        self.cleaner_thread = LoggedBackgroundScheduler(self.logger, executors=executors)
+        self.cleaner_thread = LoggedBackgroundScheduler(executors=executors)
         self.cleaner_thread.add_job(func=self.clean_offline_plugins,
                                     trigger=IntervalTrigger(seconds=20),
                                     next_run_time=datetime.now(),
@@ -131,12 +132,12 @@ class CoreService(PluginBase):
                 for delete_key, delete_value in delete_list:
                     delete_candidate = self.online_plugins.get(delete_key)
                     if delete_candidate is delete_value:
-                        self.logger.info("Plugin {0} didnt answer, deleting "
-                                         "from online plugins list".format(delete_candidate))
+                        logger.info("Plugin {0} didnt answer, deleting "
+                                    "from online plugins list".format(delete_candidate))
                         del self.online_plugins[delete_key]
 
         except Exception as e:
-            self.logger.critical("Cleaning plugins had an error. message: {0}", str(e))
+            logger.critical("Cleaning plugins had an error. message: {0}", str(e))
 
     def _setup_images(self):
         """ Setting up needed images
@@ -170,18 +171,18 @@ class CoreService(PluginBase):
                 if responder_name == plugin_unique_name:
                     return True
                 else:
-                    self.logger.info(f"Bad plugin name while checking plugin online. "
-                                     f"Expected: {plugin_unique_name}, got: {responder_name}")
+                    logger.info(f"Bad plugin name while checking plugin online. "
+                                f"Expected: {plugin_unique_name}, got: {responder_name}")
                     return False
             else:
                 return False
 
         except (ConnectionError, ReadTimeout, Timeout, PluginNotFoundError) as e:
-            self.logger.info("Got exception {} while trying to contact {}".format(e, plugin_unique_name))
+            logger.info("Got exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
         except Exception as e:
-            self.logger.fatal("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
+            logger.fatal("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
 
     def _create_db_for_plugin(self, plugin_unique_name):
@@ -247,14 +248,14 @@ class CoreService(PluginBase):
             supported_features = data['supported_features']
             plugin_is_debug = data.get('is_debug', False)
 
-            self.logger.info(f"Got registration request : {data} from {request.remote_addr}")
+            logger.info(f"Got registration request : {data} from {request.remote_addr}")
 
             relevant_doc = None
 
             if PLUGIN_UNIQUE_NAME in data:
                 # Plugin is trying to register with his own name
                 plugin_unique_name = data[PLUGIN_UNIQUE_NAME]
-                self.logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
+                logger.info("Plugin request to register with his own name: {0}".format(plugin_unique_name))
 
                 # Trying to get the configuration of the current plugin
                 relevant_doc = self._get_config(plugin_unique_name)
@@ -267,20 +268,20 @@ class CoreService(PluginBase):
                         return return_error('Wrong API key', 400)
                 else:
                     # TODO: prompt message to gui that an unrecognized plugin is trying to connect
-                    self.logger.warning("Plugin {0} request to register with "
-                                        "unique name but with no api key".format(plugin_unique_name))
+                    logger.warning("Plugin {0} request to register with "
+                                   "unique name but with no api key".format(plugin_unique_name))
 
                 # Checking if this plugin already online for some reason
                 if plugin_unique_name in self.online_plugins:
                     duplicated = self.online_plugins[plugin_unique_name]
                     if request.remote_addr == duplicated['plugin_ip'] and plugin_port == duplicated['plugin_port']:
-                        self.logger.warn("Pluging {} restarted".format(plugin_unique_name))
+                        logger.warn("Pluging {} restarted".format(plugin_unique_name))
                         del self.online_plugins[plugin_unique_name]
                     else:
-                        self.logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")
+                        logger.warn(f"Already have instance of {plugin_unique_name}, trying to check if alive")
                         if self._check_plugin_online(plugin_unique_name):
                             # There is already a running plugin with the same name
-                            self.logger.error("Plugin {0} trying to register but already online")
+                            logger.error("Plugin {0} trying to register but already online")
                             return return_error("Error - {0} is trying to register but already "
                                                 "online".format(plugin_unique_name), 400)
                         else:
@@ -340,13 +341,13 @@ class CoreService(PluginBase):
             for same_ip_plugin in same_ip_plugins:
                 # If we have reached here it means that we have another registered plugin with the same IP and port
                 if self._check_plugin_online(same_ip_plugin):
-                    self.logger.error(f"Found two online plugins with same IP. "
-                                      f"({same_ip_plugin}, {plugin_unique_name})")
+                    logger.error(f"Found two online plugins with same IP. "
+                                 f"({same_ip_plugin}, {plugin_unique_name})")
                     return return_error(f"Already have plugin with this ip: {same_ip_plugin}")
                 else:
                     # The older plugin is no longer online, removing it from the onine_plugins list
-                    self.logger.info(f"Removing {same_ip_plugin} from online since other "
-                                     f"{plugin_unique_name} got registered with same ip")
+                    logger.info(f"Removing {same_ip_plugin} from online since other "
+                                f"{plugin_unique_name} got registered with same ip")
                     del self.online_plugins[same_ip_plugin]
 
             # Setting a new doc with the wanted configuration
@@ -362,7 +363,7 @@ class CoreService(PluginBase):
             self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field
             self.did_adapter_registered = True
-            self.logger.info("Plugin {0} registered successfuly!".format(relevant_doc[PLUGIN_UNIQUE_NAME]))
+            logger.info("Plugin {0} registered successfuly!".format(relevant_doc[PLUGIN_UNIQUE_NAME]))
             return jsonify(relevant_doc)
 
     def _get_online_plugins(self):
@@ -396,7 +397,7 @@ class CoreService(PluginBase):
         # Checking api key
         calling_plugin = next((plugin for plugin in self.online_plugins.values() if plugin['api_key'] == api_key), None)
         if calling_plugin is None:
-            self.logger.warning("Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
+            logger.warning("Got request from {ip} with wrong api key.".format(ip=request.remote_addr))
             return return_error("Api key not valid", 401)
 
         try:
@@ -464,7 +465,7 @@ class CoreService(PluginBase):
         relevant_doc = self._get_config(unique_plugin)
 
         if not relevant_doc:
-            self.logger.warning("No online plugin found for {0}".format(plugin_unique_name))
+            logger.warning("No online plugin found for {0}".format(plugin_unique_name))
             raise PluginNotFoundError()
 
         return {"plugin_ip": relevant_doc["plugin_ip"],
@@ -505,9 +506,9 @@ class CoreService(PluginBase):
         """
         data = self.get_request_data_as_object()
         mailing_list = data['recipient_list']
-        self.logger.info(f"Sending email: {data}")
+        logger.info(f"Sending email: {data}")
         mail_server = self._get_email_server()
-        self.logger.info(f"Sending email server: {mail_server}")
+        logger.info(f"Sending email server: {mail_server}")
         msg = MIMEText(data['content'], 'html')
         msg['Subject'] = data['title']
         msg['From'] = consts.mail_from_address
@@ -516,9 +517,9 @@ class CoreService(PluginBase):
             server = smtplib.SMTP(mail_server['host'], mail_server['port'])
             server.sendmail(consts.mail_from_address, mailing_list, msg.as_string())
         except Exception as err:
-            self.logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
+            logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
         finally:
             try:
                 server.quit()
             except:
-                self.logger.exception("Exception was raised while trying to quit the e-mail server connection.")
+                logger.exception("Exception was raised while trying to quit the e-mail server connection.")

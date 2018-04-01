@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.fields import Field
@@ -49,7 +51,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         self._resolving_thread_lock = threading.RLock()
 
         executors = {'default': ThreadPoolExecutor(2)}
-        self._resolver_scheduler = LoggedBackgroundScheduler(self.logger, executors=executors)
+        self._resolver_scheduler = LoggedBackgroundScheduler(executors=executors)
 
         # Thread for resolving IP addresses of devices
         self._resolver_scheduler.add_job(func=self._resolve_hosts_addr_thread,
@@ -89,8 +91,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
     def _connect_client(self, dc_details):
         try:
-            return LdapConnection(self.logger,
-                                  self._ldap_page_size,
+            return LdapConnection(self._ldap_page_size,
                                   dc_details['dc_name'],
                                   dc_details['domain_name'],
                                   dc_details['user'],
@@ -103,14 +104,14 @@ class ActiveDirectoryAdapter(AdapterBase):
         except LdapException as e:
             message = "Error in ldap process for dc {0}. reason: {1}".format(
                 dc_details["dc_name"], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
         except KeyError as e:
             if "dc_name" in dc_details:
                 message = "Key error for dc {0}. details: {1}".format(
                     dc_details["dc_name"], str(e))
             else:
                 message = "Missing dc name for configuration line"
-            self.logger.exception(message)
+            logger.exception(message)
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -232,18 +233,18 @@ class ActiveDirectoryAdapter(AdapterBase):
             username = user_raw.get("sAMAccountName")
             domain = user_raw.get("distinguishedName")
             if username is None:
-                self.logger.error(f"Error, could not get sAMAccountName for user.username, "
-                                  f"which is mandatory. Bypassing. raw_data: {user_raw}")
+                logger.error(f"Error, could not get sAMAccountName for user.username, "
+                             f"which is mandatory. Bypassing. raw_data: {user_raw}")
                 continue
 
             if domain is None:
-                self.logger.error(f"Error, could not get distinguishedName for user.domain, "
-                                  f"which is mandatory. Bypassing. raw_data: {user_raw}")
+                logger.error(f"Error, could not get distinguishedName for user.domain, "
+                             f"which is mandatory. Bypassing. raw_data: {user_raw}")
                 continue
 
             domain_name = convert_ldap_searchpath_to_domain_name(domain)
             if domain_name == "":
-                self.logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
+                logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
                 continue
 
             user.username = username
@@ -318,7 +319,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 if thumbnail_photo is not None:
                     user.image = bytes_image_to_base64(thumbnail_photo)
             except:
-                self.logger.exception("Exception while setting thumbnailPhoto.")
+                logger.exception("Exception while setting thumbnailPhoto.")
 
             user.set_raw(user_raw)
             yield user
@@ -337,7 +338,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
 
             except Exception as e:
-                self.logger.exception(f"Error resolving host ip from dc.")
+                logger.exception(f"Error resolving host ip from dc.")
                 current_resolved_host = dict(host)
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
 
@@ -360,7 +361,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                                                                         'raw.AXON_DC_ADDR': True,
                                                                         'hostname': True})
 
-            self.logger.info(f"Going to resolve for {hosts.count()} hosts")
+            logger.info(f"Going to resolve for {hosts.count()} hosts")
 
             did_one_resolved = False
 
@@ -377,7 +378,7 @@ class ActiveDirectoryAdapter(AdapterBase):
 
             if not did_one_resolved and hosts.count() != 0:
                 # Raise log message only if no host could get resolved
-                self.logger.error("Couldn't resolve IP's. Maybe dns is incorrect?")
+                logger.error("Couldn't resolve IP's. Maybe dns is incorrect?")
             return
 
     def _resolve_change_status_thread(self):
@@ -425,9 +426,9 @@ class ActiveDirectoryAdapter(AdapterBase):
                 no_timestamp_count += 1
                 continue
             if type(last_seen) != datetime:
-                self.logger.error(f"Unrecognized date format for "
-                                  f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
-                                  f"Got type {type(last_seen)} instead of datetime")
+                logger.error(f"Unrecognized date format for "
+                             f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
+                             f"Got type {type(last_seen)} instead of datetime")
                 continue
 
             device = self._new_device_adapter()
@@ -459,7 +460,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         if len(to_insert) > 0:
             devices_collection.insert_many(to_insert)
         if no_timestamp_count != 0:
-            self.logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
+            logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
 
     def _create_random_file(self, file_buffer, attrib='w'):
         """ Creating a random file in the temp_file folder.
@@ -554,7 +555,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                     else:
                         raise IpResolveError(f"hostname {wanted_hostname} has never been resolved, not resolving")
                 except Exception:
-                    self.logger.exception(f"Exception - could not resolve ip for execution.")
+                    logger.exception(f"Exception - could not resolve ip for execution.")
                     raise
 
                 # Putting the file using wmi_smb_path.
@@ -620,7 +621,7 @@ class ActiveDirectoryAdapter(AdapterBase):
             return {"result": 'Failure', "product": 'No WMI/SMB queries/commands list supplied'}
 
         command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
-        self.logger.debug("running wmi {0}".format(command_list))
+        logger.debug("running wmi {0}".format(command_list))
 
         # Running the command.
         subprocess_handle = subprocess.Popen(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -640,22 +641,22 @@ class ActiveDirectoryAdapter(AdapterBase):
                                                            str(command_stderr),
                                                            get_exception_string(),
                                                            MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS)
-            self.logger.error(err_log)
+            logger.error(err_log)
             raise ValueError(err_log)
         except subprocess.SubprocessError:
             # This is a base class for all the rest of subprocess excpetions.
             err_log = f"General Execution error! command {command_list}, exception: {get_exception_string()}"
-            self.logger.error(err_log)
+            logger.error(err_log)
             raise ValueError(err_log)
 
         if subprocess_handle.returncode != 0:
             err_log = f"Execution Error! command {command_list} returned returncode " \
                       f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
-            self.logger.error(err_log)
+            logger.error(err_log)
             raise ValueError(err_log)
 
         product = json.loads(command_stdout.strip())
-        self.logger.debug("command returned with return code 0 (successfully).")
+        logger.debug("command returned with return code 0 (successfully).")
 
         # Optimization if all failed
         if all([True if line['status'] != 'ok' else False for line in product]):

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 from datetime import datetime
 import requests
@@ -21,14 +23,12 @@ class JamfPolicy(SmartJsonClass):
 
 
 class JamfConnection(object):
-    def __init__(self, logger, domain, num_of_simultaneous_devices,
+    def __init__(self, domain, num_of_simultaneous_devices,
                  http_proxy=None, https_proxy=None):
         """ Initializes a connection to Jamf using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Jamf
         """
-        self.logger = logger
         url = domain
         if not url.lower().startswith('https://'):
             url = 'https://' + url
@@ -43,7 +43,7 @@ class JamfConnection(object):
             self.proxies['http'] = http_proxy
         if https_proxy is not None:
             self.proxies['https'] = https_proxy
-        self.logger.info(f"Proxies: {self.proxies}")
+        logger.info(f"Proxies: {self.proxies}")
         self.num_of_simultaneous_devices = num_of_simultaneous_devices
 
     def set_credentials(self, username, password):
@@ -116,7 +116,7 @@ class JamfConnection(object):
             raise JamfRequestException(str(e))
 
     def _run_in_thread_pool_per_device(self, devices, func):
-        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
+        logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
         with ThreadPoolExecutor(max_workers=self.num_of_simultaneous_devices) as executor:
             try:
                 device_counter = 0
@@ -130,9 +130,9 @@ class JamfConnection(object):
 
                 wait(futures, timeout=None, return_when=ALL_COMPLETED)
             except Exception as err:
-                self.logger.exception("An exception was raised while trying to get the data.")
+                logger.exception("An exception was raised while trying to get the data.")
 
-        self.logger.info("Finished getting all device data.")
+        logger.info("Finished getting all device data.")
 
     def threaded_get_devices(self, url, device_list_name, device_type):
         def get_device(device, device_number):
@@ -140,10 +140,10 @@ class JamfConnection(object):
                 device_id = device['id']
                 device_details = self.get(url + '/id/' + device_id).get(device_type)
                 if device_number % print_modulo == 0:
-                    self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
+                    logger.info(f"Got {device_number} devices out of {num_of_devices}.")
                 device_list.append(device_details)
             except:
-                self.logger.exception(f'error retrieving details of device id {device_id}')
+                logger.exception(f'error retrieving details of device id {device_id}')
         devices = (self.get(url).get(device_list_name) or {})
         num_of_devices = devices.get('size')
         if num_of_devices:
@@ -185,19 +185,19 @@ class JamfConnection(object):
                             device_policy.last_completed_date = policy_date
                         device_policies[policy_key] = device_policy
                     except Exception:
-                        self.logger.exception(f"failed to parse policy: {policy}")
+                        logger.exception(f"failed to parse policy: {policy}")
 
                 device['policies'] = list(device_policies.values())
             except Exception as err:
-                self.logger.exception("An exception occured while getting and parsing device policies.")
+                logger.exception("An exception occured while getting and parsing device policies.")
 
             if device_number % print_modulo == 0:
-                self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
+                logger.info(f"Got {device_number} devices out of {num_of_devices}.")
             return device_details
 
         num_of_devices = len(devices)
         print_modulo = max(int(num_of_devices / 10), 1)
-        self.logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
+        logger.info("Starting {0} worker threads.".format(self.num_of_simultaneous_devices))
         self._run_in_thread_pool_per_device(devices, get_history_worker)
 
         return devices

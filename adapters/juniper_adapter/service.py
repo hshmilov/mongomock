@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -20,8 +22,8 @@ class JuniperAdapter(AdapterBase):
         device_type = Field(str, 'Device Type')
         serial = Field(str, 'Serial')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _clients_schema(self):
         return {
@@ -61,13 +63,13 @@ class JuniperAdapter(AdapterBase):
                         device.id = arp_item['mac_address']
                         ip_address = arp_item.get('ipAddr', None)
                         device.add_nic(arp_item['mac_address'], [ip_address]
-                                       if ip_address is not None else None, self.logger)
+                                       if ip_address is not None else None)
                         device.interface = arp_item.get('interface')
                         device.set_raw(arp_item)
                         yield device
 
                     except Exception as err:
-                        self.logger.exception("Got bad arp item with missing data.")
+                        logger.exception("Got bad arp item with missing data.")
             elif device_type == 'juniper_device':
                 device = self._new_device_adapter()
                 device.device_type = device_type
@@ -81,7 +83,7 @@ class JuniperAdapter(AdapterBase):
                               for item in list_of_arp_items if item['ipAddr'] == juno_device.get('ipAddr')]
                 mac_address = mac_finder[0] if len(mac_finder) != 0 else None
                 ip_address = arp_item.get('ipAddr', None)
-                device.add_nic(mac_address, [ip_address] if ip_address is not None else None, self.logger)
+                device.add_nic(mac_address, [ip_address] if ip_address is not None else None)
                 device.set_raw(juno_device)
                 yield device
 
@@ -90,7 +92,7 @@ class JuniperAdapter(AdapterBase):
             assert isinstance(client_data, JuniperClient)
             return client_data.get_all_devices()
         except Exception as err:
-            self.logger.exception(f'Failed to get all the devices from the client: {client_data}')
+            logger.exception(f'Failed to get all the devices from the client: {client_data}')
             raise AdapterException(f'Failed to get all the devices from the client: {client_data}')
 
     def _get_client_id(self, client_config):
@@ -98,9 +100,11 @@ class JuniperAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            return JuniperClient(self.logger, url=f"https://{client_config[consts.JUNIPER_HOST]}", username=client_config[consts.USER], password=self.decrypt_password(client_config[consts.PASSWORD]))
+            return JuniperClient(url=f"https://{client_config[consts.JUNIPER_HOST]}",
+                                 username=client_config[consts.USER],
+                                 password=self.decrypt_password(client_config[consts.PASSWORD]))
         except Exception as err:
-            self.logger.exception(f'Failed to connect to Juniper provider using this config {client_config}')
+            logger.exception(f'Failed to connect to Juniper provider using this config {client_config}')
             raise ClientConnectionException(f'Failed to connect to Juniper provider using this config {client_config}')
 
     @classmethod

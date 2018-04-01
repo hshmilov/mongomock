@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 
 from qualys_adapter.exceptions import QualysConnectionError
@@ -10,13 +12,11 @@ Which is obviously why there's no regard to rate limiting
 
 
 class QualysConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, domain):
         """ Initializes a connection to Qualys using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Qualys
         """
-        self.logger = logger
         url = domain
         if not url.lower().startswith('https://'):
             url = 'https://' + url
@@ -46,13 +46,13 @@ class QualysConnection(object):
         """ Connects to the service """
 
         if self.auth[0] is None or self.auth[1] is None:
-            self.logger.error(f"Username {0} or password {1} is None".format(
+            logger.error(f"Username {0} or password {1} is None".format(
                 self.auth[0], self.auth[1]))
             raise QualysConnectionError(f"Username {self.auth[0]} or password {self.auth[1]} is None")
         response = self._post("count/am/hostasset/", auth=self.auth, headers=self.headers)
 
         if "SUCCESS" != response['responseCode']:
-            self.logger.error("Failed to connect to qualys.", response["responseErrorDetails"])
+            logger.error("Failed to connect to qualys.", response["responseErrorDetails"])
             raise QualysConnectionError(response["responseErrorDetails"])
 
     def __del__(self):
@@ -79,7 +79,7 @@ class QualysConnection(object):
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
-            self.logger.exception('Post request failed. {0}'.format(str(e)), name, headers, cookies, auth, data)
+            logger.exception('Post request failed. {0}'.format(str(e)), name, headers, cookies, auth, data)
             raise e
         response = response.json()
         return response['ServiceResponse']

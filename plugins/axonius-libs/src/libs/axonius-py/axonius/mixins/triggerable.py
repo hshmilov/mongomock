@@ -1,5 +1,9 @@
+import logging
+
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+
+logger = logging.getLogger(f"axonius.{__name__}")
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, auto
 from threading import RLock
 
@@ -41,7 +45,7 @@ class Triggerable(Feature, ABC):
         self.__trigger_lock = RLock()
         self.__state = {}
         # this executor executes the trigger function
-        self.__executor = ThreadPoolExecutor(max_workers=20)
+        self.__executor = LoggedThreadPoolExecutor(max_workers=20)
         self.__last_error = ""
         self._default_activity = False
 
@@ -50,7 +54,7 @@ class Triggerable(Feature, ABC):
         for doc in docs:
             job_name = doc["trigger_activate_job"]
             job_state = doc["trigger_activate_state"]
-            self.logger.info(f"Trigger activate job {job_name}: state is {job_state}")
+            logger.info(f"Trigger activate job {job_name}: state is {job_state}")
             if job_state is True:
                 self._activate(job_name)
 
@@ -129,7 +133,7 @@ class Triggerable(Feature, ABC):
         job_state = self._get_state_or_default(job_name)
         # Flipping current active state.
         job_state['active'] = True
-        self.logger.info(f'Trigger job {job_name} has been activated.')
+        logger.info(f'Trigger job {job_name} has been activated.')
         self.__trigger_activate_save_to_db()
         return ''
 
@@ -151,7 +155,7 @@ class Triggerable(Feature, ABC):
         job_state = self._get_state_or_default(job_name)
         # Flipping current active state.
         job_state['active'] = False
-        self.logger.info(f'Trigger job {job_name} has been deactivated.')
+        logger.info(f'Trigger job {job_name} has been deactivated.')
         return ''
 
     def _get_state_or_default(self, job_name):
@@ -204,12 +208,12 @@ class Triggerable(Feature, ABC):
                     if not job_state['scheduled']:
                         job_state['triggered'] = False
                     job_state['scheduled'] = False
-                    self.logger.info("Successfully triggered")
+                    logger.info("Successfully triggered")
                     return arg
 
             def on_failed(err):
                 with job_state['lock']:
-                    self.logger.error(f"Failed triggering up: {err}")
+                    logger.error(f"Failed triggering up: {err}")
                     job_state['last_error'] = str(repr(err))
                     if not job_state['scheduled']:
                         job_state['triggered'] = False
@@ -228,7 +232,7 @@ class Triggerable(Feature, ABC):
                     trigger_response = ""
                 on_success(trigger_response)
             except Exception as err:
-                self.logger.exception(f'An exception was raised while triggering job: {job_name}')
+                logger.exception(f'An exception was raised while triggering job: {job_name}')
                 on_failed(err)
                 raise
 

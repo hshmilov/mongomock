@@ -1,4 +1,6 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import ssl
 from enum import Enum, auto
 
@@ -16,20 +18,19 @@ class SSLState(Enum):
     Unverified = auto()
 
 
-class LdapConnection:
+class LdapConnection(object):
     """Class responsible for creating an ldap connection.
 
     This class will use a single LDAP connection in order to retrieve
     Data from the wanted ActiveDirectory.
     """
 
-    def __init__(self, logger, ldap_page_size, server_addr, domain_name,
+    def __init__(self, ldap_page_size, server_addr, domain_name,
                  user_name, user_password, dns_server,
                  use_ssl: SSLState = SSLState.Unverified, ca_file_data: bytes = None, cert_file: bytes = None,
                  private_key: bytes = None):
         """Class initialization.
 
-        :param obj logger: Logger object to send logs
         :param int ldap_page_size: Amount of devices to fetch on each request
         :param str server_addr: Server address (name of IP)
         :param str domain_name: Domain name to connect with
@@ -38,7 +39,6 @@ class LdapConnection:
         :param str dns_server: Address of other dns server
         :param bool use_ssl: Whether or not to use ssl. If true, ca_file_data, cert_file and private_key must be set
         """
-
         self.server_addr = server_addr
         self.domain_name = domain_name
         self.user_name = user_name
@@ -53,7 +53,6 @@ class LdapConnection:
             self.__cert_file = create_temp_file(cert_file) if cert_file else None
             self.__private_key_file = create_temp_file(private_key) if private_key else None
 
-        self.logger = logger
         self._connect_to_server()
 
     def _connect_to_server(self):
@@ -149,7 +148,7 @@ class LdapConnection:
                 device_dict['AXON_DOMAIN_NAME'] = self.domain_name
                 devices_count += 1
                 if devices_count % 1000 == 0:
-                    self.logger.info(f"Got {devices_count} devices so far")
+                    logger.info(f"Got {devices_count} devices so far")
                 yield device_dict
 
             if one_device is None:
@@ -192,7 +191,7 @@ class LdapConnection:
 
                     users_count = users_count + 1
                     if users_count % 100 == 0:
-                        self.logger.info(f"Got {users_count} users so far")
+                        logger.info(f"Got {users_count} users so far")
 
                     yield dict(user['attributes'])
 

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -34,8 +36,8 @@ class SentineloneAdapter(AdapterBase):
         agent_version = Field(str, 'Agent Version')
         active_state = Field(str, 'Active State')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['SentinelOne_Domain']
@@ -47,15 +49,15 @@ class SentineloneAdapter(AdapterBase):
         if has_token and maybe_has_user:
             msg = f"Different logins for SentinelOne domain " \
                   f"{client_config.get('SentinelOne_Domain')}, user: {client_config.get('username', '')}"
-            self.logger.error(msg)
+            logger.error(msg)
             raise ClientConnectionException(msg)
         elif maybe_has_user and not has_user:
             msg = f"Missing credentials for SentinelOne domain " \
                   f"{client_config.get('SentinelOne_Domain')}, user: {client_config.get('username', '')}"
-            self.logger.error(msg)
+            logger.error(msg)
             raise ClientConnectionException(msg)
         try:
-            connection = SentinelOneConnection(logger=self.logger, domain=client_config["SentinelOne_Domain"])
+            connection = SentinelOneConnection(domain=client_config["SentinelOne_Domain"])
             if has_token:
                 connection.set_token(client_config['token'])
             else:
@@ -67,7 +69,7 @@ class SentineloneAdapter(AdapterBase):
         except SentinelOneException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['SentinelOne_Domain'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -86,7 +88,7 @@ class SentineloneAdapter(AdapterBase):
             last_id = current_clients_page['last_id']
             while last_id is not None:
                 devices_count += 1
-                self.logger.info(f"Got {devices_count*200} devices so far")
+                logger.info(f"Got {devices_count*200} devices so far")
                 current_clients_page = client_data.get_device_iterator(limit='200', last_id=last_id)
                 client_list.extend(current_clients_page['data'])
                 last_id = current_clients_page['last_id']
@@ -145,9 +147,9 @@ class SentineloneAdapter(AdapterBase):
             try:
                 for interface in net_info.get('interfaces', []):
                     device.add_nic(interface.get('physical'), interface.get(
-                        'inet6', []) + interface.get('inet', []), self.logger)
+                        'inet6', []) + interface.get('inet', []))
             except:
-                self.logger.exception(f"Problem adding nic {str(interfaces)} to SentinelOne")
+                logger.exception(f"Problem adding nic {str(interfaces)} to SentinelOne")
             device.agent_version = device_raw.get('agent_version')
             device.id = device_raw['id']
             device.last_seen = parse_date(str(device_raw.get('last_active_date', '')))
@@ -184,7 +186,7 @@ class SentineloneAdapter(AdapterBase):
         if os_type in sentinelone_ID_Matcher:
             return next(sentinelone_ID_Matcher[os_type].findall(correlation_cmd_result.strip()), None)
         else:
-            self.logger.warn("The OS type {0} doesn't have a sentinelone matcher", os_type)
+            logger.warn("The OS type {0} doesn't have a sentinelone matcher", os_type)
             return None
 
     @classmethod

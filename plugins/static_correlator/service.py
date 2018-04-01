@@ -10,7 +10,7 @@ class StaticCorrelatorService(CorrelatorBase):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
 
-        self._correlation_engine = StaticCorrelatorEngine(logger=self.logger)
+        self._correlation_engine = StaticCorrelatorEngine()
         self._activate('execute')
 
     def get_devices_from_ids(self, devices_ids=None):

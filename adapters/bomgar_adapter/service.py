@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -23,8 +25,8 @@ class BomgarAdapter(AdapterBase):
         last_session_start_method = Field(str, 'Last Session Start Method')
         public_ip = Field(str, 'Public IP', converter=format_ip, json_format=JsonStringFormat.ip)
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return f"{client_config['domain']}:{client_config['client_id']}"
@@ -38,7 +40,7 @@ class BomgarAdapter(AdapterBase):
             return connection
         except BomgarException as e:
             message = f"Error connecting to client {self._get_client_id(client_config)}, reason: {str(e)}"
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):

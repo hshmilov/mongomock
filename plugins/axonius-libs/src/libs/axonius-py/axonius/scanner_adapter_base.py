@@ -1,7 +1,10 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 """
 ScannerAdapterBase is an abstract class all scanner adapters should inherit from.
 See https://axonius.atlassian.net/wiki/spaces/AX/pages/415858710/ScannerAdapter+Design
 """
+from axonius.plugin_base import EntityType
 import uuid
 from abc import ABC
 from typing import Tuple, List
@@ -29,13 +32,12 @@ def newest(devices):
 
 
 class ScannerCorrelatorBase(object):
-    def __init__(self, logger, all_devices, *args, **kwargs):
+    def __init__(self, all_devices, *args, **kwargs):
         """
         Base scanner correlator; base behavior is correlating with hostname
         :param all_devices: all axonius devices from DB
         """
         super().__init__(*args, **kwargs)
-        self.logger = logger
         self._all_devices = list(all_devices)
         self._all_adapter_devices = [adapter for adapters in self._all_devices for adapter in adapters['adapters']]
 
@@ -136,7 +138,7 @@ class ScannerCorrelatorBase(object):
             newest_device = newest(filter(lambda dev: parsed_device[PLUGIN_NAME] == dev[PLUGIN_NAME],
                                           correlation_base_axonius_device['adapters']))
             if newest_device is not None:
-                self.logger.debug(f"Found remote correlation but not self correlation - {newest_device['data']['id']}")
+                logger.debug(f"Found remote correlation but not self correlation - {newest_device['data']['id']}")
                 # updating a current adapter correlation so no new one will be created - basically a different kind
                 # of self correlation
                 parsed_device['data']['id'] = newest_device['data']['id']
@@ -155,14 +157,14 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _try_query_data_by_client(self, client_name, entity_type):
+    def _try_query_data_by_client(self, client_name, entity_type: EntityType):
         raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
 
-        if entity_type == "devices":
+        if entity_type == EntityType.Devices:
             with self._get_db_connection(True) as db:
                 aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
                 devices = aggregator_db['devices_db'].find()
-            scanner = self._get_scanner_correlator(self.logger, devices)
+            scanner = self._get_scanner_correlator(devices)
 
             num_of_devices = len(parsed_data)
             print_modulo = max(int(num_of_devices / 10), 1)
@@ -173,7 +175,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
                                                                  PLUGIN_NAME: self.plugin_name,
                                                                  'plugin_type': self.plugin_type})
                 if device_number % print_modulo == 0:
-                    self.logger.info(f"Got {device_number} devices out of {num_of_devices}.")
+                    logger.info(f"Got {device_number} devices out of {num_of_devices}.")
                 device_number += 1
         return raw_data, parsed_data
 

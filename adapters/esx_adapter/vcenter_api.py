@@ -1,9 +1,12 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from pyVim import connect
 from pyVmomi.VmomiSupport import Enum as pyVmomiEnum
 from retrying import retry
 from datetime import datetime
 from namedlist import namedlist
 from pyVmomi import vim
+
 
 vCenterNode = namedlist(
     'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None), ('Hardware', None)])
@@ -46,10 +49,10 @@ def _should_retry_fetching(exception):
     return isinstance(exception, vim.fault.NoPermission)
 
 
-class vCenterApi():
+class vCenterApi(object):
     """ vCenterApi.py: A wrapper for vCenter SOAP services """
 
-    def __init__(self, logger, host, user, password, verify_ssl=False):
+    def __init__(self, host, user, password, verify_ssl=False):
         """
         Ctor
         :param str host: ip or dns of the vcenter server
@@ -58,7 +61,6 @@ class vCenterApi():
         :param bool verify_ssl: should we verify SSL or not
         :raise See pyVim documentation for connect
         """
-        self.logger = logger
         self._verify_ssl = verify_ssl
         self._host = host
         self._user = user
@@ -121,7 +123,7 @@ class vCenterApi():
         if len(host.host) == 1:
             parsed_host = self._parse_vm_host(host.host[0])
         else:
-            self.logger.warn(f"Amount of hosts is {len(host.host)}, which is unexpected")
+            logger.warn(f"Amount of hosts is {len(host.host)}, which is unexpected")
         return vCenterNode(Name=host.name, Type='ESXHost', Details=parsed_host, Hardware=details)
 
     def _parse_vm_host(self, vm_root):
@@ -173,7 +175,7 @@ class vCenterApi():
         """
         self.devices_count += 1
         if self.devices_count % 1000 == 0:
-            self.logger.info(f"Got {self.devices_count} vms so far")
+            logger.info(f"Got {self.devices_count} vms so far")
         maxdepth = 100
         if depth > maxdepth:
             return

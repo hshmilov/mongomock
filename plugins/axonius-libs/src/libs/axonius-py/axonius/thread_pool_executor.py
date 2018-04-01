@@ -1,10 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 
 
 class LoggedThreadPoolExecutor(ThreadPoolExecutor):
-    def __init__(self, logger, *vargs, **kwargs):
+    def __init__(self, *vargs, **kwargs):
         super().__init__(*vargs, **kwargs)
-        self._user_logger = logger
 
     def submit(self, *vargs, **kwargs):
         f = super().submit(*vargs, **kwargs)
@@ -13,4 +14,4 @@ class LoggedThreadPoolExecutor(ThreadPoolExecutor):
 
     def _logger_listener(self, future):
         if future.exception():
-            self._user_logger.exception('Async job error', exc_info=future.exception())
+            logger.exception('Async job error', exc_info=future.exception())

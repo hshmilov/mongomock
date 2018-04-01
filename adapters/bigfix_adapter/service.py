@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -19,15 +21,15 @@ class BigfixAdapter(AdapterBase):
         bigfix_device_type = Field(str, "Device type")
         bigfix_computre_type = Field(str, "Computer type")
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['Bigfix_Domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = BigfixConnection(logger=self.logger, domain=client_config["Bigfix_Domain"],
+            connection = BigfixConnection(domain=client_config["Bigfix_Domain"],
                                           verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]))
@@ -109,9 +111,9 @@ class BigfixAdapter(AdapterBase):
                 device.figure_os(device_raw.get("OS", ""))
                 try:
                     device.add_nic(None, device_raw.get("IP Address", "").split(",") +
-                                   device_raw.get("IPv6 Address", "").split(","), self.logger)
+                                   device_raw.get("IPv6 Address", "").split(","))
                 except:
-                    self.logger.exception("Problem adding nic to Bigfix")
+                    logger.exception("Problem adding nic to Bigfix")
                 device.agent_version = device_raw.get("Agent Version", "")
                 device.last_used_users = device_raw.get("User Name", "").split(",")
                 device.last_seen = parse_date(device_raw.get("Last Report Time", ""))
@@ -120,7 +122,7 @@ class BigfixAdapter(AdapterBase):
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Bigfix Device")
+                logger.exception("Problem with fetching Bigfix Device")
 
     @classmethod
     def adapter_properties(cls):

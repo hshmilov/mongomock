@@ -9,8 +9,8 @@ class CsvAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['user_id']

@@ -1,4 +1,5 @@
-import requests
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 import threading
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, is_wmi_answer_ok

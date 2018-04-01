@@ -7,21 +7,11 @@ The following will be run by pytest.
 from axonius.execution_correlator_engine_base import _find_contradictions, UNAVAILABLE_CMD_OUTPUT
 from execution_correlator.engine import ExecutionCorrelatorEngine
 import execution_correlator.engine as CE
-import logging
 import sys
 from promise import Promise
 
 from axonius.correlator_base import CorrelationResult, WarningResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-
-correlator_logger = logging.getLogger()
-correlator_logger.setLevel(logging.DEBUG)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(' [Correlator] %(message)s')
-ch.setFormatter(formatter)
-correlator_logger.addHandler(ch)
 
 
 def correlate(devices_db, executor=None, cmds=None, parse_results=None):
@@ -44,7 +34,7 @@ def correlate(devices_db, executor=None, cmds=None, parse_results=None):
         return result
 
     correlator = ExecutionCorrelatorEngine(_executor, cmds or default_get_remote_plugin_correlation_cmds,
-                                           parse_results or default_parse_correlation_results, logger=correlator_logger)
+                                           parse_results or default_parse_correlation_results)
     from datetime import timedelta
     CE.EXECUTE_TIMEOUT = timedelta(seconds=3)
 

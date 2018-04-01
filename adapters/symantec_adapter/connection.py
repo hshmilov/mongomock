@@ -7,13 +7,11 @@ DEFAULT_SYMANTEC_PORT = 8446
 
 
 class SymantecConnection(object):
-    def __init__(self, logger, domain, port):
+    def __init__(self, domain, port):
         """ Initializes a connection to Symantec using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Symantec
         """
-        self.logger = logger
         self.domain = domain
         self.port = port if port is not None else DEFAULT_SYMANTEC_PORT
         assert type(self.port) == int, "the port {self.port} is not a valid int!"

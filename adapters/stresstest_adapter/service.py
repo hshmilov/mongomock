@@ -28,8 +28,8 @@ class StressTestAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self.initial_devices_db = {}
 
     def _generate_initial_devices_db(self, client_name, device_count):
@@ -181,7 +181,7 @@ class StressTestAdapter(AdapterBase):
             for iface in device_raw.get('networking', []):
                 ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
                 if ips:
-                    device.add_nic(iface.get('macAddress'), ips, self.logger)
+                    device.add_nic(iface.get('macAddress'), ips)
             device.hostname = device_raw['guest'].get('hostName')
             device.vm_tools_status = device_raw['guest'].get('toolsStatus')
             device.set_raw(device_raw)

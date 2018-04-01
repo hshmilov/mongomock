@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import pyodbc
 
 from sccm_adapter.exceptions import SccmAlreadyConnected
@@ -5,8 +7,7 @@ from sccm_adapter.consts import TDS_DRIVER, TDS_VERSION
 
 
 class SccmConnection(object):
-    def __init__(self, logger, database, server, port, devices_paging):
-        self.logger = logger
+    def __init__(self, database, server, port, devices_paging):
         self.database = database
         assert type(port) == int, "the port {self.port} is not a valid int!"
         self.server = server + ',' + str(port)
@@ -36,7 +37,7 @@ class SccmConnection(object):
             self.db = pyodbc.connect(server=self.server, user=self.username, password=self.password, driver=TDS_DRIVER,
                                      DATABASE=self.database, tds_version=TDS_VERSION)
         except Exception:
-            self.logger.exception("Connection to database failed")
+            logger.exception("Connection to database failed")
             raise
 
     def __del__(self):
@@ -68,12 +69,12 @@ class SccmConnection(object):
             batch = True
             while batch:
                 batch = results.fetchmany(self.devices_paging)
-                self.logger.info(f"Got {devices_count*self.devices_paging} devices so far")
+                logger.info(f"Got {devices_count*self.devices_paging} devices so far")
                 devices_count += 1
                 for row in batch:
                     yield dict(zip(columns, row))
         except Exception:
-            self.logger.exception("Unable to perform query: ")
+            logger.exception("Unable to perform query: ")
             raise
 
     def __enter__(self):

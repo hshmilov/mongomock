@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
@@ -136,10 +138,10 @@ class AggregatorService(PluginBase, Triggerable):
         try:
             clients = self.request_remote_plugin('clients', adapter).json()
         except Exception as e:
-            self.logger.exception(f"{repr(e)}")
+            logger.exception(f"{repr(e)}")
             raise AdapterOffline()
         if 'status' in clients and 'message' in clients:
-            self.logger.error(
+            logger.error(
                 f'Request for clients from {adapter} failed. Status: {clients.get("status", "")}, Message \'{clients.get("message", "")}\'')
             raise ClientsUnavailable()
         for client_name in clients:
@@ -147,11 +149,11 @@ class AggregatorService(PluginBase, Triggerable):
                 data = self.request_remote_plugin(f'insert_to_db?client_name={client_name}', adapter, method='PUT')
             except Exception as e:
                 # request failed
-                self.logger.exception(f"{repr(e)}")
+                logger.exception(f"{repr(e)}")
                 raise AdapterOffline()
             if data.status_code != 200:
-                self.logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {data.status_code}. "
-                                 f"Reason: {str(data.content)}")
+                logger.warn(f"{client_name} client for adapter {adapter} is returned HTTP {data.status_code}. "
+                            f"Reason: {str(data.content)}")
                 continue
             yield (client_name, from_json(data.content))
 
@@ -167,8 +169,8 @@ class AggregatorService(PluginBase, Triggerable):
         adapters = requests.get(self.core_address + '/register')
 
         if adapters.status_code != 200:
-            self.logger.error(f"Error getting adapters from core. reason: "
-                              f"{str(adapters.status_code)}, {str(adapters.content)}")
+            logger.error(f"Error getting adapters from core. reason: "
+                         f"{str(adapters.status_code)}, {str(adapters.content)}")
             return return_error('Could not fetch adapters', 500)
 
         adapters = adapters.json()
@@ -181,7 +183,7 @@ class AggregatorService(PluginBase, Triggerable):
             adapters = [adapter for adapter in adapters.values()
                         if adapter[PLUGIN_UNIQUE_NAME] == job_name]
 
-        self.logger.debug("Fetching from registered adapters = {}".format(adapters))
+        logger.debug("Fetching from registered adapters = {}".format(adapters))
 
         return self._fetch_data_from_adapters(job_name, adapters)
 
@@ -192,8 +194,8 @@ class AggregatorService(PluginBase, Triggerable):
         """
         response = self.request_remote_plugin(f'clean_devices', plugin_unique_name, method='POST')
         if response.status_code != 200:
-            self.logger.warn(f"Failed cleaning db with adapter {plugin_unique_name}. " +
-                             f"Reason: {str(devices.content)}")
+            logger.warn(f"Failed cleaning db with adapter {plugin_unique_name}. " +
+                        f"Reason: {str(devices.content)}")
             return None
         return from_json(response.content)
 
@@ -222,16 +224,16 @@ class AggregatorService(PluginBase, Triggerable):
                         try:
                             num_of_adapters_to_fetch -= 1
                             future.result()
-                            self.logger.info(f"Finished adapter number {num_of_adapters_to_fetch}")
+                            logger.info(f"Finished adapter number {num_of_adapters_to_fetch}")
                         except Exception as err:
-                            self.logger.exception("An exception was raised while trying to get a result.")
+                            logger.exception("An exception was raised while trying to get a result.")
 
-                self.logger.info("Finished cleaning all device data.")
+                logger.info("Finished cleaning all device data.")
 
                 return ''  # raw_detailed_devices
 
         except Exception as e:
-            self.logger.exception(f'Getting devices from all requested adapters failed, {repr(e)}')
+            logger.exception(f'Getting devices from all requested adapters failed, {repr(e)}')
 
     def _fetch_data_from_adapters(self, job_name, current_adapters=None):
         """ Function for fetching devices from adapters.
@@ -262,14 +264,14 @@ class AggregatorService(PluginBase, Triggerable):
                             self._notify_adapter_fetch_devices_finished(
                                 futures_for_adapter[future], num_of_adapters_to_fetch / len(current_adapters))
                         except Exception as err:
-                            self.logger.exception("An exception was raised while trying to get a result.")
+                            logger.exception("An exception was raised while trying to get a result.")
 
-                self.logger.info("Finished getting all device data.")
+                logger.info("Finished getting all device data.")
 
                 return ''  # raw_detailed_devices
 
         except Exception as e:
-            self.logger.exception('Getting devices from all requested adapters failed.')
+            logger.exception('Getting devices from all requested adapters failed.')
 
     @add_rule("plugin_push", methods=["POST"])
     def plugin_push(self):
@@ -489,21 +491,21 @@ class AggregatorService(PluginBase, Triggerable):
         :param str adapter_unique_name: The unique name of the adapter
         """
 
-        self.logger.info(f"Starting to fetch device for {adapter_unique_name}")
+        logger.info(f"Starting to fetch device for {adapter_unique_name}")
         try:
             data = self._request_insertion_from_adapters(adapter_unique_name)
             for client_name, devices_per_client in data:
-                self.logger.info(f"Got {devices_per_client} for client {client_name} in {adapter_unique_name}")
+                logger.info(f"Got {devices_per_client} for client {client_name} in {adapter_unique_name}")
 
         except (AdapterOffline, ClientsUnavailable) as e:
             # not throwing - if the adapter is truly offline, then Core will figure it out
             # and then the scheduler will remove this task
-            self.logger.warn(f"adapter {adapter_unique_name} might be offline. Reason {str(e)}")
+            logger.warn(f"adapter {adapter_unique_name} might be offline. Reason {str(e)}")
         except Exception as e:
-            self.logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
+            logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        self.logger.info(f"Finished for {adapter_unique_name}")
+        logger.info(f"Finished for {adapter_unique_name}")
 
     def _update_entity_with_tag(self, tag, axonius_entity, entities_db):
         """
@@ -530,7 +532,7 @@ class AggregatorService(PluginBase, Triggerable):
                 if len(final_data) != 1:
                     msg = f"Got tag {tag['plugin_unique_name']}/{tag['name']}/{tag['type']} with " \
                           f"action_if_exists=update, but final_data is not of length 1: {final_data}"
-                    self.logger.error(msg)
+                    logger.error(msg)
                     raise ValueError(msg)
 
                 final_data = final_data[0]
@@ -539,7 +541,7 @@ class AggregatorService(PluginBase, Triggerable):
                 # for us (for example ip). Usually when we get some list variable we get all of it so we don't need
                 # any update things
                 tag["data"] = deep_merge_only_dict(tag["data"], final_data)
-                self.logger.info("action if exists on tag!")
+                logger.info("action if exists on tag!")
 
             result = entities_db.update_one({
                 "internal_axon_id": axonius_entity['internal_axon_id'],
@@ -559,7 +561,7 @@ class AggregatorService(PluginBase, Triggerable):
 
             if result.modified_count != 1:
                 msg = f"tried to update tag {tag}. expected modified_count == 1 but got {result.modified_count}"
-                self.logger.error(msg)
+                logger.error(msg)
                 raise ValueError(msg)
         else:
             result = entities_db.update_one(
@@ -572,7 +574,7 @@ class AggregatorService(PluginBase, Triggerable):
 
             if result.modified_count != 1:
                 msg = f"tried to add tag {tag}. expected modified_count == 1 but got {result.modified_count}"
-                self.logger.error(msg)
+                logger.error(msg)
                 raise ValueError(msg)
 
     @property

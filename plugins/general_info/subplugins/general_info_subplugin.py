@@ -45,4 +45,4 @@ class GeneralInfoSubplugin(ABC):
         :param adapterdata_device: a Device object, that is used for having adapterdata tags (general-info enrichment).
         :return: the caption of the last logged user (domain+username). e.g., avidor@axonius.lan
         """
-        check_wmi_answers_integrity(result, self.logger)
+        check_wmi_answers_integrity(result)

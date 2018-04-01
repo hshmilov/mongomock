@@ -2,6 +2,9 @@
 AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
+import logging
+
+logger = logging.getLogger(f"axonius.{__name__}")
 import threading
 from abc import ABC, abstractmethod
 
@@ -123,7 +126,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                                                               24 * 14)
         user_alive_threshold = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_USER_ALIVE_THRESHOLD_DAYS, -1)
 
-        self.logger.info(f"Setting last seen threshold to {device_alive_thresh}")
+        logger.info(f"Setting last seen threshold to {device_alive_thresh}")
 
         self.last_seen_timedelta = timedelta(hours=device_alive_thresh)
         self.user_last_seen_timedelta = timedelta(days=user_alive_threshold)
@@ -140,7 +143,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         self._prepare_parsed_clients_config(False)
 
-        self._thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=50)
+        self._thread_pool = LoggedThreadPoolExecutor(max_workers=50)
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -168,7 +171,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                         # client id from DB not sent to verify it is updated
                         self._add_client(client['client_config'], str(client['_id']))
                 except:
-                    self.logger.exception('Error while loading clients from config')
+                    logger.exception('Error while loading clients from config')
                     if blocking:
                         raise
 
@@ -232,7 +235,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             }
         })
         if axonius_device is None:
-            self.logger.error(f"Trying to archive nonexisting device: {plugin_unique_name}: {device_id}")
+            logger.error(f"Trying to archive nonexisting device: {plugin_unique_name}: {device_id}")
             return False
 
         axonius_device['archived_at'] = datetime.utcnow()
@@ -249,7 +252,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             return 0
 
         device_age_cutoff = datetime.now(timezone.utc) - self.last_seen_timedelta
-        self.logger.info(f"Cleaning devices that are before {device_age_cutoff}")
+        logger.info(f"Cleaning devices that are before {device_age_cutoff}")
 
         deleted_adapter_devices_count = 0
         for axonius_device in self.__find_old_axonius_devices(device_age_cutoff):
@@ -259,7 +262,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
             for index, adapter_device_to_remove in enumerate(old_adapter_devices):
                 if index < len(axonius_device['adapters']) - 1:
-                    self.logger.info(f"Unlinking device {adapter_device_to_remove}")
+                    logger.info(f"Unlinking device {adapter_device_to_remove}")
                     # if the above condition isn't met it means
                     # that the current adapter_device is the last one (or even the only one)
                     # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
@@ -275,13 +278,13 @@ class AdapterBase(PluginBase, Feature, ABC):
                         "entity": "devices"
                     })
                     if response.status_code != 200:
-                        self.logger.error(f"Unlink failed for {adapter_device_to_remove}," +
-                                          "not removing the device for consistency." +
-                                          f"Error: {response.status_code}, {str(response.content)}")
+                        logger.error(f"Unlink failed for {adapter_device_to_remove}," +
+                                     "not removing the device for consistency." +
+                                     f"Error: {response.status_code}, {str(response.content)}")
 
                         continue
 
-                self.logger.info(f"Deleting device {adapter_device_to_remove}")
+                logger.info(f"Deleting device {adapter_device_to_remove}")
                 if self.__archive_axonius_device(*adapter_device_to_remove):
                     deleted_adapter_devices_count += 1
 
@@ -361,9 +364,9 @@ class AdapterBase(PluginBase, Feature, ABC):
         self._save_field_names_to_db("users")
 
         if skipped_count > 0:
-            self.logger.info(f"Skipped {skipped_count} old users")
+            logger.info(f"Skipped {skipped_count} old users")
         else:
-            self.logger.warning("No old users filtered (did you choose ttl period on the config file?)")
+            logger.warning("No old users filtered (did you choose ttl period on the config file?)")
 
     def _parse_users_raw_data(self, user):
         """
@@ -428,27 +431,27 @@ class AdapterBase(PluginBase, Feature, ABC):
         Get all devices, both raw and parsed, from the given client name
         data_type is devices/users.
         """
-        self.logger.info(f"Trying to query {data_type} from client {client_name}")
+        logger.info(f"Trying to query {data_type} from client {client_name}")
         with self._clients_lock:
             if client_name not in self._clients:
-                self.logger.error(f"client {client_name} does not exist")
+                logger.error(f"client {client_name} does not exist")
                 return return_error("Client does not exist", 404)
         try:
             time_before_query = datetime.now()
             raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
             query_time = datetime.now() - time_before_query
-            self.logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
-                             f"returned {len(parsed_data)} {data_type}")
+            logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
+                        f"returned {len(parsed_data)} {data_type}")
         except adapter_exceptions.CredentialErrorException as e:
-            self.logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
+            logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             raise adapter_exceptions.CredentialErrorException(
                 f"Credentials error for {client_name} on {self.plugin_unique_name}")
         except adapter_exceptions.AdapterException as e:
-            self.logger.exception(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+            logger.exception(f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
             raise adapter_exceptions.AdapterException(
                 f"AdapterException for {client_name} on {self.plugin_unique_name}: {repr(e)}")
         except Exception as e:
-            self.logger.exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
+            logger.exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
             raise Exception(f"Error while trying to get {data_type} for {client_name}. Details: {repr(e)}")
         else:
             data_list = {'raw': [],  # AD-HOC: Not returning any raw values
@@ -497,11 +500,11 @@ class AdapterBase(PluginBase, Feature, ABC):
             try:
                 client_id = self._get_client_id(client['client_config'])
             except KeyError as e:
-                self.logger.info("Problem creating client id, to remove from connected clients")
+                logger.info("Problem creating client id, to remove from connected clients")
             try:
                 del self._clients[client_id]
             except KeyError as e:
-                self.logger.info("No connected client {0} to remove".format(client_id))
+                logger.info("No connected client {0} to remove".format(client_id))
             return '', 200
 
     def _add_client(self, client_config: dict, id=None):
@@ -526,7 +529,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
             error_msg = e.args
             id_for_log = client_id if client_id else (id if id else '')
-            self.logger.exception(
+            logger.exception(
                 f"Got error while handling client {id_for_log} - \
                 possibly compliance problem with schema. Details: {repr(e)}")
             if client_id in self._clients:
@@ -534,7 +537,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         if client_id is not None:
             # Updating DB according to the axiom that client_id is a unique field across clients
-            self.logger.info(f"Setting {client_id} status to {status}")
+            logger.info(f"Setting {client_id} status to {status}")
             result = self._get_collection('clients').replace_one({'client_id': client_id},
                                                                  {
                                                                      'client_id': client_id,
@@ -548,7 +551,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             result = self._get_collection('clients').update_one({'_id': ObjectId(id)}, {'$set': {'status': status}})
         else:
             # No way of updating other than logs and no return value
-            self.logger.error("Not updating client since no DB id and no client id exist")
+            logger.error("Not updating client since no DB id and no client id exist")
             return {}
 
         # Verifying update succeeded and returning the matched id and final status
@@ -616,7 +619,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             # Running the function, it should block until action is finished
             result = func(device_data, **kwargs)
         except Exception:
-            self.logger.exception(f"Failed running actionid {action_id}")
+            logger.exception(f"Failed running actionid {action_id}")
             self._update_action_data(action_id, status="failed", output={
                 "result": "Failure", "product": get_exception_string()})
             return
@@ -646,7 +649,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         needed_action_function = getattr(self, action_type)
 
-        self.logger.info("Got action type {0}. Request data is {1}".format(action_type, request_data))
+        logger.info("Got action type {0}. Request data is {1}".format(action_type, request_data))
 
         self._create_action_thread(
             device_data, needed_action_function, action_id, **request_data)
@@ -757,7 +760,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             return key_to_check
         else:
             # Data type not recognized or can't filter key, deleting the too big key
-            self.logger.warning(f"Found too big key on entity (Device/User) {entity_id}. Deleting")
+            logger.warning(f"Found too big key on entity (Device/User) {entity_id}. Deleting")
             return {'AXON_TOO_BIG_VALUE': sys.getsizeof(key_to_check)}
 
     def _parse_devices_raw_data_hook(self, raw_devices):
@@ -779,9 +782,9 @@ class AdapterBase(PluginBase, Feature, ABC):
         self._save_field_names_to_db("devices")
 
         if skipped_count > 0:
-            self.logger.info(f"Skipped {skipped_count} old devices")
+            logger.info(f"Skipped {skipped_count} old devices")
         else:
-            self.logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
+            logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
 
     def _try_query_data_by_client(self, client_id, entity_type: EntityType):
         """
@@ -832,7 +835,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             except Exception as e2:
                 # No connection to attempt querying
                 self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
-                self.logger.exception(
+                logger.exception(
                     "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
                 _update_client_status("error")
                 raise
@@ -848,7 +851,7 @@ class AdapterBase(PluginBase, Feature, ABC):
                         raise ValueError(f"expected {entity_type} to be devices/users.")
                 except:
                     # No devices despite a working connection
-                    self.logger.exception(f"Problem querying {entity_type} for client {0}".format(client_id))
+                    logger.exception(f"Problem querying {entity_type} for client {0}".format(client_id))
                     _update_client_status("error")
                     raise
         _update_client_status("success")
@@ -860,7 +863,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         with self._clients_lock:
             if len(self._clients) == 0:
-                self.logger.info(f"{self.plugin_unique_name}: Trying to fetch devices but no clients found")
+                logger.info(f"{self.plugin_unique_name}: Trying to fetch devices but no clients found")
                 return
             clients = self._clients.copy()
 
@@ -869,15 +872,15 @@ class AdapterBase(PluginBase, Feature, ABC):
             try:
                 raw_data, parsed_data = self._try_query_data_by_client(client_name, entity_type)
             except adapter_exceptions.CredentialErrorException as e:
-                self.logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                logger.warning(f"Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Credentials error for {client_name} on {self.plugin_unique_name}", repr(e))
                 raise
             except adapter_exceptions.AdapterException as e:
-                self.logger.exception(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                logger.exception(f"Error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 self.create_notification(f"Error for {client_name} on {self.plugin_unique_name}", repr(e))
                 raise
             except Exception as e:
-                self.logger.exception(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
+                logger.exception(f"Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}")
                 raise
             else:
                 data_list = {'raw': raw_data,

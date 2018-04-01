@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from bson import json_util
 from bson.objectid import ObjectId
 from flask import jsonify
@@ -28,7 +30,7 @@ class ExecutionService(PluginBase):
         self._restore_actions_from_db()
 
         # Threadpool for creating new actions
-        self._actions_thread_pool = LoggedThreadPoolExecutor(self.logger, max_workers=20)
+        self._actions_thread_pool = LoggedThreadPoolExecutor(max_workers=20)
 
     @property
     def plugin_subtype(self):
@@ -79,10 +81,10 @@ class ExecutionService(PluginBase):
 
             result = devices_db.find_one({"internal_axon_id": device_id})
             if result is None:
-                self.logger.error("could not find device. Are you sure the device exists?")
+                logger.error("could not find device. Are you sure the device exists?")
                 raise ValueError("could not find device. Are you sure the device exists?")
             if any(tag['name'] == 'do_not_execute' and tag['data'] == True for tag in result['tags']):
-                self.logger.debug(f"Device {device_id} skipped from execution due to blacklist")
+                logger.debug(f"Device {device_id} skipped from execution due to blacklist")
                 return
             try:
                 for adapter_data in result['adapters']:
@@ -153,8 +155,8 @@ class ExecutionService(PluginBase):
             action_data['product'] = request_content['output'].get('product', '')
             action_data['result'] = request_content['output'].get('result', '')
 
-        self.logger.info(f"Got action update on action {action_id}. status is {action_data['status']},"
-                         f"action result is {action_data.get('result')}")
+        logger.info(f"Got action update on action {action_id}. status is {action_data['status']},"
+                    f"action result is {action_data.get('result')}")
 
         self._save_action_data(action_data, action_id)
 
@@ -181,10 +183,10 @@ class ExecutionService(PluginBase):
 
             accumulated_error = accumulated_error + f"{current_adapter} failure: {current_adapter_failure}\n"
 
-            self.logger.warning('Adapter {0} failed to run action {1}'.format(
+            logger.warning('Adapter {0} failed to run action {1}'.format(
                 current_adapter, action_id))
             if not adapters_tuple:
-                self.logger.error(
+                logger.error(
                     'Couldnt run code on action {0}, no more adapters to try'.format(action_id))
             else:
                 # Trying to run on a different adapter, don't need to inform the issuer
@@ -247,8 +249,8 @@ class ExecutionService(PluginBase):
             current_action_data = dict()
 
         if data_dict.keys() - available_data_keys:
-            self.logger.warning('Trying to add invalid key to action_data. '
-                                'Keys: {0}'.format(data_dict.keys() - available_data_keys))
+            logger.warning('Trying to add invalid key to action_data. '
+                           'Keys: {0}'.format(data_dict.keys() - available_data_keys))
         current_action_data.update(
             {k: v for k, v in data_dict.items() if k in available_data_keys})
 
@@ -282,7 +284,7 @@ class ExecutionService(PluginBase):
             adapters_count = 1
             for adapter_unique_name, device_raw_data in adapters_tuple:
                 # Requesting the adapter for the action
-                self.logger.debug(f"requesting {action_type} from {adapter_unique_name}, action id is {action_id}")
+                logger.debug(f"requesting {action_type} from {adapter_unique_name}, action id is {action_id}")
                 result = self.request_action(action_type,
                                              self.ec_callback,
                                              data,
@@ -310,9 +312,9 @@ class ExecutionService(PluginBase):
 
                 elif result.status_code != 501:
                     # Some general error happened, which is not "Not Implemented"
-                    self.logger.warning("Adapter failed running code on {id}. "
-                                        "Reason: {mess}".format(id=device_id,
-                                                                mess=result.content))
+                    logger.warning("Adapter failed running code on {id}. "
+                                   "Reason: {mess}".format(id=device_id,
+                                                           mess=result.content))
 
                     accumulated_error = accumulated_error + f"Failure from {adapter_unique_name}. " \
                                                             f"Got status {result.status_code} with " \
@@ -402,7 +404,7 @@ class ExecutionService(PluginBase):
 
         adapters_whitelist = data_for_action.pop("adapters_to_whitelist", None)
         if adapters_whitelist is not None:
-            self.logger.info(f"Using adapters {adapters_whitelist}")
+            logger.info(f"Using adapters {adapters_whitelist}")
 
         action_id = self._save_action_data({'action_type': action_type,
                                             'issuer_unique_name': issuer_unique_name,

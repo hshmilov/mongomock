@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -6,25 +8,23 @@ from axonius.fields import Field
 
 from minerva_adapter.connection import MinervaConnection
 from minerva_adapter.exceptions import MinervaException
-import json
 from axonius.parsing_utils import parse_date
 
 
 class MinervaAdapter(AdapterBase):
-
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         agent_status = Field(str, 'Agent Status')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['Minerva_Domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = MinervaConnection(logger=self.logger, domain=client_config["Minerva_Domain"],
+            connection = MinervaConnection(domain=client_config["Minerva_Domain"],
                                            is_ssl=client_config["is_ssl"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]))
@@ -34,7 +34,7 @@ class MinervaAdapter(AdapterBase):
         except MinervaException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Minerva_Domain'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -105,9 +105,9 @@ class MinervaAdapter(AdapterBase):
                 device.figure_os(device_raw.get("operatingSystem", ""))
                 try:
                     if device_raw.get("reportedIpAddress"):
-                        device.add_nic(None, device_raw.get("reportedIpAddress", "").split(","), self.logger)
+                        device.add_nic(None, device_raw.get("reportedIpAddress", "").split(","))
                 except:
-                    self.logger.exception("Problem with adding nic to Minerva device")
+                    logger.exception("Problem with adding nic to Minerva device")
                 device.agent_version = device_raw.get("armorVersion", "")
                 device.agent_status = device_raw.get("agentStatus")
                 device.last_used_users = device_raw.get("loggedOnUsers", "").split(";")
@@ -115,7 +115,7 @@ class MinervaAdapter(AdapterBase):
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Minerva Device")
+                logger.exception("Problem with fetching Minerva Device")
 
     @classmethod
     def adapter_properties(cls):

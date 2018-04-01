@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 import time
 import xml.etree.cElementTree as ET
@@ -13,13 +15,11 @@ For the sake of the user - if the next api request is allowed within the next 30
 
 
 class QualysScansConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, domain):
         """ Initializes a connection to qualys scans using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for qualys scans
         """
-        self.logger = logger
         url = domain
         if not url.lower().startswith('https://'):
             url = 'https://' + url
@@ -49,7 +49,7 @@ class QualysScansConnection(object):
         """ Connects to the service """
 
         if self.auth[0] is None or self.auth[1] is None:
-            self.logger.error(f"Username {0} or password {1} is None".format(
+            logger.error(f"Username {0} or password {1} is None".format(
                 self.auth[0], self.auth[1]))
             raise QualysScansConnectionError(f"Username {self.auth[0]} or password {self.auth[1]} is None")
         response = self.get("scan", auth=self.auth, headers=self.headers,
@@ -57,7 +57,7 @@ class QualysScansConnection(object):
         response_tree = ET.fromstring(response.text)
         if response_tree.find('RESPONSE') is None or response_tree.find('RESPONSE').find('DATETIME') is None \
                 or response_tree.find('RESPONSE').find('CODE') is not None:
-            self.logger.error("Failed to connect to qualys scans.", response.text)
+            logger.error("Failed to connect to qualys scans.", response.text)
             raise QualysScansConnectionError(response.text)
 
     def __del__(self):
@@ -79,7 +79,7 @@ class QualysScansConnection(object):
                 return response
             except requests.HTTPError as e:
                 if response.status_code == 409:  # conflict for url - reached the API limit
-                    self.logger.warn('Qualys API limit reached. {0}'.format(str(e)), response.text, **kwargs)
+                    logger.warn('Qualys API limit reached. {0}'.format(str(e)), response.text, **kwargs)
                     error = Xml2Json(response.text).result
                     seconds_to_wait = int(error['SIMPLE_RETURN']['RESPONSE']['ITEM_LIST']['ITEM']['VALUE'])
                     if seconds_to_wait + seconds_waited < max_seconds:
@@ -89,7 +89,7 @@ class QualysScansConnection(object):
                     raise QualysScansAPILimitException(seconds_to_wait, f'Qualys API limit reached. {0}'.format(str(e)),
                                                        response.text, str(kwargs))
                 else:
-                    self.logger.exception('Qualys request exception. {0}'.format(str(e)), response.text, **kwargs)
+                    logger.exception('Qualys request exception. {0}'.format(str(e)), response.text, **kwargs)
                 raise e
 
     def get(self, name, headers=None, auth=None, params=None):

@@ -1,16 +1,17 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from urllib3.util.url import parse_url
 import chef
 from chef_adapter.exceptions import ChefConnectionError, ChefRequestException
 
 
 class ChefConnection(object):
-    def __init__(self, logger, domain: str, organization: str, client_key: bytes, client: str, ssl_verify=False):
+    def __init__(self, domain: str, organization: str, client_key: bytes, client: str, ssl_verify=False):
         """ Initializes a connection to Chef using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Chef
         """
-        self.logger = logger
         url = "https://{}".format(parse_url(domain).hostname, organization)
         key = chef.rsa.Key(client_key)
         self._chef_connection = chef.ChefAPI(url=url, key=key, client=client, ssl_verify=ssl_verify)
@@ -31,7 +32,7 @@ class ChefConnection(object):
         except Exception as err:
             message = f'Error connecting to chef-server {self._chef_connection.url}{self.url} for client ' \
                       f'{self._chef_connection.client}'
-            self.logger.exception(message)
+            logger.exception(message)
             raise ChefConnectionError(message)
 
     def __del__(self):
@@ -61,11 +62,11 @@ class ChefConnection(object):
                 client_list.extend(response['rows'])
                 last_id = len(client_list)
                 total = response['total']
-                self.logger.info(f"Got {last_id} devices so far out of {total}")
+                logger.info(f"Got {last_id} devices so far out of {total}")
         except Exception as err:
             message = f'Error fetching nodes for {self._chef_connection.url}' \
                       f'{self.url}/search/node?rows=1000&start={last_id}'
-            self.logger.exception(message)
+            logger.exception(message)
             raise ChefRequestException(message)
         return client_list
 

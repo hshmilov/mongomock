@@ -12,8 +12,8 @@ class ForcepointCsvAdapter(AdapterBase):
         client_version = Field(str, 'Client Version')
         client_status = Field(str, 'Client Status')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['user_id']
@@ -67,7 +67,7 @@ class ForcepointCsvAdapter(AdapterBase):
             device.id = host_name
             device.client_status = client_status
             device.client_version = version
-            device.add_nic(None, ip_address.split(','), self.logger)
+            device.add_nic(None, ip_address.split(','))
             device.last_used_users = [logged_in_users]
             device.last_seen = parse_date(last_update)
             device.set_raw({"last_update": last_update,

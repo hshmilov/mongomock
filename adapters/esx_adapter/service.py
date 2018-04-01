@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from enum import Enum, auto
 from pyVmomi import vim
 
@@ -35,8 +37,8 @@ class EsxAdapter(AdapterBase):
         device_type = Field(ESXDeviceType, 'VM type')
         esx_host = Field(str, 'VM ESX Host')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return '{}/{}'.format(client_config['host'], client_config['user'])
@@ -44,19 +46,18 @@ class EsxAdapter(AdapterBase):
     def _connect_client(self, client_config):
         client_id = self._get_client_id(client_config)
         try:
-            return vCenterApi(self.logger,
-                              host=client_config['host'], user=client_config['user'],
+            return vCenterApi(host=client_config['host'], user=client_config['user'],
                               password=self.decrypt_password(client_config['password']),
                               verify_ssl=client_config['verify_ssl'])
         except vim.fault.InvalidLogin as e:
             message = "Credentials invalid for ESX client for account {0}".format(client_id)
-            self.logger.exception(message)
+            logger.exception(message)
         except vim.fault.HostConnectFault as e:
             message = "Unable to access vCenter, text={}, host = {}".format(e.msg, client_config['host'])
-            self.logger.exception(message)
+            logger.exception(message)
         except Exception as e:
             message = "Unknown error on account {}, text={}".format(client_id, str(e))
-            self.logger.exception(message)
+            logger.exception(message)
         raise ClientConnectionException(message)
 
     def _clients_schema(self):
@@ -122,10 +123,10 @@ class EsxAdapter(AdapterBase):
             ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
             if ips:
                 added_macs.append(iface.get('macAddress'))
-                device.add_nic(iface.get('macAddress'), ips, self.logger)
+                device.add_nic(iface.get('macAddress'), ips)
         if not device.network_interfaces and 'ipAddress' in guest:
             # if nothing is found in raw.networking this will be used
-            device.add_nic('', [guest.get('ipAddress')], self.logger)
+            device.add_nic('', [guest.get('ipAddress')])
 
         for hwdevice in details.get('hardware', {}).get('devices', []):
             if 'macAddress' in hwdevice and hwdevice['macAddress'] not in added_macs:

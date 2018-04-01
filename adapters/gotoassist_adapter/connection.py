@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 
 from gotoassist_adapter.exceptions import GotoassistAlreadyConnected, GotoassistConnectionError, GotoassistNotConnected, \
@@ -5,12 +7,11 @@ from gotoassist_adapter.exceptions import GotoassistAlreadyConnected, Gotoassist
 
 
 class GotoassistConnection(object):
-    def __init__(self, logger):
+    def __init__(self):
         """ Initializes a connection to Gotoassist using its rest API
 
         :param obj logger: Logger object of the system
         """
-        self.logger = logger
         self.url = "https://api.getgo.com"
         self.session = None
         self.username = None
@@ -139,13 +140,13 @@ class GotoassistConnection(object):
         companies_list = []
         companies_raw = self._get('/G2A/rest/v1/companies', params={'limit': 50, 'offset': offset})
         comapnies_count = companies_raw["totalNumCompanies"]
-        self.logger.debug(f"Got {comapnies_count} Companies Count")
+        logger.debug(f"Got {comapnies_count} Companies Count")
         companies_list += [company_raw["companyId"] for company_raw in companies_raw["companies"]]
         while comapnies_count > offset + 50:
             offset += 50
             companies_raw = self._get('/G2A/rest/v1/companies', params={'limit': 50, 'offset': offset})
             companies_list += [company_raw["companyId"] for company_raw in companies_raw["companies"]]
-        self.logger.debug(f"Companies list is {str(companies_list)}")
+        logger.debug(f"Companies list is {str(companies_list)}")
         devices_list = []
         for company_id in companies_list:
             offset = 0

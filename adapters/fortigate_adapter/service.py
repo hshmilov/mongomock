@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -18,8 +20,8 @@ class FortigateAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         interface = Field(str, "Interface")
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _clients_schema(self):
         return {
@@ -78,7 +80,7 @@ class FortigateAdapter(AdapterBase):
                 device.hostname = raw_device.get('hostname', '')
                 mac_address = format_mac(raw_device.get('mac', ''))
                 device.id = mac_address
-                device.add_nic(mac_address, [raw_device.get("ip")] if raw_device.get("ip") else [], self.logger)
+                device.add_nic(mac_address, [raw_device.get("ip")] if raw_device.get("ip") else [])
 
                 last_seen = raw_device.get('expire_time')
                 # The DHCP lease time is kept in seconds and by getting the dhcp lease expiry - lease time
@@ -96,7 +98,7 @@ class FortigateAdapter(AdapterBase):
             assert isinstance(client_data, FortigateClient)
             return client_data.get_all_devices()
         except Exception as err:
-            self.logger.exception(f'Failed to get all the devices from the client: {client_data}')
+            logger.exception(f'Failed to get all the devices from the client: {client_data}')
             raise GetDevicesError(f'Failed to get all the devices from the client: {client_data}')
 
     def _get_client_id(self, client_config):
@@ -105,9 +107,9 @@ class FortigateAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             client_config['password'] = self.decrypt_password(client_config['password'])
-            return FortigateClient(self.logger, **client_config)
+            return FortigateClient(**client_config)
         except Exception as err:
-            self.logger.exception(
+            logger.exception(
                 f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')
             raise ClientConnectionException(
                 f'Failed to connect to Fortigate client using this config {client_config[consts.FORTIGATE_HOST]}')

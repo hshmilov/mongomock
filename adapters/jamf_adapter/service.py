@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.consts import adapter_consts
@@ -36,8 +38,8 @@ class JamfAdapter(AdapterBase):
         phone_number = Field(str, 'Phone Number')
         imei = Field(str, 'IMEI')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self.num_of_simultaneous_devices = int(self.config["DEFAULT"]["num_of_simultaneous_devices"])
 
     def _get_client_id(self, client_config):
@@ -45,8 +47,7 @@ class JamfAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = JamfConnection(logger=self.logger,
-                                        domain=client_config[consts.JAMF_DOMAIN],
+            connection = JamfConnection(domain=client_config[consts.JAMF_DOMAIN],
                                         num_of_simultaneous_devices=self.num_of_simultaneous_devices,
                                         http_proxy=client_config.get(consts.HTTP_PROXY),
                                         https_proxy=client_config.get(consts.HTTPS_PROXY))
@@ -57,7 +58,7 @@ class JamfAdapter(AdapterBase):
         except JamfException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Jamf_Domain'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -126,7 +127,7 @@ class JamfAdapter(AdapterBase):
                 if site:
                     device.site = JamfSite(id=int(site.get('id')), name=site.get('name'))
             except:
-                self.logger.exception(f'device site is unexpected {device_raw}')
+                logger.exception(f'device site is unexpected {device_raw}')
 
             device.device_serial = general_info.get("serial_number")
             if 'platform' in general_info:
@@ -134,11 +135,10 @@ class JamfAdapter(AdapterBase):
                 # Thus we believe the following fields will be present.
                 device.jamf_version = general_info.get('jamf_version')
                 try:
-                    device.add_nic(general_info.get('mac_address', ''), [general_info.get('last_reported_ip', '')],
-                                   self.logger)
-                    device.add_nic(general_info.get('alt_mac_address', ''), logger=self.logger)
+                    device.add_nic(general_info.get('mac_address', ''), [general_info.get('last_reported_ip', '')])
+                    device.add_nic(general_info.get('alt_mac_address', ''))
                 except:
-                    self.logger.exception(f"Problem adding nic to Jamf {str(device_raw)}")
+                    logger.exception(f"Problem adding nic to Jamf {str(device_raw)}")
 
                 hardware = device_raw['hardware']
                 device.figure_os(' '.join([hardware.get('os_name', ''),
@@ -208,9 +208,8 @@ class JamfAdapter(AdapterBase):
                                            general_info.get('os_version', '')]))
                 device.os.build = general_info.get('os_build', '')
                 device.phone_number = general_info.get('phone_number') or None
-                device.add_nic(general_info.get('wifi_mac_address', ''), [general_info.get('ip_address', '')],
-                               self.logger)
-                device.add_nic(general_info.get('bluetooth_mac_address', ''), logger=self.logger)
+                device.add_nic(general_info.get('wifi_mac_address', ''), [general_info.get('ip_address', '')])
+                device.add_nic(general_info.get('bluetooth_mac_address', ''))
 
                 device.device_model = general_info.get('model_identifier')
                 device.device_model_family = general_info.get('model')
@@ -222,7 +221,7 @@ class JamfAdapter(AdapterBase):
                     try:
                         device.profiles.append(JamfProfile(**profile))
                     except:
-                        self.logger.exception(f"Unexpected profile {profile}")
+                        logger.exception(f"Unexpected profile {profile}")
             applications = [applications] if type(applications) != list else applications
             for app in applications:
                 device.add_installed_software(
@@ -239,7 +238,7 @@ class JamfAdapter(AdapterBase):
         :return: shell commands that help correlations
         """
 
-        self.logger.error("correlation_cmds is not implemented for jamf adapter")
+        logger.error("correlation_cmds is not implemented for jamf adapter")
         raise NotImplementedError("correlation_cmds is not implemented for jamf adapter")
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
@@ -251,7 +250,7 @@ class JamfAdapter(AdapterBase):
         :param os_type: the type of machine ran upon
         :return:
         """
-        self.logger.error("_parse_correlation_results is not implemented for jamf adapter")
+        logger.error("_parse_correlation_results is not implemented for jamf adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for jamf adapter")
 
     @classmethod

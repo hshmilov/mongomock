@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from datetime import datetime
 import time
 import threading
@@ -34,7 +36,7 @@ class DnsConflictsService(PluginBase, Triggerable):
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
-            self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
         else:
             return self.check_ip_conflict_now()
@@ -44,13 +46,13 @@ class DnsConflictsService(PluginBase, Triggerable):
         This thread will try to find ip contradiction between different dns servers. If it finds such contradiction,
         The related device will get tagged with 'IP_CONFLICT' tag
         """
-        self.logger.info("Find conflicts thread had started")
+        logger.info("Find conflicts thread had started")
         with self.resolve_lock:
             ad_adapters = self.get_plugin_by_name('ad_adapter', verify_single=False)
 
             for ad_adapter in ad_adapters:
                 ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]
-                self.logger.info(f"looking for ip conflicts from ad_adapter {ad_adapter_unique_name}")
+                logger.info(f"looking for ip conflicts from ad_adapter {ad_adapter_unique_name}")
                 hosts = self._get_collection(DEVICES_DATA, db_name=ad_adapter_unique_name). \
                     find({DNS_RESOLVE_STATUS: DNSResolveStatus.Resolved.name},
                          projection={'_id': True,
@@ -59,7 +61,7 @@ class DnsConflictsService(PluginBase, Triggerable):
                                      'raw.AXON_DOMAIN_NAME': True,
                                      'raw.AXON_DC_ADDR': True,
                                      'hostname': True})
-                self.logger.info(
+                logger.info(
                     f"Starting to search for dns conflicts for {hosts.count()} devices from {ad_adapter_unique_name}")
 
                 for host in hosts:
@@ -69,14 +71,14 @@ class DnsConflictsService(PluginBase, Triggerable):
                         dns_name = host['raw']['AXON_DNS_ADDR']
                         domain_name = host['raw']['AXON_DOMAIN_NAME']
 
-                        self.logger.info(f"Inspecting host {host}")
+                        logger.info(f"Inspecting host {host}")
 
                         self._find_dns_conflicts(ad_adapter_unique_name,
                                                  host['hostname'],
                                                  host['id'],
                                                  {"dns_name": dns_name, "domain_name": domain_name, "dc_name": dc_name})
                     except Exception as e:
-                        self.logger.exception(f"Error finding conflicts on host{host['hostname']} . Err: {str(e)}")
+                        logger.exception(f"Error finding conflicts on host{host['hostname']} . Err: {str(e)}")
                     finally:
                         # Waiting at least 50[ms] before each request
                         resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
@@ -114,12 +116,12 @@ class DnsConflictsService(PluginBase, Triggerable):
         except NoIpFoundError:
             pass
 
-        self.logger.info(f"found ips {available_ips} for device {full_device_name}")
+        logger.info(f"found ips {available_ips} for device {full_device_name}")
 
         if len(available_ips) > 1:
             # If we have more than one key in available_ips that means that this device got two different IP's
             # i.e duplicate! we need to tag this device
-            self.logger.info(f"Found ip conflict. details: {str(available_ips)}")
+            logger.info(f"Found ip conflict. details: {str(available_ips)}")
             self.devices.add_label([(adapter_unique_name, device_id)], "IP Conflicts")
 
             serialized_available_ips = AvailableIps(

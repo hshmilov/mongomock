@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import time
 import threading
 import functools
@@ -52,17 +54,17 @@ class GeneralInfoService(PluginBase, Triggerable):
         :return:
         """
         if job_name != 'execute':
-            self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
 
         self._number_of_triggers = self._number_of_triggers + 1
         if self._number_of_triggers == 1:
             # first trigger is blocking.
-            self.logger.info(f"Running gather_general_info sync (number of triggers: {self._number_of_triggers})")
+            logger.info(f"Running gather_general_info sync (number of triggers: {self._number_of_triggers})")
             self._gather_general_info()
         else:
             # Run it in a different thread
-            self.logger.info(f"Running gather_general_info async (number of triggers: {self._number_of_triggers})")
+            logger.info(f"Running gather_general_info async (number of triggers: {self._number_of_triggers})")
             threading.Thread(target=self._run_gather_general_info_async).start()
 
     @property
@@ -95,7 +97,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         try:
             self._gather_general_info()
         except:
-            self.logger.exception("Run gather_general_info asynchronously: Got an exception.")
+            logger.exception("Run gather_general_info asynchronously: Got an exception.")
 
     def _gather_general_info(self):
         """
@@ -103,12 +105,12 @@ class GeneralInfoService(PluginBase, Triggerable):
         Afterwards, adds more information to users.
         """
 
-        self.logger.info("Gathering General info started.")
+        logger.info("Gathering General info started.")
         acquired = False
         try:
             if self.work_lock.acquire(False):
                 acquired = True
-                self.logger.debug("acquired work lock")
+                logger.debug("acquired work lock")
 
                 # First, gather general info about devices
                 self._gather_windows_devices_general_info()
@@ -128,7 +130,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         :returns: true if successful, false otherwise.
         """
 
-        self.logger.info("Gathering General info about windows devices - started.")
+        logger.info("Gathering General info about windows devices - started.")
         """
         1. Get a list of windows devices
         2. Get wmi queries to run from all subplugins
@@ -147,7 +149,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                         'tags': True})
 
         windows_devices = list(windows_devices)  # no cursors needed.
-        self.logger.info(f"Found {len(windows_devices)} windows devices to run queries on.")
+        logger.info(f"Found {len(windows_devices)} windows devices to run queries on.")
 
         # We don't wanna burst thousands of queries here, so we are going to have a thread that always
         # keeps count of the number of requests, and shoot new ones in case needed.
@@ -164,22 +166,22 @@ class GeneralInfoService(PluginBase, Triggerable):
                 self.seconds_stuck = self.seconds_stuck + SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS
 
                 if self.seconds_stuck % 60 == 0:
-                    self.logger.info(f"Execution progress: {device_i} out of {len(windows_devices)} devices executed")
+                    logger.info(f"Execution progress: {device_i} out of {len(windows_devices)} devices executed")
 
                 if self.seconds_stuck > MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS:
                     # The current execution requests sent will still be handled, everything in general will
                     # still continue to work, but this thread will finish. It is important because if the system
                     # waits for us to finish we wanna avoid getting stuck forever.
-                    self.logger.error(f"Waited {self.seconds_stuck} seconds to continue sending more execution "
-                                      f"requests but we still have {self.number_of_active_execution_requests} "
-                                      f"threads active")
+                    logger.error(f"Waited {self.seconds_stuck} seconds to continue sending more execution "
+                                 f"requests but we still have {self.number_of_active_execution_requests} "
+                                 f"threads active")
                     return False
 
             # shoot another one!
             self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
             internal_axon_id = device["internal_axon_id"]
 
-            self.logger.debug(f"Going to request action on {internal_axon_id}")
+            logger.debug(f"Going to request action on {internal_axon_id}")
 
             # Get all wmi queries from all subadapters.
             wmi_smb_commands = []
@@ -206,9 +208,9 @@ class GeneralInfoService(PluginBase, Triggerable):
             time.sleep(1)
             self.seconds_stuck = self.seconds_stuck + 1
             if self.seconds_stuck > MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS:
-                self.logger.error(f"Waited {self.seconds_stuck} seconds for all execution threads to "
-                                  f"finish, bailing out with {self.number_of_active_execution_requests} threads still"
-                                  f"active.")
+                logger.error(f"Waited {self.seconds_stuck} seconds for all execution threads to "
+                             f"finish, bailing out with {self.number_of_active_execution_requests} threads still"
+                             f"active.")
                 return False
 
         return True
@@ -218,7 +220,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         Assuming devices were assocaited with users, now we associate users with devices.
         :return:
         """
-        self.logger.info("Associating users with devices")
+        logger.info("Associating users with devices")
 
         # 1. Get all devices which have users associations, and map all these devices to one global users object.
         devices_with_users_association = self.devices.get(data={"users": {"$exists": True}})
@@ -249,11 +251,11 @@ class GeneralInfoService(PluginBase, Triggerable):
             # Do we have it? or do we need to create it?
             if len(user) > 1:
                 # Can't be! how can we have a user with the same id? should have been correlated.
-                self.logger.error(f"Found a couple of users (expected one) with same id: {username} -> {user}")
+                logger.error(f"Found a couple of users (expected one) with same id: {username} -> {user}")
                 continue
             elif len(user) == 0:
                 # user does not exists, create it.
-                self.logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
+                logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
                 user_dict = self._new_user_adapter()
                 user_dict.id = username  # Should be the unique identifier of that user.
                 user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
@@ -274,7 +276,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                     linked_device.get_first_data("hostname") or \
                     linked_device.get_first_data("id")
 
-                self.logger.debug(f"Associating {device_caption} with user {username}")
+                logger.debug(f"Associating {device_caption} with user {username}")
                 try:
                     adapterdata_user.last_seen_in_devices = \
                         max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
@@ -337,9 +339,9 @@ class GeneralInfoService(PluginBase, Triggerable):
                     if did_subplugin_succeed is not True:
                         raise ValueError("return value is not True")
                 except Exception:
-                    self.logger.exception(f"Subplugin {subplugin.__class__.__name__} exception."
-                                          f"Internal axon id is {device['internal_axon_id']}. "
-                                          f"Moving on to next plugin.")
+                    logger.exception(f"Subplugin {subplugin.__class__.__name__} exception."
+                                     f"Internal axon id is {device['internal_axon_id']}. "
+                                     f"Moving on to next plugin.")
                     all_error_logs.append(f"Subplugin {subplugin.__class__.__name__} exception: "
                                           f"{get_exception_string()}")
 
@@ -364,8 +366,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                 last_execution_debug = "All errors logs: {0}".format("\n".join(all_error_logs))
 
         except Exception as e:
-            self.logger.exception("An error occured while processing wmi result: {0}, {1}"
-                                  .format(str(e), get_exception_string()))
+            logger.exception("An error occured while processing wmi result: {0}, {1}"
+                             .format(str(e), get_exception_string()))
             is_execution_exception = True
             last_execution_debug = f"An exception occured while processing wmi results: {get_exception_string()}"
 
@@ -390,7 +392,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                     "Last Execution Debug", last_execution_debug
                 )
 
-            self.logger.info(f"Finished with device {device['internal_axon_id']}.")
+            logger.info(f"Finished with device {device['internal_axon_id']}.")
 
     def _handle_wmi_execution_failure(self, device, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
@@ -401,11 +403,11 @@ class GeneralInfoService(PluginBase, Triggerable):
             # TODO: Fix the whole god damn execution system
 
             if "{'status': 'failed', 'output': ''}" == str(exc):
-                self.logger.debug(f"No executing adapters for device {device['internal_axon_id']}, continuing")
+                logger.debug(f"No executing adapters for device {device['internal_axon_id']}, continuing")
                 return
 
-            self.logger.info("Failed running wmi query on device {0}! error: {1}"
-                             .format(device["internal_axon_id"], str(exc)))
+            logger.info("Failed running wmi query on device {0}! error: {1}"
+                        .format(device["internal_axon_id"], str(exc)))
 
             # We need to tag that device, but we have no associated adapter devices. we must use the first one.
             if len(device["adapters"]) > 0:
@@ -425,7 +427,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                     "Last Execution Debug", f"Execution failed: {ex_str}"
                 )
         except Exception:
-            self.logger.exception("Exception in failure.")
+            logger.exception("Exception in failure.")
 
     @add_rule('run', methods=['POST'], should_authenticate=False)
     def run_now(self):

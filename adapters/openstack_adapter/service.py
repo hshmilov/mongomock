@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter, Field
 from axonius.utils.files import get_local_config_file
@@ -23,11 +25,11 @@ class OpenstackAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             client_config['password'] = self.decrypt_password(client_config['password'])
-            client = OpenStackClient(self.logger, **client_config)
+            client = OpenStackClient(**client_config)
             client.connect()
             return client
         except ClientConnectionException as err:
-            self.logger.error('Failed to connect to client {0} using config: {1}'.format(
+            logger.error('Failed to connect to client {0} using config: {1}'.format(
                 self._get_client_id(client_config), client_config))
             raise
 
@@ -98,7 +100,7 @@ class OpenstackAdapter(AdapterBase):
 
         # iterate the nics and add them
         for mac, ip_address in OpenStackClient.get_nics(raw_device).items():
-            device.add_nic(mac, ip_address, logger=self.logger)
+            device.add_nic(mac, ip_address)
 
         device.set_raw(
             {"device": raw_device, "flavor": flavor, "image": image})
@@ -111,7 +113,7 @@ class OpenstackAdapter(AdapterBase):
                 device = self.create_device(raw_device_data)
                 yield device
             except Exception:
-                self.logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
+                logger.exception(f'Got exception for raw_device_data: {raw_device_data}')
 
     @classmethod
     def adapter_properties(cls):

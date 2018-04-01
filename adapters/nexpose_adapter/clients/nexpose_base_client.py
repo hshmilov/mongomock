@@ -6,8 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException, ParseDevicesEr
 
 class NexposeClient(abc.ABC):
 
-    def __init__(self, logger, num_of_simultaneous_devices, host, port, username, password, verify_ssl):
-        self.logger = logger
+    def __init__(self, num_of_simultaneous_devices, host, port, username, password, verify_ssl):
         self.host = host
         self.port = port
         self.username = username
@@ -38,12 +37,11 @@ class NexposeClient(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def parse_raw_device(device_raw, device_class, logger):
+    def parse_raw_device(device_raw, device_class):
         """ Used to parse a single raw device that this client class returned.
 
         :param device_raw: The raw device data returned by this client class.
         :param device_class: The axonius device class to generate and return.
-        :param logger: The adapter logger.
         :return: A filled axonius device_class.
         """
 

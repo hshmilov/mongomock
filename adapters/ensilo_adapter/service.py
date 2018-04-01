@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -16,8 +18,8 @@ class EnsiloAdapter(AdapterBase):
         agent_version = Field(str, 'Agent Version')
         state = Field(str, "Device running state")
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['Ensilo_Domain']
@@ -25,7 +27,7 @@ class EnsiloAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
 
-            connection = EnsiloConnection(logger=self.logger, domain=client_config["Ensilo_Domain"],
+            connection = EnsiloConnection(domain=client_config["Ensilo_Domain"],
                                           verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]))
@@ -35,7 +37,7 @@ class EnsiloAdapter(AdapterBase):
         except EnsiloException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Ensilo_Domain'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -106,21 +108,21 @@ class EnsiloAdapter(AdapterBase):
                         ip_addresses = ip_addresses.split(",")
                     if mac_addresses == []:
                         if ip_addresses is not None:
-                            device.add_nic(None, ip_addresses, self.logger)
+                            device.add_nic(None, ip_addresses)
                     else:
                         for mac_address in mac_addresses:
                             if ip_addresses is not None:
-                                device.add_nic(mac_address, ip_addresses, self.logger)
+                                device.add_nic(mac_address, ip_addresses)
                             else:
-                                device.add_nic(mac_address, None, self.logger)
+                                device.add_nic(mac_address, None)
                 except:
-                    self.logger.exception("Problem with adding nic to ensilo device")
+                    logger.exception("Problem with adding nic to ensilo device")
                 device.agent_version = device_raw.get("version", "")
                 device.last_seen = parse_date(str(device_raw.get("lastSeenTime", "")))
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Ensilo Device")
+                logger.exception("Problem with fetching Ensilo Device")
 
     @classmethod
     def adapter_properties(cls):

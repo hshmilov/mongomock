@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import time
 
 from splunklib.client import connect, Service
@@ -5,8 +7,7 @@ from splunklib.results import ResultsReader
 
 
 class SplunkConnection(object):
-    def __init__(self, logger, host, port, username, password, token):
-        self.logger = logger
+    def __init__(self, host, port, username, password, token):
         self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password}
         if token:
             self.conn_details['token'] = token
@@ -53,14 +54,14 @@ class SplunkConnection(object):
         for result in reader:
             devices_count += 1
             if devices_count % 1000 == 0:
-                self.logger.info(f"Got {devices_count} devices so far")
+                logger.info(f"Got {devices_count} devices so far")
             raw = result[b'_raw'].decode('utf-8')
             try:
                 new_item = split_raw(raw)
                 if new_item is not None:
                     yield new_item
             except Exception as err:
-                self.logger.exception("The data did not return as expected. we got {0}".format(repr(raw)))
+                logger.exception("The data did not return as expected. we got {0}".format(repr(raw)))
                 break
 
     def get_nexpose_devices(self, earliest=None):

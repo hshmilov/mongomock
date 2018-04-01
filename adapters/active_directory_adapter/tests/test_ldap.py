@@ -22,7 +22,7 @@ WMI_SMB_RUNNER_LOCATION = os.path.abspath(
 
 @pytest.fixture(scope="module")
 def ldap_connection():
-    return LdapConnection(logging.getLogger("default"), 900, ADDRESS, DOMAIN, f"{DOMAIN_NAME}\\{USERNAME}",
+    return LdapConnection(900, ADDRESS, DOMAIN, f"{DOMAIN_NAME}\\{USERNAME}",
                           PASSWORD, None, SSLState[SSLState.Unencrypted.name], bytes([]), bytes([]),
                           bytes([]))
 

@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 
 from ensilo_adapter.exceptions import EnsiloAlreadyConnected, EnsiloConnectionError, EnsiloNotConnected, \
@@ -5,13 +7,12 @@ from ensilo_adapter.exceptions import EnsiloAlreadyConnected, EnsiloConnectionEr
 
 
 class EnsiloConnection(object):
-    def __init__(self, logger, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl):
         """ Initializes a connection to Ensilo using its rest API
 
         :param obj logger: Logger object of the system
         :param str domain: domain address for Ensilo
         """
-        self.logger = logger
         self.domain = domain
         self.verify_ssl = verify_ssl
         url = domain
@@ -101,7 +102,7 @@ class EnsiloConnection(object):
         try:
             devices_list += self._get('inventory/list-collectors?itemsPerPage=2000&pageNumber=0')
         except:
-            self.logger.exception("Page 0 Unsopported in Ensilo")
+            logger.exception("Page 0 Unsopported in Ensilo")
         try:
             # If we won't get error, let's stop after million devices
             for page_number in range(1, 500):

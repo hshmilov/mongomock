@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import json
 import ipaddress
 
@@ -8,7 +10,6 @@ from axonius.fields import ListField, Field
 from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
 from axonius.utils.files import get_local_config_file
 from epo_adapter.mcafee import client
-
 
 EPO_HOST = 'host'
 EPO_PORT = 'port'
@@ -29,7 +30,7 @@ def get_all_linked_tables(table):
     return all_linked_tables
 
 
-def parse_network(device_raw, device, logger):
+def parse_network(device_raw, device):
     mac = ''
     ip_list = set()
 
@@ -66,7 +67,7 @@ def parse_network(device_raw, device, logger):
     except:
         logger.info(f"Failed formatting {raw_mac}")
 
-    device.add_nic(mac, list(ip_list), logger)
+    device.add_nic(mac, list(ip_list))
 
 
 class EpoAdapter(AdapterBase):
@@ -78,8 +79,8 @@ class EpoAdapter(AdapterBase):
         epo_products = ListField(str, "EPO Products")
         epo_agent_version = Field(str, "EPO Agent Version")
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _clients_schema(self):
         return {
@@ -128,7 +129,7 @@ class EpoAdapter(AdapterBase):
 
             if 'EPOLeafNode.LastUpdate' not in device_raw:
                 # No date for this device, we don't want to enter devices with no date so continuing.
-                self.logger.warning(f"Found device with no date. Not inserting to db. device name: {hostname}")
+                logger.warning(f"Found device with no date. Not inserting to db. device name: {hostname}")
                 continue
 
             device = self._new_device_adapter()
@@ -136,7 +137,7 @@ class EpoAdapter(AdapterBase):
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
             device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
             device.id = epo_id
-            parse_network(device_raw, device, self.logger)
+            parse_network(device_raw, device)
             last_seen = parse_date(device_raw['EPOLeafNode.LastUpdate'])
             if last_seen:
                 device.last_seen = last_seen
@@ -184,7 +185,7 @@ class EpoAdapter(AdapterBase):
                 )
 
             except:
-                self.logger.exception("Couldn't set some epo info")
+                logger.exception("Couldn't set some epo info")
 
             device.set_raw(device_raw)
             yield device
@@ -201,11 +202,11 @@ class EpoAdapter(AdapterBase):
             raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables=all_linked_tables)
         except Exception as e:
             try:
-                self.logger.warning(f"Failed to query all linked tables - {e}")
+                logger.warning(f"Failed to query all linked tables - {e}")
                 raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE,
                              joinTables="EPOComputerProperties, EPOProductPropertyProducts")
             except Exception as e:
-                self.logger.warning(f"Failed to query EPOComputerProperties, EPOProductPropertyProducts - {e}. \
+                logger.warning(f"Failed to query EPOComputerProperties, EPOProductPropertyProducts - {e}. \
                                         Will fetch only basic info from EPOComputerProperties")
                 raw = mc.run("core.executeQuery", target=LEAF_NODE_TABLE, joinTables="EPOComputerProperties")
         return json.dumps(raw)
@@ -219,7 +220,7 @@ class EpoAdapter(AdapterBase):
                    client_config[USER], self.decrypt_password(client_config[PASS]))
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
         return client_config
 

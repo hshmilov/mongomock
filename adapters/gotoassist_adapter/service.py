@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -14,15 +16,15 @@ class GotoassistAdapter(AdapterBase):
         company_id = Field(str, 'Company ID')
         machine_status = Field(str, 'Machine Status')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['user_name']
 
     def _connect_client(self, client_config):
         try:
-            connection = GotoassistConnection(logger=self.logger)
+            connection = GotoassistConnection()
             connection.set_credentials(client_id=client_config["client_id"], client_secret=client_config["client_secret"],
                                        username=client_config["user_name"], password=self.decrypt_password(client_config["password"]))
             with connection:
@@ -31,7 +33,7 @@ class GotoassistAdapter(AdapterBase):
         except GotoassistException as e:
             message = "Error connecting to client with user {0}, reason: {1}".format(
                 client_config['user_name'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -91,7 +93,7 @@ class GotoassistAdapter(AdapterBase):
                 device = self._new_device_adapter()
                 device_id = device_raw.get("machineUuid")
                 if device_id is None:
-                    self.logger.warning("Warning! machineUuid is None..")
+                    logger.warning("Warning! machineUuid is None..")
                     continue
                 device.id = device_id
                 device.hostname = device_raw.get("dnsName")
@@ -100,14 +102,14 @@ class GotoassistAdapter(AdapterBase):
                 try:
                     ip_address = device_raw.get("ipAddresses")
                     if ip_address is not None:
-                        device.add_nic(None, ip_address, self.logger)
+                        device.add_nic(None, ip_address)
                 except:
-                    self.logger.exception("Problem with adding nic to Gotoassist device")
+                    logger.exception("Problem with adding nic to Gotoassist device")
                 device.company_id = device_raw.get("companyId")
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Gotoassist Device: {str(device_raw)}")
+                logger.exception("Problem with fetching Gotoassist Device: {str(device_raw)}")
 
     @classmethod
     def adapter_properties(cls):

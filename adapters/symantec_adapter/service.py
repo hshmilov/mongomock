@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -14,15 +16,15 @@ class SymantecAdapter(AdapterBase):
         online_status = Field(str, 'Online Status')
         agent_version = Field(str, 'Agent Version')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['SEPM_Address']
 
     def _connect_client(self, client_config):
         try:
-            connection = SymantecConnection(logger=self.logger, domain=client_config["SEPM_Address"],
+            connection = SymantecConnection(domain=client_config["SEPM_Address"],
                                             port=(client_config["SEPM_Port"] if "SEPM_Port" in client_config else None))
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]))
@@ -32,7 +34,7 @@ class SymantecAdapter(AdapterBase):
         except SymantecException as e:
             message = "Error connecting to client with address {0} and port {1}, reason: {2}".format(
                 client_config['SEPM_Address'], client_config['SEPM_Port'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -53,7 +55,7 @@ class SymantecAdapter(AdapterBase):
                 client_list.extend(current_clients_page['content'])
                 last_page = current_clients_page['lastPage']
                 page_num += 1
-                self.logger.info(f"Got {page_num*1000} devices so far")
+                logger.info(f"Got {page_num*1000} devices so far")
             return client_list
 
     def _clients_schema(self):
@@ -112,18 +114,18 @@ class SymantecAdapter(AdapterBase):
                 mac_addresses = device_raw.get('macAddresses', [])
                 ip_addresses = device_raw.get('ipAddresses')
                 if mac_addresses == []:
-                    device.add_nic(None, ip_addresses, self.logger)
+                    device.add_nic(None, ip_addresses)
                 for mac_address in mac_addresses:
-                    device.add_nic(mac_address, ip_addresses, self.logger)
+                    device.add_nic(mac_address, ip_addresses)
             except:
-                self.logger.exception("Problem adding nic to Symantec")
+                logger.exception("Problem adding nic to Symantec")
             device.online_status = str(device_raw.get('onlineStatus'))
             device.agent_version = device_raw.get("agentVersion")
             try:
                 device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get("lastScanTime", 0)),
                                                                        int(device_raw.get("lastUpdateTime", 0))) / 1000)
             except:
-                self.logger.exception("Problem adding last seen to Symantec")
+                logger.exception("Problem adding last seen to Symantec")
             device.id = device_raw['agentId']
             device.set_raw(device_raw)
             yield device
@@ -133,7 +135,7 @@ class SymantecAdapter(AdapterBase):
         Correlation commands for Symantec
         :return: shell commands that help correlations
         """
-        self.logger.error("correlation_cmds is not implemented for symantec adapter")
+        logger.error("correlation_cmds is not implemented for symantec adapter")
         raise NotImplementedError("correlation_cmds is not implemented for symantec adapter")
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
@@ -145,7 +147,7 @@ class SymantecAdapter(AdapterBase):
         :param os_type: the type of machine ran upon
         :return:
         """
-        self.logger.error("_parse_correlation_results is not implemented for symantec adapter")
+        logger.error("_parse_correlation_results is not implemented for symantec adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for symantec adapter")
 
     @classmethod

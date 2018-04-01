@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from typing import List, NewType, Tuple, Iterable
 from abc import ABC, abstractmethod
 
@@ -94,9 +96,8 @@ def _prefilter_devices(devices, correlation_preconditions):
 
 
 class CorrelatorEngineBase(ABC):
-    def __init__(self, logger):
-        super().__init__()
-        self.logger = logger
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.correlation_preconditions = None
 
     def _prefilter_device(self, devices) -> iter:
@@ -135,7 +136,7 @@ class CorrelatorEngineBase(ABC):
         print_count = max(int(float(num_of_pairs) / 100), 100)
         for a, b in pairwise(adapters_to_correlate):
             if pair_number % print_count == 0:
-                self.logger.info(f"Correlating outer bucket of #pair: {pair_number} out of {num_of_pairs}")
+                logger.info(f"Correlating outer bucket of #pair: {pair_number} out of {num_of_pairs}")
             if all(compare(a, b) for compare in bucket_insertion_comparators):
                 bucket.append(b)
             else:
@@ -243,7 +244,7 @@ class CorrelatorEngineBase(ABC):
 
         correlations_with_unavailable_devices = list()
 
-        self.logger.info(f"Correlating {len(devices)} devices")
+        logger.info(f"Correlating {len(devices)} devices")
         for result in itertools.chain(logic_correlations, self._raw_correlate(devices)):
             if not isinstance(result, CorrelationResult):
                 yield result  # only post process correlation results
@@ -296,7 +297,7 @@ class CorrelatorEngineBase(ABC):
                 result.associated_adapters = [(first_name, first_id), (second_name, second_id)]
             sorted_associated_adapters = sorted(result.associated_adapters)
             if sorted_associated_adapters in correlations_done_already:
-                self.logger.debug(f"result is the same as old one : {result}")
+                logger.debug(f"result is the same as old one : {result}")
                 # skip correlations done twice
                 continue
 

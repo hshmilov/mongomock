@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 import typing
 
@@ -156,7 +158,7 @@ class DeviceAdapter(SmartJsonClass):
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
 
-    def add_nic(self, mac=None, ips=None, logger=None):
+    def add_nic(self, mac=None, ips=None):
         """
         Add a new network interface card to this device.
         :param mac: the mac

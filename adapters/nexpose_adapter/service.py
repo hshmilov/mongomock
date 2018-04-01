@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from typing import Tuple
 
 from axonius.consts.plugin_consts import PLUGIN_NAME
@@ -74,8 +76,8 @@ class NexposeAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         risk_score = Field(float, 'Risk score')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self.num_of_simultaneous_devices = int(self.config["DEFAULT"]["num_of_simultaneous_devices"])
 
     def _clients_schema(self):
@@ -126,13 +128,13 @@ class NexposeAdapter(ScannerAdapterBase):
 
             for device_raw in devices_raw_data:
                 try:
-                    yield api_client_class.parse_raw_device(device_raw, self._new_device_adapter, self.logger)
+                    yield api_client_class.parse_raw_device(device_raw, self._new_device_adapter)
                 except Exception as err:
-                    self.logger.exception(f"Caught exception from parsing using the {api_client_class.__name__}.")
+                    logger.exception(f"Caught exception from parsing using the {api_client_class.__name__}.")
                     failed_to_parse += 1
 
             if failed_to_parse != 0:
-                self.logger.warning(f"Failed to parse {failed_to_parse} devices.")
+                logger.warning(f"Failed to parse {failed_to_parse} devices.")
 
     def _query_devices_by_client(self, client_name, client_data):
         if isinstance(client_data, nexpose_clients.NexposeClient):
@@ -144,9 +146,9 @@ class NexposeAdapter(ScannerAdapterBase):
     def _connect_client(self, client_config):
         client_config['password'] = self.decrypt_password(client_config['password'])
         try:
-            return nexpose_clients.NexposeV3Client(self.logger, self.num_of_simultaneous_devices, **client_config)
+            return nexpose_clients.NexposeV3Client(self.num_of_simultaneous_devices, **client_config)
         except ClientConnectionException:
-            return nexpose_clients.NexposeV2Client(self.logger, self.num_of_simultaneous_devices, **client_config)
+            return nexpose_clients.NexposeV2Client(self.num_of_simultaneous_devices, **client_config)
 
     @property
     def _get_scanner_correlator(self):

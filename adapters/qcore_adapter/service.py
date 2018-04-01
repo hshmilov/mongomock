@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from datetime import timedelta
 from threading import Thread
 
@@ -49,8 +51,8 @@ class QcoreAdapter(AdapterBase):
 
         gen_device_context_type = Field(str, 'Context type')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
         # add one client ...
         if self._get_collection('clients').count({}) == 0:
@@ -67,9 +69,9 @@ class QcoreAdapter(AdapterBase):
             connectivity = pump_document[CLINICAL_STATUS]['Connectivity']
             mac = connectivity['mac']
             ip = connectivity['ip_address']
-            device.add_nic(mac=mac, ips=[ip], logger=self.logger)
+            device.add_nic(mac=mac, ips=[ip])
         except:
-            self.logger.exception(f"failed to populate nic info")
+            logger.exception(f"failed to populate nic info")
 
     def populate_infusion_status(self, device, pump_document):
         try:
@@ -104,7 +106,7 @@ class QcoreAdapter(AdapterBase):
                     self.populate_infusion_state(device, periodic_status)
 
         except:
-            self.logger.exception("Failed to populate infusion status")
+            logger.exception("Failed to populate infusion status")
 
     def populate_infusion_state(self, device, infusion):
         device.inf_is_bolus = infusion['is_bolus'] != 0
@@ -167,10 +169,10 @@ class QcoreAdapter(AdapterBase):
             self.populate_infusion_status(device, pump_document)
 
             device.set_raw(pump_document)
-            self.logger.info(f'Yielding a device: ')
+            logger.info(f'Yielding a device: ')
             for k, v in device.to_dict().items():
                 if str(k).startswith("inf_"):
-                    self.logger.info(f'{k}:{v}')
+                    logger.info(f'{k}:{v}')
             yield device
 
     def _get_client_id(self, client_config):

@@ -1,4 +1,7 @@
+
 # A help class for dealing with CIMTYPE_DateTime (returning from wmi...)
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import re
 from datetime import tzinfo, datetime, timedelta
 
@@ -66,7 +69,7 @@ def is_wmi_answer_ok(answer):
     return answer["status"] == "ok"
 
 
-def check_wmi_answers_integrity(answers, logger=None):
+def check_wmi_answers_integrity(answers):
     """
     Gets answers and checks for integrity.
     :param answers: list of answers from wmi execution.

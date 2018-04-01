@@ -1,4 +1,5 @@
-import json
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -15,15 +16,15 @@ class DesktopCentralAdapter(AdapterBase):
         agent_version = Field(str, 'Agent Version')
         installation_status = Field(str, 'Installation Status')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['DesktopCentral_Domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = DesktopCentralConnection(logger=self.logger, domain=client_config["DesktopCentral_Domain"],
+            connection = DesktopCentralConnection(domain=client_config["DesktopCentral_Domain"],
                                                   verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]))
@@ -102,12 +103,12 @@ class DesktopCentralAdapter(AdapterBase):
                 try:
                     if device_raw.get("mac_address") or device_raw.get("ip_address"):
                         device.add_nic(device_raw.get("mac_address"), device_raw.get(
-                            "ip_address", "").split(","), self.logger)
+                            "ip_address", "").split(","))
                 except:
-                    self.logger.exception("Problem with adding nic to desktop central device")
+                    logger.exception("Problem with adding nic to desktop central device")
                 device.agent_version = device_raw.get("agent_version", "")
                 if "resource_id" not in device_raw:
-                    self.logger.info(f"No Desktop Central device Id for {str(device_raw)}")
+                    logger.info(f"No Desktop Central device Id for {str(device_raw)}")
                     continue
                 device.id = str(device_raw.get("resource_id"))
                 os_version_list = device_raw.get("os_version", "").split(".")
@@ -124,7 +125,7 @@ class DesktopCentralAdapter(AdapterBase):
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Desktop Central Device")
+                logger.exception("Problem with fetching Desktop Central Device")
 
     @classmethod
     def adapter_properties(cls):

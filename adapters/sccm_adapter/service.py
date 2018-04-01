@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, adapter_consts, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.ad_device import ADDevice
@@ -11,8 +13,8 @@ class SccmAdapter(AdapterBase):
     class MyDeviceAdapter(ADDevice):
         pass
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
         self.alive_hours = self.config['DEFAULT'][adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS]
         self.devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
 
@@ -21,8 +23,7 @@ class SccmAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = SccmConnection(logger=self.logger,
-                                        database=client_config[consts.SCCM_DATABASE],
+            connection = SccmConnection(database=client_config[consts.SCCM_DATABASE],
                                         server=client_config[consts.SCCM_HOST],
                                         port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
                                         devices_paging=self.devices_fetched_at_a_time)
@@ -33,7 +34,7 @@ class SccmAdapter(AdapterBase):
             return connection
         except SccmException:
             message = f"Error connecting to client with parameters {str(client_config)} "
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -84,7 +85,7 @@ class SccmAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             device_id = device_raw.get('Distinguished_Name0')
             if not device_id:
-                self.logger.error(f'Got a device with no distinguished name {device_raw}')
+                logger.error(f'Got a device with no distinguished name {device_raw}')
                 continue
             device = self._new_device_adapter()
             device.id = device_id
@@ -103,7 +104,7 @@ class SccmAdapter(AdapterBase):
                     mac, ips = nic.split('@')
                     device.add_nic(mac, ips.split(', '))
                 except Exception:
-                    self.logger.warn(f"Caught weird NIC {nic} for device id {device.id}")
+                    logger.warn(f"Caught weird NIC {nic} for device id {device.id}")
                     pass
             free_physical_memory = device_raw.get('FreePhysicalMemory0')
             device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None
@@ -129,11 +130,11 @@ class SccmAdapter(AdapterBase):
             yield device
 
     def _correlation_cmds(self):
-        self.logger.error("correlation_cmds is not implemented for sccm adapter")
+        logger.error("correlation_cmds is not implemented for sccm adapter")
         raise NotImplementedError("correlation_cmds is not implemented for sccm adapter")
 
     def _parse_correlation_results(self, correlation_cmd_result, os_type):
-        self.logger.error("_parse_correlation_results is not implemented for sccm adapter")
+        logger.error("_parse_correlation_results is not implemented for sccm adapter")
         raise NotImplementedError("_parse_correlation_results is not implemented for sccm adapter")
 
     @classmethod

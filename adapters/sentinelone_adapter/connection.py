@@ -5,13 +5,11 @@ from sentinelone_adapter.exceptions import SentinelOneAlreadyConnected, Sentinel
 
 
 class SentinelOneConnection(object):
-    def __init__(self, logger, domain):
+    def __init__(self, domain):
         """ Initializes a connection to SentinelOne using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for SentinelOne
         """
-        self.logger = logger
         self.domain = domain
         url = domain
         if not url.lower().startswith('https://'):

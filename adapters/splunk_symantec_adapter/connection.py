@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import time
 
 from splunk_symantec_adapter.plugins import splunk_split_symantec_win, splunk_split_symantec_mac
@@ -6,12 +8,11 @@ from splunklib.results import ResultsReader
 
 
 class SplunkConnection(object):
-    def __init__(self, logger, host, port, username, password, token):
+    def __init__(self, host, port, username, password, token):
         self.conn_details = {'host': host, 'port': port, 'username': username, 'password': password}
         if token:
             self.conn_details['token'] = token
         self.conn = None
-        self.logger = logger
 
     @property
     def is_connected(self):
@@ -51,7 +52,7 @@ class SplunkConnection(object):
         for result in reader:
             devices_count += 1
             if devices_count % 1000 == 0:
-                self.logger.info(f"Got {devices_count} devices so far")
+                logger.info(f"Got {devices_count} devices so far")
             raw = result[b'_raw'].decode('utf-8')
             new_item = split_raw(raw)
             if new_item is not None:

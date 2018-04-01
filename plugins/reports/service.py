@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 # Standard modules
 import concurrent.futures
 import threading
@@ -30,7 +32,7 @@ class ReportsService(PluginBase, Triggerable):
 
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
-            self.logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
         else:
             return self._create_reports()
@@ -61,7 +63,7 @@ class ReportsService(PluginBase, Triggerable):
 
         except ValueError:
             message = 'Expected JSON, got something else...'
-            self.logger.exception(message)
+            logger.exception(message)
             return return_error(message, 400)
 
     @add_rule("reports", methods=['PUT', 'GET', 'DELETE'])
@@ -91,7 +93,7 @@ class ReportsService(PluginBase, Triggerable):
                 return self._remove_report(self.get_request_data_as_object())
         except ValueError:
             message = 'Expected JSON, got something else...'
-            self.logger.exception(message)
+            logger.exception(message)
             return return_error(message, 400)
 
     def _add_report(self, report_data):
@@ -128,18 +130,18 @@ class ReportsService(PluginBase, Triggerable):
 
                 # Pushes the resource to the db.
                 insert_result = self._get_collection('reports').insert_one(report_resource)
-                self.logger.info('Added query to reports list')
+                logger.info('Added query to reports list')
                 return str(insert_result.inserted_id), 201
 
             return return_error('An existing reports on a query as been requested', 409)
 
         except KeyError as e:
             message = 'The query reports request is missing data. Details: {0}'.format(str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             return return_error(message, 400)
         except TypeError as e:
             message = 'The mongo query was invalid. Details: {0}'.format(str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             return return_error(message, 400)
 
     def _remove_report(self, report_data):
@@ -154,10 +156,10 @@ class ReportsService(PluginBase, Triggerable):
         delete_result = self._get_collection('reports').delete_one(delete_query)
 
         if delete_result.deleted_count == 0:
-            self.logger.error('Attempted to delete an non-existing report.')
+            logger.error('Attempted to delete an non-existing report.')
             return return_error('Attempted to delete non-existing reports.', 404)
 
-        self.logger.info('Removed query from reports.')
+        logger.info('Removed query from reports.')
         return '', 200
 
     def get_query_results(self, query):
@@ -189,9 +191,9 @@ class ReportsService(PluginBase, Triggerable):
                 for future in concurrent.futures.as_completed(future_for_report_checks):
                     try:
                         future.result()
-                        self.logger.info(f'{future_for_report_checks[future]} finished checking reports.')
+                        logger.info(f'{future_for_report_checks[future]} finished checking reports.')
                     except Exception:
-                        self.logger.exception("Failed to check report generation.")
+                        logger.exception("Failed to check report generation.")
 
         return ''
 
@@ -383,7 +385,7 @@ class ReportsService(PluginBase, Triggerable):
         try:
             current_result = self.get_query_results(json.loads(report_data['query']))
             if current_result is None:
-                self.logger.info("Skipping reports trigger because there were no current results.")
+                logger.info("Skipping reports trigger because there were no current results.")
                 return
             retrigger = report_data['retrigger']
             # DeepDiff(report_data['result'], current_result, ignore_order=True)
@@ -402,7 +404,7 @@ class ReportsService(PluginBase, Triggerable):
                     self.update_report(report_data)
 
         except Exception as e:
-            self.logger.exception(
+            logger.exception(
                 "Thread {0} encountered error: {1}. Repeated errors like this could be a race condition of a deleted reports.".format(
                     threading.current_thread(), str(e)))
             raise

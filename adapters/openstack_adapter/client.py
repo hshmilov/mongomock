@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 #!/usr/bin/env python3
 
 from openstack.connection import Connection
@@ -10,13 +12,12 @@ class OpenstackException(Exception):
 
 
 class OpenStackClient:
-    def __init__(self, logger, auth_url, username, password, project,  domain='default'):
+    def __init__(self, auth_url, username, password, project,  domain='default'):
         self._auth_url = auth_url
         self._username = username
         self._password = password
         self._project = project
         self._domain = domain
-        self.logger = logger
 
         self._sess = None
 
@@ -25,7 +26,7 @@ class OpenStackClient:
         Open session using the given creds.
         call authorize to check that the we authenticated successfully.
         """
-        self.logger.info('Creating session')
+        logger.info('Creating session')
         self._sess = Connection(auth_url=self._auth_url, project_name=self._project,
                                 username=self._username, password=self._password, default_domain_name=self._domain)
         try:

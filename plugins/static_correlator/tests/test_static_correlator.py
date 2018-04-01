@@ -5,22 +5,12 @@ import sys
 
 from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
+from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 from static_correlator.engine import StaticCorrelatorEngine
 
 
-correlator_logger = logging.getLogger()
-correlator_logger.setLevel(logging.DEBUG)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(' [Correlator] %(message)s')
-ch.setFormatter(formatter)
-correlator_logger.addHandler(ch)
-
-
 def correlate(devices):
-    return list(StaticCorrelatorEngine(correlator_logger).correlate(devices))
+    return list(StaticCorrelatorEngine().correlate(devices))
 
 
 def test_empty():

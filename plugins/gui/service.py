@@ -1,4 +1,6 @@
-from axonius.adapter_base import is_plugin_adapter, AdapterProperty
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
+from axonius.adapter_base import AdapterProperty
 
 from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -131,7 +133,7 @@ def filtered():
             try:
                 filter_expr = request.args.get('filter')
                 if filter_expr:
-                    self.logger.debug("Parsing filter: {0}".format(filter_expr))
+                    logger.debug("Parsing filter: {0}".format(filter_expr))
                     filter_obj = parse_filter(filter_expr)
             except Exception as e:
                 return return_error("Could not create mongo filter. Details: {0}".format(e), 400)
@@ -155,7 +157,7 @@ def sorted():
             try:
                 sort_param = request.args.get('sort')
                 if sort_param:
-                    self.logger.debug(f'Parsing sort: {sort_param}')
+                    logger.debug(f'Parsing sort: {sort_param}')
                     sort_field = sort_param[:-1]
                     sort_direction = sort_param[-1]
                     sort_obj[sort_field] = pymongo.DESCENDING if (sort_direction == '-') else pymongo.ASCENDING
@@ -241,21 +243,21 @@ class GuiService(PluginBase):
                 try:
                     self._insert_query('device', name, query['query'])
                 except:
-                    self.logger.exception(f'Error adding default query {name}')
+                    logger.exception(f'Error adding default query {name}')
         except:
-            self.logger.exception(f'Error adding default queries')
+            logger.exception(f'Error adding default queries')
 
     def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
         queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
         if existed_query is not None:
-            self.logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
+            logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
             return existed_query['_id']
         result = queries_collection.update({'name': name}, {'$set': {'name': name, 'filter': query_filter,
                                                                      'expressions': query_expressions,
                                                                      'query_type': 'saved', 'timestamp': datetime.now(),
                                                                      'archived': False}}, upsert=True)
-        self.logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
+        logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
         return result.get('inserted_id', '')
 
     ########
@@ -266,7 +268,7 @@ class GuiService(PluginBase):
         """
         Get Axonius data of type <module_name>, from the aggregator which is expected to store them.
         """
-        self.logger.debug(f'Fetching data for module {module_name}')
+        logger.debug(f'Fetching data for module {module_name}')
         with self._get_db_connection(False) as db_connection:
             pipeline = [{'$match': filter}]
             if projection:
@@ -274,7 +276,7 @@ class GuiService(PluginBase):
                 projection['adapters'] = 1
                 pipeline.append({'$project': projection})
             if sort:
-                self.logger.info(f'HERE IS SORT {sort}')
+                logger.info(f'HERE IS SORT {sort}')
                 pipeline.append({'$sort': sort})
             else:
                 # Default sort by adapters list size and then Mongo id (giving order of insertion)
@@ -502,7 +504,7 @@ class GuiService(PluginBase):
                                                     are_enabled=request.method == 'POST')
 
             if response.status_code != 200:
-                self.logger.error(f"Tagging did not complete. First {response.json()}")
+                logger.error(f"Tagging did not complete. First {response.json()}")
                 return_error(f'Tagging did not complete. First error: {response.json()}', 400)
 
             return '', 200
@@ -619,11 +621,11 @@ class GuiService(PluginBase):
             research_state = self.request_remote_plugin(f"state",
                                                         plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
             if research_state[StateLevels.Phase.name] == Phases.Stable.name:
-                self.logger.info('System is stable, triggering static correlator')
+                logger.info('System is stable, triggering static correlator')
                 self.request_remote_plugin(
                     f"trigger/execute", plugin_consts.STATIC_CORRELATOR_PLUGIN_NAME, method='post')
             else:
-                self.logger.info('System is in research phase, not triggering static correlator')
+                logger.info('System is in research phase, not triggering static correlator')
         except Exception:
             # if there's no aggregator, there's nothing we can do
             pass
@@ -697,7 +699,7 @@ class GuiService(PluginBase):
             if query is None or not query.get('filter'):
                 return return_error("Invalid query id {0} requested for creating report".format(report_to_add['query']))
 
-            self.logger.info("About to generate a report for the filter: {0}".format(query['filter']))
+            logger.info("About to generate a report for the filter: {0}".format(query['filter']))
             report_to_add['query'] = query['filter']
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
             if response is not None and response.status_code == 201:
@@ -725,7 +727,7 @@ class GuiService(PluginBase):
                     report_ids = set(query.get('alertIds') or [])
                     report_ids.remove(report_id)
                     queries_collection.update_one({'_id': query['_id']}, {'$set': {'alertIds': list(report_ids)}})
-                    self.logger.info("Removed alert from containing query {0}".format(query['_id']))
+                    logger.info("Removed alert from containing query {0}".format(query['_id']))
             return response.text, response.status_code
 
         if request.method == 'POST':
@@ -790,7 +792,7 @@ class GuiService(PluginBase):
                     response = self.request_remote_plugin(
                         "trigger_state/execute", plugin[plugin_consts.PLUGIN_UNIQUE_NAME])
                     if response.status_code != 200:
-                        self.logger.error("Error getting state of plugin {0}".format(
+                        logger.error("Error getting state of plugin {0}".format(
                             plugin[plugin_consts.PLUGIN_UNIQUE_NAME]))
                         processed_plugin['status'] = 'error'
                     else:
@@ -913,10 +915,10 @@ class GuiService(PluginBase):
         password = log_in_data.get('password')
         user_from_db = users_collection.find_one({'user_name': user_name})
         if user_from_db is None:
-            self.logger.info(f"Unknown user {user_name} tried logging in")
+            logger.info(f"Unknown user {user_name} tried logging in")
             return return_error("Wrong user name or password", 401)
         if not bcrypt.verify(password, user_from_db['password']):
-            self.logger.info(f"User {user_name} tried logging in with wrong password")
+            logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
         session['user'] = user_from_db
         return ""
@@ -1021,15 +1023,15 @@ class GuiService(PluginBase):
             dashboard_list = []
             for dashboard_object in dashboard_collection.find(filter_archived()):
                 if not dashboard_object.get('name'):
-                    self.logger.info(f'No name for dashboard {dashboard_object["_id"]}')
+                    logger.info(f'No name for dashboard {dashboard_object["_id"]}')
                 elif not dashboard_object.get('queries'):
-                    self.logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
+                    logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
                 else:
                     # Let's fetch and run them query filters
                     for query_name in dashboard_object['queries']:
                         query_object = queries_collection.find_one({'name': query_name})
                         if not query_object or not query_object.get('filter'):
-                            self.logger.info(f'No filter found for query {query_name}')
+                            logger.info(f'No filter found for query {query_name}')
                         else:
                             if not dashboard_object.get('data'):
                                 dashboard_object['data'] = {}
@@ -1115,7 +1117,7 @@ class GuiService(PluginBase):
         elif self.get_method() == 'POST':
             response = self.request_remote_plugin(
                 'research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
-            self.logger.info(f"response code: {response.status_code} response crap: {response.content}")
+            logger.info(f"response code: {response.status_code} response crap: {response.content}")
             return ''
 
     @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
@@ -1179,12 +1181,12 @@ class GuiService(PluginBase):
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
         data = self.get_request_data_as_object()
-        self.logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
+        logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
         response = self.request_remote_plugin(
             'trigger/execute', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
 
         if response.status_code != 200:
-            self.logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
+            logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
             return return_error(f"Could not schedule research phase to: {data if data else 'Now'}",
                                 response.status_code)
 
@@ -1239,10 +1241,10 @@ class GuiService(PluginBase):
                                                   params={'wanted': plugin_state})
 
             if response.status_code != 200:
-                self.logger.error(f"Failed to {plugin_state} {current_service}.")
+                logger.error(f"Failed to {plugin_state} {current_service}.")
                 statuses.append(False)
             else:
-                self.logger.info(f"Switched {current_service} to be {plugin_state}.")
+                logger.info(f"Switched {current_service} to be {plugin_state}.")
                 statuses.append(True)
 
         return '' if all(statuses) else return_error(f'Failed to {plugin_state} all plugins', 500)

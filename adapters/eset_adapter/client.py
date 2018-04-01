@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import ctypes
 import json
 from contextlib import contextmanager
@@ -8,9 +10,9 @@ import eset_adapter.consts as eset_consts
 
 class EsetClient(object):
 
-    def __init__(self, lock, library, logger, host, username, password, port=22):
+    def __init__(self, lock, library, host, username, password, port=22):
+        super().__init__()
         self.client = library
-        self.logger = logger
         self.host = host
         self.username = username
         self.password = password
@@ -52,7 +54,7 @@ class EsetClient(object):
 
                 yield self.client
             except Exception:
-                self.logger.exception("Failed opening a session.")
+                logger.exception("Failed opening a session.")
                 raise axonius.adapter_exceptions.ClientConnectionException("Failed opening a session.")
             finally:
                 self._send_message_to_server(self.client, eset_consts.CLOSE_CONNECTION)
@@ -67,7 +69,7 @@ class EsetClient(object):
                     self._send_message_to_server(session, eset_consts.LOGIN_CHECK),
                     type_of_response='Era.ServerApi.IsConnectionAliveResponse')
         except Exception:
-            self.logger.exception("Failed connecting to eset")
+            logger.exception("Failed connecting to eset")
             raise axonius.adapter_exceptions.ClientConnectionException("Failed to connect to eset.")
 
     def _get_report(self):

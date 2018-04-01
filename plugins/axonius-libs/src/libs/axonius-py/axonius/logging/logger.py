@@ -42,7 +42,7 @@ def create_logger(plugin_unique_name, log_level, logstash_host, log_path):
     # logstash_handler.setFormatter(formatter)
 
     # Building the logger object
-    logger = logging.getLogger('axonius_plugin_log')
+    logger = logging.getLogger('axonius')
     logger.addHandler(file_handler)
     # logger.addHandler(logstash_handler)
     logger.setLevel(log_level)

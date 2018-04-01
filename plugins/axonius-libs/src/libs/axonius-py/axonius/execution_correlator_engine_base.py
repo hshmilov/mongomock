@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 """
 ExecutionCorrelationEngineBase.py: A base class that implements execution based correlation
 """
@@ -122,7 +124,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
             for adapter in all_adapters.values()
         })
 
-        self.logger.debug(f"Adapter cmds: {adapters_cmds}")
+        logger.debug(f"Adapter cmds: {adapters_cmds}")
 
         # Stage (4):
         promises = {}
@@ -141,7 +143,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                 cmd = [_default_shell_command(adapter_cmd.get(os_type)) for
                        adapter_cmd in adapters_cmds.values()]
             except UnsupportedOS:
-                self.logger.info(f"Device {device['internal_axon_id']} has unsupported OS")
+                logger.info(f"Device {device['internal_axon_id']} has unsupported OS")
                 continue
             data_for_action = {
                 'shell_commands': {os_type: cmd}
@@ -158,8 +160,8 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                 remaining_time = EXECUTE_TIMEOUT.total_seconds() - (datetime.now() - started_time).total_seconds()
                 promises_to_wait_for = [p for p, _ in promises.values() if p and p.is_pending]
 
-                self.logger.info(f"Waiting for {remaining_time} " +
-                                 f"seconds for execution results on {len(promises_to_wait_for)} promises")
+                logger.info(f"Waiting for {remaining_time} " +
+                            f"seconds for execution results on {len(promises_to_wait_for)} promises")
 
                 promiseAll = Promise.all(promises_to_wait_for)
                 Promise.wait(promiseAll, remaining_time)
@@ -230,7 +232,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
             if second_name == first_name:
                 # this means that some logic in the correlator logic is wrong, because
                 # such correlations should have reason == "Logic"
-                self.logger.error(
+                logger.error(
                     f"{first_name} correlated to itself, id: '{first_id}' and '{second_id}' via execution")
                 return False
         return True

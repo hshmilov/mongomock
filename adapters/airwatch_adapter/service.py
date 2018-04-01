@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -29,7 +31,7 @@ class AirwatchAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = AirwatchConnection(logger=self.logger, domain=client_config["Airwatch_Domain"],
+            connection = AirwatchConnection(domain=client_config["Airwatch_Domain"],
                                             apikey=client_config["apikey"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(username=client_config["username"],
                                        password=self.decrypt_password(client_config["password"]),
@@ -124,9 +126,9 @@ class AirwatchAdapter(AdapterBase):
                         if ipaddresses_raw[ipaddress_raw] not in falsed_ips:
                             ipaddresses.append(ipaddresses_raw[ipaddress_raw])
                     if ipaddresses != [] or mac_address is not None:
-                        device.add_nic(mac_address, ipaddresses, self.logger)
+                        device.add_nic(mac_address, ipaddresses)
                 except:
-                    self.logger.exception("Problem adding nic to Airwatch")
+                    logger.exception("Problem adding nic to Airwatch")
                 device.serial_number = device_raw.get("SerialNumber")
                 device.udid = device_raw.get("Udid")
 
@@ -137,11 +139,11 @@ class AirwatchAdapter(AdapterBase):
                         device.add_installed_software(name=app_raw.get("ApplicationName"),
                                                       version=app_raw.get("Version"))
                 except:
-                    self.logger.exception("Problem adding software to Airwatch")
+                    logger.exception("Problem adding software to Airwatch")
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Airwatch Device")
+                logger.exception("Problem with fetching Airwatch Device")
 
     @classmethod
     def adapter_properties(cls):

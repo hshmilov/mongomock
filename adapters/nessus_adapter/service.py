@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_base import AdapterProperty
@@ -20,8 +22,8 @@ class NessusAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         """
@@ -40,7 +42,7 @@ class NessusAdapter(ScannerAdapterBase):
         :return:
         """
         try:
-            connection = NessusConnection(logger=self.logger, host=client_config[HOST],
+            connection = NessusConnection(host=client_config[HOST],
                                           port=(client_config[PORT] if PORT in client_config else None))
             connection.set_credentials(username=client_config[USERNAME],
                                        password=self.decrypt_password(client_config[PASSWORD]))
@@ -51,7 +53,7 @@ class NessusAdapter(ScannerAdapterBase):
             port = client_config[PORT] if PORT in client_config else ''
             message = 'Error connecting to client with address {0} and port {1}, reason: {2}'.format(
                 client_config[HOST], port, str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -76,7 +78,7 @@ class NessusAdapter(ScannerAdapterBase):
                             continue
                         devices_count += 1
                         if devices_count % 1000 == 0:
-                            self.logger.info(f"Got {devices_count} hosts requests so far")
+                            logger.info(f"Got {devices_count} hosts requests so far")
                         # Get specific details of the host
                         host_details = client_data.get_host_details(scan['id'], host['host_id'])
                         if not host_details:
@@ -92,7 +94,7 @@ class NessusAdapter(ScannerAdapterBase):
 
                 return device_dict.values()
         except NessusException:
-            self.logger.exception(f'Error querying devices from client {client_name}')
+            logger.exception(f'Error querying devices from client {client_name}')
             raise AdapterException('Nessus Adapter failed querying devices for {0}'.format(client_name))
 
     def _clients_schema(self):
@@ -142,7 +144,7 @@ class NessusAdapter(ScannerAdapterBase):
             device = self._new_device_adapter()
             device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
-                           [device_raw.get('info', {}).get('host-ip', '')], self.logger)
+                           [device_raw.get('info', {}).get('host-ip', '')])
             device.last_seen = parse_date(str(device_raw.get('info', {}).get('host_end', '')))
             device.scanner = True
             device.set_raw(device_raw)

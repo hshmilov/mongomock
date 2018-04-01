@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 
 from axonius.adapter_base import AdapterBase
@@ -15,21 +17,21 @@ class TraianaLabMachinesAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config["api_url"]
 
     def _connect_client(self, client_config):
         api_url = client_config['api_url']
-        self.logger.info(f"Added a client with url '{api_url}'")
+        logger.info(f"Added a client with url '{api_url}'")
 
         # Try to connect to this url. This is the only way for us to check that things work.
         try:
             resp = requests.get(api_url)
         except requests.exceptions.RequestException as e:
-            self.logger.exception(f"Failed adding url {api_url} as client")
+            logger.exception(f"Failed adding url {api_url} as client")
             raise ClientConnectionException(
                 "Failed adding client {0}: {1}".format(api_url, repr(e)))
 
@@ -58,7 +60,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
 
             return resp.json()
         except (requests.exceptions.RequestException, ValueError) as e:
-            self.logger.exception("Got an exception when querying {0}".format(client_data))
+            logger.exception("Got an exception when querying {0}".format(client_data))
             raise CredentialErrorException(repr(e))
 
     def _clients_schema(self):
@@ -88,7 +90,7 @@ class TraianaLabMachinesAdapter(AdapterBase):
             device.name = device_raw.get("name", "unknown")
             device.id = device_raw['id']
             device.figure_os(device_raw.get("os", ""))
-            device.add_nic('', [device_raw.get("ip")] if device_raw.get("ip") else [], self.logger)
+            device.add_nic('', [device_raw.get("ip")] if device_raw.get("ip") else [])
             device.set_raw(device_raw)
             yield device
 

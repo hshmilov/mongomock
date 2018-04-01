@@ -18,8 +18,7 @@ class ExecutionCorrelatorService(CorrelatorBase):
 
         self._correlation_engine = ExecutionCorrelatorEngine(executor,
                                                              get_remote_plugin_correlation_cmds,
-                                                             parse_correlation_results,
-                                                             logger=self.logger)
+                                                             parse_correlation_results)
 
         self.trigger_activate_if_needed()
 

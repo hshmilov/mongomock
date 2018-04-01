@@ -6,13 +6,12 @@ from bigfix_adapter.exceptions import BigfixAlreadyConnected, BigfixConnectionEr
 
 
 class BigfixConnection(object):
-    def __init__(self, logger, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl):
         """ Initializes a connection to Bigfix using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Bigfix
         """
-        self.logger = logger
+
         self.domain = domain
         self.verify_ssl = verify_ssl
         url = domain

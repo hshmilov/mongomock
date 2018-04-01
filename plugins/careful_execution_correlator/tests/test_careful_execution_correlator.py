@@ -4,19 +4,8 @@ The following will be run by pytest.
 """
 
 # we're actually testing ExecutionCorrelatorEngineBase here
-import logging
 
-import sys
 from careful_execution_correlator.engine import CarefulExecutionCorrelatorEngine
-
-correlator_logger = logging.getLogger()
-correlator_logger.setLevel(logging.DEBUG)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter(' [Correlator] %(message)s')
-ch.setFormatter(formatter)
-correlator_logger.addHandler(ch)
 
 
 def filterdevices(devices_db, executor=None, cmds=None, parse_results=None):
@@ -39,8 +28,7 @@ def filterdevices(devices_db, executor=None, cmds=None, parse_results=None):
         return result
 
     correlator = CarefulExecutionCorrelatorEngine(_executor, cmds or default_get_remote_plugin_correlation_cmds,
-                                                  parse_results or default_parse_correlation_results,
-                                                  logger=correlator_logger)
+                                                  parse_results or default_parse_correlation_results)
 
     r = list(correlator._prefilter_device(devices_db))
     print(f"len = {len(r)};\n{r}")

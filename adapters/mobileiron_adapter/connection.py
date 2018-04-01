@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 import requests
 
 from mobileiron_adapter.exceptions import MobileironAlreadyConnected, MobileironConnectionError, MobileironNotConnected, \
@@ -5,14 +7,12 @@ from mobileiron_adapter.exceptions import MobileironAlreadyConnected, Mobileiron
 
 
 class MobileironConnection(object):
-    def __init__(self, logger, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl):
         """ Initializes a connection to Mobileiron using its rest API
 
-        :param obj logger: Logger object of the system
         :param str domain: domain address for Mobileiron
         :param bool verify_ssl Verify the ssl
         """
-        self.logger = logger
         self.domain = domain
         url = domain
         if not url.endswith('/'):
@@ -108,7 +108,7 @@ class MobileironConnection(object):
         offset = 0
         devices_list = []
         while count > 0:
-            self.logger.info(f"Fetching devices {offset} to {offset+200}")
+            logger.info(f"Fetching devices {offset} to {offset+200}")
             devices_list += self._get("devices", params={'adminDeviceSpaceId': device_space_id, 'limit': 200,
                                                          'count': 50, 'offset': offset, 'query': "",
                                                          'fields': fields,
@@ -121,7 +121,7 @@ class MobileironConnection(object):
             for device in devices_list:
                 app_devices_count += 1
                 if app_devices_count % 100 == 0:
-                    self.logger.info(f"Got apps for {app_devices_count} devices")
+                    logger.info(f"Got apps for {app_devices_count} devices")
                 device_uuid = device.get("common.uuid")
                 if device_uuid:
                     device["appInventory"] = self._get("devices/appinventory",
@@ -129,7 +129,7 @@ class MobileironConnection(object):
                                                                'adminDeviceSpaceId': device_space_id})["results"][0]["appInventory"]
 
         except:
-            self.logger.exception("Problem fetching apps")
+            logger.exception("Problem fetching apps")
         return devices_list
 
     def __enter__(self):

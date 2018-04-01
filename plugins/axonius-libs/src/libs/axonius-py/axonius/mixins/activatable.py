@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
@@ -54,7 +56,7 @@ class Activatable(Feature, ABC):
         self.__activation_lock = RLock()
 
         # this executor starts and closes the activatable
-        self.__executor = LoggedThreadPoolExecutor(self.logger, max_workers=1)
+        self.__executor = LoggedThreadPoolExecutor(max_workers=1)
 
         # this is used internally for startup and shutdown logic
         self.__shutdown_startup_state = ActiveStates.Disabled
@@ -128,7 +130,7 @@ class Activatable(Feature, ABC):
 
             # starting up began
             self.__shutdown_startup_state = ActiveStates.StartingUp
-            self.logger.info("Starting up")
+            logger.info("Starting up")
 
             promise = Promise(
                 functools.partial(run_in_executor_helper,
@@ -137,11 +139,11 @@ class Activatable(Feature, ABC):
 
             def on_success(*args):
                 self._set_activation_state(ActiveStates.Scheduled)
-                self.logger.info("Successfully started")
+                logger.info("Successfully started")
 
             def on_failed(err):
                 # if failed, restore to 'Disabled'
-                self.logger.exception(f"Failed starting up: {err}")
+                logger.exception(f"Failed starting up: {err}")
                 self.__last_error = str(repr(err))
                 self._set_activation_state(ActiveStates.Disabled)
 
@@ -164,7 +166,7 @@ class Activatable(Feature, ABC):
 
             # shutting down began
             self.__shutdown_startup_state = ActiveStates.ShuttingDown
-            self.logger.info("Shutting down")
+            logger.info("Shutting down")
 
             promise = Promise(
                 functools.partial(run_in_executor_helper,
@@ -173,11 +175,11 @@ class Activatable(Feature, ABC):
 
             def on_success(*args):
                 self._set_activation_state(ActiveStates.Disabled)
-                self.logger.info("Successfully stopped")
+                logger.info("Successfully stopped")
 
             def on_failed(err):
                 # if failed, restore to 'Scheduled'
-                self.logger.error(f"Failed shutting down: {err}")
+                logger.error(f"Failed shutting down: {err}")
                 self.__last_error = str(repr(err))
                 self._set_activation_state(ActiveStates.Scheduled)
 

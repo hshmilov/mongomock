@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 # coding=utf-8
 #
 # Copyright © 2011-2015 Splunk, Inc.
@@ -274,7 +276,7 @@ class SearchCommand(object):
                 values = next(reader)
         except IOError as error:
             if error.errno == 2:
-                self.logger.exception('Search results info file {} does not exist.'.format(json_encode_string(path)))
+                logger.exception('Search results info file {} does not exist.'.format(json_encode_string(path)))
                 return
             raise
 
@@ -369,7 +371,7 @@ class SearchCommand(object):
 
     def error_exit(self, error, message=None):
         self.write_error(error.message if message is None else message)
-        self.logger.error('Abnormal exit: %s', error)
+        logger.error('Abnormal exit: %s', error)
         exit(1)
 
     def finish(self):
@@ -551,7 +553,7 @@ class SearchCommand(object):
 
         if dispatch_dir is not None:  # __GETINFO__ action does not include a dispatch_dir
             root_dir, base_dir = os.path.split(dispatch_dir)
-            make_archive(recording + '.dispatch_dir', 'gztar', root_dir, base_dir, logger=self.logger)
+            make_archive(recording + '.dispatch_dir', 'gztar', root_dir, base_dir)
 
         # Save a splunk command line because it is useful for developing tests
 

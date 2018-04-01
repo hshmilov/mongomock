@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
@@ -6,7 +8,6 @@ from axonius.fields import Field
 
 from secdo_adapter.connection import SecdoConnection
 from secdo_adapter.exceptions import SecdoException
-import json
 import datetime
 
 
@@ -16,16 +17,15 @@ class SecdoAdapter(AdapterBase):
         agent_version = Field(str, 'Agent Version')
         agent_state = Field(str, 'Agent State')
 
-    def __init__(self):
-        super().__init__(get_local_config_file(__file__))
+    def __init__(self, *args, **kwargs):
+        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
         return client_config['Secdo_Domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = SecdoConnection(
-                logger=self.logger, domain=client_config["Secdo_Domain"], verify_ssl=client_config["verify_ssl"])
+            connection = SecdoConnection(domain=client_config["Secdo_Domain"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(company=client_config["company"], api_key=client_config["api_key"])
             with connection:
                 pass  # check that the connection credentials are valid
@@ -33,7 +33,7 @@ class SecdoAdapter(AdapterBase):
         except SecdoException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Secdo_Domain'], str(e))
-            self.logger.exception(message)
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -97,9 +97,9 @@ class SecdoAdapter(AdapterBase):
                 device.domain = device_raw.get("domain")
                 device.figure_os(device_raw.get("osName", ""))
                 try:
-                    device.add_nic(None, device_raw.get("interfaces", "").split(","), self.logger)
+                    device.add_nic(None, device_raw.get("interfaces", "").split(","))
                 except:
-                    self.logger.exception("Problem with fetching Secdo Device nic")
+                    logger.exception("Problem with fetching Secdo Device nic")
                 device.agent_version = device_raw.get("version", "")
                 device.agent_state = device_raw.get("agentState")
                 device.last_used_users = device_raw.get("users", "").split(",")
@@ -108,7 +108,7 @@ class SecdoAdapter(AdapterBase):
                 device.set_raw(device_raw)
                 yield device
             except:
-                self.logger.exception("Problem with fetching Secdo Device")
+                logger.exception("Problem with fetching Secdo Device")
 
     @classmethod
     def adapter_properties(cls):
