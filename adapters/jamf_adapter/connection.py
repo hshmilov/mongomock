@@ -93,10 +93,10 @@ class JamfConnection(object):
         :param str data: the body of the request
         :return: the service response or raises an exception if it's not 200
         """
-        response = requests.post(self.get_url_request(name), headers=headers, data=data, proxies=self.proxies)
         try:
+            response = requests.post(self.get_url_request(name), headers=headers, data=data, proxies=self.proxies)
             response.raise_for_status()
-        except requests.HTTPError as e:
+        except Exception as e:
             raise JamfRequestException(str(e))
         return response.json()
 
@@ -108,11 +108,11 @@ class JamfConnection(object):
         :return: the service response or raises an exception if it's not 200
         """
         headers = headers or self.headers
-        response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies)
         try:
+            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies)
             response.raise_for_status()
             return Xml2Json(response.text).result
-        except requests.HTTPError as e:
+        except Exception as e:
             raise JamfRequestException(str(e))
 
     def _run_in_thread_pool_per_device(self, devices, func):
@@ -150,7 +150,7 @@ class JamfConnection(object):
             num_of_devices = int(num_of_devices)
         if not num_of_devices:
             # for the edge case '0'
-            return
+            return []
         print_modulo = max(int(num_of_devices / 10), 1)
         devices = devices.get(device_type)
         devices = [devices] if type(devices) != list else devices
@@ -163,6 +163,7 @@ class JamfConnection(object):
         def get_history_worker(device, device_number):
             device_details = {}
             try:
+                device['policies'] = []
                 device_details = self.get(consts.COMPUTER_HISTORY_URL + (device.get('general') or {}).get('id'))
                 policies = device_details[consts.COMPUTER_HISTORY_XML_NAME][
                     consts.COMPUTER_HISTORY_POLICY_LIST_NAME].get(consts.COMPUTER_HISTORY_POLICY_INFO_TYPE, [])

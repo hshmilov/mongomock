@@ -22,7 +22,6 @@ SSL_VERIFY = 'ssl_verify'
 class ChefAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        client_name = Field(str, "Chef client name")
         environment = Field(str, "Chef environment")
         instance_id = Field(str, "AWS instance ID")
 
@@ -110,10 +109,9 @@ class ChefAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
-            device.client_name = device_raw.get('name')
+            device.name = device_raw.get('name')
             device.environment = device_raw.get('chef_environment')
             device_raw_data = device_raw.get('automatic')
-            device.name = device_raw_data.get('hostname')
             device.figure_os(' '.join([(device_raw_data.get('platform_family') or ''),
                                        (device_raw_data.get('platform') or ''),
                                        (device_raw_data.get('platform_version') or ''),

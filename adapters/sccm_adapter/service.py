@@ -32,14 +32,18 @@ class SccmAdapter(AdapterBase):
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except SccmException:
+        except Exception:
             message = f"Error connecting to client with parameters {str(client_config)} "
             logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            return list(client_data.query(consts.SCCM_QUERY.format(self.alive_hours)))
+            if self.alive_hours == '-1':
+                return list(client_data.query(consts.SCCM_QUERY.format('')))
+            else:
+                return list(client_data.query(consts.SCCM_QUERY.format(
+                    consts.LIMIT_SCCM_QUERY.format(self.alive_hours))))
 
     def _clients_schema(self):
         return {
