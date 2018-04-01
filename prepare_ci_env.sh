@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 echo "Removing all containers, volumes, networks, and axonius images"
-docker network rm axonius
 RUNNING_DOCKERS=$( docker ps -a -q )
 if [ "$RUNNING_DOCKERS" != "" ]; then
     docker rm -f ${RUNNING_DOCKERS}
@@ -13,6 +12,7 @@ AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
 if [ "$AVAILABLE_IMAGES" != "" ]; then
     docker rmi ${AVAILABLE_IMAGES}
 fi
+docker network rm axonius
 
 set -e # from now on exit on any error 
 

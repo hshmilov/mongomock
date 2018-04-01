@@ -33,6 +33,7 @@ class TestQualysScansAdapter(AdapterTestBase):
                 from qualys_scans_adapter.connection import QualysScansConnection
                 qualys_connection = QualysScansConnection(
                     self.axonius_system.aggregator.logger, client_details['Qualys_Scans_Domain'])
+
                 qualys_connection.set_credentials(client_details["username"], client_details["password"])
                 response = requests.get(qualys_connection._get_url_request("scan"), headers=qualys_connection.headers,
                                         auth=qualys_connection.auth,

@@ -32,9 +32,10 @@ class MobileironAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = MobileironConnection(
-                logger=self.logger, domain=client_config["Mobileiron_Domain"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = MobileironConnection(logger=self.logger, domain=client_config["Mobileiron_Domain"],
+                                              verify_ssl=client_config["verify_ssl"])
+            connection.set_credentials(username=client_config["username"],
+                                       password=self.decrypt_password(client_config["password"]))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -103,12 +104,12 @@ class MobileironAdapter(AdapterBase):
                 if device.id is None:
                     continue
                 device.uuid = device_raw.get("common.uuid")
-                device.hostname = device_raw.get("ios.DeviceName",  "")
+                device.hostname = device_raw.get("ios.DeviceName", "")
                 device.figure_os(device_raw.get("common.platform", ""))
                 device.os.type = device_raw.get("common.platform", "")
                 device.os.distribution = device_raw.get("common.os_version", "")
                 try:
-                    if device_raw.get("common.ethernet_mac")or device_raw.get("common.ip_address"):
+                    if device_raw.get("common.ethernet_mac") or device_raw.get("common.ip_address"):
                         device.add_nic(device_raw.get("common.wifi_mac_address"), device_raw.get(
                             "common.ip_address", "").split(","), self.logger)
                 except:

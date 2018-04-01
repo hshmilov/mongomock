@@ -32,7 +32,7 @@ class BomgarAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = BomgarConnection(client_config["domain"], client_config["client_id"],
-                                          client_config["client_secret"])
+                                          self.decrypt_password(client_config["client_secret"]))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

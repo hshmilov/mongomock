@@ -4,8 +4,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, \
-    SYSTEM_SCHEDULER_PLUGIN_NAME, STATIC_CORRELATOR_PLUGIN_NAME
+from axonius.consts import plugin_consts
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 
 import tarfile
@@ -288,7 +287,7 @@ class GuiService(PluginBase):
 
             # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
             # The reason is that sorting without the flag, causes exceeding of the memory limit.
-            data_list = db_connection[AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].aggregate(
+            data_list = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].aggregate(
                 pipeline, allowDiskUse=True)
 
             if filter and not skip:
@@ -306,7 +305,7 @@ class GuiService(PluginBase):
         :return:
         """
         with self._get_db_connection(False) as db_connection:
-            entity = db_connection[AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].find_one(
+            entity = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].find_one(
                 {'internal_axon_id': entity_id})
             if entity is None:
                 return return_error("Entity ID wasn't found", 404)
@@ -355,7 +354,7 @@ class GuiService(PluginBase):
         :return: Number of devices
         """
         with self._get_db_connection(False) as db_connection:
-            data_collection = db_connection[AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view']
+            data_collection = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view']
             return str(data_collection.find(filter, {'_id': 1}).count())
 
     def _entity_fields(self, module_name):
@@ -398,15 +397,15 @@ class GuiService(PluginBase):
         })
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = list(db_connection['core']['configs'].find({}).
-                                   sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
+                                   sort([(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
-                if db_connection[plugin[PLUGIN_UNIQUE_NAME]]['fields']:
-                    plugin_fields_record = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{module_name}_fields'].find_one(
+                if db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]]['fields']:
+                    plugin_fields_record = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{module_name}_fields'].find_one(
                         {'name': 'parsed'}, projection={'schema': 1})
                     if plugin_fields_record:
-                        fields['specific'][plugin[PLUGIN_NAME]] = \
+                        fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = \
                             guify_fields(plugin_fields_record['schema'],
-                                         name_prefix=f'adapters_data.{plugin[PLUGIN_NAME]}.')
+                                         name_prefix=f'adapters_data.{plugin_consts.PLUGIN_NAME}.data')
 
         return jsonify(fields)
 
@@ -477,7 +476,7 @@ class GuiService(PluginBase):
         """
         all_labels = set()
         with self._get_db_connection(False) as db_connection:
-            devices_collection = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
+            devices_collection = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db']
             if request.method == 'GET':
                 for current_device in devices_collection.find({"tags.type": "label"}, projection={"tags": 1}):
                     for current_label in current_device['tags']:
@@ -495,7 +494,7 @@ class GuiService(PluginBase):
             devices = [devices_collection.find_one({'internal_axon_id': device_id})['adapters'][0]
                        for device_id in
                        devices_and_labels['devices']]
-            devices = [(device[PLUGIN_UNIQUE_NAME], device['data']['id'])
+            devices = [(device[plugin_consts.PLUGIN_UNIQUE_NAME], device['data']['id'])
                        for device in devices]
 
             response = self.devices.add_many_labels(devices,
@@ -573,32 +572,39 @@ class GuiService(PluginBase):
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
                                                                               {'plugin_type': 'ScannerAdapter'}]}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+                [(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
-                if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
+                if not adapter[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
 
-                clients_configured = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
+                clients_configured = db_connection[adapter[plugin_consts.PLUGIN_UNIQUE_NAME]]['clients'].find(
                     projection={'_id': 1}).count()
                 status = ''
                 if clients_configured:
-                    clients_connected = db_connection[adapter[PLUGIN_UNIQUE_NAME]]['clients'].find(
+                    clients_connected = db_connection[adapter[plugin_consts.PLUGIN_UNIQUE_NAME]]['clients'].find(
                         {'status': 'success'}, projection={'_id': 1}).count()
                     status = 'success' if clients_configured == clients_connected else 'warning'
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
-                                           'unique_plugin_name': adapter[PLUGIN_UNIQUE_NAME],
+                                           'unique_plugin_name': adapter[plugin_consts.PLUGIN_UNIQUE_NAME],
                                            'status': status
                                            })
 
             return jsonify(adapters_to_return)
 
-    def _query_client_for_devices(self, request, adapter_unique_name):
+    def _query_client_for_devices(self, request, adapter_unique_name, db_connection):
         client_to_add = request.get_json(silent=True)
         if client_to_add is None:
             return return_error("Invalid client", 400)
+
+        # Encrypting needed fields
+        client_schema_items = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']['items']
+        password_formated_items = [x for x in client_schema_items if 'format' in x and x['format'] == 'password']
+        for item in password_formated_items:
+            if item['name'] in client_to_add:
+                client_to_add[item['name']] = self.encrypt_password(client_to_add[item['name']])
 
         # adding client to specific adapter
         response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
@@ -608,12 +614,14 @@ class GuiService(PluginBase):
 
         # if there's no aggregator, that's fine
         try:
-            self.request_remote_plugin(f"trigger/{adapter_unique_name}", AGGREGATOR_PLUGIN_NAME, method='post')
+            self.request_remote_plugin(f"trigger/{adapter_unique_name}",
+                                       plugin_consts.AGGREGATOR_PLUGIN_NAME, method='post')
             research_state = self.request_remote_plugin(f"state",
-                                                        SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
+                                                        plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
             if research_state[StateLevels.Phase.name] == Phases.Stable.name:
                 self.logger.info('System is stable, triggering static correlator')
-                self.request_remote_plugin(f"trigger/execute", STATIC_CORRELATOR_PLUGIN_NAME, method='post')
+                self.request_remote_plugin(
+                    f"trigger/execute", plugin_consts.STATIC_CORRELATOR_PLUGIN_NAME, method='post')
             else:
                 self.logger.info('System is in research phase, not triggering static correlator')
         except Exception:
@@ -634,13 +642,14 @@ class GuiService(PluginBase):
         with self._get_db_connection(False) as db_connection:
             if request.method == 'GET':
                 client_collection = db_connection[adapter_unique_name]['clients']
+
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
                                 client_collection.find().skip(skip).limit(limit)]
                 })
             if request.method == 'PUT':
-                return self._query_client_for_devices(request, adapter_unique_name)
+                return self._query_client_for_devices(request, adapter_unique_name, db_connection)
 
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id):
@@ -669,7 +678,7 @@ class GuiService(PluginBase):
             with self._get_db_connection(False) as db_connection:
                 reports_to_return = []
                 report_service = self.get_plugin_by_name('reports')
-                for report in db_connection[report_service[PLUGIN_UNIQUE_NAME]]['reports'].find(projection={
+                for report in db_connection[report_service[plugin_consts.PLUGIN_UNIQUE_NAME]]['reports'].find(projection={
                     'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1, 'retrigger': 1
                 }).sort([('report_creation_time', pymongo.DESCENDING)]):
                     # Fetching query in order to replace the string saved for aler
@@ -761,26 +770,28 @@ class GuiService(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+                [(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME, "gui",
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [plugin_consts.AGGREGATOR_PLUGIN_NAME, "gui",
                                                                                   "watch_service",
                                                                                   "execution",
                                                                                   "system_scheduler"]:
                     continue
 
                 processed_plugin = {'plugin_name': plugin['plugin_name'],
-                                    'unique_plugin_name': plugin[PLUGIN_UNIQUE_NAME],
+                                    'unique_plugin_name': plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
                                     'status': 'error',
                                     'state': 'Disabled'
                                     }
-                if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
+                if plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
                     processed_plugin['status'] = 'warning'
-                    response = self.request_remote_plugin("trigger_state/execute", plugin[PLUGIN_UNIQUE_NAME])
+                    response = self.request_remote_plugin(
+                        "trigger_state/execute", plugin[plugin_consts.PLUGIN_UNIQUE_NAME])
                     if response.status_code != 200:
-                        self.logger.error("Error getting state of plugin {0}".format(plugin[PLUGIN_UNIQUE_NAME]))
+                        self.logger.error("Error getting state of plugin {0}".format(
+                            plugin[plugin_consts.PLUGIN_UNIQUE_NAME]))
                         processed_plugin['status'] = 'error'
                     else:
                         processed_plugin['state'] = response.json()
@@ -1065,7 +1076,7 @@ class GuiService(PluginBase):
          - Portion of work remaining for the current sub-phase
          - The time next cycle is scheduled to run
         """
-        state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        state_response = self.request_remote_plugin('state', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
             return return_error(f"Error fetching status of system scheduler. Reason: {state_response.text}")
 
@@ -1087,7 +1098,7 @@ class GuiService(PluginBase):
                 # Set 0 or 1, depending if reached current status yet
                 sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
 
-        run_time_response = self.request_remote_plugin('next_run_time', SYSTEM_SCHEDULER_PLUGIN_NAME)
+        run_time_response = self.request_remote_plugin('next_run_time', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME)
         if run_time_response.status_code != 200:
             return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
 
@@ -1099,11 +1110,11 @@ class GuiService(PluginBase):
 
         """
         if self.get_method() == 'GET':
-            response = self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
+            response = self.request_remote_plugin('research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME)
             return response.content
         elif self.get_method() == 'POST':
             response = self.request_remote_plugin(
-                'research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
+                'research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
             self.logger.info(f"response code: {response.status_code} response crap: {response.content}")
             return ''
 
@@ -1120,17 +1131,18 @@ class GuiService(PluginBase):
             adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
                                                                               {'plugin_type': 'ScannerAdapter'}]})
             for adapter in adapters_from_db:
-                if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
+                if not adapter[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
-                devices_count = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find(
+                devices_count = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find(
                     {'adapters.plugin_name': adapter['plugin_name']}).count()
                 if not devices_count:
                     # No need to document since adapter has no devices
                     continue
                 adapter_devices['adapter_count'][adapter['plugin_name']] = devices_count
                 adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
-            adapter_devices['total_net'] = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db'].find({}).count()
+            adapter_devices['total_net'] = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find({
+            }).count()
 
         return jsonify(adapter_devices)
 
@@ -1168,7 +1180,8 @@ class GuiService(PluginBase):
         """
         data = self.get_request_data_as_object()
         self.logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
-        response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+        response = self.request_remote_plugin(
+            'trigger/execute', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
 
         if response.status_code != 200:
             self.logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")

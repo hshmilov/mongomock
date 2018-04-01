@@ -46,7 +46,8 @@ class QualysScansAdapter(ScannerAdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = QualysScansConnection(logger=self.logger, domain=client_config[QUALYS_SCANS_DOMAIN])
-            connection.set_credentials(username=client_config[USERNAME], password=client_config[PASSWORD])
+            connection.set_credentials(username=client_config[USERNAME],
+                                       password=self.decrypt_password(client_config[PASSWORD]))
             with connection:
                 pass
             return connection

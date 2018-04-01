@@ -52,7 +52,7 @@ class AdapterTestBase(object):
         assert self.adapter_service.is_plugin_registered(self.axonius_system.core)
 
     def test_fetch_devices(self):
-        self.adapter_service.add_client(self.some_client_details)
+        self.adapter_service.add_client(self.some_client_details, self.axonius_system.core.vol_conf.password_secret())
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
     def test_devices_cleaning(self):

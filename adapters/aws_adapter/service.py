@@ -91,7 +91,7 @@ class AwsAdapter(AdapterBase):
             params = dict()
             params[REGION_NAME] = client_config[REGION_NAME]
             params[AWS_ACCESS_KEY_ID] = client_config[AWS_ACCESS_KEY_ID]
-            params[AWS_SECRET_ACCESS_KEY] = client_config[AWS_SECRET_ACCESS_KEY]
+            params[AWS_SECRET_ACCESS_KEY] = self.decrypt_password(client_config[AWS_SECRET_ACCESS_KEY])
 
             proxies = dict()
             if PROXY in client_config:

@@ -29,7 +29,7 @@ class TestNexposeAdapter(AdapterTestBase):
         """
         test fetch devices is different because no permanent ID on scanners.
         """
-        self.adapter_service.add_client(self.some_client_details)
+        self.adapter_service.add_client(self.some_client_details, self.axonius_system.core.vol_conf.password_secret())
 
         self.axonius_system.aggregator.query_devices(
             adapter_id=self.adapter_service.unique_name)  # send trigger to agg to refresh devices

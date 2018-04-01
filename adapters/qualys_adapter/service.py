@@ -41,7 +41,8 @@ class QualysAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = QualysConnection(logger=self.logger, domain=client_config[QUALYS_DOMAIN])
-            connection.set_credentials(username=client_config[USERNAME], password=client_config[PASSWORD])
+            connection.set_credentials(username=client_config[USERNAME],
+                                       password=self.decrypt_password(client_config[PASSWORD]))
             with connection:
                 pass
             return connection

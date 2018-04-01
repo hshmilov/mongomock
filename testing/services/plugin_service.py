@@ -1,6 +1,7 @@
 import json
 import requests
 import os
+from cryptography.fernet import Fernet
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -157,8 +158,15 @@ class AdapterService(PluginService):
         super().__init__(f'{name}-adapter', f'../adapters/{name.replace("-", "_")}_adapter')
         self.adapter_name = name
 
-    def add_client(self, client_details):
-        self.clients(client_details)
+    def encrypt(self, encryption_key, to_encrypt):
+        cipher = Fernet(encryption_key)
+        return cipher.encrypt(bytes(to_encrypt, 'utf-8')).decode("utf-8")
+
+    def add_client(self, client_details, encryption_key):
+        client_details_copy = dict(client_details)
+        if 'password' in client_details_copy:
+            client_details_copy['password'] = self.encrypt(encryption_key, client_details_copy['password'])
+        self.clients(client_details_copy)
 
     def users(self):
         response = requests.get(self.req_url + "/users", headers={API_KEY_HEADER: self.api_key})

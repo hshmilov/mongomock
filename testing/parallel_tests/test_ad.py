@@ -48,7 +48,7 @@ class TestAdAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']
-        self.adapter_service.add_client(ad_client1_details)
+        self.adapter_service.add_client(ad_client1_details, self.axonius_system.core.vol_conf.password_secret())
 
         # Adding second client
         # client_id_2 = ad_client2_details['dc_name']

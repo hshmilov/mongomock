@@ -22,6 +22,7 @@ class OpenstackAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
+            client_config['password'] = self.decrypt_password(client_config['password'])
             client = OpenStackClient(self.logger, **client_config)
             client.connect()
             return client

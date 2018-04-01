@@ -98,7 +98,7 @@ class JuniperAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            return JuniperClient(self.logger, url=f"https://{client_config[consts.JUNIPER_HOST]}", username=client_config[consts.USER], password=client_config[consts.PASSWORD])
+            return JuniperClient(self.logger, url=f"https://{client_config[consts.JUNIPER_HOST]}", username=client_config[consts.USER], password=self.decrypt_password(client_config[consts.PASSWORD]))
         except Exception as err:
             self.logger.exception(f'Failed to connect to Juniper provider using this config {client_config}')
             raise ClientConnectionException(f'Failed to connect to Juniper provider using this config {client_config}')

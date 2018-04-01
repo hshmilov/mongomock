@@ -52,13 +52,14 @@ class TestEpoAdapter(AdapterTestBase):
         adapter_db = self.axonius_system.db.client[self.adapter_service.unique_name]
 
         # Add client to adapter, using name given defined in host translation
-        self.adapter_service.add_client(self.some_client_details)
+        self.adapter_service.add_client(self.some_client_details, self.axonius_system.core.vol_conf.password_secret())
         _verify_client_status("success")
         devices_as_dict = self.adapter_service.devices()
         _verify_client_status("success")
         assert len(devices_as_dict) > 0, "Got no devices although expected some"
 
-        self.adapter_service.add_client({**self.some_client_details, 'port': 1})
+        self.adapter_service.add_client({**self.some_client_details, 'port': 1},
+                                        self.axonius_system.core.vol_conf.password_secret())
         _verify_client_status("error")
 
         devices_as_dict = self.adapter_service.devices()

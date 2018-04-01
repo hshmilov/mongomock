@@ -23,7 +23,7 @@ class TestSplunkNexposeAdapter(AdapterTestBase):
 
     @pytest.mark.skip("test causes ci to fail")
     def test_fetch_devices(self):
-        self.adapter_service.add_client(self.some_client_details)
+        self.adapter_service.add_client(self.some_client_details, self.axonius_system.core.vol_conf.password_secret())
         self.axonius_system.aggregator.query_devices(adapter_id=self.adapter_service.unique_name)
         devices_as_dict = self.adapter_service.devices()
         assert len(devices_as_dict) > 0

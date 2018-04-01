@@ -30,7 +30,7 @@ class TestNessusAdapter(AdapterTestBase):
         return SOME_DEVICE_IP
 
     def test_fetch_devices(self):
-        self.adapter_service.add_client(self.some_client_details)
+        self.adapter_service.add_client(self.some_client_details, self.axonius_system.core.vol_conf.password_secret())
         devices_as_tuple = self.adapter_service.devices()
         devices_list = devices_as_tuple[self.some_client_id]["parsed"]
 

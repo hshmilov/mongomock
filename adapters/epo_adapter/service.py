@@ -216,7 +216,7 @@ class EpoAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             client(client_config[EPO_HOST], client_config[EPO_PORT],
-                   client_config[USER], client_config[PASS])
+                   client_config[USER], self.decrypt_password(client_config[PASS]))
         except Exception as e:
             message = "Error connecting to client {0}, reason: {1}".format(self._get_client_id(client_config), str(e))
             self.logger.exception(message)

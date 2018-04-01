@@ -25,8 +25,19 @@ class TestAwsAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    def test_fetch_devices(self):
+        client_details_copy = dict(self.some_client_details)
+        client_details_copy['aws_secret_access_key'] = self.adapter_service.encrypt(
+            self.axonius_system.core.vol_conf.password_secret(), self.some_client_details['aws_secret_access_key'])
+        self.adapter_service.add_client(client_details_copy, self.axonius_system.core.vol_conf.password_secret())
+        self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
+
     def test_proxy(self):
         self.drop_clients()
-        self.adapter_service.add_client(client_with_proxy)  # set client to use proxy
+        client_details_copy = dict(client_with_proxy)
+        client_details_copy['aws_secret_access_key'] = self.adapter_service.encrypt(
+            self.axonius_system.core.vol_conf.password_secret(), self.some_client_details['aws_secret_access_key'])
+        self.adapter_service.add_client(
+            client_details_copy, self.axonius_system.core.vol_conf.password_secret())  # set client to use proxy
         assert self.some_client_id in self.adapter_service.devices()
-        self.adapter_service.add_client(client_details)  # restore
+        self.adapter_service.add_client(client_details, self.axonius_system.core.vol_conf.password_secret())  # restore

@@ -18,6 +18,7 @@ import pymongo
 import concurrent
 import uuid
 import functools
+from cryptography.fernet import Fernet
 
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.threading_utils import run_in_executor_helper
@@ -309,6 +310,8 @@ class PluginBase(Feature):
 
         self.db_user = core_data['db_user']
         self.db_password = core_data['db_password']
+
+        self.password_secret = bytes(core_data['password_secret'], 'utf-8')
 
         self.log_path = LOG_PATH + '/' + self.plugin_unique_name + '_axonius.log'
         self.log_level = logging.INFO
@@ -1212,3 +1215,11 @@ class PluginBase(Feature):
     def add_adapterdata_to_entity(self, identity_by_adapter, data, entity=None, action_if_exists="replace"):
         """ A shortcut to __tag with type "adapterdata" """
         return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity, action_if_exists)
+
+    def decrypt_password(self, to_decrypt: str):
+        cipher = Fernet(self.password_secret)
+        return cipher.decrypt(bytes(to_decrypt, 'utf-8')).decode("utf-8")
+
+    def encrypt_password(self, to_encrypt: str):
+        cipher = Fernet(self.password_secret)
+        return cipher.encrypt(bytes(to_encrypt, 'utf-8')).decode("utf-8")

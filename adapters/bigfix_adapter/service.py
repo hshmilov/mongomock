@@ -29,7 +29,8 @@ class BigfixAdapter(AdapterBase):
         try:
             connection = BigfixConnection(logger=self.logger, domain=client_config["Bigfix_Domain"],
                                           verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection.set_credentials(username=client_config["username"],
+                                       password=self.decrypt_password(client_config["password"]))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

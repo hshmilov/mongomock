@@ -126,7 +126,7 @@ class EsetAdapter(AdapterBase):
     def _connect_client(self, client_config):
         return EsetClient(self.eset_session_lock, self.eset_connection_library, self.logger,
                           host=client_config[ESET_HOST], username=client_config[USER],
-                          password=client_config[PASSWORD], port=client_config.get(ESET_PORT, 2223))
+                          password=self.decrypt_password(client_config[PASSWORD]), port=client_config.get(ESET_PORT, 2223))
 
     @classmethod
     def adapter_properties(cls):

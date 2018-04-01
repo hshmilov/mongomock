@@ -6,8 +6,6 @@ from axonius.fields import Field
 
 from gotoassist_adapter.connection import GotoassistConnection
 from gotoassist_adapter.exceptions import GotoassistException
-import json
-from axonius.parsing_utils import parse_date
 
 
 class GotoassistAdapter(AdapterBase):
@@ -26,7 +24,7 @@ class GotoassistAdapter(AdapterBase):
         try:
             connection = GotoassistConnection(logger=self.logger)
             connection.set_credentials(client_id=client_config["client_id"], client_secret=client_config["client_secret"],
-                                       username=client_config["user_name"], password=client_config["password"])
+                                       username=client_config["user_name"], password=self.decrypt_password(client_config["password"]))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

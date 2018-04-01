@@ -94,7 +94,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   dc_details['dc_name'],
                                   dc_details['domain_name'],
                                   dc_details['user'],
-                                  dc_details['password'],
+                                  self.decrypt_password(dc_details['password']),
                                   dc_details.get('dns_server_address'),
                                   SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
                                   bytes(dc_details.get('ca_file', [])),
@@ -534,7 +534,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                     # This is a legitimate flow. Do not try to build the domain name from the configurations.
                     domain_name, user_name = "", client_config['user']
 
-                password = client_config['password']
+                password = self.decrypt_password(client_config['password'])
                 try:
                     device_ip = self._resolve_device_name(
                         device_data['data']['hostname'], client_config)
