@@ -256,6 +256,17 @@ class AxoniusService(object):
                     break
         return adapters_list
 
+    def pull_base_image(self, repull=False):
+        base_image = 'axonius/axonius-base-image'
+        base_image_exists = base_image in subprocess.check_output(['docker', 'images', base_image]).decode('utf-8')
+        if base_image_exists and not repull:
+            print('Base image already exists - skipping pull step')
+            return base_image
+        runner = ParallelRunner()
+        runner.append_single('axonius-base-image', ['docker', 'pull', base_image])
+        assert runner.wait_for_all() == 0
+        return base_image
+
     def build_libs(self, rebuild=False):
         image_name = 'axonius/axonius-libs'
         output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')

@@ -24,7 +24,7 @@ except (ModuleNotFoundError, ImportError):
 def main():
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} [-h] {system,adapter,service} [<args>]
-       {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
+       {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
        {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard]
        {name} ls
@@ -67,6 +67,7 @@ def system_entry_point(args):
     parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
     parser.add_argument('--hard', type=str2bool, nargs='?', const=True, default=False,
                         help='Rebuild Image after rebuilding axonius-libs')
+    parser.add_argument('--pull', action='store_true', default=False, help='Pull base image before rebuild')
     parser.add_argument('--skip', type=str2bool, nargs='?', const=True, default=False,
                         help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
@@ -94,6 +95,10 @@ def system_entry_point(args):
         args.adapters = [name for name in args.adapters if name not in args.exclude]
 
     axonius_system.take_process_ownership()
+    if args.pull:
+        assert args.mode in ('up', 'build')
+        args.hard = True
+    axonius_system.pull_base_image(args.pull)
     if args.hard:
         assert args.mode in ('up', 'build')
         axonius_system.build_libs(True)
