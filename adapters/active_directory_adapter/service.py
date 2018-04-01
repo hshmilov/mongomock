@@ -534,13 +534,28 @@ class ActiveDirectoryAdapter(AdapterBase):
                     # This is a legitimate flow. Do not try to build the domain name from the configurations.
                     domain_name, user_name = "", client_config['user']
 
+                wanted_hostname = device_data['data']['hostname']
                 password = self.decrypt_password(client_config['password'])
                 try:
-                    device_ip = self._resolve_device_name(
-                        device_data['data']['hostname'], client_config)
+                    # We resolve ip only for devices who have been resolved before.
+                    # We do this to reduce the time execution tasks take for devices that we are sure
+                    # will not be resolved.
+                    num_of_previously_resolved_devices = self._get_collection(DEVICES_DATA).find(
+                        {
+                            "hostname": wanted_hostname,                        # get all queries with this hostname
+                            'network_interfaces.ips': {'$not': {'$size': 0}}    # which have at least one ip
+                        },
+                        projection={'_id': True}).count()
+
+                    if num_of_previously_resolved_devices > 0:
+                        # If a device has been resolved already, our theory is that the resolving time will be
+                        # close to immediate. that is why we re-resolve it.
+                        device_ip = self._resolve_device_name(wanted_hostname, client_config)
+                    else:
+                        raise IpResolveError(f"hostname {wanted_hostname} has never been resolved, not resolving")
                 except Exception:
-                    self.logger.exception(f"Could not resolve ip for execution.")
-                    raise IpResolveError("Cant Resolve Ip")
+                    self.logger.exception(f"Exception - could not resolve ip for execution.")
+                    raise
 
                 # Putting the file using wmi_smb_path.
                 return [self._python_27_path, self._use_wmi_smb_path, domain_name, user_name, password, device_ip]

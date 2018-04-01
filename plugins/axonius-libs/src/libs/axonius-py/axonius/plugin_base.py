@@ -382,16 +382,19 @@ class PluginBase(Feature):
         self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
 
-        # An executor dedicated to deleting forgotten execution requests
-        self.execution_monitor_scheduler = LoggedBackgroundScheduler(
-            self.logger, executors={'default': ThreadPoolExecutor(1)})
-        self.execution_monitor_scheduler.add_job(func=self.execution_monitor_thread,
-                                                 trigger=IntervalTrigger(seconds=30),
-                                                 next_run_time=datetime.now(),
-                                                 name='execution_monitor_thread',
-                                                 id='execution_monitor_thread',
-                                                 max_instances=1)
-        self.execution_monitor_scheduler.start()
+        # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
+        # since it will try to reject functions and not promises.
+        if self.plugin_name != "execution":
+            # An executor dedicated to deleting forgotten execution requests
+            self.execution_monitor_scheduler = LoggedBackgroundScheduler(
+                self.logger, executors={'default': ThreadPoolExecutor(1)})
+            self.execution_monitor_scheduler.add_job(func=self.execution_monitor_thread,
+                                                     trigger=IntervalTrigger(seconds=30),
+                                                     next_run_time=datetime.now(),
+                                                     name='execution_monitor_thread',
+                                                     id='execution_monitor_thread',
+                                                     max_instances=1)
+            self.execution_monitor_scheduler.start()
 
         # Finished, Writing some log
         self.logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,

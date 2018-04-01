@@ -135,7 +135,7 @@ class LdapConnection:
                 generator=True)
 
             one_device = None
-            devices_count = 1
+            devices_count = 0
             for one_device in entry_generator:
                 if one_device['type'] != 'searchResEntry':
                     # searchResEntry is not a wanted object
@@ -185,9 +185,15 @@ class LdapConnection:
                 paged_size=self.ldap_page_size,
                 generator=True)
 
+            users_count = 0
             for user in entry_generator:
                 if 'attributes' in user:
                     user['attributes']['axonius_extended'] = {"maxPwdAge": self.domain_properties['maxPwdAge']}
+
+                    users_count = users_count + 1
+                    if users_count % 100 == 0:
+                        self.logger.info(f"Got {users_count} users so far")
+
                     yield dict(user['attributes'])
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
