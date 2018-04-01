@@ -7,4 +7,4 @@ client_details = {
     "ssl_verify": False
 }
 
-SOME_DEVICE_ID = '38ccfb1aec5b4cd89da57c6f6ef32996'  # ip-10-0-2-180 (chef-client) on amazon
+SOME_DEVICE_ID = '06d71e1cb34f47898c320b96609134c6'  # ip 192.168.20.18 under our ESX
