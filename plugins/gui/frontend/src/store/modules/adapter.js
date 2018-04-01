@@ -274,20 +274,19 @@ export const adapter = {
 			let rule = `adapters/${payload.adapterId}/clients`
 			if (payload.uuid !== 'new') {
 				rule += '/' + payload.uuid
-			}
 
-            commit(SET_ADAPTER_SERVERS, {
-                fetching: true,
-                error: false,
-                data: {
-                    clients: [
-                        {
-                            status: 'warning',
-                            client_config: payload.serverData
-                        }
-                    ]
-                }
-            })
+                commit(UPDATE_ADAPTER_SERVER, {
+                    client_config: payload.serverData,
+                    uuid: payload.uuid,
+                    status: 'warning',
+                })
+			}
+			else {
+                commit(ADD_ADAPTER_SERVER, {
+                    status: 'warning',
+                    client_config: payload.serverData
+                })
+			}
 
 			dispatch(REQUEST_API, {
 				rule: rule,
