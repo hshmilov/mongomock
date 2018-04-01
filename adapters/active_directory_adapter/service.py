@@ -338,7 +338,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
 
             except Exception as e:
-                logger.exception(f"Error resolving host ip from dc.")
+                # Don't log here, it will happen for every failed resolving (Can happen a lot of times)
                 current_resolved_host = dict(host)
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
 

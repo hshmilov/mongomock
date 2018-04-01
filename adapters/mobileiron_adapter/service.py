@@ -138,4 +138,4 @@ class MobileironAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Manager, AdapterProperty.Agent]
+        return [AdapterProperty.Agent]

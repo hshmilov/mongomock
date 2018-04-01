@@ -255,4 +255,4 @@ class JamfAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Agent, AdapterProperty.Manager]
+        return [AdapterProperty.Agent]
