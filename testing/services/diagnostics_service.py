@@ -26,8 +26,12 @@ class DiagnosticsService(DockerService):
     @property
     def environment(self):
         env = json.loads(self.diag_env_file.read_bytes())
-        for k, v in env.items():
-            yield f'{k}={v}'
+        generated_env = Path(self.service_dir) / 'env_autogen.sh'
+        with generated_env.open('wb') as env_file:
+            for k, v in env.items():
+                env_file.write(f'export {k}={v}\n'.encode())
+                yield f'{k}={v}'
+            env_file.write('export STUNNEL_LISTEN_PORT=0\n'.encode())
 
     @property
     def volumes(self):

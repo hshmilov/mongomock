@@ -284,6 +284,7 @@ projectFilesBackup/*
 .idea/codeStyles/*
 Dockerfile.autogen
 stunnel_autogen.conf
+env_autogen.sh
 
 # Vim 
 *.swp

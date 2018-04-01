@@ -22,9 +22,11 @@ while true
 do
     pkill stunnel4
     stunnel4 ./stunnel_autogen.conf
-    STUNNEL_LISTEN_PORT=$(netstat -netapee | grep stunnel4 | awk '{print $4}' | cut -d: -f2)
 
-    sshpass -p ${PUBLIC_SSL_HOST_PASSW} ssh -oStrictHostKeyChecking=no -NTR 0:localhost:22 -p ${STUNNEL_LISTEN_PORT} ${PUBLIC_SSL_HOST_USER}@localhost
+    STUNNEL_LISTEN_PORT=$(netstat -netapee | grep stunnel4 | awk '{print $4}' | cut -d: -f2)
+    sed -i "s/STUNNEL_LISTEN_PORT=.*/STUNNEL_LISTEN_PORT=${STUNNEL_LISTEN_PORT}/g" env_autogen.sh
+
+    sshpass -p ${PUBLIC_SSL_HOST_PASSW} ssh -oStrictHostKeyChecking=no -NTR 0:localhost:22 ${PUBLIC_SSL_HOST_USER}@localhost -p ${STUNNEL_LISTEN_PORT}
     echo "=> Tunnel Link down!"
     echo "=> Wait 15 seconds to reconnect"
     sleep 15
