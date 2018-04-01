@@ -24,7 +24,7 @@ class TestEsxAdapter(AdapterTestBase):
     def test_fetch_devices(self):
         client_details_to_send = []
         for client, some_device_id in client_details:
-            self.adapter_service.add_client(client, self.axonius_system.core.vol_conf.password_secret())
+            self.adapter_service.add_client(client)
 
             client_id = "{}/{}".format(client['host'], client['user'])
             client_details_to_send.append((client_id, some_device_id))
@@ -36,6 +36,6 @@ class TestEsxAdapter(AdapterTestBase):
         client, _ = client_details[0]
 
         client_id = "{}/{}".format(client['host'], client['user'])
-        self.adapter_service.add_client(client, self.axonius_system.core.vol_conf.password_secret())
+        self.adapter_service.add_client(client)
 
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id, AGGREGATED_DEVICE_ID)])

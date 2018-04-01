@@ -24,7 +24,7 @@ class TestSplunkSymantecAdapter(AdapterTestBase):
 
     @pytest.mark.skip
     def test_fetch_devices(self):
-        self.adapter_service.add_client(self.some_client_details, self.axonius_system.core.vol_conf.password_secret())
+        self.adapter_service.add_client(self.some_client_details)
         devices_as_dict = self.adapter_service.devices()
         # splunk symantec returns only online devices - both in raw and parsed devices
         assert len(devices_as_dict[self.some_client_id]['raw']) == 0

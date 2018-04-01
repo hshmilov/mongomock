@@ -162,10 +162,17 @@ class AdapterService(PluginService):
         cipher = Fernet(encryption_key)
         return cipher.encrypt(bytes(to_encrypt, 'utf-8')).decode("utf-8")
 
-    def add_client(self, client_details, encryption_key):
+    def add_client(self, client_details):
+        from services.core_service import CoreService
         client_details_copy = dict(client_details)
-        if 'password' in client_details_copy:
-            client_details_copy['password'] = self.encrypt(encryption_key, client_details_copy['password'])
+
+        # Encrypting password format client details.
+        schema = self.schema('clients').json()
+        for item in schema['items']:
+            if item.get('format', '') == 'password':
+                client_details_copy[item['name']] = self.encrypt(CoreService().vol_conf.password_secret(),
+                                                                 client_details_copy[item['name']])
+
         self.clients(client_details_copy)
 
     def users(self):

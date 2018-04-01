@@ -56,7 +56,8 @@ class OpenstackAdapter(AdapterBase):
                 {
                     "name": "password",
                     "title": "Password",
-                    "type": "string"
+                    "type": "string",
+                    "format": "password"
                 },
                 {
                     "name": "project",
