@@ -30,10 +30,6 @@ class AdapterConfig(PluginConfig):
     def __init__(self, config_file_path):
         super().__init__(config_file_path)
 
-    @property
-    def default_sample_rate(self):
-        return int(self._config['DEFAULT'][adapter_consts.DEFAULT_SAMPLE_RATE])
-
 
 class PluginVolatileConfig(object):
     def __init__(self, config_string):

@@ -1,4 +1,6 @@
 import logging
+from datetime import timedelta
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, adapter_consts, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -13,9 +15,8 @@ class SccmAdapter(AdapterBase):
     class MyDeviceAdapter(ADDevice):
         pass
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
-        self.alive_hours = self.config['DEFAULT'][adapter_consts.DEFAULT_DEVICE_ALIVE_THRESHOLD_HOURS]
+    def __init__(self):
+        super().__init__(get_local_config_file(__file__))
         self.devices_fetched_at_a_time = int(self.config['DEFAULT'][consts.DEVICES_FETECHED_AT_A_TIME])
 
     def _get_client_id(self, client_config):
@@ -39,11 +40,11 @@ class SccmAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         with client_data:
-            if self.alive_hours == '-1':
+            if self._last_seen_timedelta < timedelta(0):
                 return list(client_data.query(consts.SCCM_QUERY.format('')))
             else:
                 return list(client_data.query(consts.SCCM_QUERY.format(
-                    consts.LIMIT_SCCM_QUERY.format(self.alive_hours))))
+                    consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))))
 
     def _clients_schema(self):
         return {

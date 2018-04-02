@@ -21,3 +21,11 @@ class TestSccmAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
+
+    @property
+    def device_alive_thresh_last_seen(self):
+        return 720
+
+    @property
+    def device_alive_thresh_last_fetched(self):
+        return 720

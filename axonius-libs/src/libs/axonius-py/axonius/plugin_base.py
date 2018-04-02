@@ -881,15 +881,6 @@ class PluginBase(Feature):
             logger.warning("Someone tried to get wrong schema '{0}'".format(schema_type))
             return return_error("No such schema. should implement {0}".format(schema_type), 400)
 
-    def _general_schema(self):
-        """
-        Represents the set of keys the plugin expects from general config
-
-        :return: JSON Schema
-        """
-
-        return {}
-
     @property
     def plugin_type(self):
         return "Plugin"

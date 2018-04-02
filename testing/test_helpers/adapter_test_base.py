@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime, timezone, timedelta
 
 import pytest
+
+from axonius.adapter_base import DEFAULT_LAST_FETCHED_THRESHOLD_HOURS, DEFAULT_LAST_SEEN_THRESHOLD_HOURS
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 
 from services.axonius_service import get_service
@@ -36,12 +38,21 @@ class AdapterTestBase(object):
     def some_device_id(self):
         raise NotImplementedError
 
+    @property
+    def device_alive_thresh_last_seen(self):
+        return DEFAULT_LAST_SEEN_THRESHOLD_HOURS
+
+    @property
+    def device_alive_thresh_last_fetched(self):
+        return DEFAULT_LAST_FETCHED_THRESHOLD_HOURS
+
     def drop_clients(self):
         self.axonius_system.db.client[self.adapter_service.unique_name].drop_collection('clients')
 
     def test_adapter_is_up(self):
         assert self.adapter_service.is_up()
 
+    @pytest.mark.skip("Not all plugins have schemas - TODO: Figure out how to test this properly or delete")
     def test_adapter_responds_to_schema(self):
         assert self.adapter_service.schema().status_code == 200
 
@@ -61,10 +72,17 @@ class AdapterTestBase(object):
         assert cleaned_count == 0  # second clean should have no devices cleaned
 
         now = datetime.now(tz=timezone.utc)
-        long_time_ago = now - timedelta(days=360)
+
+        using_last_seen = self.device_alive_thresh_last_seen > 0
+        if using_last_seen:
+            last_seen_long_time_ago = now - timedelta(hours=self.device_alive_thresh_last_seen * 5)
+        using_last_fetched = self.device_alive_thresh_last_fetched > 0
+        if using_last_fetched:
+            last_fetched_long_time_ago = now - timedelta(hours=self.device_alive_thresh_last_fetched * 5)
+
         devices_db = self.axonius_system.db.client[AGGREGATOR_PLUGIN_NAME]['devices_db']
 
-        # this is a fake device that is "new" from "now"
+        # this is a fake device that is "new" on all forms
         devices_db.insert_one({
             "internal_axon_id": "1-" + uuid.uuid4().hex,
             "accurate_for_datetime": now,
@@ -87,98 +105,100 @@ class AdapterTestBase(object):
         cleaned_count = self.adapter_service.trigger_clean_db()
         assert cleaned_count == 0  # the device added shouldn't be removed
 
-        # this is a fake device from a "long time ago"
-        deleted_device_id = "3-" + uuid.uuid4().hex
-        devices_db.insert_one({
-            "internal_axon_id": deleted_device_id,
-            "accurate_for_datetime": now,
-            "adapters": [
-                {
-                    "client_used": "SomeClient",
-                    "plugin_type": "Adapter",
-                    "plugin_name": self.adapter_service.plugin_name,
-                    "plugin_unique_name": self.adapter_service.unique_name,
-                    "accurate_for_datetime": long_time_ago,
-                    "data": {
-                        "id": "4-" + uuid.uuid4().hex,
-                        "raw": {
-                        },
+        if using_last_fetched:
+            # this is a fake device from a "long time ago" by last_fetched
+            deleted_device_id = "3-" + uuid.uuid4().hex
+            devices_db.insert_one({
+                "internal_axon_id": deleted_device_id,
+                "accurate_for_datetime": now,
+                "adapters": [
+                    {
+                        "client_used": "SomeClient",
+                        "plugin_type": "Adapter",
+                        "plugin_name": self.adapter_service.plugin_name,
+                        "plugin_unique_name": self.adapter_service.unique_name,
+                        "accurate_for_datetime": last_fetched_long_time_ago,
+                        "data": {
+                            "id": "4-" + uuid.uuid4().hex,
+                            "raw": {
+                            },
+                        }
                     }
-                }
-            ],
-            "tags": []
-        })
-        cleaned_count = self.adapter_service.trigger_clean_db()
-        assert cleaned_count == 1  # the device added is old and should be deleted
-        assert devices_db.count({'internal_axon_id': deleted_device_id}) == 0
+                ],
+                "tags": []
+            })
+            cleaned_count = self.adapter_service.trigger_clean_db()
+            assert cleaned_count == 1  # the device added is old and should be deleted
+            assert devices_db.count({'internal_axon_id': deleted_device_id}) == 0
 
-        deleted_device_id = "5-" + uuid.uuid4().hex
-        deleted_adapter_device_id = "6-" + uuid.uuid4().hex
-        not_deleted_adapter_device_id = "7-" + uuid.uuid4().hex
-        devices_db.insert_one({
-            "internal_axon_id": deleted_device_id,
-            "accurate_for_datetime": now,
-            "adapters": [
-                {
-                    "client_used": "SomeClient",
-                    "plugin_type": "Adapter",
-                    "plugin_name": self.adapter_service.plugin_name,
-                    "plugin_unique_name": self.adapter_service.unique_name,
-                    "accurate_for_datetime": long_time_ago,
-                    "data": {
-                        "id": deleted_adapter_device_id,
-                        "raw": {
-                        },
+            deleted_device_id = "5-" + uuid.uuid4().hex
+            deleted_adapter_device_id = "6-" + uuid.uuid4().hex
+            not_deleted_adapter_device_id = "7-" + uuid.uuid4().hex
+            devices_db.insert_one({
+                "internal_axon_id": deleted_device_id,
+                "accurate_for_datetime": now,
+                "adapters": [
+                    {
+                        "client_used": "SomeClient",
+                        "plugin_type": "Adapter",
+                        "plugin_name": self.adapter_service.plugin_name,
+                        "plugin_unique_name": self.adapter_service.unique_name,
+                        "accurate_for_datetime": last_fetched_long_time_ago,
+                        "data": {
+                            "id": deleted_adapter_device_id,
+                            "raw": {
+                            },
+                        }
+                    },
+                    {
+                        "client_used": "SomeClientFromAnotherAdapter",
+                        "plugin_type": "Adapter",
+                        "plugin_name": "high_capacity_carburetor_adapter",
+                        "plugin_unique_name": "high_capacity_carburetor_adapter_1337",
+                        "accurate_for_datetime": now,
+                        "data": {
+                            "raw": {
+                            },
+                            "id": not_deleted_adapter_device_id,
+                        }
                     }
-                },
-                {
-                    "client_used": "SomeClientFromAnotherAdapter",
-                    "plugin_type": "Adapter",
-                    "plugin_name": "high_capacity_carburetor_adapter",
-                    "plugin_unique_name": "high_capacity_carburetor_adapter_1337",
-                    "accurate_for_datetime": now,
-                    "data": {
-                        "raw": {
-                        },
-                        "id": not_deleted_adapter_device_id,
-                    }
-                }
-            ],
-            "tags": []
-        })
+                ],
+                "tags": []
+            })
 
-        cleaned_count = self.adapter_service.trigger_clean_db()
-        assert cleaned_count == 1  # the device added is old and should be deleted
-        # only one of the adapter_devices should be removed, so the axonius device should stay
-        assert devices_db.count({'adapters.data.id': not_deleted_adapter_device_id}) == 1
-        # verify our device is deleted
-        assert devices_db.count({'adapters.data.id': deleted_adapter_device_id}) == 0
+            cleaned_count = self.adapter_service.trigger_clean_db()
+            assert cleaned_count == 1  # the device added is old and should be deleted
+            # only one of the adapter_devices should be removed, so the axonius device should stay
+            assert devices_db.count({'adapters.data.id': not_deleted_adapter_device_id}) == 1
+            # verify our device is deleted
+            assert devices_db.count({'adapters.data.id': deleted_adapter_device_id}) == 0
 
-        # this is a fake device from a "long time ago" according to last `seen_but` not `accurate_for_datetime`
-        deleted_device_id = "8-" + uuid.uuid4().hex
-        devices_db.insert_one({
-            "internal_axon_id": deleted_device_id,
-            "accurate_for_datetime": now,
-            "adapters": [
-                {
-                    "client_used": "SomeClient",
-                    "plugin_type": "Adapter",
-                    "plugin_name": self.adapter_service.plugin_name,
-                    "plugin_unique_name": self.adapter_service.unique_name,
-                    "accurate_for_datetime": now,
-                    "data": {
-                        "id": "9-" + uuid.uuid4().hex,
-                        "last_seen": long_time_ago,
-                        "raw": {
-                        },
+        if using_last_seen:
+            # this is a fake device from a "long time ago" according to `last_seen`
+            deleted_device_id = "8-" + uuid.uuid4().hex
+            devices_db.insert_one({
+                "internal_axon_id": deleted_device_id,
+                "accurate_for_datetime": now,
+                "adapters": [
+                    {
+                        "client_used": "SomeClient",
+                        "plugin_type": "Adapter",
+                        "plugin_name": self.adapter_service.plugin_name,
+                        "plugin_unique_name": self.adapter_service.unique_name,
+                        "accurate_for_datetime": now,
+                        "data": {
+                            "id": "9-" + uuid.uuid4().hex,
+                            "last_seen": last_seen_long_time_ago,
+                            "raw": {
+                            },
+                        }
                     }
-                }
-            ],
-            "tags": []
-        })
-        cleaned_count = self.adapter_service.trigger_clean_db()
-        assert cleaned_count == 1  # the device added is old and should be deleted
-        assert devices_db.count({'internal_axon_id': deleted_device_id}) == 0
+                ],
+                "tags": []
+            })
+            cleaned_count = self.adapter_service.trigger_clean_db()
+            assert cleaned_count == 1
+            assert devices_db.count({'internal_axon_id': deleted_device_id}) == 0
 
     def test_restart(self):
         service = self.adapter_service

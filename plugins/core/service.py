@@ -317,9 +317,6 @@ class CoreService(PluginBase):
                     'status': 'ok',
                 }
 
-                if is_plugin_adapter(plugin_type):
-                    doc[adapter_consts.DEVICE_SAMPLE_RATE] = int(data[adapter_consts.DEFAULT_SAMPLE_RATE])
-
                 if plugin_is_debug:
                     doc['is_debug'] = True
 
@@ -376,10 +373,6 @@ class CoreService(PluginBase):
                 'plugin_name': plugin['plugin_name'],
                 'supported_features': plugin['supported_features']
             }
-
-            if is_plugin_adapter(plugin['plugin_type']):
-                online_devices[plugin_name][adapter_consts.DEVICE_SAMPLE_RATE] = int(
-                    plugin[adapter_consts.DEVICE_SAMPLE_RATE])
 
         return online_devices
 

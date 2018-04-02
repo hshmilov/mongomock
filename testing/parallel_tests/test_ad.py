@@ -37,9 +37,13 @@ class TestAdAdapter(AdapterTestBase):
     def some_user_id(self):
         return USER_ID_FOR_CLIENT_1
 
-    @pytest.mark.skip("Currently ad's device_alive_thresh is -1 which makes it fail.")
-    def test_devices_cleaning(self):
-        pass
+    @property
+    def device_alive_thresh_last_seen(self):
+        return -1
+
+    @property
+    def device_alive_thresh_last_fetched(self):
+        return 48
 
     def test_fetch_devices(self):
         # Adding first client
@@ -52,11 +56,14 @@ class TestAdAdapter(AdapterTestBase):
 
         # Checking that we have devices from both clients
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(client_id_1, DEVICE_ID_FOR_CLIENT_1)])
+
+        # TODO: AD Adapter will no longer check `last_seen` so no devices will be filtered out from
+        # /devices, this test should be moved elsewhere
+
         # Testing the ability to filter old devices
-        # Currently disabling the old devices test since we set it to -1.
         # devices_list = self.axonius_system.get_devices_with_condition({"adapters.data.hostname": "nonExistance"})
         # assert len(devices_list) == 0, "Found device that should have been filtered"
-        # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
+        # # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
     def test_fetch_users(self):
         # I'm going to assume this has already been aggregated. TODO: Change test_fetch_devices to test_fetch_data

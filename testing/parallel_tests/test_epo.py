@@ -21,6 +21,14 @@ class TestEpoAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @property
+    def device_alive_thresh_last_seen(self):
+        return 504
+
+    @property
+    def device_alive_thresh_last_fetched(self):
+        return 504
+
     @pytest.mark.skip("EPO License expired")
     def test_fetch_devices(self):
         """

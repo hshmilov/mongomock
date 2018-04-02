@@ -6,7 +6,8 @@ from setuptools import setup
 
 setup(
     name="Axonius",
-    packages=["axonius", "axonius.mixins", "axonius.consts", "axonius.devices", "axonius.utils"],
+    packages=["axonius", "axonius.mixins", "axonius.consts", "axonius.devices", "axonius.utils", "axonius.users",
+              "axonius.logging"],
     version="1.0.0",
     description="External libs for Axonius",
     author="Axonius, Inc",
