@@ -6,7 +6,7 @@ import requests
 import base64
 
 from axonius.fields import Field
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 from jamf_adapter.exceptions import JamfConnectionError, JamfRequestException
 from jamf_adapter import consts
 from axonius.utils.xml2json_parser import Xml2Json

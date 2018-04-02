@@ -2,16 +2,15 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.consts import adapter_consts
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.parsing_utils import format_ip
+from axonius.utils.parsing import format_ip
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, JsonStringFormat, ListField
 from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection, JamfPolicy
 from jamf_adapter.exceptions import JamfException
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 class JamfSite(SmartJsonClass):

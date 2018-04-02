@@ -12,10 +12,6 @@ class TestTraianaLabMachinesAdapter(AdapterTestBase):
         return TraianaLabMachinesService()
 
     @property
-    def adapter_name(self):
-        return 'traiana_lab_machines_adapter'
-
-    @property
     def some_client_id(self):
         return credentials_details['api_url']
 

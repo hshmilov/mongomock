@@ -2,7 +2,7 @@ import threading
 import ctypes
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.parsing_utils import format_mac, parse_date
+from axonius.utils.parsing import format_mac, parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 import axonius.adapter_exceptions
 from axonius.utils.files import get_local_config_file

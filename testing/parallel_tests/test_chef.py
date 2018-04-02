@@ -9,10 +9,6 @@ class TestChefAdapter(AdapterTestBase):
         return ChefService()
 
     @property
-    def adapter_name(self):
-        return 'chef_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['domain']
 

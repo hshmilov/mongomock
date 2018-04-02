@@ -5,7 +5,7 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="docker://axonius/openstack-adapter:latest/python3.6" />
+    <option name="SDK_HOME" value="docker://axonius/openstack-adapter/python3.6" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/adapters" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
@@ -33,7 +33,7 @@
           <DockerPortBindingImpl>
             <option name="containerPort" value="80" />
             <option name="hostIp" value="" />
-            <option name="hostPort" value="5111" />
+            <option name="hostPort" value="6018" />
             <option name="protocol" value="tcp" />
           </DockerPortBindingImpl>
         </list>
@@ -57,27 +57,13 @@
           <DockerVolumeBindingImpl>
             <option name="containerPath" value="/home/axonius/libs" />
             <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/plugins/axonius-libs/src/libs" />
+            <option name="hostPath" value="$PROJECT_DIR$/axonius-libs/src/libs" />
             <option name="readOnly" value="true" />
-          </DockerVolumeBindingImpl>
-          <DockerVolumeBindingImpl>
-            <option name="containerPath" value="/home/axonius/" />
-            <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/adapters/openstack_adapter/config/" />
-            <option name="readOnly" value="false" />
           </DockerVolumeBindingImpl>
         </list>
       </option>
     </EXTENSION>
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-    <PathMappingSettings>
-      <option name="pathMappings">
-        <list>
-          <mapping local-root="$PROJECT_DIR$/adapters " remote-root="/app" />
-          <mapping local-root="$PROJECT_DIR$/plugins/axonius-libs/src/libs" remote-root="/home/axonius/libs" />
-        </list>
-      </option>
-    </PathMappingSettings>
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/adapters/debug_main.py" />
     <option name="PARAMETERS" value="openstack" />
     <option name="SHOW_COMMAND_LINE" value="false" />

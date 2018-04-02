@@ -88,9 +88,9 @@ DEVICE_ONE = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 5
                                     'userAccountControl': 4096,
                                     'whenChanged': 'Mon, 06 Nov 2017 14:16:42 GMT',
                                     'whenCreated': 'Mon, 06 Nov 2017 14:15:18 GMT'}},
-                   'plugin_name': 'ad_adapter',
+                   'plugin_name': 'active_directory_adapter',
                    'plugin_type': 'Adapter',
-                   PLUGIN_UNIQUE_NAME: 'ad_adapter_1'}
+                   PLUGIN_UNIQUE_NAME: 'active_directory_adapter_1'}
 ],
     'internal_axon_id': '6990cbe1410f4826886e542b82459b5a',
     'tags': []}
@@ -144,9 +144,9 @@ DEVICE_TWO = {'accurate_for_datetime': datetime.datetime(2017, 11, 19, 13, 21, 5
                                     'userAccountControl': 4096,
                                     'whenChanged': 'Mon, 06 Nov 2017 14:40:58 GMT',
                                     'whenCreated': 'Mon, 06 Nov 2017 14:40:19 GMT'}},
-                   'plugin_name': 'ad_adapter',
+                   'plugin_name': 'active_directory_adapter',
                    'plugin_type': 'Adapter',
-                   PLUGIN_UNIQUE_NAME: 'ad_adapter_1'}
+                   PLUGIN_UNIQUE_NAME: 'active_directory_adapter_1'}
 ],
     'internal_axon_id': 'aca32b5ab07042c3aa55a484eb419bad',
     'tags': []}

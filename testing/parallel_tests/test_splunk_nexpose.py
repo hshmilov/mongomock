@@ -10,10 +10,6 @@ class TestSplunkNexposeAdapter(AdapterTestBase):
         return SplunkNexposeService()
 
     @property
-    def adapter_name(self):
-        return 'splunk_nexpose_adapter'
-
-    @property
     def some_client_id(self):
         return '{0}:{1}'.format(splunk_details['host'], splunk_details['port'])
 

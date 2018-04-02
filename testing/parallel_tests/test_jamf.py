@@ -11,10 +11,6 @@ class TestJamfAdapter(AdapterTestBase):
         return JamfService()
 
     @property
-    def adapter_name(self):
-        return 'jamf_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Jamf_Domain']
 

@@ -20,11 +20,11 @@ from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
 from axonius.devices.ad_device import ADDevice
 from axonius.devices.dns_resolvable import DNSResolveStatus
-from axonius.dns_utils import query_dns
+from axonius.utils.dns import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 from axonius.users.user_adapter import UserAdapter
-from axonius.parsing_utils import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
+from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
     is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"

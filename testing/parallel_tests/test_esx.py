@@ -10,10 +10,6 @@ class TestEsxAdapter(AdapterTestBase):
         return EsxService()
 
     @property
-    def adapter_name(self):
-        return 'esx_adapter'
-
-    @property
     def some_client_details(self):
         return client_details
 

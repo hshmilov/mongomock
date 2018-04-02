@@ -1,6 +1,6 @@
 To install, add an 'axonius.pth' file to site-packages (so it can be loaded):
 
-    <cortex_path>/plugins/axonius-libs/src/libs/axonius-py<br>
+    <cortex_path>/axonius-libs/src/libs/axonius-py<br>
     <cortex_path>/testing<br>
     <cortex_path>
 

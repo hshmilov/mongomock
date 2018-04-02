@@ -11,10 +11,6 @@ class TestBomgarAdapter(AdapterTestBase):
         return BomgarService()
 
     @property
-    def adapter_name(self):
-        return 'bomgar_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['domain'] + ':' + client_details['client_id']
 

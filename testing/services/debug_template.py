@@ -53,7 +53,7 @@ py_charm_debug_template = """
           <DockerVolumeBindingImpl>
             <option name="containerPath" value="/home/axonius/libs" />
             <option name="editable" value="true" />
-            <option name="hostPath" value="$PROJECT_DIR$/plugins/axonius-libs/src/libs" />
+            <option name="hostPath" value="$PROJECT_DIR$/axonius-libs/src/libs" />
             <option name="readOnly" value="true" />
           </DockerVolumeBindingImpl>
         </list>

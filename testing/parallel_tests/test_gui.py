@@ -37,7 +37,7 @@ def test_default_queries():
 
     # A sample Default Query as set in default_queries.ini under gui/src
     name = 'Active Directory'
-    query_filter = 'adapters=="ad_adapter"'
+    query_filter = 'adapters=="active_directory_adapter"'
 
     existed_query = queries.find_one({'filter': query_filter, 'name': name})
     assert existed_query is not None

@@ -11,10 +11,6 @@ class TestSymantecAdapter(AdapterTestBase):
         return SymantecService()
 
     @property
-    def adapter_name(self):
-        return 'symantec_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['SEPM_Address']
 

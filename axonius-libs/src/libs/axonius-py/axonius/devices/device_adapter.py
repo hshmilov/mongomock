@@ -4,7 +4,7 @@ import datetime
 import typing
 
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.parsing_utils import figure_out_os, format_mac, format_ip, format_ip_raw
+from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
 

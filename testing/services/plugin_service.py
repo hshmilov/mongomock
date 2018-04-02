@@ -28,11 +28,11 @@ class PluginService(DockerService):
         self.last_vol_conf = None
         if not self.service_class_name.endswith('Adapter'):
             self.service_class_name += 'Service'
+        self.plugin_name = os.path.basename(self.service_dir)
 
     @property
     def volumes_override(self):
-        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
-                                            'axonius-libs', 'src', 'libs'))
+        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', 'src', 'libs'))
         return [f'{self.service_dir}:/home/axonius/app/{self.package_name}:ro', f'{libs}:/home/axonius/libs:ro']
 
     def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
@@ -138,10 +138,6 @@ class PluginService(DockerService):
     def unique_name(self):
         return self.vol_conf.unique_name
 
-    @property
-    def plugin_name(self):
-        return self.conf.name
-
     def generate_debug_template(self):
         name = self.adapter_name.replace("-", "_") if isinstance(self, AdapterService) else self.package_name
         ports = '\n'.join([py_charm_debug_port_template.format(host_port=host_port, internal_port=internal_port)
@@ -163,7 +159,7 @@ class AdapterService(PluginService):
         return cipher.encrypt(bytes(to_encrypt, 'utf-8')).decode("utf-8")
 
     def add_client(self, client_details):
-        from services.core_service import CoreService
+        from services.plugins.core_service import CoreService
         client_details_copy = dict(client_details)
 
         # Encrypting password format client details.

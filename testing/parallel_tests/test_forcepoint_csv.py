@@ -10,10 +10,6 @@ class TestForcepointCsvAdapter(AdapterTestBase):
         return ForcepointCsvService()
 
     @property
-    def adapter_name(self):
-        return 'forcepoint_csv_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['user_id']
 

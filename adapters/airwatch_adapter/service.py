@@ -8,10 +8,8 @@ from axonius.fields import Field
 
 from airwatch_adapter.connection import AirwatchConnection
 from airwatch_adapter.exceptions import AirwatchException
-import json
-import xml.etree.ElementTree as ET
 
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 class AirwatchAdapter(AdapterBase):

@@ -136,7 +136,7 @@ class AxoniusEntity(object):
         :param bool is_enabled: true if enabled, false otherwise.
         :param identity_by_adapter: an optional list of tuples of (plugin_unique_name, data.id) to tag by.
                                     if not provided, will tag by all identities.
-                                    e.g. [("ad_adapter_123", "CN=....")]
+                                    e.g. [("active_directory_adapter_123", "CN=....")]
         :return: the response
         """
 
@@ -152,7 +152,7 @@ class AxoniusEntity(object):
         :param str data: the data of the data
         :param identity_by_adapter: an optional list of tuples of (plugin_unique_name, data.id) to tag by.
                                     if not provided, will tag by all identities.
-                                    e.g. [("ad_adapter_123", "CN=....")]
+                                    e.g. [("active_directory_adapter_123", "CN=....")]
         :return: the response
         """
 
@@ -167,7 +167,7 @@ class AxoniusEntity(object):
         :param str data: the adapterdata
         :param identity_by_adapter: an optional list of tuples of (plugin_unique_name, data.id) to tag by.
                                     if not provided, will tag by all identities.
-                                    e.g. [("ad_adapter_123", "CN=....")]
+                                    e.g. [("active_directory_adapter_123", "CN=....")]
         :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
         :return: the response
         """

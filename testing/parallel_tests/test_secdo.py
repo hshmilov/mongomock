@@ -11,10 +11,6 @@ class TestSecdoAdapter(AdapterTestBase):
         return SecdoService()
 
     @property
-    def adapter_name(self):
-        return 'secdo_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Secdo_Domain']
 

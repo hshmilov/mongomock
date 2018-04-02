@@ -1,5 +1,5 @@
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 from axonius.utils import str2bool
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands

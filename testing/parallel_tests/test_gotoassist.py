@@ -11,10 +11,6 @@ class TestGotoassistAdapter(AdapterTestBase):
         return GotoassistService()
 
     @property
-    def adapter_name(self):
-        return 'gotoassist_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['user_name']
 

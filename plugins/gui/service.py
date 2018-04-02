@@ -22,7 +22,7 @@ import pymongo
 from bson import ObjectId
 import json
 from datetime import datetime
-from axonius.parsing_utils import parse_filter
+from axonius.utils.parsing import parse_filter
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -124,7 +124,7 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
-    Decorator stating that the view supports ?filter='adapters == "ad_adapter"'
+    Decorator stating that the view supports ?filter='adapters == "active_directory_adapter"'
     """
 
     def wrap(func):
@@ -1234,7 +1234,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("execution/<plugin_state>", methods=['POST'])
     def toggle_execution(self, plugin_state):
-        services = ['execution', 'careful_execution_correlator_plugin', 'general-info-plugin']
+        services = ['execution', 'careful_execution_correlator', 'general_info']
         statuses = []
         for current_service in services:
             response = self.request_remote_plugin('plugin_state', current_service, 'POST',
@@ -1251,7 +1251,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("execution", methods=['GET'])
     def get_execution(self):
-        services = ['execution', 'careful_execution_correlator_plugin', 'general-info-plugin']
+        services = ['execution', 'careful_execution_correlator', 'general_info']
         enabled = False
         for current_service in services:
             response = self.request_remote_plugin('plugin_state', current_service)

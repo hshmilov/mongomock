@@ -10,10 +10,6 @@ class TestNessusAdapter(AdapterTestBase):
         return NessusService()
 
     @property
-    def adapter_name(self):
-        return 'nessus_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['host']
 

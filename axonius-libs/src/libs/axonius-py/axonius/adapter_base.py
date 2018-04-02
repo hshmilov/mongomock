@@ -24,7 +24,7 @@ from axonius.consts import adapter_consts
 from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
 from axonius.users.user_adapter import UserAdapter, USER_LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
-from axonius.parsing_utils import get_exception_string
+from axonius.utils.parsing import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.json import to_json

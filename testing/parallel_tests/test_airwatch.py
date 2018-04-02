@@ -11,10 +11,6 @@ class TestAirwatchAdapter(AdapterTestBase):
         return AirwatchService()
 
     @property
-    def adapter_name(self):
-        return 'airwatch_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Airwatch_Domain']
 

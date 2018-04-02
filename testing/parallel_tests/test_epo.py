@@ -10,10 +10,6 @@ class TestEpoAdapter(AdapterTestBase):
         return EpoService()
 
     @property
-    def adapter_name(self):
-        return 'epo_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['host']
 

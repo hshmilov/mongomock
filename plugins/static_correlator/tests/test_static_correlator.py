@@ -380,10 +380,10 @@ def test_rule_one_is_ad_and_full_hostname():
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'my234mac',
                                                   IPS_FIELD: ['1.31.1.1']}])
-    device1['adapters'][0]['plugin_name'] = 'ad_adapter'
-    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
-    device2['adapters'][0]['plugin_name'] = 'ad_adapter'
-    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
+    device1['adapters'][0]['plugin_name'] = 'active_directory_adapter'
+    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
+    device2['adapters'][0]['plugin_name'] = 'active_directory_adapter'
+    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 1)
 
 
@@ -405,10 +405,10 @@ def test_rule_one_is_ad_and_full_hostname_fail_on_hostname_even_with_default_dom
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'my234mac',
                                                   IPS_FIELD: ['1.31.1.1']}])
-    device1['adapters'][0]['plugin_name'] = 'ad_adapter'
-    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
-    device2['adapters'][0]['plugin_name'] = 'ad_adapter'
-    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'ad_adapter'
+    device1['adapters'][0]['plugin_name'] = 'active_directory_adapter'
+    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
+    device2['adapters'][0]['plugin_name'] = 'active_directory_adapter'
+    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 0)
 
 

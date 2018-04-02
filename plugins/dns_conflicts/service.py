@@ -6,12 +6,11 @@ import threading
 
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.devices.device_adapter import DeviceAdapter
 from axonius.devices.dns_resolvable import DNSResolveStatus
-from axonius.dns_utils import query_dns, NoIpFoundError
+from axonius.utils.dns import query_dns, NoIpFoundError
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.mixins.triggerable import Triggerable
-from axonius.parsing_utils import format_ip
+from axonius.utils.parsing import format_ip
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
@@ -48,7 +47,7 @@ class DnsConflictsService(PluginBase, Triggerable):
         """
         logger.info("Find conflicts thread had started")
         with self.resolve_lock:
-            ad_adapters = self.get_plugin_by_name('ad_adapter', verify_single=False)
+            ad_adapters = self.get_plugin_by_name('active_directory_adapter', verify_single=False)
 
             for ad_adapter in ad_adapters:
                 ad_adapter_unique_name = ad_adapter[PLUGIN_UNIQUE_NAME]

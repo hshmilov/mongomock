@@ -35,7 +35,7 @@ class CarefulExecutionCorrelatorService(CorrelatorBase):
                 return list(aggregator_db['devices_db'].find(
                     {
                         'adapters.plugin_name': {
-                            '$in': ['aws_adapter', 'ad_adapter']
+                            '$in': ['aws_adapter', 'active_directory_adapter']
                         }
                     }))
             else:

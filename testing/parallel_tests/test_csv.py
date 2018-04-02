@@ -10,10 +10,6 @@ class TestCsvAdapter(AdapterTestBase):
         return CsvService()
 
     @property
-    def adapter_name(self):
-        return 'csv_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['user_id']
 

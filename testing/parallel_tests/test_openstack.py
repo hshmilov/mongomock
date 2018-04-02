@@ -1,4 +1,4 @@
-from services.adapters.openstack_service import OpenStackService, openstack_fixture
+from services.adapters.openstack_service import OpenstackService, openstack_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_openstack_credentials import *
 from urllib3.util.url import parse_url
@@ -7,11 +7,7 @@ from urllib3.util.url import parse_url
 class TestOpenStackAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return OpenStackService()
-
-    @property
-    def adapter_name(self):
-        return 'openstack_adapter'
+        return OpenstackService()
 
     @property
     def some_client_id(self):

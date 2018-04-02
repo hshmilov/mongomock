@@ -6,7 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, JsonStringFormat
-from axonius.parsing_utils import format_ip
+from axonius.utils.parsing import format_ip
 from axonius.utils.files import get_local_config_file
 from bomgar_adapter.client import BomgarConnection
 from bomgar_adapter.exceptions import BomgarException

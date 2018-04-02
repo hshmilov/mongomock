@@ -10,7 +10,7 @@ from axonius.utils.files import get_local_config_file
 from sentinelone_adapter.connection import SentinelOneConnection
 from sentinelone_adapter.exceptions import SentinelOneException
 from axonius.fields import Field
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 """

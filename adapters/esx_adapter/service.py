@@ -7,7 +7,7 @@ from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterPropert
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 from axonius.utils.files import get_local_config_file
 from esx_adapter.vcenter_api import vCenterApi, rawify_vcenter_data
 

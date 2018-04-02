@@ -12,7 +12,7 @@ def take_uncorrecelated_ad_and_aws(devices) -> Iterable[dict]:
     """
     for axon_device1 in devices:
         plugins_connected = [adapter['plugin_name'] for adapter in axon_device1['adapters']]
-        if ('ad_adapter' in plugins_connected) == ('aws_adapter' in plugins_connected):
+        if ('active_directory_adapter' in plugins_connected) == ('aws_adapter' in plugins_connected):
             # Don't run on already correlated device or devices that aren't AD or AWS
             # We currently want to work only on ad, aws on execution
             # TODO: Remove on next version (AX-325)

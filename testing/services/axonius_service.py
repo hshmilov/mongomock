@@ -6,21 +6,19 @@ import time
 import glob
 import os
 
-import services
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from services import adapters
-from services.diagnostics_service import DiagnosticsService
-from services.execution_service import ExecutionService
-from services.aggregator_service import AggregatorService
+from services import plugins
+from services.plugins.execution_service import ExecutionService
+from services.plugins.aggregator_service import AggregatorService
 from services.axon_service import TimeoutException
-from services.core_service import CoreService
-from services.gui_service import GuiService
-from services.reports_service import ReportsService
-from services.static_correlator_service import StaticCorrelatorService
-from services.system_scheduler_service import SystemSchedulerService
-from services.mongo_service import MongoService
-from services.plugin_service import AdapterService, PluginService
+from services.plugins.core_service import CoreService
+from services.plugins.gui_service import GuiService
+from services.plugins.reports_service import ReportsService
+from services.plugins.static_correlator_service import StaticCorrelatorService
+from services.plugins.system_scheduler_service import SystemSchedulerService
+from services.plugins.mongo_service import MongoService
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
@@ -140,24 +138,17 @@ class AxoniusService(object):
         try_until_not_thrown(30, 1, assert_aggregator_registered)
 
     @staticmethod
-    def get_plugin(name):
-        module = importlib.import_module(f"services.{name.lower()}_service")
-        for variable_name in dir(module):
-            variable = getattr(module, variable_name)
-            if isinstance(variable, type) and ((issubclass(variable, PluginService) and variable != PluginService) or
-                                               issubclass(variable, MongoService) or
-                                               issubclass(variable, DiagnosticsService)):
-                return variable()
-        raise ValueError('Plugin not found')
+    def _get_docker_service(type_name, name):
+        module = importlib.import_module(f"services.{type_name}.{name.lower()}_service")
+        return getattr(module, ' '.join(name.lower().split('_')).title().replace(' ', '') + 'Service')()
 
-    @staticmethod
-    def get_adapter(name):
-        module = importlib.import_module(f"services.adapters.{name.lower()}_service")
-        for variable_name in dir(module):
-            variable = getattr(module, variable_name)
-            if isinstance(variable, type) and issubclass(variable, AdapterService) and variable != AdapterService:
-                return variable()
-        raise ValueError('Adapter not found')
+    @classmethod
+    def get_plugin(cls, name):
+        return cls._get_docker_service('plugins', name)
+
+    @classmethod
+    def get_adapter(cls, name):
+        return cls._get_docker_service('adapters', name)
 
     def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
                       skip=False):
@@ -210,51 +201,31 @@ class AxoniusService(object):
         for plugin in plugins:
             plugin.remove_container()
 
-    def get_all_plugins(self):
-        plugins_folder = os.path.dirname(inspect.getfile(services))
-        plugin_regex = os.path.join(plugins_folder, '*_service.py')
-        plugins_list = []
+    def _get_all_docker_services(self, type_name, obj):
+        folder = os.path.dirname(inspect.getfile(obj))
+        regex = os.path.join(folder, '*_service.py')
+        return_list = []
 
-        for plugin_path in glob.glob(plugin_regex):
-            module_name = os.path.basename(plugin_path)[:-3]
-            if module_name == '__init__' or module_name == 'axonius_service':
-                continue
-            module = importlib.import_module(f'services.{module_name}')
-            # Iterate variables and look for the service
-            for variable_name in dir(module):
-                variable = getattr(module, variable_name)
-                if isinstance(variable, type) and ((issubclass(variable, PluginService) and variable != PluginService
-                                                    and variable != AdapterService) or
-                                                   (issubclass(variable, MongoService)) or
-                                                   (issubclass(variable, DiagnosticsService))):
-                    not_internal = True
-                    for service in self.axonius_services:
-                        if isinstance(service, variable):
-                            not_internal = False
-                            break
-                    if not_internal:
-                        plugins_list.append((module_name[:-len('_service')], variable))
-                        break
-        return plugins_list
-
-    @staticmethod
-    def get_all_adapters():
-        adapters_folder = os.path.dirname(inspect.getfile(adapters))
-        adapter_regex = os.path.join(adapters_folder, '*_service.py')
-        adapters_list = []
-
-        for adapter_path in glob.glob(adapter_regex):
-            module_name = os.path.basename(adapter_path)[:-3]
+        for path in glob.glob(regex):
+            module_name = os.path.basename(path)[:-3]
             if module_name == '__init__':
                 continue
-            module = importlib.import_module(f'services.adapters.{module_name}')
-            # Iterate variables and look for the service
-            for variable_name in dir(module):
-                variable = getattr(module, variable_name)
-                if isinstance(variable, type) and issubclass(variable, AdapterService) and variable != AdapterService:
-                    adapters_list.append((module_name[:-len('_service')], variable))
+            module = importlib.import_module(f'services.{type_name}.{module_name}')
+            variable = getattr(module, ' '.join(module_name.split('_')).title().replace(' ', ''))
+            not_internal = True
+            for service in self.axonius_services:
+                if isinstance(service, variable):
+                    not_internal = False
                     break
-        return adapters_list
+            if not_internal:
+                return_list.append((module_name[:-len('_service')], variable))
+        return return_list
+
+    def get_all_plugins(self):
+        return self._get_all_docker_services('plugins', plugins)
+
+    def get_all_adapters(self):
+        return self._get_all_docker_services('adapters', adapters)
 
     def pull_base_image(self, repull=False):
         base_image = 'axonius/axonius-base-image'
@@ -280,8 +251,7 @@ class AxoniusService(object):
                 return
         runner = ParallelRunner()
         runner.append_single('axonius-libs', ['docker', 'build', '.', '-t', image_name],
-                             cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
-                                                              'axonius-libs')))
+                             cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs')))
         assert runner.wait_for_all() == 0
 
     def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, hard=False, async=True):

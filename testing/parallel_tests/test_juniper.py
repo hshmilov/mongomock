@@ -11,10 +11,6 @@ class TestJuniperAdapter(AdapterTestBase):
         return JuniperService()
 
     @property
-    def adapter_name(self):
-        return 'juniper_adapter'
-
-    @property
     def some_client_id(self):
         return f"{client_details['username']}@{client_details['host']}"
 

@@ -6,8 +6,8 @@ from axonius.devices.device_adapter import DeviceAdapter, MAC_FIELD
 from axonius.utils.files import get_local_config_file
 from puppet_adapter.connection import PuppetConnection
 from puppet_adapter.exceptions import PuppetException
-from axonius.fields import Field, JsonStringFormat, ListField
-from axonius.parsing_utils import parse_date
+from axonius.fields import Field
+from axonius.utils.parsing import parse_date
 
 
 # TODO ofir: Change the return values protocol

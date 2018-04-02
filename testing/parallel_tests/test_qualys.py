@@ -9,10 +9,6 @@ class TestQualysAdapter(AdapterTestBase):
         return QualysService()
 
     @property
-    def adapter_name(self):
-        return 'qualys_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Qualys_Domain']
 

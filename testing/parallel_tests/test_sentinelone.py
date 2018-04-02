@@ -1,4 +1,4 @@
-from services.adapters.sentinelone_service import SentinelOneService, sentinelone_fixture
+from services.adapters.sentinelone_service import SentineloneService, sentinelone_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_sentinelone_credentials import *
 
@@ -6,11 +6,7 @@ from test_credentials.test_sentinelone_credentials import *
 class TestSentinelOneAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return SentinelOneService()
-
-    @property
-    def adapter_name(self):
-        return 'sentinelone_adapter'
+        return SentineloneService()
 
     @property
     def some_client_id(self):

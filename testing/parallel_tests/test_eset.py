@@ -10,10 +10,6 @@ class TestEsetAdapter(AdapterTestBase):
         return EsetService()
 
     @property
-    def adapter_name(self):
-        return 'eset_adapter'
-
-    @property
     def some_client_id(self):
         return ':'.join([eset_details['host'], eset_details['port']])
 

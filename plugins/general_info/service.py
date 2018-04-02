@@ -8,7 +8,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.mixins.triggerable import Triggerable
-from axonius.parsing_utils import get_exception_string
+from axonius.utils.parsing import get_exception_string
 from axonius.utils.files import get_local_config_file
 from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares

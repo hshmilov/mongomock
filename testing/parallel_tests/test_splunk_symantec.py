@@ -11,10 +11,6 @@ class TestSplunkSymantecAdapter(AdapterTestBase):
         return SplunkSymantecService()
 
     @property
-    def adapter_name(self):
-        return 'splunk_symantec_adapter'
-
-    @property
     def some_client_id(self):
         return '{0}:{1}'.format(splunk_details['host'], splunk_details['port'])
 

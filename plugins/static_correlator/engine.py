@@ -1,7 +1,7 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.parsing_utils import get_hostname, is_different_plugin, compare_hostname, is_from_ad, get_normalized_mac, \
+from axonius.utils.parsing import get_hostname, is_different_plugin, compare_hostname, is_from_ad, get_normalized_mac, \
     ips_do_not_contradict, compare_macs, get_normalized_ip, compare_device_normalized_hostname, \
     normalize_adapter_devices
 from axonius.correlator_base import has_mac, has_hostname

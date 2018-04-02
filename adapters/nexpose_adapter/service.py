@@ -7,7 +7,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.parsing_utils import normalize_adapter_device, is_different_plugin, compare_ips, macs_do_not_contradict, \
+from axonius.utils.parsing import normalize_adapter_device, is_different_plugin, compare_ips, macs_do_not_contradict, \
     hostnames_do_not_contradict, and_function, or_function
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
 from axonius.adapter_base import AdapterProperty

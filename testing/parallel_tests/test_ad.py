@@ -8,9 +8,9 @@ import time
 
 # These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
-from services.dns_conflicts_service import DnsConflictsService, dns_conflicts_fixture
-from services.general_info_service import general_info_fixture
-from services.execution_service import execution_fixture
+from services.plugins.dns_conflicts_service import dns_conflicts_fixture
+from services.plugins.general_info_service import general_info_fixture
+from services.plugins.execution_service import execution_fixture
 
 CLIENT_ID_1_ADMIN_SID = "S-1-5-21-4050441107-50035988-2732102988-500"
 CLIENT_ID_1_ADMIN_CAPTION = "Administrator@TestDomain.test"
@@ -20,10 +20,6 @@ class TestAdAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
         return AdService()
-
-    @property
-    def adapter_name(self):
-        return 'ad_adapter'
 
     @property
     def some_client_id(self):
@@ -130,7 +126,7 @@ class TestAdAdapter(AdapterTestBase):
                                                                   {"type": "query", "args": [
                                                                       "select SID from Win32_UserAccount"]}
                                                               ]},
-                                                              adapters_to_whitelist=["ad_adapter"])
+                                                              adapters_to_whitelist=["active_directory_adapter"])
 
         def check_execute_wmi_results():
             # Get the first action from the action list ([0])
@@ -162,7 +158,7 @@ class TestAdAdapter(AdapterTestBase):
                                                                   r"dir c:\windows\system32\drivers\etc",
                                                                   r"dir c:\windows\system32\*.exe"
                                                               ]}},
-                                                              adapters_to_whitelist=["ad_adapter"])
+                                                              adapters_to_whitelist=["active_directory_adapter"])
 
         def check_execute_shell_results():
             action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
@@ -192,7 +188,7 @@ class TestAdAdapter(AdapterTestBase):
                                                                   "files_path": [file1_name, file2_name],
                                                                   "files_content": ["abcd", "efgh"]
                                                               },
-                                                              adapters_to_whitelist=["ad_adapter"])
+                                                              adapters_to_whitelist=["active_directory_adapter"])
 
         def check_put_files_results():
             action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
@@ -210,7 +206,7 @@ class TestAdAdapter(AdapterTestBase):
                                                               {
                                                                   "files_path": [file1_name, file2_name]
                                                               },
-                                                              adapters_to_whitelist=["ad_adapter"])
+                                                              adapters_to_whitelist=["active_directory_adapter"])
 
         def check_get_files_results():
             action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
@@ -228,7 +224,7 @@ class TestAdAdapter(AdapterTestBase):
                                                               {
                                                                   "files_path": [file1_name, file2_name]
                                                               },
-                                                              adapters_to_whitelist=["ad_adapter"])
+                                                              adapters_to_whitelist=["active_directory_adapter"])
 
         def check_delete_files_results():
             action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
@@ -247,7 +243,7 @@ class TestAdAdapter(AdapterTestBase):
                                                               {
                                                                   "files_path": [file1_name, file2_name]
                                                               },
-                                                              adapters_to_whitelist=["ad_adapter"])
+                                                              adapters_to_whitelist=["active_directory_adapter"])
 
         def check_get_files_after_delete_results():
             action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]

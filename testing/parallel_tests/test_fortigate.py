@@ -10,10 +10,6 @@ class TestFortigateAdapter(AdapterTestBase):
         return FortigateService()
 
     @property
-    def adapter_name(self):
-        return 'fortigate_adapter'
-
-    @property
     def some_client_id(self):
         return ':'.join([fortigate_details['host'], fortigate_details['port']])
 

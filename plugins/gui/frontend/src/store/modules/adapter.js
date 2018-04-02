@@ -11,7 +11,7 @@ export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
 export const REMOVE_SERVER = 'REMOVE_SERVER'
 
 export const adapterStaticData = {
-	'ad_adapter': {
+	'active_directory_adapter': {
 		name: 'Active Directory',
 		description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticate and authorizes all users and computers.'
 	},

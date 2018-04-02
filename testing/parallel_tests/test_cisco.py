@@ -10,10 +10,6 @@ class TestCiscoAdapter(AdapterTestBase):
         return CiscoService()
 
     @property
-    def adapter_name(self):
-        return 'cisco_adapter'
-
-    @property
     def some_client_id(self):
         return cisco_creds['host']
 

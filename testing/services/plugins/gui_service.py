@@ -17,8 +17,7 @@ class GuiService(PluginService):
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         if os.path.isdir(local_npm) and os.path.isdir(local_dist):
             return super().volumes_override
-        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'plugins',
-                                            'axonius-libs', 'src', 'libs'))
+        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
         return [f'{libs}:/home/axonius/libs:ro']
 
     def get_dockerfile(self, mode=''):

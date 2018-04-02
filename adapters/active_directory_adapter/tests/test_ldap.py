@@ -2,13 +2,11 @@
 import json
 import subprocess
 import time
-import logging
 import pytest
 import os
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState
 from testing.test_credentials.test_ad_credentials import ad_client1_details
-from axonius.parsing_utils import ad_integer8_to_timedelta
-from pprint import pprint
+from axonius.utils.parsing import ad_integer8_to_timedelta
 from datetime import timedelta
 
 DOMAIN = ad_client1_details["domain_name"]

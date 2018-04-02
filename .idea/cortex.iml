@@ -7,7 +7,7 @@
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk_symantec/external" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/devops" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/plugins" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/plugins/axonius-libs/src/libs/axonius-py" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/axonius-libs/src/libs/axonius-py" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/testing" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk_symantec_adapter/external" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk_nexpose_adapter/external" isTestSource="false" />

@@ -22,10 +22,6 @@ class PluginConfig(object):
         return self._config['DEFAULT']['version']
 
     @property
-    def name(self):
-        return self._config['DEFAULT']['name']
-
-    @property
     def core_address(self):
         return self._config['DEBUG']['core_address']
 

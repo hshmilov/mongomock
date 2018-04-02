@@ -1,7 +1,7 @@
 """
 Just calls the regular logger but adds a prefix before.
 """
-from axonius.parsing_utils import get_exception_string
+from axonius.utils.parsing import get_exception_string
 from datetime import datetime
 
 

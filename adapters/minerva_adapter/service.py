@@ -8,7 +8,7 @@ from axonius.fields import Field
 
 from minerva_adapter.connection import MinervaConnection
 from minerva_adapter.exceptions import MinervaException
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 class MinervaAdapter(AdapterBase):

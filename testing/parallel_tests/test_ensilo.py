@@ -11,10 +11,6 @@ class TestEnsiloAdapter(AdapterTestBase):
         return EnsiloService()
 
     @property
-    def adapter_name(self):
-        return 'ensilo_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Ensilo_Domain']
 

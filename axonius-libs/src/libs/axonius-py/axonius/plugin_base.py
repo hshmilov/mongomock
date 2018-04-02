@@ -22,8 +22,8 @@ import functools
 from cryptography.fernet import Fernet
 
 from axonius.consts.adapter_consts import IGNORE_DEVICE
-from axonius.threading_utils import run_in_executor_helper
-from axonius.parsing_utils import get_exception_string
+from axonius.utils.threading import run_in_executor_helper
+from axonius.utils.parsing import get_exception_string
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
 from bson import json_util
@@ -35,7 +35,7 @@ from apscheduler.executors.pool import ThreadPoolExecutor
 from retrying import retry
 from pathlib import Path
 from promise import Promise
-from typing import Iterable, Tuple
+from typing import Iterable
 
 import axonius.entities
 from axonius import plugin_exceptions
@@ -232,7 +232,7 @@ class PluginBase(Feature):
 
         self.version = self.config['DEFAULT']['version']
         self.lib_version = self.version  # no meaning to axonius-libs right now, when we are in one repo.
-        self.plugin_name = self.config['DEFAULT']['name']
+        self.plugin_name = os.path.basename(os.path.dirname(self.config_file_path))
         self.plugin_unique_name = None
         self.api_key = None
 

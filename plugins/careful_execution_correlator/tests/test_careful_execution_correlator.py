@@ -53,8 +53,8 @@ def test_no_pass():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -69,8 +69,8 @@ def test_no_pass():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_2",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_2",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -85,8 +85,8 @@ def test_no_pass():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_2",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_2",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -101,8 +101,8 @@ def test_no_pass():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_2",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_2",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -123,8 +123,8 @@ def test_no_pass_different_plugin():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -175,8 +175,8 @@ def test_network_error():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -197,8 +197,8 @@ def test_network_error():
         "tags": [],
         "adapters": [
             {
-                "plugin_name": "ad_adapter",
-                "plugin_unique_name": "ad_adapter_2",
+                "plugin_name": "active_directory_adapter",
+                "plugin_unique_name": "active_directory_adapter_2",
                 "data": {
                     "id": "ad1",
                     "network_interfaces": [

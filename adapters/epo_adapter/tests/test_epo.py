@@ -2,7 +2,7 @@ from epo_adapter import service
 import pytest
 
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.parsing_utils import figure_out_os
+from axonius.utils.parsing import figure_out_os
 from axonius.utils.mongo_escaping import escape_dict
 
 list_tables = {

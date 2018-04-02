@@ -10,10 +10,6 @@ class TestPuppetAdapter(AdapterTestBase):
         return PuppetService()
 
     @property
-    def adapter_name(self):
-        return 'puppet_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['puppet_server_name']
 

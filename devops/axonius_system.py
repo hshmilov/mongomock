@@ -9,7 +9,7 @@ try:
     import axonius
 except (ModuleNotFoundError, ImportError):
     # if not in path...
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'plugins', 'axonius-libs',
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'axonius-libs',
                                                  'src', 'libs', 'axonius-py')))
 
 

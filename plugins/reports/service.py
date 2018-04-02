@@ -15,7 +15,7 @@ from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_N
 from axonius.consts import report_consts
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
-from axonius.parsing_utils import parse_filter
+from axonius.utils.parsing import parse_filter
 
 
 class ReportsService(PluginBase, Triggerable):

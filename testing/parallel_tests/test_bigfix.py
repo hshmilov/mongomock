@@ -11,10 +11,6 @@ class TestBigfixAdapter(AdapterTestBase):
         return BigfixService()
 
     @property
-    def adapter_name(self):
-        return 'bigfix_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Bigfix_Domain']
 

@@ -195,22 +195,22 @@ for i in range(1, ad_esx_splunk_num):
     print(loop_count)
     loop_count += 1
     g_general = generate_general()
-    g_general['adapters']['ad_adapter'] = generate_adapter('ad_adapter',
-                                                           g_general['accurate_for_datetime'],
-                                                           "WIN-0HI4F5QHV2T",
-                                                           os_list=os_list)
+    g_general['adapters']['active_directory_adapter'] = generate_adapter('active_directory_adapter',
+                                                                         g_general['accurate_for_datetime'],
+                                                                         "WIN-0HI4F5QHV2T",
+                                                                         os_list=os_list)
 
     g_general['adapters']['esx_adapter'] = generate_adapter('esx_adapter',
                                                             g_general['accurate_for_datetime'],
                                                             "esx_main_manage",
                                                             os_list=os_list,
-                                                            adapter_before=g_general['adapters']['ad_adapter'])
+                                                            adapter_before=g_general['adapters']['active_directory_adapter'])
 
     g_general['adapters']['splunk_adapter'] = generate_adapter('splunk_adapter',
                                                                g_general['accurate_for_datetime'],
                                                                "splunk_admin",
                                                                os_list=os_list,
-                                                               adapter_before=g_general['adapters']['ad_adapter'],
+                                                               adapter_before=g_general['adapters']['active_directory_adapter'],
                                                                reporter='active_directory')
 
     connection['aggregator_plugin']['devices_db_2'].insert_one(g_general)

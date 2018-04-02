@@ -14,10 +14,6 @@ class TestQcoreAdapter(AdapterTestBase):
         return QcoreService()
 
     @property
-    def adapter_name(self):
-        return 'qcore_adapter'
-
-    @property
     def some_client_id(self):
         return "1"
 

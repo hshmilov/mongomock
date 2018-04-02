@@ -10,7 +10,7 @@ from promise import Promise
 
 from axonius.plugin_base import add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-from axonius.threading_utils import run_in_executor_helper
+from axonius.utils.threading import run_in_executor_helper
 from axonius.mixins.feature import Feature
 
 

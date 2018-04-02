@@ -11,10 +11,6 @@ class TestMinervaAdapter(AdapterTestBase):
         return MinervaService()
 
     @property
-    def adapter_name(self):
-        return 'minerva_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Minerva_Domain']
 

@@ -68,7 +68,7 @@ class ExecutionService(PluginBase):
 
         :param str device_id: The Axon id of the device we want to run code on
         :param list adapters_whitelist: a list of adapters whitelist, which are the only one we can execute code from.
-        e.g., ["ad_adapter", "esx_adapter"]. If None, there is no whitelist.
+        e.g., ["active_directory_adapter", "esx_adapter"]. If None, there is no whitelist.
 
         :return list of tuples: A list of tuple from kind (<adapter_unique_name>, <device_raw_data>). The list is sorted
                              In a descending order of the best adapters to run code on. The device_raw_data is the raw
@@ -274,7 +274,8 @@ class ExecutionService(PluginBase):
         :param str action_id: The action id of this action thread
         :param str accumulated_error: since this function can be called numerous times, we store here the accumulated
                                       error for each time called.
-        :param list adapters_whitelist: a whitelist of adapters from which we can execute code. e.g. ["ad_adapter"].
+        :param list adapters_whitelist: a whitelist of adapters from which we can execute code.
+               e.g. ["active_directory_adapter"].
         """
 
         try:

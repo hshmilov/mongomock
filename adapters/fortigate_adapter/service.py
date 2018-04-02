@@ -4,7 +4,7 @@ import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException, GetDevicesError
-from axonius.parsing_utils import format_mac
+from axonius.utils.parsing import format_mac
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from fortigate_adapter import consts

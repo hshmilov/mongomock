@@ -15,10 +15,10 @@ import uuid
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.parsing_utils import get_entity_id_for_plugin_name
+from axonius.utils.parsing import get_entity_id_for_plugin_name
 from axonius.mixins.triggerable import Triggerable
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
-from axonius.threading_utils import LazyMultiLocker
+from axonius.utils.threading import LazyMultiLocker
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
 from axonius.devices import deep_merge_only_dict

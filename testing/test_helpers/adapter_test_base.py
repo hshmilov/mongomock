@@ -22,7 +22,7 @@ class AdapterTestBase(object):
 
     @property
     def adapter_name(self):
-        raise NotImplementedError
+        return self.adapter_service.plugin_name
 
     @property
     def some_client_id(self):

@@ -11,10 +11,6 @@ class TestMobileironAdapter(AdapterTestBase):
         return MobileironService()
 
     @property
-    def adapter_name(self):
-        return 'mobileiron_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['Mobileiron_Domain']
 

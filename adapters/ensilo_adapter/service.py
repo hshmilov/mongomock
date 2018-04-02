@@ -8,8 +8,7 @@ from axonius.fields import Field
 
 from ensilo_adapter.connection import EnsiloConnection
 from ensilo_adapter.exceptions import EnsiloException
-import json
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 class EnsiloAdapter(AdapterBase):

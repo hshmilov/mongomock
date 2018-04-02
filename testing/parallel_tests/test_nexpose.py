@@ -10,10 +10,6 @@ class TestNexposeAdapter(AdapterTestBase):
         return NexposeService()
 
     @property
-    def adapter_name(self):
-        return 'nexpose_adapter'
-
-    @property
     def some_client_id(self):
         return nexpose_details['host']
 

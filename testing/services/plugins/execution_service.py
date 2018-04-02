@@ -16,7 +16,7 @@ class ExecutionService(PluginService):
         :param axon_id: the axon id of the device.
         :param data: the data. usually a json object with details about the action.
         :param adapters_to_whitelist: a list of strings, representing adapters which we want to run code from.
-                e.g., ["ad_adapter"].
+                e.g., ["active_directory_adapter"].
         :return: action_id.
         """
 

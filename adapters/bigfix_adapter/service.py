@@ -8,10 +8,9 @@ from axonius.fields import Field
 
 from bigfix_adapter.connection import BigfixConnection
 from bigfix_adapter.exceptions import BigfixException
-import json
 import xml.etree.ElementTree as ET
 
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 class BigfixAdapter(AdapterBase):

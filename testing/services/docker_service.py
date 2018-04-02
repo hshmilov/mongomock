@@ -70,7 +70,7 @@ RUN ln -s /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcryp
     def get_main_file(self):
         return f"""
 from {self.package_name}.service import {self.service_class_name} as CurrentService
-from axonius.server_utils import init_wsgi
+from axonius.utils.server import init_wsgi
 
 if __name__ == '__main__':
     # Initialize

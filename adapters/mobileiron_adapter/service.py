@@ -8,7 +8,7 @@ from axonius.fields import Field
 
 from mobileiron_adapter.connection import MobileironConnection
 from mobileiron_adapter.exceptions import MobileironException
-from axonius.parsing_utils import parse_date
+from axonius.utils.parsing import parse_date
 
 
 class MobileironAdapter(AdapterBase):

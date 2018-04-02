@@ -386,7 +386,7 @@ def is_different_plugin(adapter_device1, adapter_device2):
 
 
 def is_from_ad(adapter_device):
-    return adapter_device['plugin_name'] == 'ad_adapter'
+    return adapter_device['plugin_name'] == 'active_directory_adapter'
 
 
 def get_os_type(adapter_device):

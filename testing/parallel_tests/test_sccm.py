@@ -11,10 +11,6 @@ class TestSccmAdapter(AdapterTestBase):
         return SccmService()
 
     @property
-    def adapter_name(self):
-        return 'sccm_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['server']
 

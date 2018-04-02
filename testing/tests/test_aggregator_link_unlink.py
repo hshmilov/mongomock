@@ -19,7 +19,8 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
 
     devices_response = axonius_fixture.get_devices_with_condition({})
 
-    first_ad_device = next((d for d in devices_response if d['adapters'][0]['plugin_name'] == 'ad_adapter'), None)
+    first_ad_device = next((d for d in devices_response
+                            if d['adapters'][0]['plugin_name'] == 'active_directory_adapter'), None)
     assert first_ad_device is not None, "No AD device found"
 
     first_esx_device = next((d for d in devices_response if d['adapters'][0]['plugin_name'] == 'esx_adapter'), None)

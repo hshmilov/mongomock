@@ -9,10 +9,6 @@ class TestDesktopCentralAdapter(AdapterTestBase):
         return DesktopCentralService()
 
     @property
-    def adapter_name(self):
-        return 'desktop_central_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['DesktopCentral_Domain']
 

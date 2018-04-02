@@ -8,7 +8,7 @@ from funcy import pairwise
 
 from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.parsing_utils import pair_comparator, parameter_function
+from axonius.utils.parsing import pair_comparator, parameter_function
 
 adapter_device = NewType('adapter_device', dict)
 device_pair = NewType('DevicePair', Tuple)

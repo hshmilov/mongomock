@@ -10,10 +10,6 @@ class TestAwsAdapter(AdapterTestBase):
         return AwsService()
 
     @property
-    def adapter_name(self):
-        return 'aws_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['aws_access_key_id']
 

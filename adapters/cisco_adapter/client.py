@@ -3,7 +3,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from netmiko import ConnectHandler
 
 from axonius.adapter_exceptions import AdapterException
-from axonius.parsing_utils import format_mac
+from axonius.utils.parsing import format_mac
 
 
 class CiscoClient(object):

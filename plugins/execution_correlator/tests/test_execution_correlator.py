@@ -91,8 +91,8 @@ def test_no_correlations():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -129,10 +129,10 @@ def test_no_correlations():
         esx_id = UNAVAILABLE_CMD_OUTPUT
         if associated_adapter['plugin_name'] == 'esx_adapter':
             esx_id = 'esx2'
-        if associated_adapter['plugin_name'] == 'ad_adapter':
+        if associated_adapter['plugin_name'] == 'active_directory_adapter':
             ad_id = 'ad1'
 
-        executor_result = join_with_order({'ad_adapter_1': ad_id, 'esx_adapter_1': esx_id}, shell_cmd)
+        executor_result = join_with_order({'active_directory_adapter_1': ad_id, 'esx_adapter_1': esx_id}, shell_cmd)
         print(f"smart_executor {executor_result}")
 
         return Promise.resolve({
@@ -159,8 +159,8 @@ def test_simple_logic_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -175,8 +175,8 @@ def test_simple_logic_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_2",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_2",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -207,8 +207,8 @@ def test_simple_logic_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_2",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_2",
                     "data": {
                         "os": {
                             "type": "Windows"
@@ -226,8 +226,8 @@ def test_simple_logic_correlation():
     assert isinstance(result, CorrelationResult)
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
-    assert 'ad_adapter_1' == first_name
-    assert 'ad_adapter_2' == second_name
+    assert 'active_directory_adapter_1' == first_name
+    assert 'active_directory_adapter_2' == second_name
     assert first_id == second_id
     print("Now, with smarter executor:\n\n")
 
@@ -237,12 +237,13 @@ def test_simple_logic_correlation():
         ad = UNAVAILABLE_CMD_OUTPUT
         if associated_adapter['plugin_name'] == 'esx_adapter':
             esx = associated_adapter['data']['id']
-        if associated_adapter['plugin_name'] == 'ad_adapter':
+        if associated_adapter['plugin_name'] == 'active_directory_adapter':
             ad = associated_adapter['data']['id']
 
         return Promise.resolve({
             'output': {
-                'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_2': esx, 'ad_adapter_2': ad}, shell_cmd),
+                'product': join_with_order({'active_directory_adapter_1': ad, 'esx_adapter_2': esx,
+                                            'active_directory_adapter_2': ad}, shell_cmd),
                 'result': 'Success'
             },
             'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
@@ -256,8 +257,8 @@ def test_simple_logic_correlation():
     assert isinstance(result, CorrelationResult)
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
-    assert 'ad_adapter_1' == first_name
-    assert 'ad_adapter_2' == second_name
+    assert 'active_directory_adapter_1' == first_name
+    assert 'active_directory_adapter_2' == second_name
     assert first_id == second_id
 
 
@@ -272,8 +273,8 @@ def test_execution_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -310,11 +311,11 @@ def test_execution_correlation():
         if associated_adapter['plugin_name'] == 'esx_adapter':
             esx = associated_adapter['data']['id']
             ad = 'ad1'
-        if associated_adapter['plugin_name'] == 'ad_adapter':
+        if associated_adapter['plugin_name'] == 'active_directory_adapter':
             ad = associated_adapter['data']['id']
 
         return Promise.resolve({
-            'output': {'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
+            'output': {'product': join_with_order({'active_directory_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
                        'result': 'Success'
                        },
             'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
@@ -329,7 +330,7 @@ def test_execution_correlation():
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'esx_adapter_1' == first_name
-    assert 'ad_adapter_1' == second_name
+    assert 'active_directory_adapter_1' == second_name
     assert first_id == 'esx1'
     assert second_id == 'ad1'
 
@@ -345,8 +346,8 @@ def test_execution_nonexistent_device_nocorrelation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -383,11 +384,11 @@ def test_execution_nonexistent_device_nocorrelation():
         if associated_adapter['plugin_name'] == 'esx_adapter':
             esx = associated_adapter['data']['id']
             ad = 'ad5'
-        if associated_adapter['plugin_name'] == 'ad_adapter':
+        if associated_adapter['plugin_name'] == 'active_directory_adapter':
             ad = associated_adapter['data']['id']
 
         return Promise.resolve({
-            'output': {'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
+            'output': {'product': join_with_order({'active_directory_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
                        'result': 'Success'
                        },
             'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
@@ -410,8 +411,8 @@ def test_execution_nonexistent_device_deduction_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -485,9 +486,9 @@ def test_execution_nonexistent_device_deduction_correlation():
     assert result.reason == "NonexistentDeduction"
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
-    assert ('esx_adapter_1' == first_name and 'ad_adapter_1' == second_name and
+    assert ('esx_adapter_1' == first_name and 'active_directory_adapter_1' == second_name and
             first_id == 'esx1' and second_id == 'ad1') or \
-           ('ad_adapter_1' == first_name and 'esx_adapter_1' == second_name and
+           ('active_directory_adapter_1' == first_name and 'esx_adapter_1' == second_name and
             first_id == 'ad1' and second_id == 'esx1')
 
 
@@ -502,8 +503,8 @@ def test_partial_cmds_execution_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -551,7 +552,7 @@ def test_partial_cmds_execution_correlation():
 
         response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
         response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
-        if first_adapter['plugin_name'] == 'ad_adapter':
+        if first_adapter['plugin_name'] == 'active_directory_adapter':
             response['aws_adapter_1'] = 'aws1'
 
         output = join_with_order(response, shell_cmd)
@@ -581,7 +582,7 @@ def test_partial_cmds_execution_correlation():
     assert isinstance(result, CorrelationResult)
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
-    assert 'ad_adapter_1' == first_name
+    assert 'active_directory_adapter_1' == first_name
     assert 'aws_adapter_1' == second_name
     assert first_id == 'ad1'
     assert second_id == 'aws1'
@@ -598,8 +599,8 @@ def test_multi_adapter_execution_correlation():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -649,7 +650,7 @@ def test_multi_adapter_execution_correlation():
         response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
         response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
         if first_adapter['plugin_name'] == 'aws_adapter':
-            response['ad_adapter_1'] = 'ad1'
+            response['active_directory_adapter_1'] = 'ad1'
 
         return Promise.resolve({
             'output': {'product': join_with_order(response, shell_cmd),
@@ -666,7 +667,7 @@ def test_multi_adapter_execution_correlation():
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert 'aws_adapter_1' == first_name
-    assert 'ad_adapter_1' == second_name
+    assert 'active_directory_adapter_1' == second_name
     assert first_id == 'aws1'
     assert second_id == 'ad1'
 
@@ -678,8 +679,8 @@ def test_find_just_contradictions_no_contradictions():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -706,8 +707,8 @@ def test_find_just_contradictions_no_contradictions():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad2",
                         "os": {
@@ -744,11 +745,11 @@ def test_find_just_contradictions_no_contradictions():
     assert len(list(_find_contradictions(devices,
                                          {
                                              0: ('responder', {
-                                                 'ad_adapter': 'ad1',
+                                                 'active_directory_adapter': 'ad1',
                                                  'esx_adapter': 'esx1',
                                              }),
                                              1: ('responder', {
-                                                 'ad_adapter': 'ad2',
+                                                 'active_directory_adapter': 'ad2',
                                                  'esx_adapter': 'esx2'
                                              })
                                          }
@@ -762,8 +763,8 @@ def test_find_just_contradictions_with_contradictions():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -788,7 +789,7 @@ def test_find_just_contradictions_with_contradictions():
     ]
     execution_results = {
         0: ('responder', {
-            'ad_adapter': 'ad3',
+            'active_directory_adapter': 'ad3',
         })
     }
     contradictions_found = list(_find_contradictions(devices, execution_results))
@@ -811,8 +812,8 @@ def test_execution_correlation_contradiction():
             "tags": [],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -856,7 +857,7 @@ def test_execution_correlation_contradiction():
         response = {adapter[PLUGIN_UNIQUE_NAME]: UNAVAILABLE_CMD_OUTPUT for adapter in all_adapter_devices}
         response.update({adapter[PLUGIN_UNIQUE_NAME]: adapter['data']['id'] for adapter in associated_adapters})
 
-        response['ad_adapter_1'] = 'ad2'
+        response['active_directory_adapter_1'] = 'ad2'
         print(f"Response from test_execution_correlation_contradiction executor: {response}")
 
         return Promise.resolve({
@@ -872,7 +873,7 @@ def test_execution_correlation_contradiction():
     result = results[0]
     assert isinstance(result, WarningResult)
     assert result.notification_type == 'CORRELATION_CONTRADICTION'
-    assert result.content == ['axon1', 'ad_adapter', 'ad1', 'ad2']
+    assert result.content == ['axon1', 'active_directory_adapter', 'ad1', 'ad2']
 
 
 def test_execution_strongly_unbound_with():
@@ -885,8 +886,8 @@ def test_execution_strongly_unbound_with():
             }],
             "adapters": [
                 {
-                    "plugin_name": "ad_adapter",
-                    "plugin_unique_name": "ad_adapter_1",
+                    "plugin_name": "active_directory_adapter",
+                    "plugin_unique_name": "active_directory_adapter_1",
                     "data": {
                         "hostname": "ad1",
                         "os": {
@@ -901,7 +902,7 @@ def test_execution_strongly_unbound_with():
             "internal_axon_id": "axon2",
             "tags": [{
                 "name": "strongly_unbound_with",
-                "data": [['ad_adapter', 'ad1']],
+                "data": [['active_directory_adapter', 'ad1']],
             }],
             "adapters": [
                 {
@@ -926,11 +927,11 @@ def test_execution_strongly_unbound_with():
         if associated_adapter['plugin_name'] == 'esx_adapter':
             esx = associated_adapter['data']['id']
             ad = 'ad1'
-        if associated_adapter['plugin_name'] == 'ad_adapter':
+        if associated_adapter['plugin_name'] == 'active_directory_adapter':
             ad = associated_adapter['data']['id']
 
         return Promise.resolve({
-            'output': {'product': join_with_order({'ad_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
+            'output': {'product': join_with_order({'active_directory_adapter_1': ad, 'esx_adapter_1': esx}, shell_cmd),
                        'result': "Success"},
             'responder': associated_adapter[PLUGIN_UNIQUE_NAME]
         })

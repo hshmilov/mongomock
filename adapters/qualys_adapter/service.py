@@ -5,7 +5,7 @@ from itertools import groupby
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.parsing_utils import format_mac, parse_date, is_valid_ip
+from axonius.utils.parsing import parse_date
 from axonius.utils.files import get_local_config_file
 from qualys_adapter.exceptions import QualysException
 from qualys_adapter.connection import QualysConnection

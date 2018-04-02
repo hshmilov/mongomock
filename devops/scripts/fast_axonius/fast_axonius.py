@@ -19,6 +19,7 @@ def fast_axonius():
     from test_helpers.adapter_test_base import AdapterTestBase
     from services.axonius_service import get_service
     services = {}
+    service_names = {}
 
     axonius_system = get_service()
     for ad_name, variable in axonius_system.get_all_adapters():
@@ -26,6 +27,7 @@ def fast_axonius():
         service = variable()
         service.take_process_ownership()
         services[ad_name] = service
+        service_names[service.plugin_name[:-len('_adapter')]] = ad_name
 
     plugins = {}
     for plugin in axonius_system.axonius_services:
@@ -54,34 +56,37 @@ def fast_axonius():
                 name = test.adapter_name
                 assert name.endswith('_adapter')
                 name = name[:-len('_adapter')]
-                if name not in services:
+                if name not in service_names:
                     print(f'missing service for test {variable_name} in module {module_name}')
-                services[name].test = test
+                services[service_names[name]].test = test
 
                 # Create a set_client with credentials function for that adapter's name
                 def get_funcs(name):
+                    current = services[service_names[name]]
+
                     def set_client():
-                        if not services[name].get_is_container_up():
+                        if not current.get_is_container_up():
                             print(f'Container {name} not running')
                             return
-                        if services[name].clients():
+                        if current.clients():
                             print('A Client Already exists')
-                        if isinstance(services[name].test.some_client_details, list):
-                            for client in services[name].test.some_client_details:
-                                services[name].add_client(client[0])
+                        if isinstance(current.test.some_client_details, list):
+                            for client in current.test.some_client_details:
+                                current.add_client(client[0])
                         else:
-                            services[name].add_client(services[name].test.some_client_details)
+                            current.add_client(current.test.some_client_details)
 
                     def refresh_devices():
-                        if not services[name].get_is_container_up():
+                        if not current.get_is_container_up():
                             print(f'Container {name} not running')
                             return
-                        if not services[name].clients():
+                        if not current.clients():
                             print('No clients exists')
-                        axonius_system.aggregator.query_devices(services[name].unique_name)
+                        axonius_system.aggregator.query_devices(current.unique_name)
                     return set_client, refresh_devices
 
-                services[name].set_client, services[name].refresh_devices = get_funcs(name)
+                services[service_names[name]].set_client, services[service_names[name]].\
+                    refresh_devices = get_funcs(name)
 
     class AxTests(object):
         def __init__(self, services=services, plugins=plugins):
