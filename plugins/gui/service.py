@@ -601,15 +601,10 @@ class GuiService(PluginBase):
         if client_to_add is None:
             return return_error("Invalid client", 400)
 
-        # Encrypting needed fields
-        client_schema_items = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']['items']
-        password_formated_items = [x for x in client_schema_items if 'format' in x and x['format'] == 'password']
-        for item in password_formated_items:
-            if item['name'] in client_to_add:
-                client_to_add[item['name']] = self.encrypt_password(client_to_add[item['name']])
+        encrypted_client = self._handle_encryption(adapter_unique_name, client_to_add, db_connection, 'encrypt')
 
         # adding client to specific adapter
-        response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
+        response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=encrypted_client)
         if response.status_code != 200:
             # failed, return immediately
             return response.text, response.status_code
@@ -631,6 +626,15 @@ class GuiService(PluginBase):
             pass
         return response.text, response.status_code
 
+    def _handle_encryption(self, adapter_unique_name, client_config, db_connection, action):
+        # Encrypting needed fields
+        client_schema_items = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']['items']
+        password_formatted_items = [x for x in client_schema_items if 'format' in x and x['format'] == 'password']
+        for item in password_formatted_items:
+            if item['name'] in client_config:
+                client_config[item['name']] = getattr(self, f'{action}_password')(client_config[item['name']])
+        return client_config
+
     @paginated()
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'])
     def adapters_clients(self, adapter_unique_name, limit, skip):
@@ -643,12 +647,16 @@ class GuiService(PluginBase):
         """
         with self._get_db_connection(False) as db_connection:
             if request.method == 'GET':
-                client_collection = db_connection[adapter_unique_name]['clients']
+                adapter_clients = list(db_connection[adapter_unique_name]['clients'].find().skip(skip).limit(limit))
+
+                for client in adapter_clients:
+                    client['client_config'] = self._handle_encryption(
+                        adapter_unique_name, client['client_config'], db_connection, 'decrypt')
 
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
-                                client_collection.find().skip(skip).limit(limit)]
+                                adapter_clients]
                 })
             if request.method == 'PUT':
                 return self._query_client_for_devices(request, adapter_unique_name, db_connection)
