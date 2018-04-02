@@ -402,12 +402,12 @@ class GuiService(PluginBase):
                                    sort([(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
                 if db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]]['fields']:
-                    plugin_fields_record = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{module_name}_fields'].find_one(
-                        {'name': 'parsed'}, projection={'schema': 1})
+                    plugin_fields_record = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][
+                        f'{module_name}_fields'].find_one({'name': 'parsed'}, projection={'schema': 1})
                     if plugin_fields_record:
                         fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = \
                             guify_fields(plugin_fields_record['schema'],
-                                         name_prefix=f'adapters_data.{plugin_consts.PLUGIN_NAME}.data')
+                                         name_prefix=f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}.')
 
         return jsonify(fields)
 
@@ -663,7 +663,8 @@ class GuiService(PluginBase):
         """
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
-            return self._query_client_for_devices(request, adapter_unique_name)
+            with self._get_db_connection(False) as db_connection:
+                return self._query_client_for_devices(request, adapter_unique_name, db_connection)
         if request.method == 'DELETE':
             return '', 200
 

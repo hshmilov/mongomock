@@ -44,8 +44,14 @@ $theme-orange: #FF7D46;
 $theme-black: #1D222C;
 $theme-blue: #0076FF;
 $theme-white: #FFFFFF;
-$theme-gray-light: #F3F3F3;
-$theme-gray-dark: #727272;
+
+/* Grey Colours */
+$grey-1: #F7F7F7;
+$grey-2: #DEDEDE;
+$grey-3: #ADADAD;
+$grey-4: #727272;
+$grey-5: #4A4A4A;
+$grey-dient: linear-gradient($grey-1, $theme-white);
 
 
 /* Indicator Colours */
@@ -69,7 +75,7 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
 
 /* Mixins */
 
-@mixin triangle($direction, $size: 0.25rem, $color: $theme-gray-dark) {
+@mixin triangle($direction, $size: 0.25rem, $color: $grey-4) {
   content: '';
   display: block;
   position: absolute;

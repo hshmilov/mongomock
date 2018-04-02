@@ -23,14 +23,14 @@ export default {
 	props: ['schema', 'value', 'validator'],
 	data() {
 		return {
-			data: this.value,
+			data: null,
 			valid: true
 		}
 	},
 	watch: {
 		value(newValue, oldValue) {
 			if (newValue !== oldValue) {
-				this.data = this.value
+				this.data = newValue
 			}
 		}
 	},
@@ -61,6 +61,7 @@ export default {
 		if (this.schema.default) {
 			this.data = this.schema.default
 		}
+		this.data = this.value
 
 	}
 }

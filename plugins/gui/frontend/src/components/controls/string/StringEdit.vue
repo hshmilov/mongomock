@@ -5,26 +5,22 @@
         <!-- Date Picker -->
         <x-date-edit v-model="data" @input="input" />
     </div>
-    <div v-else-if="schema.enum">
+    <div v-else-if="enumOptions">
         <!-- Select from enum values -->
-        <select :class="{'invalid': !valid}" v-model="data" @change="input" @focusout.stop="validate">
-            <option value="" disabled hidden>VALUE...</option>
-            <template v-for="item in schema.enum">
-                <option v-if="item.name" :value="item.name">{{item.title || item.name}}</option>
-                <option v-else :value="item">{{item}}</option>
-            </template>
-        </select>
+        <x-select :options="enumOptions" v-model="data" placeholder="value..." :class="{'invalid': !valid}"
+                  @input="input" @focusout.stop="validate"/>
     </div>
 </template>
 
 <script>
 	import PrimitiveMixin from '../primitive.js'
     import xDateEdit from './DateEdit.vue'
+    import xSelect from '../../inputs/Select.vue'
 
 	export default {
 		name: 'x-string-edit',
         mixins: [PrimitiveMixin],
-        components: { xDateEdit },
+        components: { xDateEdit, xSelect },
         computed: {
             inputType() {
 				if (this.schema.format && this.schema.format === 'password') {
@@ -33,6 +29,13 @@
 					return ''
                 }
                 return 'text'
+            },
+            enumOptions() {
+            	if (!this.schema.enum) return undefined
+                return this.schema.enum.map((item) => {
+                	if (typeof item !== 'string' && item.name) return item
+                    return {name: item, title: item}
+                })
             }
         }
 	}

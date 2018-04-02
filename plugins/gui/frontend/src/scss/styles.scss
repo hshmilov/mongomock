@@ -56,7 +56,7 @@
 }
 
 .theme-fill-gray-light {
-  fill: $theme-gray-light;
+  fill: $grey-2;
 }
 
 
@@ -67,9 +67,15 @@
   margin-right: 4px;
 }
 
+.logo-text {
+  display: inline-block;
+  font-size: 14px;
+  margin-left: 4px;
+}
+
 .hint {
   font-size: 80%;
-  color: rgba($theme-gray-dark, 0.6);
+  color: rgba($grey-4, 0.6);
   display: inline-block;
   margin-left: 4px;
 }
@@ -120,12 +126,12 @@ table {
   background: $theme-white;
   thead {
     tr {
-      border-bottom: 2px dashed $theme-gray-light;
+      border-bottom: 2px dashed $grey-2;
     }
   }
   tbody {
     tr:nth-child(odd) {
-      background: rgba($theme-gray-light, 0.6);
+      background: rgba($grey-1, 0.6);
     }
   }
 }
@@ -148,16 +154,19 @@ table {
   line-height: 30px;
   padding: 4px;
   text-align: center;
-  &:hover { box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2); }
+  &:hover {
+    color: $theme-white;
+    box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
+  }
   &.light {
-    background-color: $theme-gray-light;
+    background-color: $grey-2;
     color: $theme-black;
     width: 30px;
     height: 30px;
     line-height: 24px;
     &.active {
       background-color: $theme-black;
-      color: $theme-gray-light;
+      color: $grey-2;
     }
   }
   &.right {
@@ -188,22 +197,22 @@ table {
     height: 4px;
     margin-left: 8px;
     &.up:before {
-      @include triangle('up', $color: $theme-gray-dark);
+      @include triangle('up', $color: $grey-4);
       top: -2px;
     }
     &.down:after {
-      @include triangle('down', $color: $theme-gray-dark);
+      @include triangle('down', $color: $grey-4);
       top: 4px;
     }
   }
   &:hover {
     .x-sort {
       &.down:before {
-        @include triangle('up', $color: rgba($theme-gray-dark, 0.6));
+        @include triangle('up', $color: rgba($grey-4, 0.6));
         top: -2px;
       }
       &:not(.down):not(.up):after {
-        @include triangle('down', $color: rgba($theme-gray-dark, 0.6));
+        @include triangle('down', $color: rgba($grey-4, 0.6));
         top: 4px;
       }
     }

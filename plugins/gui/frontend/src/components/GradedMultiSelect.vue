@@ -1,7 +1,7 @@
 <template>
     <triggerable-dropdown size="sm" align="right" class="graded-multi-select" :arrow="false">
-        <div slot="dropdownTrigger" class="link">{{ placeholder }}</div>
-        <template slot="dropdownContent">
+        <div slot="trigger" class="link">{{ placeholder }}</div>
+        <template slot="content">
             <nested-menu>
                 <nested-menu-item v-for="option, ind in options" v-if="option.fields" :title="option.title" :key="ind"
                                   v-on:mouseover="currentOption = option"><div/></nested-menu-item>

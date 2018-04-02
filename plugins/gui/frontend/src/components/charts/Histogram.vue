@@ -56,7 +56,7 @@
                 align-items: flex-end;
                 background-color: rgba($indicator-blue, 0.2);
                 &:hover {
-                    box-shadow: 2px 2px 12px -2px $theme-gray-dark;
+                    box-shadow: 2px 2px 12px -2px $grey-4;
                     cursor: pointer;
                 }
             }

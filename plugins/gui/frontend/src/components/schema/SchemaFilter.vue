@@ -30,6 +30,9 @@
 		watch: {
 			value (newValue) {
 				this.expressions = [...newValue]
+                if (!this.expressions.length) {
+					this.error = ''
+                }
 			},
             rebuild (newRebuild) {
 				if (newRebuild) {

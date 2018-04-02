@@ -30,14 +30,14 @@
 
 <style lang="scss">
     .menu-item {
-        color: $color-text-main;
+        color: $theme-black;
         cursor: pointer;
         padding-right: 12px;
         padding-left: 12px;
         margin: 4px 0px;
         position: relative;
         &:hover {
-            background-color: $border-color;
+            background-color: $grey-2;
         }
         &.nested {
             position: relative;
@@ -47,14 +47,10 @@
                 top: 8px;
                 right: 8px;
                 display: inline-block;
-                border-right: 1px solid $color-text-main;
-                border-top: 1px solid $color-text-main;
+                border-right: 1px solid $theme-black;
+                border-top: 1px solid $theme-black;
                 width: 8px;
                 height: 8px;
-                -webkit-transform: rotate(45deg);
-                -moz-transform: rotate(45deg);
-                -ms-transform: rotate(45deg);
-                -o-transform: rotate(45deg);
                 transform: rotate(45deg);
             }
         }

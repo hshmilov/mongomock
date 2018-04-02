@@ -15,7 +15,7 @@
 </template>
 
 <script>
-    import SearchInput from './SearchInput.vue'
+    import SearchInput from './inputs/SearchInput.vue'
     import Checkbox from './Checkbox.vue'
 
     export default {

@@ -15,7 +15,7 @@
 	import ActionBar from '../../../components/ActionBar.vue'
 	import GenericForm from '../../../components/GenericForm.vue'
 	import PaginatedTable from '../../../components/tables/PaginatedTable.vue'
-	import SearchInput from '../../../components/SearchInput.vue'
+	import SearchInput from '../../../components/inputs/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import { FETCH_SAVED_QUERIES, ARCHIVE_SAVED_QUERY } from '../../../store/modules/query'

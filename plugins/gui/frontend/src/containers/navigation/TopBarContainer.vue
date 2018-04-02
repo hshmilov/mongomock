@@ -23,12 +23,12 @@
                     <li class="nav-item">
                         <a class="nav-link">
                             <triggerable-dropdown size="lg" align="right" :arrow="false">
-                                <div slot="dropdownTrigger">
+                                <div slot="trigger">
                                     <i class="icon-bell-o"></i>
                                     <span class="badge" v-if="notification.notificationUnseen.data.count"
                                     >{{ notification.notificationUnseen.data.count }}</span>
                                 </div>
-                                <div slot="dropdownContent" class="preview-table">
+                                <div slot="content" class="preview-table">
                                     <h5>Notifications</h5>
                                     <div v-for="notification in notification.notificationUnseen.data.list"
                                          @click="navigateNotification(notification.uuid)" class="item row"
@@ -144,7 +144,7 @@
 
 <style lang="scss">
     .topbar {
-        background: $theme-gray-light;
+        background: $grey-1;
         position: relative;
         z-index: 101;
         .top-navbar {
@@ -168,7 +168,7 @@
                 transition: all ease-in 0.2s;
                 .sidebartoggler {
                     text-align: left;
-                    color: $theme-gray-dark;
+                    color: $grey-4;
                     &:hover {
                         color: $theme-orange;
                     }
@@ -250,13 +250,13 @@
         line-height: initial;
         font-size: 12px;
         .item {
-            border-bottom: 1px solid $theme-gray-dark;
+            border-bottom: 1px solid $grey-4;
             padding: 12px 12px;
             margin: 0 -12px;
             text-transform: none;
             letter-spacing: initial;
             &:first-of-type {
-                border-top: 1px solid $theme-gray-dark;
+                border-top: 1px solid $grey-4;
             }
             &:hover {
                 color: $theme-orange;

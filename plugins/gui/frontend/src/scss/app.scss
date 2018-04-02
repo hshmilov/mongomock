@@ -7,7 +7,7 @@ General
 html {
   position: relative;
   min-height: 100%;
-  background: $theme-gray-light;
+  background: $grey-1;
 }
 
 body {
@@ -28,13 +28,9 @@ a, a:hover, a:focus {
 
 a {
   color: $theme-black;
-  &:hover, &:focus {
+  &.link:hover, &.link:focus {
     color: $theme-orange;
   }
-}
-
-a.link {
-  color: $theme-black;
 }
 
 .img-responsive {
@@ -140,7 +136,6 @@ Formatting
   background-color: $color-success !important;
   border-color: $color-success !important;
   &:hover {
-    -webkit-box-shadow: 0 14px 26px -12px rgba($color-success, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-success, 0.2) !important;
     box-shadow: 0 14px 26px -12px rgba($color-success, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-success, 0.2) !important;
   }
 }
@@ -187,15 +182,12 @@ Components
   padding: 4px 12px;
   background: $color-theme-light;
   border: 1px solid $color-theme-light;
-  -webkit-transition: 0.2s ease-in;
-  -o-transition: 0.2s ease-in;
   transition: 0.2s ease-in;
   display: inline-block;
   width: 108px;
   height: 32px;
   line-height: 24px;
   &:hover {
-    -webkit-box-shadow: 0 14px 26px -12px rgba($color-theme-light, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme-light, 0.2);
     box-shadow: 0 14px 26px -12px rgba($color-theme-light, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-theme-light, 0.2);
   }
   &.btn-inverse {
@@ -220,7 +212,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
 
 .tag {
   display: inline;
-  border: 1px solid $theme-gray-light;
+  border: 1px solid $grey-4;
   border-right: 0;
   border-radius: 2px;
   padding: 0 4px;
@@ -235,8 +227,8 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
     content: '';
     position: absolute;
     transform: rotate(45deg);
-    border-right: 1px solid $theme-gray-light;
-    border-top: 1px solid $theme-gray-light;
+    border-right: 1px solid $grey-4;
+    border-top: 1px solid $grey-4;
     border-radius: 2px;
     height: 18px;
     width: 18px;
@@ -334,12 +326,10 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   top: 96%;
   width: 100%;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
-  -webkit-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
-  -moz-box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
   border-color: $border-color;
   padding: 12px;
   &.w-xl {
-    width: 720px;
+    width: 800px;
   }
   &.w-lg {
     width: 480px;

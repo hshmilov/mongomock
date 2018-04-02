@@ -4,7 +4,7 @@
             <div class="text">Consider installing {{title}} system on uncovered devices</div>
             <div :class="`mark indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
         </div>
-        <x-pie-chart :data="pieSlices" @click-slice="$emit('click-slice', $event)" :tooltip="tooltip" />
+        <x-pie-chart :data="pieSlices" @click-slice="$emit('click-slice', $event)" />
     </x-card>
 </template>
 
@@ -13,7 +13,7 @@
     import xPieChart from '../charts/Pie.vue'
 
 	export default {
-		name: 'coverage-pie',
+		name: 'coverage-card',
         components: { xCard, xPieChart },
         props: {portion: {required: true}, title: {}},
         computed: {
@@ -51,7 +51,7 @@
                 border-width: 1px;
                 border-style: solid;
                 border-radius: 12px;
-                background-color: $theme-gray-light;
+                background-color: $grey-1;
                 text-transform: uppercase;
             }
         }

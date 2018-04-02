@@ -9,8 +9,8 @@
                 <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices"/>
 
                 <triggerable-dropdown :arrow="false" align="right">
-                    <div slot="dropdownTrigger" class="link">View</div>
-                    <nested-menu slot="dropdownContent">
+                    <div slot="trigger" class="link">View</div>
+                    <nested-menu slot="content">
                         <nested-menu-item title="Save" @click="openSaveModal(confirmSaveView)" />
                         <nested-menu-item title="Load">
                             <dynamic-popover size="sm" left="-236" top="0">
@@ -108,11 +108,11 @@
 
 				return [
 					{
-						title: 'Generic', fields: this.genericFlatSchema
+						name: 'axonius', title: 'General', fields: this.genericFlatSchema
 					},
 					...Object.keys(this.specificFlatSchema).map((name) => {
 						let title = adapterStaticData[name] ? adapterStaticData[name].name : name
-						return { title, fields: this.specificFlatSchema[name] }
+						return { title, name, fields: this.specificFlatSchema[name] }
 					})
                 ]
             },

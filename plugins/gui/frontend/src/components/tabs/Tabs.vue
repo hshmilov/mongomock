@@ -40,11 +40,11 @@
 
 <style scoped lang="scss">
     .nav-item:hover > .nav-link {
-        color: $color-theme-light;
+        color: $theme-orange;
     }
     .tab-content {
-        background-color: $color-light;
-        border: 1px solid #ddd;
+        background-color: $theme-white;
+        border: 1px solid $grey-2;
         border-top: 0;
         border-bottom-right-radius: 4px;
         border-bottom-left-radius: 4px;

@@ -81,7 +81,7 @@
             fill: none;
             stroke-width: 12;
             &.pre {
-                stroke: $theme-gray-light;
+                stroke: $grey-1;
             }
             &.marker {
                 stroke: $theme-white;
@@ -96,7 +96,7 @@
             stroke: none;
             font-size: 10px;
             &.title {
-                fill: $theme-gray-dark;
+                fill: $grey-5;
                 font-size: 24px;
             }
             &.subtitle {

@@ -1,7 +1,7 @@
 <template>
     <triggerable-dropdown size="sm" align="left" class="graded-select">
-        <div slot="dropdownTrigger" class="">{{ selectedTitle? selectedTitle: placeholder }}</div>
-        <nested-menu slot="dropdownContent">
+        <div slot="trigger" class="">{{ selectedTitle? selectedTitle: placeholder }}</div>
+        <nested-menu slot="content">
             <nested-menu-item v-for="option, ind in options" v-if="!option.fields || option.fields.length"
                               :title="option.title" :key="ind" @click="onSelect(option.name)">
                 <dynamic-popover v-if="option.fields" size="sm" left="236" :alignBottom="ind > 6">

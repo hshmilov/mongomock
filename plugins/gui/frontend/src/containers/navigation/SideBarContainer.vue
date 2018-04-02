@@ -32,8 +32,8 @@
 <script>
     import '../../components/icons/navigation'
 
-    import NestedNavBar from '../../components/NestedNavBar.vue'
-    import NestedNavItem from '../../components/NestedNavItem.vue'
+    import NestedNavBar from '../../components/menus/NestedNavBar.vue'
+    import NestedNavItem from '../../components/menus/NestedNavItem.vue'
     import { LOGOUT } from '../../store/modules/auth'
     import { mapState, mapActions } from 'vuex'
 
@@ -89,7 +89,7 @@
                     position: relative;
                     text-align: center;
                     > a {
-                        color: $theme-gray-dark;
+                        color: $grey-4;
                         padding: 0 4px;
                         &:hover {  color: $theme-white;  }
                         &:after {  display: none;  }

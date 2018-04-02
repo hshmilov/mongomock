@@ -8,7 +8,7 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
-	import SearchInput from '../../components/SearchInput.vue'
+	import SearchInput from '../../components/inputs/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_ADAPTERS, FETCH_ADAPTER_SERVERS } from '../../store/modules/adapter'

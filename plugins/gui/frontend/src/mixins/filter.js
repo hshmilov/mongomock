@@ -39,7 +39,7 @@ export const compOps = {
 	'date-time': {
 		'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
 		'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' },
-		'past days': {
+		'days': {
 			pattern: '{field} >= date("NOW - {val}d")',
 			notPattern: '{field} < date("NOW - {val}d")'
 		}
@@ -58,6 +58,13 @@ export const compOps = {
 			pattern: '{field} == regex(":")',
 			notPattern: '{field} == regex("^(?!.*:)")'
 		},
+		exists
+	},
+	'tag': {
+		contains,
+		equals
+	},
+	'image': {
 		exists
 	},
 	'string': {

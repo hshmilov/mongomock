@@ -2,13 +2,15 @@
     <div class="input-group search-input">
         <input type="text" v-model="searchValue" class="search-value form-control" @input="updateSearchValue()"
                :placeholder="placeholder">
-        <span class="input-group-addon"><i class="icon-search"></i></span>
+        <span class="input-group-addon">
+            <svg-icon name="action/search" :original="true" height="18"></svg-icon>
+        </span>
     </div>
 </template>
 
 <script>
     export default {
-        name: 'search-input',
+        name: 'x-search-input',
         props: [ 'value', 'placeholder' ],
         data() {
             return {
@@ -28,14 +30,13 @@
         display: inline-block;
         .search-value.form-control {
             width: 100%;
-            border-radius: 4px;
-            border: 1px solid $border-color;
+            border-radius: 2px;
+            border: 1px solid $grey-2;
             height: 30px;
             &:focus {
-                border-color: $color-theme-light;
+                border-color: $theme-blue;
             }
         }
-        margin-bottom: 12px;
         .input-group-addon {
             border: 0;
             position: absolute;
@@ -46,12 +47,9 @@
             padding-right: 8px;
             padding-left: 8px;
             background-color: transparent;
-            color: $border-color;
             font-size: 150%;
-            &:hover {
-                color: $color-theme-light;
-                cursor: pointer;
-            }
+            .svg-fill { fill: $theme-black }
+            .svg-stroke { stroke: $theme-black }
         }
     }
 </style>

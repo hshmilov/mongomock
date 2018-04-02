@@ -1,8 +1,8 @@
 <template>
     <triggerable-dropdown class="multiple-select">
-        <object-list slot="dropdownTrigger" :type="type" :data="selectedItems" :limit="2"></object-list>
-        <searchable-checklist slot="dropdownContent" :title="title" :items="items" v-model="selectedItems"
-                              @input="updateSelected()"></searchable-checklist>
+        <object-list slot="trigger" :type="type" :data="selectedItems" :limit="2"></object-list>
+        <searchable-checklist slot="content" :title="title" :items="items" v-model="selectedItems"
+                              @input="updateSelected()"/>
     </triggerable-dropdown>
 </template>
 

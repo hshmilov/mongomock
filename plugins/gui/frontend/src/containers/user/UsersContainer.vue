@@ -57,11 +57,11 @@
 
 				return [
 					{
-						title: 'Generic', fields: this.genericFlatSchema
+						name: 'axonius', title: 'General', fields: this.genericFlatSchema
 					},
 					...Object.keys(this.specificFlatSchema).map((name) => {
 						let title = adapterStaticData[name] ? adapterStaticData[name].name : name
-						return { title, fields: this.specificFlatSchema[name] }
+						return { title, name, fields: this.specificFlatSchema[name] }
 					})
 				]
 			},

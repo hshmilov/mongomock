@@ -3,8 +3,8 @@
         <!-- Dropdown component for selecting a query --->
         <triggerable-dropdown :arrow="false">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
-            <input slot="dropdownTrigger" class="form-control" v-model="searchValue" ref="greatInput"
-                   @input="searchQuery" @keyup.enter.stop="submitFilter"
+            <input slot="trigger" class="form-control" v-model="searchValue" ref="greatInput"
+                   @input="searchQuery" @keyup.enter.stop="submitFilter" :tabindex="1"
                    placeholder="Insert your query or start typing to filter recent Queries">
             <!--
             Content is a list composed of 3 sections:
@@ -12,7 +12,7 @@
             2. Historical queries, filtered to whose filter contain the value 'searchValue'
             3. Option to search for 'searchValue' everywhere in data (compares to every text field)
             -->
-            <div slot="dropdownContent">
+            <div slot="content">
                 <nested-menu v-if="savedQueries && savedQueries.length">
                     <div class="title">Saved Queries</div>
                     <nested-menu-item v-for="query, index in savedQueries.slice(0, limit)" :key="index"
@@ -30,23 +30,21 @@
             </div>
         </triggerable-dropdown>
         <triggerable-dropdown class="form-control" align="right" size="xl">
-            <div slot="dropdownTrigger" class="link">Query</div>
-            <div slot="dropdownContent">
+            <div slot="trigger" class="link" :tabindex="2">Query</div>
+            <div slot="content" class="query-wizard">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
                                  @error="filterValid = false" :rebuild="rebuild"/>
-                <div class="row">
-                    <div class="form-group place-right">
-                        <a class="x-btn link" @click="clearFilter">Clear</a>
-                        <a class="x-btn" @click="rebuildFilter">Search</a>
-                    </div>
+                <div class="place-right">
+                    <a class="x-btn link" @click="clearFilter" :tabindex="3">Clear</a>
+                    <a class="x-btn" @click="rebuildFilter" :tabindex="4">Search</a>
                 </div>
             </div>
         </triggerable-dropdown>
         <!-- Button controlling the execution of currently filled query -->
-        <a class="x-btn right" @click="submitFilter">
+        <a class="x-btn right" @click="submitFilter" :tabindex="5">
             <svg-icon name="action/search" :original="true" height="24"></svg-icon>
         </a>
-        <a class="x-btn link" @click="openSaveQuery">
+        <a class="x-btn link" @click="openSaveQuery" :tabindex="6">
             <svg-icon name="action/save" :original="true" height="18"></svg-icon>
         </a>
         <modal v-if="saveModal.isActive" @close="closeSaveQuery" approveText="save" @confirm="confirmSaveQuery">
@@ -126,17 +124,16 @@
                 return patternParts.join(' or ')
             },
             filterSchema () {
-				if (!this.schema) return []
+				if (!this.schema || !this.schema.length) return []
 
-                return [
-					{
-						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-						enum: this.savedQueries.map((query) => {
-							return {name: query.filter, title: query.name}
-						})
-					},
-					...this.schema
-				]
+                let filterSchema = [ ...this.schema ]
+                filterSchema[0].fields = [{
+					name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
+					enum: this.savedQueries.map((query) => {
+						return {name: query.filter, title: query.name}
+					})
+				}, ...filterSchema[0].fields ]
+                return filterSchema
             }
 		},
 		data () {
@@ -179,7 +176,8 @@
             clearFilter() {
 				this.queryExpressions = [ {...expression} ]
                 this.searchValue = ''
-                this.submitFilter()
+                this.queryFilter = ''
+				this.executeFilter()
             },
 			rebuildFilter() {
                 this.rebuild = true
@@ -235,7 +233,7 @@
     .data-query {
         display: flex;
         width: 100%;
-        .dropdown {
+        > .dropdown {
             flex: auto;
             .dropdown-toggle {
                 padding: 0;
@@ -252,7 +250,7 @@
                 padding-right: 36px;
             }
             .menu {
-                border-bottom: 1px solid #EEE;
+                border-bottom: 1px solid $grey-2;
                 &:last-child {
                     border: 0;
                 }
@@ -269,6 +267,9 @@
                     }
                 }
             }
+        }
+        .query-wizard {
+            padding: 12px;
         }
     }
 </style>

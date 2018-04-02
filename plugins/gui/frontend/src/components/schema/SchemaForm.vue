@@ -59,7 +59,7 @@
                 width: 240px;
                 input, select {
                     width: 100%;
-                    border: 1px solid $theme-gray-light;
+                    border: 1px solid $grey-2;
                     &.invalid {
                         border-color: $indicator-red;
                     }

@@ -9,16 +9,20 @@
         <!-- Option to add '(', to negate expression and choice of field to filter -->
         <label class="x-btn light checkbox-label" :class="{'active': expression.leftBracket}">
             <input type="checkbox" v-model="expression.leftBracket">(</label>
-        <label class="x-btn light checkbox-label" :class="{'active': expression.not}">
+        <label class="x-btn light checkbox-label" :class="{active: expression.not, disabled: disableNot}">
             <input type="checkbox" v-model="expression.not">NOT</label>
-
-        <x-graded-select v-model="expression.field" placeholder="FIELD..." :options="fields"/>
+        <div class="expression-field">
+            <x-select :options="fields" v-model="fieldSpace" class="space-select">
+                <template slot-scope="{ option }">
+                    <div class="space-select-img"><img :src="`/src/assets/images/logos/${option.name}.png`" /></div>
+                    <div class="logo-text">{{option.title}}</div>
+                </template>
+            </x-select>
+            <x-select :options="currentFields" v-model="expression.field" :searchable="true" class="field-select"/>
+        </div>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
-            <select v-model="expression.compOp" v-if="fieldOpsList.length">
-                <option value="" disabled hidden>FUNC...</option>
-                <option v-for="op, i in fieldOpsList" :key="i" :value="op">{{ op }}</option>
-            </select>
+            <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length" placeholder="func..."/>
             <template v-if="showValue">
                 <component :is="`x-${valueSchema.type}-edit`" :schema="valueSchema" v-model="expression.value"
                            class="fill" :class="{'grid-span2': !fieldOpsList.length}"/>
@@ -28,7 +32,7 @@
                 <div></div>
             </template>
         </template>
-        <template v-else><select></select><input disabled></template>
+        <template v-else><div/><div/></template>
         <!-- Option to add ')' and to remove the expression -->
         <label class="x-btn light checkbox-label" :class="{'active': expression.rightBracket}">
             <input type="checkbox" v-model="expression.rightBracket">)</label>
@@ -37,24 +41,18 @@
 </template>
 
 <script>
-	import Checkbox from '../Checkbox.vue'
+    import xSelect from '../inputs/Select.vue'
 	import xStringEdit from '../controls/string/StringEdit.vue'
 	import xNumberEdit from '../controls/numerical/NumberEdit.vue'
 	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
 	import xBoolEdit from '../controls/boolean/BooleanEdit.vue'
 	import xArrayEdit from '../controls/array/ArrayFilter.vue'
-	import xGradedSelect from '../GradedSelect.vue'
 	import IP from 'ip'
 	import { compOps } from '../../mixins/filter'
 
 	export default {
 		components: {
-			Checkbox, xStringEdit,
-			xNumberEdit,
-			xIntegerEdit,
-			xBoolEdit,
-			xArrayEdit,
-            xGradedSelect
+			xSelect, xStringEdit, xNumberEdit, xIntegerEdit, xBoolEdit, xArrayEdit,
 		},
 		name: 'x-schema-expression',
 		props: {
@@ -87,7 +85,7 @@
 					return this.fieldSchema.items
 				}
                 if (this.fieldSchema && this.fieldSchema.format && this.fieldSchema.format === 'date-time'
-                    && ['past days'].includes(this.expression.compOp)) {
+                    && ['days'].includes(this.expression.compOp)) {
 					return { type: 'integer' }
                 }
 				return this.fieldSchema
@@ -107,20 +105,31 @@
 				return ops
 			},
 			fieldOpsList () {
-				return Object.keys(this.fieldOps)
+				return Object.keys(this.fieldOps).map((op ) => {
+					return { name: op, title: op }
+				})
 
 			},
 			showValue () {
 				return this.fieldSchema.format === 'predefined'
 					|| (this.expression.compOp && this.fieldOpsList.length && this.fieldOps[this.expression.compOp]
 						&& this.fieldOps[this.expression.compOp].pattern.includes('{val}'))
-			}
+			},
+            disableNot() {
+				return this.expression.field && this.expression.format === 'predefined'
+            },
+            currentFields() {
+				if (!this.fields || !this.fields.length) return []
+                if (!this.fieldSpace) return this.fields[0].fields
+				return this.fields.filter(item => item.name === this.fieldSpace)[0].fields
+            }
 		},
 		data () {
 			return {
 				expression: { ...this.value },
 				processedValue: '',
-                newExpression: false
+                newExpression: false,
+                fieldSpace: 'axonius'
 			}
 		},
 		watch: {
@@ -136,14 +145,18 @@
 					this.expression.value = null
 				}
 				this.newExpression = false
-			}
+			},
+            currentFields(newCurrenFields) {
+				if (!this.expression.field) return
+                if (!newCurrenFields.filter(field => field.name === this.expression.field).length) {
+					this.expression.field = ''
+                }
+            }
 		},
 		methods: {
 			checkErrors () {
 				if (!this.first && !this.expression.logicOp) {
 					return 'Logical operator is needed to add expression to the filter'
-				} else if (!this.expression.field) {
-					return 'A field to check is needed to add expression to the filter'
 				} else if (!this.expression.compOp && this.fieldOpsList.length) {
 					return 'Comparison operator is needed to add expression to the filter'
 				} else if (this.showValue && !this.expression.value) {
@@ -199,21 +212,26 @@
 					this.$emit('change', {error})
 					return
 				}
-
 				let filterStack = []
 				if (this.expression.logicOp) {
 					filterStack.push(this.expression.logicOp + ' ')
 				}
-				let bracketWeight = 0
-				if (this.expression.leftBracket) {
-					filterStack.push('(')
-					bracketWeight -= 1
-				}
-				filterStack.push(this.composeCondition())
-				if (this.expression.rightBracket) {
-					filterStack.push(')')
-					bracketWeight += 1
-				}
+                let bracketWeight = 0
+				if (this.expression.field) {
+                    if (this.expression.leftBracket) {
+                        filterStack.push('(')
+                        bracketWeight -= 1
+                    }
+                    filterStack.push(this.composeCondition())
+                    if (this.expression.rightBracket) {
+                        filterStack.push(')')
+                        bracketWeight += 1
+                    }
+				} else if (this.fieldSpace !== 'axonius') {
+					filterStack.push(`adapters == '${this.fieldSpace}'`)
+                } else {
+					return
+                }
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
 			}
 		},
@@ -231,7 +249,7 @@
 <style lang="scss">
     .expression {
         display: grid;
-        grid-template-columns: 60px 30px 30px 180px 90px 200px 30px 30px;
+        grid-template-columns: 60px 30px 30px 240px 90px auto 30px 30px;
         grid-template-rows: 40px;
         justify-items: start;
         align-items: center;
@@ -256,9 +274,42 @@
             input {
                 display: none;
             }
+            &.disabled {
+                visibility: hidden;
+            }
         }
         .link {
             margin: auto;
+        }
+        .expression-field {
+            display: flex;
+            width: 100%;
+            .space-select-img {
+                width: 30px;
+                display: inline-block;
+                img {
+                    margin: auto;
+                    height: 24px;
+                }
+            }
+            .space-select {
+                border-bottom-right-radius: 0;
+                border-top-right-radius: 0;
+            }
+            .field-select {
+                flex: 1 0 auto;
+                margin-left: -2px;
+                border-bottom-left-radius: 0;
+                border-top-left-radius: 0;
+            }
+        }
+        .x-select-trigger {
+            .logo-text {
+                display: none;
+            }
+            .placeholder {
+                text-transform: uppercase;
+            }
         }
     }
 </style>

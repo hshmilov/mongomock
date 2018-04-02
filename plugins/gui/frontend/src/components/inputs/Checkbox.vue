@@ -67,7 +67,7 @@
             height: 20px;
             position: relative;
             border-radius: 2px;
-            border: 2px solid $theme-gray-dark;
+            border: 2px solid $grey-4;
             transition: .4s cubic-bezier(.25,.8,.25,1);
             input {
                 position: absolute;

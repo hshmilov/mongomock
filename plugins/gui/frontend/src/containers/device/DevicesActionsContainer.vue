@@ -1,8 +1,8 @@
 <template>
     <div>
         <triggerable-dropdown size="sm" align="right" :arrow="false">
-            <div slot="dropdownTrigger" class="link">Actions</div>
-            <nested-menu slot="dropdownContent">
+            <div slot="trigger" class="link">Actions</div>
+            <nested-menu slot="content">
                 <nested-menu-item title="Tag..." @click="activate(tag)"></nested-menu-item>
                 <nested-menu-item title="Deploy..." @click="activate(deploy)"></nested-menu-item>
                 <nested-menu-item title="Run..." @click="activate(run)"></nested-menu-item>
