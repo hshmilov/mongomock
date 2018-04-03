@@ -10,11 +10,12 @@ class GeneralInfoSubplugin(ABC):
     A skeleton for a general info subplugin.
     """
 
-    def __init__(self, logger):
+    def __init__(self, plugin_base, logger):
         """
         initialization.
         :param logger: a logger to be used.
         """
+        self.plugin_base = plugin_base
         self.logger = LoggerWrapper(logger, self.__class__.__name__)
 
     def get_error_logs(self):

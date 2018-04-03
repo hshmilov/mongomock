@@ -13,12 +13,11 @@ class GetUserLogons(GeneralInfoSubplugin):
     users_to_sids_last_query = None
     users_to_sids_query_lock = threading.Lock()
 
-    def __init__(self, logger):
+    def __init__(self, *args, **kwargs):
         """
         initialization.
-        :param logger: the logger of plugin base
         """
-        super().__init__(logger)
+        super().__init__(*args, **kwargs)
 
     def get_sid_to_users_db(self):
         """

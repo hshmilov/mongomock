@@ -16,12 +16,11 @@ GET_INSTALLED_SOFTWARE_COMMANDS = [
 class GetInstalledSoftwares(GeneralInfoSubplugin):
     """ Using wmi queries, determines all installed software on the machine. """
 
-    def __init__(self, logger):
+    def __init__(self, *args, **kwargs):
         """
         initialization.
-        :param logger: the logger of plugin base
         """
-        super().__init__(logger)
+        super().__init__(*args, **kwargs)
 
     @staticmethod
     def get_wmi_smb_commands():
