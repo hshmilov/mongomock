@@ -8,7 +8,7 @@ fi
 echo "=> Setting up the reverse ssh on 443 - ${PUBLIC_SSH_HOST_USER}@${PUBLIC_SSH_HOST_ADDR}"
 while true
 do
-    sshpass -p ${PUBLIC_SSH_HOST_PASSW} ssh -oStrictHostKeyChecking=no -NTR 0:localhost:22 ${PUBLIC_SSH_HOST_USER}@${PUBLIC_SSH_HOST_ADDR} -p 443
+    sshpass -p ${PUBLIC_SSH_HOST_PASSW} autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -oStrictHostKeyChecking=no -NTR 0:localhost:22 ${PUBLIC_SSH_HOST_USER}@${PUBLIC_SSH_HOST_ADDR} -p 443
     echo "=> Tunnel Link down!"
     echo "=> Wait 15 seconds to reconnect"
     sleep 15
