@@ -1,7 +1,7 @@
 <template>
     <x-card :title="`${title} Coverage`" :key="title" class="coverage">
         <div class="coverage-status">
-            <div class="text">Consider installing {{title}} system on uncovered devices</div>
+            <div class="text">{{description}}</div>
             <div :class="`mark indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
         </div>
         <x-pie-chart :data="pieSlices" @click-slice="$emit('click-slice', $event)" />
@@ -15,7 +15,7 @@
 	export default {
 		name: 'coverage-card',
         components: { xCard, xPieChart },
-        props: {portion: {required: true}, title: {}},
+        props: {portion: {required: true}, title: {}, description: {}},
         computed: {
 			quarter() {
 				return Math.ceil(this.portion * 4)

@@ -1,8 +1,9 @@
 <template>
     <x-page title="axonius dashboard" class="dashboard">
-        <x-coverage-card v-for="item in dashboard.coverage.data" :portion="item.portion" :title="item.title" :key="item.title"
+        <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
+                         :portion="item.portion" :title="item.title" :description="item.description"
                          @click-slice="runCoverageFilter(item.properties, $event)" />
-        <x-card title="Data Collection">
+        <x-card title="Data Discovery">
             <x-counter-chart :data="adapterDevicesCounterData"/>
         </x-card>
         <x-card title="Devices per Adapter">
@@ -87,8 +88,8 @@
 			},
 			adapterDevicesCounterData () {
 				return [
-					{count: this.adapterDevices.total_gross || 0, title: 'Managed Devices Collected', highlight: true},
-					{count: this.adapterDevices.total_net || 0, title: 'Actual Devices Discovered'},
+					{count: this.adapterDevices.total_gross || 0, title: 'Seen Devices', highlight: true},
+					{count: this.adapterDevices.total_net || 0, title: 'Unique Devices'},
 				]
 			},
 			nextRunTime () {

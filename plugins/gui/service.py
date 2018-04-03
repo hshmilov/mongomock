@@ -1173,9 +1173,12 @@ class GuiService(PluginBase):
         if not devices_count:
             return jsonify([])
         coverage_list = [
-            {'title': 'Managed', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name]},
-            {'title': 'EPP', 'properties': [AdapterProperty.Endpoint_Protection_Platform.name]},
-            {'title': 'Vulnerability', 'properties': [AdapterProperty.Vulnerability_Assessment.name]}
+            {'title': 'Managed Device', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
+             'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},
+            {'title': 'Endpoint Protection', 'properties': [AdapterProperty.Endpoint_Protection_Platform.name],
+             'description': 'Add an endpoint protection solution to uncovered devices.'},
+            {'title': 'VA Scanner', 'properties': [AdapterProperty.Vulnerability_Assessment.name],
+             'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
         ]
         for item in coverage_list:
             item['portion'] = self.aggregator_db_connection['devices_db_view'].find(
