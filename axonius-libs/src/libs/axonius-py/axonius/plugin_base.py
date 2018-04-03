@@ -1001,7 +1001,7 @@ class PluginBase(Feature):
                                                           insert_data_to_db,
                                                           args=[data_to_update, parsed_to_insert])))
             promise_all = Promise.all(promises)
-            Promise.wait(promise_all, timedelta(minutes=5).total_seconds())
+            Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
             if promise_all.is_rejected:
                 logger.error(f"Error in insertion of {entity_type} to DB", exc_info=promise_all.reason)
 

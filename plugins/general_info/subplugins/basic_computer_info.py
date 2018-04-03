@@ -8,12 +8,12 @@ from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_co
 class GetBasicComputerInfo(GeneralInfoSubplugin):
     """ Using wmi queries, determines basic computer info """
 
-    def __init__(self, plugin_base_delegate):
+    def __init__(self, logger):
         """
         initialization.
-        :param plugin_base_delegate: the "self" of a relevant plugin base.
+        :param logger: the logger of plugin base
         """
-        super().__init__(plugin_base_delegate)
+        super().__init__(logger)
 
     @staticmethod
     def get_wmi_smb_commands():

@@ -305,7 +305,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             last_execution_debug = None
 
             # Initialize all subplugins. We do that in each run, to refresh cached data.
-            subplugins_list = [con(self) for con in subplugins_objects]
+            subplugins_list = [con(logger) for con in subplugins_objects]
 
             # Now get some info depending on the adapter that ran the execution
             executer_info = dict()

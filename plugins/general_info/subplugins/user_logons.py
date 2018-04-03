@@ -1,5 +1,3 @@
-import logging
-logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 import threading
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, is_wmi_answer_ok
@@ -15,12 +13,12 @@ class GetUserLogons(GeneralInfoSubplugin):
     users_to_sids_last_query = None
     users_to_sids_query_lock = threading.Lock()
 
-    def __init__(self, plugin_base_delegate):
+    def __init__(self, logger):
         """
         initialization.
-        :param plugin_base_delegate: the "self" of a relevant plugin base.
+        :param logger: the logger of plugin base
         """
-        super().__init__(plugin_base_delegate)
+        super().__init__(logger)
 
     def get_sid_to_users_db(self):
         """
