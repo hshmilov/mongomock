@@ -30,8 +30,9 @@
 		watch: {
 			value (newValue) {
 				this.expressions = [...newValue]
-                if (!this.expressions.length) {
+                if (!this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)) {
 					this.error = ''
+                    this.filters = []
                 }
 			},
             rebuild (newRebuild) {

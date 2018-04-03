@@ -1,10 +1,7 @@
 <template>
     <div class="expression">
         <!-- Choice of logical operator, available from second expression --->
-        <select v-if="!first" v-model="expression.logicOp">
-            <option value="" disabled hidden>OP...</option>
-            <option v-for="op, i in logicOps" :key="i" :value="op">{{ op }}</option>
-        </select>
+        <x-select v-if="!first" :options="logicOps" placeholder="op..." v-model="expression.logicOp"/>
         <div v-else></div>
         <!-- Option to add '(', to negate expression and choice of field to filter -->
         <label class="x-btn light checkbox-label" :class="{'active': expression.leftBracket}">
@@ -61,7 +58,7 @@
 		},
 		computed: {
 			logicOps () {
-				return ['and', 'or']
+				return [{name: 'and', title: 'and'}, {name: 'or', title: 'or'}]
 			},
 			fieldMap () {
 				return this.fields.reduce((map, item) => {
@@ -229,7 +226,9 @@
                         bracketWeight += 1
                     }
 				} else if (this.fieldSpace !== 'axonius') {
-					filterStack.push(`adapters == '${this.fieldSpace}'`)
+					filterStack.push('adapters ')
+					filterStack.push(this.expression.not? '!=': '==')
+					filterStack.push(` '${this.fieldSpace}'`)
                 } else {
 					return
                 }
