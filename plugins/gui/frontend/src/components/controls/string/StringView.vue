@@ -24,7 +24,7 @@
 			format(value) {
 				if (this.schema.format === 'date-time') {
 					let dateTime = new Date(value)
-					if (dateTime == 'Invalid Date') return value
+					if (dateTime === 'Invalid Date') return value
 
 					return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
 				}

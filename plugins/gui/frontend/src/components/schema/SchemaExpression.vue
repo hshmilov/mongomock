@@ -18,7 +18,8 @@
                     <div class="logo-text">{{option.title}}</div>
                 </template>
             </x-select>
-            <x-select :options="currentFields" v-model="expression.field" :searchable="true" class="field-select"/>
+            <x-select :options="currentFields" v-model="expression.field" placeholder="field..." :searchable="true"
+                      class="field-select"/>
         </div>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
@@ -251,7 +252,7 @@
         display: grid;
         grid-template-columns: 60px 30px 30px 240px 90px auto 30px 30px;
         grid-template-rows: 40px;
-        justify-items: start;
+        justify-items: stretch;
         align-items: center;
         grid-gap: 8px;
         margin-bottom: 20px;
@@ -286,11 +287,17 @@
             width: 100%;
             .space-select-img {
                 width: 30px;
+                height: 24px;
+                text-align: center;
                 display: inline-block;
                 img {
                     margin: auto;
-                    height: 24px;
+                    max-width: 30px;
+                    max-height: 24px;
                 }
+            }
+            .logo-text {
+                max-width: 160px;
             }
             .space-select {
                 border-bottom-right-radius: 0;

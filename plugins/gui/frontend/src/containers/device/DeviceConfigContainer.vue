@@ -27,12 +27,12 @@
                      :selected="!i" :title="getAdapterName(item.plugin_name)"
                      :logo="item.plugin_name" :outdated="item.outdated">
                     <div class="d-flex tab-header">
-                        <div>Data From: {{ item.client_used }}</div>
+                        <div class="flex-expand">Data From: {{ item.client_used }}</div>
                         <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
                         <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                     </div>
                     <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]"
-                                   :data="getDataForFieldList(deviceFields.specific[item.plugin_name], item.data)"
+                                   :data="getDataForFieldList(deviceFields.specific[item.plugin_name], {adapters_data: {[item.plugin_name]: item.data}})"
                                    :schema="deviceFields.specific[item.plugin_name]"/>
                     <div v-if="!viewBasic">
                         <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
@@ -104,9 +104,9 @@
 				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) {
 					return ''
 				}
-                let name = this.getData(this.deviceData.specific_data, 'data.hostname').concat(
-                	this.getData(this.deviceData.specific_data, 'data.name')).concat(
-                		this.getData(this.deviceData.specific_data, 'data.pretty_id'))
+                let name = this.getData(this.deviceData.specific_data, 'data.hostname') ||
+                    this.getData(this.deviceData.specific_data, 'data.name') ||
+                    this.getData(this.deviceData.specific_data, 'data.pretty_id')
                 if (Array.isArray(name) && name.length) {
 					return name[0]
                 } else if (!Array.isArray(name)) {
@@ -195,18 +195,10 @@
             margin-right: -12px;
             padding-left: 12px;
             padding-right: 12px;
-            .link {
-                flex: 1 0 auto;
-                text-align: right;
-            }
         }
         .tab-content {
             overflow: auto;
             height: calc(100% - 40px);
-            .link {
-                flex: 1 0 auto;
-                text-align: right;
-            }
         }
         .tag-edit {
             text-align: right;

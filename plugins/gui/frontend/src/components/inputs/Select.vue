@@ -1,7 +1,7 @@
 <template>
     <triggerable-dropdown :arrow="true" size="sm" class="x-select">
         <div slot="trigger" class="x-select-trigger">
-            <slot v-if="value && options.length" :option="selectedOption">{{selectedOption.title}}</slot>
+            <slot v-if="selectedOption" :option="selectedOption">{{selectedOption.title}}</slot>
             <div v-if="!value && placeholder" class="placeholder">{{placeholder}}</div>
         </div>
         <div class="x-select-content" slot="content">
@@ -30,7 +30,7 @@
                     && option.title.toLowerCase().includes(this.searchValue.toLowerCase()))
             },
             selectedOption() {
-				if (!this.value || !this.options || !this.options.length) return {}
+				if (!this.value || !this.options || !this.options.length) return undefined
 				return this.options.filter(option => (option.name === this.value))[0]
             }
         },

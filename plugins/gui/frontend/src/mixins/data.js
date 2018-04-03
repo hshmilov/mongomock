@@ -5,9 +5,12 @@ export default {
 
 			if (!Array.isArray(data)) {
 				let firstDot = path.indexOf('.')
-				if (firstDot === -1) return data[path]
+				if (firstDot === -1) {
+					return data[path] ? data[path] : ''
+				}
 				let prefix = path.substring(0, firstDot)
-				return this.getData((data[prefix]? data[prefix] : data), path.substring(firstDot + 1))
+				// return this.getData((data[prefix]? data[prefix] : data), path.substring(firstDot + 1))
+				return this.getData(data[prefix], path.substring(firstDot + 1))
 			}
 			if (data.length === 1) return this.getData(data[0], path)
 

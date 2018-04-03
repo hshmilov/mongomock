@@ -71,6 +71,7 @@
   display: inline-block;
   font-size: 14px;
   margin-left: 4px;
+  vertical-align: middle;
 }
 
 .hint {
@@ -78,6 +79,10 @@
   color: rgba($grey-4, 0.6);
   display: inline-block;
   margin-left: 4px;
+}
+
+.flex-expand {
+  flex: 1 0 auto;
 }
 
 @for $i from 1 through length($indicator-colours) {

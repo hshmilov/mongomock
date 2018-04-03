@@ -126,14 +126,12 @@
             filterSchema () {
 				if (!this.schema || !this.schema.length) return []
 
-                let filterSchema = [ ...this.schema ]
-                filterSchema[0].fields = [{
-					name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-					enum: this.savedQueries.map((query) => {
-						return {name: query.filter, title: query.name}
-					})
-				}, ...filterSchema[0].fields ]
-                return filterSchema
+                return [ { ...this.schema[0], fields: [ {
+						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
+						enum: this.savedQueries.map((query) => {
+							return {name: query.filter, title: query.name}
+						})
+					}, ...this.schema[0].fields]}, ...this.schema.slice(1)]
             }
 		},
 		data () {
@@ -270,6 +268,9 @@
         }
         .query-wizard {
             padding: 12px;
+            .x-btn.link {
+                margin-right: 8px;
+            }
         }
     }
 </style>

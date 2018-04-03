@@ -29,7 +29,7 @@ a, a:hover, a:focus {
 a {
   color: $theme-black;
   &.link:hover, &.link:focus {
-    color: $theme-orange;
+    color: $theme-black;
   }
 }
 
@@ -118,6 +118,7 @@ Formatting
 
 .error-text {
   color: $indicator-red;
+  font-size: 12px;
 }
 
 .error-fill {
