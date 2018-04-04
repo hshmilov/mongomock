@@ -898,14 +898,14 @@ class PluginBase(Feature):
         :return: Device count saved
         """
 
+        db_to_use = self.__entity_db_map.get(entity_type)
+        assert db_to_use, f"got unexpected {entity_type}"
+
         def insert_data_to_db(data_to_update, parsed_to_insert):
             """
             Insert data (devices/users/...) into the DB
             :return:
             """
-            db_to_use = self.__entity_db_map.get(entity_type)
-            assert db_to_use, f"got unexpected {entity_type}"
-
             correlates = parsed_to_insert['data'].get('correlates')
             if correlates == IGNORE_DEVICE:
                 # special case: this is a device we shouldn't handle
@@ -1005,7 +1005,7 @@ class PluginBase(Feature):
             if promise_all.is_rejected:
                 logger.error(f"Error in insertion of {entity_type} to DB", exc_info=promise_all.reason)
 
-            if entity_type == "devices":
+            if entity_type == EntityType.Devices:
                 added_pretty_ids_count = self._add_pretty_id_to_missing_adapter_devices()
                 logger.info(f"{added_pretty_ids_count} devices had their pretty_id set")
 
@@ -1026,6 +1026,7 @@ class PluginBase(Feature):
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
         """
+        Virtual.
         Creates an axonius entity ("Parsed data")
         :param client_name: the name of the client
         :param data: the parsed data

@@ -406,7 +406,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         /insert_to_db?client_name=(None or Client name)
 
-        Will insert the given client name (or all clients if None) into DB
+        Will insert entities from the given client name (or all clients if None) into DB
         :return:
         """
         client_name = request.args.get('client_name')
@@ -423,7 +423,7 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         return to_json({"devices_count": devices_count, "users_count": users_count})
 
-    def _get_data_by_client(self, client_name: str, data_type: EntityType):
+    def _get_data_by_client(self, client_name: str, data_type: EntityType) -> dict:
         """
         Get all devices, both raw and parsed, from the given client name
         data_type is devices/users.
@@ -432,7 +432,7 @@ class AdapterBase(PluginBase, Feature, ABC):
         with self._clients_lock:
             if client_name not in self._clients:
                 logger.error(f"client {client_name} does not exist")
-                return return_error("Client does not exist", 404)
+                raise Exception("Client does not exist")
         try:
             time_before_query = datetime.now()
             raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
