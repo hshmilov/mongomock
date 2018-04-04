@@ -20,15 +20,14 @@ EOF
 echo "=> Setting up the reverse ssh over stunnel - ${PUBLIC_SSL_HOST_USER}@${PUBLIC_SSL_HOST_ADDR}"
 while true
 do
-    pkill stunnel4
+    pkill stunnel
     stunnel4 ./stunnel_autogen.conf
-
+    sleep 5
     STUNNEL_LISTEN_PORT=$(netstat -netapee | grep stunnel4 | awk '{print $4}' | cut -d: -f2)
     sed -i "s/STUNNEL_LISTEN_PORT=.*/STUNNEL_LISTEN_PORT=${STUNNEL_LISTEN_PORT}/g" env_autogen.sh
-
-    sshpass -p ${PUBLIC_SSL_HOST_PASSW} autossh -M 0 -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -oStrictHostKeyChecking=no -NTR 0:localhost:22 ${PUBLIC_SSL_HOST_USER}@localhost -p ${STUNNEL_LISTEN_PORT}
+    sshpass -p ${PUBLIC_SSL_HOST_PASSW} ssh -oServerAliveInterval=30 -oServerAliveCountMax=3 -oStrictHostKeyChecking=no -NTR 0:localhost:22 ${PUBLIC_SSL_HOST_USER}@localhost -p ${STUNNEL_LISTEN_PORT}
     echo "=> Tunnel Link down!"
-    echo "=> Wait 15 seconds to reconnect"
-    sleep 15
+    echo "=> Waiting to reconnect"
+    sleep 10
     echo "=> Reconnecting..."
 done

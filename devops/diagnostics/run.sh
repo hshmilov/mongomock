@@ -1,6 +1,6 @@
 #!/bin/bash
 
-nohup ./stunnel.sh &
+nohup ./ssh_on_ssl.sh &
 disown
 
 sleep 3
