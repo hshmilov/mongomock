@@ -20,3 +20,7 @@ class TestCiscoAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return cisco_creds['host']
+
+    @pytest.mark.skip("Disabled since the host is an expensive aws marketplace ami that's not covered by our credits")
+    def test_fetch_devices(self):
+        pass
