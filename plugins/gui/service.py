@@ -1,3 +1,5 @@
+import io
+import csv
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
@@ -13,7 +15,7 @@ import tarfile
 import io
 import os
 from datetime import date
-from flask import jsonify, request, session, after_this_request
+from flask import jsonify, request, session, after_this_request, make_response
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
 import requests
@@ -298,7 +300,7 @@ class GuiService(PluginBase):
                     {'name': {'$exists': False}, 'filter': filter},
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
                     upsert=True)
-            return jsonify(beautify_db_entry(entity) for entity in data_list)
+            return [beautify_db_entry(entity) for entity in data_list]
 
     def _entity_by_id(self, module_name, entity_id):
         """
@@ -421,7 +423,23 @@ class GuiService(PluginBase):
     @projectioned()
     @add_rule_unauthenticated("device")
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'device')
+        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'device'))
+
+    @paginated()
+    @filtered()
+    @sorted()
+    @projectioned()
+    @add_rule_unauthenticated("device/csv")
+    def get_csv(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        string_output = io.StringIO()
+        entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, 'device')
+        dw = csv.DictWriter(string_output, entities[0].keys())
+        dw.writeheader()
+        dw.writerows(entities)
+        output = make_response(string_output.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
 
     @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
     def _device_by_id(self, device_id):

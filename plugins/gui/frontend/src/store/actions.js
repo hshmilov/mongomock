@@ -92,7 +92,14 @@ export const fetchDataContent = ({state, dispatch}, payload) => {
 	}
 	if (!payload.limit) payload.limit = 1000
 
-	let param = `?limit=${payload.limit}&skip=${payload.skip}`
+    let param = ''
+
+	if (payload.param) param = payload.param
+
+	let type = ''
+	if (!('type' in payload)) type = UPDATE_DATA_CONTENT
+
+	param += `?limit=${payload.limit}&skip=${payload.skip}`
 	if (view.fields && view.fields.length) {
 		param += `&fields=${view.fields}`
 	}
@@ -104,7 +111,7 @@ export const fetchDataContent = ({state, dispatch}, payload) => {
 	}
 	return dispatch(REQUEST_API, {
 		rule: payload.module + param,
-		type: UPDATE_DATA_CONTENT,
+		type: type,
 		payload: {module: payload.module, skip: payload.skip}
 	})
 }

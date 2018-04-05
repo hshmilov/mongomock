@@ -26,6 +26,7 @@
 
                 <!-- Dropdown for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-graded-multi-select placeholder="Add Columns" :options="coloumnSelectionFields" v-model="selectedFields"/>
+                <div class="link extra-link" @click="exportCSV">Export csv</div>
             </template>
         </x-data-table>
         <modal v-if="saveModal.open" @close="saveModal.open = false" approveText="save" @confirm="saveModal.handleConfirm">
@@ -54,7 +55,7 @@
 	import { FETCH_ADAPTERS, adapterStaticData } from '../../store/modules/adapter'
     import { FETCH_SETTINGS } from '../../store/modules/settings'
 	import {
-		FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS
+		FETCH_DATA_VIEWS, SAVE_DATA_VIEW, FETCH_DATA_FIELDS, FETCH_DATA_CONTENT
 	} from '../../store/actions'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
 
@@ -154,8 +155,20 @@
 				fetchAdapters: FETCH_ADAPTERS,
                 fetchDataViews: FETCH_DATA_VIEWS,
                 saveDataView: SAVE_DATA_VIEW,
-                fetchSettings: FETCH_SETTINGS
+                fetchSettings: FETCH_SETTINGS,
+                fetchContent: FETCH_DATA_CONTENT
 			}),
+            exportCSV() {
+                this.fetchContent({
+                    module: 'device', param: '/csv', type: ''
+                }).then((response) => {
+                    let blob = new Blob([response.data], { type: response.headers["content-type"]} )
+                    let link = document.createElement('a')
+                    link.href = window.URL.createObjectURL(blob)
+                    link.download = 'export.csv'
+                    link.click()
+                })
+            },
             openSaveModal(confirmHandler) {
 				this.saveModal.open = true
                 this.saveModal.handleConfirm = confirmHandler
@@ -192,5 +205,7 @@
 
 
 <style lang="scss">
-
+    .x-data-table .x-table-header .extra-link {
+        font-size: 80%;
+    }
 </style>
