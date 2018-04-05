@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
-#!/usr/bin/env python3
 
 from openstack.connection import Connection
 from collections import defaultdict
