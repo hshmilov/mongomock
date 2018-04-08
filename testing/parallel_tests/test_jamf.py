@@ -1,5 +1,5 @@
 import pytest
-
+from flaky import flaky
 from services.adapters.jamf_service import JamfService, jamf_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_jamf_credentials import *
@@ -29,3 +29,7 @@ class TestJamfAdapter(AdapterTestBase):
     @property
     def device_alive_thresh_last_fetched(self):
         return 720
+
+    @flaky(max_runs=2)
+    def test_fetch_devices(self):
+        super().test_fetch_devices()

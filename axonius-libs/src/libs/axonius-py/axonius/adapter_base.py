@@ -346,8 +346,17 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
 
         skipped_count = 0
+        users_ids = []
         for parsed_user in self._parse_users_raw_data(raw_users):
             assert isinstance(parsed_user, UserAdapter)
+
+            # There is no such thing as scanners for users, so we always check for id here.
+            parsed_user_id = parsed_user.id  # we must have an id
+            if parsed_user_id in users_ids:
+                logger.critical(f"Error! user with id {parsed_user_id} already yielded! skipping")
+                continue
+            users_ids.append(parsed_user_id)
+
             parsed_user = parsed_user.to_dict()
             parsed_user = self._remove_big_keys(parsed_user, parsed_user.get('id', 'unidentified user'))
             if self.is_old_user(parsed_user):
@@ -787,8 +796,19 @@ class AdapterBase(PluginBase, Feature, ABC):
         """
         skipped_count = 0
         last_seen_cutoff, _ = self.__device_time_cutoff()
+        devices_ids = []
+        should_check_for_unique_ids = self.plugin_subtype == adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
+
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
+
+            if should_check_for_unique_ids:
+                parsed_device_id = parsed_device.id   # we must have an id (its definitely not a scanner)
+                if parsed_device_id in devices_ids:
+                    logger.critical(f"Error! device with id {parsed_device_id} already yielded! skipping")
+                    continue
+                devices_ids.append(parsed_device_id)
+
             parsed_device = parsed_device.to_dict()
             parsed_device = self._remove_big_keys(parsed_device, parsed_device.get('id', 'unidentified device'))
             if self._is_adapter_old_by_last_seen(parsed_device, last_seen_cutoff):

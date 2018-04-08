@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone, timedelta
-
+from flaky import flaky
 import pytest
 
 from axonius.adapter_base import DEFAULT_LAST_FETCHED_THRESHOLD_HOURS, DEFAULT_LAST_SEEN_THRESHOLD_HOURS
@@ -62,6 +62,7 @@ class AdapterTestBase(object):
     def test_check_registration(self):
         assert self.adapter_service.is_plugin_registered(self.axonius_system.core)
 
+    @flaky(max_runs=2)
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])

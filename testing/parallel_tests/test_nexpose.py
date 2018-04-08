@@ -1,4 +1,5 @@
 import pytest
+from flaky import flaky
 from services.adapters.nexpose_service import NexposeService, nexpose_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_nexpose_credentials import *
@@ -21,6 +22,7 @@ class TestNexposeAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
+    @flaky(max_runs=2)
     def test_fetch_devices(self):
         """
         test fetch devices is different because no permanent ID on scanners.

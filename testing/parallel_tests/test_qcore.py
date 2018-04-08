@@ -1,5 +1,5 @@
 import pytest
-
+from flaky import flaky
 from services.adapters.qcore_service import QcoreService, qcore_fixture
 
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -25,6 +25,7 @@ class TestQcoreAdapter(AdapterTestBase):
     def some_device_id(self):
         return "659"
 
+    @flaky(max_runs=2)
     def test_fetch_devices(self):
         from qcore_adapter.qcore_mongo import QcoreMongo
         assert self.adapter_service.is_up()

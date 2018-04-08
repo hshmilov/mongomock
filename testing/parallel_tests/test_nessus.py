@@ -1,4 +1,5 @@
 import pytest
+from flaky import flaky
 from services.adapters.nessus_service import NessusService, nessus_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_nessus_credentials import *
@@ -25,6 +26,7 @@ class TestNessusAdapter(AdapterTestBase):
     def some_device_ip(self):
         return SOME_DEVICE_IP
 
+    @flaky(max_runs=2)
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         devices_as_tuple = self.adapter_service.devices()
