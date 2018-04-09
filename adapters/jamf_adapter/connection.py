@@ -171,7 +171,7 @@ class JamfConnection(object):
                 for policy in reversed(policies):
                     try:
                         policy_key = policy['policy_id']
-                        policy_date = parse_date(policy['date_completed_utc'])
+                        policy_date = parse_date(policy['date_completed_utc']) or parse_date(policy['date_completed'])
                         device_policy = device_policies.get(policy_key)
                         if device_policy is None or device_policy.last_runtime_date < policy_date:
                             device_policy = JamfPolicy()
