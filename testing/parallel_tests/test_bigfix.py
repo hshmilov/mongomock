@@ -5,6 +5,7 @@ from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_bigfix_credentials import *
 
 
+@pytest.mark.skip("dc is down")
 class TestBigfixAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
