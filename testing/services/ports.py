@@ -22,6 +22,7 @@ DOCKER_PORTS = {
     'stress-test-adapter':              5114,
     'bomgar-adapter':                   5115,
     'gotoassist-adapter':               5200,
+    'carbonblack-adapter':              5211,
     'puppet-adapter':                   5222,
     'chef-adapter':                     5223,
     'airwatch-adapter':                 5228,

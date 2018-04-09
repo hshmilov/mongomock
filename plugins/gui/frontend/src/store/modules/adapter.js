@@ -31,6 +31,10 @@ export const adapterStaticData = {
 		name: 'Jamf Pro',
 		description: 'Jamf Pro is an enterprise mobility management (EMM) tool that provides unified endpoint management for Apple devices.'
 	},
+	'carbonblack_adapter': {
+		name: 'CarbonBlack',
+		description: 'The Cb Predictive Security Cloud collects and analyzes endpoint data to make predictions about, and protect against attacks.'
+	},
 	'epo_adapter': {
 		name: 'McAfee ePO',
 		description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'

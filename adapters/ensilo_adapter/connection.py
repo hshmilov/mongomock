@@ -16,9 +16,11 @@ class EnsiloConnection(object):
         self.domain = domain
         self.verify_ssl = verify_ssl
         url = domain
+        if not url.lower().startswith('https://'):
+            url = 'https://' + url
+
         if not url.endswith('/'):
             url += '/'
-
         url += "management-rest/"
         self.url = url
         self.session = None
