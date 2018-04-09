@@ -537,7 +537,7 @@ class GuiService(PluginBase):
     @projectioned()
     @add_rule_unauthenticated("user")
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'user')
+        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'user'))
 
     @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
