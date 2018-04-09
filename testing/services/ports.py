@@ -19,7 +19,7 @@ DOCKER_PORTS = {
     'esx-adapter':                      5111,
     'aws-adapter':                      5112,
     'traiana-lab-machines-adapter':     5113,
-    'stress-test-adapter':              5114,
+    'stresstest-adapter':               5114,
     'bomgar-adapter':                   5115,
     'gotoassist-adapter':               5200,
     'carbonblack-adapter':              5211,

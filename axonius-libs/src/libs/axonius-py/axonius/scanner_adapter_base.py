@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 """
 ScannerAdapterBase is an abstract class all scanner adapters should inherit from.
@@ -16,8 +17,9 @@ from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \
-    extract_all_macs, get_hostname, compare_ips, macs_do_not_contradict, hostnames_do_not_contradict, \
-    inverse_function, or_function, compare_macs, compare_device_normalized_hostname, ips_do_not_contradict
+    extract_all_macs, get_hostname, macs_do_not_contradict, hostnames_do_not_contradict, \
+    or_function, compare_macs, compare_device_normalized_hostname, ips_do_not_contradict, \
+    NORMALIZED_IPS, remove_duplicates_by_reference
 
 
 def newest(devices):
@@ -32,25 +34,40 @@ def newest(devices):
 
 
 class ScannerCorrelatorBase(object):
-    def __init__(self, all_devices, *args, **kwargs):
+    def __init__(self, all_devices, plugin_name, *args, **kwargs):
         """
         Base scanner correlator; base behavior is correlating with hostname
         :param all_devices: all axonius devices from DB
         """
         super().__init__(*args, **kwargs)
+        self._plugin_name = plugin_name
         self._all_devices = list(all_devices)
-        self._all_adapter_devices = [adapter for adapters in self._all_devices for adapter in adapters['adapters']]
+        self._all_adapter_devices = [normalize_adapter_device(adapter) for adapters in self._all_devices for adapter in
+                                     adapters['adapters']]
+        self._all_adapter_devices_from_same_plugin = [x for x in self._all_adapter_devices if
+                                                      x[PLUGIN_NAME] == self._plugin_name]
+
+        # all adapters indexed by IPs
+        self._all_adapters_by_ips = {}
+        for adapter in self._all_adapter_devices:
+            ips = adapter.get(NORMALIZED_IPS)
+            if ips:
+                for ip in ips:
+                    self._all_adapters_by_ips.setdefault(ip, []).append(adapter)
 
     def find_suitable(self, parsed_device, normalizations: List[parameter_function],
-                      predicates: List[pair_comparator]) -> Tuple[str, str]:
+                      predicates: List[pair_comparator], adapter_list: list = None) -> Tuple[str, str]:
         """
         Returns all devices that are compatible with all given predicates
+        :param normalizations: a list of transformations to perform on each device before checking the predicates
+        :param predicates: a list of predicates that a pair of devices have to fulfil to be "suitable"
+        :param adapter_list: If given, will use this instead of self._all_adapter_devices
         :return: iterator(parsed_devices)
         """
         for normalization in normalizations:
             parsed_device = normalization(parsed_device)
 
-        for device in self._all_adapter_devices:
+        for device in adapter_list or self._all_adapter_devices:
             for normalization in normalizations:
                 device = normalization(device)
             if all(predict(parsed_device, device) for predict in predicates):
@@ -66,14 +83,29 @@ class ScannerCorrelatorBase(object):
             return None
         return newest_device[PLUGIN_UNIQUE_NAME], newest_device['data']['id']
 
-    def find_suitable_no_ip_contrdictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
-        devices = list(self.find_suitable(parsed_device, *args, **kwargs))
-        if len(devices) > 1:
-            device = next(filter(lambda dev: ips_do_not_contradict(dev, parsed_device), devices), None)
-        elif len(devices) == 0:
+    def find_suitable_newest_by_ip(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
+        """
+        Returns newest from find_suitable - see find_suitable docs
+        Also checks that there's overlaps in the IPs
+        :return: parsed_devices
+        """
+        ips = parsed_device.get(NORMALIZED_IPS)
+        if not ips:
             return None
+        devices_to_search = []
+        for ip in ips:
+            devices_per_ip = self._all_adapters_by_ips.get(ip)
+            if devices_per_ip:
+                devices_to_search += devices_per_ip
+        devices_to_search = remove_duplicates_by_reference(devices_to_search)
+        return self.find_suitable_newest(*args, **kwargs, adapter_list=devices_to_search)
+
+    def find_suitable_no_ip_contradictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
+        devices = list(self.find_suitable(parsed_device, *args, **kwargs))
+        if len(devices) >= 1:
+            device = next(filter(lambda dev: ips_do_not_contradict(dev, parsed_device), devices), None)
         else:
-            device = devices[0]
+            return None
         return None if device is None else (device[PLUGIN_UNIQUE_NAME], device['data']['id'])
 
     def _find_correlation_with_self(self, parsed_device) -> Tuple[str, str]:
@@ -85,11 +117,11 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
-        return self.find_suitable_no_ip_contrdictions(parsed_device,
-                                                      normalizations=[normalize_adapter_device],
-                                                      predicates=[inverse_function(is_different_plugin),
-                                                                  or_function(compare_macs,
-                                                                              compare_device_normalized_hostname)])
+        return self.find_suitable_no_ip_contradictions(parsed_device,
+                                                       normalizations=[],
+                                                       predicates=[or_function(compare_macs,
+                                                                               compare_device_normalized_hostname)],
+                                                       adapter_list=self._all_adapter_devices_from_same_plugin)
 
     def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
         """
@@ -98,11 +130,11 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
-        return self.find_suitable_newest(parsed_device,
-                                         normalizations=[normalize_adapter_device],
-                                         predicates=[is_different_plugin, compare_ips,
-                                                     macs_do_not_contradict,
-                                                     hostnames_do_not_contradict])
+        return self.find_suitable_newest_by_ip(parsed_device,
+                                               normalizations=[],
+                                               predicates=[is_different_plugin,
+                                                           macs_do_not_contradict,
+                                                           hostnames_do_not_contradict])
 
     def find_correlation(self, parsed_device) -> Tuple[str, str]:
         """
@@ -164,7 +196,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             with self._get_db_connection(True) as db:
                 aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
                 devices = aggregator_db['devices_db'].find()
-            scanner = self._get_scanner_correlator(devices)
+            scanner = self._get_scanner_correlator(devices, self.plugin_name)
 
             num_of_devices = len(parsed_data)
             print_modulo = max(int(num_of_devices / 10), 1)
@@ -174,9 +206,9 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
                                                                  PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
                                                                  PLUGIN_NAME: self.plugin_name,
                                                                  'plugin_type': self.plugin_type})
+                device_number += 1
                 if device_number % print_modulo == 0:
                     logger.info(f"Got {device_number} devices out of {num_of_devices}.")
-                device_number += 1
         return raw_data, parsed_data
 
     @property

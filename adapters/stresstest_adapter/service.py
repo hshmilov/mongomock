@@ -16,7 +16,7 @@ OPERATION_SYSTEMS_EXAMPLES = [
 ]
 
 
-class StressTestAdapter(AdapterBase):
+class StresstestAdapter(AdapterBase):
     """
     An adapter for stress testing.
 

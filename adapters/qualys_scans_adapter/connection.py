@@ -79,7 +79,7 @@ class QualysScansConnection(object):
                 return response
             except requests.HTTPError as e:
                 if response.status_code == 409:  # conflict for url - reached the API limit
-                    logger.warn('Qualys API limit reached. {0}'.format(str(e)), response.text, **kwargs)
+                    logger.warn('Qualys API limit reached. {0}'.format(str(e)), response.text)
                     error = Xml2Json(response.text).result
                     seconds_to_wait = int(error['SIMPLE_RETURN']['RESPONSE']['ITEM_LIST']['ITEM']['VALUE'])
                     if seconds_to_wait + seconds_waited < max_seconds:
@@ -89,7 +89,7 @@ class QualysScansConnection(object):
                     raise QualysScansAPILimitException(seconds_to_wait, f'Qualys API limit reached. {0}'.format(str(e)),
                                                        response.text, str(kwargs))
                 else:
-                    logger.exception('Qualys request exception. {0}'.format(str(e)), response.text, **kwargs)
+                    logger.exception('Qualys request exception. {0}'.format(str(e)), response.text)
                 raise e
 
     def get(self, name, headers=None, auth=None, params=None):

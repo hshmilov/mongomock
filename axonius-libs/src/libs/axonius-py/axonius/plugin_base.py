@@ -993,7 +993,7 @@ class PluginBase(Feature):
                     except TypeError:
                         logger.exception(f"Got TypeError while getting {entity_type} field {field}")
                         continue
-                    data_to_update['accurate_for_datetime'] = datetime.now()
+                data_to_update['accurate_for_datetime'] = datetime.now()
 
                 inserted_data_count += 1
                 promises.append(Promise(functools.partial(run_in_executor_helper,

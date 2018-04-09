@@ -571,3 +571,19 @@ def parse_filter(filter):
     elif matches.group(2) == 'w':
         computed_date -= datetime.timedelta(days=int(matches.group(1)) * 7)
     return pql.find(filter.replace(matches.group(0), computed_date.strftime("%m/%d/%Y %I:%M %p")))
+
+
+def remove_duplicates_by_reference(seq):
+    """
+    order preserving duplicate reference removing
+    benchmark: 1.91 ms ± 28.8 µs for 20k values on i7 7700HQ
+    """
+    seen = {}
+    result = []
+    for item in seq:
+        marker = id(item)
+        if marker in seen:
+            continue
+        seen[marker] = 1
+        result.append(item)
+    return result

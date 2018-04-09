@@ -1,14 +1,13 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from typing import Tuple
 
-from axonius.consts.plugin_consts import PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 
 from axonius.fields import Field
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.parsing import normalize_adapter_device, is_different_plugin, compare_ips, macs_do_not_contradict, \
-    hostnames_do_not_contradict, and_function, or_function
 from axonius.scanner_adapter_base import ScannerAdapterBase, ScannerCorrelatorBase
 from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
@@ -22,52 +21,31 @@ VERIFY_SSL = 'verify_ssl'
 
 
 class NexposeScannerCorrelator(ScannerCorrelatorBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._all_aws_devices_by_id = {x['data']['id']: x
+                                       for x in self._all_adapter_devices
+                                       if x[PLUGIN_NAME] == 'aws_adapter'}
+
     def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
         """
         See parent class docs
         """
-        NORMALIZED_AWS_ID = 'normalized_aws_id'
 
-        def add_aws_id(adapter_device):
-            """
-            If our device has a AWS ID hidden somewhere in the hostnames, highlight it
-            """
-            if adapter_device is not parsed_device:
-                # we want to modify only our given device
-                return adapter_device
+        # first, lets see if we have an AWS hostname - if is so, let's try to correlate accordingly
+        adapter_data = parsed_device['data']
+        hostnames = adapter_data['raw'].get('hostNames')
+        if hostnames:
+            aws_potential_hostname = next((hn['name'] for hn in hostnames
+                                           if hn.get('source', '').lower() == 'epsec' and
+                                           'i-' in hn.get('name', '')), None)
+            if aws_potential_hostname:
+                aws_potential_hostname = aws_potential_hostname[aws_potential_hostname.index('i-'):]
+                aws_potential_correlation = self._all_aws_devices_by_id.get(aws_potential_hostname)
+                if aws_potential_correlation:
+                    return aws_potential_correlation[PLUGIN_UNIQUE_NAME], aws_potential_correlation['data']['id']
 
-            aws_potential_hostname = None
-
-            adapter_data = adapter_device['data']
-            hostnames = adapter_data['raw'].get('hostNames')
-            if hostnames:
-                aws_potential_hostname = next((hn['name'] for hn in hostnames
-                                               if hn.get('source', '').lower() == 'epsec' and
-                                               'i-' in hn.get('name', '')), None)
-                if aws_potential_hostname:
-                    aws_potential_hostname = aws_potential_hostname[aws_potential_hostname.index('i-'):]
-
-            adapter_device[NORMALIZED_AWS_ID] = aws_potential_hostname
-            return adapter_device
-
-        def aws_ids_match(parsed_device, remote_device):
-            """
-            If our device has an AWS ID - compare that will the remote device
-            :param parsed_device:
-            :param remote_device:
-            :return:
-            """
-            return remote_device[PLUGIN_NAME] == 'aws_adapter' and \
-                parsed_device.get(NORMALIZED_AWS_ID) == remote_device['data']['id']
-
-        return self.find_suitable_newest(parsed_device,
-                                         normalizations=[normalize_adapter_device, add_aws_id],
-                                         predicates=[is_different_plugin,
-                                                     or_function(and_function(compare_ips,
-                                                                              macs_do_not_contradict,
-                                                                              hostnames_do_not_contradict),
-                                                                 aws_ids_match)
-                                                     ])
+        return super()._find_correlation_with_real_adapter(parsed_device)
 
 
 class NexposeAdapter(ScannerAdapterBase):
