@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from pyVim import connect
 from pyVmomi.VmomiSupport import Enum as pyVmomiEnum
@@ -6,7 +7,6 @@ from retrying import retry
 from datetime import datetime
 from namedlist import namedlist
 from pyVmomi import vim
-
 
 vCenterNode = namedlist(
     'vCenterNode', ['Name', 'Type', ('Children', []), ('Details', None), ('Hardware', None)])
@@ -194,9 +194,25 @@ class vCenterApi(object):
             children = [self._parse_vm(c, depth + 1) for c in vm_list]
             return vCenterNode(Name=vm_root.name, Type="Folder", Children=children)
 
-        # otherwise, we're dealing with a machine
-        summary = vm_root.summary
-        return vCenterNode(Name=summary.config.name, Type="Machine", Details=self._parse_vm_host(vm_root))
+        # otherwise, we're perhaps dealing with a machine
+
+        parsed_data = self._parse_vm_host(vm_root)
+        config = parsed_data.get('config')
+        if not config:
+            logger.error("Got a machine without a config")
+            return None
+
+        name = config.get('name')
+        if not name:
+            logger.error("Got a machine without a name")
+            return None
+
+        template = config.get('template')
+        if template is None:
+            logger.error("Got a machine without a template")
+            return None
+
+        return vCenterNode(Name=name, Type="Template" if template else "Machine", Details=parsed_data)
 
     @retry(stop_max_attempt_number=3, retry_on_exception=_should_retry_fetching)
     def get_all_vms(self):

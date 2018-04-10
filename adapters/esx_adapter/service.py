@@ -169,7 +169,9 @@ class EsxAdapter(AdapterBase):
         node_type = node.get('Type')
         if not node_type:
             return
-        if node_type == 'Machine':
+        if node_type == "Template":
+            return
+        elif node_type == 'Machine':
             device = self._parse_vm_machine(node, _curr_path)
             device.device_type = ESXDeviceType.VMMachine
             yield device

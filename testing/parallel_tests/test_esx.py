@@ -25,6 +25,7 @@ class TestEsxAdapter(AdapterTestBase):
             client_id = "{}/{}".format(client['host'], client['user'])
             client_details_to_send.append((client_id, some_device_id))
         self.axonius_system.assert_device_aggregated(self.adapter_service, client_details_to_send)
+        assert not self.axonius_system.get_device_by_id(self.adapter_service.unique_name, VERIFY_DEVICE_MISSING)
 
     def test_folder_on_dc_level(self):
         self.drop_clients()
