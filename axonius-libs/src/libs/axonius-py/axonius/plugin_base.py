@@ -1,6 +1,7 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 import json
 from datetime import datetime, timedelta
@@ -22,7 +23,7 @@ import functools
 from cryptography.fernet import Fernet
 
 from axonius.consts.adapter_consts import IGNORE_DEVICE
-from axonius.utils.threading import run_in_executor_helper
+from axonius.utils.threading import run_in_executor_helper, LazyMultiLocker
 from axonius.utils.parsing import get_exception_string
 from flask import Flask, request, jsonify
 from flask.json import JSONEncoder
@@ -897,7 +898,7 @@ class PluginBase(Feature):
         Saves all given data from adapter (devices, users) into the DB for the given client name
         :return: Device count saved
         """
-
+        multilocker = LazyMultiLocker()
         db_to_use = self.__entity_db_map.get(entity_type)
         assert db_to_use, f"got unexpected {entity_type}"
 
@@ -911,48 +912,55 @@ class PluginBase(Feature):
                 # special case: this is a device we shouldn't handle
                 self._save_parsed_in_db(parsed_to_insert, db_type='ignored_scanner_devices')
                 return
+            _to_insert_identity = parsed_to_insert['data']['id'], parsed_to_insert[PLUGIN_UNIQUE_NAME]
 
-            # trying to update the device if it is already in the DB
-            modified_count = db_to_use.update_one({
-                'adapters': {
-                    '$elemMatch': {
-                        PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
-                        'data.id': parsed_to_insert['data']['id']
+            if correlates:
+                to_lock = [_to_insert_identity, correlates]
+            else:
+                to_lock = [_to_insert_identity]
+
+            with multilocker.get_lock(to_lock):
+                # trying to update the device if it is already in the DB
+                modified_count = db_to_use.update_one({
+                    'adapters': {
+                        '$elemMatch': {
+                            PLUGIN_UNIQUE_NAME: parsed_to_insert[PLUGIN_UNIQUE_NAME],
+                            'data.id': parsed_to_insert['data']['id']
+                        }
                     }
-                }
-            }, {"$set": data_to_update}).modified_count
+                }, {"$set": data_to_update}).modified_count
 
-            if modified_count == 0:
-                # if it's not in the db then,
+                if modified_count == 0:
+                    # if it's not in the db then,
 
-                if correlates:
-                    # for scanner adapters this is case B - see "scanner_adapter_base.py"
-                    # we need to add this device to the list of adapters in another device
-                    correlate_plugin_unique_name, correlated_id = correlates
-                    modified_count = db_to_use.update_one({
-                        'adapters': {
-                            '$elemMatch': {
-                                PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
-                                'data.id': correlated_id
-                            }
-                        }},
-                        {
-                            "$addToSet": {
-                                "adapters": parsed_to_insert
-                            }
-                    })
-                    if modified_count == 0:
-                        logger.error("No devices update for case B for scanner device "
-                                     f"{parsed_to_insert['data']['id']} from "
-                                     f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
-                else:
-                    # this is regular first-seen device, make its own value
-                    db_to_use.insert_one({
-                        "internal_axon_id": uuid.uuid4().hex,
-                        "accurate_for_datetime": datetime.now(),
-                        "adapters": [parsed_to_insert],
-                        "tags": []
-                    })
+                    if correlates:
+                        # for scanner adapters this is case B - see "scanner_adapter_base.py"
+                        # we need to add this device to the list of adapters in another device
+                        correlate_plugin_unique_name, correlated_id = correlates
+                        modified_count = db_to_use.update_one({
+                            'adapters': {
+                                '$elemMatch': {
+                                    PLUGIN_UNIQUE_NAME: correlate_plugin_unique_name,
+                                    'data.id': correlated_id
+                                }
+                            }},
+                            {
+                                "$addToSet": {
+                                    "adapters": parsed_to_insert
+                                }
+                        })
+                        if modified_count == 0:
+                            logger.error("No devices update for case B for scanner device "
+                                         f"{parsed_to_insert['data']['id']} from "
+                                         f"{parsed_to_insert[PLUGIN_UNIQUE_NAME]}")
+                    else:
+                        # this is regular first-seen device, make its own value
+                        db_to_use.insert_one({
+                            "internal_axon_id": uuid.uuid4().hex,
+                            "accurate_for_datetime": datetime.now(),
+                            "adapters": [parsed_to_insert],
+                            "tags": []
+                        })
 
         if should_log_info is True:
             logger.info(f"Starting to fetch data (devices/users) for {client_name}")
