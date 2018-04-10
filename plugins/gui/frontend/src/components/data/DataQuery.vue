@@ -63,15 +63,16 @@
     import xSchemaFilter from '../schema/SchemaFilter.vue'
 	import Modal from '../../components/popover/Modal.vue'
 
-	import { mapState, mapMutations, mapActions } from 'vuex'
-    import { UPDATE_DATA_VIEW } from '../../store/mutations'
+	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
+    import { GET_DATA_FIELD_LIST_TYPED } from '../../store/getters'
+	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_DATA_QUERIES, SAVE_DATA_QUERY } from '../../store/actions'
 	import { expression } from '../../mixins/filter'
 
 	export default {
 		name: 'x-data-query',
 		components: { TriggerableDropdown, NestedMenu, NestedMenuItem, xSchemaFilter, Modal },
-		props: {module: {required: true}, schema: {}, selected: {}, limit: {default: 5}},
+		props: {module: {required: true}, limit: {default: 5}},
 		computed: {
 			...mapState({
                 savedQueries(state) {
@@ -82,8 +83,15 @@
 				},
                 query(state) {
                 	return state[this.module].data.view.query
+                },
+                selected(state) {
+                	return state[this.module].data.view.fields
                 }
             }),
+            ...mapGetters({getDataFieldsListTyped: GET_DATA_FIELD_LIST_TYPED}),
+            schema() {
+				return this.getDataFieldsListTyped(this.module)
+            },
             queryExpressions: {
 				get() {
 					return this.query.expressions

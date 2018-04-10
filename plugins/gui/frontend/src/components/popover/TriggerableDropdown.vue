@@ -40,7 +40,6 @@
     .dropdown {
         .dropdown-toggle {
             cursor: pointer;
-            font-size: 80%;
             padding-right: 4px;
             padding-left: 4px;
             i, .svg-icon {

@@ -278,7 +278,6 @@ class GuiService(PluginBase):
                 projection['adapters'] = 1
                 pipeline.append({'$project': projection})
             if sort:
-                logger.info(f'HERE IS SORT {sort}')
                 pipeline.append({'$sort': sort})
             else:
                 # Default sort by adapters list size and then Mongo id (giving order of insertion)
@@ -301,6 +300,29 @@ class GuiService(PluginBase):
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
                     upsert=True)
             return [beautify_db_entry(entity) for entity in data_list]
+
+    def _get_csv(self, mongo_filter, mongo_sort, mongo_projection, module_name):
+        """
+        Given a module_name, retrieve it's entities, according to given filter, sort and requested fields.
+        The resulting list is processed into csv format and returned as a file conent, to be downloaded by browser.
+
+        :param limit:
+        :param skip:
+        :param mongo_filter:
+        :param mongo_sort:
+        :param mongo_projection:
+        :param module_name:
+        :return:
+        """
+        string_output = io.StringIO()
+        entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, module_name)
+        dw = csv.DictWriter(string_output, entities[0].keys())
+        dw.writeheader()
+        dw.writerows(entities)
+        output = make_response(string_output.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
 
     def _entity_by_id(self, module_name, entity_id):
         """
@@ -370,12 +392,14 @@ class GuiService(PluginBase):
 
         def guify_fields(fields, name_prefix=""):
             # Remove fields from data that are not relevant to UI
-            if 'items' in fields:
-                fields['items'] = [x for x in fields['items'] if x.get('name', '') not in ['scanner']]
+            if not 'items' in fields:
+                return fields
+            fields['items'] = [x for x in fields['items'] if x.get('name', '') not in ['scanner']]
             if name_prefix:
                 for field in fields['items']:
                     if 'name' in field:
                         field['name'] = name_prefix + field['name']
+
             return fields
 
         def _get_generic_fields():
@@ -385,33 +409,62 @@ class GuiService(PluginBase):
                 return UserAdapter.get_fields_info()
             return dict()
 
+        all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
+
         fields = {
             'generic': guify_fields(_get_generic_fields(), name_prefix='specific_data.data.'),
             'specific': {}
         }
+        fields['generic']['items'] = [{
+            'name': 'adapters',
+            'title': 'Adapters',
+            'type': 'array',
+            'items': {'type': 'string', 'format': 'logo', 'enum': []}
 
-        all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
-
-        # insert at index 0 to be first
-        fields['generic']['items'].insert(0, {
+        }, {
             'name': 'specific_data.adapter_properties',
             'title': 'Adapter Properties',
             'type': 'string',
-            "enum": all_supported_properties,
-        })
+            "enum": all_supported_properties
+        }] + fields['generic']['items'] + [{
+            'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
+        }]
+        plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = list(db_connection['core']['configs'].find({}).
                                    sort([(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
-                if db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]]['fields']:
-                    plugin_fields_record = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][
-                        f'{module_name}_fields'].find_one({'name': 'parsed'}, projection={'schema': 1})
-                    if plugin_fields_record:
-                        fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = \
-                            guify_fields(plugin_fields_record['schema'],
-                                         name_prefix=f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}.')
-
+                if plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
+                    plugin_fields = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{module_name}_fields']
+                    if plugin_fields:
+                        plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
+                        if plugin_fields_record:
+                            fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = \
+                                guify_fields(plugin_fields_record['schema'],
+                                             name_prefix=f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}.')
+                            fields['generic']['items'][0]['items']['enum'].append(plugin[plugin_consts.PLUGIN_NAME])
         return jsonify(fields)
+
+    def _entity_views(self, method, module_name):
+        """
+        Save or fetch views over the devices db
+        :return:
+        """
+        entity_views_collection = self._get_collection(f'{module_name}_views', limited_user=False)
+        if method == 'GET':
+            mongo_filter = filter_archived()
+            return jsonify(beautify_db_entry(entry) for entry in entity_views_collection.find(mongo_filter))
+
+        # Handle POST request
+        view_data = self.get_request_data_as_object()
+        if not view_data.get('name'):
+            return return_error(f'Name is required in order to save a view', 400)
+        if not view_data.get('view'):
+            return return_error(f'View data is required in order to save one', 400)
+        update_result = entity_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
+        if not update_result.upserted_id and not update_result.modified_count:
+            return return_error(f'View named {view_data.name} was not saved', 400)
+        return ''
 
     ##########
     # DEVICE #
@@ -425,21 +478,12 @@ class GuiService(PluginBase):
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'device'))
 
-    @paginated()
     @filtered()
     @sorted()
     @projectioned()
     @add_rule_unauthenticated("device/csv")
-    def get_csv(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        string_output = io.StringIO()
-        entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, 'device')
-        dw = csv.DictWriter(string_output, entities[0].keys())
-        dw.writeheader()
-        dw.writerows(entities)
-        output = make_response(string_output.getvalue())
-        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-        output.headers["Content-type"] = "text/csv"
-        return output
+    def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
+        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, 'device')
 
     @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
     def _device_by_id(self, device_id):
@@ -470,21 +514,7 @@ class GuiService(PluginBase):
         Save or fetch views over the devices db
         :return:
         """
-        device_views_collection = self._get_collection('device_views', limited_user=False)
-        if request.method == 'GET':
-            mongo_filter = filter_archived()
-            return jsonify(beautify_db_entry(entry) for entry in device_views_collection.find(mongo_filter))
-
-        # Handle POST request
-        view_data = self.get_request_data_as_object()
-        if not view_data.get('name'):
-            return return_error(f'Name is required in order to save a view', 400)
-        if not view_data.get('view'):
-            return return_error(f'View data is required in order to save one', 400)
-        update_result = device_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
-        if not update_result.upserted_id and not update_result.modified_count:
-            return return_error(f'View named {view_data.name} was not saved', 400)
-        return ''
+        return self._entity_views(request.method, 'device')
 
     @add_rule_unauthenticated("device/labels", methods=['GET', 'POST', 'DELETE'])
     def labels(self):
@@ -539,6 +569,13 @@ class GuiService(PluginBase):
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'user'))
 
+    @filtered()
+    @sorted()
+    @projectioned()
+    @add_rule_unauthenticated("user/csv")
+    def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
+        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, 'user')
+
     @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
         return self._entity_by_id('user', user_id)
@@ -561,6 +598,10 @@ class GuiService(PluginBase):
     @add_rule_unauthenticated("user/fields")
     def user_fields(self):
         return self._entity_fields('user')
+
+    @add_rule_unauthenticated("user/views", methods=['GET', 'POST'])
+    def user_views(self):
+        return self._entity_views(request.method, 'user')
 
     ###########
     # ADAPTER #

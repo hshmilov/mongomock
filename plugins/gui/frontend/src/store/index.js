@@ -4,6 +4,7 @@ import Vuex from 'vuex'
 import {
 	REQUEST_API, requestApi,
 	FETCH_DATA_CONTENT, fetchDataContent,
+	FETCH_DATA_CONTENT_CSV, fetchDataContentCSV,
 	FETCH_DATA_COUNT, fetchDataCount,
 	FETCH_DATA_VIEWS, fetchDataViews,
 	SAVE_DATA_VIEW, saveDataView,
@@ -23,6 +24,10 @@ import {
 	UPDATE_DATA_QUERIES, updateDataQueries,
 	ADD_DATA_QUERY, addDataQuery
 } from './mutations'
+import {
+	GET_DATA_FIELD_LIST_TYPED, getDataFieldsListTyped,
+	GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread
+} from './getters'
 import { settings } from '../store/modules/settings'
 import { device } from '../store/modules/device'
 import { user } from '../store/modules/user'
@@ -47,6 +52,10 @@ export default new Vuex.Store({
             collapseSidebar: true
         }
     },
+	getters: {
+		[ GET_DATA_FIELD_LIST_TYPED ]: getDataFieldsListTyped,
+		[ GET_DATA_FIELD_LIST_SPREAD ]: getDataFieldListSpread
+	},
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
         [ UPDATE_DATA_CONTENT ]: updateDataContent,
@@ -61,6 +70,7 @@ export default new Vuex.Store({
     actions: {
         [ REQUEST_API ]: requestApi,
         [ FETCH_DATA_CONTENT ]: fetchDataContent,
+		[ FETCH_DATA_CONTENT_CSV ]: fetchDataContentCSV,
 		[ FETCH_DATA_COUNT ]: fetchDataCount,
 		[ FETCH_DATA_VIEWS ]: fetchDataViews,
 		[ SAVE_DATA_VIEW ]: saveDataView,

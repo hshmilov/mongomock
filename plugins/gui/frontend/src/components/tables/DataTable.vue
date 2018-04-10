@@ -2,7 +2,7 @@
     <div class="x-data-table">
         <div class="x-table-header">
             <div class="x-title">{{ title }} ({{count.data}})</div>
-            <slot name="tableActions"/>
+            <div class="x-actions"><slot name="actions"/></div>
         </div>
         <pulse-loader :loading="loading" color="#FF7D46" />
         <div class="x-table-container">
@@ -10,7 +10,7 @@
                 <thead>
                     <tr class="x-row clickable">
                         <th v-if="value">
-                            <checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
+                            <x-checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
                                       :value="ids" @change="$emit('input', $event)"/>
                         </th>
                         <th v-for="field in viewFields" nowrap @click="onClickSort(field.name)" class="sortable">
@@ -22,7 +22,7 @@
                 <tbody>
                     <tr v-for="item in pageData" @click="onClickRow(item[idField])" class="x-row clickable">
                         <td v-if="value">
-                            <checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)" />
+                            <x-checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)" />
                         </td>
                         <td v-for="field in viewFields" nowrap>
                             <component :is="`x-${field.type}-view`" :value="getData(item, field.name)" :schema="field"
@@ -55,12 +55,13 @@
 </template>
 
 <script>
+    import { GET_DATA_FIELD_LIST_SPREAD } from '../../store/getters'
+	import { UPDATE_DATA_VIEW} from '../../store/mutations'
 	import { FETCH_DATA_CONTENT } from '../../store/actions'
-    import { UPDATE_DATA_VIEW} from '../../store/mutations'
-	import { mapState, mapMutations, mapActions } from 'vuex'
+	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
-	import Checkbox from '../inputs/Checkbox.vue'
+	import xCheckbox from '../inputs/Checkbox.vue'
 	import xStringView from '../../components/controls/string/StringView.vue'
 	import xNumberView from '../../components/controls/numerical/NumberView.vue'
 	import xIntegerView from '../../components/controls/numerical/IntegerView.vue'
@@ -71,9 +72,9 @@
 
 	export default {
 		name: 'x-data-table',
-        components: {PulseLoader, Checkbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
+        components: {PulseLoader, xCheckbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
         mixins: [DataMixin],
-        props: {module: {required: true}, fields: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
+        props: {module: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
 				loading: true
@@ -99,6 +100,12 @@
 					return state['settings'].data.multiLine
                 }
 			}),
+            ...mapGetters({
+                getDataFieldsListSpread: GET_DATA_FIELD_LIST_SPREAD
+            }),
+            fields() {
+				return this.getDataFieldsListSpread(this.module)
+            },
             fetching() {
 				return (!this.fields.length || this.content.fetching || this.count.fetching) && !this.pageData.length
             },
@@ -215,6 +222,11 @@
             line-height: 24px;
             .x-title {
                 flex: 1 0 auto;
+            }
+            .x-actions {
+                display: grid;
+                grid-auto-flow: column;
+                grid-gap: 8px;
             }
         }
         .x-table-container {

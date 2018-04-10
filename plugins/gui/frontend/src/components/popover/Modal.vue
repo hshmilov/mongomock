@@ -63,7 +63,7 @@
                 }
                 .modal-footer {
                     border: 0;
-                    padding: .5rem;
+                    padding: 0;
                 }
             }
         }

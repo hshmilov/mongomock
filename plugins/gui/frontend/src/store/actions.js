@@ -81,38 +81,53 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 	})
 }
 
-export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
-export const fetchDataContent = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload)) return
+const createContentRequest = (state, payload) => {
+	if (!validModule(state, payload)) return ''
 	const view = state[payload.module].data.view
 
-	if (!payload.skip) {
-		payload.skip = 0
-		dispatch(FETCH_DATA_COUNT, {module: payload.module})
+	let params = []
+	if (payload.skip !== undefined) {
+		params.push(`skip=${payload.skip}`)
 	}
-	if (!payload.limit) payload.limit = 1000
-
-    let param = ''
-
-	if (payload.param) param = payload.param
-
-	let type = ''
-	if (!('type' in payload)) type = UPDATE_DATA_CONTENT
-
-	param += `?limit=${payload.limit}&skip=${payload.skip}`
+	if (payload.limit !== undefined) {
+		params.push(`limit=${payload.limit}`)
+	}
 	if (view.fields && view.fields.length) {
-		param += `&fields=${view.fields}`
+		params.push(`fields=${view.fields}`)
 	}
 	if (view.query && view.query.filter) {
-		param += `&filter=${encodeURI(view.query.filter)}`
+		params.push(`filter=${encodeURI(view.query.filter)}`)
 	}
 	if (view.sort && view.sort.field) {
-		param += `&sort=${view.sort.field}${view.sort.desc? '-' : '+'}`
+		params.push(`sort=${view.sort.field}${view.sort.desc? '-' : '+'}`)
+	}
+	return params.join('&')
+}
+
+export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT'
+export const fetchDataContent = ({state, dispatch}, payload) => {
+	if (!payload.skip) {
+		dispatch(FETCH_DATA_COUNT, {module: payload.module})
 	}
 	return dispatch(REQUEST_API, {
-		rule: payload.module + param,
-		type: type,
+		rule: `${payload.module}?${createContentRequest(state, payload)}`,
+		type: UPDATE_DATA_CONTENT,
 		payload: {module: payload.module, skip: payload.skip}
+	})
+}
+
+export const FETCH_DATA_CONTENT_CSV = 'FETCH_DATA_CONTENT_CSV'
+export const fetchDataContentCSV = ({state, dispatch}, payload) => {
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/csv?${createContentRequest(state, payload)}`,
+		payload: {module: payload.module, skip: payload.skip}
+	}).then((response) => {
+		let blob = new Blob([response.data], { type: response.headers["content-type"]} )
+		let link = document.createElement('a')
+		link.href = window.URL.createObjectURL(blob)
+		link.download = 'export.csv'
+		link.click()
 	})
 }
 

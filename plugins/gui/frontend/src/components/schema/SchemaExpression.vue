@@ -9,12 +9,7 @@
         <label class="x-btn light checkbox-label" :class="{active: expression.not, disabled: disableNot}">
             <input type="checkbox" v-model="expression.not">NOT</label>
         <div class="expression-field">
-            <x-select :options="fields" v-model="fieldSpace" class="space-select">
-                <template slot-scope="{ option }">
-                    <div class="space-select-img"><img :src="`/src/assets/images/logos/${option.name}.png`" /></div>
-                    <div class="logo-text">{{option.title}}</div>
-                </template>
-            </x-select>
+            <x-select-type :options="fields" v-model="fieldSpace" />
             <x-select :options="currentFields" v-model="expression.field" placeholder="field..." :searchable="true"
                       class="field-select"/>
         </div>
@@ -40,6 +35,7 @@
 
 <script>
     import xSelect from '../inputs/Select.vue'
+    import xSelectType from '../inputs/SelectType.vue'
 	import xStringEdit from '../controls/string/StringEdit.vue'
 	import xNumberEdit from '../controls/numerical/NumberEdit.vue'
 	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
@@ -50,7 +46,7 @@
 
 	export default {
 		components: {
-			xSelect, xStringEdit, xNumberEdit, xIntegerEdit, xBoolEdit, xArrayEdit,
+			xSelect, xSelectType, xStringEdit, xNumberEdit, xIntegerEdit, xBoolEdit, xArrayEdit,
 		},
 		name: 'x-schema-expression',
 		props: {
@@ -284,21 +280,7 @@
         .expression-field {
             display: flex;
             width: 100%;
-            .space-select-img {
-                width: 30px;
-                height: 24px;
-                text-align: center;
-                display: inline-block;
-                img {
-                    margin: auto;
-                    max-width: 30px;
-                    max-height: 24px;
-                }
-            }
-            .logo-text {
-                max-width: 160px;
-            }
-            .space-select {
+            .x-select-type {
                 border-bottom-right-radius: 0;
                 border-top-right-radius: 0;
             }
@@ -310,11 +292,11 @@
             }
         }
         .x-select-trigger {
-            .logo-text {
-                display: none;
-            }
             .placeholder {
                 text-transform: uppercase;
+            }
+            .logo-text {
+                display: none;
             }
         }
     }

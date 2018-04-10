@@ -38,7 +38,7 @@
                                 <label for="TriggerBelow">Below:</label>
                                 <input id="TriggerBelow" type="number" class="ml-4" v-model="alert.triggers.below" min="0">
                             </div>
-                            <checkbox class="ml-4" label="Not Changed" v-model="alert.triggers.noChange"></checkbox>
+                            <checkbox class="ml-4" label="Not Changed" v-model="alert.triggers.no_change"></checkbox>
                         </div>
                         <div class="form-group col-6">
                             <div class="form-group-header">

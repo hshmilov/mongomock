@@ -3,13 +3,14 @@
         <div class="x-checkbox-container" :class="{'x-checkbox-semi': semi}">
             <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox">
         </div>
+        <label v-if="label" class="x-checkbox-label">{{label}}</label>
     </div>
 </template>
 
 <script>
 	export default {
 		name: 'x-checkbox',
-        props: {data: {}, value: {default: 'on'}, semi: {default: false}},
+        props: {data: {}, value: {default: 'on'}, label: {}, semi: {default: false}},
         model: {
 			prop: 'data',
             event: 'change'
@@ -69,6 +70,8 @@
             border-radius: 2px;
             border: 2px solid $grey-4;
             transition: .4s cubic-bezier(.25,.8,.25,1);
+            display: inline-block;
+            vertical-align: middle;
             input {
                 position: absolute;
                 left: -999em;
@@ -114,6 +117,13 @@
                 transform: rotate(45deg) scale3D(1,1,1);
                 transition: .4s cubic-bezier(.25,.8,.25,1);
                 border-color: $theme-white;
+            }
+        }
+        .x-checkbox-label {
+            margin-left: 8px;
+            cursor: pointer;
+            &:hover {
+                text-shadow: 1px 1px rgba(0, 0, 0, 0.2)
             }
         }
     }

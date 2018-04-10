@@ -43,7 +43,7 @@
 			selectOption(name) {
 				this.$emit('input', name)
                 this.searchValue = ''
-                this.$el.parentElement.click()
+                this.$children[0].close()
             }
         }
 	}

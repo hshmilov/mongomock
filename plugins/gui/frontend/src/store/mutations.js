@@ -6,7 +6,6 @@ export const toggleSidebar = (state) => {
     state.interaction.collapseSidebar = !state.interaction.collapseSidebar
 }
 
-
 export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateDataCount = (state, payload) => {
 	if (!validModule(state, payload)) return
