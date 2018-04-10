@@ -26,7 +26,7 @@ if [ "$AVAILABLE_VOLUMES" != "" ]; then
 fi
 
 echo "Running unitests"
-pytest -v -s --ignore=testing --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform --junitxml=testing/reporting/ut_report.xml
+pytest -vv -s --ignore=testing --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform --junitxml=testing/reporting/ut_report.xml
 if [ $? -ne 0 ]
 then
   echo "Unitests failed"

@@ -12,11 +12,7 @@ from services.plugins.dns_conflicts_service import dns_conflicts_fixture
 from services.plugins.general_info_service import general_info_fixture
 from services.plugins.execution_service import execution_fixture
 
-CLIENT_ID_1_ADMIN_SID = "S-1-5-21-4050441107-50035988-2732102988-500"
-CLIENT_ID_1_ADMIN_CAPTION = "Administrator@TestDomain.test"
 
-
-@pytest.mark.skip("dc is down")
 class TestAdAdapter(AdapterTestBase):
     @property
     def adapter_service(self):

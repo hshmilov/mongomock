@@ -33,9 +33,9 @@ def test_users(ldap_connection: LdapConnection):
         users_dict[user["sAMAccountName"]] = user
 
     assert len(users_dict) > 0
-    assert users_dict['ofri']['cn'] == 'Ofri Shur'
+    assert users_dict['avidor']['cn'] == 'Avidor Bartov'
     assert users_dict['Administrator']['adminCount'] == 1
-    assert "maxPwdAge" in users_dict['ofri']['axonius_extended']
+    assert "maxPwdAge" in users_dict['avidor']['axonius_extended']
 
 
 def test_devices(ldap_connection: LdapConnection):
@@ -86,5 +86,5 @@ def test_wmi():
         assert r["status"] == "ok"
 
     assert "Program Files" in response[0]["data"]
-    assert {'SID': 'S-1-5-21-4050441107-50035988-2732102988-500'} in response[1]["data"]
+    assert {'SID': 'S-1-5-21-3246437399-2412088855-2625664447-500'} in response[1]["data"]
     assert "SOFTWARE" in response[2]["data"][0]['sNames']

@@ -12,9 +12,11 @@ The following also have three advantages:
 """
 
 import sys
+import os
 import ntpath
 import json
 import time
+import socket
 
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.dcom import wmi
@@ -81,7 +83,7 @@ class WmiSmbRunner(object):
         :param namespace: the wmi namespace.
         """
 
-        self.address = address
+        self.address = socket.gethostbyname(address)    # This doesn't work otherwise, if given a hostname
         self.username = username
         self.password = password
         self.domain = domain
@@ -541,7 +543,9 @@ if __name__ == '__main__':
         sys.stdout.flush()
 
     except Exception:
-        raise
+        # At this point we can have many threads which are not daemon threads. we need to forcefully exit.
+        sys.stderr.write(get_exception_string())
+        os._exit(-1)
 
     finally:
         tp.terminate()
