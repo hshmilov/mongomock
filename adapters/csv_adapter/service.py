@@ -1,4 +1,6 @@
 import csv
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
@@ -19,7 +21,8 @@ class CsvAdapter(AdapterBase):
         return client_config
 
     def _query_devices_by_client(self, client_name, client_data):
-        return {"data": list(csv.reader(bytearray(client_data['csv']).decode('ascii').splitlines()))}
+        csv_data = bytearray(client_data['csv']).decode('utf-8')
+        return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data[:1024]))
 
     def _clients_schema(self):
         return {
@@ -49,12 +52,29 @@ class CsvAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, raw_data):
-        for asset_name, serial in raw_data['data']:
-            device = self._new_device_adapter()
-            device.name = asset_name
-            device.id = serial
-            device.set_raw({"name": asset_name, "id": serial})
-            yield device
+        if "Serial" not in raw_data.fieldnames:
+            logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
+            return
+        for device_raw in raw_data:
+            try:
+                device = self._new_device_adapter()
+                serial = device_raw.get("Serial")
+                device.id = serial
+                if device.id is None or device.id == "":
+                    continue
+                device.device_serial = serial
+                device.name = device_raw.get("Name")
+                mac_addresses = device_raw.get("MAC Address", "").split(',')
+                for mac_address in mac_addresses:
+                    if mac_address != "":
+                        device.add_nic(mac_address, None)
+                os = device_raw.get("OS")
+                if os is not None:
+                    device.figure_os(os)
+                device.set_raw(device_raw)
+                yield device
+            except:
+                logger.exception(f"Problem adding device: {str(device_raw)}")
 
     def _correlation_cmds(self):
         """
