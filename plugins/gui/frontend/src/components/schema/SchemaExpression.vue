@@ -200,9 +200,14 @@
 				})
 			},
 			compileExpression () {
+				if (!this.expression.field && this.fieldSpace !== '' && this.fieldSpace !== 'axonius') {
+					this.expression.field = 'adapters'
+                    this.expression.compOp = 'equals'
+                    this.expression.value = this.fieldSpace
+                }
 				this.$emit('input', this.expression)
 				let error = this.checkErrors() || this.formatExpression()
-				if (error) {
+				if (error || !this.expression.field) {
 					this.$emit('change', {error})
 					return
 				}
@@ -211,22 +216,14 @@
 					filterStack.push(this.expression.logicOp + ' ')
 				}
                 let bracketWeight = 0
-				if (this.expression.field) {
-                    if (this.expression.leftBracket) {
-                        filterStack.push('(')
-                        bracketWeight -= 1
-                    }
-                    filterStack.push(this.composeCondition())
-                    if (this.expression.rightBracket) {
-                        filterStack.push(')')
-                        bracketWeight += 1
-                    }
-				} else if (this.fieldSpace !== 'axonius') {
-					filterStack.push('adapters ')
-					filterStack.push(this.expression.not? '!=': '==')
-					filterStack.push(` '${this.fieldSpace}'`)
-                } else {
-					return
+                if (this.expression.leftBracket) {
+                    filterStack.push('(')
+                    bracketWeight -= 1
+                }
+                filterStack.push(this.composeCondition())
+                if (this.expression.rightBracket) {
+                    filterStack.push(')')
+                    bracketWeight += 1
                 }
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
 			}
