@@ -102,13 +102,14 @@ class EnsiloConnection(object):
         """
         devices_list = []
         try:
-            devices_list += self._get('inventory/list-collectors?itemsPerPage=2000&pageNumber=0')
-        except:
-            logger.exception("Page 0 Unsopported in Ensilo")
-        try:
             # If we won't get error, let's stop after million devices
-            for page_number in range(1, 500):
-                devices_list += self._get('inventory/list-collectors?itemsPerPage=2000&pageNumber=' + str(page_number))
+            for page_number in range(0, 500):
+                device_list_page = self._get(
+                    'inventory/list-collectors?itemsPerPage=2000&pageNumber=' + str(page_number))
+                if len(device_list_page) == 0:
+                    break
+                devices_list += device_list_page
+                logger.info(f"Got {len(device_list_page)} devices at page {page_number}")
         except:
             pass
         return devices_list
