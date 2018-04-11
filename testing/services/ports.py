@@ -47,6 +47,7 @@ DOCKER_PORTS = {
     'mobileiron-adapter':               6016,
     'juniper-adapter':                  6017,
     'openstack-adapter':                6018,
+    'device-control':                   6019,
     'mongo':                            27017,
 }
 

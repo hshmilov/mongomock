@@ -670,7 +670,7 @@ class AdapterBase(PluginBase, Feature, ABC):
     def get_files(self, device_data, files_path):
         raise RuntimeError("Not implemented yet")
 
-    def execute_binary(self, device_data, binary_buffer):
+    def execute_binary(self, device_data, binary_file_path, binary_params):
         raise RuntimeError("Not implemented yet")
 
     def execute_shell(self, device_data, shell_commands):

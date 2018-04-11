@@ -6,6 +6,7 @@ from axonius.fields import Field
 from datetime import datetime, timedelta
 import json
 import os
+import os.path
 import tempfile
 import threading
 import time
@@ -31,7 +32,12 @@ TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
 LDAP_PASSWORD_NOT_REQUIRED = 0x0020
-MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 90
+
+# Note! After this time the process will be terminated. We shouldn't ever terminate a process while it runs,
+# In case its the execution we might leave some files on the target machine which is a bad idea.
+# For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
+# This value should be for times we are really really sure there is a problem.
+MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
 
 # TODO ofir: Change the return values protocol
 
@@ -606,8 +612,27 @@ class ActiveDirectoryAdapter(AdapterBase):
 
         return self.execute_wmi_smb(device_data, commands_list)
 
-    def execute_binary(self, device_data, binary_buffer):
-        raise NotImplementedError("Execute binary is not implemented")
+    def execute_binary(self, device_data, binary_file_path, binary_params):
+        """
+        Executes a binary file. We do not get the contents of this file, but rather the absolute path
+        of this file on the machine that runs the current execution code (not the target).
+
+        Note! It is the requester's responsibility to delete this file from the running machine (the local one!
+        the file is, ofcourse, being deleted from the target machine)
+        :param device_data:the device data
+        :param binary_buffer: the absolute path of the file, on this current machine.
+        :param binary_params: a string to give as an argument to the binary.
+                              we run eventually "cmd.exe /Q /c file.exe binary_params > ...."
+        :return:
+        """
+
+        if os.path.isfile(binary_file_path) is False:
+            raise ValueError(f"Error, file path {binary_file_path} is not a file (or does not exist)!")
+
+        if type(binary_params) != str:
+            raise ValueError(f"Error, type of binary_params should be string, but instead got {type(binary_params)}")
+
+        return self.execute_wmi_smb(device_data, [{"type": "execbinary", "args": [binary_file_path, binary_params]}])
 
     def execute_wmi_smb(self, device_data, wmi_smb_commands):
         """
@@ -689,7 +714,7 @@ class ActiveDirectoryAdapter(AdapterBase):
         """
         :return: Returns a list of all supported execution features by this adapter.
         """
-        return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell"]
+        return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell", "execute_binary"]
 
     @classmethod
     def adapter_properties(cls):

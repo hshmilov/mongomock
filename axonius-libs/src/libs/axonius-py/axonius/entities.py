@@ -105,6 +105,10 @@ class AxoniusEntity(object):
     def specific_data(self):
         return self.data['specific_data']
 
+    @property
+    def internal_axon_id(self):
+        return self.data['internal_axon_id']
+
     def __get_all_identities(self):
         return [(plugin["plugin_unique_name"], plugin["data"]["id"])
                 for plugin in self.data['specific_data'] if plugin.get('type') == 'entitydata']
@@ -117,9 +121,9 @@ class AxoniusEntity(object):
         """
 
         if self.entity == "devices":
-            data = self.plugin_base.devices_db_view.findOne({"_id": ObjectId(self.data.get("_id"))})
+            data = self.plugin_base.devices_db_view.find_one({"_id": ObjectId(self.data.get("_id"))})
         elif self.entity == "users":
-            data = self.plugin_base.users_db_view.findOne({"_id": ObjectId(self.data.get("_id"))})
+            data = self.plugin_base.users_db_view.find_one({"_id": ObjectId(self.data.get("_id"))})
         else:
             raise ValueError("expected devices or users")
 
@@ -129,7 +133,7 @@ class AxoniusEntity(object):
 
         self.data = data
 
-    def add_label(self, label, is_enabled, identity_by_adapter=None):
+    def add_label(self, label, is_enabled=True, identity_by_adapter=None):
         """
         adds a label to that device.
         :param str label: the label
@@ -206,6 +210,20 @@ class AxoniusEntity(object):
                 raise ValueError(f"Expected to find 1 {plugin_unique_name} but found {len(data)}")
 
             return data[0]['data'].get(name)
+
+    def request_action(self, name, data):
+        """
+        Requests an action from the execution service.
+        :param name: the name of the action, e.g. "execute_shell".
+        :param data: a json representing the data.
+        :return: a promise.
+        """
+
+        # Flush the device to get the latest axon id.
+        self.flush()
+
+        # return the promise.
+        return self.plugin_base.request_action(name, self.internal_axon_id, data)
 
 
 class AxoniusDevice(AxoniusEntity):

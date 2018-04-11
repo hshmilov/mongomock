@@ -19,6 +19,7 @@ class DockerService(AxonService):
             raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
 
         self.log_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'logs', self.container_name))
+        self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, "uploaded_files"))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
         self.package_name = os.path.basename(self.service_dir)
         self._process_owner = False
@@ -43,7 +44,11 @@ class DockerService(AxonService):
 
     @property
     def volumes(self):
-        return [f'{self.container_name}_data:/home/axonius', '{0}:/home/axonius/logs'.format(self.log_dir)]
+        return [
+            f'{self.container_name}_data:/home/axonius',
+            f'{self.log_dir}:/home/axonius/logs',
+            f'{self.uploaded_files_dir}:/home/axonius/uploaded_files'
+        ]
 
     @property
     def volumes_override(self):

@@ -735,6 +735,23 @@ class GuiService(PluginBase):
         if request.method == 'DELETE':
             return '', 200
 
+    @add_rule_unauthenticated("actions/run_shell", methods=['POST'])
+    def actions_run_shell(self):
+        """
+        Executes a run shell command on devices.
+        Expected values: a list of internal axon ids, the action name, and the action command.
+        :return:
+        """
+        device_control_service_unique_name = self.get_plugin_by_name("device_control")
+        data = self.get_request_data_as_object()
+
+        # The format of data is defined in device_control\service.py::run_shell
+        response = self.request_remote_plugin('run_shell', device_control_service_unique_name, 'post',
+                                              data=data)
+        if response.status_code != 200:
+            self.logger.error(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
+            raise ValueError(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
+
     @add_rule_unauthenticated("reports", methods=['GET', 'PUT'])
     def reports(self):
         """

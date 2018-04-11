@@ -17,6 +17,9 @@ ADDRESS = ad_client1_details["dc_name"]
 WMI_SMB_RUNNER_LOCATION = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "wmi_smb_runner", "wmi_smb_runner.py"))
 
+TEST_BINARY_LOCATION = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "tests", "test_binary", "test_binary.exe"))
+
 
 @pytest.fixture(scope="module")
 def ldap_connection():
@@ -64,6 +67,7 @@ def test_wmi():
         {"type": "shell", "args": ["dir"]},
         {"type": "query", "args": ["select SID from Win32_Account"]},
         {"type": "method", "args": ["StdRegProv", "EnumKey", 2147483649, ""]},
+        {"type": "execbinary", "args": [TEST_BINARY_LOCATION, "\"hello, world\""]},
         # {"type": "putfile", "args": ["c:\\a.txt", "abcdefgh"]},
         # {"type": "getfile", "args": ["c:\\a.txt"]},
         # {"type": "deletefile", "args": ["c:\\a.txt"]},
@@ -83,8 +87,10 @@ def test_wmi():
     assert len(response) == len(commands)
 
     for r in response:
-        assert r["status"] == "ok"
+        if r["status"] != "ok":
+            raise ValueError(f"Error, status is not ok. response: {r}")
 
     assert "Program Files" in response[0]["data"]
     assert {'SID': 'S-1-5-21-3246437399-2412088855-2625664447-500'} in response[1]["data"]
     assert "SOFTWARE" in response[2]["data"][0]['sNames']
+    assert "hello, world" in response[3]["data"]

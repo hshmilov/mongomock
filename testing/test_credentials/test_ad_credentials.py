@@ -1,5 +1,5 @@
 from test_helpers.machines import FAKE_DNS_IP
-
+import os
 
 fakednsaddr = FAKE_DNS_IP
 
@@ -25,3 +25,5 @@ DEVICE_ID_FOR_CLIENT_1 = 'CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test'
 DEVICE_ID_FOR_CLIENT_2 = 'CN=DESKTOP-GO8PIUL,CN=Computers,DC=TestSecDomain,DC=test'
 USER_ID_FOR_CLIENT_1 = "Administrator"
 USER_SID_FOR_CLIENT_1 = "S-1-5-21-3246437399-2412088855-2625664447-500"
+
+TEST_BINARY_LOCATION = "/home/axonius/uploaded_files/test_binary.exe"

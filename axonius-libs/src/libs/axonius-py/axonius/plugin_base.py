@@ -380,6 +380,9 @@ class PluginBase(Feature):
         self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
 
+        # An executor dedicated for running execution promises
+        self.execution_promises = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
         if self.plugin_name != "execution":
@@ -767,13 +770,15 @@ class PluginBase(Feature):
                     # Calling the needed function
                     request_content = self.get_request_data_as_object()
 
+                    # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
+                    # and return the http request immediately.
+
                     if request_content['status'] == 'failed':
-                        action_promise.do_reject(Exception(request_content))
+                        self.execution_promises.submit(action_promise.do_reject, Exception(request_content))
                         self._open_actions.pop(action_id)
                     elif request_content['status'] == 'finished':
-                        action_promise.do_resolve(request_content)
+                        self.execution_promises.submit(action_promise.do_resolve, request_content)
                         self._open_actions.pop(action_id)
-
                     return ''
                 else:
                     logger.error(f'Got unrecognized action_id update. Action ID: {action_id}. Was it resolved?')
@@ -828,8 +833,10 @@ class PluginBase(Feature):
                     err_msg = f"Timeout {TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS } reached for " \
                               f"action_id {action_id}, rejecting the promise."
                     logger.error(err_msg)
-                    action_promise.do_reject(Exception(err_msg))
 
+                    # We must reject or resolve the promise with a thread, so that we wouldn't catch the lock
+                    # and return the http request immediately.
+                    self.execution_promises.submit(action_promise.do_reject, Exception(err_msg))
                     self._open_actions.pop(action_id)
 
     def _get_db_connection(self, limited_user=True):

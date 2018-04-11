@@ -235,17 +235,18 @@ class WmiSmbRunner(object):
 
         return True
 
-    def execshell(self, shell_command):
+    def _exec_generic(self, binary_path, binary_params):
         """
-        Executes a shell command and returns its output.
-        :param str shell_command: the command, as you would type it in cmd.
+        Executes a binary and returns its output.
+        :param str binary_path: the path of the binary to run
+        :param str binary_params: the parameters to pass to the binary, as a cmd string.
         :return str: the output.
         """
 
         win32_process, _ = self.iWbemServices.GetObject("Win32_Process")
         output_filename = "axonius_output_{0}.txt".format(str(time.time()), )
-        command_to_run = r"cmd.exe /Q /c {0} 1> \\127.0.0.1\{1}\{2} 2>&1".format(
-            shell_command, DEFAULT_SHARE, output_filename)
+        command_to_run = r"{0} {1} 1> \\127.0.0.1\{2}\{3} 2>&1".format(
+            binary_path, binary_params, DEFAULT_SHARE, output_filename)
         is_process_created = False
 
         try:
@@ -257,7 +258,7 @@ class WmiSmbRunner(object):
             # Lets get it's pid.
             pid = int(rv.getProperties()['ProcessId']['value'])
             if pid == 0:
-                raise ValueError("cmd with {0} could not be created, pid is 0".format(shell_command))
+                raise ValueError("cmd with {0} could not be created, pid is 0".format(binary_path))
 
             is_process_created = True
 
@@ -297,11 +298,12 @@ class WmiSmbRunner(object):
                     if len(query_results) != 0:
                         raise ValueError("Process was not terminated")
                 except Exception as e:
-                    raise ValueError("Process {0} with cmd {1} took too much time and "
-                                     "could not be terminated. exception {2}".format(pid, shell_command, repr(e)))
+                    raise ValueError("Process {0} with cmd {1} (params {2}...} took too much time and "
+                                     "could not be terminated. exception {3}".format(pid, binary_path,
+                                                                                     binary_params[:20], repr(e)))
 
-                raise ValueError("Process {0} with cmd {1} took too much time and had to be terminated".format(
-                    pid, shell_command))
+                raise ValueError("Process {0} with cmd {1} (params {2}...) took too much time and had "
+                                 "to be terminated".format(pid, binary_path, binary_params[:20]))
 
             return self.getfile(output_filename)
         except:
@@ -310,19 +312,40 @@ class WmiSmbRunner(object):
             if is_process_created is True:
                 self.deletefile(output_filename)
 
-    def execbinary(self, binary_file):
+    def execshell(self, shell_command):
         """
-        Not implemented yet
+        Executes a shell command and returns its output.
+        :param str shell_command: the command, as you would type it in cmd.
+        :return str: the output.
+        """
+
+        return self._exec_generic("cmd.exe", "/Q /c {0}".format(shell_command))
+
+    def execbinary(self, binary_file_path, binary_params):
+        """
+        Executes a binary file and returns its output.
         :param binary_file: the binary file.
+        :param binary_params: a string of all params to pass to the binary (shell-like -> my_file.exe param1 "param 2"
         :return:
         """
 
-        # Todo:
+        # What we do:
         # 1. self.putfile
         # 2. same thing like exec shell but without the output redirecting
         # 3. self.deletefile
 
-        raise NotImplementedError("Not Implemented Yet")
+        did_put_file = False
+        try:
+            with open(binary_file_path, "rb") as f:
+                binary_file = f.read()
+            binary_path = "axonius_binary_{0}.exe".format(str(time.time()), )
+            did_put_file = self.putfile(binary_path, binary_file)
+            return self._exec_generic("cmd.exe", "/Q /c {0} {1}".format(binary_path, binary_params))
+        except:
+            raise
+        finally:
+            if did_put_file is True:
+                self.deletefile(binary_path)
 
     def execmethod(self, object_name, method_name, *args):
         """

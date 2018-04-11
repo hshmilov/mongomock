@@ -1,4 +1,3 @@
-import pytest
 from retrying import retry
 
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -9,8 +8,7 @@ import time
 # These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
 from services.plugins.dns_conflicts_service import dns_conflicts_fixture
-from services.plugins.general_info_service import general_info_fixture
-from services.plugins.execution_service import execution_fixture
+from services.plugins.device_control_service import device_control_fixture
 
 
 class TestAdAdapter(AdapterTestBase):
@@ -177,6 +175,72 @@ class TestAdAdapter(AdapterTestBase):
             assert "cmd.exe" in action_data["product"][1]["data"]
 
         try_until_not_thrown(15, 5, check_execute_shell_results)
+
+    def test_ad_execute_binary(self):
+        device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
+        internal_axon_id = device['internal_axon_id']
+
+        action_id = self.axonius_system.execution.make_action(
+            "execute_binary",
+            internal_axon_id,
+            {
+                "binary_file_path": TEST_BINARY_LOCATION,
+                "binary_params": "\"Hello, World\""
+            },
+            adapters_to_whitelist=["active_directory_adapter"])
+
+        def check_execute_binary_results():
+            action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
+            assert action_data["result"] == "Success"
+            assert action_data["status"] == "finished"
+
+            # The following is a file that is always present in c:\windows\system32\drivers\etc\
+            assert action_data["product"][0]["status"] == "ok"
+            assert "Hello, World" in action_data["product"][0]["data"]
+
+        try_until_not_thrown(15, 5, check_execute_binary_results)
+
+    def test_ad_execute_shell_by_device_control(self, device_control_fixture):
+        # TODO: We should have a parallel test for device control but this is complicated now.
+        device = self.axonius_system.get_device_by_id(self.adapter_service.unique_name, self.some_device_id)[0]
+        internal_axon_id = device['internal_axon_id']
+
+        device_control_fixture.run_action(
+            {
+                "action_name": "Test Action",
+                "action_type": "shell",
+                "command": r"dir c:\windows\system32\drivers\etc",
+                "internal_axon_ids": [internal_axon_id]
+            }
+        )
+
+        @retry(wait_fixed=500,
+               stop_max_delay=15000)
+        def has_run_shell_success_tags():
+            assert len(self.axonius_system.get_devices_with_condition(
+                {
+                    "tags": {
+                        '$elemMatch': {
+                            "name": "Action 'Test Action' Success",
+                            "type": "label",
+                            "data": {"$ne": "False"}
+                        }
+                    }
+                }
+            )) > 0
+            assert len(self.axonius_system.get_devices_with_condition(
+                {
+                    "tags": {
+                        '$elemMatch': {
+                            "name": "Action 'Test Action'",
+                            "type": "data",
+                            "data": {"$regex": ".*lmhosts\.sam.*"}
+                        }
+                    }
+                }
+            )) > 0
+
+        has_run_shell_success_tags()
 
     def test_ad_file_operations(self):
         # We must remember this runs in parallel. So the filename is going to be random.

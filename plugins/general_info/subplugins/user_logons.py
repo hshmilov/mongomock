@@ -90,7 +90,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                     # which should be false but might be on weird circumstances true? (deleting user etc?)
                     sids_to_users[1] = bool(is_local_account)
                 else:
-                    sids_to_users[sid] = "@".join(caption.split("\\")[::-1]), bool(is_local_account)
+                    local_hostname, local_username = caption.split("\\")
+                    sids_to_users[sid] = f"{local_username}@{local_hostname}", bool(is_local_account)
 
         # Now, go over all users, parse their last use time date and add them to the array.
         last_used_time_arr = []
@@ -116,7 +117,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                 last_use_time = datetime.datetime(1, 1, 1)
 
             # This is a string in a special format, we need to parse it.
-            user = sids_to_users.get(sid, ["Unknown Name", False])
+            # In case we don't have a user here, we need a hostname. Lets take one of the
+            user = sids_to_users.get(sid, [f"Unknown@{local_hostname}", False])
             last_used_time_arr.append(
                 {"Sid": sid,
                  "User": user[0],
