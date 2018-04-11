@@ -26,8 +26,7 @@ class SymantecAdapter(AdapterBase):
         try:
             connection = SymantecConnection(domain=client_config["SEPM_Address"],
                                             port=(client_config["SEPM_Port"] if "SEPM_Port" in client_config else None))
-            connection.set_credentials(username=client_config["username"],
-                                       password=self.decrypt_password(client_config["password"]))
+            connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

@@ -43,8 +43,7 @@ class NessusAdapter(ScannerAdapterBase):
         try:
             connection = NessusConnection(host=client_config[HOST],
                                           port=(client_config[PORT] if PORT in client_config else None))
-            connection.set_credentials(username=client_config[USERNAME],
-                                       password=self.decrypt_password(client_config[PASSWORD]))
+            connection.set_credentials(username=client_config[USERNAME], password=client_config[PASSWORD])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

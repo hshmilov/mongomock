@@ -43,6 +43,3 @@ class PluginVolatileConfig(object):
     @property
     def unique_name(self):
         return self._config['registration'][PLUGIN_UNIQUE_NAME]
-
-    def password_secret(self):
-        return self._config['registration']['password_secret']

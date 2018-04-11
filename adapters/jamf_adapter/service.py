@@ -51,7 +51,7 @@ class JamfAdapter(AdapterBase):
                                         http_proxy=client_config.get(consts.HTTP_PROXY),
                                         https_proxy=client_config.get(consts.HTTPS_PROXY))
             connection.set_credentials(username=client_config[consts.USERNAME],
-                                       password=self.decrypt_password(client_config[consts.PASSWORD]))
+                                       password=client_config[consts.PASSWORD])
             connection.connect()
             return connection
         except JamfException as e:

@@ -655,15 +655,13 @@ class GuiService(PluginBase):
 
             return jsonify(adapters_to_return)
 
-    def _query_client_for_devices(self, request, adapter_unique_name, db_connection):
+    def _query_client_for_devices(self, request, adapter_unique_name):
         client_to_add = request.get_json(silent=True)
         if client_to_add is None:
             return return_error("Invalid client", 400)
 
-        encrypted_client = self._handle_encryption(adapter_unique_name, client_to_add, db_connection, 'encrypt')
-
         # adding client to specific adapter
-        response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=encrypted_client)
+        response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
         if response.status_code != 200:
             # failed, return immediately
             return response.text, response.status_code
@@ -685,15 +683,6 @@ class GuiService(PluginBase):
             pass
         return response.text, response.status_code
 
-    def _handle_encryption(self, adapter_unique_name, client_config, db_connection, action):
-        # Encrypting needed fields
-        client_schema_items = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']['items']
-        password_formatted_items = [x for x in client_schema_items if 'format' in x and x['format'] == 'password']
-        for item in password_formatted_items:
-            if item['name'] in client_config:
-                client_config[item['name']] = getattr(self, f'{action}_password')(client_config[item['name']])
-        return client_config
-
     @paginated()
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'])
     def adapters_clients(self, adapter_unique_name, limit, skip):
@@ -706,19 +695,14 @@ class GuiService(PluginBase):
         """
         with self._get_db_connection(False) as db_connection:
             if request.method == 'GET':
-                adapter_clients = list(db_connection[adapter_unique_name]['clients'].find().skip(skip).limit(limit))
-
-                for client in adapter_clients:
-                    client['client_config'] = self._handle_encryption(
-                        adapter_unique_name, client['client_config'], db_connection, 'decrypt')
-
+                client_collection = db_connection[adapter_unique_name]['clients']
                 return jsonify({
                     'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
                     'clients': [beautify_db_entry(client) for client in
-                                adapter_clients]
+                                client_collection.find().skip(skip).limit(limit)]
                 })
             if request.method == 'PUT':
-                return self._query_client_for_devices(request, adapter_unique_name, db_connection)
+                return self._query_client_for_devices(request, adapter_unique_name)
 
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id):
@@ -730,8 +714,7 @@ class GuiService(PluginBase):
         """
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
-            with self._get_db_connection(False) as db_connection:
-                return self._query_client_for_devices(request, adapter_unique_name, db_connection)
+            return self._query_client_for_devices(request, adapter_unique_name)
         if request.method == 'DELETE':
             return '', 200
 

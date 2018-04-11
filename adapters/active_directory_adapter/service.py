@@ -101,7 +101,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                                   dc_details['dc_name'],
                                   dc_details['domain_name'],
                                   dc_details['user'],
-                                  self.decrypt_password(dc_details['password']),
+                                  dc_details['password'],
                                   dc_details.get('dns_server_address'),
                                   SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
                                   bytes(dc_details.get('ca_file', [])),
@@ -543,7 +543,7 @@ class ActiveDirectoryAdapter(AdapterBase):
                     domain_name, user_name = "", client_config['user']
 
                 wanted_hostname = device_data['data']['hostname']
-                password = self.decrypt_password(client_config['password'])
+                password = client_config['password']
                 try:
                     # We resolve ip only for devices who have been resolved before.
                     # We do this to reduce the time execution tasks take for devices that we are sure

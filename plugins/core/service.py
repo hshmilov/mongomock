@@ -14,7 +14,6 @@ import uritools
 import uuid
 import smtplib
 from email.mime.text import MIMEText
-from cryptography.fernet import Fernet
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.adapter_base import is_plugin_adapter
@@ -40,25 +39,16 @@ class CoreService(PluginBase):
         db_user = config['core_specific']['db_user']
         db_password = config['core_specific']['db_password']
         log_addr = config['core_specific']['log_addr']
-        api_key = None
-        password_secret = None
 
         temp_config = configparser.ConfigParser()
         temp_config.read(VOLATILE_CONFIG_PATH)
         try:
-            api_key = config['core_specific']['api_key']
-            password_secret = config['core_specific']['password_secret']
+            api_key = temp_config['core_specific']['api_key']
         except KeyError:
+            # We should generate a new api_key and save it
+            api_key = uuid.uuid4().hex
             temp_config['registration'] = {}
-            if not api_key:
-                # We should generate a new api_key and save it
-                api_key = uuid.uuid4().hex
-                temp_config['registration']['api_key'] = api_key
-
-            if not password_secret:
-                # We should generate a new password_secret and save it
-                password_secret = Fernet.generate_key()
-                temp_config['registration']['password_secret'] = password_secret.decode("utf-8")
+            temp_config['registration']['api_key'] = api_key
         with open(VOLATILE_CONFIG_PATH, 'w') as temp_config_file:
             temp_config.write(temp_config_file)
 
@@ -72,7 +62,6 @@ class CoreService(PluginBase):
                      "db_password": db_password,
                      "log_addr": log_addr,
                      "api_key": api_key,
-                     "password_secret": password_secret.decode("utf-8"),
                      "status": "ok"}
 
         # Initialize the base plugin (will initialize http server)
@@ -355,7 +344,6 @@ class CoreService(PluginBase):
 
             # This time it must work since we enterned the needed document
             relevant_doc = self._get_config(plugin_unique_name)
-            relevant_doc['password_secret'] = self.password_secret.decode("utf-8")
 
             self.online_plugins[plugin_unique_name] = relevant_doc
             del relevant_doc['_id']  # We dont need the '_id' field

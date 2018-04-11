@@ -32,7 +32,7 @@ class CarbonblackAdapter(AdapterBase):
         try:
             connection = CarbonblackConnection(
                 domain=client_config["Carbonblack_Domain"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(apikey=self.decrypt_password(client_config["apikey"]),
+            connection.set_credentials(apikey=client_config["apikey"],
                                        connector_id=client_config["connector_id"])
             with connection:
                 pass  # check that the connection credentials are valid

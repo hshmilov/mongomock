@@ -122,7 +122,6 @@ class NexposeAdapter(ScannerAdapterBase):
         return client_config[NEXPOSE_HOST]
 
     def _connect_client(self, client_config):
-        client_config['password'] = self.decrypt_password(client_config['password'])
         try:
             return nexpose_clients.NexposeV3Client(self.num_of_simultaneous_devices, **client_config)
         except ClientConnectionException:

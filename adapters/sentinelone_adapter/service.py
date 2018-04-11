@@ -61,8 +61,7 @@ class SentineloneAdapter(AdapterBase):
             if has_token:
                 connection.set_token(client_config['token'])
             else:
-                connection.set_credentials(
-                    username=client_config["username"], password=self.decrypt_password(client_config["password"]))
+                connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

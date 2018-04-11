@@ -106,7 +106,6 @@ class FortigateAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            client_config['password'] = self.decrypt_password(client_config['password'])
             return FortigateClient(**client_config)
         except Exception as err:
             logger.exception(

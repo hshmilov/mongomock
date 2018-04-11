@@ -34,7 +34,6 @@ class SplunkNexposeAdapter(AdapterBase):
             logger.error(msg)
             raise ClientConnectionException(msg)
         try:
-            client_config['password'] = self.decrypt_password(client_config['password'])
             connection = SplunkConnection(**client_config)
             with connection:
                 pass  # check that the connection credentials are valid

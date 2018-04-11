@@ -47,7 +47,7 @@ class EsxAdapter(AdapterBase):
         client_id = self._get_client_id(client_config)
         try:
             return vCenterApi(host=client_config['host'], user=client_config['user'],
-                              password=self.decrypt_password(client_config['password']),
+                              password=client_config['password'],
                               verify_ssl=client_config['verify_ssl'])
         except vim.fault.InvalidLogin as e:
             message = "Credentials invalid for ESX client for account {0}".format(client_id)

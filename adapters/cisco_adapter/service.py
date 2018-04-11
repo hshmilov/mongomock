@@ -22,7 +22,7 @@ class CiscoAdapter(AdapterBase):
     def _connect_client(self, client_config):
         # tries to connect and throws adapter Exception on failure
         client = CiscoClient(host=client_config[HOST], username=client_config[USERNAME],
-                             password=self.decrypt_password(client_config[PASSWORD]), port=22)
+                             password=client_config[PASSWORD], port=22)
         try:
             client.get_parsed_arp()
         except Exception as e:

@@ -26,7 +26,7 @@ class GotoassistAdapter(AdapterBase):
         try:
             connection = GotoassistConnection()
             connection.set_credentials(client_id=client_config["client_id"], client_secret=client_config["client_secret"],
-                                       username=client_config["user_name"], password=self.decrypt_password(client_config["password"]))
+                                       username=client_config["user_name"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection

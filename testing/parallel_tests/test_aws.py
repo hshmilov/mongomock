@@ -21,12 +21,8 @@ class TestAwsAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    def test_fetch_devices(self):
-        self.adapter_service.add_client(self.some_client_details)
-        self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
-
     def test_proxy(self):
         self.drop_clients()
-        self.adapter_service.add_client(client_with_proxy)
+        self.adapter_service.add_client(client_with_proxy)  # set client to use proxy
         assert self.some_client_id in self.adapter_service.devices()
         self.adapter_service.add_client(client_details)  # restore

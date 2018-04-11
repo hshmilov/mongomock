@@ -29,7 +29,7 @@ class SccmAdapter(AdapterBase):
                                         port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
                                         devices_paging=self.devices_fetched_at_a_time)
             connection.set_credentials(username=client_config[consts.USER],
-                                       password=self.decrypt_password(client_config[consts.PASSWORD]))
+                                       password=client_config[consts.PASSWORD])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
