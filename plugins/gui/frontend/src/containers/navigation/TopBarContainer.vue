@@ -30,12 +30,16 @@
                                 </div>
                                 <div slot="content" class="preview-table">
                                     <h5>Notifications</h5>
-                                    <div v-for="notification in notification.notificationUnseen.data.list"
-                                         @click="navigateNotification(notification.uuid)" class="item row"
-                                         v-bind:class="{ 'bold': !notification.seen }">
-                                        <status-icon :value="notification.severity"/>
-                                        <div class="col">{{ notification.title }}</div>
-                                        <div>{{ relativeDate(notification.date_fetched) }}</div>
+                                    <div class="notification">
+                                        <template v-for="notification in notification.notificationUnseen.data.list"
+                                             @click="navigateNotification(notification.uuid)"
+                                             v-bind:class="{ 'bold': !notification.seen }">
+                                            <div class="notification-item">
+                                            <status-icon :value="notification.severity"/>
+                                            </div>
+                                            <div class="notification-item single-notification">{{ notification.title }}</div>
+                                            <div class="notification-item">{{ relativeDate(notification.date_fetched) }}</div>
+                                        </template>
                                     </div>
                                     <div v-if="!notification.notificationUnseen.data.list.length" class="item row empty">
                                         <i class="icon-checkmark2"></i>
@@ -259,34 +263,6 @@
         color: $theme-black;
         line-height: initial;
         font-size: 12px;
-        .item {
-            border-bottom: 1px solid $grey-4;
-            padding: 12px 12px;
-            margin: 0 -12px;
-            text-transform: none;
-            letter-spacing: initial;
-            &:first-of-type {
-                border-top: 1px solid $grey-4;
-            }
-            &:hover {
-                color: $theme-orange;
-            }
-            &.empty {
-                color: $theme-orange;
-                cursor: default;
-                i {
-                    margin: auto;
-                }
-            }
-            .status-icon {
-                text-align: center;
-                width: 20px;
-                i {
-                    font-size: 120%;
-                    padding: 0;
-                }
-            }
-        }
         .view-all {
             text-align: center;
             width: 100%;
@@ -342,6 +318,28 @@
         visibility: visible;
         opacity: 1;
         transition: opacity .15s;
+    }
+
+    .notification {
+        display: grid;
+        grid-template-columns: 20px auto 72px;
+        grid-auto-flow: row;
+        letter-spacing: 1px;
+        grid-gap: 8px 4px;
+        .notification-item {
+            border-bottom: 1px solid $grey-2;
+            padding-bottom: 8px;
+        }
+        .single-notification {
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+        .status-icon {
+            border-radius: 4px;
+            .icon-info {
+                padding: 0px;
+            }
+        }
     }
 
 </style>
