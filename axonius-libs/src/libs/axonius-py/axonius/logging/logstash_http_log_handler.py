@@ -57,8 +57,10 @@ class LogstashHttpServer(logging.Handler):
                 warning_count = 0
                 for log_line in logs_to_send:
                     try:
-                        s.post(self.logstash_host,
-                               data=log_line, timeout=2)
+                        # TODO: Currently we are not using elk, When we will use it, we should enable this lines again
+                        pass
+                        # s.post(self.logstash_host,
+                        #       data=log_line, timeout=2)
 
                     except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout,
                             requests.exceptions.InvalidSchema):
