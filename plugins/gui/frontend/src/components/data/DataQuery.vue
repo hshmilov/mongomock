@@ -44,7 +44,7 @@
         <a class="x-btn right" @click="submitFilter" :tabindex="5">
             <svg-icon name="action/search" :original="true" height="24"></svg-icon>
         </a>
-        <a class="x-btn link" @click="openSaveQuery" :tabindex="6">
+        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery" :tabindex="6">
             <svg-icon name="action/save" :original="true" height="18"></svg-icon>
         </a>
         <modal v-if="saveModal.isActive" @close="closeSaveQuery" approveText="save" @confirm="confirmSaveQuery">
@@ -145,6 +145,7 @@
 		data () {
 			return {
 				searchValue: '',
+                disableSaveButton: true,
                 filterValid: true,
                 rebuild: false,
                 saveModal: {
@@ -156,6 +157,9 @@
         watch: {
 			queryFilter(newFilter) {
 				this.searchValue = newFilter
+            },
+            searchValue(newSearchValue) {
+                this.disableSaveButton = newSearchValue === ''
             }
         },
 		methods: {
@@ -212,6 +216,7 @@
 				this.updateView({ module: this.module, view: { page: 0 } })
             },
             openSaveQuery() {
+                if (this.searchValue === '') return
             	this.saveModal.isActive = true
             },
             closeSaveQuery() {
@@ -279,6 +284,10 @@
             .x-btn.link {
                 margin-right: 8px;
             }
+        }
+        .disabled {
+            pointer-events: none;
+            opacity: 0.4;
         }
     }
 </style>

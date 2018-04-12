@@ -360,7 +360,7 @@ class GuiService(PluginBase):
                            .skip(skip).limit(limit))
         if request.method == 'POST':
             query_to_add = request.get_json(silent=True)
-            if query_to_add is None:
+            if query_to_add is None or query_to_add['filter'] == '':
                 return return_error("Invalid query", 400)
             inserted_id = self._insert_query(module_name, query_to_add.get('name'), query_to_add.get('filter'),
                                              query_to_add.get('expressions'))
