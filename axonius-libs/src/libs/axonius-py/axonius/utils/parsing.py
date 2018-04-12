@@ -178,6 +178,9 @@ def figure_out_os(s):
         if distribution not in esx_distributions:
             distribution = "(?) " + distribution
 
+    elif s == 'cisco':
+        os_type = 'Cisco'
+
     return {"type": os_type,
             "distribution": distribution,
             "bitness": bitness}

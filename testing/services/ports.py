@@ -48,6 +48,7 @@ DOCKER_PORTS = {
     'juniper-adapter':                  6017,
     'openstack-adapter':                6018,
     'device-control':                   6019,
+    'cisco-prime-adapter':              6020,
     'mongo':                            27017,
 }
 

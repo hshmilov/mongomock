@@ -170,6 +170,10 @@ export const pluginMeta = {
 			description: 'Continuous automation for building, deploying, and managing infrastructure, ' +
 			'compliance, and applications in modern, legacy, and hybrid environments.'
 		},
+        'cisco_prime_adapter': {
+            name: 'Cisco Prime',
+            description: 'Cisco network management software suite.'
+        },
 		general_info: {
 			title: 'General Info',
 			description: ''

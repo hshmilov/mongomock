@@ -15,7 +15,7 @@ from axonius.utils.mongo_escaping import escape_dict
 
 class DeviceAdapterOS(SmartJsonClass):
     """ A definition for the json-scheme for an OS (of a device) """
-    type = Field(str, 'OS', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare'])
+    type = Field(str, 'OS', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare', 'Cisco'])
     distribution = Field(str, 'OS Distribution')
     bitness = Field(int, 'OS Bitness', enum=[32, 64])
     build = Field(str, 'OS Build')  # aka patch level

@@ -10,7 +10,6 @@ export const ADD_ADAPTER_SERVER = 'ADD_ADAPTER_SERVER'
 export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
 export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
 export const REMOVE_SERVER = 'REMOVE_SERVER'
-
 export const adapter = {
 	state: {
 		/* All adapters */
