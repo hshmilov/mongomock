@@ -1,4 +1,4 @@
-import { adapterStaticData } from './modules/adapter'
+import { pluginMeta } from '../static.js'
 
 export const GET_DATA_FIELD_LIST_TYPED = 'GET_DATA_FIELD_LIST_TYPED'
 export const getDataFieldsListTyped = (state) => (module) => {
@@ -11,7 +11,7 @@ export const getDataFieldsListTyped = (state) => (module) => {
 			name: 'axonius', title: 'General', fields: fields.generic
 		},
 		...Object.keys(fields.specific).map((name) => {
-			let title = adapterStaticData[name] ? adapterStaticData[name].name : name
+			let title = pluginMeta[name] ? pluginMeta[name].title : name
 			return { title, name, fields: fields.specific[name] }
 		})
 	]

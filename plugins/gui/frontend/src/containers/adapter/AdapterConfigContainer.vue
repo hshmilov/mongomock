@@ -47,8 +47,9 @@
 
 	import { mapState, mapActions } from 'vuex'
 	import {
-		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER, adapterStaticData
+		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
 	} from '../../store/modules/adapter'
+    import { pluginMeta } from '../../static.js'
 
 	export default {
 		name: 'adapter-config-container',
@@ -62,8 +63,8 @@
 				return this.adapterUniquePluginName.match(/(.*_adapter)_\d*/)[1]
 			},
 			adapterName () {
-				if (!adapterStaticData[this.adapterPluginName]) { return this.adapterPluginName }
-				return adapterStaticData[this.adapterPluginName].name
+				if (!pluginMeta[this.adapterPluginName]) { return this.adapterPluginName }
+				return pluginMeta[this.adapterPluginName].title
 			},
 			adapterData () {
 				return this.adapter.currentAdapter.data

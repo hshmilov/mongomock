@@ -1,5 +1,5 @@
-
 import { validModule } from './actions'
+import { pluginMeta } from '../static'
 
 export const TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
 export const toggleSidebar = (state) => {
@@ -89,9 +89,17 @@ export const updateDataFields = (state, payload) => {
 	fields.fetching = payload.fetching
 	fields.error = payload.error
 	if (payload.data) {
-		fields.data = {generic: flattenSchema(payload.data.generic), specific: {}}
+		fields.data = {
+			generic: [{
+					name: 'adapters',
+					title: 'Adapters',
+					type: 'array',
+					items: {type: 'string', format: 'logo', enum: []}
+				}, ...flattenSchema(payload.data.generic)],
+			specific: {}}
 		Object.keys(payload.data.specific).forEach((name) => {
 			fields.data.specific[name] = flattenSchema(payload.data.specific[name])
+			fields.data.generic[0].items.enum.push({name, title: pluginMeta[name].title})
 		})
 	}
 }

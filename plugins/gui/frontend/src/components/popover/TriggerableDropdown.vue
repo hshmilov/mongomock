@@ -53,7 +53,7 @@
                 display: none;
             }
             &.arrow:after {
-                right: 12px;
+                right: 8px;
                 @include triangle('down', 0.35rem);
                 transition: transform ease-in-out 0.5s;
             }

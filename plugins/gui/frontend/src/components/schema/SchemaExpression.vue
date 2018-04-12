@@ -134,7 +134,7 @@
                 }
             },
 			valueSchema (newSchema, oldSchema) {
-				if (!oldSchema.type || !oldSchema.format) return
+				if (!oldSchema.type && !oldSchema.format) return
 				if (!this.newExpression && (newSchema.type !== oldSchema.type || newSchema.format !== oldSchema.format)) {
 					this.expression.value = null
 				}
@@ -201,9 +201,8 @@
 			},
 			compileExpression () {
 				if (!this.expression.field && this.fieldSpace !== '' && this.fieldSpace !== 'axonius') {
-					this.expression.field = 'adapters'
-                    this.expression.compOp = 'equals'
-                    this.expression.value = this.fieldSpace
+					this.expression.field = `adapters_data.${this.fieldSpace}.id`
+                    this.expression.compOp = 'exists'
                 }
 				this.$emit('input', this.expression)
 				let error = this.checkErrors() || this.formatExpression()

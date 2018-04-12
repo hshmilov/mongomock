@@ -420,12 +420,6 @@ class GuiService(PluginBase):
             'specific': {}
         }
         fields['generic']['items'] = [{
-            'name': 'adapters',
-            'title': 'Adapters',
-            'type': 'array',
-            'items': {'type': 'string', 'format': 'logo', 'enum': []}
-
-        }, {
             'name': 'specific_data.adapter_properties',
             'title': 'Adapter Properties',
             'type': 'string',
@@ -446,7 +440,6 @@ class GuiService(PluginBase):
                             fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = \
                                 guify_fields(plugin_fields_record['schema'],
                                              name_prefix=f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}.')
-                            fields['generic']['items'][0]['items']['enum'].append(plugin[plugin_consts.PLUGIN_NAME])
         return jsonify(fields)
 
     def __disable_entity(self, entity_type: EntityType):

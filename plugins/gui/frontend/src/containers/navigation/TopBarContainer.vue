@@ -3,28 +3,28 @@
         <nav class="navbar top-navbar navbar-expand navbar-light">
             <div class="navbar-header">
                 <a class="nav-link sidebartoggler hidden-sm-down" v-on:click="toggleSidebar">
-                    <i class="icon-menu"></i>
+                    <svg-icon name="navigation/menu" :original="true" height="20"/>
                 </a>
             </div>
             <div class="navbar-collapse">
                 <div class="navbar-logo">
-                    <svg-icon name="logo/logo" height="30" :original="true"></svg-icon>
-                    <svg-icon name="logo/axonius" height="16" :original="true"></svg-icon>
+                    <svg-icon name="logo/logo" height="30" :original="true" />
+                    <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
                 </div>
                 <ul class="navbar-nav">
                     <li class="nav-item">
                         <a v-if="!isRunning" v-tooltip.bottom="'Discover Now'" @click="startResearch" class="nav-link">
-                            <svg-icon name="action/lifecycle/run" :original="true" height="20"></svg-icon>
+                            <svg-icon name="action/lifecycle/run" :original="true" height="20"/>
                         </a>
                         <a v-if="isRunning" class="nav-link">
-                            <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"></svg-icon>
+                            <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link">
                             <triggerable-dropdown size="lg" align="right" :arrow="false">
                                 <div slot="trigger">
-                                    <i class="icon-bell-o"></i>
+                                    <svg-icon name="navigation/notifications" :original="true" height="20" />
                                     <span class="badge" v-if="notification.notificationUnseen.data.count"
                                     >{{ notification.notificationUnseen.data.count }}</span>
                                 </div>
@@ -49,7 +49,7 @@
                     </li>
                     <li class="nav-item">
                         <router-link :to="{ name: 'Settings' }" class="nav-link" tag="a">
-                            <i class="icon-settings"></i>
+                            <svg-icon name="navigation/settings" :original="true" height="20" />
                         </router-link>
                     </li>
                 </ul>
@@ -168,9 +168,19 @@
                 transition: all ease-in 0.2s;
                 .sidebartoggler {
                     text-align: left;
-                    color: $grey-4;
+                    .svg-stroke {
+                        stroke: $grey-4;
+                    }
+                    .svg-fill {
+                        fill: $grey-4;
+                    }
                     &:hover {
-                        color: $theme-orange;
+                        .svg-stroke {
+                            stroke: $theme-orange;
+                        }
+                        .svg-fill {
+                            fill: $theme-orange;
+                        }
                     }
                 }
             }

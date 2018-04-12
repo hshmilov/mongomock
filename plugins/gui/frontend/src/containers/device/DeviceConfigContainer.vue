@@ -64,7 +64,7 @@
 		FETCH_DEVICE, UPDATE_DEVICE,
 		CREATE_DEVICE_LABELS, DELETE_DEVICE_LABELS, FETCH_LABELS,
 	} from '../../store/modules/device.js'
-	import { adapterStaticData } from '../../store/modules/adapter.js'
+	import { pluginMeta } from '../../static.js'
     import { FETCH_DATA_FIELDS } from '../../store/actions'
 
 	export default {
@@ -121,7 +121,7 @@
 			},
 			deviceDataBasic () {
 				return this.getDataForFieldList(this.deviceFields.generic.filter((field) => {
-					return !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item))
+					return !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item)) && (field.name !== 'adapters')
 				}), this.deviceData)
 			},
 			deviceDataGenericAdvanced () {
@@ -152,10 +152,10 @@
 				fetchLabels: FETCH_LABELS
 			}),
 			getAdapterName (pluginName) {
-				if (!adapterStaticData[pluginName]) {
+				if (!pluginMeta[pluginName]) {
 					return pluginName
 				}
-				return adapterStaticData[pluginName].name
+				return pluginMeta[pluginName].title || pluginName
 			},
 			removeTag (label) {
 				this.deleteDeviceTags({devices: [this.deviceId], labels: [label]})

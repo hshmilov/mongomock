@@ -1,31 +1,29 @@
 <template>
-    <aside class="left-sidebar" v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
-        <div class="scroll-sidebar">
-            <div class="user">
-                <div class="user-profile">
-                    <img :src="auth.data.pic_name" />
-                    <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
-                </div>
-                <div class="user-actions">
-                    <a @click="logout" class="" data-toggle="tooltip" title="Logout">
-                        <i class="icon-logout"></i>
-                    </a>
-                </div>
+    <aside class="x-side-bar" v-bind:class="{ 'collapse': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
+        <div class="x-user">
+            <div class="x-user-profile">
+                <img :src="auth.data.pic_name" />
+                <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
             </div>
-            <nav class="sidebar-nav">
-                <nested-nav-bar>
-                    <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"/>
-                    <nested-nav-item routeName="Devices" iconName="device">
-                        <nested-nav-bar nestLevel="1" class="collapse">
-                            <nested-nav-item routeName="Saved Queries"/>
-                        </nested-nav-bar>
-                    </nested-nav-item>
-                    <nested-nav-item routeName="Users" iconName="user"/>
-                    <nested-nav-item routeName="Alerts" iconName="alert"/>
-                    <nested-nav-item routeName="Adapters" iconName="adapter"/>
-                </nested-nav-bar>
-            </nav>
+            <div class="x-user-actions">
+                <a @click="logout" data-toggle="tooltip" title="Logout">
+                    <svg-icon name="navigation/logout" height="16" :original="true"/>
+                </a>
+            </div>
         </div>
+        <nav class="x-menu">
+            <nested-nav-bar>
+                <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"/>
+                <nested-nav-item routeName="Devices" iconName="device">
+                    <nested-nav-bar nestLevel="1" class="collapse">
+                        <nested-nav-item routeName="Saved Queries"/>
+                    </nested-nav-bar>
+                </nested-nav-item>
+                <nested-nav-item routeName="Users" iconName="user"/>
+                <nested-nav-item routeName="Alerts" iconName="alert"/>
+                <nested-nav-item routeName="Adapters" iconName="adapter"/>
+            </nested-nav-bar>
+        </nav>
     </aside>
 </template>
 
@@ -38,7 +36,7 @@
     import { mapState, mapActions } from 'vuex'
 
     export default {
-        name: 'side-bar-container',
+        name: 'x-side-bar-container',
         components: { NestedNavBar, NestedNavItem },
         computed: mapState([ 'auth', 'interaction' ]),
         methods: mapActions({ logout: LOGOUT })
@@ -46,121 +44,116 @@
 </script>
 
 <style lang="scss">
-    .left-sidebar {
-        position: absolute;
+    .x-side-bar {
+        position: fixed;
         width: 240px;
         transition: all ease-in 0.2s;
         height: 100%;
         z-index: 20;
-        padding-top: 60px;
         background: $theme-black;
-        .scroll-sidebar {
-            padding-bottom: 60px;
-            display: flex;
-            flex-flow: column;
-            height: 100%;
+        padding-bottom: 60px;
+        display: flex;
+        flex-flow: column;
+        .x-user {
+            flex: 0 1 auto;
+            position: relative;
+            font-size: $font-size-title;
+            width: 100%;
+            overflow-x: hidden;
             transition: all ease-in 0.2s;
-            .user {
-                flex: 0 1 auto;
-                position: relative;
-                font-size: $font-size-title;
-                width: 100%;
-                overflow-x: hidden;
-                transition: all ease-in 0.2s;
-                .user-profile {
-                    text-align: center;
-                    margin: 0 auto;
-                    padding: 10px 0 5px 0;
+            .x-user-profile {
+                text-align: center;
+                margin: 0 auto;
+                padding: 10px 0 5px 0;
+                border-radius: 100%;
+                width: 240px;
+                img {
+                    width: 60px;
+                    margin-bottom: 8px;
                     border-radius: 100%;
-                    width: 240px;
-                    img {
-                        width: 60px;
-                        margin-bottom: 8px;
-                        border-radius: 100%;
-                    }
-                    h5 {
-                        color: $theme-white;
-                        margin-bottom: 0;
-                        trasition: all ease-in 0.2s;
-                    }
                 }
-                .user-actions {
-                    padding: 4px 0px;
-                    position: relative;
-                    text-align: center;
-                    > a {
-                        color: $grey-4;
-                        padding: 0 4px;
-                        &:hover {  color: $theme-white;  }
-                        &:after {  display: none;  }
-                    }
+                h5 {
+                    color: $theme-white;
+                    margin-bottom: 0;
+                    transition: all ease-in 0.2s;
                 }
             }
-            .sidebar-nav {
-                overflow: auto;
-                flex: 1 0 auto;
-                background: $theme-black;
-                padding: 0px;
-                padding-top: 30px;
-                .nav-nest {
-                    transition: all ease-in 0.2s;
-                }
-                .nav-link.has-arrow::after {
-                    transition: all ease-in 0.2s;
-                    opacity: 1;
+            .x-user-actions {
+                padding: 4px 0px;
+                position: relative;
+                text-align: center;
+                > a {
+                    color: $grey-4;
+                    padding: 0 4px;
+                    .svg-fill {  fill: $grey-4;  }
+                    .svg-stroke {  stroke: $grey-4;  }
+                    &:hover {
+                        color: $theme-white;
+                        .svg-fill {  fill: $theme-white;  }
+                        .svg-stroke {  stroke: $theme-white;  }
+                    }
+                    &:after {  display: none;  }
                 }
             }
         }
+        .x-menu {
+            overflow: auto;
+            flex: 1 0 auto;
+            background: $theme-black;
+            padding: 0px;
+            padding-top: 30px;
+            .nav-nest {
+                transition: all ease-in 0.2s;
+            }
+            .nav-link.has-arrow::after {
+                transition: all ease-in 0.2s;
+                opacity: 1;
+            }
+        }
     }
-
-    .fix-sidebar .left-sidebar {  position: fixed;  }
-
-    .left-sidebar.collapse {
+    .x-side-bar.collapse {
         display: block;
         width: 60px;
-        .scroll-sidebar {
-            padding-bottom: 0;
-            position: absolute;
-            width: 60px;
-            .user {
-                .user-profile {
-                    text-align: left;
-                    h5 {
-                        opacity: 0;
-                    }
-                }
-            }
-            .sidebar-nav {
-                overflow: visible;
-                .nav-nest .nav-link span {
+        padding-bottom: 0;
+        position: absolute;
+        .x-user {
+            .x-user-profile {
+                text-align: left;
+                h5 {
                     opacity: 0;
                 }
-                .nav-item {
-                    overflow: hidden;
+            }
+        }
+        .x-menu {
+            overflow: visible;
+            .nav-nest .nav-link span {
+                opacity: 0;
+            }
+            .nav-item {
+                overflow: hidden;
+                .nav-nest.collapse {
+                    display: none;
+                    transition: all ease-in 0.2s;
+                }
+                &:hover {
+                    overflow: visible;
+                    position: relative;
                     .nav-nest.collapse {
-                        display: none;
-                        transition: all ease-in 0.2s;
-                    }
-                    &:hover {
-                        overflow: visible;
-                        position: relative;
-                        .nav-nest.collapse {
-                            left: 56px;
-                            margin-left: 0;
-                            top: 0;
-                            position: absolute;
-                            background-color: $theme-black;
-                            display: block;
-                            .nav-link span {
-                                transition: all ease-in 0.5s;
-                                opacity: 1;
-                            }
+                        left: 56px;
+                        margin-left: 0;
+                        top: 0;
+                        position: absolute;
+                        background-color: $theme-black;
+                        display: block;
+                        .nav-link span {
+                            transition: all ease-in 0.5s;
+                            opacity: 1;
                         }
                     }
                 }
-                .nav-link.has-arrow::after {
-                    opacity: 0;
-                }
+            }
+            .nav-link.has-arrow::after {
+                opacity: 0;
             }
         }
     }

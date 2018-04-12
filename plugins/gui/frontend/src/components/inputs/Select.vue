@@ -56,9 +56,9 @@
         background: $grey-dient;
         .x-select-trigger {
             display: flex;
-            padding: 0 32px 0 4px;
+            padding: 0 24px 0 4px;
             height: 30px;
-            line-height: 32px;
+            line-height: 30px;
         }
         .x-select-content {
             font-size: 14px;

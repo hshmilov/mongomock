@@ -33,14 +33,14 @@
         display: flex;
         flex-direction: column;
         background: $grey-1;
-        padding: 72px 24px 24px 264px;
+        padding: 12px 24px 24px 264px;
         position: relative;
         width: 100%;
         height: 100vh;
         &.collapse {
             display: flex;
             flex-direction: column;
-            padding: 72px 24px 24px 84px;
+            padding-left: 84px;
         }
         > .x-header {
             display: flex;
