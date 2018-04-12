@@ -1,11 +1,14 @@
 import io
 import csv
 import logging
+
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
 
 from axonius.utils.files import get_local_config_file
-from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts import plugin_consts
@@ -276,6 +279,7 @@ class GuiService(PluginBase):
             if projection:
                 projection['internal_axon_id'] = 1
                 projection['adapters'] = 1
+                projection['unique_adapter_names'] = 1
                 pipeline.append({'$project': projection})
             if sort:
                 pipeline.append({'$sort': sort})
@@ -445,6 +449,67 @@ class GuiService(PluginBase):
                             fields['generic']['items'][0]['items']['enum'].append(plugin[plugin_consts.PLUGIN_NAME])
         return jsonify(fields)
 
+    def __disable_entity(self, entity_type: EntityType):
+        entity_map = {
+            EntityType.Devices: ("Devicedisabelable", "devices/disable"),
+            EntityType.Users: ("Userdisabelable", "users/disable")
+        }
+        if entity_type not in entity_map:
+            raise Exception("Weird entity type given")
+
+        featurename, urlpath = entity_map[entity_type]
+
+        entitys_uuids = self.get_request_data_as_object()
+        if not entitys_uuids:
+            return return_error("No entity uuids provided")
+        entity_disabelables_adapters, entity_ids_by_adapters = \
+            self.__find_entities_by_uuid_for_adapter_with_feature(entitys_uuids, featurename, entity_type)
+
+        err = ""
+        for adapter_unique_name in entity_disabelables_adapters:
+            entitys_by_adapter = entity_ids_by_adapters.get(adapter_unique_name)
+            if entitys_by_adapter:
+                response = self.request_remote_plugin(urlpath, adapter_unique_name, method='POST',
+                                                      json=entitys_by_adapter)
+                if response.status_code != 200:
+                    logger.error(f"Error on disabling on {adapter_unique_name}: {response.content}")
+                    err += f"Error on disabling on {adapter_unique_name}: {response.content}\n"
+
+        return return_error(err, 500) if err else ("", 200)
+
+    def __find_entities_by_uuid_for_adapter_with_feature(self, entity_uuids, feature, entity_type: EntityType):
+        """
+        Find all entity from adapters that have a given feature, from a given set of entities
+        :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
+        """
+        with self._get_db_connection(False) as db_connection:
+            entities = list(self._entity_db_map.get(entity_type).find(
+                {'internal_axon_id': {
+                    "$in": entity_uuids
+                }}))
+
+            entities_ids_by_adapters = {}
+            for axonius_device in entities:
+                for adapter_entity in axonius_device['adapters']:
+                    entities_ids_by_adapters.setdefault(adapter_entity[PLUGIN_UNIQUE_NAME], []).append(
+                        adapter_entity['data']['id'])
+
+            # all adapters that are disabelable and that theres atleast one
+                    entitydisabelables_adapters = [x[PLUGIN_UNIQUE_NAME]
+                                                   for x in
+                                                   db_connection['core']['configs'].find(
+                        filter={
+                                                   'supported_features': feature,
+                                                   PLUGIN_UNIQUE_NAME: {
+                                                       "$in": list(entities_ids_by_adapters.keys())
+                                                   }
+                                                   },
+                        projection={
+                            PLUGIN_UNIQUE_NAME: 1
+                        }
+                    )]
+        return entitydisabelables_adapters, entities_ids_by_adapters
+
     def _entity_views(self, method, module_name):
         """
         Save or fetch views over the devices db
@@ -557,6 +622,10 @@ class GuiService(PluginBase):
 
             return '', 200
 
+    @add_rule_unauthenticated("device/disable", methods=['POST'])
+    def disable_device(self):
+        return self.__disable_entity(EntityType.Devices)
+
     #########
     # USER #
     #########
@@ -598,6 +667,10 @@ class GuiService(PluginBase):
     @add_rule_unauthenticated("user/fields")
     def user_fields(self):
         return self._entity_fields('user')
+
+    @add_rule_unauthenticated("user/disable", methods=['POST'])
+    def disable_user(self):
+        return self.__disable_entity(EntityType.Users)
 
     @add_rule_unauthenticated("user/views", methods=['GET', 'POST'])
     def user_views(self):
@@ -650,7 +723,8 @@ class GuiService(PluginBase):
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
                                            'unique_plugin_name': adapter[plugin_consts.PLUGIN_UNIQUE_NAME],
-                                           'status': status
+                                           'status': status,
+                                           'supported_features': adapter['supported_features']
                                            })
 
             return jsonify(adapters_to_return)
@@ -748,9 +822,11 @@ class GuiService(PluginBase):
             with self._get_db_connection(False) as db_connection:
                 reports_to_return = []
                 report_service = self.get_plugin_by_name('reports')
-                for report in db_connection[report_service[plugin_consts.PLUGIN_UNIQUE_NAME]]['reports'].find(projection={
-                    'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1, 'retrigger': 1
-                }).sort([('report_creation_time', pymongo.DESCENDING)]):
+                for report in db_connection[report_service[plugin_consts.PLUGIN_UNIQUE_NAME]]['reports'].find(
+                        projection={
+                            'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1,
+                            'retrigger': 1
+                        }).sort([('report_creation_time', pymongo.DESCENDING)]):
                     # Fetching query in order to replace the string saved for aler
                     #  with the corresponding id that the UI can recognize the query as
                     query = queries_collection.find_one({'alertIds': {'$in': [str(report['_id'])]}})

@@ -9,6 +9,7 @@ export const CREATE_DEVICE_LABELS = 'CREATE_DEVICE_LABELS'
 export const ADD_DEVICE_LABELS = 'ADD_DEVICE_LABELS'
 export const DELETE_DEVICE_LABELS = 'DELETE_DEVICE_LABELS'
 export const REMOVE_DEVICE_LABELS = 'REMOVE_DEVICE_LABELS'
+export const DISABLE_DEVICES = 'DISABLE_DEVICES'
 
 
 export const device = {
@@ -132,6 +133,16 @@ export const device = {
 				method: 'DELETE',
 				data: payload
 			}).then(() => commit(REMOVE_DEVICE_LABELS, payload))
-		}
+		},
+		[ DISABLE_DEVICES ] ({dispatch, commit}, payload) {
+			if (!payload) {
+				return
+			}
+			return dispatch(REQUEST_API, {
+				rule: `device/disable`,
+				method: 'POST',
+				data: payload
+			})
+		},
 	}
 }

@@ -1,4 +1,8 @@
 import logging
+
+from axonius.mixins.devicedisabelable import Devicedisabelable
+from axonius.mixins.userdisabelable import Userdisabelable
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -12,7 +16,8 @@ import threading
 import time
 import subprocess
 
-from active_directory_adapter.ldap_connection import LdapConnection, SSLState
+from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
+    LDAP_PASSWORD_NOT_REQUIRED, LDAP_DONT_EXPIRE_PASSWORD
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -39,10 +44,11 @@ LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 # This value should be for times we are really really sure there is a problem.
 MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
 
+
 # TODO ofir: Change the return values protocol
 
 
-class ActiveDirectoryAdapter(AdapterBase):
+class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
     class MyDeviceAdapter(ADDevice):
         pass
 
@@ -309,15 +315,9 @@ class ActiveDirectoryAdapter(AdapterBase):
             # http://jackstromberg.com/2013/01/useraccountcontrol-attributeflag-values/
             userAccountControl = user_raw.get("userAccountControl")
             if userAccountControl is not None and type(userAccountControl) == int:
-                if userAccountControl & LDAP_DONT_EXPIRE_PASSWORD:
-                    user.password_never_expires = True
-                else:
-                    user.password_never_expires = False
-
-                if userAccountControl & LDAP_PASSWORD_NOT_REQUIRED:
-                    user.password_not_required = True
-                else:
-                    user.password_not_required = False
+                user.password_never_expires = bool(userAccountControl & LDAP_DONT_EXPIRE_PASSWORD)
+                user.password_not_required = bool(userAccountControl & LDAP_PASSWORD_NOT_REQUIRED)
+                user.account_enabled = not bool(userAccountControl & LDAP_ACCOUNTDISABLE)
 
             # I'm afraid this could cause exceptions, lets put it in try/except.
             try:
@@ -550,8 +550,8 @@ class ActiveDirectoryAdapter(AdapterBase):
                     # will not be resolved.
                     num_of_previously_resolved_devices = self._get_collection(DEVICES_DATA).find(
                         {
-                            "hostname": wanted_hostname,                        # get all queries with this hostname
-                            'network_interfaces.ips': {'$not': {'$size': 0}}    # which have at least one ip
+                            "hostname": wanted_hostname,  # get all queries with this hostname
+                            'network_interfaces.ips': {'$not': {'$size': 0}}  # which have at least one ip
                         },
                         projection={'_id': True}).count()
 
@@ -715,6 +715,24 @@ class ActiveDirectoryAdapter(AdapterBase):
         :return: Returns a list of all supported execution features by this adapter.
         """
         return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell", "execute_binary"]
+
+    def _enable_user(self, user_data, client_data):
+        dn = user_data['raw'].get('distinguishedName')
+        assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
+        assert client_data.change_user_enabled_state(dn, True), "Failed enabling user"
+
+    def _disable_user(self, user_data, client_data):
+        dn = user_data['raw'].get('distinguishedName')
+        assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
+        assert client_data.change_user_enabled_state(dn, False), "Failed disabling user"
+
+    def _enable_device(self, device_data, client_data):
+        dn = device_data['id']
+        assert client_data.change_device_enabled_state(dn, True), "Failed enabling device"
+
+    def _disable_device(self, device_data, client_data):
+        dn = device_data['id']
+        assert client_data.change_device_enabled_state(dn, False), "Failed disabling device"
 
     @classmethod
     def adapter_properties(cls):

@@ -5,7 +5,7 @@
                       v-model="selectedDevices" @click-row="configDevice" title="Devices">
             <template slot="actions">
                 <!-- Available actions for performing on currently selected group of devices --->
-                <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices"/>
+                <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices" />
                 <x-data-view-menu module="device" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu module="device" class="link" />
@@ -26,7 +26,6 @@
 
 	import { mapState, mapActions } from 'vuex'
 	import { FETCH_DEVICE, FETCH_LABELS } from '../../store/modules/device'
-    import { FETCH_SETTINGS } from '../../store/modules/settings'
 	import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
 
 	export default {
@@ -46,7 +45,6 @@
 			...mapActions({
 				fetchDevice: FETCH_DEVICE,
 				fetchLabels: FETCH_LABELS,
-                fetchSettings: FETCH_SETTINGS,
                 fetchContentCSV: FETCH_DATA_CONTENT_CSV
 			}),
 			configDevice (deviceId) {
@@ -61,7 +59,6 @@
             }
 		},
 		created () {
-            this.fetchSettings()
             if (!this.device.labelList.data || !this.device.labelList.data.length) {
 				this.fetchLabels()
 			}

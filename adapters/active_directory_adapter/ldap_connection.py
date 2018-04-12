@@ -1,5 +1,6 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 import ssl
 from enum import Enum, auto
@@ -16,6 +17,11 @@ class SSLState(Enum):
     Unencrypted = auto()
     Verified = auto()
     Unverified = auto()
+
+
+LDAP_ACCOUNTDISABLE = 0x2
+LDAP_DONT_EXPIRE_PASSWORD = 0x10000
+LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 
 
 class LdapConnection(object):
@@ -194,6 +200,76 @@ class LdapConnection(object):
                         logger.info(f"Got {users_count} users so far")
 
                     yield dict(user['attributes'])
+
+        except ldap3.core.exceptions.LDAPException as ldap_error:
+            raise LdapException(str(ldap_error))
+
+    def change_user_enabled_state(self, distinguished_name: str, enabled: bool) -> bool:
+        """
+        Enable or disable an AD user
+        :param distinguished_name: The distinguished name of the AD user
+        :param enabled: True to leave the user "enabled" and False to disable the user
+        :return:
+        """
+        try:
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
+
+            self.ldap_connection.search(distinguished_name,
+                                        '(objectClass=*)',
+                                        ldap3.BASE,
+                                        attributes=['userAccountControl'],
+                                        paged_size=1)
+            user_account_control = self.ldap_connection.response[0]['attributes']['userAccountControl']
+            if enabled:
+                new_user_account_control = user_account_control & (~LDAP_ACCOUNTDISABLE)
+            else:
+                new_user_account_control = user_account_control | LDAP_ACCOUNTDISABLE
+            logger.info(
+                f"Changing user {distinguished_name} state from {user_account_control} to {new_user_account_control}")
+
+            if not self.ldap_connection.modify(distinguished_name,
+                                               {'userAccountControl': [
+                                                   (ldap3.MODIFY_REPLACE, [new_user_account_control])]}):
+                logger.error(f"Failed modifying userAccountControl for {distinguished_name}")
+                return False
+
+            return True
+
+        except ldap3.core.exceptions.LDAPException as ldap_error:
+            raise LdapException(str(ldap_error))
+
+    def change_device_enabled_state(self, distinguished_name: str, enabled: bool) -> bool:
+        """
+        Enable or disable an AD device
+        :param distinguished_name: The distinguished name of the AD device
+        :param enabled: True to leave the device "enabled" and False to disable the device
+        :return:
+        """
+        try:
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
+
+            self.ldap_connection.search(distinguished_name,
+                                        '(objectClass=*)',
+                                        ldap3.BASE,
+                                        attributes=['userAccountControl'],
+                                        paged_size=1)
+            user_account_control = self.ldap_connection.response[0]['attributes']['userAccountControl']
+            if enabled:
+                new_user_account_control = user_account_control & (~LDAP_ACCOUNTDISABLE)
+            else:
+                new_user_account_control = user_account_control | LDAP_ACCOUNTDISABLE
+            logger.info(
+                f"Changing device {distinguished_name} state from {user_account_control} to {new_user_account_control}")
+
+            if not self.ldap_connection.modify(distinguished_name,
+                                               {'userAccountControl': [
+                                                   (ldap3.MODIFY_REPLACE, [new_user_account_control])]}):
+                logger.error(f"Failed modifying userAccountControl for {distinguished_name}")
+                return False
+
+            return True
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
             raise LdapException(str(ldap_error))

@@ -23,7 +23,7 @@
 <script>
 	export default {
 		name: 'modal',
-        props: [ 'approveText', 'dismissText'],
+        props: ['approveText', 'dismissText'],
         mounted() {
 			if (this.$el.querySelector("input")) {
 				this.$el.querySelector("input").focus()

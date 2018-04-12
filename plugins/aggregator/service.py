@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
@@ -101,6 +102,7 @@ class AggregatorService(PluginBase, Triggerable):
                                                              {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
                                                                           {'$eq': ['$$tag.type', 'adapterdata']}}}]},
                                       'adapters': '$adapters.plugin_name',
+                                      'unique_adapter_names': '$adapters.plugin_unique_name',
                                       'labels': {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
                                                              {'$and': [{'$eq': ['$$tag.type', 'label']},
                                                                        {'$eq': ['$$tag.data', True]}]}
@@ -108,7 +110,8 @@ class AggregatorService(PluginBase, Triggerable):
                                                  }
                                       }
                          },
-                        {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1, 'labels': '$labels.name',
+                        {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1,
+                                      'unique_adapter_names': 1, 'labels': '$labels.name',
                                       'adapters_data': {'$map': {'input': '$specific_data', 'as': 'data', 'in': {
                                           '$arrayToObject': {'$concatArrays': [[], [{'k': '$$data.plugin_name',
                                                                                      'v': '$$data.data'}]]}}}},
@@ -516,8 +519,9 @@ class AggregatorService(PluginBase, Triggerable):
         :return: None
         """
 
-        if any((x['name'] == tag['name'] and x['plugin_unique_name'] == tag['plugin_unique_name'] and x['type'] == tag['type'])
-               for x in axonius_entity['tags']):
+        if any((x['name'] == tag['name'] and x['plugin_unique_name'] == tag['plugin_unique_name'] and x['type'] == tag[
+                'type'])
+                for x in axonius_entity['tags']):
 
             # We found the tag. If action_if_exists is replace just replace it. but if its update, lets
             # make a deep merge here. Note that the access to the db should be locked (happens in the calling function)

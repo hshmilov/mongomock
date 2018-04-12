@@ -37,6 +37,7 @@ class UserAdapter(SmartJsonClass):
     password_expiration_date = Field(datetime.datetime, "Password Expiration Date")
     password_never_expires = Field(bool, "Password Never Expires")
     password_not_required = Field(bool, "Password Is Not Required")
+    account_enabled = Field(bool, "Account Enabled")
     account_expires = Field(datetime.datetime, "Account Expiration Date")
     last_bad_logon = Field(datetime.datetime, "Domain Last Bad Logon Date")
     last_password_change = Field(datetime.datetime, "Last Password Change")

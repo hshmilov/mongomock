@@ -7,6 +7,7 @@
                 <nested-menu-item title="Deploy..." @click="activate(deploy)"></nested-menu-item>
                 <nested-menu-item title="Run..." @click="activate(run)"></nested-menu-item>
                 <nested-menu-item title="Add to Black-List" @click="activate(blacklist)"></nested-menu-item>
+                <nested-menu-item title="Disable" @click="activate(disable)"></nested-menu-item>
                 <!--<nested-menu-item title="Block" @click="activate(block)">-->
                     <!--<dynamic-popover size="xs" left="236">-->
                         <!--<nested-menu>-->
@@ -41,6 +42,11 @@
             <div>Add {{devices.length}} devices to Blacklist?</div>
             <div>These devices will be prevented from executing code on.</div>
         </feedback-modal>
+        <feedback-modal v-model="disable.isActive" :handleSave="saveDisableDevices" message="Disable devices">
+            <div>Out of {{devices.length}} devices, {{disabelableDevices.length}} are disabelable.</div>
+            <div>These devices will not appear in further scans.</div>
+            <div>Are you sure you want to continue?</div>
+        </feedback-modal>
         <feedback-modal v-model="block.isActive" :handleSave="saveBlock" message="Block saved">
             <div>Block {{devices.length}} devices by {{block.selected}}?</div>
         </feedback-modal>
@@ -59,7 +65,9 @@
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
     import TagsMixin from '../../mixins/tags'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
-	import { mapState } from 'vuex'
+	import { mapState, mapActions } from 'vuex'
+    import { DISABLE_DEVICES } from '../../store/modules/device'
+
 
 	export default {
 		name: 'devices-actions-container',
@@ -70,17 +78,33 @@
 		props: {'devices': {required: true}},
         mixins: [TagsMixin],
         computed: {
-			...mapState(['device']),
+			...mapState(['device', 'adapter']),
+            adapters() {
+				return this.adapter.adapterList.data
+            },
 			deviceById () {
 				if (!this.device.data.content.data || !this.device.data.content.data.length) return {}
 
 				return this.device.data.content.data.filter((device) => {
-					return this.devices.includes(device.id)
+					return this.devices.includes(device.internal_axon_id)
 				}).reduce(function (map, input) {
-					map[input.id] = input
+					map[input.internal_axon_id] = input
 					return map
 				}, {})
 			},
+            adaptersByUniquePluginName() {
+			    if (!this.adapters || !this.adapters.length) return {}
+                return this.adapters.reduce((map, input) => {
+                    map[input.unique_plugin_name] = input
+                    return map
+                }, {})
+            },
+            disabelableDevices() {
+                return Object.values(this.deviceById).filter(device => {
+                    var device_adapters = device.unique_adapter_names.map(adapter => this.adaptersByUniquePluginName[adapter])
+                    return device_adapters.some(adapter => adapter && adapter.supported_features.includes("Devicedisabelable"))
+                })
+            },
 			currentTags () {
 				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
 				let labels = this.deviceById[this.devices[0]].labels
@@ -138,6 +162,9 @@
                 blacklist: {
 					isActive: false
                 },
+                disable: {
+                    isActive: false
+                },
                 block: {
 					isActive: false,
                     blockers: ['Cisco'],
@@ -161,6 +188,9 @@
 			}
 		},
 		methods: {
+		    ...mapActions({
+                disableDevices: DISABLE_DEVICES
+			}),
             activate(module) {
 				module.isActive = true
                 // Close the actions dropdown
@@ -194,7 +224,10 @@
 				    if (!this.run.valid) reject()
 					resolve()
 				})
-			}
+			},
+            saveDisableDevices() {
+                return this.disableDevices(this.disabelableDevices.map(x => x.internal_axon_id))
+            },
 		}
 	}
 </script>

@@ -198,7 +198,8 @@ export const adapter = {
 							logo: adapter.plugin_name,
 							status: adapter.status
 						},
-						description: pluginDescription
+						description: pluginDescription,
+						supported_features: adapter.supported_features
 					})
 				})
 			}

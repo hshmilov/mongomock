@@ -21,7 +21,9 @@
     import SideBarContainer from './navigation/SideBarContainer.vue'
     import LoginContainer from './auth/LoginContainer.vue'
     import { GET_USER } from '../store/modules/auth'
-    import { mapState, mapActions } from 'vuex'
+    import { FETCH_ADAPTERS } from '../store/modules/adapter'
+    import { FETCH_SETTINGS } from '../store/modules/settings'
+	import { mapState, mapActions } from 'vuex'
 
     export default {
         name: 'app',
@@ -29,9 +31,18 @@
 			LoginContainer,
 			TopBarContainer, SideBarContainer },
         computed: mapState(['auth']),
-        methods: mapActions({ getUser: GET_USER }),
+        methods: mapActions({
+            getUser: GET_USER,
+            fetchAdapters: FETCH_ADAPTERS,
+            fetchSettings: FETCH_SETTINGS
+        }),
         created() {
-        	this.getUser()
+        	this.getUser().then((response) => {
+        		if (response.status === 200) {
+                    this.fetchAdapters()
+                    this.fetchSettings()
+                }
+            })
         }
     }
 </script>

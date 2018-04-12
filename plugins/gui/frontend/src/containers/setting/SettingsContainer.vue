@@ -56,7 +56,6 @@
 
 	import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
 	import {
-		FETCH_SETTINGS,
 		UPDATE_REFRESH_RATE,
 		UPDATE_SINGLE_ADAPTER,
 		UPDATE_MULTI_LINE,
@@ -123,7 +122,6 @@
 			}),
 			...mapActions({
 				fetchLifecycle: FETCH_LIFECYCLE,
-				fetchSettings: FETCH_SETTINGS,
 				fetchData: REQUEST_API,
 				saveSettings: SAVE_SETTINGS,
                 startResearch: START_RESEARCH_PHASE
@@ -163,7 +161,6 @@
 		},
 		created () {
 			this.fetchLifecycle()
-			this.fetchSettings()
 			this.fetchData({
 				rule: 'execution'
 			}).then((response) => {

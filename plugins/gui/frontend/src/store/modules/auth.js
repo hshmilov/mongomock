@@ -34,7 +34,7 @@ export const auth = {
 	},
 	actions: {
 		[ GET_USER ] ({dispatch}) {
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: 'login',
 				type: SET_USER
 			})

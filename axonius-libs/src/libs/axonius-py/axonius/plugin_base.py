@@ -364,7 +364,7 @@ class PluginBase(Feature):
         self.devices_db_view = self.aggregator_db_connection['devices_db_view']
         self.users_db_view = self.aggregator_db_connection['users_db_view']
 
-        self.__entity_db_map = {
+        self._entity_db_map = {
             EntityType.Users: self.users_db,
             EntityType.Devices: self.devices_db,
         }
@@ -903,7 +903,7 @@ class PluginBase(Feature):
         :return: Device count saved
         """
         multilocker = LazyMultiLocker()
-        db_to_use = self.__entity_db_map.get(entity_type)
+        db_to_use = self._entity_db_map.get(entity_type)
         assert db_to_use, f"got unexpected {entity_type}"
 
         def insert_data_to_db(data_to_update, parsed_to_insert):
