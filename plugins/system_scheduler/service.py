@@ -166,10 +166,6 @@ class SystemSchedulerService(PluginBase, Triggerable):
         with self._start_research():
             self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
 
-            # Clean old devices.
-            _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices.name)
-            self._run_cleaning_phase()
-
             # Fetch Devices Data.
             _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices.name)
             self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
@@ -177,6 +173,10 @@ class SystemSchedulerService(PluginBase, Triggerable):
             # Fetch Scanners Data.
             _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners.name)
             self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
+
+            # Clean old devices.
+            _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices.name)
+            self._run_cleaning_phase()
 
             # Run Pre Correlation plugins.
             _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation.name)
