@@ -15,6 +15,7 @@ import binascii
 import base64
 import datetime
 import pql
+import csv
 
 osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
@@ -590,3 +591,7 @@ def remove_duplicates_by_reference(seq):
         seen[marker] = 1
         result.append(item)
     return result
+
+
+def make_dict_from_csv(csv_data):
+    return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data[:1024]))

@@ -170,9 +170,14 @@ export const pluginMeta = {
 			description: 'Continuous automation for building, deploying, and managing infrastructure, ' +
 			'compliance, and applications in modern, legacy, and hybrid environments.'
 		},
-        'cisco_prime_adapter': {
-            name: 'Cisco Prime',
+	    cisco_prime_adapter: {
+		    title: 'Cisco Prime',
             description: 'Cisco network management software suite.'
+	    },
+	    observeit_csv_adapter: {
+		    title: 'ObserveIT',
+		    description: 'ObserveIT provides insider threat security solutions, including employee monitoring, ' +
+			'user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
         },
 		general_info: {
 			title: 'General Info',

@@ -38,6 +38,7 @@ DOCKER_PORTS = {
     'fortigate-adapter':                5689,
     'sccm-adapter':                     5699,
     'forcepoint-csv-adapter':           5770,
+    'observeit-csv-adapter':            5773,
     'qualys-scans-adapter':             5777,
     'cisco-adapter':                    6001,
     'minerva-adapter':                  6010,
