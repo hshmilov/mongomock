@@ -151,18 +151,27 @@ class AxoniusService(object):
         return cls._get_docker_service('adapters', name)
 
     def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
-                      skip=False):
+                      skip=False, exclude_restart=None):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+
+        if exclude_restart is None:
+            exclude_restart = []
         if rebuild:
             for plugin in plugins:
                 plugin.remove_image()
         if allow_restart:
             for plugin in plugins:
+                if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
+                    continue
                 plugin.remove_container()
         for plugin in plugins:
             plugin.take_process_ownership()
-            if skip and plugin.get_is_container_up():
-                continue
+            if plugin.get_is_container_up():
+                if skip:
+                    continue
+                elif self.get_plugin_short_name(plugin) in exclude_restart:
+                    print(f'Ignoring - {self.get_plugin_short_name(plugin)}')
+                    continue
             plugin.start(mode, allow_restart=allow_restart, hard=hard)
         timeout = 60
         start = time.time()
@@ -196,9 +205,14 @@ class AxoniusService(object):
             for _ in async_item:
                 pass
 
-    def remove_plugin_containers(self, adapter_names, plugin_names):
+    def remove_plugin_containers(self, adapter_names, plugin_names, exclude_restart=None):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+
+        if exclude_restart is None:
+            exclude_restart = []
         for plugin in plugins:
+            if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
+                continue
             plugin.remove_container()
 
     def _get_all_docker_services(self, type_name, obj):
@@ -274,4 +288,12 @@ class AxoniusService(object):
             assert runner.wait_for_all() == 0
         else:
             for service in to_build:
+                if service.get_image_exists():
+                    continue
                 service.build(mode)
+
+    @staticmethod
+    def get_plugin_short_name(plugin_obj):
+        short_name = os.path.basename(inspect.getfile(plugin_obj.__class__))
+        assert short_name.endswith('_service.py')
+        return short_name[:-len('_service.py')]

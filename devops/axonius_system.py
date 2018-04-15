@@ -107,15 +107,17 @@ def system_entry_point(args):
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         mode = 'prod' if args.prod else ''
+        exclude_restart = (['diagnostics'] if args.all and args.restart and not args.hard else [])
         if args.restart:
             # clear old containers if exists...
-            axonius_system.remove_plugin_containers(args.adapters, args.services)
+            axonius_system.remove_plugin_containers(args.adapters, args.services, exclude_restart=exclude_restart)
 
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
 
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip)
-        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip)
+        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip,
+                                     exclude_restart=exclude_restart)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
