@@ -29,6 +29,7 @@
 		},
 		watch: {
 			value (newValue) {
+				if (!newValue) return
 				this.expressions = [...newValue]
                 if (!this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)) {
 					this.error = ''

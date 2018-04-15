@@ -1,5 +1,6 @@
 <template>
-    <div class="x-checkbox" :class="{'x-checked': checked}" @click.stop="$refs.checkbox.click()">
+    <div class="x-checkbox" :class="{'x-checked': checked}"
+         @click.stop="$refs.checkbox.click()" @keyup.enter.stop="$refs.checkbox.click()">
         <div class="x-checkbox-container" :class="{'x-checkbox-semi': semi}">
             <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox">
         </div>

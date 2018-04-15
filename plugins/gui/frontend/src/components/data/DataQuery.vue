@@ -5,26 +5,28 @@
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
             <input slot="trigger" class="form-control" v-model="searchValue" ref="greatInput"
                    @input="searchQuery" @keyup.enter.stop="submitFilter" :tabindex="1"
-                   placeholder="Insert your query or start typing to filter recent Queries">
+                   placeholder="Insert your query or start typing to filter recent Queries"
+                   @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex">
             <!--
             Content is a list composed of 3 sections:
             1. Saved queries, filtered to whose names contain the value 'searchValue'
             2. Historical queries, filtered to whose filter contain the value 'searchValue'
             3. Option to search for 'searchValue' everywhere in data (compares to every text field)
             -->
-            <div slot="content">
+            <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex">
                 <nested-menu v-if="savedQueries && savedQueries.length">
                     <div class="title">Saved Queries</div>
-                    <nested-menu-item v-for="query, index in savedQueries.slice(0, limit)" :key="index"
-                                      :title="query.name" @click="selectQuery(query.filter, query.expressions)"/>
+                    <nested-menu-item v-for="query, index in savedQueries" :key="index" :title="query.name"
+                                      :selected="queryMenuIndex === index" @click="selectQuery(query)" />
                 </nested-menu>
                 <nested-menu v-if="historyQueries && historyQueries.length">
                     <div class="title">History</div>
-                    <nested-menu-item v-for="query, index in historyQueries.slice(0, limit)" :key="index"
-                                      :title="query.filter" @click="selectQuery(query.filter, [])"/>
+                    <nested-menu-item v-for="query, index in historyQueries" :key="index" :title="query.filter"
+                                      :selected="queryMenuIndex - savedQueries.length === index" @click="selectQuery(query)" />
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
-                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"/>
+                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"
+                                      :selected="queryMenuIndex === queryMenuCount - 1"/>
                 </nested-menu>
                 <div v-if="noResults">No results</div>
             </div>
@@ -35,8 +37,8 @@
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
                                  @error="filterValid = false" :rebuild="rebuild"/>
                 <div class="place-right">
-                    <a class="x-btn link" @click="clearFilter" :tabindex="3">Clear</a>
-                    <a class="x-btn" @click="rebuildFilter" :tabindex="4">Search</a>
+                    <a class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter" :tabindex="3">Clear</a>
+                    <a class="x-btn" @click="rebuildFilter" @keyup.enter="rebuildFilter" :tabindex="4">Search</a>
                 </div>
             </div>
         </triggerable-dropdown>
@@ -76,10 +78,10 @@
 		computed: {
 			...mapState({
                 savedQueries(state) {
-                	return state[this.module].data.queries.saved.data
+                	return state[this.module].data.queries.saved.data.slice(0, this.limit)
                 },
 				historyQueries(state) {
-					return state[this.module].data.queries.history.data
+					return state[this.module].data.queries.history.data.slice(0, this.limit)
 				},
                 query(state) {
                 	return state[this.module].data.view.query
@@ -140,6 +142,9 @@
 							return {name: query.filter, title: query.name}
 						})
 					}, ...this.schema[0].fields]}, ...this.schema.slice(1)]
+            },
+            queryMenuCount() {
+                return this.savedQueries.length + this.historyQueries.length + (this.searchValue && !this.complexSearch)
             }
 		},
 		data () {
@@ -151,7 +156,8 @@
                 saveModal: {
 					isActive: false,
                     name: ''
-                }
+                },
+                queryMenuIndex: -1
 			}
 		},
         watch: {
@@ -167,8 +173,11 @@
 			...mapActions({
 				fetchQueries: FETCH_DATA_QUERIES, saveQuery: SAVE_DATA_QUERY,
 			}),
+            focusInput() {
+				this.$refs.greatInput.focus()
+            },
 			searchQuery () {
-				if (this.complexSearch) return
+				if (this.complexSearch || this.queryMenuIndex !== -1) return
 				Promise.all([this.filterQueries('saved', 'name'), this.filterQueries('history', 'filter')])
 					.catch((error) => console.log(error))
 			},
@@ -199,10 +208,10 @@
             	this.executeFilter()
 				this.$refs.greatInput.parentElement.click()
             },
-			selectQuery (filter, expressions) {
+			selectQuery ({ filter, expressions }) {
             	this.queryExpressions = expressions
 				this.updateFilter(filter)
-				this.$refs.greatInput.focus()
+				this.focusInput()
 				this.$refs.greatInput.parentElement.click()
 			},
             updateFilter (filter) {
@@ -229,6 +238,21 @@
 					module: this.module,
 					name: this.saveModal.name
 				}).then(() => this.saveModal.isActive = false)
+            },
+            incQueryMenuIndex() {
+            	this.queryMenuIndex++
+                if (this.queryMenuIndex >= this.queryMenuCount) {
+            		this.queryMenuIndex = -1
+                    this.focusInput()
+                }
+            },
+            decQueryMenuIndex() {
+            	this.queryMenuIndex--
+                if (this.queryMenuIndex < -1) {
+            		this.queryMenuIndex = this.queryMenuCount - 1
+                } else if (this.queryMenuIndex === -1) {
+            		this.focusInput()
+                }
             }
 		},
         created() {
@@ -264,6 +288,11 @@
                 border-bottom: 1px solid $grey-2;
                 &:last-child {
                     border: 0;
+                }
+                .menu-item .item-content {
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    overflow: hidden;
                 }
                 .title {
                     font-size: 12px;

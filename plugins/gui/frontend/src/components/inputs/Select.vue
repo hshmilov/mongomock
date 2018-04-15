@@ -1,13 +1,15 @@
 <template>
-    <triggerable-dropdown :arrow="true" size="sm" class="x-select">
-        <div slot="trigger" class="x-select-trigger">
+    <triggerable-dropdown :arrow="true" size="sm" class="x-select" ref="dropdown">
+        <div slot="trigger" class="x-select-trigger" @keyup.down="incActiveOption" :tabindex="-1">
             <slot v-if="selectedOption" :option="selectedOption">{{selectedOption.title}}</slot>
             <div v-if="!value && placeholder" class="placeholder">{{placeholder}}</div>
         </div>
-        <div class="x-select-content" slot="content">
-            <search-input v-if="searchable" v-model="searchValue" class="x-select-search" />
+        <div slot="content" class="x-select-content" @keydown.down="incActiveOption" @keydown.up="decActiveOption"
+             @keyup.enter="selectActive" @keyup.esc="closeDropdown">
+            <search-input v-if="searchable" v-model="searchValue" class="x-select-search" ref="searchInput" />
             <div class="x-select-options">
-                <div v-for="option in currentOptions" @click="selectOption(option.name)" class="x-select-option" >
+                <div v-for="option, index in currentOptions" @click="selectOption(option.name)" class="x-select-option"
+                     :class="{active: index === activeOptionIndex}" :tabindex="-1" ref="option">
                     <slot :option="option">{{option.title}}</slot>
                 </div>
             </div>
@@ -36,14 +38,54 @@
         },
         data() {
 			return {
-				searchValue: ''
+				searchValue: '',
+                activeOptionIndex: -1
+            }
+        },
+        watch: {
+			currentOptions() {
+				this.activeOptionIndex = -1
             }
         },
         methods: {
 			selectOption(name) {
 				this.$emit('input', name)
                 this.searchValue = ''
-                this.$children[0].close()
+                this.closeDropdown()
+            },
+            closeDropdown() {
+				this.$refs.dropdown.close()
+            },
+			incActiveOption() {
+				this.focusOptions()
+                this.activeOptionIndex++
+                if (this.activeOptionIndex === this.currentOptions.length) {
+                	this.activeOptionIndex = -1
+                }
+                this.scrollOption()
+            },
+            decActiveOption() {
+				this.activeOptionIndex--
+                if (this.activeOptionIndex < -1) {
+					this.activeOptionIndex = this.currentOptions.length - 1
+                }
+                this.scrollOption()
+            },
+			focusOptions() {
+				if (this.searchable) {
+				    this.$refs.searchInput.focus()
+                } else {
+					this.$refs.option[0].focus()
+                }
+			},
+            scrollOption() {
+				if (this.activeOptionIndex >= 0 && this.activeOptionIndex < this.currentOptions.length) {
+					this.$refs.option[this.activeOptionIndex].scrollIntoView(false)
+				}
+            },
+            selectActive() {
+				if (this.activeOptionIndex === -1) return
+                this.selectOption(this.currentOptions[this.activeOptionIndex].name)
             }
         }
 	}
@@ -73,7 +115,7 @@
                     cursor: pointer;
                     margin: 4px 0;
                     padding: 4px 12px;
-                    &:hover {
+                    &:hover, &.active {
                         background-color: $grey-2;
                     }
                 }

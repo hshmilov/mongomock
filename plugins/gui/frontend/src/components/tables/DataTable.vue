@@ -5,24 +5,26 @@
             <div class="x-actions"><slot name="actions"/></div>
         </div>
         <pulse-loader :loading="loading" color="#FF7D46" />
-        <div class="x-table-container">
+        <div class="x-table-container" :tabindex="-1" ref="greatTable">
             <table class="x-striped-table">
                 <thead>
                     <tr class="x-row clickable">
                         <th v-if="value">
                             <x-checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
-                                      :value="ids" @change="$emit('input', $event)"/>
+                                      :value="ids" @change="$emit('input', $event)" :tabindex="100"/>
                         </th>
-                        <th v-for="field in viewFields" nowrap @click="onClickSort(field.name)" class="sortable">
+                        <th v-for="field, i in viewFields" nowrap class="sortable" :tabindex="101 + i"
+                            @click="onClickSort(field.name)" @keyup.enter.stop="onClickSort(field.name)">
                             <img v-if="field.logo" class="logo" :src="`/src/assets/images/logos/${field.logo}.png`"
                                  height="20">{{ field.title }}<div :class="`x-sort ${sortClass(field.name)}`"></div>
                         </th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in pageData" @click="onClickRow(item[idField])" class="x-row clickable">
+                    <tr v-for="item, i in pageData" @click="onClickRow(item[idField])" class="x-row clickable">
                         <td v-if="value">
-                            <x-checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)" />
+                            <x-checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)"
+                                        :tabindex="200 + i" />
                         </td>
                         <td v-for="field in viewFields" nowrap>
                             <component :is="`x-${field.type}-view`" :value="getData(item, field.name)" :schema="field"
@@ -39,16 +41,20 @@
         <div class="x-pagination">
             <div class="x-sizes">
                 <div class="x-title">results per page:</div>
-                <div v-for="size in [20, 50, 100]" @click="onClickSize(size)" class="x-link"
-                     :class="{active: size === view.pageSize}">{{size}}</div>
+                <div v-for="size, i in [20, 50, 100]" @click="onClickSize(size)" @keyup.enter="onClickSize(size)"
+                     class="x-link" :class="{active: size === view.pageSize}" :tabindex="300 + i">{{size}}</div>
             </div>
             <div class="x-pages">
-                <div @click="onClickPage(0)" :class="{'x-link': view.page > 0}">&lt;&lt;</div>
-                <div @click="onClickPage(view.page - 1)" :class="{'x-link': view.page - 1 >= 0}">&lt;</div>
-                <div v-for="number in pageLinkNumbers" @click="onClickPage(number)" class="x-link"
-                     :class="{active: (number === view.page)}">{{number + 1}}</div>
-                <div @click="onClickPage(view.page + 1)" :class="{'x-link': view.page + 1 <= pageCount}">&gt;</div>
-                <div @click="onClickPage(pageCount)" :class="{'x-link': view.page < pageCount}">&gt;&gt;</div>
+                <div @click="onClickPage(0)" @keyup.enter="onClickPage(0)"
+                     :class="{'x-link': view.page > 0}" :tabindex="400">&lt;&lt;</div>
+                <div @click="onClickPage(view.page - 1)" @keyup.enter="onClickPage(view.page - 1)"
+                     :class="{'x-link': view.page - 1 >= 0}" :tabindex="401">&lt;</div>
+                <div v-for="number in pageLinkNumbers" @click="onClickPage(number)" @keyup.enter="onClickPage(number)"
+                     class="x-link" :class="{active: (number === view.page)}" :tabindex="402 + number">{{number + 1}}</div>
+                <div @click="onClickPage(view.page + 1)" @keyup.enter="onClickPage(view.page + 1)"
+                     :class="{'x-link': view.page + 1 <= pageCount}" :tabindex="450">&gt;</div>
+                <div @click="onClickPage(pageCount)" @keyup.enter="onClickPage(pageCount)"
+                     :class="{'x-link': view.page < pageCount}" :tabindex="451">&gt;&gt;</div>
             </div>
         </div>
     </div>
@@ -205,6 +211,9 @@
                 }.bind(this), this.refresh * 1000);
             }
 		},
+        mounted() {
+			this.$refs.greatTable.focus()
+        },
 		beforeDestroy() {
 			if (this.refresh && this.interval) {
 			    clearInterval(this.interval);
@@ -231,7 +240,7 @@
         }
         .x-table-container {
             overflow: auto;
-            max-height: calc(100% - 80px);
+            max-height: calc(100% - 140px);
             .x-striped-table {
                 .x-row {
                     height: 30px;

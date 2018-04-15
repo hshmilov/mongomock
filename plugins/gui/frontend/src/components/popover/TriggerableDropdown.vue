@@ -1,7 +1,7 @@
 <template>
-    <div class="dropdown" v-bind:class="{ 'show': isActive }" v-on-clickaway="close" v-on:mouseout="$emit('mouseout')">
-        <div class="dropdown-toggle" :class="{'arrow': arrow}" @click="isActive = !isActive"
-             data-toggle="dropdown" aria-haspopup="true" :aria-expanded="`${isActive}`">
+    <div class="dropdown" v-bind:class="{ 'show': isActive }" v-on-clickaway="close">
+        <div class="dropdown-toggle" :class="{'arrow': arrow}" @click="toggle" @keyup.enter="toggle" @keyup.down="open"
+             @keyup.up="close" @keyup.esc="close" data-toggle="dropdown" aria-haspopup="true" :aria-expanded="isActive">
             <slot name="trigger"></slot>
         </div>
         <div :class="`dropdown-menu w-${size}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}">
@@ -29,6 +29,12 @@
             }
         },
         methods: {
+        	open() {
+        	    this.isActive = true
+            },
+            toggle() {
+                this.isActive = !this.isActive
+            },
         	close() {
         		this.isActive = false
             }
