@@ -182,5 +182,9 @@ export const pluginMeta = {
 		general_info: {
 			title: 'General Info',
 			description: ''
-		}
+		},
+		json_file_adapter: {
+		    title: 'Adapter title',
+		    description: 'Adapter description'
+        },
 }

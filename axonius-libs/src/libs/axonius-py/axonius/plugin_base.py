@@ -411,12 +411,10 @@ class PluginBase(Feature):
         else:
             raise ValueError(f"got entity {entity} but expected devices/users!")
 
-        with entity_fields['fields_db_lock']:
-            last_fields_count, last_raw_fields_count = entity_fields['last_fields_count']
-            if len(entity_fields['fields_set']) == last_fields_count and \
-                    len(entity_fields['raw_fields_set']) == last_raw_fields_count:
-                return  # Optimization. Note that this is true only if we don't delete fields!
+        if my_entity is None:
+            return
 
+        with entity_fields['fields_db_lock']:
             logger.info(f"Persisting {entity} fields to DB")
             fields = list(entity_fields['fields_set'])  # copy
             raw_fields = list(entity_fields['raw_fields_set'])  # copy

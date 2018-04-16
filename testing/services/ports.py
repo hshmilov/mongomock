@@ -50,6 +50,7 @@ DOCKER_PORTS = {
     'openstack-adapter':                6018,
     'device-control':                   6019,
     'cisco-prime-adapter':              6020,
+    'json-file-adapter':                6021,
     'mongo':                            27017,
 }
 
