@@ -6,12 +6,12 @@
     <div id="app">
         <!-- Nested navigation linking to routes defined in router/index.js -->
         <template v-if="auth.data.user_name">
-            <top-bar-container></top-bar-container>
-            <side-bar-container></side-bar-container>
-            <router-view></router-view>
+            <top-bar-container class="print-exclude"/>
+            <side-bar-container class="print-exclude"/>
+            <router-view/>
         </template>
         <template v-else>
-            <login-container></login-container>
+            <login-container/>
         </template>
     </div>
 </template>

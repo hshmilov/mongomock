@@ -10,7 +10,7 @@
                 <!-- Adding currently viewed page without a link -->
                 {{breadcrumbs[breadcrumbs.length - 1].title}}
             </h4>
-            <div class="x-action"><slot name="pageAction"/></div>
+            <div class="x-action print-exclude"><slot name="action"/></div>
         </div>
         <div class="x-body">
             <slot/>
@@ -59,7 +59,7 @@
                 letter-spacing: 1px;
                 margin-bottom: 0;
                 vertical-align: middle;
-                line-height: 24px;
+                line-height: 30px;
                 display: inline-block;
                 .x-crumb {
                     position: relative;

@@ -1,27 +1,32 @@
 <template>
     <x-page title="axonius dashboard" class="dashboard">
-        <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
-                         :portion="item.portion" :title="item.title" :description="item.description"
-                         @click-slice="runCoverageFilter(item.properties, $event)" />
-        <x-card title="Data Discovery">
-            <x-counter-chart :data="adapterDevicesCounterData"/>
-        </x-card>
-        <x-card title="Devices per Adapter">
-            <x-histogram-chart :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"/>
-        </x-card>
-        <x-card title="System Lifecycle" class="lifecycle">
-            <x-cycle-chart :data="lifecycle.subPhases"/>
-            <div class="cycle-time">Next cycle starts in
-                <div class="blue">{{ nextRunTime }}</div>
-            </div>
-        </x-card>
-        <x-card v-for="chart in dashboard.charts.data" :title="chart.name" :key="chart.name" v-if="chart.data"
-                :removable="true" @remove="removeDashboard(chart.uuid)">
-            <x-results-chart :data="chart.data"/>
-        </x-card>
-        <x-card title="New Chart..." class="build-chart">
-            <div class="link" @click="createNewDashboard">+</div>
-        </x-card>
+        <div slot="action">
+            <a class="x-btn link" @click="exportPDF">Export PDF</a>
+        </div>
+        <div class="dashboard-charts">
+            <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
+                             :portion="item.portion" :title="item.title" :description="item.description"
+                             @click-slice="runCoverageFilter(item.properties, $event)" />
+            <x-card title="Data Discovery">
+                <x-counter-chart :data="adapterDevicesCounterData"/>
+            </x-card>
+            <x-card title="Devices per Adapter">
+                <x-histogram-chart :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"/>
+            </x-card>
+            <x-card v-for="chart in dashboard.charts.data" :title="chart.name" :key="chart.name" v-if="chart.data"
+                    :removable="true" @remove="removeDashboard(chart.uuid)">
+                <x-results-chart :data="chart.data"/>
+            </x-card>
+            <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
+                <x-cycle-chart :data="lifecycle.subPhases"/>
+                <div class="cycle-time">Next cycle starts in
+                    <div class="blue">{{ nextRunTime }}</div>
+                </div>
+            </x-card>
+            <x-card title="New Chart" class="chart-new print-exclude">
+                <div class="link" @click="createNewDashboard">+</div>
+            </x-card>
+        </div>
         <feedback-modal :launch="newDashboard.isActive" :handle-save="saveNewDashboard" @change="finishNewDashboard">
             <h3>Create a Dashboard Chart</h3>
             <div class="x-grid x-grid-col-2">
@@ -155,6 +160,9 @@
 						page: 0, query: { filter, expressions: [] }
 					}})
 				this.$router.push({name: 'Devices'})
+            },
+            exportPDF() {
+				window.print()
             }
 		},
 		created () {
@@ -182,45 +190,45 @@
 <style lang="scss">
 
     .dashboard {
-        .x-body {
-            display: flex;
-            flex-wrap: wrap;
-            .x-card {
-                width: 360px;
-                height: 320px;
-                margin-right: 24px;
+        .modal-body {
+            h3 {
                 margin-bottom: 24px;
-                &.lifecycle {
-                    display: flex;
-                    flex-direction: column;
-                    .cycle {
-                        flex: 100%;
-                    }
-                    .cycle-time {
-                        font-size: 12px;
-                        text-align: right;
-                        .blue {
-                            display: inline-block;
-                        }
-                    }
-                }
-                &.build-chart {
-                    .link {
-                        font-size: 144px;
-                        text-align: center;
-                    }
+            }
+            .vm-select {
+                grid-column: span 2;
+                .vm-select-input__inner {
+                    width: 100%;
                 }
             }
-            .modal-body {
-                h3 {
-                    margin-bottom: 24px;
+        }
+    }
+    .dashboard-charts {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, 320px);
+        grid-gap: 12px;
+        width: 100%;
+        .x-card {
+            width: 320px;
+            height: 320px;
+        }
+        .chart-lifecycle {
+            display: flex;
+            flex-direction: column;
+            .cycle {
+                flex: 100%;
+            }
+            .cycle-time {
+                font-size: 12px;
+                text-align: right;
+                .blue {
+                    display: inline-block;
                 }
-                .vm-select {
-                    grid-column: span 2;
-                    .vm-select-input__inner {
-                        width: 100%;
-                    }
-                }
+            }
+        }
+        .chart-new {
+            .link {
+                font-size: 144px;
+                text-align: center;
             }
         }
     }

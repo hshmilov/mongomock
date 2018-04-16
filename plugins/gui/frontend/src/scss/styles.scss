@@ -62,6 +62,10 @@
 
 /* Basic Styles */
 
+.hide {
+  display: none;
+}
+
 .logo {
   margin-bottom: 4px;
   margin-right: 4px;
@@ -227,6 +231,8 @@ table {
   }
 }
 
+/* Common Animations */
+
 .rotating {
   animation: rotating 2s linear infinite;
 }
@@ -237,4 +243,35 @@ table {
 
 .scaling {
   animation: scaling 1s ease-in-out forwards;
+}
+
+.rising {
+  animation: rise 1s ease-out;
+}
+
+
+@media print {
+  @page {
+    margin: 0.5cm 1cm;
+  }
+  .print-exclude, .print-exclude * {
+    display: none !important;
+  }
+  .x-page, .x-page.collapse {
+    padding: 0;
+    >.x-header {
+      display: block;
+    }
+    .x-body {
+      height: auto;
+    }
+  }
+  .dashboard-charts {
+    display: block;
+    .x-card {
+      page-break-inside: avoid;
+      display: inline-flex;
+      margin: 12px 12px 0 0;
+    }
+  }
 }

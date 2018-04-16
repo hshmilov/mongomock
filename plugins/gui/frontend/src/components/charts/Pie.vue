@@ -48,7 +48,7 @@
             cursor: pointer;
         }
         .clickable {
-            opacity: 0.6;
+            opacity: 0.4;
             transition: opacity ease-in 0.4s;
             &:hover {
                 opacity: 1;

@@ -27,21 +27,21 @@
             setTimeout(() => {
                 this.enumerating = false
                 this.displayData = this.displayData.map((item, index) => {
-                    let jump_value = Math.max(10, Math.ceil(this.data[index].count / 200))
+                    let jumpValue = Math.max(10, Math.ceil(this.data[index].count / 200))
                     if (item.count === this.data[index].count) return item
                     this.enumerating = true
                     if (this.data[index].count > item.count) {
-                        return { ...item, count: Math.min(item.count + jump_value,  this.data[index].count)}
+                        return { ...item, count: Math.min(item.count + jumpValue,  this.data[index].count)}
                     }
                     // Smaller - need to subtract
-					return { ...item, count: Math.max(item.count - jump_value,  this.data[index].count)}
+					return { ...item, count: Math.max(item.count - jumpValue,  this.data[index].count)}
                 })
             }, 10)
         }
 	}
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
     .counter {
         .count {
             font-size: 60px;

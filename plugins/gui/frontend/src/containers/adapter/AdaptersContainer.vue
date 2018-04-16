@@ -11,7 +11,7 @@
 	import SearchInput from '../../components/inputs/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-    import { FETCH_ADAPTER_SERVERS } from '../../store/modules/adapter'
+    import { FETCH_ADAPTERS, FETCH_ADAPTER_SERVERS } from '../../store/modules/adapter'
 
     export default {
         name: 'adapters-container',
@@ -38,7 +38,7 @@
             }
         },
         methods: {
-            ...mapActions({ fetchAdapter: FETCH_ADAPTER_SERVERS }),
+            ...mapActions({ fetchAdapters: FETCH_ADAPTERS, fetchAdapter: FETCH_ADAPTER_SERVERS }),
         	configAdapter(adapter) {
             	/*
             	    Fetch adapter requested to be configured asynchronously, before navigating to the
@@ -47,6 +47,9 @@
             	this.fetchAdapter(adapter['id'])
                 this.$router.push({path: `adapter/${adapter['id']}`})
             }
+        },
+        created() {
+        	this.fetchAdapters()
         }
     }
 </script>

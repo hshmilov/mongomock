@@ -136,3 +136,12 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
     transform: scale(1);
   }
 }
+
+@keyframes rise {
+  from {
+    height: 0;
+  }
+  to {
+    height: 100%;
+  }
+}
