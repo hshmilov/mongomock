@@ -10,7 +10,7 @@ class JsonFileService(AdapterService):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def json_file_service(request):
+def json_file_fixture(request):
     service = JsonFileService()
     initialize_fixture(request, service)
     return service
