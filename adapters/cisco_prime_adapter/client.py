@@ -8,7 +8,7 @@ import requests
 from urllib.parse import urljoin
 import socket
 import struct
-
+from axonius.utils.json import validate, JsonFieldError
 from axonius.adapter_exceptions import ClientConnectionException
 
 
@@ -103,13 +103,18 @@ class CiscoPrimeClient:
         :return: json that conatins the ifaces
         """
 
-        if not all(map(lambda x: x in device, ['ethernetInterfaces', 'ipInterfaces'])):
-            # the device doesn't have nics
+        # validate that the device has the nic structure, return empty list if it isn't
+        try:
+            validate({'ipInterfaces': {'ipInterface': ['ipAddress', 'name']}}, device)
+            validate({'ethernetInterfaces': {'ethernetInterface': ['name', 'macAddress']}}, device)
+        except JsonFieldError as e:
+            logging.exception(f'invalid fields in device {device}')
             return {}
 
         ethernet_interfaces = device['ethernetInterfaces']['ethernetInterface']
         ip_interfaces = device['ipInterfaces']['ipInterface']
 
+        # TODO: for now we only get interface that has ip
         # TODO: The algorithem complexity is O(nm) we can do much better by sorting creating dict of ether by name.
         result = defaultdict(list)
         for ipiface in ip_interfaces:
@@ -125,5 +130,5 @@ class CiscoPrimeClient:
                     if ip_subnet[0] == '0.0.0.0':
                         continue
 
-                    result[etheriface['macAddress']].append(ip_subnet)
+                    result[(etheriface['name'], etheriface['macAddress'])].append(ip_subnet)
         return result

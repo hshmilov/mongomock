@@ -86,8 +86,10 @@ class CiscoPrimeAdapter(AdapterBase):
         device.os.build = raw_device['summary'].get('softwareVersion', '')
 
         # iterate the nics and add them
-        for mac, iplist in CiscoPrimeClient.get_nics(raw_device).items():
-            device.add_nic(mac, map(lambda ipsubnet: ipsubnet[0], iplist))
+        for mac_name, iplist in CiscoPrimeClient.get_nics(raw_device).items():
+            name, mac = mac_name
+            device.add_nic(mac, ips=map(lambda ipsubnet: ipsubnet[1], iplist), subnets=map(
+                lambda ipsubnet: ipsubnet[1], iplist), name=name)
 
         device.set_raw(raw_device)
 

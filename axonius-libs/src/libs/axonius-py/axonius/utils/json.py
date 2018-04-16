@@ -20,3 +20,35 @@ def to_json(value):
 
 def from_json(json_string):
     return json.loads(json_string, object_hook=lambda dct: object_hook(dct, json_options))
+
+
+class JsonFieldError(Exception):
+    ''' Exception for json validation errors '''
+    pass
+
+
+def validate(fields, json):
+    ''' Given a structure named field validate that you can reach each field in the json.
+    :raise: JsonFieldError if it fields isn't reachable '''
+    if isinstance(fields, dict):
+        if not isinstance(json, dict):
+            raise JsonFieldError(f"Json dosen't conatin {fields}")
+
+        for key, value in fields.items():
+            if key not in json:
+                raise JsonFieldError(f'Json is missing {key}')
+            return validate(value, json[key])
+
+    if isinstance(fields, list):
+        if not isinstance(json, list):
+            raise JsonFieldError(f'Json is not iterable')
+
+        for subdict in json:
+            for item in fields:
+                return validate(item, subdict)
+
+    if not isinstance(json, dict):
+        raise JsonFieldError(f"Json dosen't conatin {fields}")
+
+    if fields not in json.keys():
+        raise JsonFieldError(f'Json missing is missing {fields}')

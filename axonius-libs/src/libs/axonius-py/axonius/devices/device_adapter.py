@@ -27,8 +27,11 @@ class DeviceAdapterOS(SmartJsonClass):
 
 class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
+    name = Field(str, 'Iface Name')
     mac = Field(str, 'Mac', converter=format_mac)
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    subnets = ListField(str, 'Subnets', converter=format_ip, json_format=JsonStringFormat.ip,
+                        description='A list of subnets in ip format, that correspond the IPs')
     ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
                         converter=format_ip_raw)
 
@@ -158,7 +161,7 @@ class DeviceAdapter(SmartJsonClass):
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
 
-    def add_nic(self, mac=None, ips=None):
+    def add_nic(self, mac=None, ips=None, subnets=None, name=None):
         """
         Add a new network interface card to this device.
         :param mac: the mac
@@ -189,6 +192,29 @@ class DeviceAdapter(SmartJsonClass):
                         if logger is None:
                             raise
                         logger.exception(f'Invalid ip: {repr(ip)}')
+        if subnets is not None:
+            try:
+                subnets_iter = iter(subnets)
+            except TypeError:
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid subnets: {repr(subnets)}')
+            else:
+                for subnet in subnets_iter:
+                    try:
+                        nic.subnets.append(subnet)
+                    except (ValueError, TypeError):
+                        if logger is None:
+                            raise
+                        logger.exception(f'Invalid subnet: {repr(subnet)}')
+        if name is not None:
+            try:
+                nic.name = name
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid name : {repr(name)}')
+
         self.network_interfaces.append(nic)
 
     def figure_os(self, os_string):
