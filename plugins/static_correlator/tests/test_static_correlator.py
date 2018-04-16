@@ -1,7 +1,5 @@
 import itertools
 import uuid
-import logging
-import sys
 
 from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
@@ -17,18 +15,19 @@ def test_empty():
     assert len(correlate([])) == 0
 
 
-def get_raw_device(hostname=None, network_interfaces=None, os=None):
+def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None):
     return {
         'tags': [],
         'adapters': [
             {
-                'plugin_name': 'ad1' + str(uuid.uuid1()),
-                PLUGIN_UNIQUE_NAME: 'ad1' + str(uuid.uuid1()),
+                'plugin_name': str(uuid.uuid1()),
+                PLUGIN_UNIQUE_NAME: str(uuid.uuid1()),
                 'data': {
-                    'id': "idad1" + str(uuid.uuid1()),
+                    'id': str(uuid.uuid1()),
                     OS_FIELD: os,
-                    'hostname': hostname,  # Capital letter in in purpose
-                    NETWORK_INTERFACES_FIELD: network_interfaces
+                    'hostname': hostname,
+                    NETWORK_INTERFACES_FIELD: network_interfaces,
+                    'device_serial': serial,
                 }
             }
         ],
@@ -410,6 +409,30 @@ def test_rule_one_is_ad_and_full_hostname_fail_on_hostname_even_with_default_dom
     device2['adapters'][0]['plugin_name'] = 'active_directory_adapter'
     device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 0)
+
+
+def test_positive_serial_correlation():
+    device1 = get_raw_device(serial="Some serial")
+    device2 = get_raw_device(serial="Some serial")
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 1)
+
+
+def test_positive_serial_correlation_capitaliztion():
+    device1 = get_raw_device(serial="xDDDD123DDDDx")
+    device2 = get_raw_device(serial="Xdddd123ddddX")
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 1)
+
+
+def test_negative_serial_correlation_simple():
+    device1 = get_raw_device()
+    device2 = get_raw_device()
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 0)
+
+
+def test_negative_serial_correlation_not_simple():
+    device1 = get_raw_device(serial="Some serial1")
+    device2 = get_raw_device(serial="Some serial2")
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 0)
 
 
 if __name__ == '__main__':

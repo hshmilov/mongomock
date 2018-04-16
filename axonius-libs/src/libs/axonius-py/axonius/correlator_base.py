@@ -56,6 +56,10 @@ def has_hostname(adapters):
     return does_device_have_field(adapters, lambda adapter_data: 'hostname' in adapter_data)
 
 
+def has_serial(adapters):
+    return does_device_have_field(adapters, lambda adapter_data: adapter_data.get('device_serial'))  # not none
+
+
 def has_mac(adapters):
     return does_device_have_field(adapters, _has_mac)
 

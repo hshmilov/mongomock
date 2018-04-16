@@ -1,10 +1,11 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import get_hostname, is_different_plugin, compare_hostname, is_from_ad, get_normalized_mac, \
     ips_do_not_contradict, compare_macs, get_normalized_ip, compare_device_normalized_hostname, \
-    normalize_adapter_devices
-from axonius.correlator_base import has_mac, has_hostname
+    normalize_adapter_devices, get_serial
+from axonius.correlator_base import has_mac, has_hostname, has_serial
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -36,7 +37,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _prefilter_device(self, devices):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        self.correlation_preconditions = [has_hostname, has_mac]
+        self.correlation_preconditions = [has_hostname, has_mac, has_serial]
         return super()._prefilter_device(devices)
 
     def _correlate_mac_ip_no_contradiction(self, adapters_to_correlate):
@@ -85,6 +86,18 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and IPs'},
                                       'StaticAnalysis')
 
+    def _correlate_serial(self, adapters_to_correlate):
+        logger.info("Starting to correlate on Serial")
+        filtered_adapters_list = filter(get_serial, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_serial],
+                                      [lambda a, b: a['data']['device_serial'].upper() == b['data'][
+                                          'device_serial'].upper()],
+                                      [],
+                                      [is_different_plugin],
+                                      {'Reason': 'They have the same serial'},
+                                      'StaticAnalysis')
+
     def _correlate_with_ad(self, adapters_to_correlate):
         """
         AD correlation is a little more loose - we allow correlation based on hostname alone.
@@ -115,6 +128,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_mac_ip_no_contradiction(adapters_to_correlate)
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
+
+        # Find adapters with the same serial
+        yield from self._correlate_serial(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == 'StaticAnalysis':

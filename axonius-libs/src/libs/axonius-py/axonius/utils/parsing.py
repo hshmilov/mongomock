@@ -402,6 +402,10 @@ def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
 
 
+def get_serial(adapter_device):
+    return adapter_device['data'].get('device_serial')
+
+
 def has_mac_or_ip(adapter_data):
     """
     checks if one of the network interfaces in adapter data has a MAC or ip
