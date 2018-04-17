@@ -59,6 +59,7 @@ class ScannerCorrelatorBase(object):
                       predicates: List[pair_comparator], adapter_list: list = None) -> Tuple[str, str]:
         """
         Returns all devices that are compatible with all given predicates
+        :param parsed_device: Compare with this device
         :param normalizations: a list of transformations to perform on each device before checking the predicates
         :param predicates: a list of predicates that a pair of devices have to fulfil to be "suitable"
         :param adapter_list: If given, will use this instead of self._all_adapter_devices
@@ -98,7 +99,7 @@ class ScannerCorrelatorBase(object):
             if devices_per_ip:
                 devices_to_search += devices_per_ip
         devices_to_search = remove_duplicates_by_reference(devices_to_search)
-        return self.find_suitable_newest(*args, **kwargs, adapter_list=devices_to_search)
+        return self.find_suitable_newest(parsed_device, *args, **kwargs, adapter_list=devices_to_search)
 
     def find_suitable_no_ip_contradictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
         devices = list(self.find_suitable(parsed_device, *args, **kwargs))
@@ -130,7 +131,7 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
-        return self.find_suitable_newest_by_ip(parsed_device,
+        return self.find_suitable_newest_by_ip(parsed_device=parsed_device,
                                                normalizations=[],
                                                predicates=[is_different_plugin,
                                                            macs_do_not_contradict,
@@ -142,6 +143,7 @@ class ScannerCorrelatorBase(object):
         :param parsed_device: parsed device
         :return: (plugin_unique_name, id)
         """
+        parsed_device = normalize_adapter_device(dict(parsed_device))
         self_correlation = self._find_correlation_with_self(parsed_device)
         if self_correlation:
             # Case "A": The device has been found to be the same as a previous result
