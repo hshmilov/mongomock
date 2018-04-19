@@ -1,4 +1,7 @@
 import logging
+from typing import Tuple, List
+
+from axonius.smart_json_class import SmartJsonClass
 
 from axonius.mixins.devicedisabelable import Devicedisabelable
 from axonius.mixins.userdisabelable import Userdisabelable
@@ -6,7 +9,7 @@ from axonius.mixins.userdisabelable import Userdisabelable
 logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
-from axonius.fields import Field
+from axonius.fields import Field, JsonStringFormat, ListField
 from datetime import datetime, timedelta
 import json
 import os
@@ -19,7 +22,7 @@ import subprocess
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
     LDAP_PASSWORD_NOT_REQUIRED, LDAP_DONT_EXPIRE_PASSWORD
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
-from axonius.adapter_exceptions import ClientConnectionException
+from axonius.adapter_exceptions import ClientConnectionException, TagDeviceError
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
@@ -31,7 +34,7 @@ from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
-    is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name
+    is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -46,6 +49,14 @@ MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
 
 
 # TODO ofir: Change the return values protocol
+class AvailableIp(SmartJsonClass):
+    """ A definition for the json-scheme for an available IP and its origin"""
+    ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
+    source_dns = Field(str, 'DNS server that gave the result')
+
+
+class AvailableIps(SmartJsonClass):
+    available_ips = ListField(AvailableIp, "Map between IPs and their origin")
 
 
 class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
@@ -338,8 +349,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
             dc_name = host['raw'].get('AXON_DC_ADDR')
             current_resolved_host = dict(host)
             try:
-                ip = self._resolve_device_name(host['hostname'], {"dns_name": dns_name, "dc_name": dc_name})
-                network_interfaces = [{MAC_FIELD: None, IPS_FIELD: [ip]}]
+                ips = self._resolve_device_name(host['hostname'],
+                                                {"dns_name": dns_name,
+                                                 "dc_name": dc_name})
+                network_interfaces = [{MAC_FIELD: None, IPS_FIELD: [ip]} for ip, _ in ips]
                 current_resolved_host[NETWORK_INTERFACES_FIELD] = network_interfaces
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
 
@@ -347,6 +360,30 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 # Don't log here, it will happen for every failed resolving (Can happen a lot of times)
                 current_resolved_host = dict(host)
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
+            else:
+                try:
+                    available_ips = {ip: dns for ip, dns in ips}
+                    if len(available_ips) > 1:
+                        # If we have more than one key in available_ips that means
+                        # that this device got two different IP's
+                        # i.e duplicate! we need to tag this device
+                        logger.info(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
+                        self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
+
+                        serialized_available_ips = AvailableIps(
+                            available_ips=[AvailableIp(ip=ip, source_dns=dns)
+                                           for ip, dns in available_ips.items()]
+                        )
+                        self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts",
+                                              serialized_available_ips.to_dict())
+                    else:
+                        # no conflicts - let's reflect that
+                        self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
+                        self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts", False)
+                except TagDeviceError:
+                    pass  # if the device wasn't yet inserted this will be raised
+                except Exception:
+                    logger.exception("Exception while checking for DNS conflicts")
 
             finally:
                 resolved_hosts.append(current_resolved_host)
@@ -363,6 +400,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         with self._resolving_thread_lock:
             hosts = self._get_collection(DEVICES_DATA).find({DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name},
                                                             projection={'_id': True,
+                                                                        'id': True,
                                                                         'raw.AXON_DNS_ADDR': True,
                                                                         'raw.AXON_DC_ADDR': True,
                                                                         'hostname': True})
@@ -423,9 +461,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
             last_logon = device_raw.get('lastLogon')
             last_logon_timestamp = device_raw.get('lastLogonTimestamp')
 
-            last_seen = max(last_logon, last_logon_timestamp) \
-                if last_logon is not None and last_logon_timestamp is not None \
-                else last_logon or last_logon_timestamp
+            if last_logon is not None and last_logon_timestamp is not None:
+                last_seen = max(last_logon, last_logon_timestamp)
+            else:
+                last_seen = last_logon or last_logon_timestamp
 
             if last_seen is None:
                 # No data on the last timestamp of the device. Not inserting this device.
@@ -453,10 +492,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]
             else:
                 device_as_dict = device.to_dict()
-                resolved_device = self._resolve_hosts_addresses([device_as_dict])[0]
-                if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
-                    device.network_interfaces = resolved_device[NETWORK_INTERFACES_FIELD]
-                    device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
+                device.network_interfaces = []
+                for resolved_device in self._resolve_hosts_addresses([device_as_dict]):
+                    if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
+                        device.network_interfaces.append(resolved_device[NETWORK_INTERFACES_FIELD][0])
+                        device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
 
                 if not self._is_adapter_old_by_last_seen(device_as_dict):
                     # That means that the device is new (As determined in adapter_base code)
@@ -487,7 +527,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
             file_obj.write(file_buffer)
             return os_path
 
-    def _resolve_device_name(self, device_name, client_config, timeout=2):
+    def _resolve_device_name(self, device_name, client_config, timeout=2) -> List[Tuple[str, str]]:
         """ Resolve a device name address using dns servers.
         This function will first try to resolve IP using the machine network interface DNS servers.
         If the servers cant find an appropriate IP, The function will try to query the DC (assuming that it
@@ -497,30 +537,35 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         :param dict client_config:  Client data. Must contain 'dc_name'
         :param int timeout: The timeout for the dns query process. Since we try twice the function ca block
                             up to 3*timeout seconds
-        :return: The ip address of the device
+        :return: List of Tuple[ip, dns_origin]
         :raises exception.IpResolveError: In case of an error in the query process
         """
         # We are assuming that the dc is the DNS server
         full_device_name = device_name
 
         err = f"Resolving {full_device_name} {client_config}"
+
+        ips = []
+
         try:
             dns_server = None
-            return query_dns(full_device_name, timeout, dns_server)
+            ips.append((query_dns(full_device_name, timeout, dns_server), 'default'))
         except Exception as e:
             err += f"failed to resolve from {dns_server} <{e}>; "
 
         try:
             dns_server = client_config["dns_name"]
-            return query_dns(full_device_name, timeout, dns_server)
+            ips.append((query_dns(full_device_name, timeout, dns_server), dns_server))
         except Exception as e:
             err += f"failed to resolve from {dns_server} <{e}>; "
 
         try:
             dns_server = client_config["dc_name"]
-            return query_dns(full_device_name, timeout, dns_server)
+            ips.append((query_dns(full_device_name, timeout, dns_server), dns_server))
         except Exception as e:
             err += f"failed to resolve from {dns_server} <{e}>; "
+        if ips:
+            return ips
 
         raise IpResolveError(err)
 
@@ -558,7 +603,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                     if num_of_previously_resolved_devices > 0:
                         # If a device has been resolved already, our theory is that the resolving time will be
                         # close to immediate. that is why we re-resolve it.
-                        device_ip = self._resolve_device_name(wanted_hostname, client_config)
+                        device_ip, _ = self._resolve_device_name(wanted_hostname, client_config)[0]
                     else:
                         raise IpResolveError(f"hostname {wanted_hostname} has never been resolved, not resolving")
                 except Exception:

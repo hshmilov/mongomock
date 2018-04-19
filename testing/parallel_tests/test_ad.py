@@ -7,7 +7,6 @@ import time
 
 # These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
-from services.plugins.dns_conflicts_service import dns_conflicts_fixture
 from services.plugins.device_control_service import device_control_fixture
 
 
@@ -83,21 +82,17 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
-    def test_dns_conflicts(self, dns_conflicts_fixture):
-        dns_conflicts_fixture.triggerable_execute_enable()
-        dns_conflicts_fixture.find_conflicts()
-
-        @retry(wait_fixed=500,
-               stop_max_delay=15000)
+    def test_dns_conflicts(self):
+        @retry(wait_fixed=5000,
+               stop_max_delay=125000)  # it can take up to 2 minutes for the tag to appear
         def has_ip_conflict_tag():
-            dns_conflicts_fixture.find_conflicts()
             assert len(self.axonius_system.get_devices_with_condition(
                 {
                     "tags": {
                         '$elemMatch': {
                             "name": "IP Conflicts",
                             "type": "label",
-                            "data": {"$ne": "False"}
+                            "data": {"$ne": False}
                         }
                     }
                 }
@@ -108,7 +103,7 @@ class TestAdAdapter(AdapterTestBase):
                         '$elemMatch': {
                             "name": "IP Conflicts",
                             "type": "data",
-                            "data": {"$ne": "False"}
+                            "data": {"$ne": False}
                         }
                     }
                 }

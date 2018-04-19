@@ -11,10 +11,6 @@ export const STOP_PLUGIN = 'STOP_PLUGIN'
 export const UPDATE_PLUGIN_STOP = 'UPDATE_PLUGIN_STOP'
 
 export const pluginStaticData = {
-	'dns_conflicts': {
-		name: 'Conflicting IP',
-		description: 'The Conflicting IP plugin uses controls from Active Directory and other DNS servers to compare the hostnames of devices to identify conflicting IP addresses.'
-	},
 	'static_correlator': {
 		name: 'Static Correlator',
 		description: 'The Static Correlator plugin compares values across managed devices to discover instances of the same device.'
@@ -72,7 +68,6 @@ export const plugin = {
 						description: description,
 						startable: (plugin.status !== 'error' && plugin.state.state === 'Disabled'),
 						stoppable: (plugin.status !== 'error' && (plugin.state.state === 'Scheduled' || plugin.state.state === 'Triggered')),
-						configurable: plugin.plugin_name === 'dns_conflicts'
 					}
 				})
 			}
