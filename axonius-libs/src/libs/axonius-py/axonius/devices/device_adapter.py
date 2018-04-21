@@ -15,14 +15,14 @@ from axonius.utils.mongo_escaping import escape_dict
 
 class DeviceAdapterOS(SmartJsonClass):
     """ A definition for the json-scheme for an OS (of a device) """
-    type = Field(str, 'OS', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare', 'Cisco'])
-    distribution = Field(str, 'OS Distribution')
-    bitness = Field(int, 'OS Bitness', enum=[32, 64])
-    build = Field(str, 'OS Build')  # aka patch level
-    install_date = Field(datetime.datetime, "OS Install Date")
+    type = Field(str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'Android', 'FreeBSD', 'VMWare', 'Cisco'])
+    distribution = Field(str, 'Distribution')
+    bitness = Field(int, 'Bitness', enum=[32, 64])
+    build = Field(str, 'Build')  # aka patch level
+    install_date = Field(datetime.datetime, "Install Date")
 
-    major = Field(int, 'OS Major')
-    minor = Field(int, 'OS Minor')
+    major = Field(int, 'Major')
+    minor = Field(int, 'Minor')
 
 
 class DeviceAdapterNetworkInterface(SmartJsonClass):
@@ -40,39 +40,39 @@ class DeviceAdapterHD(SmartJsonClass):
     """ A definition for hard drives on that device. On windows, that would be a drive.
     On linux and mac, we need to think what it is (not sure its mounts...) """
 
-    path = Field(str, "HD Path")
-    total_size = Field(float, "HD Size (GB)")
-    free_size = Field(float, "HD Free Size (GB)")
-    is_encrypted = Field(bool, "HD Encrypted")
-    file_system = Field(str, "HD Filesystem")
+    path = Field(str, "Path")
+    total_size = Field(float, "Size (GB)")
+    free_size = Field(float, "Free Size (GB)")
+    is_encrypted = Field(bool, "Encrypted")
+    file_system = Field(str, "Filesystem")
 
 
 class DeviceAdapterCPU(SmartJsonClass):
     """ A definition for cpu's """
 
-    name = Field(str, "CPU Description")
-    bitness = Field(int, "CPU Bitness", enum=[32, 64])
-    cores = Field(int, "CPU Cores")
-    load_percentage = Field(int, "CPU Load Percentage")
-    architecture = Field(str, "CPU Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64"])
-    ghz = Field(float, "CPU Clockspeed (GHZ)")
+    name = Field(str, "Description")
+    bitness = Field(int, "Bitness", enum=[32, 64])
+    cores = Field(int, "Cores")
+    load_percentage = Field(int, "Load Percentage")
+    architecture = Field(str, "Architecture", enum=["x86", "x64", "MIPS", "Alpha", "PowerPC", "ARM", "ia64"])
+    ghz = Field(float, "Clockspeed (GHZ)")
 
 
 class DeviceAdapterBattery(SmartJsonClass):
     """ A definition for a battery"""
 
-    percentage = Field(int, "Battery Percentage")
-    status = Field(str, "Battery Status", enum=["Not Charging", "Connected to AC", "Fully Charged", "Low", "Critical",
-                                                "Charging", "Charging and High", "Charging and Low",
-                                                "Charging and Critical", "Undefined", "Partially Charged"])
+    percentage = Field(int, "Percentage")
+    status = Field(str, "Status", enum=["Not Charging", "Connected to AC", "Fully Charged", "Low", "Critical",
+                                        "Charging", "Charging and High", "Charging and Low",
+                                        "Charging and Critical", "Undefined", "Partially Charged"])
 
 
 class DeviceAdapterUser(SmartJsonClass):
     """ A definition for users known by this device"""
 
-    username = Field(str, "Known User")
-    last_use_date = Field(datetime.datetime)
-    is_local = Field(bool, "Is User Local")
+    username = Field(str, "Known")
+    last_use_date = Field(datetime.datetime, 'Last Use')
+    is_local = Field(bool, "Is Local")
 
     # Where did this user really come from?
     origin_unique_adapter_name = Field(str)
@@ -82,16 +82,16 @@ class DeviceAdapterUser(SmartJsonClass):
 class DeviceAdapterSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    security_patch_id = Field(str, "Security Patch Name")
+    security_patch_id = Field(str, "Name")
     installed_on = Field(datetime.datetime)
 
 
 class DeviceAdapterInstalledSoftware(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    vendor = Field(str, "Software Vendor")
-    name = Field(str, "Software Name")
-    version = Field(str)
+    vendor = Field(str, "Vendor")
+    name = Field(str, "Name")
+    version = Field(str, "Version")
 
 
 class DeviceAdapter(SmartJsonClass):
@@ -101,7 +101,7 @@ class DeviceAdapter(SmartJsonClass):
     hostname = Field(str, 'Host Name')
     last_seen = Field(datetime.datetime, 'Last Seen')
     network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces')
-    os = Field(DeviceAdapterOS)
+    os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
     security_patches = ListField(DeviceAdapterSecurityPatch, "Security Patch")

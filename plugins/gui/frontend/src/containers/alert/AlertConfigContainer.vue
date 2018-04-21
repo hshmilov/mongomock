@@ -70,8 +70,8 @@
                             <checkbox class="ml-4 mt-2" label="Push a system notification" v-model="actions.notification"></checkbox>
                             <checkbox class="ml-4 mt-2 inline" label="Send an Email" v-model="actions.mail"/>
                             <template v-if="actions.mail">
-                                <vm-select v-model="mailList" multiple filterable allow-create
-                                           no-data-text="Type mail addresses..." placeholder=""/>
+                                <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
+                                           no-data-text="Type mail addresses..." :default-first-option="true"/>
                             </template>
                             <template v-if="alert.triggers.increase">
                                 <checkbox class="ml-4 mt-2 inline" label="Tag Devices" v-model="actions.tag"/>

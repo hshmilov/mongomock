@@ -82,9 +82,7 @@
             }
         }
         .x-body {
-            flex: 1 0 auto;
-            padding: 0;
-            height: calc(100vh - 172px);
+            height: calc(100vh - 170px);
             overflow: auto;
         }
     }

@@ -1,6 +1,6 @@
 <template>
     <div class="schema-list">
-        <x-array-view :value="data" :schema="{ type: 'array', items: schema}" />
+        <x-array-view :value="data" :schema="schema" />
     </div>
 </template>
 
@@ -26,6 +26,9 @@
         grid-column-gap: 24px;
         .label, .index {
             font-weight: 500;
+        }
+        .index {
+            margin-right: 4px;
         }
     }
 </style>

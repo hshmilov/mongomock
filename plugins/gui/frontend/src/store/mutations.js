@@ -53,35 +53,6 @@ export const addDataView = (state, payload) => {
 	views.data = [{ name: payload.name, view: payload.view }, ...views.data.filter(item => item.name !== payload.name)]
 }
 
-const flattenSchema = (schema, name = '') => {
-	/*
-		Recursion over schema to extract a flat map from field path to its schema
-	 */
-	if (schema.name) {
-		name = name ? `${name}.${schema.name}` : schema.name
-	}
-	if (schema.type === 'array' && schema.items) {
-		if (!Array.isArray(schema.items)) {
-			if (schema.items.type !== 'array') {
-				if (!schema.title) return []
-				return [{...schema, name}]
-			}
-			let childSchema = {...schema.items}
-			if (schema.title) {
-				childSchema.title = childSchema.title ? `${schema.title} ${childSchema.title}` : schema.title
-			}
-			return flattenSchema(childSchema, name)
-		}
-		let children = []
-		schema.items.forEach((item) => {
-			children = children.concat(flattenSchema({...item}, name))
-		})
-		return children
-	}
-	if (!schema.title) return []
-	return [{...schema, name}]
-}
-
 export const UPDATE_DATA_FIELDS = 'UPDATE_DATA_FIELDS'
 export const updateDataFields = (state, payload) => {
 	if (!validModule(state, payload)) return
@@ -89,16 +60,9 @@ export const updateDataFields = (state, payload) => {
 	fields.fetching = payload.fetching
 	fields.error = payload.error
 	if (payload.data) {
-		fields.data = {
-			generic: [{
-					name: 'adapters',
-					title: 'Adapters',
-					type: 'array',
-					items: {type: 'string', format: 'logo', enum: []}
-				}, ...flattenSchema(payload.data.generic)],
-			specific: {}}
+		fields.data = { generic: payload.data.generic, specific: {}, schema: payload.data.schema}
 		Object.keys(payload.data.specific).forEach((name) => {
-			fields.data.specific[name] = flattenSchema(payload.data.specific[name])
+			fields.data.specific[name] = payload.data.specific[name]
 			fields.data.generic[0].items.enum.push({name, title: pluginMeta[name].title})
 		})
 	}

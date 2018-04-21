@@ -31,6 +31,7 @@
 <style lang="scss">
     .search-input {
         padding: 0 12px;
+        position: relative;
         .input-value {
             width: 100%;
             border: 0;

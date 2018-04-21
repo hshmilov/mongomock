@@ -3,12 +3,15 @@
     	{ title: 'devices', path: { name: 'Devices'}},
     	{ title: deviceName }
     ]">
-        <template v-if="deviceFields.generic">
+        <template v-if="deviceFields.generic && deviceData.generic">
             <tabs>
                 <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                    <x-schema-list :data="deviceDataBasic" :schema="deviceFields.generic"/>
+                    <x-schema-list :data="deviceData.generic.basic" :schema="{type: 'array', items: deviceFields.generic}"/>
                 </tab>
-                <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.name" :id="i" :key="i">
+                <tab v-for="item, i in deviceDataGenericAdvanced" :title="item.title" :id="i" :key="i">
+                    <x-schema-list :data="item.data" :schema="item.schema" />
+                </tab>
+                <tab v-for="item, i in deviceData.generic.data" :title="item.name" :id="`data_${i}`" :key="`data_${i}`">
                     <x-custom-data :data="item.data"/>
                 </tab>
                 <tab title="Tags" id="tags" key="tags">
@@ -23,8 +26,7 @@
         <template v-if="deviceFields.specific">
             <tabs>
                 <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
-                     :key="item.data.id+item.plugin_unique_name"
-                     :selected="!i" :title="getAdapterName(item.plugin_name)"
+                     :key="item.data.id+item.plugin_unique_name" :selected="!i" :title="getAdapterName(item.plugin_name)"
                      :logo="item.plugin_name" :outdated="item.outdated">
                     <div class="d-flex tab-header">
                         <div class="flex-expand">Data From: {{ item.client_used }}</div>
@@ -32,8 +34,7 @@
                         <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
                     </div>
                     <x-schema-list v-if="viewBasic && deviceFields.specific[item.plugin_name]"
-                                   :data="getDataForFieldList(deviceFields.specific[item.plugin_name], {adapters_data: {[item.plugin_name]: item.data}})"
-                                   :schema="deviceFields.specific[item.plugin_name]"/>
+                                   :data="item.data" :schema="deviceFields.schema.specific[item.plugin_name]"/>
                     <div v-if="!viewBasic">
                         <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
                     </div>
@@ -57,7 +58,6 @@
 	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
 	import SearchableChecklist from '../../components/SearchableChecklist.vue'
 	import TagsMixin from '../../mixins/tags'
-	import DataMixin from '../../mixins/data'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
@@ -73,7 +73,7 @@
 			xPage, NamedSection, Tabs, Tab, xSchemaList, xCustomData,
 			FeedbackModal, SearchableChecklist
 		},
-		mixins: [TagsMixin, DataMixin],
+		mixins: [TagsMixin],
 		computed: {
 			...mapState(['device']),
 			deviceId () {
@@ -82,31 +82,13 @@
 			deviceData () {
 				return this.device.deviceDetails.data
 			},
-			sortedSpecificData () {
-				if (!this.deviceData || !this.deviceData.specific_data) return []
-
-                let lastSeen = new Set()
-                return [ ...this.deviceData.specific_data].sort((first, second) => {
-					// Adapters with no last_seen field go first
-					if (!second.data.last_seen) return 1
-					if (!first.data.last_seen) return -1
-
-					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
-					return new Date(second.data.last_seen) - new Date(first.data.last_seen)
-				}).map((item) => {
-					if (lastSeen.has(item.plugin_name)) return { ...item, outdated: true }
-
-					lastSeen.add(item.plugin_name)
-                    return item
-				})
-			},
 			deviceName () {
-				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) {
+				if (!this.deviceData || !this.deviceData.generic) {
 					return ''
 				}
-                let name = this.getData(this.deviceData.specific_data, 'data.hostname') ||
-                    this.getData(this.deviceData.specific_data, 'data.name') ||
-                    this.getData(this.deviceData.specific_data, 'data.pretty_id')
+                let name = this.deviceData.generic.basic['specific_data.data.hostname']
+                    || this.deviceData.generic.basic['specific_data.data.name']
+                    || this.deviceData.generic.basic['specific_data.data.pretty_id']
                 if (Array.isArray(name) && name.length) {
 					return name[0]
                 } else if (!Array.isArray(name)) {
@@ -116,23 +98,30 @@
 			deviceFields () {
 				return this.device.data.fields.data
 			},
-			deviceFieldsGenericAdvanced () {
-				return ['installed_software', 'security_patches', 'users']
-			},
-			deviceDataBasic () {
-				return this.getDataForFieldList(this.deviceFields.generic.filter((field) => {
-					return !this.deviceFieldsGenericAdvanced.some(item => field.name.includes(item)) && (field.name !== 'adapters')
-				}), this.deviceData)
-			},
-			deviceDataGenericAdvanced () {
-				if (!this.deviceData.specific_data || !this.deviceData.specific_data.length) return {}
-				return this.deviceFieldsGenericAdvanced.map((includeField) => {
-					return {
-						name: includeField.split('_').join(' '),
-                        data: this.getData(this.deviceData, `specific_data.data.${includeField}`)
-					}
-				}).filter(item => item.data && (!Array.isArray(item.data) || item.data.length)
-                ).concat(this.deviceData.generic_data)
+            deviceDataGenericAdvanced() {
+				if (!this.deviceData.generic || !this.deviceData.generic.advanced) return []
+				return this.deviceData.generic.advanced.filter(item => item.data && item.data.length).map((item) => {
+					let schema = this.getAdvancedFieldSchema(item.name)
+					return { ...item,
+						title: schema.title,
+                        schema: { ...schema, title: undefined }
+                    }
+                })
+            },
+			sortedSpecificData () {
+				if (!this.deviceData.specific) return []
+				let lastSeen = new Set()
+				return [ ...this.deviceData.specific].sort((first, second) => {
+					// Adapters with no last_seen field go first
+					if (!second.data.last_seen) return 1
+					if (!first.data.last_seen) return -1
+					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
+					return new Date(second.data.last_seen) - new Date(first.data.last_seen)
+				}).map((item) => {
+					if (lastSeen.has(item.plugin_name)) return { ...item, outdated: true }
+					lastSeen.add(item.plugin_name)
+					return item
+				})
 			},
 			currentTags () {
 				return this.deviceData.labels
@@ -157,15 +146,13 @@
 				}
 				return pluginMeta[pluginName].title || pluginName
 			},
+            getAdvancedFieldSchema(field) {
+				if (!this.deviceFields.schema || !this.deviceFields.schema.generic) return {}
+				return this.deviceFields.schema.generic.items.filter(schema => schema.name === field)[0]
+            },
 			removeTag (label) {
 				this.deleteDeviceTags({devices: [this.deviceId], labels: [label]})
-			},
-            getDataForFieldList(fieldList, data) {
-				return fieldList.reduce((map, field) => {
-					map[field.name] = this.getData(data, field.name)
-					return map
-				}, {})
-            }
+			}
 		},
 		created () {
 			if (!this.deviceFields || !this.deviceFields.generic) {

@@ -87,7 +87,6 @@
         }
         .x-select-type {
             width: 240px;
-            flex: 1 0 auto;
             margin-right: 12px;
         }
         .x-field-menu-filter {

@@ -28,6 +28,7 @@ from bson import ObjectId
 import json
 from datetime import datetime
 from axonius.utils.parsing import parse_filter
+import re
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -303,29 +304,126 @@ class GuiService(PluginBase):
                     {'name': {'$exists': False}, 'filter': filter},
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
                     upsert=True)
-            return [beautify_db_entry(entity) for entity in data_list]
+            if not projection:
+                return [beautify_db_entry(entity) for entity in data_list]
+            return [self._parse_entity_fields(entity, projection.keys()) for entity in data_list]
+
+    def _parse_entity_fields(self, entity_data, fields):
+        """
+        For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
+
+        :param entity_data: A nested dict representing parsed values of an entity
+        :param fields:      List of paths to values in the entity_data dict
+        :return:            Mapping of a field path to it's value list as found in the entity_data
+        """
+        field_to_value = {}
+        for field in fields:
+            field_to_value[field] = self._find_entity_field(entity_data, field)
+        return field_to_value
+
+    def _find_entity_field(self, entity_data, field_path):
+        """
+        Recursively expand given entity, following period separated properties of given field_path,
+        until reaching the requested value
+
+        :param entity_data: A nested dict representing parsed values of an entity
+        :param field_path:  A path to a field ('.' separated chain of keys)
+        :return:
+        """
+        if entity_data is None:
+            # Return no value for this path
+            return ''
+        if not field_path:
+            # Return value corresponding with given path
+            return entity_data
+
+        if type(entity_data) != list:
+            first_dot = field_path.find('.')
+            if first_dot == -1:
+                # Return value of last key in the chain
+                return entity_data.get(field_path)
+            # Continue recursively with value of current key and rest of path
+            return self._find_entity_field(entity_data.get(field_path[:first_dot]), field_path[first_dot + 1:])
+
+        if len(entity_data) == 1:
+            # Continue recursively on the single element in the list, with the same path
+            return self._find_entity_field(entity_data[0], field_path)
+
+        children = []
+        for item in entity_data:
+            # Continue recursively for current element of the list
+            child_value = self._find_entity_field(item, field_path)
+            if child_value:
+                def new_instance(value):
+                    """
+                    Test if given value is not yet found in the children list, according to comparison rules.
+                    For strings, if value is a prefix of or has a prefix in the list, is considered to be found.
+                    :param value:   Value for testing if exists in the list
+                    :return: True, if value is new to the children list and False otherwise
+                    """
+                    def same_string(x, y): return type(x) != 'str' or (re.match(x, y, re.I) or re.match(y, x, re.I))
+                    if type(value) == str:
+                        return len([child for child in children if same_string(child, value)]) == 0
+                    if type(value) == int:
+                        return value in children
+                    if type(value) == dict:
+                        # For a dict, check if there is an element of whom all keys are identical to value's keys
+                        return len([item for item in children if len([key for key in item.keys()
+                                                                      if same_string(item[key], value[key])]) > 0]) == 0
+                    return False
+
+                if type(child_value) == list:
+                    # Check which elements of found value can be added to children
+                    children = children + list(filter(new_instance, child_value))
+                elif new_instance(child_value):
+                    # Check if value found can be added to children
+                    children.append(child_value)
+
+        return children
 
     def _get_csv(self, mongo_filter, mongo_sort, mongo_projection, module_name):
         """
         Given a module_name, retrieve it's entities, according to given filter, sort and requested fields.
-        The resulting list is processed into csv format and returned as a file conent, to be downloaded by browser.
+        The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
 
-        :param limit:
-        :param skip:
         :param mongo_filter:
         :param mongo_sort:
         :param mongo_projection:
         :param module_name:
         :return:
         """
+        logger.info("Generating csv")
         string_output = io.StringIO()
         entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, module_name)
-        dw = csv.DictWriter(string_output, entities[0].keys())
-        dw.writeheader()
-        dw.writerows(entities)
-        output = make_response(string_output.getvalue())
-        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-        output.headers["Content-type"] = "text/csv"
+        output = ''
+        if len(entities) > 0:
+            # Beautifying the resulting csv.
+            del mongo_projection['internal_axon_id']
+            del mongo_projection['unique_adapter_names']
+            # Getting pretty titles for all generic fields as well as specific
+            entity_fields = self._entity_fields(module_name)
+            for field in entity_fields['generic']:
+                if field['name'] in mongo_projection:
+                    mongo_projection[field['name']] = field['title']
+            for type in entity_fields['specific']:
+                for field in entity_fields['specific'][type]:
+                    if field['name'] in mongo_projection:
+                        mongo_projection[field['name']] = field['title']
+
+            for current_entity in entities:
+                del current_entity['internal_axon_id']
+                del current_entity['unique_adapter_names']
+                for field in mongo_projection.keys():
+                    # Replace field paths with their pretty titles
+                    if field in current_entity:
+                        current_entity[mongo_projection[field]] = current_entity[field]
+                        del current_entity[field]
+            dw = csv.DictWriter(string_output, mongo_projection.values())
+            dw.writeheader()
+            dw.writerows(entities)
+            output = make_response(string_output.getvalue())
+            output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+            output.headers["Content-type"] = "text/csv"
         return output
 
     def _entity_by_id(self, module_name, entity_id):
@@ -334,12 +432,37 @@ class GuiService(PluginBase):
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
+
+        advanced_field_categories = ['installed_software', 'security_patches', 'users']
+
+        def _basic_generic_field_names():
+            generic_field_names = list(map(lambda field: field.get(
+                'name'), self._entity_fields(module_name)['generic']))
+            return filter(
+                lambda field: field != 'adapters' and field != 'labels' and
+                len([category for category in advanced_field_categories if category in field]) == 0,
+                generic_field_names)
+
         with self._get_db_connection(False) as db_connection:
             entity = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].find_one(
                 {'internal_axon_id': entity_id})
             if entity is None:
                 return return_error("Entity ID wasn't found", 404)
-            return jsonify(entity)
+            # Specific is returned as is, to show all adapter datas.
+            # Generic fields are divided to basic which are all merged through all adapter datas
+            # and advanced, of which the main field is merged and data is given in original structure.
+            return jsonify({
+                'specific': entity['specific_data'],
+                'generic': {
+                    'basic': self._parse_entity_fields(entity, _basic_generic_field_names()),
+                    'advanced': [{
+                        'name': category, 'data': self._find_entity_field(entity, f'specific_data.data.{category}')
+                    } for category in advanced_field_categories],
+                    'data': entity['generic_data']
+                },
+                'labels': entity['labels'],
+                'internal_axon_id': entity['internal_axon_id']
+            })
 
     def _entity_queries(self, limit, skip, filter, module_name):
         """
@@ -387,25 +510,50 @@ class GuiService(PluginBase):
             data_collection = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view']
             return str(data_collection.find(filter, {'_id': 1}).count())
 
+    def _flatten_fields(self, schema, name='', exclude=[]):
+        def _merge_title(schema, title):
+            """
+            If exists, add given title before that of given schema or set it if none existing
+            :param schema:
+            :param title:
+            :return:
+            """
+            new_schema = {**schema}
+            if title:
+                new_schema['title'] = f'{title} {new_schema["title"]}' if new_schema.get('title') else title
+            return new_schema
+
+        if (schema.get('name')):
+            if schema['name'] in exclude:
+                return []
+            name = f'{name}.{schema["name"]}' if name else schema['name']
+
+        if schema['type'] == 'array' and schema.get('items'):
+            if type(schema['items']) == list:
+                children = []
+                for item in schema['items']:
+                    if not item.get('title'):
+                        continue
+                    children = children + self._flatten_fields(_merge_title(item, schema.get('title')), name)
+                return children
+
+            if schema['items']['type'] != 'array':
+                if not schema.get('title'):
+                    return []
+                return [{**schema, 'name': name}]
+            return self._flatten_fields(_merge_title(schema['items'], schema.get('title')), name, exclude)
+
+        if not schema.get('title'):
+            return []
+        return [{**schema, 'name': name}]
+
     def _entity_fields(self, module_name):
         """
         Get generic fields schema as well as adapter-specific parsed fields schema.
         Together these are all fields that any device may have data for and should be presented in UI accordingly.
+
         :return:
         """
-
-        def guify_fields(fields, name_prefix=""):
-            # Remove fields from data that are not relevant to UI
-            if not 'items' in fields:
-                return fields
-            fields['items'] = [x for x in fields['items'] if x.get('name', '') not in ['scanner']]
-            if name_prefix:
-                for field in fields['items']:
-                    if 'name' in field:
-                        field['name'] = name_prefix + field['name']
-
-            return fields
-
         def _get_generic_fields():
             if module_name == 'device':
                 return DeviceAdapter.get_fields_info()
@@ -415,34 +563,40 @@ class GuiService(PluginBase):
 
         all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
 
+        generic_fields = _get_generic_fields()
         fields = {
-            'generic': guify_fields(_get_generic_fields(), name_prefix='specific_data.data.'),
+            'schema': {'generic': generic_fields, 'specific': {}},
+            'generic': [{
+                'name': 'adapters', 'title': 'Adapters', 'type': 'array', 'items': {
+                    'type': 'string', 'format': 'logo', 'enum': []
+                }}, {
+                'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
+                'enum': all_supported_properties
+            }] + self._flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [{
+                'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
+            }],
             'specific': {}
         }
-        fields['generic']['items'] = [{
-            'name': 'specific_data.adapter_properties',
-            'title': 'Adapter Properties',
-            'type': 'string',
-            "enum": all_supported_properties
-        }] + fields['generic']['items'] + [{
-            'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
-        }]
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = list(db_connection['core']['configs'].find({}).
                                    sort([(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
-                if plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
-                    plugin_fields = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{module_name}_fields']
-                    if plugin_fields:
-                        plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
-                        if plugin_fields_record:
-                            fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = \
-                                guify_fields(plugin_fields_record['schema'],
-                                             name_prefix=f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}.')
-        return jsonify(fields)
+                if not plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
+                    continue
+                plugin_fields = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{module_name}_fields']
+                if not plugin_fields:
+                    continue
+                plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
+                if not plugin_fields_record:
+                    continue
+                fields['schema']['specific'][plugin[plugin_consts.PLUGIN_NAME]] = plugin_fields_record['schema']
+                fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = self._flatten_fields(
+                    plugin_fields_record['schema'], f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}', ['scanner'])
 
-    def __disable_entity(self, entity_type: EntityType):
+        return fields
+
+    def _disable_entity(self, entity_type: EntityType):
         entity_map = {
             EntityType.Devices: ("Devicedisabelable", "devices/disable"),
             EntityType.Users: ("Userdisabelable", "users/disable")
@@ -456,7 +610,7 @@ class GuiService(PluginBase):
         if not entitys_uuids:
             return return_error("No entity uuids provided")
         entity_disabelables_adapters, entity_ids_by_adapters = \
-            self.__find_entities_by_uuid_for_adapter_with_feature(entitys_uuids, featurename, entity_type)
+            self._find_entities_by_uuid_for_adapter_with_feature(entitys_uuids, featurename, entity_type)
 
         err = ""
         for adapter_unique_name in entity_disabelables_adapters:
@@ -470,7 +624,7 @@ class GuiService(PluginBase):
 
         return return_error(err, 500) if err else ("", 200)
 
-    def __find_entities_by_uuid_for_adapter_with_feature(self, entity_uuids, feature, entity_type: EntityType):
+    def _find_entities_by_uuid_for_adapter_with_feature(self, entity_uuids, feature, entity_type: EntityType):
         """
         Find all entity from adapters that have a given feature, from a given set of entities
         :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
@@ -487,19 +641,19 @@ class GuiService(PluginBase):
                     entities_ids_by_adapters.setdefault(adapter_entity[PLUGIN_UNIQUE_NAME], []).append(
                         adapter_entity['data']['id'])
 
-            # all adapters that are disabelable and that theres atleast one
+                    # all adapters that are disabelable and that theres atleast one
                     entitydisabelables_adapters = [x[PLUGIN_UNIQUE_NAME]
                                                    for x in
                                                    db_connection['core']['configs'].find(
-                        filter={
-                                                   'supported_features': feature,
-                                                   PLUGIN_UNIQUE_NAME: {
-                                                       "$in": list(entities_ids_by_adapters.keys())
-                                                   }
-                                                   },
-                        projection={
-                            PLUGIN_UNIQUE_NAME: 1
-                        }
+                                                       filter={
+                                                           'supported_features': feature,
+                                                           PLUGIN_UNIQUE_NAME: {
+                                                               "$in": list(entities_ids_by_adapters.keys())
+                                                           }
+                                                       },
+                                                       projection={
+                                                           PLUGIN_UNIQUE_NAME: 1
+                                                       }
                     )]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
@@ -564,7 +718,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("device/fields")
     def device_fields(self):
-        return self._entity_fields('device')
+        return jsonify(self._entity_fields('device'))
 
     @add_rule_unauthenticated("device/views", methods=['GET', 'POST'])
     def device_views(self):
@@ -617,7 +771,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("device/disable", methods=['POST'])
     def disable_device(self):
-        return self.__disable_entity(EntityType.Devices)
+        return self._disable_entity(EntityType.Devices)
 
     #########
     # USER #
@@ -659,11 +813,11 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("user/fields")
     def user_fields(self):
-        return self._entity_fields('user')
+        return jsonify(self._entity_fields('user'))
 
     @add_rule_unauthenticated("user/disable", methods=['POST'])
     def disable_user(self):
-        return self.__disable_entity(EntityType.Users)
+        return self._disable_entity(EntityType.Users)
 
     @add_rule_unauthenticated("user/views", methods=['GET', 'POST'])
     def user_views(self):
@@ -913,7 +1067,8 @@ class GuiService(PluginBase):
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [plugin_consts.AGGREGATOR_PLUGIN_NAME, "gui",
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [plugin_consts.AGGREGATOR_PLUGIN_NAME,
+                                                                                  "gui",
                                                                                   "watch_service",
                                                                                   "execution",
                                                                                   "system_scheduler"]:
@@ -1253,7 +1408,8 @@ class GuiService(PluginBase):
             return response.content
         elif self.get_method() == 'POST':
             response = self.request_remote_plugin(
-                'research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST', json=self.get_request_data_as_object())
+                'research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST',
+                json=self.get_request_data_as_object())
             logger.info(f"response code: {response.status_code} response crap: {response.content}")
             return ''
 

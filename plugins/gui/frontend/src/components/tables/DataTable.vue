@@ -27,7 +27,7 @@
                                         :tabindex="200 + i" />
                         </td>
                         <td v-for="field in viewFields" nowrap>
-                            <component :is="`x-${field.type}-view`" :value="getData(item, field.name)" :schema="field"
+                            <component :is="`x-${field.type}-view`" :value="item[field.name]" :schema="field"
                                        :limit="2" :multiline="multiline"/>
                         </td>
                     </tr>
@@ -74,12 +74,10 @@
 	import xBoolView from '../../components/controls/boolean/BooleanView.vue'
     import xFileView from '../../components/controls/array/FileView.vue'
 	import xArrayView from '../../components/controls/array/ArrayInlineView.vue'
-    import DataMixin from '../../mixins/data'
 
 	export default {
 		name: 'x-data-table',
         components: {PulseLoader, xCheckbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
-        mixins: [DataMixin],
         props: {module: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
@@ -240,7 +238,7 @@
         }
         .x-table-container {
             overflow: auto;
-            max-height: calc(100% - 140px);
+            max-height: 100%;
             .x-striped-table {
                 .x-row {
                     height: 30px;
