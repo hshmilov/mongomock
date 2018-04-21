@@ -47,11 +47,16 @@ def check_addr(message):
 
 def check_domain(message):
     while True:
-        domain = input(message)
-        for ch in domain:
-            if ch not in string.digits + string.digits + '-._/\\':
-                print(f'Illegal character {ch} in domain name')
-        return domain
+        try:
+            domain = input(message)
+            for ch in domain:
+                if ch not in string.digits + string.ascii_letters + '-._/\\':
+                    print(f'Illegal character {ch} in domain name')
+                    raise Exception()
+
+            return domain
+        except:
+            pass
 
 
 def generate_static():

@@ -22,11 +22,6 @@ int main()
         return 1;
       }
 
-      if (0 != unlink("/home/netconfig/interfaces")){
-        printf("unlink failed\n");
-        return 1;
-      }
-
       printf("interfaces file updated\n");
 
    } else {
