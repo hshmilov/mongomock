@@ -106,7 +106,7 @@ class CarbonblackConnection(object):
         try:
             while row_number + 100 <= total_count:
                 row_number += 100
-            devices_list += self._get('device', params={"rows": str(100), "start": str(row_number)})["results"]
+                devices_list += self._get('device', params={"rows": str(100), "start": str(row_number)})["results"]
         except:
             logger.exception(f"Problem getting device in row number: {row_number}")
         return devices_list
