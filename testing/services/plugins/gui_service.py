@@ -28,6 +28,15 @@ FROM axonius/axonius-libs
 # Set the working directory to /app
 WORKDIR /home/axonius/app
 
+# Compile npm to a temp directory 'node' (see explanation below)
+COPY ./frontend/package.json ./node/package.json
+# This must be the first thing so subsequent rebuilds will use this cache image layer
+# (Docker builds the image from the dockerfile in stages [called layers], each layer is cached and reused if it should
+#  not change [since the line created it + the layer before it has not changed]. So we moved the long process [of
+#  npm install and the COPY of the package.json that it depends on] to be the first thing. if the file wont change
+#  it would use the cached layer)
+RUN cd ./node && npm set progress=false && npm install
+
 # Copy the current directory contents into the container at /app
 COPY ./ ./gui/
 COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
@@ -35,8 +44,8 @@ COPY /config/nginx_conf.d/ /home/axonius/config/nginx_conf.d/
 # Removing folders generated from build, so that next command will build properly
 RUN cd ./gui/frontend && rm -rf dist node_modules
 
-# Compile npm. we assume we have it from axonius-libs
-RUN cd ./gui/frontend && npm set progress=false && npm install && npm run {dev}build"""[1:]
+RUN mv /home/axonius/app/node/node_modules/ /home/axonius/app/gui/frontend/node_modules && cd ./gui/frontend/ && npm run {dev}build
+"""[1:]
 
     def __del__(self):
         self._session.close()
