@@ -21,6 +21,7 @@ DOCKER_PORTS = {
     'traiana-lab-machines-adapter':     5113,
     'stresstest-adapter':               5114,
     'bomgar-adapter':                   5115,
+    'service-now-adapter':              5117,
     'gotoassist-adapter':               5200,
     'carbonblack-adapter':              5211,
     'puppet-adapter':                   5222,

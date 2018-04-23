@@ -179,6 +179,11 @@ export const pluginMeta = {
 		    description: 'ObserveIT provides insider threat security solutions, including employee monitoring, ' +
 			'user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
         },
+        service_now_adapter: {
+        	title: 'ServiceNow',
+			description: 'ServiceNow provides service management software as a service,' +
+			' including IT services management (ITSM), IT operations management (ITOM) and IT business management (ITBM).'
+		},
 		general_info: {
 			title: 'General Info',
 			description: ''
