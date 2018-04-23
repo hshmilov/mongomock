@@ -186,7 +186,13 @@ class JamfAdapter(AdapterBase):
                                 device.add_hd(total_size=total_size, free_size=free_size)
                         except Exception:
                             logger.exception(f"couldn't parse drive: {drive}")
-
+                    active_directory_status = hardware.get("active_directory_status", "Not Bound")
+                    if active_directory_status == "Not Bound":
+                        device.part_of_domain = False
+                    else:
+                        device.part_of_domain = True
+                        device.domain = active_directory_status
+                        device.hostname += "." + active_directory_status
                     applications = ((device_raw.get('software') or {}).get('applications') or {}).get('application', [])
                 else:
                     last_inventory_update_utc = parse_date(general_info.get('last_inventory_update_utc', ''))
