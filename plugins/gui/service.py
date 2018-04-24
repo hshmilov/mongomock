@@ -233,13 +233,20 @@ class GuiService(PluginBase):
                                                                   'pic_name': 'avatar.png',
                                                                   'password': bcrypt.hash('bestadminpassword')},
                                                                  upsert=True)
-        self.add_default_device_queries()
+        self.add_default_queries('device', 'default_queries_devices.ini')
+        self.add_default_queries('user', 'default_queries_users.ini')
 
-    def add_default_device_queries(self):
+    def add_default_queries(self, module_name, default_queries_ini_path):
+        """
+        Adds default queries.
+        :param module_name: "device" or "user"
+        :param default_queries_ini_path: the file path with the queries
+        :return:
+        """
         # Load default queries and save them to the DB
         try:
             config = configparser.ConfigParser()
-            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), 'default_queries.ini')))
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), default_queries_ini_path)))
 
             # Save default queries
             for name, query in config.items():
@@ -247,10 +254,10 @@ class GuiService(PluginBase):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_query('device', name, query['query'])
-                except:
+                    self._insert_query(module_name, name, query['query'])
+                except Exception:
                     logger.exception(f'Error adding default query {name}')
-        except:
+        except Exception:
             logger.exception(f'Error adding default queries')
 
     def _insert_query(self, module_name, name, query_filter, query_expressions=[]):

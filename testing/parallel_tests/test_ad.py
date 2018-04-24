@@ -162,12 +162,18 @@ class TestAdAdapter(AdapterTestBase):
             assert action_data["result"] == "Success"
             assert action_data["status"] == "finished"
 
+            # Put these in their own variables to that a failure will show them in teamcity.
+            product_0_status = action_data["product"][0]["status"]
+            product_0_data = action_data["product"][0]["data"]
+            product_1_status = action_data["product"][1]["status"]
+            product_1_data = action_data["product"][1]["data"]
+
             # The following is a file that is always present in c:\windows\system32\drivers\etc\
-            assert action_data["product"][0]["status"] == "ok"
-            assert "lmhosts.sam" in action_data["product"][0]["data"]
+            assert product_0_status == "ok"
+            assert "lmhosts.sam" in product_0_data
             # The following is a file that is always present in c:\windows\system32
-            assert action_data["product"][1]["status"] == "ok"
-            assert "cmd.exe" in action_data["product"][1]["data"]
+            assert product_1_status == "ok"
+            assert "cmd.exe" in product_1_data
 
         try_until_not_thrown(15, 5, check_execute_shell_results)
 

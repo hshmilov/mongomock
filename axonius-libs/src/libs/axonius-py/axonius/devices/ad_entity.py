@@ -29,6 +29,9 @@ PARTIAL_SECRETS_ACCOUNT = 0x04000000
 
 AD_OBJECT_TYPE_ENUM = ["Typical User", "Domain Controller", "Workstation/Server"]
 AD_OBJECT_DIALIN_OPTIONS = ["Dial In Enabled", "Dial In Disabled", "Control Access Through NPS Network Policy"]
+AD_DELEGATION_POLICY = ["Do Not Trust For Delegation",
+                        "Trust For Delegation To Any Service",
+                        "Trust For Delegation To Specified Services"]
 
 
 class ADEntity(object):
@@ -56,6 +59,9 @@ class ADEntity(object):
     ad_when_created = Field(datetime.datetime, "AD whenCreated")
     ad_is_critical_system_object = Field(bool, "AD isCriticalSystemObject")
     ad_dialin_policy = Field(str, "AD Dial In Policy", enum=AD_OBJECT_DIALIN_OPTIONS)
+    ad_msds_allowed_to_delegate_to = ListField(str, "AD msDS-AllowedToDelegateTo")
+    ad_delegation_policy = Field(str, "AD Delegation Policy", enum=AD_DELEGATION_POLICY)
+    ad_pwd_must_change = Field(bool, "AD Password Must Change")
 
     # User Account Control
     ad_uac_logon_script = Field(bool, "AD logon script will be run (SCRIPT)")
@@ -90,6 +96,15 @@ class ADEntity(object):
             self.ad_dialin_policy = AD_OBJECT_DIALIN_OPTIONS[0]
         elif msNPAllowDialin is False:
             self.ad_dialin_policy = AD_OBJECT_DIALIN_OPTIONS[1]
+
+    def figure_out_delegation_policy(self, user_account_control, msds_allowed_to_delegate_to):
+        if msds_allowed_to_delegate_to is not None:
+            self.ad_delegation_policy = AD_DELEGATION_POLICY[2]
+        else:
+            if user_account_control & TRUSTED_FOR_DELEGATION > 0:
+                self.ad_delegation_policy = AD_DELEGATION_POLICY[1]
+            else:
+                self.ad_delegation_policy = AD_DELEGATION_POLICY[0]
 
     def parse_user_account_control(self, user_account_control):
         if user_account_control is not None and type(user_account_control) == int:

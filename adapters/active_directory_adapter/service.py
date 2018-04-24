@@ -290,7 +290,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         ad_entity.ad_is_critical_system_object = raw_data.get("isCriticalSystemObject")
         ad_entity.ad_member_of = get_member_of_list_from_memberof(raw_data.get("memberOf"))
         ad_entity.ad_managed_by = get_first_object_from_dn(raw_data.get('managedBy'))
+        ad_entity.ad_msds_allowed_to_delegate_to = raw_data.get("msDS-AllowedToDelegateTo")
         ad_entity.figure_out_dial_in_policy(raw_data.get('msNPAllowDialin'))
+        ad_entity.figure_out_delegation_policy(raw_data.get("userAccountControl"),
+                                               raw_data.get("msDS-AllowedToDelegateTo"))
+
+        # If pwdLastSet is 0 (which is, in date time, 1/1/1601) then it means the password must change now.
+        # is_date_real checks if the date is a "special" date like 1/1/1601 and if it is - the date is not real,
+        # which means its 0.
+        ad_entity.ad_pwd_must_change = is_date_real(raw_data.get("pwdLastSet")) is False
 
         ad_entity.parse_user_account_control(raw_data.get("userAccountControl"))
 
@@ -816,6 +824,13 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         # Optimization if all failed
         if all([True if line['status'] != 'ok' else False for line in product]):
             return {"result": 'Failure', "product": product}
+
+        # Some more validity check
+        if len(product) != len(wmi_smb_commands):
+            err_log = f"Error, needed to run {wmi_smb_commands} and expected the same length in return " \
+                      f"but got {product}"
+            logger.error(err_log)
+            raise ValueError(err_log)
 
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
