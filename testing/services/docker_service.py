@@ -36,7 +36,7 @@ class DockerService(AxonService):
         """
         :return: list of pairs (exposed_port, inner_port)
         """
-        return [(DOCKER_PORTS[self.container_name], 80)]
+        return [(DOCKER_PORTS[self.container_name], 443)]
 
     @property
     def image(self):

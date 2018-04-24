@@ -1,5 +1,5 @@
 DOCKER_PORTS = {
-    'gui':                              80,
+    'gui':                              443,
     'execution':                        4999,
     'aggregator':                       5000,
     'active-directory-adapter':         5001,

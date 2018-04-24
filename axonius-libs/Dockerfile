@@ -14,6 +14,8 @@ COPY src/app/main.py ./app/main.py
 COPY src/config/supervisord.conf /etc/supervisor/supervisord.conf
 COPY src/config/nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 COPY src/keys/nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
+RUN cp /etc/ssl/certs/nginx-selfsigned.crt /usr/local/share/ca-certificates/nginx-selfsigned.crt
+RUN update-ca-certificates
 COPY src/keys/nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
 COPY src/keys/dhparam.pem /etc/ssl/certs/dhparam.pem
 COPY src/config/nginx-ssl /etc/nginx/snippets/

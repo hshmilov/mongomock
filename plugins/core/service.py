@@ -16,9 +16,7 @@ import smtplib
 from email.mime.text import MIMEText
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
-from axonius.adapter_base import is_plugin_adapter
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts import adapter_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
@@ -150,7 +148,7 @@ class CoreService(PluginBase):
         try:
             # Trying a simple GET request for the version
             data = self._translate_url(plugin_unique_name + "/version")
-            final_url = uritools.uricompose(scheme='http', host=data['plugin_ip'], port=data['plugin_port'],
+            final_url = uritools.uricompose(scheme='https', host=data['plugin_ip'], port=data['plugin_port'],
                                             path=data['path'])
 
             check_response = requests.get(final_url, timeout=3)
@@ -388,7 +386,7 @@ class CoreService(PluginBase):
 
         data = self.get_request_data()
 
-        final_url = uritools.uricompose(scheme='http', host=url_data['plugin_ip'], port=url_data['plugin_port'],
+        final_url = uritools.uricompose(scheme='https', host=url_data['plugin_ip'], port=url_data['plugin_port'],
                                         path=url_data['path'], query=request.args)
 
         # Requesting the wanted plugin
@@ -400,8 +398,7 @@ class CoreService(PluginBase):
         copy_headers = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding']
         headers.update({h: request.headers[h] for h in copy_headers if request.headers.get(h, '') != ''})
 
-        r = requests.request(self.get_method(), final_url,
-                             headers=headers, data=data)
+        r = requests.request(self.get_method(), final_url, headers=headers, data=data)
 
         headers = dict(r.headers)
 

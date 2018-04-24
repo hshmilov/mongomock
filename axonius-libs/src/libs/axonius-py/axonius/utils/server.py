@@ -27,11 +27,8 @@ def init_wsgi(plugin_object):
         When in production mode, we use a production server with wsgi support to load our modules.
         so we use this function as a proxy to the real wsgi function flask provides.
         """
-
         with lock:
             if not hasattr(wsgi_main, "plugin"):
                 wsgi_main.plugin = plugin_object()
-
         return wsgi_main.plugin.wsgi_app(*args, **kwargs)
-
     return functools.partial(wsgi_main, plugin_object)

@@ -1,5 +1,5 @@
 """
-Browse "http://localhost/api/version" periodically.
+Browse "https://localhost/api/version" periodically.
 
 This is a hack we do, to make our app load successfully;
 Our design in a nutshell is an nginx server that runs uwsgi that spawns a process/thread/worker.
@@ -19,7 +19,7 @@ import sys
 import requests
 import time
 
-URL = "http://localhost/api/version?whoami=periodic_api_version_runner"
+URL = "https://localhost/api/version?whoami=periodic_api_version_runner"
 SLEEP_COUNT = 10  # In seconds.
 DEBUG = False
 

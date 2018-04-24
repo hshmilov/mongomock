@@ -11,7 +11,7 @@ class QcoreService(AdapterService):
 
     @property
     def exposed_ports(self):
-        return [(DOCKER_PORTS[self.container_name], 80),
+        return [(DOCKER_PORTS[self.container_name], 443),
                 (DOCKER_PORTS['qcore-mediator'], DOCKER_PORTS['qcore-mediator'])]
 
 

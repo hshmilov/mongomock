@@ -22,7 +22,7 @@ class PluginService(DockerService):
         if self.container_name not in DOCKER_PORTS:
             raise ValueError(f'Container {self.container_name} missing external port in DOCKER_PORTS')
         self.endpoint = ('localhost', DOCKER_PORTS[self.container_name])
-        self.req_url = "http://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
+        self.req_url = "https://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
         self.config_file_path = self.service_dir + '/' + CONFIG_FILE_NAME
         self.last_vol_conf = None
         if not self.service_class_name.endswith('Adapter'):

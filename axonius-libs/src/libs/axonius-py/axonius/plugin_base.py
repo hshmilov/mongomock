@@ -217,6 +217,7 @@ class PluginBase(Feature):
 
         :raise KeyError: In case of environment variables missing
         """
+        print(f"Hello docker from {type(self)}")
         super().__init__(*args, **kwargs)
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
@@ -266,7 +267,7 @@ class PluginBase(Feature):
                 self.host = "0.0.0.0"
                 self.port = 443  # We listen on https.
                 # This should be dns resolved.
-                self.core_address = "http://core/api"
+                self.core_address = "https://core/api"
 
         if requested_unique_plugin_name is not None:
             self.plugin_unique_name = requested_unique_plugin_name
@@ -282,7 +283,6 @@ class PluginBase(Feature):
             core_data = self._register(self.core_address + "/register", self.plugin_unique_name, self.api_key)
         if not core_data or core_data['status'] == 'error':
             raise RuntimeError("Register process failed, Exiting. Reason: {0}".format(core_data['message']))
-
         if 'registration' not in self.temp_config:
             self.temp_config['registration'] = {}
 
@@ -516,8 +516,13 @@ class PluginBase(Feature):
             if api_key is not None:
                 register_doc['api_key'] = api_key
 
-        response = requests.post(core_address, data=json.dumps(register_doc))
-        return response.json()
+        try:
+            response = requests.post(core_address, data=json.dumps(register_doc))
+            return response.json()
+        except Exception as e:
+            # this is in print because this is called before logger is available
+            print(f"Exception on register: {repr(e)}")
+            raise
 
     def start_serve(self):
         """Start Http server.
@@ -525,7 +530,12 @@ class PluginBase(Feature):
         This function is blocking as long as the Http server is up.
         .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
+        from OpenSSL import SSL
+        context = SSL.Context(SSL.SSLv23_METHOD)
+        context.use_privatekey_file('/etc/ssl/private/nginx-selfsigned.key')
+        context.use_certificate_file('/etc/ssl/certs/nginx-selfsigned.crt')
         AXONIUS_REST.run(host=self.host, port=self.port,
+                         ssl_context=context,
                          debug=True, use_reloader=False)
 
     def get_method(self):
@@ -604,8 +614,7 @@ class PluginBase(Feature):
             url = '{0}/{1}/{2}'.format(self.core_address,
                                        plugin_unique_name, resource)
 
-        return requests.request(method, url,
-                                headers=headers, **kwargs)
+        return requests.request(method, url, headers=headers, **kwargs)
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
         with self._get_db_connection(True) as db:
@@ -871,7 +880,7 @@ class PluginBase(Feature):
 
         Accepts:
             GET - Get schema. name of the schema is given in the url. 
-                  For example: "http://<address>/schema/general_schema
+                  For example: "https://<address>/schema/general_schema
 
         :return: list(str)
         """

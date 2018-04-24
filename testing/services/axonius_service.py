@@ -153,7 +153,6 @@ class AxoniusService(object):
     def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
                       skip=False, exclude_restart=None):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
-
         if exclude_restart is None:
             exclude_restart = []
         if rebuild:
