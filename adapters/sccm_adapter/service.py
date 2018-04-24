@@ -4,15 +4,17 @@ from datetime import timedelta
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, adapter_consts, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.ad_device import ADDevice
+from axonius.devices.ad_entity import ADEntity
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import get_organizational_units_from_dn
 from sccm_adapter.connection import SccmConnection
 import sccm_adapter.consts as consts
 from sccm_adapter.exceptions import SccmException
 
 
 class SccmAdapter(AdapterBase):
-    class MyDeviceAdapter(ADDevice):
+    class MyDeviceAdapter(DeviceAdapter, ADEntity):
         pass
 
     def __init__(self):
@@ -94,7 +96,7 @@ class SccmAdapter(AdapterBase):
                 continue
             device = self._new_device_adapter()
             device.id = device_id
-            device.add_organizational_units(device_id)
+            device.organizational_unit = get_organizational_units_from_dn(device_id)
             domain = device_raw.get('Full_Domain_Name0')
             device.hostname = device_raw.get('Netbios_Name0')
             if domain and device.hostname:
@@ -109,7 +111,7 @@ class SccmAdapter(AdapterBase):
                     mac, ips = nic.split('@')
                     device.add_nic(mac, ips.split(', '))
                 except Exception:
-                    logger.warn(f"Caught weird NIC {nic} for device id {device.id}")
+                    logger.warning(f"Caught weird NIC {nic} for device id {device.id}")
                     pass
             free_physical_memory = device_raw.get('FreePhysicalMemory0')
             device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None

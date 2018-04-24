@@ -33,8 +33,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                 # If we haven't queried users_to_sids, or if too much time has passed, Lets query and enrich.
                 GetUserLogons.users_to_sids = {}
                 list_of_users_from_users_db = self.plugin_base.users_db_view.find(
-                    filter={"specific_data.data.sid": {"$exists": True}},
-                    projection={"specific_data.data.sid": 1, "specific_data.data.username": 1,
+                    filter={"specific_data.data.ad_sid": {"$exists": True}},
+                    projection={"specific_data.data.ad_sid": 1, "specific_data.data.username": 1,
                                 "specific_data.data.domain": 1}
                 )
 
@@ -42,7 +42,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                     # we always take the first one. if that device has more than one adapter that reports sid, the name
                     # is going to be the same - its the correlation rule for users_to_sids (its their id!)
                     data = user["specific_data"][0]["data"]
-                    sid = data.get("sid")    # there because that is our filter.
+                    sid = data.get("ad_sid")    # there because that is our filter.
                     username = data.get("username")  # should always be there
                     domain = data.get("domain")  # not necessarily there...
                     if domain is not None:

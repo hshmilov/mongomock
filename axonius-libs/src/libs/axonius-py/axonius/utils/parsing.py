@@ -198,6 +198,39 @@ def convert_ldap_searchpath_to_domain_name(ldap_search_path):
     return ".".join([x[3:] for x in ldap_search_path.strip().split(",") if x.lower().startswith("dc=")])
 
 
+def get_organizational_units_from_dn(distinguished_name):
+    try:
+        return [ou[3:] for ou in distinguished_name.split(",") if ou.startswith("OU=")]
+    except Exception:
+        return None
+
+
+def get_first_object_from_dn(dn):
+    """
+    :param dn: e.g. CN=Administrator,CN=Users,DC=TestDomain,DC=test
+    :return: e.g. Administrator
+    """
+    if type(dn) == str:
+        dn = dn.split(",")
+        if len(dn) > 0:
+            # This usually looks like CN=User Name, CN=Users, DC=.... so lets take the first one
+            rv = dn[0].split("=")
+            if len(rv) == 2:
+                return rv[1]
+
+    return None
+
+
+def get_member_of_list_from_memberof(member_of):
+    if member_of is not None:
+        # member_of is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
+        # so we take each string in the list and transform it to d.b.c.a
+        return [".".join([x[3:] for x in member_of_entry.strip().split(",")]) for member_of_entry in member_of]
+
+    else:
+        return None
+
+
 def is_valid_ip(ip):
     try:
         ipaddress.ip_address(ip)

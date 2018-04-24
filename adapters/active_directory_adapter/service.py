@@ -26,15 +26,17 @@ from axonius.adapter_exceptions import ClientConnectionException, TagDeviceError
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
-from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD
-from axonius.devices.ad_device import ADDevice
+from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD, DeviceAdapter
+from axonius.devices.dns_resolvable import DNSResolvableDevice
+from axonius.devices.ad_entity import ADEntity
 from axonius.devices.dns_resolvable import DNSResolveStatus
 from axonius.utils.dns import query_dns
 from axonius.plugin_base import add_rule
 from axonius.utils.files import get_local_config_file
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
-    is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip
+    is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip, \
+    get_organizational_units_from_dn, get_member_of_list_from_memberof, get_first_object_from_dn
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
@@ -60,11 +62,12 @@ class AvailableIps(SmartJsonClass):
 
 
 class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
-    class MyDeviceAdapter(ADDevice):
-        pass
+    class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
+        ad_service_principal_name = Field(str, "AD Service Principal Name")
 
-    class MyUserAdapter(UserAdapter):
-        sid = Field(str, "AD User SID")
+    class MyUserAdapter(UserAdapter, ADEntity):
+        ad_user_principal_name = Field(str, "AD User Principal Name")
+        user_managed_objects = ListField(str, "AD User Managed Objects")
 
     def __init__(self):
 
@@ -123,7 +126,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                                   SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
                                   bytes(dc_details.get('ca_file', [])),
                                   bytes(dc_details.get('cert_file', [])),
-                                  bytes(dc_details.get('private_key', [])))
+                                  bytes(dc_details.get('private_key', [])),
+                                  dc_details.get('fetch_disabled_devices', False),
+                                  dc_details.get('fetch_disabled_users', False)
+                                  )
         except LdapException as e:
             message = "Error in ldap process for dc {0}. reason: {1}".format(
                 dc_details["dc_name"], str(e))
@@ -210,6 +216,16 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                         "type": "integer",
                         "default": 0
                     }
+                },
+                {
+                    "name": "fetch_disabled_devices",
+                    "title": "Fetch Disabled Devices",
+                    "type": "bool"
+                },
+                {
+                    "name": "fetch_disabled_users",
+                    "title": "Fetch Disabled Users",
+                    "type": "bool"
                 }
             ],
             "required": [
@@ -243,6 +259,41 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
 
         return client_data.get_users_list()
 
+    def _parse_generic_ad_raw_data(self, ad_entity: ADEntity, raw_data: dict):
+        """
+        Both ad device and ad user has a lot in common. We parse them here.
+        :param ad_entity: the entity to add things to.
+        :param raw_data: the raw data for this entity
+        :return:
+        """
+
+        ad_entity.ad_sid = raw_data.get("objectSid")
+        ad_entity.ad_guid = raw_data.get("objectGUID")
+        ad_entity.ad_name = raw_data.get("name")
+        ad_entity.ad_sAMAccountName = raw_data.get("sAMAccountName")
+        ad_entity.ad_distinguished_name = raw_data.get("distinguishedName")
+        ad_entity.ad_account_expires = parse_date(raw_data.get("accountExpires"))
+        ad_entity.ad_object_class = [i.lower() for i in raw_data.get("objectClass")]
+        ad_entity.ad_object_category = raw_data.get("objectCategory")
+        ad_entity.ad_organizational_unit = get_organizational_units_from_dn(raw_data.get("distinguishedName"))
+        ad_entity.ad_last_logoff = parse_date(raw_data.get("lastLogoff"))
+        ad_entity.ad_last_logon = parse_date(raw_data.get("lastLogon"))
+        ad_entity.ad_last_logon_timestamp = parse_date(raw_data.get("lastLogonTimestamp"))
+        ad_entity.ad_bad_password_time = parse_date(raw_data.get("badPasswordTime"))
+        ad_entity.ad_bad_pwd_count = raw_data.get("badPwdCount")
+        ad_entity.ad_password_last_set = parse_date(raw_data.get("pwdLastSet"))
+        ad_entity.ad_cn = raw_data.get("cn")
+        ad_entity.ad_usn_changed = raw_data.get("uSNChanged")
+        ad_entity.ad_usn_created = raw_data.get("uSNCreated")
+        ad_entity.ad_when_changed = parse_date(raw_data.get("whenChanged"))
+        ad_entity.ad_when_created = parse_date(raw_data.get("whenCreated"))
+        ad_entity.ad_is_critical_system_object = raw_data.get("isCriticalSystemObject")
+        ad_entity.ad_member_of = get_member_of_list_from_memberof(raw_data.get("memberOf"))
+        ad_entity.ad_managed_by = get_first_object_from_dn(raw_data.get('managedBy'))
+        ad_entity.figure_out_dial_in_policy(raw_data.get('msNPAllowDialin'))
+
+        ad_entity.parse_user_account_control(raw_data.get("userAccountControl"))
+
     def _parse_users_raw_data(self, raw_data):
         """
         Gets raw data and yields User objects.
@@ -251,95 +302,109 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         """
 
         for user_raw in raw_data:
-            user = self._new_user_adapter()
-
-            username = user_raw.get("sAMAccountName")
-            domain = user_raw.get("distinguishedName")
-            if username is None:
-                logger.error(f"Error, could not get sAMAccountName for user.username, "
-                             f"which is mandatory. Bypassing. raw_data: {user_raw}")
-                continue
-
-            if domain is None:
-                logger.error(f"Error, could not get distinguishedName for user.domain, "
-                             f"which is mandatory. Bypassing. raw_data: {user_raw}")
-                continue
-
-            domain_name = convert_ldap_searchpath_to_domain_name(domain)
-            if domain_name == "":
-                logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
-                continue
-
-            user.username = username
-            user.domain = domain_name
-            user.id = f"{username}@{domain_name}"  # Should be the unique identifier of that user.
-
-            user.sid = user_raw.get("objectSid")
-            user.is_local = False
-            memberof = user_raw.get("memberOf")
-            if memberof is not None:
-                # memberof is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
-                # so we take each string in the list and transform it to d.b.c.a
-                user.member_of = [".".join([x[3:] for x in memberof_entry.strip().split(",")])
-                                  for memberof_entry in memberof]
-
-            is_admin = user_raw.get("adminCount")
-            if is_admin is not None:
-                user.is_admin = bool(is_admin)
-
-            use_timestamps = []  # Last usage times
-            user.account_expires = parse_date(user_raw.get("accountExpires"))
-            user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
-            pwd_last_set = parse_date(user_raw.get("pwdLastSet"))
-            if pwd_last_set is not None:
-                user.last_password_change = pwd_last_set
-                # parse maxPwdAge
-                max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
-                if max_pwd_age is not None:
-                    user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
-            last_logoff = parse_date(user_raw.get("lastLogoff"))
-            if last_logoff is not None:
-                user.last_logoff = last_logoff
-                use_timestamps.append(last_logoff)
-
-            last_logon = parse_date(user_raw.get("lastLogon"))
-            if last_logon is not None:
-                user.last_logon = last_logon
-                use_timestamps.append(last_logon)
-
-            user.user_created = parse_date(user_raw.get("whenCreated"))
-
-            # Last seen is the latest timestamp of use we have.
-            use_timestamps = sorted(use_timestamps, reverse=True)
-            if len(use_timestamps) > 0:
-                user.last_seen_in_domain = use_timestamps[0]
-
-            lockout_time = user_raw.get("lockoutTime")
-            if is_date_real(lockout_time):
-                user.is_locked = True
-                user.last_lockout_time = parse_date(lockout_time)
-            else:
-                user.is_locked = False
-
-            # Parse the bit-field that is called userAccountControl.
-            # For future reference: the list of all bits is here
-            # http://jackstromberg.com/2013/01/useraccountcontrol-attributeflag-values/
-            userAccountControl = user_raw.get("userAccountControl")
-            if userAccountControl is not None and type(userAccountControl) == int:
-                user.password_never_expires = bool(userAccountControl & LDAP_DONT_EXPIRE_PASSWORD)
-                user.password_not_required = bool(userAccountControl & LDAP_PASSWORD_NOT_REQUIRED)
-                user.account_enabled = not bool(userAccountControl & LDAP_ACCOUNTDISABLE)
-
-            # I'm afraid this could cause exceptions, lets put it in try/except.
             try:
-                thumbnail_photo = user_raw.get("thumbnailPhoto")
-                if thumbnail_photo is not None:
-                    user.image = bytes_image_to_base64(thumbnail_photo)
-            except:
-                logger.exception("Exception while setting thumbnailPhoto.")
+                user = self._new_user_adapter()
 
-            user.set_raw(user_raw)
-            yield user
+                self._parse_generic_ad_raw_data(user, user_raw)
+
+                username = user_raw.get("sAMAccountName")
+                domain = user_raw.get("distinguishedName")
+                if username is None:
+                    logger.error(f"Error, could not get sAMAccountName for user.username, "
+                                 f"which is mandatory. Bypassing. raw_data: {user_raw}")
+                    continue
+
+                if domain is None:
+                    logger.error(f"Error, could not get distinguishedName for user.domain, "
+                                 f"which is mandatory. Bypassing. raw_data: {user_raw}")
+                    continue
+
+                domain_name = convert_ldap_searchpath_to_domain_name(domain)
+                if domain_name == "":
+                    logger.error(f"Error, domain name turned out to be empty. Do we have DC=? its {domain}. Bypassing")
+                    continue
+
+                user.username = username
+                user.description = user_raw.get('description')
+                user.domain = domain_name
+                user.id = f"{username}@{domain_name}"  # Should be the unique identifier of that user.
+
+                user.mail = user_raw.get("mail")
+                user.ad_user_principal_name = user_raw.get("userPrincipalName")
+                user.is_local = False
+                is_admin = user_raw.get("adminCount")
+                if is_admin is not None:
+                    user.is_admin = bool(is_admin)
+
+                use_timestamps = []  # Last usage times
+                user.account_expires = parse_date(user_raw.get("accountExpires"))
+                user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
+                pwd_last_set = parse_date(user_raw.get("pwdLastSet"))
+                if pwd_last_set is not None:
+                    user.last_password_change = pwd_last_set
+                    # parse maxPwdAge
+                    max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
+                    if max_pwd_age is not None:
+                        user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
+                last_logoff = parse_date(user_raw.get("lastLogoff"))
+                if last_logoff is not None:
+                    user.last_logoff = last_logoff
+                    use_timestamps.append(last_logoff)
+
+                last_logon = parse_date(user_raw.get("lastLogon"))
+                if last_logon is not None:
+                    user.last_logon = last_logon
+                    use_timestamps.append(last_logon)
+
+                user.user_created = parse_date(user_raw.get("whenCreated"))
+
+                user.logon_count = user_raw.get("logonCount")
+
+                # Last seen is the latest timestamp of use we have.
+                use_timestamps = sorted(use_timestamps, reverse=True)
+                if len(use_timestamps) > 0:
+                    user.last_seen_in_domain = use_timestamps[0]
+
+                lockout_time = user_raw.get("lockoutTime")
+                if is_date_real(lockout_time):
+                    user.is_locked = True
+                    user.last_lockout_time = parse_date(lockout_time)
+                else:
+                    user.is_locked = False
+
+                # Parse the bit-field that is called userAccountControl.
+                # For future reference: the list of all bits is here
+                # http://jackstromberg.com/2013/01/useraccountcontrol-attributeflag-values/
+                user_account_control = user_raw.get("userAccountControl")
+                if user_account_control is not None and type(user_account_control) == int:
+                    user.password_never_expires = bool(user_account_control & LDAP_DONT_EXPIRE_PASSWORD)
+                    user.password_not_required = bool(user_account_control & LDAP_PASSWORD_NOT_REQUIRED)
+                    user.account_disabled = bool(user_account_control & LDAP_ACCOUNTDISABLE)
+
+                # I'm afraid this could cause exceptions, lets put it in try/except.
+                try:
+                    thumbnail_photo = user_raw.get("thumbnailPhoto") or \
+                        user_raw.get("exchangePhoto") or \
+                        user_raw.get("jpegPhoto") or \
+                        user_raw.get("photo") or \
+                        user_raw.get("thumbnailLogo")
+                    if thumbnail_photo is not None:
+                        user.image = bytes_image_to_base64(thumbnail_photo)
+                except:
+                    logger.exception("Exception while setting thumbnailPhoto.")
+
+                # User Personal Details
+                user.user_title = user_raw.get("title")
+                user.user_department = user_raw.get("department")
+                user.user_manager = get_first_object_from_dn(user_raw.get("manager"))
+                user.user_managed_objects = user_raw.get("managedObjects")
+                user.user_telephone_number = user_raw.get("telephoneNumber")
+                user.user_country = user_raw.get("co")
+
+                user.set_raw(user_raw)
+                yield user
+            except Exception:
+                logger.exception(f"Exception while parsing user {user_raw.get('distinguishedName')}, bypassing")
 
     def _resolve_hosts_addresses(self, hosts):
         resolved_hosts = []
@@ -458,51 +523,70 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         to_insert = []
         no_timestamp_count = 0
         for device_raw in devices_raw_data:
-            last_logon = device_raw.get('lastLogon')
-            last_logon_timestamp = device_raw.get('lastLogonTimestamp')
+            try:
+                last_logon = device_raw.get('lastLogon')
+                last_logon_timestamp = device_raw.get('lastLogonTimestamp')
 
-            if last_logon is not None and last_logon_timestamp is not None:
-                last_seen = max(last_logon, last_logon_timestamp)
-            else:
-                last_seen = last_logon or last_logon_timestamp
+                if last_logon is not None and last_logon_timestamp is not None:
+                    last_seen = max(last_logon, last_logon_timestamp)
+                else:
+                    last_seen = last_logon or last_logon_timestamp
 
-            if last_seen is None:
-                # No data on the last timestamp of the device. Not inserting this device.
-                no_timestamp_count += 1
-                continue
-            if type(last_seen) != datetime:
-                logger.error(f"Unrecognized date format for "
-                             f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
-                             f"Got type {type(last_seen)} instead of datetime")
-                continue
+                if last_seen is None:
+                    # No data on the last timestamp of the device. Not inserting this device.
+                    no_timestamp_count += 1
+                    continue
+                if type(last_seen) != datetime:
+                    logger.error(f"Unrecognized date format for "
+                                 f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
+                                 f"Got type {type(last_seen)} instead of datetime")
+                    continue
 
-            device = self._new_device_adapter()
-            device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
-            device.figure_os(device_raw.get('operatingSystem', ''))
-            device.network_interfaces = []
-            device.last_seen = last_seen
-            device.dns_resolve_status = DNSResolveStatus.Pending
-            device.id = device_raw['distinguishedName']
-            device.add_organizational_units(device.id)
-            device.set_raw(device_raw)
-
-            device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])
-            if device_interfaces is not None:
-                device.network_interfaces = device_interfaces[NETWORK_INTERFACES_FIELD]
-                device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]
-            else:
-                device_as_dict = device.to_dict()
+                device = self._new_device_adapter()
+                self._parse_generic_ad_raw_data(device, device_raw)
+                device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
+                device.name = device_raw.get('name', )
+                device.description = device_raw.get('description')
                 device.network_interfaces = []
-                for resolved_device in self._resolve_hosts_addresses([device_as_dict]):
-                    if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
-                        device.network_interfaces.append(resolved_device[NETWORK_INTERFACES_FIELD][0])
-                        device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
+                device.last_seen = last_seen
+                device.dns_resolve_status = DNSResolveStatus.Pending
+                device.id = device_raw['distinguishedName']
+                device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
+                device.part_of_domain = True
+                device.organizational_unit = get_organizational_units_from_dn(device.id)
+                device.ad_service_principal_name = device_raw.get("servicePrincipalName")
+                device.set_raw(device_raw)
 
-                if not self._is_adapter_old_by_last_seen(device_as_dict):
-                    # That means that the device is new (As determined in adapter_base code)
-                    to_insert.append(device_as_dict)
+                # OS. we must change device.os only after figure_os which initializes it
+                device.figure_os(device_raw.get('operatingSystem', ''))
+                device.os.build = device_raw.get('operatingSystemVersion')
+                device.os.sp = device_raw.get('operatingSystemServicePack')
 
-            yield device
+                device.device_managed_by = get_first_object_from_dn(device_raw.get('managedBy'))
+
+                user_account_control = device_raw.get("userAccountControl")
+                if user_account_control is not None and type(user_account_control) == int:
+                    device.device_disabled = bool(user_account_control & LDAP_ACCOUNTDISABLE)
+
+                device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])
+                if device_interfaces is not None:
+                    device.network_interfaces = device_interfaces[NETWORK_INTERFACES_FIELD]
+                    device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]
+                else:
+                    device_as_dict = device.to_dict()
+                    device.network_interfaces = []
+                    for resolved_device in self._resolve_hosts_addresses([device_as_dict]):
+                        if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
+                            device.network_interfaces.append(resolved_device[NETWORK_INTERFACES_FIELD][0])
+                            device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
+
+                    if not self._is_adapter_old_by_last_seen(device_as_dict):
+                        # That means that the device is new (As determined in adapter_base code)
+                        to_insert.append(device_as_dict)
+
+                yield device
+            except Exception:
+                logger.exception(f"Exception when parsing device {device_raw.get('distinguishedName')}, bypassing")
 
         if len(to_insert) > 0:
             devices_collection.insert_many(to_insert)

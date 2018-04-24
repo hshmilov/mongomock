@@ -19,6 +19,7 @@ class DeviceAdapterOS(SmartJsonClass):
     distribution = Field(str, 'Distribution')
     bitness = Field(int, 'Bitness', enum=[32, 64])
     build = Field(str, 'Build')  # aka patch level
+    sp = Field(str, 'Service Pack')
     install_date = Field(datetime.datetime, "Install Date")
 
     major = Field(int, 'Major')
@@ -99,6 +100,7 @@ class DeviceAdapter(SmartJsonClass):
 
     name = Field(str, 'Asset Name')
     hostname = Field(str, 'Host Name')
+    description = Field(str, 'Description')
     last_seen = Field(datetime.datetime, 'Last Seen')
     network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces')
     os = Field(DeviceAdapterOS, 'OS')
@@ -107,7 +109,7 @@ class DeviceAdapter(SmartJsonClass):
     security_patches = ListField(DeviceAdapterSecurityPatch, "Security Patch")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
-    domain = Field(str, "Domain")
+    domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     users = ListField(DeviceAdapterUser, "Users")
     pretty_id = Field(str, 'Axonius Name')
     device_manufacturer = Field(str, "Device Manufacturer")
@@ -131,6 +133,9 @@ class DeviceAdapter(SmartJsonClass):
     total_number_of_cores = Field(int, "Total Cores")
     batteries = ListField(DeviceAdapterBattery, "Battery")
     current_logged_user = Field(str, "Currently Logged User")
+    device_disabled = Field(bool, "Device Disabled")
+    device_managed_by = Field(str, "Managed By")    # Who is the entity managing the device
+    organizational_unit = ListField(str, "Organizational Unit")
     scanner = Field(bool, 'Scanner')
 
     required = ['name', 'hostname', 'os', 'network_interfaces']

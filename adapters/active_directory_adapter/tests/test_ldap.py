@@ -14,6 +14,8 @@ DOMAIN_NAME, USERNAME = ad_client1_details["user"].split("\\")
 PASSWORD = ad_client1_details["password"]
 ADDRESS = ad_client1_details["dc_name"]
 
+ACCOUNTDISABLE = 0x0002
+
 WMI_SMB_RUNNER_LOCATION = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "wmi_smb_runner", "wmi_smb_runner.py"))
 
@@ -25,33 +27,45 @@ TEST_BINARY_LOCATION = os.path.abspath(
 def ldap_connection():
     return LdapConnection(900, ADDRESS, DOMAIN, f"{DOMAIN_NAME}\\{USERNAME}",
                           PASSWORD, None, SSLState[SSLState.Unencrypted.name], bytes([]), bytes([]),
-                          bytes([]))
+                          bytes([]), True, True)
 
 
 def test_users(ldap_connection: LdapConnection):
     users = list(ldap_connection.get_users_list())
 
     users_dict = {}
+    has_disabled_user = False
     for user in users:
         users_dict[user["sAMAccountName"]] = user
+        if user["userAccountControl"] & ACCOUNTDISABLE > 0:
+            has_disabled_user = True
 
     assert len(users_dict) > 0
     assert users_dict['avidor']['cn'] == 'Avidor Bartov'
     assert users_dict['Administrator']['adminCount'] == 1
     assert "maxPwdAge" in users_dict['avidor']['axonius_extended']
 
+    # assert there is at least one disabled device
+    assert has_disabled_user is True
+
 
 def test_devices(ldap_connection: LdapConnection):
     devices = ldap_connection.get_device_list()
     devices_dict = {}
+    has_disabled_device = True
     for device in devices:
         devices_dict[device['distinguishedName']] = device
+        if device["userAccountControl"] & ACCOUNTDISABLE > 0:
+            has_disabled_device = True
 
     assert len(devices_dict) > 0
 
     test_device = devices_dict["CN=DESKTOP-MPP10U1,CN=Computers,DC=TestDomain,DC=test"]
     assert test_device["name"] == "DESKTOP-MPP10U1"
     assert test_device["operatingSystem"] == "Windows 10 Pro"
+
+    # assert there is at least one disabled device
+    assert has_disabled_device is True
 
 
 def test_get_domain_properties(ldap_connection: LdapConnection):

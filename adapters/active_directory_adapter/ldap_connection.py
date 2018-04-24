@@ -33,8 +33,8 @@ class LdapConnection(object):
 
     def __init__(self, ldap_page_size, server_addr, domain_name,
                  user_name, user_password, dns_server,
-                 use_ssl: SSLState = SSLState.Unverified, ca_file_data: bytes = None, cert_file: bytes = None,
-                 private_key: bytes = None):
+                 use_ssl: SSLState, ca_file_data: bytes, cert_file: bytes,
+                 private_key: bytes, should_fetch_disabled_devices, should_fetch_disabled_users):
         """Class initialization.
 
         :param int ldap_page_size: Amount of devices to fetch on each request
@@ -53,6 +53,8 @@ class LdapConnection(object):
         self.ldap_connection = None
         self.ldap_page_size = ldap_page_size
         self.__use_ssl = use_ssl
+        self.should_fetch_disabled_devices = should_fetch_disabled_devices
+        self.should_fetch_disabled_users = should_fetch_disabled_users
 
         if self.__use_ssl != SSLState.Unencrypted:
             self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
@@ -127,6 +129,11 @@ class LdapConnection(object):
             # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
             self._connect_to_server()
 
+            if self.should_fetch_disabled_devices is True:
+                search_filter = '(objectClass=Computer)'
+            else:
+                search_filter = '(&(objectClass=Computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
+
             # The search filter will get only enabled "computer" objects.
             # We are using paged search, as documented here:
             # http://ldap3.readthedocs.io/searches.html#simple-paged-search
@@ -134,7 +141,7 @@ class LdapConnection(object):
             # https://www.experts-exchange.com/questions/26393164/LDAP-Filter-Active-Directory-Query-for-Enabled-Computers.html
             entry_generator = self.ldap_connection.extend.standard.paged_search(
                 search_base=self.domain_name,
-                search_filter='(&(objectClass=Computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
+                search_filter=search_filter,
                 attributes='*',
                 paged_size=self.ldap_page_size,
                 generator=True)
@@ -178,6 +185,11 @@ class LdapConnection(object):
             # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
             self._connect_to_server()
 
+            if self.should_fetch_disabled_users is True:
+                search_filter = '(&(objectCategory=person)(objectClass=user))'
+            else:
+                search_filter = '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
+
             # A paged search, to get only users of type person and class user. notice we also only get
             # the attributes we need, to make the query as lightweight as possible.
             # The user account control queries only for active users.
@@ -185,7 +197,7 @@ class LdapConnection(object):
             # en-US/44048e98-b191-4d18-9839-d79ffad86f76/ldap-query-for-all-active-users?forum=winserverDS
             entry_generator = self.ldap_connection.extend.standard.paged_search(
                 search_base=self.domain_name,
-                search_filter='(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
+                search_filter=search_filter,
                 attributes='*',
                 paged_size=self.ldap_page_size,
                 generator=True)

@@ -65,7 +65,7 @@ class TestAdAdapter(AdapterTestBase):
         devices_list = self.axonius_system.get_users_with_condition(
             {
                 "adapters.data.username": USER_ID_FOR_CLIENT_1,
-                "adapters.data.sid": USER_SID_FOR_CLIENT_1
+                "adapters.data.ad_sid": USER_SID_FOR_CLIENT_1
             }
         )
         assert len(devices_list) == 1, f"Did not find user {USER_ID_FOR_CLIENT_1}"

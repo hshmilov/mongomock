@@ -13,7 +13,6 @@ from axonius.utils.parsing import parse_date
 
 class ServiceNowAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        description = Field(str, 'Description')
         table_type = Field(str, "Table Type")
         class_name = Field(str, "Class Name")
 
