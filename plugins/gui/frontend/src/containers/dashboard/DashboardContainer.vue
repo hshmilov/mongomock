@@ -101,9 +101,10 @@
 				return this.adapterDevices.adapter_count
 			},
 			adapterDevicesCounterData () {
+				let totalSeen = this.adapterDevices.total_gross || 0
 				return [
-					{count: this.adapterDevices.total_gross || 0, title: 'Seen Devices', highlight: true},
-					{count: this.adapterDevices.total_net || 0, title: 'Unique Devices'},
+					{count: totalSeen, title: 'Seen Devices', highlight: true},
+					{count: Math.min(this.adapterDevices.total_net || 0, totalSeen), title: 'Unique Devices'},
 				]
 			},
 			nextRunTime () {

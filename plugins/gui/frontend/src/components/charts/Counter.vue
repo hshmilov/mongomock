@@ -1,5 +1,5 @@
 <template>
-    <div class="x-grid x-grid-col-2 counter" :class="{updating: enumerating}">
+    <div class="x-grid counter" :class="{updating: enumerating}">
         <template v-for="item in displayData">
             <div class="count" :class="{highlight: item.highlight}">{{ item.count }}</div>
             <div class="title">{{ item.title }}</div>
@@ -43,6 +43,7 @@
 
 <style lang="scss">
     .counter {
+        grid-template-columns: 1fr 2fr;
         .count {
             font-size: 60px;
             display: inline;

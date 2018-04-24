@@ -1424,8 +1424,9 @@ class GuiService(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         adapter_devices = {'total_gross': 0, 'adapter_count': {}}
         with self._get_db_connection(False) as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
-                                                                              {'plugin_type': 'ScannerAdapter'}]})
+            adapter_devices['total_net'] = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find({
+            }).count()
+            adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
             for adapter in adapters_from_db:
                 if not adapter[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
@@ -1437,8 +1438,6 @@ class GuiService(PluginBase):
                     continue
                 adapter_devices['adapter_count'][adapter['plugin_name']] = devices_count
                 adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
-            adapter_devices['total_net'] = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find({
-            }).count()
 
         return jsonify(adapter_devices)
 
@@ -1454,9 +1453,6 @@ class GuiService(PluginBase):
 
         :return:
         """
-        devices_count = self.aggregator_db_connection['devices_db_view'].find({}).count()
-        if not devices_count:
-            return jsonify([])
         coverage_list = [
             {'title': 'Managed Device', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
              'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},
@@ -1466,8 +1462,10 @@ class GuiService(PluginBase):
              'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
         ]
         for item in coverage_list:
-            item['portion'] = self.aggregator_db_connection['devices_db_view'].find(
-                {'specific_data.adapter_properties': {'$in': item['properties']}}).count() / devices_count
+            devices_property = self.aggregator_db_connection['devices_db_view'].find(
+                {'specific_data.adapter_properties': {'$in': item['properties']}}).count()
+            devices_total = self.aggregator_db_connection['devices_db_view'].find({}).count()
+            item['portion'] = devices_property / devices_total
         return jsonify(coverage_list)
 
     @add_rule_unauthenticated("research_phase", methods=['POST'])
