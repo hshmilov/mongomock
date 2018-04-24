@@ -13,15 +13,19 @@
         </div>
         <nav class="x-menu">
             <nested-nav-bar>
-                <nested-nav-item routeName="Dashboard" routerPath="/" iconName="dashboard" :exact="true"/>
-                <nested-nav-item routeName="Devices" iconName="device">
-                    <nested-nav-bar nestLevel="1" class="collapse">
-                        <nested-nav-item routeName="Saved Queries"/>
+                <nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
+                <nested-nav-item route-name="Devices" icon-name="device">
+                    <nested-nav-bar nest-level="1" class="collapse">
+                        <nested-nav-item route-name="Saved Queries" router-path="/device/query/saved" />
                     </nested-nav-bar>
                 </nested-nav-item>
-                <nested-nav-item routeName="Users" iconName="user"/>
-                <nested-nav-item routeName="Alerts" iconName="alert"/>
-                <nested-nav-item routeName="Adapters" iconName="adapter"/>
+                <nested-nav-item route-name="Users" icon-name="user">
+                    <nested-nav-bar nest-level="1" class="collapse">
+                        <nested-nav-item route-name="Saved Queries" router-path="/user/query/saved" />
+                    </nested-nav-bar>
+                </nested-nav-item>
+                <nested-nav-item route-name="Alerts" icon-name="alert"/>
+                <nested-nav-item route-name="Adapters" icon-name="adapter"/>
             </nested-nav-bar>
         </nav>
     </aside>

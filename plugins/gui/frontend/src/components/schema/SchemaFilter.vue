@@ -21,7 +21,7 @@
 		props: {schema: {required: true}, value: {}, rebuild: {default: false}},
 		data () {
 			return {
-				expressions: [...this.value],
+				expressions: [],
 				filters: [],
 				bracketWeights: [],
 				error: ''
@@ -84,6 +84,9 @@
 			}
 		},
 		created () {
+			if (this.value && this.value.length) {
+				this.expressions = [ ...this.value ]
+            }
 			if (!this.expressions.length) {
 				this.addExpression()
 			}

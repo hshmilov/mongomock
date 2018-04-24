@@ -24,17 +24,13 @@
     import xDataTable from '../../components/tables/DataTable.vue'
 
 
-	import { mapState, mapActions } from 'vuex'
-	import { FETCH_DEVICE, FETCH_LABELS } from '../../store/modules/device'
+	import { mapActions } from 'vuex'
 	import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
 
 	export default {
 		name: 'devices-container',
 		components: {
 			xPage, xDataQuery, xDataTable, DevicesActionsContainer, xDataFieldMenu, xDataViewMenu
-		},
-		computed: {
-			...mapState(['device']),
 		},
         data() {
 			return {
@@ -43,25 +39,16 @@
         },
 		methods: {
 			...mapActions({
-				fetchDevice: FETCH_DEVICE,
-				fetchLabels: FETCH_LABELS,
                 fetchContentCSV: FETCH_DATA_CONTENT_CSV
 			}),
 			configDevice (deviceId) {
-				if (this.selectedDevices && this.selectedDevices.length) {
-					return
-				}
-				this.fetchDevice(deviceId)
+				if (this.selectedDevices && this.selectedDevices.length) return
+
 				this.$router.push({path: `device/${deviceId}`})
 			},
             exportCSV() {
 				this.fetchContentCSV({ module: 'device' })
             }
-		},
-		created () {
-            if (!this.device.labelList.data || !this.device.labelList.data.length) {
-				this.fetchLabels()
-			}
 		}
 	}
 </script>

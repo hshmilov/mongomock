@@ -4,7 +4,7 @@
         <modal v-if="isActive" @close="isActive = false">
             <template slot="body">
                 <div class="x-field-menu-filter">
-                    <x-select-type slot="body" :options="schema" v-model="fieldSpace" :tabindex="1" />
+                    <x-select-type :options="schema" v-model="fieldSpace" :tabindex="1" />
                     <search-input v-model="searchValue" :tabindex="2" />
                 </div>
                 <x-checkbox-list :items="currentFields" v-model="selectedFields"/>
@@ -33,7 +33,7 @@
         computed: {
             ...mapState({
 				view(state) {
-					return state[this.module].data.view
+					return state[this.module].view
 				}
             }),
             ...mapGetters( {
@@ -86,8 +86,11 @@
             color: $theme-black;
         }
         .x-select-type {
-            width: 240px;
+            flex-basis: 25%;
             margin-right: 12px;
+        }
+        .search-input {
+            flex-basis: 25%;
         }
         .x-field-menu-filter {
             display: flex;

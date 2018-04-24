@@ -1,5 +1,5 @@
 <template>
-    <router-link tag="li" :to="!disabled? { name: routeName, path: routerPath }: {}" class="nav-item"
+    <router-link tag="li" :to="disabled? {}: link" class="nav-item"
                  :active-class="(!disabled && !exact)? 'active': ''"
                  :exact-active-class="(!disabled && exact)? 'active': ''">
         <a class="nav-link" v-bind:class="{ 'has-arrow': hasSlot }" :title="routeName">
@@ -17,6 +17,10 @@
         computed: {
             hasSlot() {
                 return !!this.$slots.default
+            },
+            link() {
+            	if (this.routerPath) return { path: this.routerPath }
+            	return { name: this.routeName }
             }
         }
     }

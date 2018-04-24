@@ -2,9 +2,9 @@ import { pluginMeta } from '../static.js'
 
 export const GET_DATA_FIELD_LIST_TYPED = 'GET_DATA_FIELD_LIST_TYPED'
 export const getDataFieldsListTyped = (state) => (module) => {
-	if (!state[module] || !state[module].data.fields || !state[module].data.fields.data) return []
-	let fields = state[module].data.fields.data
-	if (!fields.generic || !state[module].data.fields.data.generic.length) return []
+	if (!state[module] || !state[module].fields || !state[module].fields.data) return []
+	let fields = state[module].fields.data
+	if (!fields.generic || !state[module].fields.data.generic.length) return []
 
 	return [
 		{
@@ -19,9 +19,9 @@ export const getDataFieldsListTyped = (state) => (module) => {
 
 export const GET_DATA_FIELD_LIST_SPREAD = 'GET_DATA_FIELD_LIST_SPREAD'
 export const getDataFieldListSpread =  (state) => (module) => {
-	if (!state[module] || !state[module].data.fields || !state[module].data.fields.data) return []
-	let fields = state[module].data.fields.data
-	if (!fields.generic || !state[module].data.fields.data.generic.length) return []
+	if (!state[module] || !state[module].fields || !state[module].fields.data) return []
+	let fields = state[module].fields.data
+	if (!fields.generic || !state[module].fields.data.generic.length) return []
 
 	return fields.generic.filter((field) => {
 		return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
@@ -33,4 +33,15 @@ export const getDataFieldListSpread =  (state) => (module) => {
 		})]
 		return list
 	}, []))
+}
+
+export const GET_DATA_BY_ID = 'GET_DATA_BY_ID'
+export const getDataByID = (state) => (module) => {
+	if (!state[module] || !state[module].content || !state[module].content.data
+		|| !state[module].current || !state[module].current.data) return []
+
+	return state[module].content.data.reduce(function (map, input) {
+		map[input['internal_axon_id']] = input
+		return map
+	}, {})
 }

@@ -5,7 +5,8 @@ import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW,
-	UPDATE_DATA_FIELDS, UPDATE_DATA_QUERIES, ADD_DATA_QUERY
+	UPDATE_DATA_FIELDS, UPDATE_DATA_QUERIES, ADD_DATA_QUERY, UPDATE_REMOVED_DATA_QUERY,
+	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID
 } from './mutations'
 
 let host = ''
@@ -65,13 +66,13 @@ export const requestApi = ({commit}, payload) => {
 }
 
 export const validModule = (state, payload) => {
-	return (payload && payload.module && state[payload.module] && state[payload.module].data)
+	return (payload && payload.module && state[payload.module])
 }
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT'
 export const fetchDataCount = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
-	const view = state[payload.module].data.view
+	const view = state[payload.module].view
 
 	let param = (view.query && view.query.filter) ? `?filter=${view.query.filter}` : ''
 	dispatch(REQUEST_API, {
@@ -83,7 +84,7 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 
 const createContentRequest = (state, payload) => {
 	if (!validModule(state, payload)) return ''
-	const view = state[payload.module].data.view
+	const view = state[payload.module].view
 
 	let params = []
 	if (payload.skip !== undefined) {
@@ -144,7 +145,7 @@ export const fetchDataViews = ({state, dispatch}, payload) => {
 export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW'
 export const saveDataView = ({state, dispatch, commit}, payload) => {
 	if (!validModule(state, payload)) return
-	let viewObj = {name: payload.name, view: state[payload.module].data.view}
+	let viewObj = {name: payload.name, view: state[payload.module].view}
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/views',
 		data: viewObj,
@@ -187,16 +188,33 @@ export const fetchDataQueries = ({state, dispatch}, payload) => {
 export const SAVE_DATA_QUERY = 'SAVE_DATA_QUERY'
 export const saveDataQuery = ({state, dispatch, commit}, payload) => {
 	if (!validModule(state, payload) || !payload.name) return
-	let queryObj = {name: payload.name, ...state[payload.module].data.view.query }
+	let queryObj = {name: payload.name, ...state[payload.module].view.query }
 	return dispatch(REQUEST_API, {
 		rule: payload.module + '/queries',
 		method: 'POST',
 		data: queryObj
 	}).then((response) => {
-		if (response.status === 200) {
-			commit(ADD_DATA_QUERY, {module: payload.module, query: queryObj})
+		if (response.status === 200 && response.data) {
+			commit(ADD_DATA_QUERY, {
+				module: payload.module, query: { ...queryObj, uuid: response.data}
+			})
 		}
 	}).catch(console.log.bind(console))
+}
+
+export const REMOVE_DATA_QUERY = 'REMOVE_DATA_QUERY'
+export const removeDataQuery = ({state, dispatch, commit}, payload) => {
+	if (!validModule(state, payload) || !payload.id) return
+
+	dispatch(REQUEST_API, {
+		rule: `${payload.module}/queries/${payload.id}`,
+		method: 'DELETE'
+	}).then((response) => {
+		if (response.data !== '') {
+			return
+		}
+		commit(UPDATE_REMOVED_DATA_QUERY, payload)
+	})
 }
 
 export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE'
@@ -205,4 +223,68 @@ export const startResearch= ({dispatch}) => {
         rule: `research_phase`,
         method: 'POST'
     })
+}
+
+export const FETCH_DATA_LABELS = 'FETCH_DATA_LABELS'
+export const fetchDataLabels = ({state, dispatch}, payload) => {
+	if (!validModule(state, payload)) return
+	dispatch(REQUEST_API, {
+		rule: `${payload.module}/labels`,
+		type: UPDATE_DATA_LABELS,
+		payload: {module: payload.module}
+	})
+}
+
+export const ADD_DATA_LABELS = 'ADD_DATA_LABELS'
+export const addDataLabels = ({state, dispatch, commit}, payload) => {
+	if (!validModule(state, payload)) return
+
+	if (!payload.data || !payload.data.entities || !payload.data.entities.length
+		|| !payload.data.labels || !payload.data.labels.length) {
+		return
+	}
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/labels`,
+		method: 'POST',
+		data: payload.data
+	}).then(() => commit(UPDATE_ADDED_DATA_LABELS, payload))
+}
+
+export const REMOVE_DATA_LABELS = 'REMOVE_DATA_LABELS'
+export const removeDataLabels = ({state, dispatch, commit}, payload) => {
+	if (!validModule(state, payload)) return
+
+	if (!payload.data || !payload.data.entities || !payload.data.entities.length
+		|| !payload.data.labels || !payload.data.labels.length) {
+		return
+	}
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/labels`,
+		method: 'DELETE',
+		data: payload.data
+	}).then(() => commit(UPDATE_REMOVED_DATA_LABELS, payload))
+}
+
+export const DISABLE_DATA = 'DISABLE_DATA'
+export const disableData = ({state, dispatch}, payload) => {
+	if (!validModule(state, payload)) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/disable`,
+		method: 'POST',
+		data: payload.data
+	})
+}
+
+export const FETCH_DATA_BY_ID = 'FETCH_DATA_BY_ID'
+export const fetchDataByID = ({state, dispatch}, payload) => {
+	if (!validModule(state, payload)) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}/${payload.id}`,
+		type: UPDATE_DATA_BY_ID,
+		payload
+	})
 }

@@ -10,11 +10,6 @@
                             <option v-for="option in input.options">{{ option.text }}</option>
                         </select>
                     </template>
-                    <template v-else-if="input.control === 'multiple-select'">
-                        <multiple-select :title="`Select ${input.name}:`" :items="input.options" :type="input.type"
-                                         v-model="model[input.path]" @input="convertValue(input.path, input.control)">
-                        </multiple-select>
-                    </template>
                     <template v-else-if="input.control === 'bool'">
                         <checkbox v-model="model[input.path]" @change="convertValue(input.path, input.control)"></checkbox>
                     </template>
@@ -37,12 +32,11 @@
 </template>
 
 <script>
-    import MultipleSelect from './MultipleSelect.vue'
     import Checkbox from './Checkbox.vue'
 
     export default {
         name: 'generic-form',
-        components: { MultipleSelect, Checkbox },
+        components: { Checkbox },
         props: [ 'schema', 'submitLabel', 'condensed', 'value', 'vertical' ],
         computed: {
             pathByName() {

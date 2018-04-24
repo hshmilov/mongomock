@@ -87,13 +87,13 @@
         computed: {
 			...mapState({
                 content(state) {
-                	return state[this.module].data.content
+                	return state[this.module].content
                 },
                 count(state) {
-                	return state[this.module].data.count
+                	return state[this.module].count
                 },
                 view(state) {
-                	return state[this.module].data.view
+                	return state[this.module].view
                 },
                 refresh(state) {
                 	if (!state['settings'] || !state['settings'].data || !state['settings'].data.refreshRate) return 0
@@ -238,7 +238,7 @@
         }
         .x-table-container {
             overflow: auto;
-            max-height: 100%;
+            max-height: calc(100% - 80px);
             .x-striped-table {
                 .x-row {
                     height: 30px;

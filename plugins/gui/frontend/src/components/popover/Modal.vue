@@ -10,8 +10,8 @@
                     </div>
                     <div class="modal-footer">
                         <slot name="footer">
-                            <button class="btn btn-inverse" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
-                            <button class="btn" @click="$emit('confirm')">{{approveText || 'OK'}}</button>
+                            <button class="x-btn link" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
+                            <button class="x-btn" @click="$emit('confirm')">{{approveText || 'OK'}}</button>
                         </slot>
                     </div>
                 </div>
@@ -50,7 +50,7 @@
                 width: 600px;
                 margin: 0px auto;
                 padding: 20px 30px;
-                background-color: $background-color-light;
+                background-color: $theme-white;
                 border-radius: 2px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
                 transition: all .3s ease;
@@ -79,7 +79,6 @@
 
     .modal-enter .modal-container,
     .modal-leave-active .modal-container {
-        -webkit-transform: scale(1.1);
         transform: scale(1.1);
     }
 </style>

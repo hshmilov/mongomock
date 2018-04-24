@@ -34,7 +34,7 @@
                 <input type="text" v-model="newDashboard.data.name" />
                 <vm-select v-model="newDashboard.data.queries" multiple filterable
                            no-data-text="No saved queries" placeholder="Select saved queries...">
-                    <vm-option v-for="savedQuery in savedQueries" :key="savedQuery.name"
+                    <vm-option v-for="savedQuery in deviceQueries" :key="savedQuery.name"
                                :value="savedQuery.name" :label="savedQuery.name"/>
                 </vm-select>
             </div>
@@ -74,8 +74,8 @@
 				dashboard (state) {
 					return state['dashboard']
 				},
-				savedQueries (state) {
-					return state['device'].data.queries.saved.data
+				deviceQueries (state) {
+					return state['device'].queries.saved.data
 				}
 			}),
 			lifecycle () {

@@ -11,7 +11,13 @@ import {
 	FETCH_DATA_FIELDS, fetchDataFields,
 	FETCH_DATA_QUERIES, fetchDataQueries,
 	SAVE_DATA_QUERY, saveDataQuery,
-    START_RESEARCH_PHASE, startResearch
+    START_RESEARCH_PHASE, startResearch,
+	FETCH_DATA_LABELS, fetchDataLabels,
+	ADD_DATA_LABELS, addDataLabels,
+	REMOVE_DATA_LABELS, removeDataLabels,
+	DISABLE_DATA, disableData,
+	FETCH_DATA_BY_ID, fetchDataByID,
+	REMOVE_DATA_QUERY, removeDataQuery
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
@@ -22,16 +28,21 @@ import {
 	ADD_DATA_VIEW, addDataView,
 	UPDATE_DATA_FIELDS, updateDataFields,
 	UPDATE_DATA_QUERIES, updateDataQueries,
-	ADD_DATA_QUERY, addDataQuery
+	ADD_DATA_QUERY, addDataQuery,
+	UPDATE_DATA_LABELS, updateDataLabels,
+	UPDATE_ADDED_DATA_LABELS, updateAddedDataLabels,
+	UPDATE_REMOVED_DATA_LABELS, updateRemovedDataLabels,
+	UPDATE_DATA_BY_ID, updateDataByID,
+	UPDATE_REMOVED_DATA_QUERY, updateRemovedDataQuery
 } from './mutations'
 import {
 	GET_DATA_FIELD_LIST_TYPED, getDataFieldsListTyped,
-	GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread
+	GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
+	GET_DATA_BY_ID, getDataByID
 } from './getters'
 import { settings } from '../store/modules/settings'
 import { device } from '../store/modules/device'
 import { user } from '../store/modules/user'
-import { query } from '../store/modules/query'
 import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
@@ -54,7 +65,8 @@ export default new Vuex.Store({
     },
 	getters: {
 		[ GET_DATA_FIELD_LIST_TYPED ]: getDataFieldsListTyped,
-		[ GET_DATA_FIELD_LIST_SPREAD ]: getDataFieldListSpread
+		[ GET_DATA_FIELD_LIST_SPREAD ]: getDataFieldListSpread,
+		[ GET_DATA_BY_ID ]: getDataByID
 	},
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
@@ -65,7 +77,12 @@ export default new Vuex.Store({
 		[ ADD_DATA_VIEW ]: addDataView,
 		[ UPDATE_DATA_FIELDS ]: updateDataFields,
 		[ UPDATE_DATA_QUERIES ]: updateDataQueries,
-		[ ADD_DATA_QUERY ]: addDataQuery
+		[ ADD_DATA_QUERY ]: addDataQuery,
+		[ UPDATE_DATA_LABELS ]: updateDataLabels,
+		[ UPDATE_ADDED_DATA_LABELS ]: updateAddedDataLabels,
+		[ UPDATE_REMOVED_DATA_LABELS ]: updateRemovedDataLabels,
+		[ UPDATE_DATA_BY_ID ]: updateDataByID,
+		[ UPDATE_REMOVED_DATA_QUERY ]: updateRemovedDataQuery
     },
     actions: {
         [ REQUEST_API ]: requestApi,
@@ -77,7 +94,13 @@ export default new Vuex.Store({
 		[ FETCH_DATA_FIELDS ]: fetchDataFields,
 		[ FETCH_DATA_QUERIES ]: fetchDataQueries,
 		[ SAVE_DATA_QUERY ]: saveDataQuery,
-		[ START_RESEARCH_PHASE ]: startResearch
+		[ START_RESEARCH_PHASE ]: startResearch,
+		[ FETCH_DATA_LABELS ]: fetchDataLabels,
+		[ ADD_DATA_LABELS ]: addDataLabels,
+		[ REMOVE_DATA_LABELS ]: removeDataLabels,
+		[ DISABLE_DATA ]: disableData,
+		[ FETCH_DATA_BY_ID ]: fetchDataByID,
+		[ REMOVE_DATA_QUERY ]: removeDataQuery
     },
     modules: {
         /*
@@ -87,7 +110,6 @@ export default new Vuex.Store({
         settings,
         device,
 		user,
-        query,
 		plugin,
 		adapter,
 		alert,

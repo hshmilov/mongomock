@@ -1,22 +1,15 @@
 <template>
     <x-page title="users">
         <x-data-query module="user" />
-        <x-data-table module="user" v-model="selectedUsers" id-field="internal_axon_id" title="Users">
+        <x-data-table module="user" v-model="selectedUsers" id-field="internal_axon_id" title="Users" @click-row="configUser">
             <template slot="actions">
+                <x-data-action-menu v-show="selectedUsers && selectedUsers.length" module="user" :selected="selectedUsers" />
                 <x-data-view-menu module="user" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu module="user" class="link" />
                 <div class="link" @click="exportCSV">Export csv</div>
-                <div v-if="selectedUsers.length" class="link" @click="activate(disable_users)">Disable Users</div>
             </template>
         </x-data-table>
-        <feedback-modal v-model="disable_users.isActive"
-                        :handleSave="saveDisableUsers"
-                        message="Disable users">
-            <div>Out of {{selectedUsers.length}} users, {{disabelableUsers.length}} are disabelable.</div>
-            <div>These users will not appear in further scans.</div>
-            <div>Are you sure you want to continue?</div>
-        </feedback-modal>
     </x-page>
 </template>
 
@@ -26,62 +19,28 @@
     import xDataTable from '../../components/tables/DataTable.vue'
     import xDataViewMenu from '../../components/data/DataViewMenu.vue'
     import xDataFieldMenu from '../../components/data/DataFieldMenu.vue'
-    import FeedbackModal from '../../components/popover/FeedbackModal.vue'
+    import xDataActionMenu from '../../components/data/DataActionMenu.vue'
 
-	import { mapState, mapActions } from 'vuex'
-    import { DISABLE_USERS } from '../../store/modules/user'
+	import { mapActions } from 'vuex'
 	import { FETCH_DATA_CONTENT_CSV } from '../../store/actions'
 
 	export default {
 		name: 'users-container',
-        components: { xPage, xDataQuery, xDataTable, xDataViewMenu, xDataFieldMenu, FeedbackModal },
-        computed: {
-            ...mapState(['user', 'adapter']),
-            userById() {
-                if (!this.user.data.content.data || !this.user.data.content.data.length) return {}
-
-                return this.user.data.content.data.filter((user) => {
-                    return this.selectedUsers.includes(user.internal_axon_id)
-                }).reduce(function (map, input) {
-                    map[input.internal_axon_id] = input
-                    return map
-                }, {})
-            },
-            adaptersByUniquePluginName() {
-                if (!this.adapter || !this.adapter.adapterList) return {}
-                return this.adapter.adapterList.data.reduce((map, input) => {
-                    map[input.unique_plugin_name] = input
-                    return map
-                }, {})
-            },
-            disabelableUsers() {
-                return Object.values(this.userById).filter(user => {
-                    var user_adapters = user.unique_adapter_names.map(adapter => this.adaptersByUniquePluginName[adapter])
-                    return user_adapters.some(adapter => adapter && adapter.supported_features.includes("Userdisabelable"))
-                })
-            }
-        },
+        components: { xPage, xDataQuery, xDataTable, xDataViewMenu, xDataFieldMenu, xDataActionMenu },
         data() {
             return {
-                selectedUsers: [],
-                disable_users: {
-                    isActive: false
-                },
+                selectedUsers: []
             }
         },
         methods: {
             ...mapActions({
-				fetchContentCSV: FETCH_DATA_CONTENT_CSV,
-                disableUsers: DISABLE_USERS
+				fetchContentCSV: FETCH_DATA_CONTENT_CSV
             }),
-            activate(module) {
-                module.isActive = true
-                // Close the actions dropdown
-                this.$el.click()
-            },
-            saveDisableUsers() {
-                return this.disableUsers(this.disabelableUsers.map(x => x.internal_axon_id))
-            },
+			configUser (userId) {
+				if (this.selectedUsers && this.selectedUsers.length) return
+
+				this.$router.push({path: `user/${userId}`})
+			},
 			exportCSV() {
 				this.fetchContentCSV({ module: 'device' })
 			}

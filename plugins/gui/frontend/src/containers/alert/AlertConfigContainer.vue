@@ -99,8 +99,8 @@
     import Checkbox from '../../components/Checkbox.vue'
     import StatusIcon from '../../components/StatusIcon.vue'
 
-    import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-    import { FETCH_SAVED_QUERIES } from '../../store/modules/query'
+    import { mapState, mapMutations, mapActions } from 'vuex'
+    import { FETCH_DATA_QUERIES } from '../../store/actions'
     import { SET_ALERT, UPDATE_ALERT } from '../../store/modules/alert'
 
 	export default {
@@ -109,14 +109,20 @@
             xPage, Card, Checkbox, StatusIcon },
 		computed: {
             ...mapState({
-                alertData: state => state.alert.alertDetails.data
-			}),
-            ...mapGetters([ 'savedQueryOptions' ]),
-            currentQueryOptions() {
-            	return this.savedQueryOptions.filter((query) => {
-            		return !query.inUse || this.alertData.query === query.value
-                })
-            }
+                alertData: state => state.alert.alertDetails.data,
+                currentQueryOptions(state) {
+                	let queries = state.device.queries.saved.data
+                	if (!queries || !queries.length) return []
+
+                    return queries.map((query) => {
+						return {
+							value: query.uuid,
+							name: query.name,
+							inUse: (query['alertIds'] !== undefined && query['alertIds'].length)
+						}
+                    }).filter(query => !query.inUse || this.alertData.query === query.value)
+                }
+			})
         },
         data() {
 			return {
@@ -136,7 +142,7 @@
         },
         methods: {
             ...mapMutations({ setAlert: SET_ALERT }),
-            ...mapActions({ fetchQueries: FETCH_SAVED_QUERIES, updateAlert: UPDATE_ALERT }),
+            ...mapActions({ fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT }),
             fillAlert(alert) {
 				this.alert = { ...alert }
 				this.alert.actions.forEach((action) => {
@@ -193,7 +199,7 @@
             }
 
 			/* Fetch all saved queries for offering user to base alert upon */
-            this.fetchQueries({})
+            this.fetchQueries({module: 'device', type: 'saved'})
         }
 	}
 </script>

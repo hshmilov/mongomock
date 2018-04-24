@@ -42,7 +42,7 @@
         computed: {
 			...mapState({
 				views (state) {
-					return state[this.module].data.views.data
+					return state[this.module].views.data
 				}
 			})
         },

@@ -1,126 +1,32 @@
 <template>
-    <div>
-        <triggerable-dropdown size="sm" align="right" :arrow="false">
-            <div slot="trigger" class="link">Actions</div>
-            <nested-menu slot="content">
-                <nested-menu-item title="Tag..." @click="activate(tag)"></nested-menu-item>
-                <nested-menu-item title="Deploy..." @click="activate(deploy)"></nested-menu-item>
-                <nested-menu-item title="Run..." @click="activate(run)"></nested-menu-item>
-                <nested-menu-item title="Add to Black-List" @click="activate(blacklist)"></nested-menu-item>
-                <nested-menu-item title="Disable" @click="activate(disable)"></nested-menu-item>
-                <!--<nested-menu-item title="Block" @click="activate(block)">-->
-                    <!--<dynamic-popover size="xs" left="236">-->
-                        <!--<nested-menu>-->
-                            <!--<nested-menu-item v-for="blocker, index in block.blockers" :key="index" :title="blocker"-->
-                                              <!--@click="block.selected = blocker"></nested-menu-item>-->
-                        <!--</nested-menu>-->
-                    <!--</dynamic-popover>-->
-                <!--</nested-menu-item>-->
-                <!--<nested-menu-item title="Scan with" @click="activate(scan)">-->
-                    <!--<dynamic-popover size="xs" left="236">-->
-                        <!--<nested-menu>-->
-                            <!--<nested-menu-item v-for="scanner, index in scan.scanners" :key="index" :title="scanner"-->
-                                              <!--@click="scan.selected = scanner"></nested-menu-item>-->
-                        <!--</nested-menu>-->
-                    <!--</dynamic-popover>-->
-                <!--</nested-menu-item>-->
-            </nested-menu>
-        </triggerable-dropdown>
-        <feedback-modal v-model="tag.isActive" :handleSave="saveTags" :message="`Tagged ${devices.length} devices!`">
-            <searchable-checklist title="Tag as:" :items="device.labelList.data" :searchable="true"
-                                  :extendable="true" v-model="tag.selected"/>
-        </feedback-modal>
-        <feedback-modal v-model="deploy.isActive" :handleSave="saveDeploy" message="Deployment initiated">
+    <x-data-action-menu module="device" :selected="devices">
+        <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy...">
             <h3 class="mb-2">Deploy Executable</h3>
             <x-schema-form :schema="deployFormSchema" @validate="deploy.valid = $event" />
-        </feedback-modal>
-        <feedback-modal v-model="run.isActive" :handleSave="saveRun" message="Started running">
+        </x-data-action-item>
+        <x-data-action-item :handle-save="saveRun" message="Started running" title="Run...">
             <h3 class="mb-2">Run Command</h3>
             <x-schema-form :schema="runFormSchema" class="expand" @validate="run.valid = $event"/>
-        </feedback-modal>
-        <feedback-modal v-model="blacklist.isActive" :handleSave="saveBlacklist" message="Blacklist saved">
+        </x-data-action-item>
+        <x-data-action-item :handle-save="saveBlacklist" message="Blacklist saved" title="Blacklist...">
             <div>Add {{devices.length}} devices to Blacklist?</div>
             <div>These devices will be prevented from executing code on.</div>
-        </feedback-modal>
-        <feedback-modal v-model="disable.isActive" :handleSave="saveDisableDevices" message="Disable devices">
-            <div>Out of {{devices.length}} devices, {{disabelableDevices.length}} are disabelable.</div>
-            <div>These devices will not appear in further scans.</div>
-            <div>Are you sure you want to continue?</div>
-        </feedback-modal>
-        <feedback-modal v-model="block.isActive" :handleSave="saveBlock" message="Block saved">
-            <div>Block {{devices.length}} devices by {{block.selected}}?</div>
-        </feedback-modal>
-        <feedback-modal v-model="scan.isActive" :handleSave="saveScan" message="Scan saved">
-            <div>Scan {{devices.length}} devices with {{scan.selected}} scanner?</div>
-        </feedback-modal>
-    </div>
+        </x-data-action-item>
+    </x-data-action-menu>
 </template>
 
 <script>
-	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
-	import NestedMenu from '../../components/menus/NestedMenu.vue'
-	import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
-	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
-	import DynamicPopover from '../../components/popover/DynamicPopover.vue'
-	import SearchableChecklist from '../../components/SearchableChecklist.vue'
-    import TagsMixin from '../../mixins/tags'
+    import xDataActionMenu from '../../components/data/DataActionMenu.vue'
+    import xDataActionItem from '../../components/data/DataActionItem.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
-	import { mapState, mapActions } from 'vuex'
-    import { DISABLE_DEVICES } from '../../store/modules/device'
-
 
 	export default {
 		name: 'devices-actions-container',
 		components: {
-			xSchemaForm, TriggerableDropdown, FeedbackModal, DynamicPopover, SearchableChecklist,
-			'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem
+			xDataActionMenu, xDataActionItem, xSchemaForm
 		},
 		props: {'devices': {required: true}},
-        mixins: [TagsMixin],
         computed: {
-			...mapState(['device', 'adapter']),
-            adapters() {
-				return this.adapter.adapterList.data
-            },
-			deviceById () {
-				if (!this.device.data.content.data || !this.device.data.content.data.length) return {}
-
-				return this.device.data.content.data.filter((device) => {
-					return this.devices.includes(device.internal_axon_id)
-				}).reduce(function (map, input) {
-					map[input.internal_axon_id] = input
-					return map
-				}, {})
-			},
-            adaptersByUniquePluginName() {
-			    if (!this.adapters || !this.adapters.length) return {}
-                return this.adapters.reduce((map, input) => {
-                    map[input.unique_plugin_name] = input
-                    return map
-                }, {})
-            },
-            disabelableDevices() {
-                return Object.values(this.deviceById).filter(device => {
-                    var device_adapters = device.unique_adapter_names.map(adapter => this.adaptersByUniquePluginName[adapter])
-                    return device_adapters.some(adapter => adapter && adapter.supported_features.includes("Devicedisabelable"))
-                })
-            },
-			currentTags () {
-				if (!this.devices || !this.devices.length || !this.deviceById[this.devices[0]]) { return [] }
-				let labels = this.deviceById[this.devices[0]].labels
-				if (this.devices.length === 1) { return labels }
-				this.devices.forEach((device) => {
-					let deviceLabels = this.deviceById[device].labels
-					if (!deviceLabels || !deviceLabels.length) {
-						labels = []
-						return
-					}
-					labels = labels.filter((label) => {
-						return deviceLabels.includes(label)
-					})
-				})
-				return labels
-			},
             deployFormSchema() {
 				return {
 					type: 'array',
@@ -159,59 +65,22 @@
         },
 		data () {
 			return {
-                blacklist: {
-					isActive: false
-                },
-                disable: {
-                    isActive: false
-                },
-                block: {
-					isActive: false,
-                    blockers: ['Cisco'],
-                    selected: ''
-                },
-                scan: {
-					isActive: false,
-				    scanners: ['Qualys', 'Nexpose', 'Nessus'],
-                    selected: ''
-                },
                 deploy: {
-					isActive: false,
-				    deployments: ['ePO (WIN 5.3.2)', 'ePO (OSX 4.8.1938)', 'Qualys (LIN 1.6.1.26)', 'Qualys (WIN 1.6.0.246)'],
                     selected: '',
                     valid: false
                 },
                 run: {
-                	isActive: false,
                     valid: true
                 }
 			}
 		},
 		methods: {
-		    ...mapActions({
-                disableDevices: DISABLE_DEVICES
-			}),
-            activate(module) {
-				module.isActive = true
-                // Close the actions dropdown
-                this.$el.click()
-            },
 			saveBlacklist () {
 				/*
 				Blacklist is currently implemented by checking for a designated tag,
 				Therefore, adding this tag to selected devices
 				 */
-                return this.addDeviceLabels({devices: this.devices, tags: ['do_not_execute']})
-			},
-			saveBlock () {
-				return new Promise((resolve, reject) => {
-					resolve()
-				})
-			},
-			saveScan () {
-				return new Promise((resolve, reject) => {
-					resolve()
-				})
+                return this.addLabels({devices: this.devices, tags: ['do_not_execute']})
 			},
 			saveDeploy () {
 				return new Promise((resolve, reject) => {
@@ -224,10 +93,7 @@
 				    if (!this.run.valid) reject()
 					resolve()
 				})
-			},
-            saveDisableDevices() {
-                return this.disableDevices(this.disabelableDevices.map(x => x.internal_axon_id))
-            },
+			}
 		}
 	}
 </script>

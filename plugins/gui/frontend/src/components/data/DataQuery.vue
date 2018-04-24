@@ -14,15 +14,15 @@
             3. Option to search for 'searchValue' everywhere in data (compares to every text field)
             -->
             <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex">
-                <nested-menu v-if="savedQueries && savedQueries.length">
+                <nested-menu v-if="deviceQueries && deviceQueries.length">
                     <div class="title">Saved Queries</div>
-                    <nested-menu-item v-for="query, index in savedQueries" :key="index" :title="query.name"
+                    <nested-menu-item v-for="query, index in deviceQueries" :key="index" :title="query.name"
                                       :selected="queryMenuIndex === index" @click="selectQuery(query)" />
                 </nested-menu>
                 <nested-menu v-if="historyQueries && historyQueries.length">
                     <div class="title">History</div>
                     <nested-menu-item v-for="query, index in historyQueries" :key="index" :title="query.filter"
-                                      :selected="queryMenuIndex - savedQueries.length === index" @click="selectQuery(query)" />
+                                      :selected="queryMenuIndex - deviceQueries.length === index" @click="selectQuery(query)" />
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
                     <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"
@@ -77,17 +77,17 @@
 		props: {module: {required: true}, limit: {default: 5}},
 		computed: {
 			...mapState({
-                savedQueries(state) {
-                	return state[this.module].data.queries.saved.data.slice(0, this.limit)
+                deviceQueries(state) {
+                	return state[this.module].queries.saved.data.slice(0, this.limit)
                 },
 				historyQueries(state) {
-					return state[this.module].data.queries.history.data.slice(0, this.limit)
+					return state[this.module].queries.history.data.slice(0, this.limit)
 				},
                 query(state) {
-                	return state[this.module].data.view.query
+                	return state[this.module].view.query
                 },
                 selected(state) {
-                	return state[this.module].data.view.fields
+                	return state[this.module].view.fields
                 }
             }),
             ...mapGetters({getDataFieldsListTyped: GET_DATA_FIELD_LIST_TYPED}),
@@ -120,7 +120,7 @@
                 return !simpleMatch || simpleMatch.length !== 1 || simpleMatch[0] !== this.searchValue
             },
             noResults() {
-				return (!this.searchValue || this.complexSearch) && (!this.savedQueries || !this.savedQueries.length)
+				return (!this.searchValue || this.complexSearch) && (!this.deviceQueries || !this.deviceQueries.length)
                     && (!this.historyQueries || !this.historyQueries.length)
             },
             textSearchPattern() {
@@ -138,13 +138,13 @@
 
                 return [ { ...this.schema[0], fields: [ {
 						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-						enum: this.savedQueries.map((query) => {
+						enum: this.deviceQueries.map((query) => {
 							return {name: query.filter, title: query.name}
 						})
 					}, ...this.schema[0].fields]}, ...this.schema.slice(1)]
             },
             queryMenuCount() {
-                return this.savedQueries.length + this.historyQueries.length + (this.searchValue && !this.complexSearch)
+                return this.deviceQueries.length + this.historyQueries.length + (this.searchValue && !this.complexSearch)
             }
 		},
 		data () {

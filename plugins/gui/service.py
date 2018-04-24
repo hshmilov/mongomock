@@ -256,7 +256,7 @@ class GuiService(PluginBase):
     def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
         queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
-        if existed_query is not None:
+        if existed_query is not None and not existed_query.get('archived'):
             logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
             return existed_query['_id']
         result = queries_collection.update({'name': name}, {'$set': {'name': name, 'filter': query_filter,
@@ -281,6 +281,7 @@ class GuiService(PluginBase):
                 projection['internal_axon_id'] = 1
                 projection['adapters'] = 1
                 projection['unique_adapter_names'] = 1
+                projection['labels'] = 1
                 pipeline.append({'$project': projection})
             if sort:
                 pipeline.append({'$sort': sort})
@@ -426,21 +427,18 @@ class GuiService(PluginBase):
             output.headers["Content-type"] = "text/csv"
         return output
 
-    def _entity_by_id(self, module_name, entity_id):
+    def _entity_by_id(self, module_name, entity_id, advanced_fields=[]):
         """
         Retrieve device by the given id, from current devices DB or update it
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
-
-        advanced_field_categories = ['installed_software', 'security_patches', 'users']
-
         def _basic_generic_field_names():
             generic_field_names = list(map(lambda field: field.get(
                 'name'), self._entity_fields(module_name)['generic']))
             return filter(
                 lambda field: field != 'adapters' and field != 'labels' and
-                len([category for category in advanced_field_categories if category in field]) == 0,
+                len([category for category in advanced_fields if category in field]) == 0,
                 generic_field_names)
 
         with self._get_db_connection(False) as db_connection:
@@ -457,7 +455,7 @@ class GuiService(PluginBase):
                     'basic': self._parse_entity_fields(entity, _basic_generic_field_names()),
                     'advanced': [{
                         'name': category, 'data': self._find_entity_field(entity, f'specific_data.data.{category}')
-                    } for category in advanced_field_categories],
+                    } for category in advanced_fields],
                     'data': entity['generic_data']
                 },
                 'labels': entity['labels'],
@@ -659,7 +657,7 @@ class GuiService(PluginBase):
 
     def _entity_views(self, method, module_name):
         """
-        Save or fetch views over the devices db
+        Save or fetch views over the entities db
         :return:
         """
         entity_views_collection = self._get_collection(f'{module_name}_views', limited_user=False)
@@ -677,6 +675,41 @@ class GuiService(PluginBase):
         if not update_result.upserted_id and not update_result.modified_count:
             return return_error(f'View named {view_data.name} was not saved', 400)
         return ''
+
+    def _entity_labels(self, db, namespace):
+        """
+        GET Find all tags that currently belong to devices, to form a set of current tag values
+        POST Add new tags to the list of given devices
+        DELETE Remove old tags from the list of given devices
+        :return:
+        """
+        all_labels = set()
+        with self._get_db_connection(False) as db_connection:
+            if request.method == 'GET':
+                for current_device in db.find({'$or': [{'labels': {'$exists': False}}, {'labels': {'$ne': []}}]},
+                                              projection={'labels': 1}):
+                    all_labels.update(current_device['labels'])
+                return jsonify(all_labels)
+
+            # Now handling POST and DELETE - they determine if the label is an added or removed one
+            entities_and_labels = self.get_request_data_as_object()
+            if not entities_and_labels.get('entities'):
+                return return_error("Cannot label entities without list of entities.", 400)
+            if not entities_and_labels.get('labels'):
+                return return_error("Cannot label entities without list of labels.", 400)
+
+            entities = [db.find_one({'internal_axon_id': entity_id})['specific_data'][0]
+                        for entity_id in entities_and_labels['entities']]
+            entities = [(entity[plugin_consts.PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
+
+            response = namespace.add_many_labels(entities, labels=entities_and_labels['labels'],
+                                                 are_enabled=request.method == 'POST')
+
+            if response.status_code != 200:
+                logger.error(f"Tagging did not complete. First {response.json()}")
+                return_error(f'Tagging did not complete. First error: {response.json()}', 400)
+
+            return '', 200
 
     ##########
     # DEVICE #
@@ -698,8 +731,8 @@ class GuiService(PluginBase):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, 'device')
 
     @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
-    def _device_by_id(self, device_id):
-        return self._entity_by_id('device', device_id)
+    def device_by_id(self, device_id):
+        return self._entity_by_id('device', device_id, ['installed_software', 'security_patches', 'users'])
 
     @paginated()
     @filtered()
@@ -729,45 +762,8 @@ class GuiService(PluginBase):
         return self._entity_views(request.method, 'device')
 
     @add_rule_unauthenticated("device/labels", methods=['GET', 'POST', 'DELETE'])
-    def labels(self):
-        """
-        GET Find all tags that currently belong to devices, to form a set of current tag values
-        POST Add new tags to the list of given devices
-        DELETE Remove old tags from the list of given devices
-        :return:
-        """
-        all_labels = set()
-        with self._get_db_connection(False) as db_connection:
-            devices_collection = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db']
-            if request.method == 'GET':
-                for current_device in devices_collection.find({"tags.type": "label"}, projection={"tags": 1}):
-                    for current_label in current_device['tags']:
-                        if current_label['type'] == 'label' and current_label['data'] == True:
-                            all_labels.add(current_label['name'])
-                return jsonify(all_labels)
-
-            # Now handling POST and DELETE - they determine if the label is an added or removed one
-            devices_and_labels = self.get_request_data_as_object()
-            if not devices_and_labels.get('devices'):
-                return return_error("Cannot label devices without list of devices.", 400)
-            if not devices_and_labels.get('labels'):
-                return return_error("Cannot label devices without list of labels.", 400)
-
-            devices = [devices_collection.find_one({'internal_axon_id': device_id})['adapters'][0]
-                       for device_id in
-                       devices_and_labels['devices']]
-            devices = [(device[plugin_consts.PLUGIN_UNIQUE_NAME], device['data']['id'])
-                       for device in devices]
-
-            response = self.devices.add_many_labels(devices,
-                                                    labels=devices_and_labels['labels'],
-                                                    are_enabled=request.method == 'POST')
-
-            if response.status_code != 200:
-                logger.error(f"Tagging did not complete. First {response.json()}")
-                return_error(f'Tagging did not complete. First error: {response.json()}', 400)
-
-            return '', 200
+    def device_labels(self):
+        return self._entity_labels(self.devices_db_view, self.devices)
 
     @add_rule_unauthenticated("device/disable", methods=['POST'])
     def disable_device(self):
@@ -794,7 +790,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
-        return self._entity_by_id('user', user_id)
+        return self._entity_by_id('user', user_id, ['associated_devices'])
 
     @paginated()
     @filtered()
@@ -822,6 +818,10 @@ class GuiService(PluginBase):
     @add_rule_unauthenticated("user/views", methods=['GET', 'POST'])
     def user_views(self):
         return self._entity_views(request.method, 'user')
+
+    @add_rule_unauthenticated("user/labels", methods=['GET', 'POST', 'DELETE'])
+    def user_labels(self):
+        return self._entity_labels(self.users_db_view, self.users)
 
     ###########
     # ADAPTER #

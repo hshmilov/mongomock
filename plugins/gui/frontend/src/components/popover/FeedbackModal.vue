@@ -1,6 +1,6 @@
 <template>
-    <modal v-show="launch" @confirm="handleConfirm" @close="handleClose">
-        <div slot="body" class="feedback-modal-body">
+    <modal v-show="launch" approveText="Save" @confirm="handleConfirm" @close="handleClose">
+        <div slot="body" class="feedback-modal-body" @keyup.esc="handleClose">
             <template v-if="status.processing">
                 <pulse-loader :loading="true" color="#26dad2"></pulse-loader>
             </template>

@@ -3,22 +3,19 @@
     	{title: 'notifications', path: {'name': 'Notifications'}},
         {title: notification.notificationDetails.data.title}
         ]">
-        <card>
-            <div slot="cardContent">{{notification.notificationDetails.data.content}}</div>
-        </card>
+        <div>{{notification.notificationDetails.data.content}}</div>
     </x-page>
 </template>
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-	import Card from '../../components/Card.vue'
 
 	import { mapState, mapActions } from 'vuex'
 	import { FETCH_NOTIFICATION, UPDATE_NOTIFICATIONS_SEEN } from '../../store/modules/notifications'
 
 	export default {
 		name: 'notification-view-container',
-		components: {xPage, Card},
+		components: {xPage},
 		computed: {
 			...mapState(['notification']),
 			notificationId () {

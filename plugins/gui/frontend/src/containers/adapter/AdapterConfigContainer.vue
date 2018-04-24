@@ -39,7 +39,6 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import DynamicTable from '../../components/tables/DynamicTable.vue'
-	import GenericForm from '../../components/GenericForm.vue'
 	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
 	import Modal from '../../components/popover/Modal.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
@@ -53,7 +52,7 @@
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, StatusIconLogoText, GenericForm, xPage, DynamicTable, xSchemaForm},
+		components: {Modal, StatusIconLogoText, xPage, DynamicTable, xSchemaForm},
 		computed: {
 			...mapState(['adapter']),
 			adapterUniquePluginName () {

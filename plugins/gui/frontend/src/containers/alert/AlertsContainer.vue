@@ -16,7 +16,6 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
     import Card from '../../components/Card.vue'
-    import GenericForm from '../../components/GenericForm.vue'
 	import ActionBar from '../../components/ActionBar.vue'
     import PaginatedTable from '../../components/tables/PaginatedTable.vue'
 
@@ -25,7 +24,7 @@
 
     export default {
         name: 'alert-container',
-        components: { xPage, Card, GenericForm, ActionBar, PaginatedTable },
+        components: { xPage, Card, ActionBar, PaginatedTable },
 		computed: {
             ...mapState(['alert']),
             ...mapGetters(['filterFields']),

@@ -107,6 +107,11 @@
   }
 }
 
+// Widths
+.w-20 {
+  width: 20vw;
+}
+
 
 /* Basic Components */
 
@@ -150,7 +155,7 @@ table {
   grid-row-gap: 16px;
   grid-auto-rows: auto;
   &.x-grid-col-2 {
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 2fr 1fr;
   }
 }
 
@@ -186,9 +191,9 @@ table {
   }
   &.link {
     width: auto;
-    margin: auto;
     background-color: transparent;
     color: $theme-black;
+    border: 0;
     .svg-fill { fill: $theme-black; }
     .svg-stroke { stroke: $theme-black; }
     &:hover {

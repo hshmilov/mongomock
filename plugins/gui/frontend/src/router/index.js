@@ -3,8 +3,10 @@ import Router from 'vue-router'
 import DashboardContainer from '../containers/dashboard/DashboardContainer.vue'
 import DevicesContainer from '../containers/device/DevicesContainer.vue'
 import DeviceConfigContainer from '../containers/device/DeviceConfigContainer.vue'
+import DeviceQueriesContainer from '../containers/device/DeviceQueriesContainer.vue'
 import UsersContainer from '../containers/user/UsersContainer.vue'
-import SavedQueriesContainer from '../containers/device/query/SavedQueriesContainer.vue'
+import UserConfigContainer from '../containers/user/UserConfigContainer.vue'
+import UserQueriesContainer from '../containers/user/UserQueriesContainer.vue'
 import PluginsContainer from '../containers/plugin/PluginsContainer.vue'
 import AdaptersContainer from '../containers/adapter/AdaptersContainer.vue'
 import AdapterConfigContainer from '../containers/adapter/AdapterConfigContainer.vue'
@@ -35,13 +37,22 @@ export default new Router({
 		},
 		{
 			path: '/device/query/saved',
-			name: 'Saved Queries',
-			component: SavedQueriesContainer
+			name: 'Device Queries',
+			component: DeviceQueriesContainer
 		},
 		{
 			path: '/user',
 			name: 'Users',
 			component: UsersContainer
+		},
+		{
+			path: '/user/:id',
+			component: UserConfigContainer
+		},
+		{
+			path: '/user/query/saved',
+			name: 'User Queries',
+			component: UserQueriesContainer
 		},
 		{
             path: '/plugin',
