@@ -39,3 +39,5 @@ pysnmp==4.4.4
 pycryptodomex==3.6.0
 ply==3.11
 pysmi==0.2.2
+weasyprint==0.42
+jinja2==2.10
