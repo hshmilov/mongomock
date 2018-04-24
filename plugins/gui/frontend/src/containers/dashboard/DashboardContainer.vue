@@ -32,11 +32,13 @@
             <div class="x-grid x-grid-col-2">
                 <label>Chart Title</label>
                 <input type="text" v-model="newDashboard.data.name" />
-                <vm-select v-model="newDashboard.data.queries" multiple filterable
-                           no-data-text="No saved queries" placeholder="Select saved queries...">
-                    <vm-option v-for="savedQuery in deviceQueries" :key="savedQuery.name"
-                               :value="savedQuery.name" :label="savedQuery.name"/>
-                </vm-select>
+                <template v-for="module in Object.keys(newDashboard.data.queries)">
+                    <label>{{module}} Queries</label>
+                    <vm-select v-model="newDashboard.data.queries[module]" multiple filterable
+                               no-data-text="No saved queries" placeholder="Select queries...">
+                        <vm-option v-for="query in queries[module]" :key="query.name" :value="query.name" :label="query.name"/>
+                    </vm-select>
+                </template>
             </div>
         </feedback-modal>
     </x-page>
@@ -63,6 +65,10 @@
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
+    const newDashboardData = {
+		name: '', queries: {device: [], user: []}
+	}
+
 	export default {
 		name: 'x-dashboard',
 		components: {
@@ -74,8 +80,11 @@
 				dashboard (state) {
 					return state['dashboard']
 				},
-				deviceQueries (state) {
-					return state['device'].queries.saved.data
+				queries (state) {
+					return Object.keys(this.newDashboard.data.queries).reduce((map, module) => {
+						map[module] = state[module].queries.saved.data
+                        return map
+                    }, {})
 				}
 			}),
 			lifecycle () {
@@ -113,9 +122,7 @@
 			return {
 				newDashboard: {
 					isActive: false,
-					data: {
-						name: '', queries: []
-					}
+					data: { ...newDashboardData }
 				},
 			}
 		},
@@ -123,8 +130,7 @@
 			...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({
 				fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
-				fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD,
-                removeDashboard: REMOVE_DASHBOARD,
+				fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
 				fetchQueries: FETCH_DATA_QUERIES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE
 			}),
 			getDashboardData () {
@@ -153,7 +159,7 @@
 			},
 			finishNewDashboard () {
 				this.newDashboard.isActive = false
-				this.newDashboard.data = {name: '', queries: []}
+				this.newDashboard.data = { ...newDashboardData }
 			},
             runFilter(filter) {
 				this.updateView({module: 'device', view: {
@@ -167,6 +173,7 @@
 		},
 		created () {
 			this.fetchQueries({module: 'device', type: 'saved'})
+			this.fetchQueries({module: 'user', type: 'saved'})
 
 			this.getDashboardData()
 			this.intervals = []
@@ -195,10 +202,12 @@
                 margin-bottom: 24px;
             }
             .vm-select {
-                grid-column: span 2;
                 .vm-select-input__inner {
                     width: 100%;
                 }
+            }
+            .x-grid {
+                grid-template-columns: 1fr 2fr;
             }
         }
     }

@@ -1311,7 +1311,6 @@ class GuiService(PluginBase):
         """
         dashboard_collection = self._get_collection('dashboard', limited_user=False)
         if request.method == 'GET':
-            queries_collection = self._get_collection('device_queries', limited_user=False)
             dashboard_list = []
             for dashboard_object in dashboard_collection.find(filter_archived()):
                 if not dashboard_object.get('name'):
@@ -1320,15 +1319,17 @@ class GuiService(PluginBase):
                     logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
                 else:
                     # Let's fetch and run them query filters
-                    for query_name in dashboard_object['queries']:
-                        query_object = queries_collection.find_one({'name': query_name})
-                        if not query_object or not query_object.get('filter'):
-                            logger.info(f'No filter found for query {query_name}')
-                        else:
-                            if not dashboard_object.get('data'):
-                                dashboard_object['data'] = {}
-                            dashboard_object['data'][query_name] = self.aggregator_db_connection[
-                                'devices_db_view'].find(parse_filter(query_object['filter']), {'_id': 1}).count()
+                    for module_name in dashboard_object['queries']:
+                        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
+                        for query_name in dashboard_object['queries'][module_name]:
+                            query_object = queries_collection.find_one({'name': query_name})
+                            if not query_object or not query_object.get('filter'):
+                                logger.info(f'No filter found for query {query_name}')
+                            else:
+                                if not dashboard_object.get('data'):
+                                    dashboard_object['data'] = {}
+                                dashboard_object['data'][query_name] = self.aggregator_db_connection[
+                                    f'{module_name}s_db_view'].find(parse_filter(query_object['filter']), {'_id': 1}).count()
 
                     dashboard_list.append(beautify_db_entry(dashboard_object))
             return jsonify(dashboard_list)

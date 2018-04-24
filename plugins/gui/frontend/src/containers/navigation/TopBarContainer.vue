@@ -138,7 +138,7 @@
             this.fetchLifecycle()
             this.intervals.push(setInterval(function () {
                 this.fetchLifecycle()
-            }.bind(this), 500))
+            }.bind(this), 10000))
 		},
 		beforeDestroy () {
             this.intervals.forEach(interval => clearInterval(interval))
