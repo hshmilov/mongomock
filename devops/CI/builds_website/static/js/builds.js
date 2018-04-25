@@ -156,7 +156,13 @@
                 ip = ec2["private_ip_address"];
                 ip_link = "";
                 if (ip != null) {
-                    ip_link = "<a href='http://" + ip + "' target='_blank'>http://" + ip + "</a>";
+                    // Yep i know its a bad thing....
+                    if (Date.parse(db["date"]) < Date.parse("2018-04-22")) {
+                        ip_link = "<a href='http://" + ip + "' target='_blank'>http://" + ip + "</a>";
+                    }
+                    else {
+                        ip_link = "<a href='https://" + ip + "' target='_blank'>https://" + ip + "</a>";
+                    }
                 }
 
                 if (db['configuration_name'] == undefined) {

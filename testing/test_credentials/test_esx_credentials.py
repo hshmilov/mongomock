@@ -4,20 +4,20 @@ client_details = [
         "user": "readonly@vsphere.local",
         "password": "a$Xvje99a$Xvje99",
         "verify_ssl": False
-    }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'),
-    # This vcenter is currently not active!!! we should return it as soon as it becomes active again
-    # ({
-    #     "host": "vcenter51.axonius.lan",
-    #     "user": "root",
-    #     "password": "vmware",
-    #     "verify_ssl": False
-    # }, "525345eb-51ef-f4d7-85bb-08e521b94528"),
-    ({
-        "host": "vcenter55.axonius.lan",
-        "user": "root",
-        "password": "vmware",
-        "verify_ssl": False
-    }, "525d738d-c18f-ed57-6059-6d3378a61442")]
+    }, '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b')]
+# This vcenter is currently not active!!! we should return it as soon as it becomes active again
+# ({
+#     "host": "vcenter51.axonius.lan",
+#     "user": "root",
+#     "password": "vmware",
+#     "verify_ssl": False
+# }, "525345eb-51ef-f4d7-85bb-08e521b94528"),
+# ({
+#     "host": "vcenter55.axonius.lan",
+#     "user": "root",
+#     "password": "vmware",
+#     "verify_ssl": False
+# }, "525d738d-c18f-ed57-6059-6d3378a61442")]
 
 # vcenter vm
 SOME_DEVICE_ID = '52e71bcb-db64-fe5e-40bf-8f5aa36f1e6b'
