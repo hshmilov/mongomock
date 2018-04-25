@@ -543,17 +543,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 if last_seen is None:
                     # No data on the last timestamp of the device. Not inserting this device.
                     no_timestamp_count += 1
-                    continue
                 if type(last_seen) != datetime:
-                    logger.error(f"Unrecognized date format for "
-                                 f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
-                                 f"Got type {type(last_seen)} instead of datetime")
-                    continue
+                    logger.warning(f"Unrecognized date format for "
+                                   f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
+                                   f"Got type {type(last_seen)} instead of datetime")
 
                 device = self._new_device_adapter()
                 self._parse_generic_ad_raw_data(device, device_raw)
                 device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
-                device.name = device_raw.get('name', )
                 device.description = device_raw.get('description')
                 device.network_interfaces = []
                 device.last_seen = last_seen
