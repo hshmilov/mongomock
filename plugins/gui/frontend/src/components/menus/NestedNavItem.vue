@@ -40,6 +40,7 @@
             letter-spacing: 2px;
             .svg-icon {
                 margin-right: 10px;
+                stroke-width: 24px;
                 .svg-fill {  fill: $color-btn  }
                 .svg-stroke {  stroke: $color-btn  }
             }

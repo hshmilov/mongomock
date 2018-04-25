@@ -49,6 +49,7 @@ import { alert } from '../store/modules/alert'
 import { notification } from '../store/modules/notifications'
 import { auth } from './modules/auth'
 import { dashboard } from '../store/modules/dashboard'
+import { report } from '../store/modules/report'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -115,7 +116,8 @@ export default new Vuex.Store({
 		alert,
         notification,
         auth,
-        dashboard
+        dashboard,
+		report
     }
 
 })

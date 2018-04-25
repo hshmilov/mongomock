@@ -169,12 +169,17 @@ table {
   color: $theme-white;
   background-color: $theme-blue;
   line-height: 30px;
-  padding: 4px;
+  padding: 2px 12px;
   text-align: center;
   width: 120px;
   &:hover {
     color: $theme-white;
     box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
+  }
+  &.inverse {
+    background-color: $theme-white;
+    color: $theme-blue;
+    border: 1px solid $theme-blue;
   }
   &.light {
     background-color: $grey-2;
@@ -206,6 +211,10 @@ table {
       .svg-stroke { stroke: $theme-orange; }
     }
   }
+  &.great {
+    font-size: 16px;
+    line-height: 30px;
+  }
   .svg-fill { fill: $theme-white; }
   .svg-stroke { stroke: $theme-white; }
 }
@@ -236,6 +245,13 @@ table {
         top: 4px;
       }
     }
+  }
+}
+
+.x-content {
+  padding: 12px;
+  .x-section {
+    margin-top: 24px;
   }
 }
 

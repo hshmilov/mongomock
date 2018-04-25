@@ -47,7 +47,6 @@
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-	import NamedSection from '../../components/NamedSection.vue'
 	import Card from '../../components/Card.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
@@ -67,7 +66,7 @@
 
 	export default {
 		name: 'settings-container',
-		components: {xPage, NamedSection, Card, Tabs, Tab, xDateEdit, Checkbox, xSelect},
+		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox, xSelect},
 		computed: {
 			...mapState(['dashboard', 'settings']),
 			limit () {

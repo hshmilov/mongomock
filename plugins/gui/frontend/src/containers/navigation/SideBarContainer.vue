@@ -26,6 +26,7 @@
                 </nested-nav-item>
                 <nested-nav-item route-name="Alerts" icon-name="alert"/>
                 <nested-nav-item route-name="Adapters" icon-name="adapter"/>
+                <nested-nav-item route-name="Reports" icon-name="report"/>
             </nested-nav-bar>
         </nav>
     </aside>
