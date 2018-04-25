@@ -40,7 +40,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         self.correlation_preconditions = [has_hostname, has_mac, has_serial]
         return super()._prefilter_device(devices)
 
-    def _correlate_mac_ip_no_contradiction(self, adapters_to_correlate):
+    def _correlate_mac(self, adapters_to_correlate):
         """
         To write a correlator rule we do a few things:
         1.  list(filtered_adapters_list) -
@@ -70,8 +70,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [],
                                       [],
-                                      [is_different_plugin, compare_macs, ips_do_not_contradict],
-                                      {'Reason': 'They have the same MAC and IPs don\'t contradict'},
+                                      [compare_macs],
+                                      {'Reason': 'They have the same MAC'},
                                       'StaticAnalysis')
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
@@ -82,7 +82,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [get_hostname],
                                       [compare_device_normalized_hostname],
                                       [],
-                                      [is_different_plugin, ips_do_not_contradict],
+                                      [ips_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
                                       'StaticAnalysis')
 
@@ -94,7 +94,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [lambda a, b: a['data']['device_serial'].upper() == b['data'][
                                           'device_serial'].upper()],
                                       [],
-                                      [is_different_plugin],
+                                      [],
                                       {'Reason': 'They have the same serial'},
                                       'StaticAnalysis')
 
@@ -125,7 +125,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_hostname_ip(adapters_to_correlate)
 
         # Now let's find devices by MAC, and IPs don't contradict (we allow empty)
-        yield from self._correlate_mac_ip_no_contradiction(adapters_to_correlate)
+        yield from self._correlate_mac(adapters_to_correlate)
         # for ad specifically we added the option to correlate on hostname basis alone (dns name with the domain)
         yield from self._correlate_with_ad(adapters_to_correlate)
 
