@@ -64,7 +64,7 @@
             }
         }
         .checkbox-label {
-            margin-left: 8px;
+            margin-left: 12px;
             margin-bottom: 0;
             &:empty {
                 margin-left: 0;

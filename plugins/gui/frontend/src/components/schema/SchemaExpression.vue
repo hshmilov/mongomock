@@ -130,7 +130,8 @@
 			value (newValue) {
                 if (newValue.field !== this.expression.field) {
                 	this.expression = { ...newValue }
-                	this.newExpression = true
+					this.updateFieldSpace()
+					this.newExpression = true
                 }
             },
 			valueSchema (newSchema, oldSchema) {
@@ -225,13 +226,20 @@
                     bracketWeight += 1
                 }
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
-			}
+			},
+            updateFieldSpace() {
+				let fieldSpaceMatch = /adapters_data\.(\w+_adapter)\./.exec(this.expression.field)
+				if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
+					this.fieldSpace = fieldSpaceMatch[1]
+				}
+            }
 		},
 		updated () {
 			this.compileExpression()
 		},
         created() {
 			if (this.expression.field) {
+				this.updateFieldSpace()
 				this.compileExpression()
             }
         }
@@ -247,9 +255,6 @@
         align-items: center;
         grid-gap: 8px;
         margin-bottom: 20px;
-        .grid-span2 {
-            grid-column-end: span 2;
-        }
         select, input:not([type=checkbox]) {
             height: 30px;
             width: 100%;

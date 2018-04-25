@@ -209,7 +209,7 @@
 				this.$refs.greatInput.parentElement.click()
             },
 			selectQuery ({ filter, expressions }) {
-            	this.queryExpressions = expressions
+            	this.queryExpressions = expressions || [ { ...expression } ]
 				this.updateFilter(filter)
 				this.focusInput()
 				this.$refs.greatInput.parentElement.click()
@@ -309,6 +309,8 @@
             }
         }
         .query-wizard {
+            max-height: 60vh;
+            overflow: auto;
             padding: 12px;
             .x-btn.link {
                 margin-right: 8px;

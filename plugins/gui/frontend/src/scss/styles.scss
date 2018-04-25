@@ -107,11 +107,14 @@
   }
 }
 
+.grid-span2 {
+  grid-column-end: span 2;
+}
+
 // Widths
 .w-20 {
   width: 20vw;
 }
-
 
 /* Basic Components */
 

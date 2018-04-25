@@ -28,57 +28,63 @@
                                 <span class="form-group-title">Alert Trigger</span>
                             </div>
                             <div>Monitor selected query and test whether devices number...</div>
-                            <checkbox class="ml-4 mt-2" label="Increased" v-model="alert.triggers.increase"></checkbox>
-                            <div class="form-inline" v-show="alert.triggers.increase">
-                                <label for="TriggerAbove">Above:</label>
-                                <input id="TriggerAbove" type="number" class="ml-4" v-model="alert.triggers.above"  min="0">
+                            <div class="form-group-content">
+                                <checkbox :class="{'grid-span2': !alert.triggers.increase}" label="Increased"
+                                          v-model="alert.triggers.increase"/>
+                                <div class="form-inline" v-if="alert.triggers.increase">
+                                    <label for="TriggerAbove">Above:</label>
+                                    <input id="TriggerAbove" type="number" v-model="alert.triggers.above"  min="0">
+                                </div>
+                                <checkbox :class="{'grid-span2': !alert.triggers.decrease}" label="Decrease"
+                                          v-model="alert.triggers.decrease" />
+                                <div class="form-inline" v-if="alert.triggers.decrease">
+                                    <label for="TriggerBelow">Below:</label>
+                                    <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0">
+                                </div>
+                                <checkbox class="grid-span2" label="Not Changed" v-model="alert.triggers.no_change"/>
                             </div>
-                            <checkbox class="ml-4" label="Decrease" v-model="alert.triggers.decrease"></checkbox>
-                            <div class="form-inline" v-show="alert.triggers.decrease">
-                                <label for="TriggerBelow">Below:</label>
-                                <input id="TriggerBelow" type="number" class="ml-4" v-model="alert.triggers.below" min="0">
-                            </div>
-                            <checkbox class="ml-4" label="Not Changed" v-model="alert.triggers.no_change"></checkbox>
                         </div>
                         <div class="form-group col-6">
                             <div class="form-group-header">
                                 <i class="icon-exclamation-triangle"></i>
                                 <span class="form-group-title">Alert Severity</span>
                             </div>
-                            <div class="col-4 mt-2 ml-4">
-                                <div>
+                            <div class="form-group-content">
+                                <div class="grid-span2">
                                     <input id="SeverityInfo" type="radio" value="info" v-model="alert.severity">
-                                    <label for="SeverityInfo"><status-icon value="info"></status-icon>Info</label>
+                                    <label for="SeverityInfo" class="ml-2"><status-icon value="info"/>Info</label>
                                 </div>
-                                <div>
+                                <div class="grid-span2">
                                     <input id="SeverityWarning" type="radio" value="warning" v-model="alert.severity">
-                                    <label for="SeverityWarning"><status-icon value="warning"></status-icon>Warning</label>
+                                    <label for="SeverityWarning" class="ml-2"><status-icon value="warning"/>Warning</label>
                                 </div>
-                                <div>
+                                <div class="grid-span2">
                                     <input id="SeverityError" type="radio" value="error" v-model="alert.severity">
-                                    <label for="SeverityError"><status-icon value="error"></status-icon>Error</label>
+                                    <label for="SeverityError" class="ml-2"><status-icon value="error"/>Error</label>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="row row-divider">
                         <!-- group for defining what action will occur upon trigger -->
-                        <div class="form-group col-6">
+                        <div class="form-group">
                             <div class="form-group-header">
                                 <i class="icon-bell-o"></i><span class="form-group-title">Action</span>
                             </div>
-                            <checkbox class="ml-4 mt-2" label="Push a system notification" v-model="actions.notification"></checkbox>
-                            <checkbox class="ml-4 mt-2 inline" label="Send an Email" v-model="actions.mail"/>
-                            <template v-if="actions.mail">
-                                <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
+                            <div class="form-group-content">
+                                <checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
+                                <checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email" v-model="actions.mail"/>
+                                <template v-if="actions.mail">
+                                    <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
                                            no-data-text="Type mail addresses..." :default-first-option="true"/>
-                            </template>
-                            <template v-if="alert.triggers.increase">
-                                <checkbox class="ml-4 mt-2 inline" label="Tag Devices" v-model="actions.tag"/>
-                                <template v-if="actions.tag">
-                                    <input class="form-control" id="tagName" v-model="tagName">
                                 </template>
-                            </template>
+                                <template v-if="alert.triggers.increase">
+                                    <checkbox :class="{'grid-span2': !actions.tag}" label="Tag Devices" v-model="actions.tag"/>
+                                    <template v-if="actions.tag">
+                                        <input class="form-control" id="tagName" v-model="tagName">
+                                    </template>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -209,8 +215,29 @@
         .checkbox.inline.checked {
             display: inline;
         }
-        #tagName {
-        width: 150px;
+    }
+    .form-group {
+        .form-group-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            align-items: center;
+            grid-gap: 8px;
+            margin-left: 24px;
+            margin-top: 12px;
+            .vm-select {
+                .vm-select-input__inner {
+                    width: 100%;
+                }
+            }
+            .form-inline {
+                display: grid;
+                grid-template-columns: 1fr 3fr;
+                align-items: center;
+            }
+            .status-icon {
+                border-radius: 4px;
+                margin-right: 4px;
+            }
         }
     }
 </style>

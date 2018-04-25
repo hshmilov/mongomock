@@ -82,6 +82,7 @@
             }
         }
         .x-body {
+            padding: 0;
             height: calc(100vh - 170px);
             overflow: auto;
         }
