@@ -348,19 +348,19 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 user.account_expires = parse_date(user_raw.get("accountExpires"))
                 user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
                 pwd_last_set = parse_date(user_raw.get("pwdLastSet"))
-                if pwd_last_set is not None:
+                if is_date_real(pwd_last_set):
                     user.last_password_change = pwd_last_set
                     # parse maxPwdAge
                     max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
                     if max_pwd_age is not None:
                         user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
                 last_logoff = parse_date(user_raw.get("lastLogoff"))
-                if last_logoff is not None:
+                if is_date_real(last_logoff):
                     user.last_logoff = last_logoff
                     use_timestamps.append(last_logoff)
 
                 last_logon = parse_date(user_raw.get("lastLogon"))
-                if last_logon is not None:
+                if is_date_real(last_logon):
                     user.last_logon = last_logon
                     use_timestamps.append(last_logon)
 
@@ -543,7 +543,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 if last_seen is None:
                     # No data on the last timestamp of the device. Not inserting this device.
                     no_timestamp_count += 1
-                if type(last_seen) != datetime:
+                elif is_date_real(last_seen):
+                    # Converting back to None since the date is not real
+                    # You do this check in order to diff between devices with no dates, and devices with wrong dates
+                    last_seen = None
                     logger.warning(f"Unrecognized date format for "
                                    f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
                                    f"Got type {type(last_seen)} instead of datetime")
