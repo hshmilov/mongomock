@@ -59,16 +59,25 @@ class TestAdAdapter(AdapterTestBase):
         # assert len(devices_list) == 0, "Found device that should have been filtered"
         # # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
+        # Check Printers
+        printers_list = self.axonius_system.get_devices_with_condition(
+            {
+                "adapters.data.id": DEVICE_ID_FOR_CLIENT_1,
+                "adapters.data.ad_printers.name": PRINTER_NAME_FOR_CLIENT1
+            }
+        )
+        assert len(printers_list) == 1, f"Did not find printer {PRINTER_NAME_FOR_CLIENT1}"
+
     def test_fetch_users(self):
         # I'm going to assume this has already been aggregated. TODO: Change test_fetch_devices to test_fetch_data
         # and check that there.
-        devices_list = self.axonius_system.get_users_with_condition(
+        users_list = self.axonius_system.get_users_with_condition(
             {
                 "adapters.data.username": USER_ID_FOR_CLIENT_1,
                 "adapters.data.ad_sid": USER_SID_FOR_CLIENT_1
             }
         )
-        assert len(devices_list) == 1, f"Did not find user {USER_ID_FOR_CLIENT_1}"
+        assert len(users_list) == 1, f"Did not find user {USER_ID_FOR_CLIENT_1}"
 
     def test_ip_resolving(self):
         self.adapter_service.resolve_ip()

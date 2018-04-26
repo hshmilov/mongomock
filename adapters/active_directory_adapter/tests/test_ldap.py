@@ -68,6 +68,19 @@ def test_devices(ldap_connection: LdapConnection):
     assert has_disabled_device is True
 
 
+def test_printers(ldap_connection: LdapConnection):
+    printers = ldap_connection.get_printers_list()
+    printers_dict = {}
+    for printer in printers:
+        printers_dict[printer['distinguishedName']] = printer
+
+    assert len(printers_dict) > 0
+
+    test_printer = printers_dict["CN=DESKTOP-MPP10U1-AXONIUS-OFFICE-PRINTER (HP Color LaserJet MF,CN=DESKTOP-MPP10U1,"
+                                 "CN=Computers,DC=TestDomain,DC=test"]
+    assert test_printer["serverName"] == "DESKTOP-MPP10U1.TestDomain.test"
+
+
 def test_get_domain_properties(ldap_connection: LdapConnection):
     domain_properties = ldap_connection.domain_properties
     assert "maxPwdAge" in domain_properties

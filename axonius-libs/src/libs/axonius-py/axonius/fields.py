@@ -167,7 +167,12 @@ class Field(object):
                 value = None
 
             if value is not None:
+                # If we expect an str, but we get a list with one str value, just take this value.
+                if isinstance(value, list) and len(value) == 1 and field_type == str and isinstance(value[0], str):
+                    value = value[0]
+
                 # We want to avoid stupid int/str/float mistakes. so lets try converting these values first.
+                # This means, that if we expect an str but get something else, it will be auto-converted.
                 if not isinstance(value, field_type) and (field_type == str or field_type == int or field_type == float):
                     try:
                         value = field_type(value)

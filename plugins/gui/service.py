@@ -235,6 +235,8 @@ class GuiService(PluginBase):
                                                                  upsert=True)
         self.add_default_queries('device', 'default_queries_devices.ini')
         self.add_default_queries('user', 'default_queries_users.ini')
+        self.add_default_views('device', 'default_views_devices.ini')
+        self.add_default_views('user', 'default_views_users.ini')
 
     def add_default_queries(self, module_name, default_queries_ini_path):
         """
@@ -260,6 +262,30 @@ class GuiService(PluginBase):
         except Exception:
             logger.exception(f'Error adding default queries')
 
+    def add_default_views(self, module_name, default_views_ini_path):
+        """
+        Adds default queries.
+        :param module_name: "device" or "user"
+        :param default_views_ini_path: the file path with the queries
+        :return:
+        """
+        # Load default queries and save them to the DB
+        try:
+            config = configparser.ConfigParser()
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), default_views_ini_path)))
+
+            # Save default queries
+            for name, view in config.items():
+                if name == 'DEFAULT':
+                    # ConfigParser always has a fake DEFAULT key, skip it
+                    continue
+                try:
+                    self._insert_view(module_name, name, json.loads(view['view']))
+                except Exception:
+                    logger.exception(f'Error adding default view {name}')
+        except Exception:
+            logger.exception(f'Error adding default views')
+
     def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
         queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
@@ -272,6 +298,17 @@ class GuiService(PluginBase):
                                                                      'archived': False}}, upsert=True)
         logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
         return result.get('inserted_id', '')
+
+    def _insert_view(self, module_name, name, mongo_view):
+        views_collection = self._get_collection(f'{module_name}_views', limited_user=False)
+        existed_view = views_collection.find_one({'name': name})
+        if existed_view is not None and not existed_view.get('archived'):
+            logger.info(f'view {name} already exists id: {existed_view["_id"]}')
+            return existed_view['_id']
+
+        result = views_collection.insert_one({'name': name, 'view': mongo_view})
+        logger.info(f'Added view {name} id: {result.inserted_id}')
+        return result.inserted_id
 
     ########
     # DATA #

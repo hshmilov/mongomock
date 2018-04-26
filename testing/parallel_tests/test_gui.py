@@ -53,6 +53,20 @@ def test_default_queries():
     assert existed_query is not None
 
 
+def test_default_views():
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
+
+    assert gui_service.is_up()  # default views are inserted when the GUI service is starting, make sure it is up...
+    views = axonius_system.db.get_collection(gui_service.unique_name, 'device_views')
+
+    # A sample Default View as set in default_queries_devices.ini under gui/src
+    name = 'AD Printers'
+
+    existed_query = views.find_one({'name': name})
+    assert existed_query is not None
+
+
 def test_labels_via_gui():
     axonius_system = get_service()
     gui_service = axonius_system.gui

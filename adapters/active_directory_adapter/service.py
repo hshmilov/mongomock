@@ -19,6 +19,7 @@ import threading
 import time
 import subprocess
 
+from collections import defaultdict
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
     LDAP_PASSWORD_NOT_REQUIRED, LDAP_DONT_EXPIRE_PASSWORD
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
@@ -61,9 +62,21 @@ class AvailableIps(SmartJsonClass):
     available_ips = ListField(AvailableIp, "Map between IPs and their origin")
 
 
+class ADPrinter(SmartJsonClass):
+    """ A definition for an active directory printer"""
+
+    name = Field(str, "Printer Name")
+    description = Field(str, "Printer Description")
+    server_name = Field(str, "Printer Server Name")
+    share_name = Field(str, "Printer Share Name")
+    location_name = Field(str, "Printer Location")
+    driver_name = Field(str, "Printer Driver Name")
+
+
 class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
     class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
         ad_service_principal_name = Field(str, "AD Service Principal Name")
+        ad_printers = ListField(ADPrinter, "AD Attached Printers")
 
     class MyUserAdapter(UserAdapter, ADEntity):
         ad_user_principal_name = Field(str, "AD User Principal Name")
@@ -237,7 +250,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
             "type": "array"
         }
 
-    def _query_devices_by_client(self, client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data: LdapConnection):
         """
         Get all devices from a specific Dc
 
@@ -246,7 +259,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
-        return client_data.get_device_list()
+        return client_data.get_device_list(), client_data.get_printers_list()
 
     def _query_users_by_client(self, client_name, client_data):
         """
@@ -397,9 +410,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                         user_raw.get("photo") or \
                         user_raw.get("thumbnailLogo")
                     if thumbnail_photo is not None:
+                        if type(thumbnail_photo) == list:
+                            thumbnail_photo = thumbnail_photo[0]        # I think this can happen from some reason..
                         user.image = bytes_image_to_base64(thumbnail_photo)
                 except:
-                    logger.exception("Exception while setting thumbnailPhoto.")
+                    logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")
 
                 # User Personal Details
                 user.user_title = user_raw.get("title")
@@ -478,7 +493,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                                                                         'raw.AXON_DC_ADDR': True,
                                                                         'hostname': True})
 
-            logger.info(f"Going to resolve for {hosts.count()} hosts")
+            logger.debug(f"Going to resolve for {hosts.count()} hosts")
 
             did_one_resolved = False
 
@@ -520,7 +535,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         self._resolver_scheduler.wakeup()
         return ''
 
-    def _parse_raw_data(self, devices_raw_data):
+    def _parse_raw_data(self, devices_and_printers_raw_data):
+        devices_raw_data, printers_raw_data = devices_and_printers_raw_data
+
         devices_collection = self._get_collection(DEVICES_DATA)
         all_devices = devices_collection.find({}, projection={'_id': False, 'id': True,
                                                               NETWORK_INTERFACES_FIELD: True,
@@ -530,6 +547,26 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                            for device in all_devices}
         to_insert = []
         no_timestamp_count = 0
+
+        # These are generators but just to be sure if there are no devices or printers
+        # I want them to be [] and not None.
+        if devices_raw_data is None:
+            devices_raw_data = []
+
+        if printers_raw_data is None:
+            printers_raw_data = []
+
+        # First, parse the printers, because we are going to assign them to devices.
+        printers_raw_dict = defaultdict(list)
+        for printer_raw in printers_raw_data:
+            dn = printer_raw.get("shortServerName")
+            if dn is not None:
+                printers_raw_dict[dn].append(printer_raw)
+            else:
+                logger.error(f"Found printer without shortServerName: {printer_raw}")
+
+        # Now, Lets parse the devices
+
         for device_raw in devices_raw_data:
             try:
                 last_logon = device_raw.get('lastLogon')
@@ -540,16 +577,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 else:
                     last_seen = last_logon or last_logon_timestamp
 
-                if last_seen is None:
+                if last_seen is None or is_date_real(last_seen) is False:
                     # No data on the last timestamp of the device. Not inserting this device.
-                    no_timestamp_count += 1
-                elif is_date_real(last_seen):
-                    # Converting back to None since the date is not real
-                    # You do this check in order to diff between devices with no dates, and devices with wrong dates
+                    # This can happen quite a lot so we don't print any message.
                     last_seen = None
-                    logger.warning(f"Unrecognized date format for "
-                                   f"{device_raw.get('dNSHostName', device_raw.get('name', ''))}. "
-                                   f"Got type {type(last_seen)} instead of datetime")
+                    no_timestamp_count += 1
 
                 device = self._new_device_adapter()
                 self._parse_generic_ad_raw_data(device, device_raw)
@@ -575,6 +607,23 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                 user_account_control = device_raw.get("userAccountControl")
                 if user_account_control is not None and type(user_account_control) == int:
                     device.device_disabled = bool(user_account_control & LDAP_ACCOUNTDISABLE)
+
+                # Add all printers associated to this device
+                device_raw_cn = device_raw.get("cn")
+                if device_raw_cn is not None and device_raw_cn in printers_raw_dict:
+                    # printers_raw_dict is a (key, value) dict where key is a server (device) cn
+                    # and the value is a list of printers that are associated to it.
+                    # so printers_raw_dict[some_device_cn] will give the list of printers that are
+                    # associated to it.
+                    for printer_raw in printers_raw_dict[device_raw_cn]:
+                        device.ad_printers.append(ADPrinter(
+                            name=printer_raw.get("printerName"),
+                            description=printer_raw.get("description"),
+                            server_name=printer_raw.get("serverName"),
+                            share_name=printer_raw.get("printShareName"),
+                            location_name=printer_raw.get("location"),
+                            driver_name=printer_raw.get("driverName")
+                        ))
 
                 device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])
                 if device_interfaces is not None:

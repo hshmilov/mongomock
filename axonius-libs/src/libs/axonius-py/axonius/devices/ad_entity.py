@@ -69,7 +69,7 @@ class ADEntity(object):
     ad_uac_homedir_required = Field(bool, "AD Home Folder Required")
     ad_uac_password_not_required = Field(bool, "AD Password Not Required")
     ad_uac_password_cant_change = Field(bool, "AD Password Can't Change")
-    ad_uac_encrypted_text_password_allowed = Field(bool, "AD Encrypted Text Password Allowed")
+    ad_uac_encrypted_text_password_allowed = Field(bool, "AD Encrypted Text Password Allowed (Reversible Password)")
     ad_uac_temp_duplicate_account = Field(bool, "AD Temp Duplicate Account")
     ad_uac_normal_account = Field(bool, "AD Normal Account")
     ad_uac_interdomain_trust_account = Field(bool, "AD Interdomain Trust Account")

@@ -222,13 +222,15 @@ def get_first_object_from_dn(dn):
 
 
 def get_member_of_list_from_memberof(member_of):
-    if member_of is not None:
-        # member_of is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
-        # so we take each string in the list and transform it to d.b.c.a
-        return [".".join([x[3:] for x in member_of_entry.strip().split(",")]) for member_of_entry in member_of]
+    try:
+        if member_of is not None:
+            # member_of is a list of dn's that look like "CN=d,OU=b,DC=c,DC=a"
+            # so we take each string in the list and transform it to d.b.c.a
+            return [".".join([x[3:] for x in member_of_entry.strip().split(",")]) for member_of_entry in member_of]
+    except Exception:
+        pass
 
-    else:
-        return None
+    return None
 
 
 def is_valid_ip(ip):
@@ -327,7 +329,10 @@ def parse_date(datetime_to_parse):
         if type(datetime_to_parse) == datetime.datetime:
             # sometimes that happens too
             return datetime_to_parse
-        return dateutil.parser.parse(datetime_to_parse, ignoretz=True)
+        d = dateutil.parser.parse(datetime_to_parse, ignoretz=True)
+
+        # Sometimes, this would be a fake date (see is_date_real). in this case return None
+        return d if is_date_real(d) else None
     except (TypeError, ValueError):
         return None
 

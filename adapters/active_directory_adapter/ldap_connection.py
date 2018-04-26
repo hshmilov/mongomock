@@ -113,7 +113,37 @@ class LdapConnection(object):
 
         raise ValueError(f"Error - couldn't find domain (objectClass=domainDNS) in client {self.domain_name}!")
 
-    @retry(stop_max_attempt_number=3, wait_fixed=1000 * 3)
+    @retry(stop_max_attempt_number=4, wait_fixed=1000 * 3)
+    def get_printers_list(self):
+        """
+        Returns all printers in the directory.
+        :return:
+        """
+
+        try:
+            # See comment about paged_search in self.get_device_list
+            entry_generator = self.ldap_connection.extend.standard.paged_search(
+                search_base=self.domain_name,
+                search_filter='(objectClass=printQueue)',
+                attributes='*',
+                paged_size=self.ldap_page_size,
+                generator=True)
+
+            printers_count = 0
+            for printer in entry_generator:
+                if 'attributes' in printer:
+                    printers_count = printers_count + 1
+                    if printers_count % 100 == 0:
+                        logger.info(f"Got {printers_count} users so far")
+
+                    yield dict(printer['attributes'])
+
+        except ldap3.core.exceptions.LDAPException as ldap_error:
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
+            raise LdapException(str(ldap_error))
+
+    @retry(stop_max_attempt_number=4, wait_fixed=1000 * 3)
     def get_device_list(self):
         """Fetch device list from the ActiveDirectory.
 
@@ -126,9 +156,6 @@ class LdapConnection(object):
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
-            self._connect_to_server()
-
             if self.should_fetch_disabled_devices is True:
                 search_filter = '(objectClass=Computer)'
             else:
@@ -168,10 +195,11 @@ class LdapConnection(object):
                 return []
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
-            # A specific connection is usually terminated if we do not use it a lot.
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
             raise LdapException(str(ldap_error))
 
-    @retry(stop_max_attempt_number=3, wait_fixed=1000 * 3)
+    @retry(stop_max_attempt_number=4, wait_fixed=1000 * 3)
     def get_users_list(self):
         """
         returns a list of objects representing the users in this DC.
@@ -182,9 +210,6 @@ class LdapConnection(object):
         """
 
         try:
-            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
-            self._connect_to_server()
-
             if self.should_fetch_disabled_users is True:
                 search_filter = '(&(objectCategory=person)(objectClass=user))'
             else:
@@ -214,6 +239,8 @@ class LdapConnection(object):
                     yield dict(user['attributes'])
 
         except ldap3.core.exceptions.LDAPException as ldap_error:
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            self._connect_to_server()
             raise LdapException(str(ldap_error))
 
     def change_user_enabled_state(self, distinguished_name: str, enabled: bool) -> bool:
