@@ -1,30 +1,30 @@
 <template>
     <x-page title="Reporting">
-        <div slot="action">
-            <a class="x-btn great" @click="downloadReport" tabindex="1">Download Now</a>
-        </div>
-        <x-box class="x-report-email">
+        <x-box class="x-report">
+            <div class="x-report-download">
+                <a class="x-btn great" @click="downloadReport" tabindex="1">Download Now</a>
+            </div>
             <h3>Periodical Report Email</h3>
             <div class="x-content">
                 <div>
                     <h4>Email Frequency</h4>
                     <div class="x-grid">
-                        <input id="period-daily" type="radio" value="daily" v-model="emailReport.period">
+                        <input disabled id="period-daily" type="radio" value="daily" v-model="emailReport.period">
                         <label for="period-daily">Daily</label>
-                        <input id="period-weekly" type="radio" value="weekly" v-model="emailReport.period">
+                        <input disabled id="period-weekly" type="radio" value="weekly" v-model="emailReport.period">
                         <label for="period-weekly">Weekly</label>
-                        <input id="period-monthly" type="radio" value="monthly" v-model="emailReport.period">
+                        <input disabled id="period-monthly" type="radio" value="monthly" v-model="emailReport.period">
                         <label for="period-monthly">Monthly</label>
                     </div>
                 </div>
                 <div class="x-section">
                     <h4>Email List</h4>
                     <vm-select v-model="emailReport.emails" multiple filterable allow-create placeholder=""
-                               no-data-text="Type mail addresses..." :default-first-option="true"/>
+                               no-data-text="Type mail addresses..." :default-first-option="true" disabled/>
                 </div>
                 <div class="x-section x-btn-container">
-                    <a class="x-btn" tabindex="6" @click="saveReporting">Save</a>
-                    <a class="x-btn inverse" tabindex="7" @click="testReporting">Test Now</a>
+                    <a class="x-btn disabled" tabindex="6">Save</a>
+                    <a class="x-btn disabled inverse" tabindex="7">Test Now</a>
                 </div>
             </div>
         </x-box>
@@ -50,19 +50,19 @@
             }
         },
         methods: {
-            ...mapActions({downloadReport: DOWNLOAD_REPORT}),
-            saveReporting() {
-
-            },
-            testReporting() {
-
-            }
+            ...mapActions({downloadReport: DOWNLOAD_REPORT})
         }
 	}
 </script>
 
 <style lang="scss">
-    .x-report-email {
+    .x-report {
+        .x-report-download {
+            margin-bottom: 24px;
+            .x-btn {
+                background-color: $theme-orange;
+            }
+        }
         .x-grid {
             grid-template-columns: 20px auto;
             grid-row-gap: 8px;

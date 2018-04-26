@@ -1460,6 +1460,9 @@ class GuiService(PluginBase):
 
         :return:
         """
+        devices_total = self.aggregator_db_connection['devices_db_view'].find({}).count()
+        if not devices_total:
+            return jsonify([])
         coverage_list = [
             {'title': 'Managed Device', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
              'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},

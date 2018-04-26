@@ -174,7 +174,13 @@ table {
   width: 120px;
   &:hover {
     color: $theme-white;
-    box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
+    &:not(.disabled) {
+      box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
+    }
+  }
+  &.disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   &.inverse {
     background-color: $theme-white;
