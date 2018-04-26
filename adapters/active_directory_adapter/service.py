@@ -881,6 +881,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
             logger.error(err_log)
             raise ValueError(err_log)
 
+        # Temp debugging to find a really rare race condition
+        logger.info(f"Success in execute_wmi_smb, requested {command_list} and got {command_stdout}")
+
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
 
@@ -900,6 +903,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         commands_list = []
         for command in shell_command_windows:
             commands_list.append({"type": "shell", "args": [command]})
+
+        logger.info(f"Got execute shell {shell_commands}, now sending {commands_list}")
 
         return self.execute_wmi_smb(device_data, commands_list)
 
