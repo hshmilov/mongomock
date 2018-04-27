@@ -49,3 +49,6 @@ netmiko==2.0.1
 dpkt==1.9.1
 mongomock==3.9.0
 pyOpenSSL==17.5.0
+numpy==1.14.2
+username-generator==2.0.0
+pypng==0.0.18

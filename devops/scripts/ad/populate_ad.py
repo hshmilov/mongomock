@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 to make this work
 pip3 install username_generator, pypng, numpy

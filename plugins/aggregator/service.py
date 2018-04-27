@@ -87,6 +87,10 @@ class AggregatorService(PluginBase, Triggerable):
         # The following creates a view that has all adapters and tags
         # of type "adapterdata" inside one (unsorted!) array.
 
+        self.aggregator_db_connection["devices_db"].create_index([
+            (f'adapters.{PLUGIN_UNIQUE_NAME}', "text"), ('adapters.data.id', "text")
+        ])
+
         for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
             try:
                 self.aggregator_db_connection.command({

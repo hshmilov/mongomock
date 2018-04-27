@@ -41,12 +41,14 @@ class SccmAdapter(AdapterBase):
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
-        with client_data:
+        try:
+            client_data.connect()
             if self._last_seen_timedelta < timedelta(0):
-                return list(client_data.query(consts.SCCM_QUERY.format('')))
+                yield from client_data.query(consts.SCCM_QUERY.format(''))
             else:
-                return list(client_data.query(consts.SCCM_QUERY.format(
-                    consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600))))
+                yield from client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600)))
+        finally:
+            client_data.logout()
 
     def _clients_schema(self):
         return {

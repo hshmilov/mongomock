@@ -252,8 +252,8 @@ class AdapterBase(PluginBase, Feature, ABC):
         deleted_adapter_devices_count = 0
         for axonius_device in self.__find_old_axonius_devices(device_age_cutoff):
 
-            old_adapter_devices = list(
-                self.__extract_old_adapter_devices_from_axonius_device(axonius_device, device_age_cutoff))
+            old_adapter_devices = self.__extract_old_adapter_devices_from_axonius_device(axonius_device,
+                                                                                         device_age_cutoff)
 
             for index, adapter_device_to_remove in enumerate(old_adapter_devices):
                 if index < len(axonius_device['adapters']) - 1:
@@ -347,6 +347,9 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         skipped_count = 0
         users_ids = []
+
+        self._save_field_names_to_db("users")
+
         for parsed_user in self._parse_users_raw_data(raw_users):
             assert isinstance(parsed_user, UserAdapter)
 
@@ -364,8 +367,6 @@ class AdapterBase(PluginBase, Feature, ABC):
                 continue
 
             yield parsed_user
-
-        self._save_field_names_to_db("users")
 
         if skipped_count > 0:
             logger.info(f"Skipped {skipped_count} old users")
@@ -446,8 +447,7 @@ class AdapterBase(PluginBase, Feature, ABC):
             time_before_query = datetime.now()
             raw_data, parsed_data = self._try_query_data_by_client(client_name, data_type)
             query_time = datetime.now() - time_before_query
-            logger.info(f"Querying {client_name} took {query_time.seconds} seconds and "
-                        f"returned {len(parsed_data)} {data_type}")
+            logger.info(f"Querying {client_name} took {query_time.seconds} seconds - {data_type}")
         except adapter_exceptions.CredentialErrorException as e:
             logger.exception(f"Credentials error for {client_name} on {self.plugin_unique_name}")
             raise adapter_exceptions.CredentialErrorException(
@@ -799,6 +799,8 @@ class AdapterBase(PluginBase, Feature, ABC):
         devices_ids = []
         should_check_for_unique_ids = self.plugin_subtype == adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
 
+        self._save_field_names_to_db("devices")
+
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
 
@@ -816,8 +818,6 @@ class AdapterBase(PluginBase, Feature, ABC):
                 continue
 
             yield parsed_device
-
-        self._save_field_names_to_db("devices")
 
         if skipped_count > 0:
             logger.info(f"Skipped {skipped_count} old devices")
@@ -854,10 +854,10 @@ class AdapterBase(PluginBase, Feature, ABC):
         try:
             if entity_type == EntityType.Devices:
                 raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
-                parsed_data = list(self._parse_devices_raw_data_hook(raw_data))
+                parsed_data = self._parse_devices_raw_data_hook(raw_data)
             elif entity_type == EntityType.Users:
                 raw_data = self._query_users_by_client(client_id, self._clients[client_id])
-                parsed_data = list(self._parse_users_raw_data_hook(raw_data))
+                parsed_data = self._parse_users_raw_data_hook(raw_data)
             else:
                 raise ValueError(f"expected {entity_type} to be devices/users.")
         except Exception as e:
@@ -881,10 +881,10 @@ class AdapterBase(PluginBase, Feature, ABC):
                 try:
                     if entity_type == EntityType.Devices:
                         raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
-                        parsed_data = list(self._parse_devices_raw_data_hook(raw_data))
+                        parsed_data = self._parse_devices_raw_data_hook(raw_data)
                     elif entity_type == EntityType.Users:
                         raw_data = self._query_users_by_client(client_id, self._clients[client_id])
-                        parsed_data = list(self._parse_users_raw_data_hook(raw_data))
+                        parsed_data = self._parse_users_raw_data_hook(raw_data)
                     else:
                         raise ValueError(f"expected {entity_type} to be devices/users.")
                 except:

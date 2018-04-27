@@ -193,6 +193,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
 
     def _try_query_data_by_client(self, client_name, entity_type: EntityType):
         raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
+        parsed_data = list(parsed_data)  # the following code assumes it is a materialized list
 
         if entity_type == EntityType.Devices:
             with self._get_db_connection(True) as db:

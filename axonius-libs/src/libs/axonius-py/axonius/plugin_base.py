@@ -20,6 +20,7 @@ import pymongo
 import concurrent
 import uuid
 import functools
+import multiprocessing
 
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.utils.threading import run_in_executor_helper, LazyMultiLocker
@@ -374,11 +375,13 @@ class PluginBase(Feature):
         self.users = axonius.entities.UsersNamespace(self)
 
         # An executor dedicated to inserting devices to the DB
-        self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
+        # the number of threads should be in a proportion to the number of actual core that can run them
+        # since these things are more IO bound here - we allow ourselves to fire more than the number of cores we have
+        self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
 
         # An executor dedicated for running execution promises
-        self.execution_promises = concurrent.futures.ThreadPoolExecutor(max_workers=50)
+        self.execution_promises = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
 
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
@@ -995,23 +998,12 @@ class PluginBase(Feature):
                 data_to_update = {f"adapters.$.{key}": value
                                   for key, value in parsed_to_insert.items() if key != 'data'}
 
-                promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                          self.__data_inserter,
-                                                          self._save_parsed_in_db,
-                                                          args=[dict(parsed_to_insert)])))
-
                 fields_to_update = data.keys() - ['id']
+
                 for field in fields_to_update:
                     field_of_data = data.get(field, [])
-                    try:
-                        if type(field_of_data) in [list, dict, str] and len(field_of_data) == 0:
-                            # We don't want to insert empty values, only one that has a valid data
-                            continue
-                        else:
-                            data_to_update[f"adapters.$.data.{field}"] = field_of_data
-                    except TypeError:
-                        logger.exception(f"Got TypeError while getting {entity_type} field {field}")
-                        continue
+                    data_to_update[f"adapters.$.data.{field}"] = field_of_data
+
                 data_to_update['accurate_for_datetime'] = datetime.now()
 
                 inserted_data_count += 1
@@ -1019,6 +1011,9 @@ class PluginBase(Feature):
                                                           self.__data_inserter,
                                                           insert_data_to_db,
                                                           args=[data_to_update, parsed_to_insert])))
+
+                promises = [p for p in promises if p.is_pending or p.is_rejected]
+
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
             if promise_all.is_rejected:
