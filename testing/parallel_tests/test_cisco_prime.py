@@ -24,7 +24,3 @@ class TestCiscoPrimeAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("cisco prime down")
-    def test_fetch_devices(self):
-        pass
