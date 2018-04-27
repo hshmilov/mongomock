@@ -1,6 +1,7 @@
 import logging
 from typing import Tuple, List
 
+from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 
 from axonius.mixins.devicedisabelable import Devicedisabelable
@@ -73,7 +74,11 @@ class ADPrinter(SmartJsonClass):
     driver_name = Field(str, "Printer Driver Name")
 
 
-class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
+class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Configurable):
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = -1
+    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 48
+    DEFAULT_USER_ALIVE_THRESHOLD_HOURS = 30 * 24
+
     class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
         ad_service_principal_name = Field(str, "AD Service Principal Name")
         ad_printers = ListField(ADPrinter, "AD Attached Printers")
@@ -112,6 +117,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
         # create temp files dir
         os.makedirs(TEMP_FILES_FOLDER, exist_ok=True)
         # TODO: Weiss: Ask why not using tempfile to creage dir.
+
+    def _on_config_update(self, config):
+        logger.info(f"Loading AD config: {config}")
+        self.__sync_resolving = config['sync_resolving']
 
     @property
     def _python_27_path(self):
@@ -631,11 +640,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
                     device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]
                 else:
                     device_as_dict = device.to_dict()
-                    device.network_interfaces = []
-                    for resolved_device in self._resolve_hosts_addresses([device_as_dict]):
-                        if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
-                            device.network_interfaces.append(resolved_device[NETWORK_INTERFACES_FIELD][0])
-                            device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
+                    if self.__sync_resolving:
+                        device.network_interfaces = []
+                        for resolved_device in self._resolve_hosts_addresses([device_as_dict]):
+                            if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
+                                device.network_interfaces.append(resolved_device[NETWORK_INTERFACES_FIELD][0])
+                                device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
 
                     if not self._is_adapter_old_by_last_seen(device_as_dict):
                         # That means that the device is new (As determined in adapter_base code)
@@ -931,6 +941,29 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase):
     def _disable_device(self, device_data, client_data):
         dn = device_data['id']
         assert client_data.change_device_enabled_state(dn, False), "Failed disabling device"
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    "name": "sync_resolving",
+                    "title": "Wait for DNS resolving",
+                    "type": "bool"
+                },
+            ],
+            "required": [
+                "sync_resolving",
+            ],
+            "pretty_name": "Active Directory Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            "sync_resolving": False,
+        }
 
     @classmethod
     def adapter_properties(cls):

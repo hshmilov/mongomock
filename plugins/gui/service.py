@@ -1,8 +1,5 @@
-import io
 import csv
 import logging
-
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
@@ -680,21 +677,21 @@ class GuiService(PluginBase):
             entities_ids_by_adapters = {}
             for axonius_device in entities:
                 for adapter_entity in axonius_device['adapters']:
-                    entities_ids_by_adapters.setdefault(adapter_entity[PLUGIN_UNIQUE_NAME], []).append(
+                    entities_ids_by_adapters.setdefault(adapter_entity[plugin_consts.PLUGIN_UNIQUE_NAME], []).append(
                         adapter_entity['data']['id'])
 
                     # all adapters that are disabelable and that theres atleast one
-                    entitydisabelables_adapters = [x[PLUGIN_UNIQUE_NAME]
+                    entitydisabelables_adapters = [x[plugin_consts.PLUGIN_UNIQUE_NAME]
                                                    for x in
                                                    db_connection['core']['configs'].find(
                                                        filter={
                                                            'supported_features': feature,
-                                                           PLUGIN_UNIQUE_NAME: {
+                                                           plugin_consts.PLUGIN_UNIQUE_NAME: {
                                                                "$in": list(entities_ids_by_adapters.keys())
                                                            }
                                                        },
                                                        projection={
-                                                           PLUGIN_UNIQUE_NAME: 1
+                                                           plugin_consts.PLUGIN_UNIQUE_NAME: 1
                                                        }
                     )]
         return entitydisabelables_adapters, entities_ids_by_adapters
@@ -900,22 +897,26 @@ class GuiService(PluginBase):
                 [(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
-                if not adapter[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
+                adapter_name = adapter[plugin_consts.PLUGIN_UNIQUE_NAME]
+                if adapter_name not in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
 
-                clients_configured = db_connection[adapter[plugin_consts.PLUGIN_UNIQUE_NAME]]['clients'].find(
+                plugin_db = db_connection[adapter_name]
+                clients_configured = plugin_db['clients'].find(
                     projection={'_id': 1}).count()
                 status = ''
                 if clients_configured:
-                    clients_connected = db_connection[adapter[plugin_consts.PLUGIN_UNIQUE_NAME]]['clients'].find(
+                    clients_connected = plugin_db['clients'].find(
                         {'status': 'success'}, projection={'_id': 1}).count()
                     status = 'success' if clients_configured == clients_connected else 'warning'
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
-                                           'unique_plugin_name': adapter[plugin_consts.PLUGIN_UNIQUE_NAME],
+                                           'unique_plugin_name': adapter_name,
                                            'status': status,
-                                           'supported_features': adapter['supported_features']
+                                           'supported_features': adapter['supported_features'],
+                                           'config_data': self.__extract_configs_and_schemas(db_connection,
+                                                                                             adapter_name)
                                            })
 
             return jsonify(adapters_to_return)
@@ -1138,6 +1139,50 @@ class GuiService(PluginBase):
                 plugins_to_return.append(processed_plugin)
 
             return jsonify(plugins_to_return)
+
+    @staticmethod
+    def __extract_configs_and_schemas(db_connection, plugin_unique_name):
+        """
+        Gets the configs and configs schemas in a nice way for a specific plugin
+        """
+        plugin_data = {}
+        schemas = list(db_connection[plugin_unique_name]['config_schemas'].find())
+        configs = list(db_connection[plugin_unique_name]['configs'].find())
+        for schema in schemas:
+            associated_config = [c for c in configs if c['config_name'] == schema['config_name']]
+            if not associated_config:
+                logger.error(f"Found schema without associated config for {plugin_unique_name}" +
+                             f" - {schema['config_name']}")
+                continue
+            associated_config = associated_config[0]
+            plugin_data[associated_config['config_name']] = {
+                "schema": schema['schema'],
+                "config": associated_config['config']
+            }
+        return plugin_data
+
+    @add_rule_unauthenticated("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST'])
+    def plugins_configs_set(self, plugin_unique_name, config_name):
+        """
+        Set a specific config on a specific plugin
+        """
+        config_to_set = request.get_json(silent=True)
+        if config_to_set is None:
+            return return_error("Invalid config", 400)
+
+        with self._get_db_connection(False) as db_connection:
+            config_collection = db_connection[plugin_unique_name]['configs']
+
+            config_collection.replace_one(filter={
+                'config_name': config_name
+            },
+                replacement={
+                    "config_name": config_name,
+                    "config": config_to_set
+            })
+            self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
+
+        return ""
 
     @add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):

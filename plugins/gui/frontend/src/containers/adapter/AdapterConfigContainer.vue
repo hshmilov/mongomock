@@ -15,6 +15,17 @@
                     </dynamic-table>
                 </div>
             </div>
+            <tabs v-if="currentAdapter">
+                <tab v-for="config, config_name, i in currentAdapter.config_data"
+                     :key="i"
+                     :title="config.schema.pretty_name || config_name"
+                     :id="config_name" :selected="!i">
+                        <x-schema-form :schema="config.schema" v-model="config.config"
+                                       @validate="serverModal.valid = $event"/>
+                        <a class="x-btn great" @click="saveConfig(config_name, config.config)" tabindex="1">Save Config</a>
+                </tab>
+            </tabs>
+
             <div class="row">
                 <div class="form-group place-right">
                     <a class="btn btn-inverse" @click="returnToAdapters">back</a>
@@ -42,22 +53,30 @@
 	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
 	import Modal from '../../components/popover/Modal.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
-	import '../../components/icons/navigation'
+	import Tabs from '../../components/tabs/Tabs.vue'
+	import Tab from '../../components/tabs/Tab.vue'
+    import '../../components/icons/navigation'
 
 	import { mapState, mapActions } from 'vuex'
 	import {
 		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
 	} from '../../store/modules/adapter'
+    import {
+	    SAVE_PLUGIN_CONFIG
+    } from '../../store/modules/plugin'
     import { pluginMeta } from '../../static.js'
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, StatusIconLogoText, xPage, DynamicTable, xSchemaForm},
+		components: {Modal, StatusIconLogoText, Tabs, Tab, xPage, DynamicTable, xSchemaForm},
 		computed: {
 			...mapState(['adapter']),
 			adapterUniquePluginName () {
 				return this.$route.params.id
 			},
+            currentAdapter() {
+			    return this.adapter.adapterList.data.find(x => x.unique_plugin_name == this.adapterUniquePluginName)
+            },
 			adapterPluginName () {
 				return this.adapterUniquePluginName.match(/(.*_adapter)_\d*/)[1]
 			},
@@ -122,7 +141,8 @@
 			...mapActions({
 				fetchAdapter: FETCH_ADAPTER_SERVERS,
 				updateAdapterServer: SAVE_ADAPTER_SERVER,
-                archiveServer: ARCHIVE_SERVER
+                archiveServer: ARCHIVE_SERVER,
+                updatePluginConfig: SAVE_PLUGIN_CONFIG
 			}),
 			returnToAdapters () {
 				this.$router.push({name: 'Adapters'})
@@ -170,7 +190,14 @@
 			},
 			toggleServerModal () {
 				this.serverModal.open = !this.serverModal.open
-			}
+			},
+            saveConfig(config_name, config) {
+                this.updatePluginConfig({
+                    pluginId: this.adapterUniquePluginName,
+                    config_name: config_name,
+                    config: config
+                })
+            }
 		},
 		created () {
 			/*

@@ -74,6 +74,8 @@ class EpoAdapter(AdapterBase):
     """
     Connects axonius to mcafee epo
     """
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 504
+    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 504
 
     class MyDeviceAdapter(DeviceAdapter):
         epo_products = ListField(str, "EPO Products")

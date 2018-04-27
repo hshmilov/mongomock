@@ -3,7 +3,6 @@ from datetime import datetime, timezone, timedelta
 from flaky import flaky
 import pytest
 
-from axonius.adapter_base import DEFAULT_LAST_FETCHED_THRESHOLD_HOURS, DEFAULT_LAST_SEEN_THRESHOLD_HOURS
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 
 from services.axonius_service import get_service
@@ -40,11 +39,11 @@ class AdapterTestBase(object):
 
     @property
     def device_alive_thresh_last_seen(self):
-        return DEFAULT_LAST_SEEN_THRESHOLD_HOURS
+        return self.adapter_service.get_configurable_config('AdapterBase')['last_seen_threshold_hours']
 
     @property
     def device_alive_thresh_last_fetched(self):
-        return DEFAULT_LAST_FETCHED_THRESHOLD_HOURS
+        return self.adapter_service.get_configurable_config('AdapterBase')['last_fetched_threshold_hours']
 
     def drop_clients(self):
         self.axonius_system.db.client[self.adapter_service.unique_name].drop_collection('clients')

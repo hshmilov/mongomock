@@ -22,14 +22,6 @@ class TestJamfAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @property
-    def device_alive_thresh_last_seen(self):
-        return 720
-
-    @property
-    def device_alive_thresh_last_fetched(self):
-        return 720
-
     @flaky(max_runs=2)
     def test_fetch_devices(self):
         super().test_fetch_devices()

@@ -3,6 +3,7 @@
 import logging
 
 logger = logging.getLogger(f"axonius.{__name__}")
+from axonius.mixins.configurable import Configurable
 import json
 from datetime import datetime, timedelta
 import sys
@@ -195,7 +196,7 @@ class EntityType(Enum):
     Devices = auto()
 
 
-class PluginBase(Feature):
+class PluginBase(Configurable, Feature):
     """ This is an abstract class containing the implementation
     For the base capabilities of the Plugin.
 
@@ -395,6 +396,9 @@ class PluginBase(Feature):
                                                      id='execution_monitor_thread',
                                                      max_instances=1)
             self.execution_monitor_scheduler.start()
+
+        self._update_schema()
+        self.renew_config_from_db()
 
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -1220,3 +1224,8 @@ class PluginBase(Feature):
     def add_adapterdata_to_entity(self, identity_by_adapter, data, entity=None, action_if_exists="replace"):
         """ A shortcut to __tag with type "adapterdata" """
         return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity, action_if_exists)
+
+    @add_rule("update_config", methods=['POST'])
+    def update_config(self):
+        self.renew_config_from_db()
+        return ""

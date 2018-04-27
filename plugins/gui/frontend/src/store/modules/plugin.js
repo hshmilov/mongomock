@@ -1,4 +1,5 @@
 import { REQUEST_API } from '../actions'
+import {ADD_ADAPTER_SERVER, FETCH_ADAPTER_SERVERS, UPDATE_ADAPTER_SERVER} from "./adapter";
 
 export const FETCH_PLUGINS = 'FETCH_PLUGINS'
 export const UPDATE_PLUGINS = 'UPDATE_PLUGINS'
@@ -9,6 +10,8 @@ export const START_PLUGIN = 'START_PLUGIN'
 export const UPDATE_PLUGIN_START = 'UPDATE_PLUGIN_START'
 export const STOP_PLUGIN = 'STOP_PLUGIN'
 export const UPDATE_PLUGIN_STOP = 'UPDATE_PLUGIN_STOP'
+
+export const SAVE_PLUGIN_CONFIG = 'SAVE_PLUGIN_CONFIG'
 
 export const pluginStaticData = {
 	'static_correlator': {
@@ -188,6 +191,19 @@ export const plugin = {
 				}
 				commit(UPDATE_PLUGIN_STOP, pluginId)
 			})
-		}
+		},
+		[ SAVE_PLUGIN_CONFIG ] ({dispatch, commit}, payload) {
+			/*
+				Call API to save given config to adapter by the given adapter unique name
+			 */
+			if (!payload || !payload.pluginId || !payload.config_name) { return }
+			let rule = `plugins/configs/${payload.pluginId}/${payload.config_name}`
+
+			dispatch(REQUEST_API, {
+				rule: rule,
+				method: 'POST',
+				data: payload.config
+			})
+		},
 	}
 }

@@ -31,14 +31,6 @@ class TestAdAdapter(AdapterTestBase):
     def some_user_id(self):
         return USER_ID_FOR_CLIENT_1
 
-    @property
-    def device_alive_thresh_last_seen(self):
-        return -1
-
-    @property
-    def device_alive_thresh_last_fetched(self):
-        return 48
-
     def test_fetch_devices(self):
         # Adding first client
         client_id_1 = ad_client1_details['dc_name']

@@ -8,6 +8,7 @@ from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
 from services.debug_template import py_charm_debug_template, py_charm_debug_port_template
 from services.docker_service import DockerService
+from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
 
 API_KEY_HEADER = "x-api-key"
@@ -28,6 +29,7 @@ class PluginService(DockerService):
         if not self.service_class_name.endswith('Adapter'):
             self.service_class_name += 'Service'
         self.plugin_name = os.path.basename(self.service_dir)
+        self.db = MongoService()
 
     @property
     def volumes_override(self):
@@ -145,6 +147,19 @@ class PluginService(DockerService):
                                                 run_type='adapters' if isinstance(self, AdapterService) else 'plugins')
         path = os.path.join(os.path.dirname(__file__), '..', '..', '.idea', 'runConfigurations', name + '_debug.xml')
         open(path, 'w').write(output)
+
+    def get_configurable_config(self, conf_name: str) -> dict:
+        """
+        Reads a specific config from 'configs'. Used with conjugation with Configurable (mixin).
+        If Configurable isn't implemented for this plugin or the conf_name doesn't exists - returns None.
+        Otherwise, returns the configuration
+        :param conf_name: The class name of the config to return
+        :return: the config or None
+        """
+        config_bulk = self.db.client[self.unique_name]['configs'].find_one({'config_name': conf_name})
+        if config_bulk:
+            return config_bulk.get('config')
+        return None
 
 
 class AdapterService(PluginService):

@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 
 logger = logging.getLogger(f"axonius.{__name__}")
-from axonius.adapter_base import AdapterBase, adapter_consts, AdapterProperty
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
@@ -10,10 +10,12 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_organizational_units_from_dn
 from sccm_adapter.connection import SccmConnection
 import sccm_adapter.consts as consts
-from sccm_adapter.exceptions import SccmException
 
 
 class SccmAdapter(AdapterBase):
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 720
+    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 720
+
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         pass
 

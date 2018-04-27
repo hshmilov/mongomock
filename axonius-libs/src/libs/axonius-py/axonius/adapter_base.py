@@ -4,6 +4,8 @@ It implements API calls that are expected to be present in all adapters.
 """
 import logging
 
+from axonius.mixins.configurable import Configurable
+
 logger = logging.getLogger(f"axonius.{__name__}")
 import threading
 from abc import ABC, abstractmethod
@@ -28,9 +30,6 @@ from axonius.utils.parsing import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.json import to_json
-
-DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 30
-DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24 * 2
 
 
 def is_plugin_adapter(plugin_type: str) -> bool:
@@ -93,7 +92,7 @@ class AdapterProperty(Enum):
     Assets = auto()
 
 
-class AdapterBase(PluginBase, Feature, ABC):
+class AdapterBase(PluginBase, Configurable, Feature, ABC):
     """
     Base abstract class for all adapters
     Terminology:
@@ -101,31 +100,12 @@ class AdapterBase(PluginBase, Feature, ABC):
         "Available Device" - A device that the adapter source knows and reports its existence.
                              Doesn't necessary means that the device is turned on or connected.
     """
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 30
+    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24 * 2
+    DEFAULT_USER_ALIVE_THRESHOLD_HOURS = -1
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        device_alive_thresh_last_seen = self.config["DEFAULT"].getfloat(
-            adapter_consts.DEFAULT_DEVICE_ALIVE_LAST_SEEN_THRESHOLD_HOURS,
-            DEFAULT_LAST_SEEN_THRESHOLD_HOURS)
-        device_alive_thresh_last_fetched = self.config["DEFAULT"].getfloat(
-            adapter_consts.DEFAULT_DEVICE_ALIVE_LAST_FETCHED_THRESHOLD_HOURS,
-            DEFAULT_LAST_FETCHED_THRESHOLD_HOURS)
-        user_alive_threshold = self.config["DEFAULT"].getfloat(adapter_consts.DEFAULT_USER_ALIVE_THRESHOLD_DAYS, -1)
-
-        logger.info(
-            f"Setting last seen threshold to {device_alive_thresh_last_seen}, {device_alive_thresh_last_fetched}")
-
-        # Devices older then the given deltas will be deleted:
-        # Either by:
-        self._last_seen_timedelta = timedelta(hours=device_alive_thresh_last_seen)
-        # this is the delta used for "last_seen" field from the adapter (if provided)
-
-        # Or by:
-        self._last_fetched_timedelta = timedelta(hours=device_alive_thresh_last_fetched)
-        # this is the delta used for comparing "accurate_for_datetime" - i.e. the last time the devices was fetched
-
-        self.__user_last_seen_timedelta = timedelta(days=user_alive_threshold)
 
         self._clients_lock = RLock()
         self._clients = {}
@@ -140,6 +120,20 @@ class AdapterBase(PluginBase, Feature, ABC):
         self._prepare_parsed_clients_config(False)
 
         self._thread_pool = LoggedThreadPoolExecutor(max_workers=50)
+
+    def _on_config_update(self, config):
+        logger.info(f"Loading AdapterBase config: {config}")
+
+        # Devices older then the given deltas will be deleted:
+        # Either by:
+        self._last_seen_timedelta = timedelta(hours=config['last_seen_threshold_hours'])
+        # this is the delta used for "last_seen" field from the adapter (if provided)
+
+        # Or by:
+        self._last_fetched_timedelta = timedelta(hours=config['last_fetched_threshold_hours'])
+        # this is the delta used for comparing "accurate_for_datetime" - i.e. the last time the devices was fetched
+
+        self.__user_last_seen_timedelta = timedelta(hours=config['user_alive_threshold_hours'])
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -748,7 +742,8 @@ class AdapterBase(PluginBase, Feature, ABC):
 
         if self._last_fetched_timedelta > timedelta(0):
             if 'accurate_for_datetime' in adapter_device:
-                return adapter_device['accurate_for_datetime'].astimezone(last_fetched_cutoff.tzinfo) < last_fetched_cutoff
+                return adapter_device['accurate_for_datetime'].astimezone(
+                    last_fetched_cutoff.tzinfo) < last_fetched_cutoff
 
         return False
 
@@ -1027,3 +1022,40 @@ class AdapterBase(PluginBase, Feature, ABC):
         Returns a list of all properties of the adapter, they will be displayed in GUI
         """
         pass
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    "name": "last_seen_threshold_hours",
+                    "title": "Old device last seen threshold hours",
+                    "type": "number"
+                },
+                {
+                    "name": "last_fetched_threshold_hours",
+                    "title": "Old device last fetched threshold hours",
+                    "type": "number"
+                },
+                {
+                    "name": "user_alive_threshold_hours",
+                    "title": "Old user last seen threshold hours",
+                    "type": "number"
+                },
+            ],
+            "required": [
+                "last_seen_threshold_hours",
+                "last_fetched_threshold_hours",
+                "user_alive_threshold_hours",
+            ],
+            "pretty_name": "Adapter Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            "last_seen_threshold_hours": cls.DEFAULT_LAST_SEEN_THRESHOLD_HOURS,
+            "last_fetched_threshold_hours": cls.DEFAULT_LAST_FETCHED_THRESHOLD_HOURS,
+            "user_alive_threshold_hours": cls.DEFAULT_USER_ALIVE_THRESHOLD_HOURS
+        }
