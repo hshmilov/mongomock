@@ -1,7 +1,9 @@
 <template>
     <triggerable-dropdown :arrow="true" size="sm" class="x-select" ref="dropdown">
         <div slot="trigger" class="x-select-trigger" @keyup.down="incActiveOption" :tabindex="-1">
-            <slot v-if="selectedOption" :option="selectedOption">{{selectedOption.title}}</slot>
+            <slot v-if="selectedOption" :option="selectedOption">
+                <div class="trigger-text" :title="selectedOption.title">{{selectedOption.title}}</div>
+            </slot>
             <div v-if="!value && placeholder" class="placeholder">{{placeholder}}</div>
         </div>
         <div slot="content" class="x-select-content" @keydown.down="incActiveOption" @keydown.up="decActiveOption"
@@ -97,10 +99,14 @@
         border: 1px solid $grey-2;
         background: $grey-dient;
         .x-select-trigger {
-            display: flex;
             padding: 0 24px 0 4px;
             height: 30px;
             line-height: 30px;
+            .trigger-text {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
         }
         .x-select-content {
             font-size: 14px;

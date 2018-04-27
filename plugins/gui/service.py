@@ -562,7 +562,7 @@ class GuiService(PluginBase):
             """
             new_schema = {**schema}
             if title:
-                new_schema['title'] = f'{title} {new_schema["title"]}' if new_schema.get('title') else title
+                new_schema['title'] = f'{title}: {new_schema["title"]}' if new_schema.get('title') else title
             return new_schema
 
         if (schema.get('name')):

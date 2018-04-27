@@ -290,6 +290,7 @@
                 margin-left: -2px;
                 border-bottom-left-radius: 0;
                 border-top-left-radius: 0;
+                width: 180px;
             }
         }
         .x-select-trigger {
