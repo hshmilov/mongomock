@@ -24,7 +24,7 @@ export const updateDataContent = (state, payload) => {
 	content.fetching = payload.fetching
 	content.error = payload.error
 	if (payload.data) {
-		content.data = content.data.slice(0, payload.skip).concat(payload.data)
+		content.data = payload.data
 	}
 }
 

@@ -120,8 +120,13 @@
 				return this.content.data.map(item => item[this.idField])
             },
             pageData() {
-				return this.content.data.slice(this.view.page * this.view.pageSize,
-                    (this.view.page + 1) * this.view.pageSize)
+				let pageId = 0
+                this.pageLinkNumbers.forEach((number, index) => {
+                	if (number === this.view.page) {
+                		pageId = index
+                    }
+                })
+				return this.content.data.slice(pageId * this.view.pageSize, (pageId + 1) * this.view.pageSize)
             },
             pageCount() {
 				return Math.ceil(this.count.data / this.view.pageSize) - 1
