@@ -98,7 +98,6 @@ def _prefilter_devices(devices, correlation_preconditions):
 class CorrelatorEngineBase(ABC):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.correlation_preconditions = None
 
     def _prefilter_device(self, devices) -> iter:
         """
@@ -106,8 +105,7 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: device to pass the device to _correlate
         """
-        assert self.correlation_preconditions, "Correlation preconditions were not defined"
-        return _prefilter_devices(devices, self.correlation_preconditions)
+        return _prefilter_devices(devices, self._correlation_preconditions)
 
     def _bucket_creator(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
                         bucket_insertion_comparators: List[pair_comparator]):
@@ -225,6 +223,11 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: iter(CorrelationResult or WarningResult)
         """
+        pass
+
+    @property
+    @abstractmethod
+    def _correlation_preconditions(self):
         pass
 
     def correlate(self, devices):

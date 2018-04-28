@@ -2,6 +2,8 @@
 
 import logging
 
+from funcy import chunks
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.mixins.configurable import Configurable
 import json
@@ -379,6 +381,18 @@ class PluginBase(Configurable, Feature):
         # the number of threads should be in a proportion to the number of actual core that can run them
         # since these things are more IO bound here - we allow ourselves to fire more than the number of cores we have
         self.__data_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=20 * multiprocessing.cpu_count())
+
+        if "ScannerAdapter" not in self.specific_supported_features():
+            # This is only used if it's the first time inserting to the DB - i.e. the DB is empty of any device
+            # from this plugin. After it is exhausted, it should be None.
+            # Also, for complexity reasons, we currently don't support scanners, because they
+            # might want to be associated with another device instead of being inserted. This restriction might
+            # be relaxed and allow scanners, but for now it's not important enough to do.
+            self.__first_time_inserter = concurrent.futures.ThreadPoolExecutor(
+                max_workers=2 * multiprocessing.cpu_count())
+        else:
+            self.__first_time_inserter = None
+
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
 
         # An executor dedicated for running execution promises
@@ -982,7 +996,6 @@ class PluginBase(Configurable, Feature):
 
         if should_log_info is True:
             logger.info(f"Starting to fetch data (devices/users) for {client_name}")
-        promises = []
         try:
             time_before_client = datetime.now()
             # Saving the raw data on the historic db
@@ -991,32 +1004,64 @@ class PluginBase(Configurable, Feature):
             except pymongo.errors.DocumentTooLarge:
                 # wanna see my "something too large"?
                 logger.warn(f"Got DocumentTooLarge with client {client_name}.")
+
             inserted_data_count = 0
+            promises = []
 
-            # Here we have all the devices a single client sees
-            for data in data_of_client['parsed']:
-                parsed_to_insert = self._create_axonius_entity(client_name, data, entity_type)
+            def insert_quickpath_to_db(devices):
+                all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
+                db_to_use.insert_many({
+                    "internal_axon_id": uuid.uuid4().hex,
+                    "accurate_for_datetime": datetime.now(),
+                    "adapters": [parsed_to_insert],
+                    "tags": []
+                }
+                    for parsed_to_insert
+                    in all_parsed)
 
-                # Note that this updates fields that are present. If some fields are not present but are present
-                # in the db they will stay there.
-                data_to_update = {f"adapters.$.{key}": value
-                                  for key, value in parsed_to_insert.items() if key != 'data'}
+            inserter = self.__first_time_inserter
+            # quickest way to find if there are any devices from this plugin in the DB
+            if inserter and db_to_use.find_one(
+                    {"adapters.plugin_unique_name": self.plugin_unique_name}) is None:
+                logger.info("Fast path! First run.")
+                # DB is empty! no need for slow path, can just bulk-insert all.
+                for devices in chunks(500, data_of_client['parsed']):
+                    promises.append(Promise(functools.partial(run_in_executor_helper,
+                                                              inserter,
+                                                              insert_quickpath_to_db,
+                                                              args=[devices])))
+                    inserted_data_count += len(devices)
+                    logger.info(f"Over {inserted_data_count} to DB")
 
-                fields_to_update = data.keys() - ['id']
+            else:
+                # DB is not empty. Should go for slow path.
+                # Here we have all the devices a single client sees
+                for data in data_of_client['parsed']:
+                    parsed_to_insert = self._create_axonius_entity(client_name, data, entity_type)
 
-                for field in fields_to_update:
-                    field_of_data = data.get(field, [])
-                    data_to_update[f"adapters.$.data.{field}"] = field_of_data
+                    # Note that this updates fields that are present. If some fields are not present but are present
+                    # in the db they will stay there.
+                    data_to_update = {f"adapters.$.{key}": value
+                                      for key, value in parsed_to_insert.items() if key != 'data'}
 
-                data_to_update['accurate_for_datetime'] = datetime.now()
+                    fields_to_update = data.keys() - ['id']
 
-                inserted_data_count += 1
-                promises.append(Promise(functools.partial(run_in_executor_helper,
-                                                          self.__data_inserter,
-                                                          insert_data_to_db,
-                                                          args=[data_to_update, parsed_to_insert])))
+                    for field in fields_to_update:
+                        field_of_data = data.get(field, [])
+                        data_to_update[f"adapters.$.data.{field}"] = field_of_data
 
-                promises = [p for p in promises if p.is_pending or p.is_rejected]
+                    inserted_data_count += 1
+                    promises.append(Promise(functools.partial(run_in_executor_helper,
+                                                              self.__data_inserter,
+                                                              insert_data_to_db,
+                                                              args=[data_to_update, parsed_to_insert])))
+
+                    promises = [p for p in promises if p.is_pending or p.is_rejected]
+
+                    if inserted_data_count % 1000 == 0:
+                        logger.info(f"Devices went through: {inserted_data_count}; " +
+                                    f"promises active: {len(promises)}; " +
+                                    f"in DB: {inserted_data_count - len(promises)}")
 
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())
@@ -1036,6 +1081,10 @@ class PluginBase(Configurable, Feature):
         except Exception as e:
             logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
+        finally:
+            # whether or not it was successful, next time we shouldn't try first-time optimization and
+            # go full slow path
+            self.__first_time_inserter = None
 
         logger.info(f"Finished inserting {entity_type} of client {client_name}")
         if should_log_info is True:
@@ -1060,6 +1109,8 @@ class PluginBase(Configurable, Feature):
             'accurate_for_datetime': datetime.now(),
             'data': data
         }
+        parsed_to_insert['data']['accurate_for_datetime'] = datetime.now()
+
         return parsed_to_insert
 
     def _add_pretty_id_to_missing_adapter_devices(self):

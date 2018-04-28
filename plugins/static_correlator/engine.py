@@ -34,11 +34,11 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     }
     """
 
-    def _prefilter_device(self, devices):
+    @property
+    def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        self.correlation_preconditions = [has_hostname, has_mac, has_serial]
-        return super()._prefilter_device(devices)
+        return [has_hostname, has_mac, has_serial]
 
     def _correlate_mac(self, adapters_to_correlate):
         """

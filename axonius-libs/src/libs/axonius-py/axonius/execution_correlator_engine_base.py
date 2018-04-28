@@ -98,16 +98,11 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
 
         self._parse_correlation_results = _parse_correlation_results
 
-    def _prefilter_device(self, devices) -> iter:
-        """
-        Virtual by design.
-        :param devices: axonius devices to correlate
-        :return: device to pass the device to _correlate
-        """
+    @property
+    def _correlation_preconditions(self):
         # this is the least of all acceptable preconditions for correlatable devices - if none is satisfied there's no
         # way to correlate the devices and so it won't be added to adapters_to_correlate
-        self.correlation_preconditions = [figure_actual_os]
-        return super()._prefilter_device(devices)
+        return [figure_actual_os]
 
     def _raw_correlate(self, devices):
         # refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/90472522/Correlation+Implementation
