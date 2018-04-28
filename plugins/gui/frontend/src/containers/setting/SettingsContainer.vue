@@ -52,7 +52,6 @@
 	import Tab from '../../components/tabs/Tab.vue'
 	import xDateEdit from '../../components/controls/string/DateEdit.vue'
 	import Checkbox from '../../components/Checkbox.vue'
-    import xSelect from '../../components/inputs/Select.vue'
 
 	import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
 	import {
@@ -66,7 +65,7 @@
 
 	export default {
 		name: 'settings-container',
-		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox, xSelect},
+		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox},
 		computed: {
 			...mapState(['dashboard', 'settings']),
 			limit () {

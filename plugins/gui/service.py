@@ -14,8 +14,8 @@ from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 import tarfile
 import io
 import os
-from datetime import date
-from flask import jsonify, request, session, after_this_request, make_response
+from datetime import date, datetime
+from flask import jsonify, request, session, after_this_request, make_response, send_file
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
 import requests
@@ -23,9 +23,12 @@ import configparser
 import pymongo
 from bson import ObjectId
 import json
-from datetime import datetime
 from axonius.utils.parsing import parse_filter
 import re
+
+from weasyprint import HTML, CSS
+from jinja2 import Environment, FileSystemLoader
+from weasyprint.fonts import FontConfiguration
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -464,8 +467,9 @@ class GuiService(PluginBase):
             dw.writeheader()
             dw.writerows(entities)
             output = make_response(string_output.getvalue())
-            output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-            output.headers["Content-type"] = "text/csv"
+            timestamp = datetime.now().strftime("%d%m%Y-%H%M%S")
+            output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
+            output.headers['Content-type'] = 'text/csv'
         return output
 
     def _entity_by_id(self, module_name, entity_id, advanced_fields=[]):
@@ -1503,8 +1507,7 @@ class GuiService(PluginBase):
             logger.info(f"response code: {response.status_code} response crap: {response.content}")
             return ''
 
-    @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
-    def get_adapter_devices(self):
+    def _adapter_devices(self):
         """
         For each adapter currently registered in system, count how many devices it fetched.
 
@@ -1527,8 +1530,11 @@ class GuiService(PluginBase):
                     continue
                 adapter_devices['adapter_count'][adapter['plugin_name']] = devices_count
                 adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
+        return adapter_devices
 
-        return jsonify(adapter_devices)
+    @add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
+    def get_adapter_devices(self):
+        return jsonify(self._adapter_devices())
 
     @add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
     def get_dashboard_coverage(self):
@@ -1647,6 +1653,39 @@ class GuiService(PluginBase):
                 break
 
         return 'enabled' if enabled else 'disabled'
+
+    @add_rule_unauthenticated('export_report')
+    def export_report(self):
+        """
+
+        :return:
+        """
+        env = Environment(loader=FileSystemLoader('.'))
+        template_path = 'gui/templates/report/'
+        report_template = env.get_template(f'{template_path}axonius_report.html')
+        card_template = env.get_template(f'{template_path}report_card.html')
+        data_template = env.get_template(f'{template_path}dashboard/data_discovery.html')
+
+        adapter_devices = self._adapter_devices()
+
+        html_data = report_template.render({
+            'title': 'Some Gruppen Company Weekly Report',
+            'content': card_template.render({
+                'title': 'Data Discovery',
+                'content': data_template.render({
+                    'seen_count': adapter_devices['total_gross'], 'unique_count': adapter_devices['total_net']
+                })
+            })
+        })
+        timestamp = datetime.now().strftime("%d%m%Y-%H%M%S")
+        temp_report_filename = f'/tmp/axonius-report_{timestamp}.pdf'
+        open(f'/tmp/axonius-report_{timestamp}.html', 'w').write(html_data)
+        font_config = FontConfiguration()
+        css = CSS(filename=f'{template_path}styles.css', font_config=font_config)
+        HTML(string=html_data, base_url=template_path).write_pdf(
+            temp_report_filename, stylesheets=[css], font_config=font_config)
+        return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
+                         attachment_filename=temp_report_filename)
 
     @property
     def plugin_subtype(self):

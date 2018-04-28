@@ -36,8 +36,9 @@ export const requestApi = ({commit}, payload) => {
 	}
 	if (!payload.method) payload.method = 'GET'
 
-	let request_config = {method: payload.method, url: `${host}/api/${payload.rule}`/*, withCredentials: true*/}
+	let request_config = {method: payload.method, url: `${host}/api/${payload.rule}`}
 	if (payload.data) request_config['data'] = payload.data
+	if (payload.binary) request_config['responseType'] = 'arraybuffer'
 	return new Promise((resolve, reject) => axios(request_config)
 		.then((response) => {
 			if (payload.type) {
@@ -127,7 +128,10 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 		let blob = new Blob([response.data], { type: response.headers["content-type"]} )
 		let link = document.createElement('a')
 		link.href = window.URL.createObjectURL(blob)
-		link.download = 'export.csv'
+		let now = new Date()
+		let formattedDate = now.toLocaleDateString().replace(/\//g,'')
+		let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
+		link.download = `axonius-data_${formattedDate}-${formattedTime}.csv`
 		link.click()
 	})
 }
@@ -286,5 +290,18 @@ export const fetchDataByID = ({state, dispatch}, payload) => {
 		rule: `${payload.module}/${payload.id}`,
 		type: UPDATE_DATA_BY_ID,
 		payload
+	})
+}
+
+export const EXPORT_REPORT = 'EXPORT_REPORT'
+export const exportReport = ({dispatch}) => {
+	dispatch(REQUEST_API, {
+		rule: 'export_report'
+	}).then((response) => {
+		let blob = new Blob([response.data], { type: response.headers["content-type"]} )
+		let link = document.createElement('a')
+		link.href = window.URL.createObjectURL(blob)
+		link.download = 'axonius_report.pdf'
+		link.click()
 	})
 }
