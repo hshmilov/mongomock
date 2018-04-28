@@ -238,16 +238,24 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   }
 }
 
-.v-spinner {
-  height: 100%;
+.v-spinner-bg {
+  height: calc(100vh - 300px);
+  width: calc(100vw - 108px);
+  background: $grey-3;
+  opacity: 0.4;
+  top: 200px;
   position: absolute;
-  width: 100%;
-  top: -48px;
   z-index: 100;
   transition: opacity .3s ease;
+}
+.v-spinner {
+  height: calc(100vh - 300px);
+  width: calc(100vw - 108px);
+  position: absolute;
+  z-index: 101;
   .v-pulse {
     position: absolute;
-    top: 50%;
+    top: 40%;
     &.v-pulse1 {
       left: 48%;
     }

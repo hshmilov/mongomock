@@ -4,6 +4,7 @@
             <div class="x-title">{{ title }} ({{count.data}})</div>
             <div class="x-actions"><slot name="actions"/></div>
         </div>
+        <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
         <div class="x-table-container" :tabindex="-1" ref="greatTable">
             <table class="x-striped-table">

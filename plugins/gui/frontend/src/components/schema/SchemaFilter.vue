@@ -49,6 +49,7 @@
 					this.$emit('error')
 					return
 				}
+				if (!payload.filter) return
 				this.filters[index] = payload.filter
                 if (!this.filters[0]) {
 					this.$emit('error')

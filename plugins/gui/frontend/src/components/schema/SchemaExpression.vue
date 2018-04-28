@@ -206,8 +206,9 @@
                     this.expression.compOp = 'exists'
                 }
 				this.$emit('input', this.expression)
+                if (!this.expression.field) return
 				let error = this.checkErrors() || this.formatExpression()
-				if (error || !this.expression.field) {
+				if (error) {
 					this.$emit('change', {error})
 					return
 				}
