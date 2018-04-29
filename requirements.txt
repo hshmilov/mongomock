@@ -1,3 +1,4 @@
+virtualenv==15.2.0
 funcy==1.10
 namedlist==1.7
 APScheduler==3.4.0

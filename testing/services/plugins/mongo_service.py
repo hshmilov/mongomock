@@ -58,7 +58,6 @@ class MongoService(DockerService):
         except Exception as err:
             print(err)
             return False
-        print("Mongo connection worked")
         return True
 
     def connect(self):

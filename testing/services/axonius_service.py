@@ -41,11 +41,11 @@ class AxoniusService(object):
         self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution,
                                  self.static_correlator, self.reports]
 
-    def stop(self, should_delete):
+    def stop(self, should_delete, remove_image=False):
         # Not critical but lets stop in reverse order
         async_items = []
         for service in self.axonius_services[::-1]:
-            current = iter(service.stop_async(should_delete=should_delete))
+            current = iter(service.stop_async(should_delete=should_delete, remove_image=remove_image))
             next(current)  # actual stop call
             async_items.append(current)
         # stop_async is a generator that yields just after the first exec, that is why we run next(current) before
@@ -59,7 +59,7 @@ class AxoniusService(object):
         for service in self.axonius_services:
             service.take_process_ownership()
 
-    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False):
+    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True):
         if rebuild:
             for service in self.axonius_services:
                 service.remove_image()
@@ -72,7 +72,7 @@ class AxoniusService(object):
         for service in self.axonius_services:
             if skip and service.get_is_container_up():
                 continue
-            service.start(mode=mode, allow_restart=allow_restart, hard=hard)
+            service.start(mode=mode, allow_restart=allow_restart, hard=hard, show_print=show_print)
 
         # wait for all
         for service in self.axonius_services:
@@ -151,7 +151,7 @@ class AxoniusService(object):
         return cls._get_docker_service('adapters', name)
 
     def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
-                      skip=False, exclude_restart=None):
+                      skip=False, show_print=True, exclude_restart=None):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         if exclude_restart is None:
             exclude_restart = []
@@ -171,7 +171,7 @@ class AxoniusService(object):
                 elif self.get_plugin_short_name(plugin) in exclude_restart:
                     print(f'Ignoring - {self.get_plugin_short_name(plugin)}')
                     continue
-            plugin.start(mode, allow_restart=allow_restart, hard=hard)
+            plugin.start(mode, allow_restart=allow_restart, hard=hard, show_print=show_print)
         timeout = 60
         start = time.time()
         first = True
@@ -189,12 +189,17 @@ class AxoniusService(object):
                 plugin.stop(should_delete=True)
             raise TimeoutException(repr([plugin.container_name for plugin in plugins]))
 
-    def stop_plugins(self, adapter_names, plugin_names, should_delete):
+    def stop_plugins(self, adapter_names, plugin_names, should_delete, remove_image=False, exclude_restart=None):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
+        if exclude_restart is None:
+            exclude_restart = []
+
         async_items = []
         for plugin in plugins:
+            if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
+                continue
             plugin.take_process_ownership()
-            current = iter(plugin.stop_async(should_delete=should_delete))
+            current = iter(plugin.stop_async(should_delete=should_delete, remove_image=remove_image))
             next(current)  # actual stop call
             async_items.append(current)
         # stop_async is a generator that yields just after the first exec, that is why we run next(current) before
@@ -240,18 +245,19 @@ class AxoniusService(object):
     def get_all_adapters(self):
         return self._get_all_docker_services('adapters', adapters)
 
-    def pull_base_image(self, repull=False):
+    def pull_base_image(self, repull=False, show_print=True):
         base_image = 'axonius/axonius-base-image'
         base_image_exists = base_image in subprocess.check_output(['docker', 'images', base_image]).decode('utf-8')
         if base_image_exists and not repull:
-            print('Base image already exists - skipping pull step')
+            if show_print:
+                print('Base image already exists - skipping pull step')
             return base_image
         runner = ParallelRunner()
         runner.append_single('axonius-base-image', ['docker', 'pull', base_image])
         assert runner.wait_for_all() == 0
         return base_image
 
-    def build_libs(self, rebuild=False):
+    def build_libs(self, rebuild=False, show_print=True):
         image_name = 'axonius/axonius-libs'
         output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
         image_exists = image_name in output
@@ -260,12 +266,14 @@ class AxoniusService(object):
                 subprocess.call(['docker', 'rmi', image_name, '--force'],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             else:
-                print('Image axonius-libs already built - skipping build step')
-                return
+                if show_print:
+                    print('Image axonius-libs already built - skipping build step')
+                return image_name
         runner = ParallelRunner()
         runner.append_single('axonius-libs', ['docker', 'build', '.', '-t', image_name],
                              cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs')))
         assert runner.wait_for_all() == 0
+        return image_name
 
     def build(self, system, adapter_names, plugin_names, mode='', rebuild=False, hard=False, async=True):
         to_build = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
@@ -277,9 +285,11 @@ class AxoniusService(object):
         if hard:
             for service in to_build:
                 service.remove_volume()
+        images = []
         if async and len(to_build) > 1:
             runner = ParallelRunner()
             for service in to_build:
+                images.append(service.image)
                 if service.get_image_exists():
                     continue
                 service.build(mode, runner)
@@ -290,6 +300,8 @@ class AxoniusService(object):
                 if service.get_image_exists():
                     continue
                 service.build(mode)
+                images.append(service.image)
+        return images
 
     @staticmethod
     def get_plugin_short_name(plugin_obj):

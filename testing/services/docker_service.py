@@ -92,7 +92,7 @@ else:
     def docker_network(self):
         return 'axonius'
 
-    def start(self, mode='', allow_restart=False, rebuild=False, hard=False):
+    def start(self, mode='', allow_restart=False, rebuild=False, hard=False, show_print=True):
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
@@ -126,7 +126,7 @@ else:
             if rebuild:
                 self.remove_image()
                 self.build(mode)
-            else:
+            elif show_print:
                 print(f'Container {self.container_name} already built - skipping build step')
         else:
             self.build(mode)
@@ -183,6 +183,10 @@ else:
             docker_cmd.append('--all')
         return self.container_name in subprocess.check_output(docker_cmd).decode('utf-8')
 
+    def get_container_id(self):
+        docker_cmd = ['docker', 'ps', '--filter', f'name={self.container_name}', '-q']
+        return subprocess.check_output(docker_cmd).decode('utf-8')
+
     def get_image_exists(self):
         output = subprocess.check_output(['docker', 'images', self.image]).decode('utf-8')
         return self.container_name in output
@@ -191,11 +195,11 @@ else:
         subprocess.call(['docker', 'rmi', self.image, '--force'], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    def stop(self, should_delete=False):
-        for _ in self.stop_async(should_delete=should_delete):
+    def stop(self, should_delete=False, remove_image=False):
+        for _ in self.stop_async(should_delete=should_delete, remove_image=remove_image):
             pass
 
-    def stop_async(self, should_delete=False):
+    def stop_async(self, should_delete=False, remove_image=False):
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
@@ -205,8 +209,13 @@ else:
         yield process
         process.wait()
         self.remove_container(remove_volumes=should_delete)
+        if remove_image:
+            # remove also named volumes:
+            self.remove_volume()
+            self.remove_image()
 
     def remove_container(self, remove_volumes=False):
+        # --volumes will remove only non-named volumes
         subprocess.call(['docker', 'rm', '--force', self.container_name] + (['--volumes'] if remove_volumes else []),
                         cwd=self.service_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 

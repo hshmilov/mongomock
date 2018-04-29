@@ -11,6 +11,8 @@
       <sourceFolder url="file://$MODULE_DIR$/testing" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk_symantec_adapter/external" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/adapters/splunk_nexpose_adapter/external" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/deployment" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/deployment/packages" />
       <excludeFolder url="file://$MODULE_DIR$/plugins/gui/frontend" />
     </content>
     <orderEntry type="jdk" jdkName="cortex-venv" jdkType="Python SDK" />

@@ -283,7 +283,11 @@ projectFilesBackup/*
 .idea/codeStyles/*
 Dockerfile.autogen
 stunnel_autogen.conf
+deployment/axonius_install*.py
+deployment/packages/
+deployment/state.json
 env_autogen.sh
+deploy_artifacts/*
 
 # Vim 
 *.swp

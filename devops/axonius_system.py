@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -43,7 +43,8 @@ def main():
         axonius_system = get_service()
         print('Core Services:')
         for service in axonius_system.axonius_services:
-            print(f'    {service.container_name}')
+            name = os.path.basename(service.service_dir)
+            print(f'    {name}')
         print('Services:')
         for name, _ in axonius_system.get_all_plugins():
             print(f'    {name}')
@@ -60,16 +61,14 @@ def system_entry_point(args):
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]"""[1:].
                                      replace('{name}', os.path.basename(__file__)))
     parser.add_argument('mode', choices=['up', 'down', 'build'])
-    parser.add_argument('--all', type=str2bool, nargs='?', const=True, default=False, help='All adapters and services')
-    parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Prod Mode')
-    parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
-                        help='Restart container')
-    parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
-    parser.add_argument('--hard', type=str2bool, nargs='?', const=True, default=False,
+    parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
+    parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
+    parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
+    parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
+    parser.add_argument('--hard', action='store_true', default=False,
                         help='Rebuild Image after rebuilding axonius-libs')
     parser.add_argument('--pull-base-image', action='store_true', default=False, help='Pull base image before rebuild')
-    parser.add_argument('--skip', type=str2bool, nargs='?', const=True, default=False,
-                        help='Skip already up containers')
+    parser.add_argument('--skip', action='store_true', default=False, help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
     parser.add_argument('--exclude', metavar='N', type=str, nargs='*', help='Adapters and Services to exclude',
@@ -135,11 +134,10 @@ def service_entry_point(target, args):
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('name')
     parser.add_argument('mode', choices=['up', 'down', 'build'])
-    parser.add_argument('--prod', type=str2bool, nargs='?', const=True, default=False, help='Prod Mode')
-    parser.add_argument('--restart', type=str2bool, nargs='?', const=True, default=False,
-                        help='Restart container')
-    parser.add_argument('--rebuild', type=str2bool, nargs='?', const=True, default=False, help='Rebuild Image')
-    parser.add_argument('--hard', type=str2bool, nargs='?', const=True, default=False,
+    parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
+    parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
+    parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
+    parser.add_argument('--hard', action='store_true', default=False,
                         help='Rebuild Image after rebuilding axonius-libs')
 
     try:
@@ -173,15 +171,6 @@ def service_entry_point(target, args):
         assert not args.restart
         print(f'Building {args.name}')
         axonius_system.build(False, adapters, services, 'prod' if args.prod else '', args.rebuild, args.hard)
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 class AutoFlush(object):
