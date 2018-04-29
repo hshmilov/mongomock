@@ -4,6 +4,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 import concurrent.futures
 import threading
 import datetime
+import requests
 
 from bson.objectid import ObjectId
 from axonius.mixins.triggerable import Triggerable
@@ -107,34 +108,28 @@ class ReportsService(PluginBase, Triggerable):
         """
         # Checks if requested query isn't already watched.
         try:
-            report_query = self._get_collection('reports').find({'query': report_data['query']})
+            current_query_result = self.get_query_results(report_data['query'])
+            if current_query_result is None:
+                return return_error('Aggregator is down, please try again later.', 404)
 
-            if report_query.count() == 0:
-                current_query_result = self.get_query_results(report_data['query'])
-                if current_query_result is None:
-                    return return_error('Aggregator is down, please try again later.', 404)
+            report_resource = {'report_creation_time': datetime.datetime.now(),
+                               'triggers': report_data['triggers'],
+                               'actions': report_data['actions'],
+                               'result': current_query_result,
+                               'query': report_data['query'],
+                               'retrigger': report_data['retrigger'],
+                               'triggered': 0,
+                               'name': report_data['name'],
+                               'severity': report_data['severity']
+                               }
 
-                report_resource = {'report_creation_time': datetime.datetime.now(),
-                                   'triggers': report_data['triggers'],
-                                   'actions': report_data['actions'],
-                                   'result': current_query_result,
-                                   'query': json.dumps(report_data['query']),
-                                   'retrigger': report_data['retrigger'],
-                                   'triggered': 0,
-                                   'name': report_data['name'],
-                                   'severity': report_data['severity']
-                                   }
+            if '_id' in report_data:
+                report_resource['_id'] = ObjectId(report_data['_id'])
 
-                if '_id' in report_data:
-                    report_resource['_id'] = ObjectId(report_data['_id'])
-
-                # Pushes the resource to the db.
-                insert_result = self._get_collection('reports').insert_one(report_resource)
-                logger.info('Added query to reports list')
-                return str(insert_result.inserted_id), 201
-
-            return return_error('An existing reports on a query as been requested', 409)
-
+            # Pushes the resource to the db.
+            insert_result = self._get_collection('reports').insert_one(report_resource)
+            logger.info('Added query to reports list')
+            return str(insert_result.inserted_id), 201
         except KeyError as e:
             message = 'The query reports request is missing data. Details: {0}'.format(str(e))
             logger.exception(message)
@@ -162,13 +157,19 @@ class ReportsService(PluginBase, Triggerable):
         logger.info('Removed query from reports.')
         return '', 200
 
-    def get_query_results(self, query):
+    def get_query_results(self, query_name):
         """Gets a query's results from the aggregator devices_db_view.
 
-        :param query: The query to use.
+        :param query_name: The query name.
         :return: The results of the query.
         """
-        return list(self._get_collection('devices_db_view', db_name=AGGREGATOR_PLUGIN_NAME).find(parse_filter(query)))
+        plugins_available = requests.get(self.core_address + '/register').json()
+        gui_name = [name for name, plugin in plugins_available.items() if plugin['plugin_name'] == 'gui'][0]
+        query = self._get_collection('device_queries', gui_name).find_one({'name': query_name})
+        if query is None:
+            raise ValueError(f'Missing query "{query_name}"')
+        parsed_query_filter = parse_filter(query['filter'])
+        return list(self._get_collection('devices_db_view', db_name=AGGREGATOR_PLUGIN_NAME).find(parsed_query_filter))
 
     def update_report(self, report_data):
         """update a report data.
@@ -383,7 +384,7 @@ class ReportsService(PluginBase, Triggerable):
                 self.update_report(report_data)
 
         try:
-            current_result = self.get_query_results(json.loads(report_data['query']))
+            current_result = self.get_query_results(report_data['query'])
             if current_result is None:
                 logger.info("Skipping reports trigger because there were no current results.")
                 return

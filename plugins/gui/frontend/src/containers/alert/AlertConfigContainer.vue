@@ -15,8 +15,8 @@
                         <div class="form-group col-6">
                             <label class="form-label" for="alertQuery">Select Saved Query:</label>
                             <select class="form-control" id="alertQuery" v-model="alert.query">
-                                <option v-for="query in currentQueryOptions" :value="query.value"
-                                        :selected="query.value === alert.query">{{query.name}}</option>
+                                <option v-for="query in currentQueryOptions" :value="query.name"
+                                        :selected="query.name === alert.query">{{query.title || query.name}}</option>
                             </select>
                         </div>
                     </div>
@@ -119,14 +119,18 @@
                 currentQueryOptions(state) {
                 	let queries = state.device.queries.saved.data
                 	if (!queries || !queries.length) return []
-
-                    return queries.map((query) => {
-						return {
-							value: query.uuid,
-							name: query.name,
-							inUse: (query['alertIds'] !== undefined && query['alertIds'].length)
-						}
-                    }).filter(query => !query.inUse || this.alertData.query === query.value)
+                    if (this.alert && this.alert.query) {
+                        let hasCurrent = false
+                        queries.forEach((query) => {
+                            if (query.name === this.alert.query) hasCurrent = true
+                        })
+                        if (!hasCurrent) {
+                            queries.push({
+                                name: this.alert.query, title: `${this.alert.query} (deleted)`
+                            })
+                        }
+                    }
+                    return queries
                 }
 			})
         },

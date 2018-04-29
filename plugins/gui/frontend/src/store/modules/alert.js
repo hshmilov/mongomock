@@ -90,9 +90,7 @@ export const alert = {
 			if (!alertId) { return }
 			state.alertList.data.forEach((alert) => {
 				if (alert.uuid === alertId) {
-					state.alertDetails.data = { ...alert,
-						query: alert.query.replace(/\\/g, '')
-					}
+					state.alertDetails.data = alert
 				}
 			})
 		},

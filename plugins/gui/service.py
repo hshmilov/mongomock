@@ -1002,7 +1002,7 @@ class GuiService(PluginBase):
         response = self.request_remote_plugin('run_shell', device_control_service_unique_name, 'post',
                                               data=data)
         if response.status_code != 200:
-            self.logger.error(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
+            logger.error(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
             raise ValueError(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
 
     @add_rule_unauthenticated("reports", methods=['GET', 'PUT'])
@@ -1013,40 +1013,24 @@ class GuiService(PluginBase):
 
         :return:
         """
-        queries_collection = self._get_collection('device_queries', limited_user=False)
         if request.method == 'GET':
             with self._get_db_connection(False) as db_connection:
                 reports_to_return = []
                 report_service = self.get_plugin_by_name('reports')
                 for report in db_connection[report_service[plugin_consts.PLUGIN_UNIQUE_NAME]]['reports'].find(
-                        projection={
-                            'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1,
-                            'retrigger': 1
-                        }).sort([('report_creation_time', pymongo.DESCENDING)]):
-                    # Fetching query in order to replace the string saved for aler
-                    #  with the corresponding id that the UI can recognize the query as
-                    query = queries_collection.find_one({'alertIds': {'$in': [str(report['_id'])]}})
-                    if query is None:
-                        continue
-                    report['query'] = str(query['_id'])
+                        projection={'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1,
+                                    'retrigger': 1, 'query': 1}).sort([('report_creation_time', pymongo.DESCENDING)]):
                     reports_to_return.append(beautify_db_entry(report))
                 return jsonify(reports_to_return)
 
         if request.method == 'PUT':
+            queries_collection = self._get_collection('device_queries', limited_user=False)
             report_to_add = request.get_json(silent=True)
-            match_query = {'_id': ObjectId(report_to_add['query'])}
-            query = queries_collection.find_one(match_query)
-            if query is None or not query.get('filter'):
-                return return_error("Invalid query id {0} requested for creating report".format(report_to_add['query']))
+            query_name = report_to_add['query']
+            if queries_collection.find_one({'name': query_name}) is None:
+                return return_error(f"Missing query {query_name} requested for creating alert")
 
-            logger.info("About to generate a report for the filter: {0}".format(query['filter']))
-            report_to_add['query'] = query['filter']
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
-            if response is not None and response.status_code == 201:
-                # Updating saved query with the created report's id, for reference when fetching alerts
-                report_ids = set(query.get('alertIds') or [])
-                report_ids.add(response.text)
-                queries_collection.update_one(match_query, {'$set': {'alertIds': list(report_ids)}})
             return response.text, response.status_code
 
     @add_rule_unauthenticated("reports/<report_id>", methods=['DELETE', 'POST'])
@@ -1056,45 +1040,23 @@ class GuiService(PluginBase):
         :param alert_id:
         :return:
         """
-        queries_collection = self._get_collection('device_queries', limited_user=False)
         if request.method == 'DELETE':
-            response = self.request_remote_plugin("reports/{0}".format(report_id), "reports", method='delete')
+            response = self.request_remote_plugin(f"reports/{report_id}", "reports", method='delete')
             if response is None:
                 return return_error("No response whether alert was removed")
-            if response.status_code == 200:
-                query = queries_collection.find_one({'alertIds': {'$in': [report_id]}})
-                if query is not None:
-                    report_ids = set(query.get('alertIds') or [])
-                    report_ids.remove(report_id)
-                    queries_collection.update_one({'_id': query['_id']}, {'$set': {'alertIds': list(report_ids)}})
-                    logger.info("Removed alert from containing query {0}".format(query['_id']))
             return response.text, response.status_code
 
         if request.method == 'POST':
+            queries_collection = self._get_collection('device_queries', limited_user=False)
             report_to_update = request.get_json(silent=True)
-            match_query = {'_id': ObjectId(report_to_update['query'])}
-            query = queries_collection.find_one(match_query)
-            if query is None or not query.get('filter'):
-                return return_error(
-                    "Invalid query id {0} requested for creating alert".format(report_to_update['query']))
+            query_name = report_to_update['query']
+            if queries_collection.find_one({'name': query_name}) is None:
+                return return_error(f"Missing query {query_name} requested for updating alert")
 
-            report_to_update['query'] = query['filter']
-            response = self.request_remote_plugin("reports/{0}".format(report_id), "reports", method='post',
+            response = self.request_remote_plugin(f"reports/{report_id}", "reports", method='post',
                                                   json=report_to_update)
             if response is None:
                 return return_error("No response whether alert was updated")
-
-            if response.status_code == 200:
-                # Remove alert from any queries holding it now
-                query = queries_collection.find_one({'alertIds': {'$in': [report_id]}})
-                if query is not None:
-                    report_ids = set(query.get('alertIds') or [])
-                    report_ids.remove(report_id)
-                    queries_collection.update_one({'_id': query['_id']}, {'$set': {'alertIds': list(report_ids)}})
-                # Updating saved query with the created alert's id, for reference when fetching alerts
-                report_ids = set(query.get('alertIds') or [])
-                report_ids.add(response.text)
-                queries_collection.update_one(match_query, {'$set': {'alertIds': list(report_ids)}})
 
             return response.text, response.status_code
 
