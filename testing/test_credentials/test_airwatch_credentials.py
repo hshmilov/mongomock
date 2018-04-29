@@ -1,7 +1,7 @@
 client_details = {
     "Airwatch_Domain": "https://techp.awmdm.com",
     "username": "nathan@axonius.com",
-    "password": "H15cnsz4M7BV6aC9kbdF",
+    "password": "AAAc5iz4M75V6aCgfgda",
     "apikey": "LTsXS00jvRqNhak28W88+6uUUnGU/YzHXGiS69W4QGI=",
     "verify_ssl": True
 }
