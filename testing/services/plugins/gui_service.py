@@ -9,6 +9,7 @@ class GuiService(PluginService):
     def __init__(self):
         super().__init__('gui')
         self._session = requests.Session()
+        self.override_exposed_port = True
 
     @property
     def volumes_override(self):

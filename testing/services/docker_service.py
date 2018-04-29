@@ -24,6 +24,7 @@ class DockerService(AxonService):
         self.package_name = os.path.basename(self.service_dir)
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
+        self.override_exposed_port = False
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -100,8 +101,12 @@ else:
 
         docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
 
+        publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
+        if mode != 'prod' or self.override_exposed_port:
+            publish_port_mode = ''  # if in debug mode or override_exposed_port is set, bind on all ips on host
+
         for exposed in self.exposed_ports:
-            docker_up.extend(['--publish', f'{exposed[0]}:{exposed[1]}'])
+            docker_up.extend(['--publish', f'{publish_port_mode}{exposed[0]}:{exposed[1]}'])
 
         volumes = self.volumes
 
