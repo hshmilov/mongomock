@@ -57,6 +57,7 @@ def install(just_install=False, print_key=False):
     load_images()
     load_new_source()
     create_venv()
+    set_logrotate()
     install_requirements()
     create_system(old_services, old_adapters)
     if key is not None:
@@ -161,6 +162,11 @@ def create_venv():
     print_state('Creating python venv')
     args = f'python3 -m virtualenv --python=python3 --clear {VENV_PATH}'.split(' ')
     subprocess.check_call(args)
+
+
+def set_logrotate():
+    print_state('Setting logrotate on both docker logs and cortex logs')
+    subprocess.check_call(safe_run_bash([VENV_WRAPPER, os.path.join(DEPLOYMENT_FOLDER_PATH, 'set_logrotate.py')]))
 
 
 def install_requirements():

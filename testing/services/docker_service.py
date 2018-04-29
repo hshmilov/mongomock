@@ -96,7 +96,7 @@ else:
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
-        logsfile = os.path.join(self.log_dir, "{0}_docker.log".format(self.container_name))
+        logsfile = os.path.join(self.log_dir, "{0}.docker.log".format(self.container_name))
 
         docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
 
