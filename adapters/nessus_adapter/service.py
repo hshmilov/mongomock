@@ -8,6 +8,9 @@ from axonius.utils.files import get_local_config_file
 from nessus_adapter.connection import NessusConnection
 from nessus_adapter.exceptions import NessusException
 from axonius.utils.parsing import parse_date
+from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.smart_json_class import SmartJsonClass
+
 
 HOST = 'host'
 PORT = 'port'
@@ -15,11 +18,19 @@ USERNAME = 'username'
 PASSWORD = 'password'
 
 
+class NessusVulnerability(SmartJsonClass):
+    plugin_id = Field(str, "Plugin ID")
+    plugin_name = Field(str, "Plugin Name")
+    severity = Field(int, "Severity")
+    severity_index = Field(int, "Severity Index")
+    vuln_index = Field(int, "Vulnerability Index")
+
+
 class NessusAdapter(ScannerAdapterBase):
     """ An adapter for Tenable's Nessus Vulnerability scanning platform. """
 
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        vulnerabilities = ListField(NessusVulnerability, "Vulnerability")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -144,6 +155,20 @@ class NessusAdapter(ScannerAdapterBase):
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
                            [device_raw.get('info', {}).get('host-ip', '')])
             device.last_seen = parse_date(str(device_raw.get('info', {}).get('host_end', '')))
+            device.hostname = device_raw.get('info', {}).get("netbios-name")
+            vulnerabilities_raw = device_raw.get("vulnerabilities", [])
+            device.vulnerabilities = []
+            for vulnerability_raw in vulnerabilities_raw:
+                try:
+                    new_vulnerability = NessusVulnerability()
+                    new_vulnerability.plugin_id = vulnerability_raw.get("plugin_id")
+                    new_vulnerability.plugin_name = vulnerability_raw.get("plugin_name")
+                    new_vulnerability.severity = vulnerability_raw.get("severity")
+                    new_vulnerability.severity_index = vulnerability_raw.get("severity_index")
+                    new_vulnerability.vuln_index = vulnerability_raw.get("vuln_index")
+                    device.vulnerabilites.append(new_vulnerability)
+                except:
+                    logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
             device.scanner = True
             device.set_raw(device_raw)
             yield device
