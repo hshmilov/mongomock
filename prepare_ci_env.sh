@@ -1,20 +1,8 @@
 #!/usr/bin/env bash
-echo "Removing all containers, volumes, networks, and axonius images"
-RUNNING_DOCKERS=$( docker ps -a -q )
-if [ "$RUNNING_DOCKERS" != "" ]; then
-    docker rm -f ${RUNNING_DOCKERS}
-fi
-AVAILABLE_VOLUMES=$( docker volume ls -q )
-if [ "$AVAILABLE_VOLUMES" != "" ]; then
-    docker volume rm ${AVAILABLE_VOLUMES}
-fi
-AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
-if [ "$AVAILABLE_IMAGES" != "" ]; then
-    docker rmi ${AVAILABLE_IMAGES}
-fi
-docker network rm axonius
 
-set -e # from now on exit on any error 
+set -e # from now on exit on any error
+
+devops/super_clean.sh
 
 echo "Logging to docker hub and pulling axonius-base-image"
 source testing/test_credentials/docker_login.sh
