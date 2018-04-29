@@ -1,12 +1,13 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
-import copy
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter, Field, DeviceAdapterOS
 from axonius.utils.files import get_local_config_file
 from cisco_prime_adapter.client import CiscoPrimeClient
+from cisco_prime_adapter.snmp import CiscoSnmpClient
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils import json
 
 
 class CiscoPrimeAdapter(AdapterBase):
@@ -15,6 +16,7 @@ class CiscoPrimeAdapter(AdapterBase):
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
+        self._macs = set()
 
     def _get_client_id(self, client_config):
         return client_config['url']
@@ -29,8 +31,41 @@ class CiscoPrimeAdapter(AdapterBase):
                 self._get_client_id(client_config), client_config))
             raise
 
+    def _get_snmp_creds(self, device, session):
+        creds = session.get_credentials(device)
+        snmp_data = ['snmp_read_cs', 'MANAGEMENT_ADDRESS', 'snmp_port']
+
+        # TODO: we aren't handling snmpv3
+
+        # missing snmp data
+        if not json.is_valid(creds, 'snmp_read_cs', 'MANAGEMENT_ADDRESS', 'snmp_port'):
+            logger.warning(f'Invalid snmp creds {creds}')
+            return None, None, None
+
+        community = creds['snmp_read_cs']
+        ip, port = creds['MANAGEMENT_ADDRESS'], creds['snmp_port']
+
+        return community, ip, port
+
+    def get_arp_table(self, raw_device, session):
+        community, ip, port = self._get_snmp_creds(raw_device, session)
+        if community is not None:
+            return CiscoSnmpClient(community, ip, port).query_arp_table()
+
     def _query_devices_by_client(self, client_name, session):
-        return session.get_devices()
+        raw_devices = []
+        for device in session.get_devices():
+            type_, raw_device = ('cisco', device)
+            yield (type_, raw_device)
+            raw_devices.append(raw_device)
+
+        for raw_device in raw_devices:
+            try:
+                arp_table = self.get_arp_table(raw_device, session)
+                for neighbor in arp_table:
+                    yield ('neighbor', neighbor)
+            except Exception as e:
+                logger.exception(f'Got exception while getting arp_table: {raw_device}')
 
     def _clients_schema(self):
         return {
@@ -62,10 +97,14 @@ class CiscoPrimeAdapter(AdapterBase):
             "type": "array"
         }
 
-    def create_device(self, raw_device):
+    def create_cisco_device(self, raw_device):
+
+        if not json.is_valid(raw_device, 'summary'):
+            logger.warning(f'Invalid device {raw_device}')
+            return None
 
         # if the device dosn't have id, it isn't really managed - ignore it
-        if 'deviceId' not in raw_device['summary']:
+        if not json.is_valid(raw_device, {'summary': 'deviceId'}):
             logger.warning(f'unmanged device detected {raw_device}')
             return None
 
@@ -88,21 +127,50 @@ class CiscoPrimeAdapter(AdapterBase):
         # iterate the nics and add them
         for mac_name, iplist in CiscoPrimeClient.get_nics(raw_device).items():
             name, mac = mac_name
-            device.add_nic(mac, ips=map(lambda ipsubnet: ipsubnet[1], iplist), subnets=map(
+            device.add_nic(mac, ips=map(lambda ipsubnet: ipsubnet[0], iplist), subnets=map(
                 lambda ipsubnet: ipsubnet[1], iplist), name=name)
 
+            # save mac address to prevent neighbors from adding managed cisco
+            self._macs.add(mac)
         device.set_raw(raw_device)
 
         return device
 
+    def create_neighbor_device(self, raw_device):
+        ip, mac = raw_device
+
+        if mac in self._macs:
+            logger.info(f'Duplicate mac in create_neighbor {mac}')
+            return None
+
+        device = self._new_device_adapter()
+        device.id = mac
+        device.device_model = 'cisco neighbor'
+        device.add_nic(mac, [ip])
+        device.set_raw({'raw_data': raw_device})
+
+        # save mac address to prevent neighbors from being added from 2 different devices
+        self._macs.add(mac)
+
+        return device
+
+    def create_device(self, raw_device):
+        type_, raw_device = raw_device
+        if type_ == 'cisco':
+            return self.create_cisco_device(raw_device)
+        if type_ == 'neighbor':
+            return self.create_neighbor_device(raw_device)
+
+        raise ValueError(f'invalid type {type_}')
+
     def _parse_raw_data(self, raw_data):
-        for raw_device in iter(raw_data):
+        for raw_device in raw_data:
             try:
                 device = self.create_device(raw_device)
                 if device:
                     yield device
             except Exception:
-                logger.exception(f'Got exception for raw_device: {raw_device}')
+                logger.exception(f'Got exception while creating device: {raw_device}')
 
     @classmethod
     def adapter_properties(cls):
