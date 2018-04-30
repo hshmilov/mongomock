@@ -35,7 +35,7 @@ def main():
     while True:
         try:
             debug_print("Sending get to {0}...".format(URL))
-            r = requests.get(URL)
+            r = requests.get(URL, verify=False)
             debug_print("Got status {0}.".format(r.status_code))
         except Exception as e:
             debug_print("Got exception {0}".format(e))

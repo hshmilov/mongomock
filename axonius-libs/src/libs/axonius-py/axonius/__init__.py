@@ -6,7 +6,7 @@ original_request = requests.Session.request
 
 
 # for now - no verification
-# TODO: Use out own CA here and create specific certificates for each plugin
+# TODO: Use our own CA here and create specific certificates for each plugin
 def __request(*args, verify=False, **kwargs):
     return original_request(*args, verify=verify, **kwargs)
 
