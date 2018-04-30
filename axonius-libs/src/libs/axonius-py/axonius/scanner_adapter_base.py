@@ -68,7 +68,7 @@ class ScannerCorrelatorBase(object):
         for normalization in normalizations:
             parsed_device = normalization(parsed_device)
 
-        for device in adapter_list or self._all_adapter_devices:
+        for device in adapter_list if adapter_list is not None else self._all_adapter_devices:
             for normalization in normalizations:
                 device = normalization(device)
             if all(predict(parsed_device, device) for predict in predicates):
