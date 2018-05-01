@@ -180,13 +180,13 @@ def retry_if_connection_error(exception):
     return isinstance(exception, requests.exceptions.ConnectionError)
 
 
-def return_error(error_message, http_status=500):
+def return_error(error_message, http_status=500, additional_data=None):
     """ Helper function for returning errors in our format.
 
     :param str error_message: The explenation of the error
     :param int http_status: The http status to return, 500 by default
     """
-    return jsonify({'status': 'error', 'message': error_message}), http_status
+    return jsonify({'status': 'error', 'message': error_message, 'additional_data': additional_data}), http_status
 
 
 class EntityType(Enum):
@@ -551,13 +551,18 @@ class PluginBase(Configurable, Feature):
         This function is blocking as long as the Http server is up.
         .. warning:: Do not use it in production! nginx->uwsgi is the one that loads us on production, so it does not call start_serve.
         """
-        from OpenSSL import SSL
-        context = SSL.Context(SSL.SSLv23_METHOD)
-        context.use_privatekey_file('/etc/ssl/private/nginx-selfsigned.key')
-        context.use_certificate_file('/etc/ssl/certs/nginx-selfsigned.crt')
-        AXONIUS_REST.run(host=self.host, port=self.port,
+        context = ('/etc/ssl/certs/nginx-selfsigned.crt', '/etc/ssl/private/nginx-selfsigned.key')
+
+        # uncomment the following lines run under profiler
+        # from werkzeug.contrib.profiler import ProfilerMiddleware
+        # AXONIUS_REST.config['PROFILE'] = True
+        # AXONIUS_REST.wsgi_app = ProfilerMiddleware(AXONIUS_REST.wsgi_app, restrictions=[100], sort_by=('time', 'calls'))
+
+        AXONIUS_REST.run(host=self.host,
+                         port=self.port,
                          ssl_context=context,
-                         debug=True, use_reloader=False)
+                         debug=True,
+                         use_reloader=False)
 
     def get_method(self):
         """Getting the method type of the request.
@@ -1010,14 +1015,17 @@ class PluginBase(Configurable, Feature):
 
             def insert_quickpath_to_db(devices):
                 all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
-                db_to_use.insert_many({
+                db_to_use.insert_many(({
                     "internal_axon_id": uuid.uuid4().hex,
                     "accurate_for_datetime": datetime.now(),
                     "adapters": [parsed_to_insert],
                     "tags": []
                 }
                     for parsed_to_insert
-                    in all_parsed)
+                    in all_parsed),
+                    ordered=False,
+                    bypass_document_validation=True
+                )
 
             inserter = self.__first_time_inserter
             # quickest way to find if there are any devices from this plugin in the DB

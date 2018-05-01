@@ -88,8 +88,9 @@ class AggregatorService(PluginBase, Triggerable):
         # of type "adapterdata" inside one (unsorted!) array.
 
         self.aggregator_db_connection["devices_db"].create_index([
-            (f'adapters.{PLUGIN_UNIQUE_NAME}', "text"), ('adapters.data.id', "text")
-        ])
+            (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
+        ], unique=True)
+        self.aggregator_db_connection["devices_db"].create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
 
         for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
             try:
@@ -280,46 +281,35 @@ class AggregatorService(PluginBase, Triggerable):
         except Exception as e:
             logger.exception('Getting devices from all requested adapters failed.')
 
-    @add_rule("plugin_push", methods=["POST"])
-    def plugin_push(self):
+    def _do_plugin_push(self, sent_plugin):
         """
-        Digests 'Link', 'Unlink' and 'Tag' requests from plugin
-        Link - links two or more adapter devices/users
-        Unlink - unlinks exactly two adapter devices/users
-        Tag - adds a tag to an adapter devices/users
-        Refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/86310913/Devices+DB+Correlation+Process for more
-        :return:
+        :return: '' if on success, else error string
         """
-        sent_plugin = self.get_request_data_as_object()
-        if sent_plugin is None:
-            return return_error("Invalid data sent", 400)
-
         association_type = sent_plugin.get('association_type')
         associated_adapters = sent_plugin.get('associated_adapters')
         entity = sent_plugin.get('entity')
 
         if entity not in ['devices', 'users']:
-            return return_error("Acceptable values for entity are: 'devices', 'users'")
+            return "Acceptable values for entity are: 'devices', 'users'"
 
         if association_type not in ['Tag', 'Multitag', 'Link', 'Unlink']:
-            return return_error("Acceptable values for association_type are: 'Tag', 'Multitag', 'Link', 'Unlink'", 400)
+            return "Acceptable values for association_type are: 'Tag', 'Multitag', 'Link', 'Unlink'"
         if not isinstance(associated_adapters, list):
-            return return_error("associated_adapters must be a list", 400)
+            return "associated_adapters must be a list"
 
         if association_type == 'Tag':
             # If a tag is associated with more than one adapter we will simply search for devices that have one of them.
             # But still we will be able to store these adapters in the "associated_adapters" field in the db.
             if len(associated_adapters) == 0:
-                return return_error("Tag must be associated with at least one adapter")
+                return "Tag must be associated with at least one adapter"
             if not _is_tag_valid(sent_plugin):
-                return return_error("tag name and type must be provided as a string")
+                return "tag name and type must be provided as a string"
 
         if association_type == 'Multitag':
             if not isinstance(sent_plugin.get('tags'), list):
-                return return_error("A multitag must have a list of tags in 'tags'")
+                return "A multitag must have a list of tags in 'tags'"
             if any(not _is_tag_valid(tag) for tag in sent_plugin['tags']):
-                return return_error("All tags in 'tags' must be valid tags, "
-                                    "such as they have 'name' and 'type' as string")
+                return "All tags in 'tags' must be valid tags, such as they have 'name' and 'type' as string"
 
         # user doesn't send this
         sent_plugin['accurate_for_datetime'] = datetime.now()
@@ -357,14 +347,13 @@ class AggregatorService(PluginBase, Triggerable):
             ]}))
 
             if len(entities_candidates) == 0:
-                return return_error("No entities given or all entities given don't exist")
+                return "No entities given or all entities given don't exist"
 
             if association_type == 'Tag':
                 if len(entities_candidates) != 1:
                     # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
                     # then if it's not 1, its definitely 0
-                    return return_error(
-                        "A tag must be associated with just one adapter, the entity provided is unavailable")
+                    return "A tag must be associated with just one adapter, the entity provided is unavailable"
 
                 # take (assumed single) key from candidates
                 self._update_entity_with_tag(sent_plugin, entities_candidates[0], entities_db)
@@ -386,27 +375,52 @@ class AggregatorService(PluginBase, Triggerable):
                 # or all the entities are already linked. In any case, if a real merge isn't done
                 # it means someone made a mistake.
                 if len(entities_candidates) < 2:
-                    return return_error(f"Got a 'Link' with only {len(entities_candidates)} candidates",
-                                        400)
-
+                    return ""
                 self._link_entities(entities_candidates, entities_db)
             elif association_type == 'Unlink':
                 if len(entities_candidates) != 1:
-                    return return_error(
-                        "All associated_adapters in an unlink operation must be from the same Axonius "
-                        "entity, in your case, they're from "
-                        f"{len(entities_candidates)} entities.")
+                    return f"All associated_adapters in an unlink operation must be from the same Axonius entity, in your case, they're from {len(entities_candidates)} entities."
                 entity_to_split = entities_candidates[0]
 
                 if len(entity_to_split['adapters']) == len(associated_adapters):
-                    return return_error("You can't remove all devices from an entity, that'll be unfair.")
+                    return "You can't remove all devices from an entity, that'll be unfair."
 
                 self._unlink_entities(associated_adapters, entity_to_split, entities_db)
 
         # raw == parsed for plugin_data
-        self._save_parsed_in_db(sent_plugin, db_type='raw')
         self._save_parsed_in_db(sent_plugin)  # save in parsed too
 
+        return ""
+
+    @add_rule("plugin_push", methods=["POST"])
+    def plugin_push(self):
+        """
+        Digests 'Link', 'Unlink' and 'Tag' requests from plugin
+        Link - links two or more adapter devices/users
+        Unlink - unlinks exactly two adapter devices/users
+        Tag - adds a tag to an adapter devices/users
+        Refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/86310913/Devices+DB+Correlation+Process for more
+        :return:
+        """
+        sent_plugin = self.get_request_data_as_object()
+        if sent_plugin is None:
+            return return_error("Invalid data sent", 400)
+        res = self._do_plugin_push(sent_plugin)
+        if res != '':
+            logger.warning(f'plugin push failed {res}')
+            return return_error(res)
+
+        return ''
+
+    @add_rule("multi_plugin_push", methods=["POST"])
+    def multi_plugin_push(self):
+        sent_plugin = self.get_request_data_as_object()
+        logger.info(f"Handling {len(sent_plugin)} pushes")
+        results = [self._do_plugin_push(d) for d in sent_plugin]
+        if any(x != "" for x in results):
+            logger.info(f"Error handling {len(sent_plugin)} pushes {[x for x in results if x != '']}")
+            return return_error("Errors took place", additional_data=[x for x in results if x != ''])
+        logger.info(f"Finished handling {len(sent_plugin)} pushes")
         return ""
 
     def _unlink_entities(self, associated_adapters, axonius_entity_to_split, entities_db):
@@ -434,7 +448,6 @@ class AggregatorService(PluginBase, Triggerable):
             candidate = get_entity_id_for_plugin_name(associated_adapters, tag_plugin_unique_name)
             if candidate is not None and candidate == tag_adapter_id:
                 new_axonius_entity['tags'].append(tag)
-        entities_db.insert_one(new_axonius_entity)
         for adapter_to_remove_from_old in new_axonius_entity['adapters']:
             entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
                                     {
@@ -455,6 +468,7 @@ class AggregatorService(PluginBase, Triggerable):
                                                 f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
                                             }
                                         }})
+        entities_db.insert_one(new_axonius_entity)
 
     def _link_entities(self, entities_candidates, entities_db):
         """
@@ -478,12 +492,7 @@ class AggregatorService(PluginBase, Triggerable):
                                for tag_key, duplicated_tags
                                in all_tags}
         internal_axon_id = uuid.uuid4().hex
-        entities_db.insert_one({
-            "internal_axon_id": internal_axon_id,
-            "accurate_for_datetime": datetime.now(),
-            "adapters": all_unique_adapter_entities_data,
-            "tags": list(tags_for_new_device.values())  # Turn it to a list
-        })
+
         # now, let us delete all other AxoniusDevices
         entities_db.delete_many({'$or':
                                  [
@@ -491,6 +500,13 @@ class AggregatorService(PluginBase, Triggerable):
                                      for axonius_entity in entities_candidates
                                  ]
                                  })
+
+        entities_db.insert_one({
+            "internal_axon_id": internal_axon_id,
+            "accurate_for_datetime": datetime.now(),
+            "adapters": all_unique_adapter_entities_data,
+            "tags": list(tags_for_new_device.values())  # Turn it to a list
+        })
 
     def _save_data_from_adapters(self, adapter_unique_name):
         """

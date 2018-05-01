@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 """
 ExecutionCorrelationEngineBase.py: A base class that implements execution based correlation
@@ -7,8 +8,7 @@ from collections import OrderedDict
 from datetime import timedelta, datetime
 from promise import Promise
 
-from axonius.correlator_base import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os, \
-    OSTypeInconsistency
+from axonius.correlator_base import WarningResult, CorrelationResult, UnsupportedOS, figure_actual_os, CorrelationReason
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
@@ -220,13 +220,14 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                     data={
                         'Reason': f"{responder_plugin_unique_name} executed code " +
                                   f"and found out it sees {correlation_plugin_name} " +
-                                  f"as {response_id}"})
+                                  f"as {response_id}"},
+                    reason=CorrelationReason.Execution)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
-        if reason == 'Execution':
+        if reason == CorrelationReason.Execution:
             if second_name == first_name:
                 # this means that some logic in the correlator logic is wrong, because
-                # such correlations should have reason == "Logic"
+                # such correlations shouldn't have reason == "Execution" - that's weird
                 logger.error(
                     f"{first_name} correlated to itself, id: '{first_id}' and '{second_id}' via execution")
                 return False

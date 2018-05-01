@@ -338,9 +338,9 @@ def test_rule_one_is_ad_and_full_hostname():
                              network_interfaces=[{MAC_FIELD: 'my234mac',
                                                   IPS_FIELD: ['1.31.1.1']}])
     device1['adapters'][0]['plugin_name'] = 'active_directory_adapter'
-    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
+    device1['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter1'
     device2['adapters'][0]['plugin_name'] = 'active_directory_adapter'
-    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter'
+    device2['adapters'][0][PLUGIN_UNIQUE_NAME] = 'active_directory_adapter2'
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same hostname and one is AD', 1)
 
 

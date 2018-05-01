@@ -2,10 +2,10 @@ import logging
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.utils.parsing import get_hostname, is_different_plugin, compare_hostname, is_from_ad, get_normalized_mac, \
+from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, get_normalized_mac, \
     ips_do_not_contradict, compare_macs, get_normalized_ip, compare_device_normalized_hostname, \
     normalize_adapter_devices, get_serial
-from axonius.correlator_base import has_mac, has_hostname, has_serial
+from axonius.correlator_base import has_mac, has_hostname, has_serial, CorrelationReason
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -62,7 +62,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         5.  {'Reason': 'They have the same MAC and IPs don\'t contradict'} - the reason for the correlation - try to make it as
                 descriptive as possible please
 
-        6. 'StaticAnalysis' - the analysis used to discover the correlation
+        6. CorrelationReason.StaticAnalysis - the analysis used to discover the correlation
         """
         logger.info("Starting to correlate on MAC-IP")
         filtered_adapters_list = filter(get_normalized_mac, adapters_to_correlate)
@@ -72,7 +72,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [compare_macs],
                                       {'Reason': 'They have the same MAC'},
-                                      'StaticAnalysis')
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
         logger.info("Starting to correlate on Hostname-IP")
@@ -84,7 +84,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [ips_do_not_contradict],
                                       {'Reason': 'They have the same hostname and IPs'},
-                                      'StaticAnalysis')
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_serial(self, adapters_to_correlate):
         logger.info("Starting to correlate on Serial")
@@ -96,7 +96,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [],
                                       {'Reason': 'They have the same serial'},
-                                      'StaticAnalysis')
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_with_ad(self, adapters_to_correlate):
         """
@@ -111,7 +111,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [is_from_ad],
                                       [],
                                       {'Reason': 'They have the same hostname and one is AD'},
-                                      'ScannerAnalysis')
+                                      CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, devices):
         # since this operation is extremely costly, we normalize the adapter_devices:
@@ -133,7 +133,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         yield from self._correlate_serial(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
-        if reason == 'StaticAnalysis':
+        if reason == CorrelationReason.StaticAnalysis:
             if second_name == first_name:
                 # this means that some logic in the correlator logic is wrong, because
                 # such correlations should have reason == "Logic"

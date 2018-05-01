@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from typing import List, NewType, Tuple, Iterable
 from abc import ABC, abstractmethod
@@ -6,8 +7,8 @@ from abc import ABC, abstractmethod
 import itertools
 from funcy import pairwise
 
-from axonius.correlator_base import CorrelationResult
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.correlator_base import CorrelationResult, CorrelationReason
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, parameter_function
 
 adapter_device = NewType('adapter_device', dict)
@@ -30,7 +31,7 @@ def _compare_devices(devices_iterator: Iterable[device_pair], comparators: List[
         if all(compare(device1, device2) for compare in comparators):
             # If we reached here that means that we should join this two devices according to this rule.
             yield CorrelationResult(associated_adapters=[(device1[PLUGIN_UNIQUE_NAME], device1['data']['id']),
-                                                         (device2['plugin_name'], device2['data']['id'])],
+                                                         (device2[PLUGIN_NAME], device2['data']['id'])],
                                     data=data_dict,  # not copying as they all have the same data
                                     reason=reason)
 
@@ -197,7 +198,7 @@ class CorrelatorEngineBase(ABC):
                                         data={
                                             'Reason': 'The same device is viewed ' +
                                                       'by two instances of the same adapter'},
-                                        reason='Logic')
+                                        reason=CorrelationReason.Logic)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         """
@@ -241,9 +242,18 @@ class CorrelatorEngineBase(ABC):
         :return: iter(CorrelationResult or WarningResult)
         """
         logic_correlations = self._preprocess_devices(devices)
-        all_adapter_devices = [adapter for adapters in devices for adapter in adapters['adapters']]
         devices = list(self._prefilter_device(devices))
-        correlations_done_already = list()
+        plugin_name_to_adapter_device = {
+            (adapter_device[PLUGIN_NAME], adapter_device['data']['id']): (axonius_device, adapter_device)
+            for axonius_device in devices
+            for adapter_device in axonius_device['adapters']
+        }
+        plugin_unique_name_to_axonius_device = {
+            (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id']): (axonius_device, adapter_device)
+            for axonius_device in devices
+            for adapter_device in axonius_device['adapters']
+        }
+        correlations_done_already = set()
 
         correlations_with_unavailable_devices = list()
 
@@ -261,51 +271,48 @@ class CorrelatorEngineBase(ABC):
             if not self._post_process(first_name, first_id, second_name, second_id, result.data, result.reason):
                 continue
 
-            if result.reason != 'Logic':
-                # TODO: this is a slow query, it makes the algorithm O(n^2)
-                # we need to store `all_adapter_devices` in a sorted array
-                # and use binarysearch, but python isn't too friendly here so I postpone this
-                correlated_adapter_device_from_db = next((adapter for adapter in all_adapter_devices
-                                                          if adapter['plugin_name'] == second_name and
-                                                          adapter['data']['id'] == second_id), None)
+            first_axonius_device, first_adapter_device = \
+                plugin_unique_name_to_axonius_device.get((first_name, first_id), (None, None))
+            if not first_axonius_device:
+                logger.error(f"{first_name}, {first_id} not found!")
+                continue
 
-                if correlated_adapter_device_from_db is None:
-                    # this means that the correlation was with a device that we don't see
-                    # e.g. if we ran the AD code to figure out the AD-ID on a device seen by AWS
-                    # but that device isn't seen by one of our AD clients, we will get an AD-ID
-                    # we don't know, so it by itself can't produce any correlation.
-                    # However, if we also see the *same* AD-ID from a different axonius-device, say
-                    # from ESX, so we can deduce that the ESX device and the AWS device are the same,
-                    # without actually "using" the AD device!
-                    correlations_with_unavailable_devices.append(result.associated_adapters)
-                    continue
+            if result.reason != CorrelationReason.Logic:
+                second_axonius_device, second_adapter_device = \
+                    plugin_name_to_adapter_device.get((second_name, second_id), (None, None))
+            else:
+                second_axonius_device, second_adapter_device = \
+                    plugin_unique_name_to_axonius_device.get((second_name, second_id), (None, None))
 
-                # figure out if the correlation violates a `strongly_unbound_with` rule
-                # https://axonius.atlassian.net/browse/AX-152
-                correlation_base_axonius_device = next((axon_device for
-                                                        axon_device in devices
-                                                        if
-                                                        any(adapter_device[PLUGIN_UNIQUE_NAME] == first_name and
-                                                            adapter_device['data']['id'] == first_id for
-                                                            adapter_device in axon_device['adapters'])), None)
-                if correlation_base_axonius_device is None:
-                    raise RuntimeError(f"Base responder for correlation doesn't exist, {first_name} {first_id}")
+            if not second_axonius_device:
+                # this means that the correlation was with a device that we don't see
+                # e.g. if we ran the AD code to figure out the AD-ID on a device seen by AWS
+                # but that device isn't seen by one of our AD clients, we will get an AD-ID
+                # we don't know, so it by itself can't produce any correlation.
+                # However, if we also see the *same* AD-ID from a different axonius-device, say
+                # from ESX, so we can deduce that the ESX device and the AWS device are the same,
+                # without actually "using" the AD device!
+                correlations_with_unavailable_devices.append(result.associated_adapters)
+                continue
 
-                if any(tag['name'] == 'strongly_unbound_with' and [second_name, second_id] in tag['data'] for
-                       tag
-                       in correlation_base_axonius_device['tags']):
-                    continue
+            # fix the second adapter - it might be plugin_name or unique_plugin_name according to "Reason"
+            result.associated_adapters = [(first_name, first_id),
+                                          (second_adapter_device[PLUGIN_UNIQUE_NAME], second_id)]
+            # figure out if the correlation violates a `strongly_unbound_with` rule
+            if any(tag['name'] == 'strongly_unbound_with' and
+                   [second_adapter_device[PLUGIN_NAME], second_id] in tag['data']
+                   for tag
+                   in first_axonius_device['tags']):
+                continue
 
-                second_name = correlated_adapter_device_from_db[PLUGIN_UNIQUE_NAME]
-                result.associated_adapters = [(first_name, first_id), (second_name, second_id)]
-            sorted_associated_adapters = sorted(result.associated_adapters)
+            sorted_associated_adapters = tuple(sorted(result.associated_adapters))
             if sorted_associated_adapters in correlations_done_already:
                 logger.debug(f"result is the same as old one : {result}")
                 # skip correlations done twice
                 continue
 
             else:
-                correlations_done_already.append(sorted_associated_adapters)
+                correlations_done_already.add(sorted_associated_adapters)
                 yield result
 
         # sort all correlations src->dst ("src" - device used for correlation and "dst" - device found by
@@ -325,4 +332,4 @@ class CorrelatorEngineBase(ABC):
                                         data={
                                             "Reason": f"{a[1]} is a nonexistent device correlated " +
                                                       f"to both {a[0]} and {b[0]}"},
-                                        reason="NonexistentDeduction")
+                                        reason=CorrelationReason.NonexistentDeduction)

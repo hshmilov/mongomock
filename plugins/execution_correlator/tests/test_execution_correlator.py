@@ -2,6 +2,7 @@
 This is a default test we do just to check that our testing system works.
 The following will be run by pytest.
 """
+import pytest
 
 # we're actually testing ExecutionCorrelatorEngineBase here
 from axonius.execution_correlator_engine_base import _find_contradictions, UNAVAILABLE_CMD_OUTPUT
@@ -10,7 +11,7 @@ import execution_correlator.engine as CE
 import sys
 from promise import Promise
 
-from axonius.correlator_base import CorrelationResult, WarningResult
+from axonius.correlator_base import CorrelationResult, WarningResult, CorrelationReason
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
 
@@ -483,7 +484,7 @@ def test_execution_nonexistent_device_deduction_correlation():
     assert len(results) == 1
     result = results[0]
     assert isinstance(result, CorrelationResult)
-    assert result.reason == "NonexistentDeduction"
+    assert result.reason == CorrelationReason.NonexistentDeduction
     assert len(result.associated_adapters) == 2
     (first_name, first_id), (second_name, second_id) = result.associated_adapters
     assert ('esx_adapter_1' == first_name and 'active_directory_adapter_1' == second_name and
@@ -940,3 +941,7 @@ def test_execution_strongly_unbound_with():
         correlate(devices, executor=specific_correlation_windows_executor, cmds=windows_unique_cmd_generator))
     print(f"RESULTS of execution are: {results}")
     assert len(results) == 0
+
+
+if __name__ == '__main__':
+    pytest.main([__file__])
