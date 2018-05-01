@@ -1,10 +1,13 @@
 <template>
-    <svg class="pie" viewBox="-1 -1 2 2">
-        <g v-for="item, index in slices" @click="$emit('click-slice', index)">
-            <path :d="item.path" :class="item.class" class="filling clickable"></path>
-            <text dx="1.5em" dy="1em" text-anchor="middle" class="scaling" v-if="item.percentage">{{item.percentage}}%</text>
-        </g>
-    </svg>
+    <div class="pie">
+        <svg viewBox="-1 -1 2 2" @mouseout="inHover = -1">
+            <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)">
+                <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
+                <text v-if="slice.anotate && slice.portion" text-anchor="middle">{{Math.round(slice.portion * 100)}}%</text>
+            </g>
+        </svg>
+        <div v-show="hoverTitle" ref="tooltip" class="pie-tooltip">{{hoverTitle}}</div>
+    </div>
 </template>
 
 <script>
@@ -12,15 +15,24 @@
 		name: 'x-pie-chart',
         props: {data: {required: true}},
         computed: {
+			completeData() {
+				let sumPortions = this.data.reduce((sum, item) => {
+					return sum + item.portion
+				}, 0)
+				if (sumPortions === 1) return this.data
+				return [ {
+					portion: 1 - sumPortions, anotate: false, class: 'theme-fill-gray-light'
+                }, ...this.data ]
+			},
 			slices() {
 				let cumulativePortion = 0
-                return this.data.map((slice, index) => {
+                return this.completeData.map((slice, index) => {
                     // Starting slice at the end of previous one, and ending after percentage defined for item
                     const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion)
                     cumulativePortion += slice.portion
                     const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
 					return {
-						class: `extra-fill-${(index % 6) + 1}`,  ...slice,
+						class: `extra-fill-${index % 6}`,  ...slice,
                         path: [
 							`M ${startX} ${startY}`, // Move
 							`A 1 1 0 ${slice.portion > .5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
@@ -29,6 +41,30 @@
 					}
                 })
             },
+            hoverTitle() {
+				if (this.inHover === -1) return ''
+                return this.slices[this.inHover].title
+            }
+        },
+        data() {
+			return {
+				inHover: -1,
+                pieChanged: false
+            }
+        },
+        watch: {
+			slices(newSlices, oldSlices) {
+				if (this.pieChanged) return
+				if (oldSlices.length !== newSlices.length) {
+					this.pieChanged = true
+					return
+				}
+                newSlices.forEach((slice, index) => {
+                    if (oldSlices[index].portion !== slice.portion) {
+                        this.pieChanged = true
+                    }
+                })
+            }
         },
         methods: {
 			getCoordinatesForPercent (portion) {
@@ -36,7 +72,33 @@
 					Math.cos(2 * Math.PI * portion),
                     Math.sin(2 * Math.PI * portion)
                 ];
-			}
+			},
+            onHover(event, index) {
+				this.inHover = index
+                if (!this.$refs || !this.$refs.tooltip) return
+                this.$refs.tooltip.style.top = event.clientY + 20 + 'px'
+				this.$refs.tooltip.style.left = event.clientX + 20 + 'px'
+            },
+            fixTexts() {
+				this.$el.querySelectorAll('path').forEach((path) => {
+					let text = path.nextElementSibling
+					if (!text) return
+                    text.classList.remove('scaling')
+					let box = path.getBBox()
+					text.setAttribute('x', box.x + box.width / 2)
+					text.setAttribute('y', box.y + box.height / 2 + (box.width >= 1 && box.width < 2 ? 0.2 : 0))
+					text.classList.add('scaling')
+				})
+            }
+        },
+        mounted() {
+			this.fixTexts()
+        },
+        updated() {
+			if (this.pieChanged) {
+				this.fixTexts()
+                this.pieChanged = false
+            }
         }
 	}
 </script>
@@ -44,19 +106,27 @@
 <style lang="scss">
     .pie {
         margin: auto;
-        path, text {
+        width: 240px;
+        g {
             cursor: pointer;
-        }
-        .clickable {
-            opacity: 0.4;
-            transition: opacity ease-in 0.4s;
-            &:hover {
-                opacity: 1;
+            path {
+                opacity: 0.4;
+                transition: opacity ease-in 0.4s;
+                &.in-hover {
+                    opacity: 1;
+                }
+            }
+            text {
+                font-size: 1%;
+                fill: $theme-black;
             }
         }
-        text {
-            font-size: 2%;
-            fill: $theme-black;
-        }
+    }
+    .pie-tooltip {
+        background-color: $theme-white;
+        border: 1px solid $grey-2;
+        border-radius: 2px;
+        position: fixed;
+        padding: 8px;
     }
 </style>

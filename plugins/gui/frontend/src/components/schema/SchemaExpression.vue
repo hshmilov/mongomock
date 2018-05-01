@@ -9,7 +9,7 @@
         <label class="x-btn light checkbox-label" :class="{active: expression.not, disabled: disableNot}">
             <input type="checkbox" v-model="expression.not">NOT</label>
         <div class="expression-field">
-            <x-select-type :options="fields" v-model="fieldSpace" />
+            <x-select-symbol :options="fields" v-model="fieldSpace" />
             <x-select :options="currentFields" v-model="expression.field" placeholder="field..." :searchable="true"
                       class="field-select"/>
         </div>
@@ -35,7 +35,7 @@
 
 <script>
     import xSelect from '../inputs/Select.vue'
-    import xSelectType from '../inputs/SelectType.vue'
+    import xSelectSymbol from '../inputs/SelectSymbol.vue'
 	import xStringEdit from '../controls/string/StringEdit.vue'
 	import xNumberEdit from '../controls/numerical/NumberEdit.vue'
 	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
@@ -46,7 +46,7 @@
 
 	export default {
 		components: {
-			xSelect, xSelectType, xStringEdit, xNumberEdit, xIntegerEdit, xBoolEdit, xArrayEdit,
+			xSelect, xSelectSymbol, xStringEdit, xNumberEdit, xIntegerEdit, xBoolEdit, xArrayEdit,
 		},
 		name: 'x-schema-expression',
 		props: {
@@ -282,7 +282,7 @@
         .expression-field {
             display: flex;
             width: 100%;
-            .x-select-type {
+            .x-select-symbol {
                 border-bottom-right-radius: 0;
                 border-top-right-radius: 0;
             }
@@ -295,9 +295,6 @@
             }
         }
         .x-select-trigger {
-            .placeholder {
-                text-transform: uppercase;
-            }
             .logo-text {
                 display: none;
             }

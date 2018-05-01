@@ -30,10 +30,16 @@
             > .x-title {
                 flex: 1 0 auto;
                 font-size: 16px;
+                width: 280px;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
             }
             .x-remove {
                 padding: 0 4px;
-                line-height: 16px;
+                margin-right: -2px;
+                line-height: 18px;
+                font-size: 18px;
                 align-self: center;
                 &:hover {
                     cursor: pointer;

@@ -74,7 +74,7 @@
 .logo-text {
   display: inline-block;
   font-size: 14px;
-  margin-left: 4px;
+  margin-left: 8px;
   vertical-align: middle;
 }
 
@@ -109,6 +109,9 @@
 
 .grid-span2 {
   grid-column-end: span 2;
+}
+.grid-span3 {
+  grid-column-end: span 3;
 }
 
 // Widths
@@ -157,6 +160,7 @@ table {
   display: grid;
   grid-row-gap: 16px;
   grid-auto-rows: auto;
+  align-items: center;
   &.x-grid-col-2 {
     grid-template-columns: 2fr 1fr;
   }
@@ -181,6 +185,9 @@ table {
   &.disabled {
     opacity: 0.4;
     cursor: default;
+    &:hover {
+      box-shadow: none;
+    }
   }
   &.inverse {
     background-color: $theme-white;
@@ -193,6 +200,7 @@ table {
     width: 30px;
     height: 30px;
     line-height: 24px;
+    padding: 4px 0;
     &.active {
       background-color: $theme-black;
       color: $grey-2;

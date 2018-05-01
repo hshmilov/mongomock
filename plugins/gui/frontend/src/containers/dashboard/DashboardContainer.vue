@@ -6,16 +6,16 @@
         <div class="dashboard-charts">
             <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
                              :portion="item.portion" :title="item.title" :description="item.description"
-                             @click-slice="runCoverageFilter(item.properties, $event)" />
+                             @click-one="runCoverageFilter(item.properties, $event)" />
             <x-card title="Data Discovery">
                 <x-counter-chart :data="adapterDevicesCounterData"/>
             </x-card>
             <x-card title="Devices per Adapter">
-                <x-histogram-chart :data="adapterDevicesCount" @click-bar="runAdapterDevicesFilter"/>
+                <x-histogram-chart :data="adapterDevicesCount" @click-one="runAdapterFilter" :sort="true" type="logo"/>
             </x-card>
-            <x-card v-for="chart in dashboard.charts.data" :title="chart.name" :key="chart.name" v-if="chart.data"
-                    :removable="true" @remove="removeDashboard(chart.uuid)">
-                <x-results-chart :data="chart.data"/>
+            <x-card v-for="chart, chartInd in dashboard.charts.data" v-if="chart.data" :key="chart.name"
+                    :title="chart.name" :removable="true" @remove="removeDashboard(chart.uuid)">
+                <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" />
             </x-card>
             <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                 <x-cycle-chart :data="lifecycle.subPhases"/>
@@ -27,20 +27,7 @@
                 <div class="link" @click="createNewDashboard">+</div>
             </x-card>
         </div>
-        <feedback-modal :launch="newDashboard.isActive" :handle-save="saveNewDashboard" @change="finishNewDashboard">
-            <h3>Create a Dashboard Chart</h3>
-            <div class="x-grid x-grid-col-2">
-                <label>Chart Title</label>
-                <input type="text" v-model="newDashboard.data.name" />
-                <template v-for="module in Object.keys(newDashboard.data.queries)">
-                    <label>{{module}} Queries</label>
-                    <vm-select v-model="newDashboard.data.queries[module]" multiple filterable
-                               no-data-text="No saved queries" placeholder="Select queries...">
-                        <vm-option v-for="query in queries[module]" :key="query.name" :value="query.name" :label="query.name"/>
-                    </vm-select>
-                </template>
-            </div>
-        </feedback-modal>
+        <dashboard-wizard-container ref="wizard" />
     </x-page>
 </template>
 
@@ -48,53 +35,40 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import xCard from '../../components/cards/Card.vue'
-	import FeedbackModal from '../../components/popover/FeedbackModal.vue'
-
+    import xCoverageCard from '../../components/cards/CoverageCard.vue'
 	import xCounterChart from '../../components/charts/Counter.vue'
 	import xHistogramChart from '../../components/charts/Histogram.vue'
+    import compare from '../../components/charts/customized/Compare.vue'
+    import intersect from '../../components/charts/customized/Intersect.vue'
 	import xCycleChart from '../../components/charts/Cycle.vue'
-	import xResultsChart from '../../components/charts/Results.vue'
-    import xCoverageCard from '../../components/cards/CoverageCard.vue'
+    import DashboardWizardContainer from './DashboardWizardContainer.vue'
 
 	import {
 		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE,
-        FETCH_DASHBOARD, SAVE_DASHBOARD, REMOVE_DASHBOARD
+        FETCH_DASHBOARD, REMOVE_DASHBOARD
 	} from '../../store/modules/dashboard'
-	import { FETCH_DATA_QUERIES } from '../../store/actions'
     import { UPDATE_DATA_VIEW } from '../../store/mutations'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
-    const newDashboardData = {
-		name: '', queries: {device: [], user: []}
-	}
-
 	export default {
 		name: 'x-dashboard',
 		components: {
-			xPage, xCard, FeedbackModal,
-			xCounterChart, xHistogramChart, xCycleChart, xResultsChart, xCoverageCard
+			xPage, xCard, xCoverageCard, xCounterChart, xHistogramChart,
+            compare, intersect, xCycleChart, DashboardWizardContainer
 		},
 		computed: {
 			...mapState({
 				dashboard (state) {
 					return state['dashboard']
-				},
-				queries (state) {
-					return Object.keys(this.newDashboard.data.queries).reduce((map, module) => {
-						map[module] = state[module].queries.saved.data
-                        return map
-                    }, {})
 				}
 			}),
 			lifecycle () {
 				if (!this.dashboard.lifecycle.data) return {}
-
 				return this.dashboard.lifecycle.data
 			},
 			adapterDevices () {
 				if (!this.dashboard.adapterDevices.data) return {}
-
 				return this.dashboard.adapterDevices.data
 			},
 			adapterDevicesCount () {
@@ -119,77 +93,58 @@
 				return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
 			}
 		},
-		data () {
-			return {
-				newDashboard: {
-					isActive: false,
-					data: { ...newDashboardData }
-				},
-			}
-		},
 		methods: {
 			...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({
 				fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
-				fetchDashboard: FETCH_DASHBOARD, saveDashboard: SAVE_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
-				fetchQueries: FETCH_DATA_QUERIES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE
+				fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
+				fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE
 			}),
 			getDashboardData () {
 				this.fetchAdapterDevices()
 				this.fetchDashboard()
                 this.fetchDashboardCoverage()
 			},
-			runAdapterDevicesFilter (adapterName) {
-				this.runFilter(`adapters == '${adapterName}'`)
+			runAdapterFilter (index) {
+				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'device')
 			},
             runCoverageFilter(properties, covered) {
 				if (!properties || !properties.length) return
                 if (covered) {
-                    this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`)
+                    this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`, 'device')
                 } else {
 					this.runFilter(properties.map((property) => {
 						return `specific_data.adapter_properties != '${property}'`
                     }).join(' and '))
                 }
             },
-			createNewDashboard () {
-				this.newDashboard.isActive = true
-			},
-			saveNewDashboard () {
-				return this.saveDashboard(this.newDashboard.data)
-			},
-			finishNewDashboard () {
-				this.newDashboard.isActive = false
-				this.newDashboard.data = { ...newDashboardData }
-			},
-            runFilter(filter) {
-				this.updateView({module: 'device', view: {
+            runChartFilter(chartInd, queryInd) {
+				let query = this.dashboard.charts.data[chartInd].data[queryInd]
+				if (!query.filter) return
+				this.runFilter(query.filter, query.module)
+            },
+            runFilter(filter, module) {
+				this.updateView({module, view: {
 						page: 0, query: { filter, expressions: [] }
 					}})
-				this.$router.push({name: 'Devices'})
+				this.$router.push({path: module})
+            },
+            createNewDashboard() {
+				if (!this.$refs.wizard) return
+                this.$refs.wizard.activate()
             },
             exportPDF() {
 				window.print()
             }
 		},
 		created () {
-			this.fetchQueries({module: 'device', type: 'saved'})
-			this.fetchQueries({module: 'user', type: 'saved'})
-
 			this.getDashboardData()
-			this.intervals = []
-			this.intervals.push(setInterval(function () {
-				this.fetchDashboard()
-			}.bind(this), 1000))
-			this.intervals.push(setInterval(function () {
-				this.fetchAdapterDevices()
-			}.bind(this), 10000))
-			this.intervals.push(setInterval(function () {
-				this.fetchDashboardCoverage()
-			}.bind(this), 10000))
+			this.interval = setInterval(function () {
+				this.getDashboardData()
+			}.bind(this), 10000)
 		},
 		beforeDestroy () {
-			this.intervals.forEach(interval => clearInterval(interval))
+			clearInterval(this.interval)
 		}
 	}
 </script>
@@ -197,21 +152,6 @@
 
 <style lang="scss">
 
-    .dashboard {
-        .modal-body {
-            h3 {
-                margin-bottom: 24px;
-            }
-            .vm-select {
-                .vm-select-input__inner {
-                    width: 100%;
-                }
-            }
-            .x-grid {
-                grid-template-columns: 1fr 2fr;
-            }
-        }
-    }
     .dashboard-charts {
         display: grid;
         grid-template-columns: repeat(auto-fill, 320px);

@@ -1,4 +1,5 @@
 import { REQUEST_API } from '../actions'
+import { ADD_DATA_QUERY } from '../mutations'
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE'
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'
@@ -12,7 +13,9 @@ export const UPDATE_ADAPTER_DEVICES = 'UPDATE_ADAPTER_DEVICES'
 export const FETCH_DASHBOARD = 'FETCH_DASHBOARD'
 export const UPDATE_DASHBOARD = 'UPDATE_DASHBOARD'
 export const SAVE_DASHBOARD = 'SAVE_DASHBOARD'
+
 export const REMOVE_DASHBOARD = 'REMOVE_DASHBOARD'
+export const UPDATE_REMOVED_DASHBOARD = 'UPDATE_REMOVED_DASHBOARD'
 
 export const FETCH_DASHBOARD_COVERAGE = 'FETCH_DASHBOARD_COVERAGE'
 export const UPDATE_DASHBOARD_COVERAGE = 'UPDATE_DASHBOARD_COVERAGE'
@@ -55,6 +58,9 @@ export const dashboard = {
 			if (payload.data && Object.keys(payload.data).length) {
 				state.coverage.data = payload.data
 			}
+		},
+		[ UPDATE_REMOVED_DASHBOARD ] (state, dashboardId) {
+			state.charts.data = state.charts.data.filter(dashboard => dashboard.uuid != dashboardId)
 		}
 	},
 	actions: {
@@ -93,13 +99,21 @@ export const dashboard = {
 				rule: 'dashboard',
 				method: 'POST',
 				data: payload
+			}).then((response) => {
+				if (response.status === 200 && response.data) {
+					dispatch(FETCH_DASHBOARD)
+				}
 			})
 		},
-		[ REMOVE_DASHBOARD ] ({dispatch}, dashboardId) {
+		[ REMOVE_DASHBOARD ] ({dispatch, commit}, dashboardId) {
 			if (!dashboardId) return
 			return dispatch(REQUEST_API, {
 				rule: `dashboard/${dashboardId}`,
 				method: 'DELETE'
+			}).then((response) => {
+				if (response.status === 200) {
+					commit(UPDATE_REMOVED_DASHBOARD, dashboardId)
+				}
 			})
 		},
 		[ FETCH_DASHBOARD_COVERAGE ] ({dispatch}) {

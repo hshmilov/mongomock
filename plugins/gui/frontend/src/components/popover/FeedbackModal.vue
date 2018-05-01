@@ -1,5 +1,5 @@
 <template>
-    <modal v-show="launch" approveText="Save" @confirm="handleConfirm" @close="handleClose">
+    <modal v-show="launch" approveText="Save" @confirm="handleConfirm" @close="handleClose" :disabled="disabled">
         <div slot="body" class="feedback-modal-body" @keyup.esc="handleClose">
             <template v-if="status.processing">
                 <pulse-loader :loading="true" color="#26dad2"></pulse-loader>
@@ -31,7 +31,8 @@
 			prop: 'launch',
 			event: 'change'
 		},
-		props: {'handleSave': {required: true}, 'message': {default: 'Save complete'}, 'launch': {default: false}},
+		props: {handleSave: {required: true}, message: {default: 'Save complete'},
+            launch: {default: false}, disabled: {default: false}},
 		data () {
 			return {
 				isActive: false,

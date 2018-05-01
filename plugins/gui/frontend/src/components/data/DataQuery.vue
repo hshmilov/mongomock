@@ -310,13 +310,8 @@
         }
         .query-wizard {
             padding: 12px;
-            .x-btn {
-                &.link {
-                    margin-right: 8px;
-                }
-                &.light {
-                    padding: 4px 0;
-                }
+            .x-btn.link {
+                margin-right: 8px;
             }
         }
         .disabled {

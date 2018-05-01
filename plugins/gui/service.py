@@ -10,6 +10,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts import plugin_consts
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
+from gui.consts import ChartTypes
 
 import tarfile
 import io
@@ -406,7 +407,10 @@ class GuiService(PluginBase):
                     :param value:   Value for testing if exists in the list
                     :return: True, if value is new to the children list and False otherwise
                     """
-                    def same_string(x, y): return type(x) != 'str' or (re.match(x, y, re.I) or re.match(y, x, re.I))
+
+                    def same_string(x, y):
+                        return type(x) != 'str' or (re.match(x, y, re.I) or re.match(y, x, re.I))
+
                     if type(value) == str:
                         return len([child for child in children if same_string(child, value)]) == 0
                     if type(value) == int:
@@ -478,6 +482,7 @@ class GuiService(PluginBase):
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
+
         def _basic_generic_field_names():
             generic_field_names = list(map(lambda field: field.get(
                 'name'), self._entity_fields(module_name)['generic']))
@@ -597,6 +602,7 @@ class GuiService(PluginBase):
 
         :return:
         """
+
         def _get_generic_fields():
             if module_name == 'device':
                 return DeviceAdapter.get_fields_info()
@@ -1367,39 +1373,107 @@ class GuiService(PluginBase):
         dashboard_collection = self._get_collection('dashboard', limited_user=False)
         if request.method == 'GET':
             dashboard_list = []
-            for dashboard_object in dashboard_collection.find(filter_archived()):
-                if not dashboard_object.get('name'):
-                    logger.info(f'No name for dashboard {dashboard_object["_id"]}')
-                elif not dashboard_object.get('queries'):
-                    logger.info(f'No queries found for dashboard {dashboard_object.get("name")}')
+            for dashboard in dashboard_collection.find(filter_archived()):
+                if not dashboard.get('name'):
+                    logger.info(f'No name for dashboard {dashboard["_id"]}')
+                elif not dashboard.get('queries'):
+                    logger.info(f'No queries found for dashboard {dashboard.get("name")}')
                 else:
-                    # Let's fetch and run them query filters
-                    for module_name in dashboard_object['queries']:
-                        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
-                        for query_name in dashboard_object['queries'][module_name]:
-                            query_object = queries_collection.find_one({'name': query_name})
-                            if not query_object or not query_object.get('filter'):
-                                logger.info(f'No filter found for query {query_name}')
-                            else:
-                                if not dashboard_object.get('data'):
-                                    dashboard_object['data'] = {}
-                                dashboard_object['data'][query_name] = self.aggregator_db_connection[
-                                    f'{module_name}s_db_view'].find(parse_filter(query_object['filter']), {'_id': 1}).count()
-
-                    dashboard_list.append(beautify_db_entry(dashboard_object))
+                    # Let's fetch and execute them query filters, depending on the chart's type
+                    try:
+                        if dashboard['type'] == ChartTypes.compare.name:
+                            dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['queries'])
+                        elif dashboard['type'] == ChartTypes.intersect.name:
+                            dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['queries'])
+                        dashboard_list.append(beautify_db_entry(dashboard))
+                    except Exception as e:
+                        # Since there is no data, not adding this chart to the list
+                        logger.exception(
+                            f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]}). Reason: {e}')
             return jsonify(dashboard_list)
 
         # Handle 'POST' request method - save dashboard configuration
-        dashboard_object = self.get_request_data_as_object()
-        if not dashboard_object.get('name'):
+        dashboard_data = self.get_request_data_as_object()
+        if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
-        if not dashboard_object.get('queries'):
+        if not dashboard_data.get('queries'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
-        update_result = dashboard_collection.replace_one({'name': dashboard_object['name']}, dashboard_object,
-                                                         upsert=True)
+        update_result = dashboard_collection.replace_one({'name': dashboard_data['name']}, dashboard_data, upsert=True)
         if not update_result.upserted_id and not update_result.modified_count:
             return return_error('Error saving dashboard chart', 400)
-        return ''
+        return str(update_result.upserted_id)
+
+    def _fetch_data_for_chart_compare(self, dashboard_queries):
+        """
+        Iterate given queries, fetch each one's filter from the appropriate query collection, according to its module,
+        and execute the filter on the appropriate entity collection.
+
+        :param dashboard_queries:
+        :return:
+        """
+        if not dashboard_queries:
+            raise Exception('No queries for the chart')
+        data = []
+        for query in dashboard_queries:
+            # Can be optimized by taking all names in advance and querying each module's collection once
+            # But since list is very short the simpler and more readable implementation is fine
+            query_object = self._get_collection(f'{query["module"]}_queries', limited_user=False).find_one(
+                {'name': query['name']})
+            if not query_object or not query_object.get('filter'):
+                raise Exception(f'No filter found for query {query["name"]}')
+            data.append({'name': query['name'], 'filter': query_object['filter'], 'module': query['module'],
+                         'count': self.aggregator_db_connection[f'{query["module"]}s_db_view'].find(
+                             parse_filter(query_object['filter']), {'_id': 1}).count()})
+        return data
+
+    def _fetch_data_for_chart_intersect(self, dashboard_queries):
+        """
+        This chart shows intersection of 1 or 2 'Child' queries with a 'Parent' (expected not to be a subset of them).
+        Module to be queried is defined by the parent query.
+
+        :param dashboard_queries: List of 2 or 3 queries
+        :return: List of result portions for the query executions along with their names. First represents Parent query.
+                 If 1 child, second represents Child intersecting with Parent.
+                 If 2 children, intersection between all three is calculated, namely 'Intersection'.
+                                Second and third represent each Child intersecting with Parent, excluding Intersection.
+                                Fourth represents Intersection.
+        """
+        if not dashboard_queries or len(dashboard_queries) < 2:
+            raise Exception('Pie chart requires at least two queries')
+        module = dashboard_queries[0]['module']
+        # Query and data collections according to given parent's module
+        queries_collection = self._get_collection(f'{module}_queries', limited_user=False)
+        data_collection = self.aggregator_db_connection[f'{module}s_db_view']
+
+        parent_name = dashboard_queries[0]['name']
+        parent_filter = parse_filter(queries_collection.find_one({'name': parent_name})['filter'])
+        data = [{'name': parent_name, 'count': data_collection.find(parent_filter, {'_id': 1}).count()}]
+
+        child_name_1 = dashboard_queries[1]['name']
+        child_filter_1 = parse_filter(queries_collection.find_one({'name': child_name_1})['filter'])
+        if len(dashboard_queries) == 2:
+            # Fetch the only child, intersecting with parent
+            data.append({'name': child_name_1,
+                         'count': data_collection.find({'$and': [parent_filter, child_filter_1]}, {'_id': 1}).count()})
+        else:
+            child_name_2 = dashboard_queries[2]['name']
+            child_filter_2 = parse_filter(queries_collection.find_one({'name': child_name_2})['filter'])
+
+            # Fetch the intersection of parent and 2 children and create match to exclude their _IDs
+            intersection_cursor = data_collection.find({'$and': [parent_filter, child_filter_1, child_filter_2]},
+                                                       {'_id': 1})
+            not_intersection = {'_id': {'$not': {'$in': [ObjectId(entry['_id']) for entry in intersection_cursor]}}}
+            # Child1 + Parent - Intersection
+            data.append({'name': child_name_1,
+                         'count': data_collection.find({'$and': [parent_filter, child_filter_1, not_intersection]},
+                                                       {'_id': 1}).count()})
+            # Intersection
+            data.append({'name': f'{child_name_1} + {child_name_2}', 'count': intersection_cursor.count()})
+            # Child2 + Parent - Intersection
+            data.append({'name': child_name_2,
+                         'count': data_collection.find({'$and': [parent_filter, child_filter_2, not_intersection]},
+                                                       {'_id': 1}).count()})
+        return data
 
     @add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
     def remove_dashboard(self, dashboard_id):
@@ -1476,7 +1550,7 @@ class GuiService(PluginBase):
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
         plugins_available = requests.get(self.core_address + '/register').json()
-        adapter_devices = {'total_gross': 0, 'adapter_count': {}}
+        adapter_devices = {'total_gross': 0, 'adapter_count': []}
         with self._get_db_connection(False) as db_connection:
             adapter_devices['total_net'] = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find({
             }).count()
@@ -1490,7 +1564,7 @@ class GuiService(PluginBase):
                 if not devices_count:
                     # No need to document since adapter has no devices
                     continue
-                adapter_devices['adapter_count'][adapter['plugin_name']] = devices_count
+                adapter_devices['adapter_count'].append({'name': adapter['plugin_name'], 'count': devices_count})
                 adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
         return adapter_devices
 

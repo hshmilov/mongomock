@@ -107,6 +107,10 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
+            .placeholder {
+                text-transform: uppercase;
+                color: $grey-2;
+            }
         }
         .x-select-content {
             font-size: 14px;

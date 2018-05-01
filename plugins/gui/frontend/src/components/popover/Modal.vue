@@ -10,8 +10,8 @@
                     </div>
                     <div class="modal-footer">
                         <slot name="footer">
-                            <button class="x-btn link" @click="$emit('close')">{{dismissText || 'Cancel'}}</button>
-                            <button class="x-btn" @click="$emit('confirm')">{{approveText || 'OK'}}</button>
+                            <button class="x-btn link" @click="$emit('close')">{{dismissText}}</button>
+                            <button class="x-btn" :class="{disabled}" @click="onApprove">{{approveText}}</button>
                         </slot>
                     </div>
                 </div>
@@ -23,7 +23,13 @@
 <script>
 	export default {
 		name: 'modal',
-        props: ['approveText', 'dismissText'],
+        props: { approveText: { default: 'OK' }, dismissText: { default: 'Cancel' }, disabled: {default: false} },
+        methods: {
+			onApprove() {
+				if (this.disabled) return
+				this.$emit('confirm')
+            }
+        },
         mounted() {
 			if (this.$el.querySelector("input")) {
 				this.$el.querySelector("input").focus()

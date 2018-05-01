@@ -139,9 +139,9 @@ $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-
 
 @keyframes rise {
   from {
-    height: 0;
+    width: 0;
   }
   to {
-    height: 100%;
+    width: 100%;
   }
 }

@@ -1,10 +1,6 @@
 <template>
     <x-card :title="`${title} Coverage`" :key="title" class="coverage">
-        <div class="coverage-status">
-            <div class="text">{{description}}</div>
-            <div :class="`mark indicator-border-${quarter}`">{{quarterText[quarter]}}</div>
-        </div>
-        <x-pie-chart :data="pieSlices" @click-slice="$emit('click-slice', $event)" />
+        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" />
     </x-card>
 </template>
 
@@ -12,6 +8,7 @@
 	import xCard from '../../components/cards/Card.vue'
     import xPieChart from '../charts/Pie.vue'
 
+    const quarters = ['', 'under a quarter', 'under half', 'over half', 'over three quarters']
 	export default {
 		name: 'coverage-card',
         components: { xCard, xPieChart },
@@ -20,14 +17,16 @@
 			quarter() {
 				return Math.ceil(this.portion * 4)
             },
-            quarterText() {
-				return ['None', 'Poor', 'Low', 'Average', 'Good']
+            quarterMessage() {
+                if (!this.quarter) return ''
+
+                return `Coverage level is ${quarters[this.quarter]}`
             },
 			pieSlices() {
                 return [{
-					portion: 1 - this.portion, class: 'theme-fill-gray-light'
+                	portion: 1 - this.portion, class: 'theme-fill-gray-light',  title: this.description
                 }, {
-					portion: this.portion, percentage: Math.round(this.portion * 100),
+                	portion: this.portion, anotate: true, title: this.quarterMessage,
                     class: `indicator-fill-${this.quarter}`
                 }]
 			}

@@ -4,7 +4,7 @@
         <modal v-if="isActive" @close="isActive = false">
             <template slot="body">
                 <div class="x-field-menu-filter">
-                    <x-select-type :options="schema" v-model="fieldSpace" :tabindex="1" />
+                    <x-select-symbol :options="schema" v-model="fieldSpace" :tabindex="1" />
                     <search-input v-model="searchValue" :tabindex="2" />
                 </div>
                 <x-checkbox-list :items="currentFields" v-model="selectedFields"/>
@@ -18,7 +18,7 @@
 
 <script>
     import Modal from '../popover/Modal.vue'
-	import xSelectType from '../inputs/SelectType.vue'
+	import xSelectSymbol from '../inputs/SelectSymbol.vue'
     import SearchInput from '../inputs/SearchInput.vue'
     import xCheckboxList from '../inputs/CheckboxList.vue'
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
@@ -28,7 +28,7 @@
 
 	export default {
 		name: 'x-data-field-menu',
-        components: { Modal, xSelectType, SearchInput, xCheckboxList },
+        components: { Modal, xSelectSymbol, SearchInput, xCheckboxList },
         props: { module: { required: true }},
         computed: {
             ...mapState({
@@ -85,7 +85,7 @@
         .x-select-trigger {
             color: $theme-black;
         }
-        .x-select-type {
+        .x-select-symbol {
             flex-basis: 25%;
             margin-right: 12px;
         }

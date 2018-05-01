@@ -1,13 +1,16 @@
 <template>
     <div class="histogram">
-        <div v-for="name in dataNamesTruncated" class="histogram-item" @click="$emit('click-bar', name)">
-            <div class="quantity">{{data[name]}}</div>
-            <div :style="{height: calculateBarHeight(data[name]) + 'px'}">
-                <div class="bar rising" :title="name"></div>
-                <img :src="`/src/assets/images/logos/${name}.png`" width="16">
+        <div v-for="item, index in limitedData" class="histogram-item" @click="$emit('click-one', index)">
+            <div class="item-bar">
+                <img v-if="type === 'logo'" :src="`/src/assets/images/logos/${item.name}.png`" width="16">
+                <div :style="{width: calculateBarHeight(item.count) + 'px'}">
+                    <div class="bar rising" :title="item.name"></div>
+                </div>
+                <div class="quantity">{{item.count}}</div>
             </div>
+            <div v-if="type ==='text'" class="item-title">{{item.name}}</div>
         </div>
-        <div v-if="dataNames.length > limit" class="remainder">+{{dataNames.length - limit}}</div>
+        <div v-if="processedData.length > limit" class="remainder">+{{processedData.length - limit}}</div>
     </div>
 </template>
 
@@ -15,17 +18,18 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: {data: {required: true}, limit: {default: 10}},
+		props: {data: {required: true}, limit: {default: 6}, sort: {default: false}, type: {default: 'text'}},
 		computed: {
-			dataNames () {
+			processedData () {
 				if (!this.data) return []
-				return Object.keys(this.data).sort((first, second) => this.data[second] - this.data[first])
+                if (!this.sort) return this.data
+				return this.data.sort((first, second) => second.count - first.count)
 			},
-			dataNamesTruncated () {
-				return this.dataNames.slice(0, this.limit)
+			limitedData () {
+				return this.processedData.slice(0, this.limit)
 			},
 			maxQuantity () {
-				return this.data[this.dataNames[0]]
+				return this.processedData[0].count
 			}
 		},
 		methods: {
@@ -38,24 +42,47 @@
 
 <style lang="scss">
     .histogram {
+        height: 100%;
         display: flex;
-        align-items: flex-end;
-        justify-content: space-around;
+        flex-direction: column;
+        align-items: flex-start;
         padding-bottom: 8px;
+        position: relative;
         .histogram-item {
-            .quantity {
-                transform: rotate(-90deg);
-            }
-            .bar {
-                height: 100%;
-                border: 10px solid rgba($grey-2, 0.4);
-                &:hover {
-                    cursor: pointer;
-                    border-color: $grey-2;
+            width: 100%;
+            margin-bottom: 12px;
+            cursor: pointer;
+            .item-bar {
+                display: flex;
+                align-items: center;
+                img {
+                    margin-right: 8px;
                 }
+                .bar {
+                    height: 100%;
+                    border: 10px solid rgba($grey-2, 0.4);
+                    &:hover {
+                        border-color: $grey-2;
+                    }
+                }
+                .quantity {
+                    margin-left: 8px;
+                    flex: 1 0 auto;
+                    text-align: right;
+                    font-weight: 500;
+                    font-size: 18px;
+                }
+            }
+            .item-title {
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                overflow: hidden;
+                width: 300px;
             }
         }
         .remainder {
+            position: absolute;
+            bottom: 0;
             font-size: 14px;
             color: $indicator-blue;
         }
