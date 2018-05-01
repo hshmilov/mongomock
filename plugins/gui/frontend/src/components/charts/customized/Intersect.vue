@@ -14,8 +14,12 @@
 				if (!this.data || !this.data.length) return []
                 let total = this.data[0].count
                 if (!total) return []
-                return this.data.slice(1).map((item) => {
-                    return { title: item.name, portion: item.count / total, anotate: true }
+                return this.data.slice(1).map((item, index) => {
+                    let newItem = { title: item.name, portion: item.count / total, anotate: true }
+                    if (index === 1) {
+                    	newItem.class = 'fill-intersection-1-2'
+                    }
+                    return newItem
                 })
             }
         }

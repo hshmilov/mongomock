@@ -1,6 +1,20 @@
 <template>
     <div class="pie">
         <svg viewBox="-1 -1 2 2" @mouseout="inHover = -1">
+            <defs>
+                <linearGradient id="intersection-1-2">
+                    <stop class="extra-stop-1" offset="0%"></stop>
+                    <stop class="extra-stop-1" offset="20%"></stop>
+                    <stop class="extra-stop-3" offset="20%"></stop>
+                    <stop class="extra-stop-3" offset="40%"></stop>
+                    <stop class="extra-stop-1" offset="40%"></stop>
+                    <stop class="extra-stop-1" offset="60%"></stop>
+                    <stop class="extra-stop-3" offset="60%"></stop>
+                    <stop class="extra-stop-3" offset="80%"></stop>
+                    <stop class="extra-stop-1" offset="80%"></stop>
+                    <stop class="extra-stop-1" offset="100%"></stop>
+                </linearGradient>
+            </defs>
             <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
                 <text v-if="slice.anotate && slice.portion" text-anchor="middle">{{Math.round(slice.portion * 100)}}%</text>
@@ -107,6 +121,9 @@
     .pie {
         margin: auto;
         width: 240px;
+        .fill-intersection-1-2 {
+            fill: url(#intersection-1-2)
+        }
         g {
             cursor: pointer;
             path {
