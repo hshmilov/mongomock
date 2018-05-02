@@ -5,6 +5,7 @@ export const LOGIN = 'LOGIN'
 export const SET_USER = 'SET_USER'
 export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
+export const INIT_ERROR = 'INIT_ERROR'
 
 const USER_IMAGE_PATH = '/src/assets/images/users/'
 
@@ -30,6 +31,9 @@ export const auth = {
 			if (!state.fetching) {
 				state.data = {}
 			}
+		},
+		[ INIT_ERROR ] (state) {
+			state.error = ''
 		}
 	},
 	actions: {

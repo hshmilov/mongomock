@@ -232,7 +232,7 @@ class GuiService(PluginBase):
                                                                   'first_name': 'administrator',
                                                                   'last_name': '',
                                                                   'pic_name': 'avatar.png',
-                                                                  'password': bcrypt.hash('bestadminpassword')},
+                                                                  'password': bcrypt.hash('cAll2SecureAll')},
                                                                  upsert=True)
         self.add_default_queries('device', 'default_queries_devices.ini')
         self.add_default_queries('user', 'default_queries_users.ini')
@@ -1256,7 +1256,7 @@ class GuiService(PluginBase):
         if request.method == 'GET':
             user = session.get('user')
             if user is None:
-                return return_error("Enter credentials to log in", 401)
+                return return_error('', 401)
             del user['password']
             return jsonify(user), 200
 

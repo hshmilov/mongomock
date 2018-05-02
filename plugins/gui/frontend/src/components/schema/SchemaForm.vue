@@ -1,8 +1,11 @@
 <template>
-    <form class="schema-form" @keyup.enter.stop="emitFocus(); $emit('submit')">
+    <form class="schema-form" @keyup.enter.stop="$emit('submit')">
         <x-array-edit v-model="data" :schema="schema" @input="$emit('input', data)" @validate="updateValidity" />
-        <div v-if="invalid.length" class="error-text">Complete "{{invalid[0]}}" to save server</div>
-        <div v-else>&nbsp;</div>
+        <div class="error-text">
+            <template v-if="error">{{error}}</template>
+            <template v-else-if="invalid.length">Complete "{{invalid[0]}}" to save data</template>
+            <template v-else>&nbsp;</template>
+        </div>
     </form>
 </template>
 
@@ -18,8 +21,8 @@
      */
 	export default {
 		name: 'x-schema-form',
-        components: {xArrayEdit},
-        props: ['value', 'schema', 'onSubmit'],
+        components: { xArrayEdit },
+        props: ['value', 'schema', 'error'],
         data() {
 			return {
                 data: { ...this.value },
