@@ -64,7 +64,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         6. CorrelationReason.StaticAnalysis - the analysis used to discover the correlation
         """
-        logger.info("Starting to correlate on MAC-IP")
+        logger.info("Starting to correlate on MAC")
         filtered_adapters_list = filter(get_normalized_mac, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [],
