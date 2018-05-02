@@ -179,6 +179,11 @@ export const pluginMeta = {
 		    description: 'ObserveIT provides insider threat security solutions, including employee monitoring, ' +
 			'user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
         },
+	    cisco_meraki_adapter: {
+			title: 'Cisco Meraki',
+			description: 'Cisco Meraki solutions include wireless, switching, security, EMM, communications, and' +
+			' security cameras, all centrally managed from the web. '
+		},
         service_now_adapter: {
         	title: 'ServiceNow',
 			description: 'ServiceNow provides service management software as a service,' +
