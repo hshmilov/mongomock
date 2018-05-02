@@ -307,7 +307,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
            GET - Finds all available devices from a specific client, and returns them
         """
         client_name = request.args.get('name')
-        return to_json(self._get_data_by_client(client_name, "devices"))
+        return to_json(self._get_data_by_client(client_name, EntityType.Devices))
 
     # Users
     @add_rule('users', methods=['GET'])
@@ -342,7 +342,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         skipped_count = 0
         users_ids = []
 
-        self._save_field_names_to_db("users")
+        self._save_field_names_to_db(EntityType.Users)
 
         for parsed_user in self._parse_users_raw_data(raw_users):
             assert isinstance(parsed_user, UserAdapter)
@@ -794,7 +794,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         devices_ids = []
         should_check_for_unique_ids = self.plugin_subtype == adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
 
-        self._save_field_names_to_db("devices")
+        self._save_field_names_to_db(EntityType.Devices)
 
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)

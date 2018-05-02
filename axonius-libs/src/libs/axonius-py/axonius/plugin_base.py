@@ -10,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 import sys
 import traceback
-from enum import Enum, auto
+from enum import Enum
 
 import requests
 import configparser
@@ -194,8 +194,8 @@ class EntityType(Enum):
     Possible axonius entities
     """
 
-    Users = auto()
-    Devices = auto()
+    Users = 'user'
+    Devices = 'device'
 
 
 class PluginBase(Configurable, Feature):
@@ -242,17 +242,13 @@ class PluginBase(Configurable, Feature):
         self.api_key = None
 
         # MyDeviceAdapter things.
-        self._entity_adapter_fields = {}
-        for name in ["devices", "users"]:
-            self._entity_adapter_fields[name] = \
-                {
-                    "fields_set": set(),
-                    "raw_fields_set": set(),
-                    "last_fields_count": (0, 0),
-                    "first_fields_change": True,
-                    "fields_db_lock": threading.RLock()
-            }
-
+        self._entity_adapter_fields = {entity_type: {
+            "fields_set": set(),
+            "raw_fields_set": set(),
+            "last_fields_count": (0, 0),
+            "first_fields_change": True,
+            "fields_db_lock": threading.RLock()
+        } for entity_type in [EntityType.Devices, EntityType.Users]}
         print(f"{self.plugin_name} is starting")
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
@@ -372,6 +368,15 @@ class PluginBase(Configurable, Feature):
             EntityType.Users: self.users_db,
             EntityType.Devices: self.devices_db,
         }
+        self._entity_views_db_map = {
+            EntityType.Users: self.users_db_view,
+            EntityType.Devices: self.devices_db_view,
+        }
+
+        self._my_adapters_map = {
+            EntityType.Users: self.MyUserAdapter,
+            EntityType.Devices: self.MyDeviceAdapter
+        }
 
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
@@ -419,24 +424,17 @@ class PluginBase(Configurable, Feature):
                                                                                          self.version,
                                                                                          self.lib_version))
 
-    def _save_field_names_to_db(self, entity):
+    def _save_field_names_to_db(self, entity_type: EntityType):
         """ Saves fields_set and raw_fields_set to the Plugin's DB """
-        if entity == "devices":
-            entity_fields = self._entity_adapter_fields["devices"]
-            collection_name = "device_fields"
-            my_entity = self.MyDeviceAdapter
-        elif entity == "users":
-            entity_fields = self._entity_adapter_fields["users"]
-            collection_name = "user_fields"
-            my_entity = self.MyUserAdapter
-        else:
-            raise ValueError(f"got entity {entity} but expected devices/users!")
+        entity_fields = self._entity_adapter_fields[entity_type]
+        collection_name = f"{entity_type.value}_fields"
+        my_entity = self._my_adapters_map[entity_type]
 
         if my_entity is None:
             return
 
         with entity_fields['fields_db_lock']:
-            logger.info(f"Persisting {entity} fields to DB")
+            logger.info(f"Persisting {entity_type.name} fields to DB")
             fields = list(entity_fields['fields_set'])  # copy
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
@@ -456,16 +454,16 @@ class PluginBase(Configurable, Feature):
         """ Returns a new empty device associated with this adapter. """
         if self.MyDeviceAdapter is None:
             raise ValueError('class MyDeviceAdapter(Device) class was not declared inside this Adapter class')
-        return self.MyDeviceAdapter(self._entity_adapter_fields['devices']['fields_set'],
-                                    self._entity_adapter_fields['devices']['raw_fields_set'])
+        return self.MyDeviceAdapter(self._entity_adapter_fields[EntityType.Devices]['fields_set'],
+                                    self._entity_adapter_fields[EntityType.Devices]['raw_fields_set'])
 
     # Users.
     def _new_user_adapter(self) -> UserAdapter:
         """ Returns a new empty User associated with this adapter. """
         if self.MyUserAdapter is None:
             raise ValueError('class MyUserAdapter(user) class was not declared inside this Adapter class')
-        return self.MyUserAdapter(self._entity_adapter_fields['users']['fields_set'],
-                                  self._entity_adapter_fields['users']['raw_fields_set'])
+        return self.MyUserAdapter(self._entity_adapter_fields[EntityType.Users]['fields_set'],
+                                  self._entity_adapter_fields[EntityType.Users]['raw_fields_set'])
 
     @classmethod
     def specific_supported_features(cls) -> list:

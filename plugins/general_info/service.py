@@ -296,7 +296,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             user.add_adapterdata(adapterdata_user.to_dict())
 
-        self._save_field_names_to_db("users")
+        self._save_field_names_to_db(EntityType.Users)
 
     def _handle_wmi_execution_success(self, device, data):
         try:
@@ -359,7 +359,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
             # Fixme: running all queries.
-            self._save_field_names_to_db("devices")
+            self._save_field_names_to_db(EntityType.Devices)
 
             if len(all_error_logs) > 0:
                 is_execution_exception = True

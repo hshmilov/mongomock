@@ -234,15 +234,28 @@ class GuiService(PluginBase):
                                                                   'pic_name': 'avatar.png',
                                                                   'password': bcrypt.hash('cAll2SecureAll')},
                                                                  upsert=True)
-        self.add_default_queries('device', 'default_queries_devices.ini')
-        self.add_default_queries('user', 'default_queries_users.ini')
-        self.add_default_views('device', 'default_views_devices.ini')
-        self.add_default_views('user', 'default_views_users.ini')
+        self.user_queries = self._get_collection("user_queries", limited_user=False)
+        self.device_queries = self._get_collection("device_queries", limited_user=False)
+        self._queries_db_map = {
+            EntityType.Users: self.user_queries,
+            EntityType.Devices: self.device_queries,
+        }
+        self.add_default_queries(EntityType.Devices, 'default_queries_devices.ini')
+        self.add_default_queries(EntityType.Users, 'default_queries_users.ini')
 
-    def add_default_queries(self, module_name, default_queries_ini_path):
+        self.user_view = self._get_collection("user_views", limited_user=False)
+        self.device_view = self._get_collection("device_views", limited_user=False)
+        self._views_db_map = {
+            EntityType.Users: self.user_view,
+            EntityType.Devices: self.device_view,
+        }
+        self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
+        self.add_default_views(EntityType.Users, 'default_views_users.ini')
+
+    def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
         """
         Adds default queries.
-        :param module_name: "device" or "user"
+        :param entity_type: "device" or "user"
         :param default_queries_ini_path: the file path with the queries
         :return:
         """
@@ -257,16 +270,16 @@ class GuiService(PluginBase):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_query(module_name, name, query['query'])
+                    self._insert_query(self._queries_db_map[entity_type], name, query['query'])
                 except Exception:
                     logger.exception(f'Error adding default query {name}')
         except Exception:
             logger.exception(f'Error adding default queries')
 
-    def add_default_views(self, module_name, default_views_ini_path):
+    def add_default_views(self, entity_type: EntityType, default_views_ini_path):
         """
         Adds default queries.
-        :param module_name: "device" or "user"
+        :param entity_type: EntityType
         :param default_views_ini_path: the file path with the queries
         :return:
         """
@@ -281,14 +294,13 @@ class GuiService(PluginBase):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_view(module_name, name, json.loads(view['view']))
+                    self._insert_view(self._views_db_map[entity_type], name, json.loads(view['view']))
                 except Exception:
                     logger.exception(f'Error adding default view {name}')
         except Exception:
             logger.exception(f'Error adding default views')
 
-    def _insert_query(self, module_name, name, query_filter, query_expressions=[]):
-        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
+    def _insert_query(self, queries_collection, name, query_filter, query_expressions=[]):
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
         if existed_query is not None and not existed_query.get('archived'):
             logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
@@ -300,8 +312,7 @@ class GuiService(PluginBase):
         logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
         return result.get('inserted_id', '')
 
-    def _insert_view(self, module_name, name, mongo_view):
-        views_collection = self._get_collection(f'{module_name}_views', limited_user=False)
+    def _insert_view(self, views_collection, name, mongo_view):
         existed_view = views_collection.find_one({'name': name})
         if existed_view is not None and not existed_view.get('archived'):
             logger.info(f'view {name} already exists id: {existed_view["_id"]}')
@@ -315,11 +326,11 @@ class GuiService(PluginBase):
     # DATA #
     ########
 
-    def _get_entities(self, limit, skip, filter, sort, projection, module_name):
+    def _get_entities(self, limit, skip, filter, sort, projection, entity_type: EntityType):
         """
-        Get Axonius data of type <module_name>, from the aggregator which is expected to store them.
+        Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
         """
-        logger.debug(f'Fetching data for module {module_name}')
+        logger.debug(f'Fetching data for entity {entity_type.name}')
         with self._get_db_connection(False) as db_connection:
             pipeline = [{'$match': filter}]
             if projection:
@@ -341,12 +352,12 @@ class GuiService(PluginBase):
 
             # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
             # The reason is that sorting without the flag, causes exceeding of the memory limit.
-            data_list = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].aggregate(
+            data_list = self._entity_views_db_map[entity_type].aggregate(
                 pipeline, allowDiskUse=True)
 
             if filter and not skip:
                 filter = request.args.get('filter')
-                db_connection[self.plugin_unique_name][f'{module_name}_queries'].replace_one(
+                self._queries_db_map[entity_type].replace_one(
                     {'name': {'$exists': False}, 'filter': filter},
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
                     upsert=True)
@@ -430,27 +441,27 @@ class GuiService(PluginBase):
 
         return children
 
-    def _get_csv(self, mongo_filter, mongo_sort, mongo_projection, module_name):
+    def _get_csv(self, mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType):
         """
-        Given a module_name, retrieve it's entities, according to given filter, sort and requested fields.
+        Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
         The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
 
         :param mongo_filter:
         :param mongo_sort:
         :param mongo_projection:
-        :param module_name:
+        :param entity_type:
         :return:
         """
         logger.info("Generating csv")
         string_output = io.StringIO()
-        entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, module_name)
+        entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, entity_type)
         output = ''
         if len(entities) > 0:
             # Beautifying the resulting csv.
             del mongo_projection['internal_axon_id']
             del mongo_projection['unique_adapter_names']
             # Getting pretty titles for all generic fields as well as specific
-            entity_fields = self._entity_fields(module_name)
+            entity_fields = self._entity_fields(entity_type)
             for field in entity_fields['generic']:
                 if field['name'] in mongo_projection:
                     mongo_projection[field['name']] = field['title']
@@ -476,7 +487,7 @@ class GuiService(PluginBase):
             output.headers['Content-type'] = 'text/csv'
         return output
 
-    def _entity_by_id(self, module_name, entity_id, advanced_fields=[]):
+    def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[]):
         """
         Retrieve device by the given id, from current devices DB or update it
         Currently, update works only for tags because that is the only edit operation user has
@@ -485,34 +496,32 @@ class GuiService(PluginBase):
 
         def _basic_generic_field_names():
             generic_field_names = list(map(lambda field: field.get(
-                'name'), self._entity_fields(module_name)['generic']))
+                'name'), self._entity_fields(entity_type)['generic']))
             return filter(
                 lambda field: field != 'adapters' and field != 'labels' and
                 len([category for category in advanced_fields if category in field]) == 0,
                 generic_field_names)
 
-        with self._get_db_connection(False) as db_connection:
-            entity = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view'].find_one(
-                {'internal_axon_id': entity_id})
-            if entity is None:
-                return return_error("Entity ID wasn't found", 404)
-            # Specific is returned as is, to show all adapter datas.
-            # Generic fields are divided to basic which are all merged through all adapter datas
-            # and advanced, of which the main field is merged and data is given in original structure.
-            return jsonify({
-                'specific': entity['specific_data'],
-                'generic': {
-                    'basic': self._parse_entity_fields(entity, _basic_generic_field_names()),
-                    'advanced': [{
-                        'name': category, 'data': self._find_entity_field(entity, f'specific_data.data.{category}')
-                    } for category in advanced_fields],
-                    'data': entity['generic_data']
-                },
-                'labels': entity['labels'],
-                'internal_axon_id': entity['internal_axon_id']
-            })
+        entity = self._entity_views_db_map[entity_type].find_one({'internal_axon_id': entity_id})
+        if entity is None:
+            return return_error("Entity ID wasn't found", 404)
+        # Specific is returned as is, to show all adapter datas.
+        # Generic fields are divided to basic which are all merged through all adapter datas
+        # and advanced, of which the main field is merged and data is given in original structure.
+        return jsonify({
+            'specific': entity['specific_data'],
+            'generic': {
+                'basic': self._parse_entity_fields(entity, _basic_generic_field_names()),
+                'advanced': [{
+                    'name': category, 'data': self._find_entity_field(entity, f'specific_data.data.{category}')
+                } for category in advanced_fields],
+                'data': entity['generic_data']
+            },
+            'labels': entity['labels'],
+            'internal_axon_id': entity['internal_axon_id']
+        })
 
-    def _entity_queries(self, limit, skip, filter, module_name):
+    def _entity_queries(self, limit, skip, filter, entity_type: EntityType):
         """
                 GET Fetch all queries saved for given module, answering give filter
                 POST Save a new query for given module
@@ -523,9 +532,9 @@ class GuiService(PluginBase):
                 :return: GET - List of query names and filters
                          POST - Id of inserted document saving given query
                 """
+        queries_collection = self._queries_db_map[entity_type]
         if request.method == 'GET':
             filter['$or'] = filter_archived()['$or']
-            queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
             return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(filter)
                            .sort([('timestamp', pymongo.DESCENDING)])
                            .skip(skip).limit(limit))
@@ -533,12 +542,12 @@ class GuiService(PluginBase):
             query_to_add = request.get_json(silent=True)
             if query_to_add is None or query_to_add['filter'] == '':
                 return return_error("Invalid query", 400)
-            inserted_id = self._insert_query(module_name, query_to_add.get('name'), query_to_add.get('filter'),
+            inserted_id = self._insert_query(queries_collection, query_to_add.get('name'), query_to_add.get('filter'),
                                              query_to_add.get('expressions'))
             return str(inserted_id), 200
 
-    def _entity_queries_delete(self, module_name, query_id):
-        queries_collection = self._get_collection(f'{module_name}_queries', limited_user=False)
+    def _entity_queries_delete(self, entity_type: EntityType, query_id):
+        queries_collection = self._queries_db_map[entity_type]
         queries_collection.update({'_id': ObjectId(query_id)},
                                   {
                                       '$set': {
@@ -547,16 +556,19 @@ class GuiService(PluginBase):
                                   )
         return ""
 
-    def _get_entities_count(self, filter, module_name):
+    def _get_entities_count(self, filter, entity_type: EntityType):
         """
         Count total number of devices answering given mongo_filter
 
         :param filter: Object defining a Mongo query
         :return: Number of devices
         """
-        with self._get_db_connection(False) as db_connection:
-            data_collection = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME][f'{module_name}s_db_view']
-            return str(data_collection.find(filter, {'_id': 1}).count())
+        if filter:
+            data_collection = self._entity_views_db_map[entity_type]
+        else:
+            # optimization: if there's no filter we can search the raw DB
+            data_collection = self._entity_db_map[entity_type]
+        return str(data_collection.count(filter))
 
     def _flatten_fields(self, schema, name='', exclude=[]):
         def _merge_title(schema, title):
@@ -595,7 +607,7 @@ class GuiService(PluginBase):
             return []
         return [{**schema, 'name': name}]
 
-    def _entity_fields(self, module_name):
+    def _entity_fields(self, entity_type: EntityType):
         """
         Get generic fields schema as well as adapter-specific parsed fields schema.
         Together these are all fields that any device may have data for and should be presented in UI accordingly.
@@ -604,9 +616,9 @@ class GuiService(PluginBase):
         """
 
         def _get_generic_fields():
-            if module_name == 'device':
+            if entity_type == EntityType.Devices:
                 return DeviceAdapter.get_fields_info()
-            elif module_name == 'user':
+            elif entity_type == EntityType.Users:
                 return UserAdapter.get_fields_info()
             return dict()
 
@@ -633,7 +645,7 @@ class GuiService(PluginBase):
             for plugin in plugins_from_db:
                 if not plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
                     continue
-                plugin_fields = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{module_name}_fields']
+                plugin_fields = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
                 if not plugin_fields:
                     continue
                 plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
@@ -706,12 +718,12 @@ class GuiService(PluginBase):
                     )]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
-    def _entity_views(self, method, module_name):
+    def _entity_views(self, method, entity_type: EntityType):
         """
         Save or fetch views over the entities db
         :return:
         """
-        entity_views_collection = self._get_collection(f'{module_name}_views', limited_user=False)
+        entity_views_collection = self._views_db_map[entity_type]
         if method == 'GET':
             mongo_filter = filter_archived()
             return jsonify(beautify_db_entry(entry) for entry in entity_views_collection.find(mongo_filter))
@@ -772,37 +784,37 @@ class GuiService(PluginBase):
     @projectioned()
     @add_rule_unauthenticated("device")
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'device'))
+        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices))
 
     @filtered()
     @sorted()
     @projectioned()
     @add_rule_unauthenticated("device/csv")
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
-        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, 'device')
+        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices)
 
     @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
     def device_by_id(self, device_id):
-        return self._entity_by_id('device', device_id, ['installed_software', 'security_patches', 'users'])
+        return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'security_patches', 'users'])
 
     @paginated()
     @filtered()
     @add_rule_unauthenticated("device/queries", methods=['POST', 'GET'])
-    def device_queries(self, limit, skip, mongo_filter):
-        return self._entity_queries(limit, skip, mongo_filter, 'device')
+    def device_queries_do(self, limit, skip, mongo_filter):
+        return self._entity_queries(limit, skip, mongo_filter, EntityType.Devices)
 
     @add_rule_unauthenticated("device/queries/<query_id>", methods=['DELETE'])
     def device_queries_delete(self, query_id):
-        return self._entity_queries_delete('device', query_id)
+        return self._entity_queries_delete(EntityType.Devices, query_id)
 
     @filtered()
     @add_rule_unauthenticated("device/count")
     def get_devices_count(self, mongo_filter):
-        return self._get_entities_count(mongo_filter, 'device')
+        return self._get_entities_count(mongo_filter, EntityType.Devices)
 
     @add_rule_unauthenticated("device/fields")
     def device_fields(self):
-        return jsonify(self._entity_fields('device'))
+        return jsonify(self._entity_fields(EntityType.Devices))
 
     @add_rule_unauthenticated("device/views", methods=['GET', 'POST'])
     def device_views(self):
@@ -810,7 +822,7 @@ class GuiService(PluginBase):
         Save or fetch views over the devices db
         :return:
         """
-        return self._entity_views(request.method, 'device')
+        return self._entity_views(request.method, EntityType.Devices)
 
     @add_rule_unauthenticated("device/labels", methods=['GET', 'POST', 'DELETE'])
     def device_labels(self):
@@ -830,37 +842,37 @@ class GuiService(PluginBase):
     @projectioned()
     @add_rule_unauthenticated("user")
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, 'user'))
+        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users))
 
     @filtered()
     @sorted()
     @projectioned()
     @add_rule_unauthenticated("user/csv")
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
-        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, 'user')
+        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users)
 
     @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
-        return self._entity_by_id('user', user_id, ['associated_devices'])
+        return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
 
     @paginated()
     @filtered()
     @add_rule_unauthenticated("user/queries", methods=['POST', 'GET'])
     def user_queries(self, limit, skip, mongo_filter):
-        return self._entity_queries(limit, skip, mongo_filter, 'user')
+        return self._entity_queries(limit, skip, mongo_filter, EntityType.Users)
 
     @add_rule_unauthenticated("user/queries/<query_id>", methods=['DELETE'])
     def user_queries_delete(self, query_id):
-        return self._entity_queries_delete('user', query_id)
+        return self._entity_queries_delete(EntityType.Users, query_id)
 
     @filtered()
     @add_rule_unauthenticated("user/count")
     def get_users_count(self, mongo_filter):
-        return self._get_entities_count(mongo_filter, 'user')
+        return self._get_entities_count(mongo_filter, EntityType.Users)
 
     @add_rule_unauthenticated("user/fields")
     def user_fields(self):
-        return jsonify(self._entity_fields('user'))
+        return jsonify(self._entity_fields(EntityType.Users))
 
     @add_rule_unauthenticated("user/disable", methods=['POST'])
     def disable_user(self):
@@ -868,7 +880,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("user/views", methods=['GET', 'POST'])
     def user_views(self):
-        return self._entity_views(request.method, 'user')
+        return self._entity_views(request.method, EntityType.Users)
 
     @add_rule_unauthenticated("user/labels", methods=['GET', 'POST', 'DELETE'])
     def user_labels(self):
@@ -1036,10 +1048,9 @@ class GuiService(PluginBase):
                 return jsonify(reports_to_return)
 
         if request.method == 'PUT':
-            queries_collection = self._get_collection('device_queries', limited_user=False)
             report_to_add = request.get_json(silent=True)
             query_name = report_to_add['query']
-            if queries_collection.find_one({'name': query_name}) is None:
+            if self.device_queries.find_one({'name': query_name}) is None:
                 return return_error(f"Missing query {query_name} requested for creating alert")
 
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
@@ -1059,10 +1070,9 @@ class GuiService(PluginBase):
             return response.text, response.status_code
 
         if request.method == 'POST':
-            queries_collection = self._get_collection('device_queries', limited_user=False)
             report_to_update = request.get_json(silent=True)
             query_name = report_to_update['query']
-            if queries_collection.find_one({'name': query_name}) is None:
+            if self.device_queries.find_one({'name': query_name}) is None:
                 return return_error(f"Missing query {query_name} requested for updating alert")
 
             response = self.request_remote_plugin(f"reports/{report_id}", "reports", method='post',
@@ -1558,15 +1568,13 @@ class GuiService(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         adapter_devices = {'total_gross': 0, 'adapter_count': []}
         with self._get_db_connection(False) as db_connection:
-            adapter_devices['total_net'] = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find({
-            }).count()
+            adapter_devices['total_net'] = self.devices_db.count()
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
             for adapter in adapters_from_db:
                 if not adapter[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
-                devices_count = db_connection[plugin_consts.AGGREGATOR_PLUGIN_NAME]['devices_db'].find(
-                    {'adapters.plugin_name': adapter['plugin_name']}).count()
+                devices_count = self.devices_db.count({'adapters.plugin_name': adapter['plugin_name']})
                 if not devices_count:
                     # No need to document since adapter has no devices
                     continue
@@ -1590,7 +1598,7 @@ class GuiService(PluginBase):
 
         :return:
         """
-        devices_total = self.aggregator_db_connection['devices_db_view'].find({}).count()
+        devices_total = self.devices_db_view.count()
         if not devices_total:
             return jsonify([])
         coverage_list = [
@@ -1602,9 +1610,10 @@ class GuiService(PluginBase):
              'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
         ]
         for item in coverage_list:
-            devices_property = self.aggregator_db_connection['devices_db_view'].find(
-                {'specific_data.adapter_properties': {'$in': item['properties']}}).count()
-            devices_total = self.aggregator_db_connection['devices_db_view'].find({}).count()
+            devices_property = self.devices_db_view.count({
+                'specific_data.adapter_properties':
+                    {'$in': item['properties']}
+            })
             item['portion'] = devices_property / devices_total
         return jsonify(coverage_list)
 
