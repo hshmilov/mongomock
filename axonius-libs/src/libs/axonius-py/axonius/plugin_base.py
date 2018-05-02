@@ -1003,12 +1003,6 @@ class PluginBase(Configurable, Feature):
             logger.info(f"Starting to fetch data (devices/users) for {client_name}")
         try:
             time_before_client = datetime.now()
-            # Saving the raw data on the historic db
-            try:
-                self._save_raw_data_in_history(data_of_client['raw'])
-            except pymongo.errors.DocumentTooLarge:
-                # wanna see my "something too large"?
-                logger.warn(f"Got DocumentTooLarge with client {client_name}.")
 
             inserted_data_count = 0
             promises = []

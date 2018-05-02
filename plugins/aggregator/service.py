@@ -92,6 +92,11 @@ class AggregatorService(PluginBase, Triggerable):
         ], unique=True)
         self.aggregator_db_connection["devices_db"].create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
 
+        self.aggregator_db_connection["users_db"].create_index([
+            (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
+        ], unique=True)
+        self.aggregator_db_connection["users_db"].create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
+
         for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
             try:
                 self.aggregator_db_connection.command({
