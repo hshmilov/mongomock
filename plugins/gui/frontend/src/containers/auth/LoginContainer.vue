@@ -8,7 +8,7 @@
             <div class="body">
                 <h3 class="title">Login</h3>
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="updateValidity"
-                               @submit="login" :error="auth.error"/>
+                               @submit="onLogin" :error="auth.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
             </div>
         </div>

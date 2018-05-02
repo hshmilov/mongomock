@@ -2,11 +2,11 @@
     <x-data-action-menu module="device" :selected="devices">
         <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy...">
             <h3 class="mb-2">Deploy Executable</h3>
-            <x-schema-form :schema="deployFormSchema" @validate="deploy.valid = $event" />
+            <x-schema-form :schema="deployFormSchema" v-model="deploy.data" @validate="deploy.valid = $event" />
         </x-data-action-item>
         <x-data-action-item :handle-save="saveRun" message="Started running" title="Run...">
             <h3 class="mb-2">Run Command</h3>
-            <x-schema-form :schema="runFormSchema" class="expand" @validate="run.valid = $event"/>
+            <x-schema-form :schema="shellFormSchema" v-model="run.data" class="expand" @validate="run.valid = $event"/>
         </x-data-action-item>
         <x-data-action-item :handle-save="saveBlacklist" message="Blacklist saved" title="Blacklist...">
             <div>Add {{devices.length}} devices to Blacklist?</div>
@@ -20,6 +20,9 @@
     import xDataActionItem from '../../components/data/DataActionItem.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
 
+    import { mapActions } from 'vuex'
+    import { ADD_DATA_LABELS, RUN_ACTION } from '../../store/actions'
+
 	export default {
 		name: 'devices-actions-container',
 		components: {
@@ -31,8 +34,13 @@
 				return {
 					type: 'array',
                     items: [
+						{
+							name: 'action_name',
+							title: 'Action Name',
+							type: 'string'
+						},
                         {
-                        	name: 'exe_file',
+                        	name: 'binary',
                             title: 'File To Execute',
                         	type: 'array',
                             format: 'bytes',
@@ -41,57 +49,68 @@
                             }
                         },
                         {
-                        	name: 'exe_params',
+                        	name: 'params',
                             title: 'Command Line Parameters',
                             type: 'string'
                         }
                     ],
-                    required: ['exe_file']
+                    required: ['action_name', 'binary']
                 }
             },
-            runFormSchema() {
+            shellFormSchema() {
 				return {
 					type: 'array',
 					items: [
+                        {
+                        	name: 'action_name',
+                            title: 'Action Name',
+                            type: 'string'
+                        },
 						{
-							name: 'command_line',
+							name: 'command',
 							title: 'Command Line',
 							type: 'string'
 						}
 					],
-					required: ['command_line']
+					required: ['action_name', 'command']
 				}
             }
         },
 		data () {
 			return {
                 deploy: {
-                    selected: '',
-                    valid: false
+                    valid: false,
+                    data: {}
                 },
                 run: {
-                    valid: true
+                    valid: true,
+                    data: {}
                 }
 			}
 		},
 		methods: {
+            ...mapActions({ addLabels: ADD_DATA_LABELS, runAction: RUN_ACTION }),
 			saveBlacklist () {
 				/*
 				Blacklist is currently implemented by checking for a designated tag,
 				Therefore, adding this tag to selected devices
 				 */
-                return this.addLabels({devices: this.devices, tags: ['do_not_execute']})
+                return this.addLabels({module: 'device', data: {entities: this.devices, labels: ['do_not_execute']}})
 			},
 			saveDeploy () {
 				return new Promise((resolve, reject) => {
             	    if (!this.deploy.valid) reject()
-					resolve()
+					this.runAction({type: 'deploy', data: { ...this.deploy.data, internal_axon_ids: this.devices}})
+						.then(response => resolve(response))
+						.catch(error => reject(error.response.data))
 				})
 			},
 			saveRun () {
 				return new Promise((resolve, reject) => {
 				    if (!this.run.valid) reject()
-					resolve()
+					this.runAction({type: 'shell', data: { ...this.run.data, internal_axon_ids: this.devices}})
+						.then(response => resolve(response))
+                        .catch(error => reject(error.response.data))
 				})
 			}
 		}

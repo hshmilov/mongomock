@@ -994,22 +994,28 @@ class GuiService(PluginBase):
         if request.method == 'DELETE':
             return '', 200
 
-    @add_rule_unauthenticated("actions/run_shell", methods=['POST'])
-    def actions_run_shell(self):
+    @add_rule_unauthenticated("actions/<action_type>", methods=['POST'])
+    def actions_run(self, action_type):
         """
         Executes a run shell command on devices.
         Expected values: a list of internal axon ids, the action name, and the action command.
         :return:
         """
-        device_control_service_unique_name = self.get_plugin_by_name("device_control")
-        data = self.get_request_data_as_object()
+        action_data = self.get_request_data_as_object()
+        action_data['action_type'] = action_type
 
         # The format of data is defined in device_control\service.py::run_shell
-        response = self.request_remote_plugin('run_shell', device_control_service_unique_name, 'post',
-                                              data=data)
-        if response.status_code != 200:
-            logger.error(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
-            raise ValueError(f"Couldn't execute run shell. Reason: {response.status_code}, {str(response.content)}")
+        try:
+            device_control_unique_name = self.get_plugin_by_name("device_control")['plugin_unique_name']
+            response = self.request_remote_plugin('run_action', device_control_unique_name, 'post', json=action_data)
+            if response.status_code != 200:
+                logger.error(
+                    f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
+                raise ValueError(
+                    f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
+            return '', 200
+        except Exception as e:
+            return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
 
     @add_rule_unauthenticated("reports", methods=['GET', 'PUT'])
     def reports(self):

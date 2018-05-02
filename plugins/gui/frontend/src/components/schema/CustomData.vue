@@ -49,6 +49,7 @@
 
 <style lang="scss">
     .custom-data {
+        white-space: pre;
         display: grid;
         grid-gap: 12px;
         .label {

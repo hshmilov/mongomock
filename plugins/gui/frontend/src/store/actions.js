@@ -221,7 +221,7 @@ export const removeDataQuery = ({state, dispatch, commit}, payload) => {
 }
 
 export const START_RESEARCH_PHASE = 'START_RESEARCH_PHASE'
-export const startResearch= ({dispatch}) => {
+export const startResearch = ({dispatch}) => {
     dispatch(REQUEST_API, {
         rule: `research_phase`,
         method: 'POST'
@@ -302,5 +302,17 @@ export const exportReport = ({dispatch}) => {
 		link.href = window.URL.createObjectURL(blob)
 		link.download = 'axonius_report.pdf'
 		link.click()
+	})
+}
+
+export const RUN_ACTION = 'RUN_ACTION'
+export const runAction = ({dispatch}, payload) => {
+	if (!payload || !payload.type || !payload.data) {
+		return
+	}
+	return dispatch(REQUEST_API, {
+		rule: `actions/${payload.type}`,
+		method: 'POST',
+		data: payload.data
 	})
 }
