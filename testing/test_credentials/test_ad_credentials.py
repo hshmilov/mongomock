@@ -18,6 +18,7 @@ ad_client2_details = {
     "dc_name": "TestSecDomain.test",
     "domain_name": "DC=TestSecDomain,DC=test",
     "dns_server_address": fakednsaddr,
+    "fetch_disabled_users": True
 }
 
 # These devices has been configured to never sleep, so that we could try to execute code through them.
