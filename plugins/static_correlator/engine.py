@@ -2,9 +2,9 @@ import logging
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, get_normalized_mac, \
-    ips_do_not_contradict, compare_macs, get_normalized_ip, compare_device_normalized_hostname, \
-    normalize_adapter_devices, get_serial
+from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, \
+    ips_do_not_contradict, get_normalized_ip, compare_device_normalized_hostname, \
+    normalize_adapter_devices, get_serial, NORMALIZED_MACS
 from axonius.correlator_base import has_mac, has_hostname, has_serial, CorrelationReason
 
 
@@ -65,14 +65,22 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         6. CorrelationReason.StaticAnalysis - the analysis used to discover the correlation
         """
         logger.info("Starting to correlate on MAC")
-        filtered_adapters_list = filter(get_normalized_mac, adapters_to_correlate)
-        return self._bucket_correlate(list(filtered_adapters_list),
-                                      [],
-                                      [],
-                                      [],
-                                      [compare_macs],
-                                      {'Reason': 'They have the same MAC'},
-                                      CorrelationReason.StaticAnalysis)
+        mac_indexed = {}
+        for adapter in adapters_to_correlate:
+            macs = adapter.get(NORMALIZED_MACS)
+            if macs:
+                for mac in macs:
+                    if mac:
+                        mac_indexed.setdefault(mac, []).append(adapter)
+        for matches in mac_indexed.values():
+            if len(matches) >= 2:
+                yield from self._bucket_correlate(matches,
+                                                  [],
+                                                  [],
+                                                  [],
+                                                  [],
+                                                  {'Reason': 'They have the same MAC'},
+                                                  CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
         logger.info("Starting to correlate on Hostname-IP")

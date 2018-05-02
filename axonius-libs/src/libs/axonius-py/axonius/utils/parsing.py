@@ -518,10 +518,6 @@ def compare_device_normalized_hostname(adapter_device1, adapter_device2) -> bool
                                         adapter_device2.get(NORMALIZED_HOSTNAME))
 
 
-def get_normalized_mac(adapter_device):
-    return adapter_device.get(NORMALIZED_MACS)
-
-
 def get_normalized_ip(adapter_device):
     return adapter_device.get(NORMALIZED_IPS)
 
