@@ -202,3 +202,29 @@ class CiscoPrimeClient:
         creds = dict(map(lambda cred: (cred['propertyName'], cred['stringValue']),
                          creds['mgmtResponse']['credentialDTO']['credentialList']['credentialList']))
         return creds
+
+
+
+# Simple tests
+if __name__ == "__main__":
+    import axonius.clients.cisco.snmp as snmp
+    from pprint import pprint
+    from test_credentials.test_cisco_prime_credentials import client_details
+
+    logging.basicConfig(level=logging.DEBUG)
+    client = CiscoPrimeClient(**client_details)
+    client.connect()
+
+    devices = list(client.get_devices())
+    for device in devices:
+        # pprint(device)
+        # pprint(client.get_nics(device))
+        # for mac, iplist in client.get_nics(device).items():
+        #    print(f'{mac}: {list(map(lambda x: x[0], iplist))}')
+        # pprint(client.get_credentials(device))
+        pass
+    creds = client.get_credentials(devices[2])
+    if creds:
+        pprint(creds)
+        a = snmp.CiscoSnmpClient(creds['snmp_read_cs'], creds['MANAGEMENT_ADDRESS'], creds['snmp_port'])
+        pprint(list(a.query_arp_table()))

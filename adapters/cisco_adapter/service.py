@@ -4,76 +4,120 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from cisco_adapter.client import CiscoClient
+from axonius.utils.parsing import get_exception_string
 
-HOST = 'host'
-USERNAME = 'username'
-PASSWORD = 'password'
+import axonius.clients.cisco.ssh as ssh
+import axonius.clients.cisco.snmp as snmp
 
 
 class CiscoAdapter(AdapterBase):
-
     class MyDeviceAdapter(DeviceAdapter):
         pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
+    @staticmethod
+    def _has_snmp_creds(client_config):
+        return all(map(client_config.get, ('snmp_community', 'snmp_port')))
+
+    @staticmethod
+    def _has_ssh_creds(client_config):
+        return all(map(client_config.get, ('ssh_username', 'ssh_password', 'ssh_port')))
+
+    def _get_client(self, client_config):
+        '''
+        validate that we have all the needed config in client_config,
+        and choose which client we should use.
+        for now we prefer snmp client.
+        maybe we should try both ssh and snmp, maybe even correlate between them?
+        '''
+
+        if self._has_snmp_creds(client_config):
+            logger.info('using snmp')
+            return snmp.CiscoSnmpClient(ip=client_config['host'],
+                                        community=client_config['snmp_community'], port=client_config['snmp_port'])
+
+        if self._has_ssh_creds(client_config):
+            logger.info('using ssh')
+            return ssh.CiscoSshClient(host=client_config['host'], username=client_config['ssh_username'],
+                                      password=client_config['ssh_password'], port=client_config['ssh_port'])
+
+        raise ClientConnectionException('client_config doesn\'t have any support client')
+
     def _connect_client(self, client_config):
         # tries to connect and throws adapter Exception on failure
-        client = CiscoClient(host=client_config[HOST], username=client_config[USERNAME],
-                             password=client_config[PASSWORD], port=22)
         try:
-            client.get_parsed_arp()
+
+            # use 'with' to check that connection works
+            with self._get_client(client_config) as client:
+                return client
         except Exception as e:
-            message = "Error connecting to client with {0}: {1}".format(self._get_client_id(client_config), str(e))
+            message = "Error connecting to client with {0}: {1}".format(
+                self._get_client_id(client_config), get_exception_string())
             logger.exception(message)
-            raise ClientConnectionException(message)
-        return client
+            raise
 
     def _query_devices_by_client(self, client_name, client_data):
-        assert isinstance(client_data, CiscoClient)
-        return list(client_data.get_parsed_arp())
+        assert isinstance(client_data, ssh.CiscoSshClient) or isinstance(client_data, snmp.CiscoSnmpClient), client_data
+        with client_data:
+            yield from client_data.query_arp_table()
 
     def _clients_schema(self):
         return {
             "items": [
                 {
-                    "name": HOST,
-                    "title": "Host Name",
-                    "type": "string"
+                    "name": 'host',
+                    "title": 'Host Name',
+                    "type": 'string'
                 },
                 {
-                    "name": USERNAME,
-                    "title": "User Name",
-                    "type": "string"
+                    "name": 'ssh_username',
+                    "title": 'User Name',
+                    "type": 'string'
                 },
                 {
-                    "name": PASSWORD,
+                    "name": 'ssh_password',
                     "title": "Password",
-                    "type": "string",
-                    "format": "password"
+                    "type": 'string',
+                    "format": 'password'
+                },
+                {
+                    "name": 'ssh_port',
+                    "title": 'Ssh port',
+                    "type": 'integer',
+                    "description": "ssh port (Default: 22)"
+                },
+                {
+                    "name": 'snmp_community',
+                    "title": 'Snmp read community',
+                    "type": 'string',
+                    "format": 'password'
+                },
+                {
+                    "name": 'snmp_port',
+                    "title": 'Snmp port',
+                    "type": 'integer',
+                    "description": 'snmp port (Default: 161)'
                 }
+
             ],
             "required": [
                 "host",
-                "username",
-                "password"
             ],
             "type": "array"
         }
 
-    def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._new_device_adapter()
-            device.id = device_raw['ip']
-            device.add_nic(device_raw['mac'], [device_raw['ip']])
-            device.scanner = True
-            device.set_raw(device_raw)
-            yield device
+    def _parse_raw_data(self, instances):
+        for instance in instances:
+            yield from instance.get_devices(self._new_device_adapter)
 
     def _get_client_id(self, client_config):
-        return client_config[HOST]
+        # TODO: is there a better place to set default values for client_config?
+        client_config.setdefault('ssh_port', 22)
+        client_config.setdefault('snmp_port', 161)
+
+        return client_config['host']
 
     @classmethod
     def adapter_properties(cls):

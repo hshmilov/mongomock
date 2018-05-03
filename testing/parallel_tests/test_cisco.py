@@ -1,7 +1,7 @@
 import pytest
 from services.adapters.cisco_service import CiscoService, cisco_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_cisco_credentials import cisco_creds
+from test_credentials.test_cisco_credentials import cisco_creds, SOME_DEVICE_ID
 
 
 class TestCiscoAdapter(AdapterTestBase):
@@ -19,8 +19,4 @@ class TestCiscoAdapter(AdapterTestBase):
 
     @property
     def some_device_id(self):
-        return cisco_creds['host']
-
-    @pytest.mark.skip("Disabled since the host is an expensive aws marketplace ami that's not covered by our credits")
-    def test_fetch_devices(self):
-        pass
+        return SOME_DEVICE_ID

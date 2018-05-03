@@ -87,8 +87,8 @@ export const pluginMeta = {
 			description: 'VMware ESXi is an entreprise-class, type-1 hypervisor for deploying and serving virtual computers. '
 		},
 		cisco_adapter: {
-			title: 'Cisco CSR',
-			description: 'Cisco Cloud Services Router (CSR) provides routing, security, and network management with multitenancy.'
+			title: 'Cisco',
+			description: 'Cisco IOS network infrastructure software.'
 		},
 		eset_adapter: {
 			title: 'ESET Endpoint Security',

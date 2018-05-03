@@ -8,6 +8,7 @@ from cisco_prime_adapter.client import CiscoPrimeClient
 from cisco_prime_adapter.snmp import CiscoSnmpClient
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils import json
+from axonius.clients.cisco import snmp
 
 
 class CiscoPrimeAdapter(AdapterBase):
@@ -50,7 +51,8 @@ class CiscoPrimeAdapter(AdapterBase):
     def get_arp_table(self, raw_device, session):
         community, ip, port = self._get_snmp_creds(raw_device, session)
         if community is not None:
-            return CiscoSnmpClient(community, ip, port).query_arp_table()
+            with snmp.CiscoSnmpClient(community, ip, port) as client:
+                yield from client.query_arp_table()
 
     def _query_devices_by_client(self, client_name, session):
         raw_devices = []
@@ -62,8 +64,8 @@ class CiscoPrimeAdapter(AdapterBase):
         for raw_device in raw_devices:
             try:
                 arp_table = self.get_arp_table(raw_device, session)
-                for neighbor in arp_table:
-                    yield ('neighbor', neighbor)
+                for arp_entry in arp_table:
+                    yield ('neighbor', arp_entry)
             except Exception as e:
                 logger.exception(f'Got exception while getting arp_table: {raw_device}')
 
@@ -136,39 +138,19 @@ class CiscoPrimeAdapter(AdapterBase):
 
         return device
 
-    def create_neighbor_device(self, raw_device):
-        ip, mac = raw_device
-
-        if mac in self._macs:
-            logger.info(f'Duplicate mac in create_neighbor {mac}')
-            return None
-
-        device = self._new_device_adapter()
-        device.id = mac
-        device.device_model = 'cisco neighbor'
-        device.add_nic(mac, [ip])
-        device.set_raw({'raw_data': raw_device})
-
-        # save mac address to prevent neighbors from being added from 2 different devices
-        self._macs.add(mac)
-
-        return device
-
-    def create_device(self, raw_device):
-        type_, raw_device = raw_device
-        if type_ == 'cisco':
-            return self.create_cisco_device(raw_device)
-        if type_ == 'neighbor':
-            return self.create_neighbor_device(raw_device)
-
-        raise ValueError(f'invalid type {type_}')
-
     def _parse_raw_data(self, raw_data):
         for raw_device in raw_data:
             try:
-                device = self.create_device(raw_device)
-                if device:
-                    yield device
+                type_, raw_device = raw_device
+                if type_ == 'cisco':
+                    device = self.create_cisco_device(raw_device)
+                    if device:
+                        yield device
+                elif type_ == 'neighbor':
+                    instance = raw_device
+                    yield from instance.get_devices(self._new_device_adapter)
+                else:
+                    raise ValueError(f'invalid type {type_}')
             except Exception:
                 logger.exception(f'Got exception while creating device: {raw_device}')
 
