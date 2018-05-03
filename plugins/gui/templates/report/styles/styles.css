@@ -1,0 +1,155 @@
+/* GENERAL */
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('Poppins-Regular.ttf') format('truetype');
+}
+
+@page {
+    margin: 0;
+}
+
+/* GENERAL */
+
+body {
+    font: 14px 'Poppins', sans-serif;
+    color: #1D222C;
+}
+
+h1, h2, h3 {
+    margin-top: 0;
+    text-align: left;
+}
+
+
+/* STRUCTURE */
+
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: right;
+}
+
+.header .logo {
+    width: 180px;
+    text-align: center;
+    display: inline-block;
+    margin: 8px 24px;
+}
+
+.content {
+    padding: 24px;
+    margin-bottom: 84px;
+    margin-top: 100px;
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: left;
+}
+
+.footer .logo {
+    margin: 24px;
+}
+
+
+/* MODIFIERS */
+
+/* Colours */
+.c-orange {
+    color: #FF7D46;
+}
+.c-blue {
+    color: #0076FF;
+}
+.c-grey {
+    color: #ADADAD;
+}
+.c-white {
+    color: #ffffff;
+}
+
+/* Backgrounds */
+.bg-black {
+    background-color: #1D222C;
+}
+
+/* Fonts */
+.f-18 {
+    font-size: 18px
+}
+.f-20 {
+    font-size: 20px
+}
+.f-72 {
+    font-size: 72px;
+}
+
+/* Line heights */
+.lh-100 {
+    line-height: 100px;
+}
+
+/* Margins */
+.m-8 {
+    margin: 8px;
+}
+.mt-8 {
+    margin-top: 8px;
+}
+.mt-24 {
+    margin-top: 24px;
+}
+.mh-48 {
+    margin: 0 48px;
+}
+
+/* Displays */
+.d-inline-block {
+    display: inline-block;
+}
+
+/* Alignment */
+.t-center {
+    text-align: center;
+}
+.t-right {
+    text-align: right;
+}
+
+/* Heights */
+.h-48 {
+    height: 48px
+}
+
+/* COMPONENTS */
+.card-section {
+    column-count: 2;
+}
+
+.card {
+    width: 300px;
+    border: 1px solid #DEDEDE;
+    border-radius: 4px;
+    padding: 12px;
+    display: inline-block;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.card.full {
+    width: auto;
+    display: block;
+}
+
+
+/* SPECIFIC */
+
+.data-discovery .f-72 {
+    line-height: 72px;
+}

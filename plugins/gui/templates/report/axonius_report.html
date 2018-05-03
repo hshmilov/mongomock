@@ -2,13 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{title}}</title>
+    <title>Axonius Report - {{date}}</title>
+    <link rel="stylesheet" href="styles/styles.css">
 </head>
 <body>
-    <div class="header">
-        <img src="logo.svg">
-        <h2>{{title}}</h2>
-    </div>
+    <header class="header bg-black">
+        <div class="logo">
+            <img src="icons/logo-icon.svg" height="48px">
+            <img src="icons/logo-text.svg" height="20px" class="mt-8">
+        </div>
+    </header>
+    <div class="content">
     {{content}}
+    </div>
+    <footer class="footer bg-black">
+        <div class="logo">
+            <img src="icons/logo-icon.svg" height="36px">
+            <img src="icons/logo-text.svg" height="20px" class="m-8">
+        </div>
+    </footer>
 </body>
 </html>

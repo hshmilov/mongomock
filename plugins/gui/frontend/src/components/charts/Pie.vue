@@ -85,7 +85,7 @@
 				return [
 					Math.cos(2 * Math.PI * portion),
                     Math.sin(2 * Math.PI * portion)
-                ];
+                ]
 			},
             onHover(event, index) {
 				this.inHover = index

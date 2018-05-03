@@ -11,6 +11,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.consts import plugin_consts
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes
+from gui.report_generator import ReportGenerator
 
 import tarfile
 import io
@@ -26,10 +27,6 @@ from bson import ObjectId
 import json
 from axonius.utils.parsing import parse_filter
 import re
-
-from weasyprint import HTML, CSS
-from jinja2 import Environment, FileSystemLoader
-from weasyprint.fonts import FontConfiguration
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
@@ -1711,30 +1708,10 @@ class GuiService(PluginBase):
 
         :return:
         """
-        env = Environment(loader=FileSystemLoader('.'))
-        template_path = 'gui/templates/report/'
-        report_template = env.get_template(f'{template_path}axonius_report.html')
-        card_template = env.get_template(f'{template_path}report_card.html')
-        data_template = env.get_template(f'{template_path}dashboard/data_discovery.html')
-
-        adapter_devices = self._adapter_devices()
-
-        html_data = report_template.render({
-            'title': 'Some Gruppen Company Weekly Report',
-            'content': card_template.render({
-                'title': 'Data Discovery',
-                'content': data_template.render({
-                    'seen_count': adapter_devices['total_gross'], 'unique_count': adapter_devices['total_net']
-                })
-            })
-        })
-        timestamp = datetime.now().strftime("%d%m%Y-%H%M%S")
-        temp_report_filename = f'/tmp/axonius-report_{timestamp}.pdf'
-        open(f'/tmp/axonius-report_{timestamp}.html', 'w').write(html_data)
-        font_config = FontConfiguration()
-        css = CSS(filename=f'{template_path}styles.css', font_config=font_config)
-        HTML(string=html_data, base_url=template_path).write_pdf(
-            temp_report_filename, stylesheets=[css], font_config=font_config)
+        report_generator = ReportGenerator({
+            'adapter_devices': self._adapter_devices()
+        }, 'gui/templates/report/')
+        temp_report_filename = report_generator.generate()
         return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=temp_report_filename)
 
