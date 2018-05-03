@@ -5,6 +5,7 @@ It implements API calls that are expected to be present in all adapters.
 import logging
 
 from axonius.mixins.configurable import Configurable
+from axonius.users.user_adapter import UserAdapter
 
 logger = logging.getLogger(f"axonius.{__name__}")
 import threading
@@ -24,7 +25,6 @@ from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
 from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
-from axonius.users.user_adapter import UserAdapter, USER_LAST_SEEN_FIELD
 from axonius.mixins.feature import Feature
 from axonius.utils.parsing import get_exception_string
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
@@ -102,7 +102,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     """
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 30
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24 * 2
-    DEFAULT_USER_ALIVE_THRESHOLD_HOURS = -1
+    DEFAULT_USER_LAST_SEEN = -1
+    DEFAULT_USER_LAST_FETCHED = -1
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -133,7 +134,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         self._last_fetched_timedelta = timedelta(hours=config['last_fetched_threshold_hours'])
         # this is the delta used for comparing "accurate_for_datetime" - i.e. the last time the devices was fetched
 
-        self.__user_last_seen_timedelta = timedelta(hours=config['user_alive_threshold_hours'])
+        self.__user_last_seen_timedelta = timedelta(hours=config['user_last_seen_threshold_hours'])
+        self.__user_last_fetched_timedelta = timedelta(hours=config['user_last_fetched_threshold_hours'])
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -172,12 +174,12 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             thread.start()
             event.wait()
 
-    def __find_old_axonius_devices(self, device_age_cutoff: Tuple[date, date]):
+    def __find_old_axonius_entities(self, entity_age_cutoff: Tuple[date, date], entity_db):
         """
-        Scans the DB for devices that have at least one old adapter device
-        :return: devices cursor
+        Scans the DB for axonius devices that have at least one old entity
+        :return: entity cursor
         """
-        last_seen_cutoff, last_fetched_cutoff = device_age_cutoff or self.__device_time_cutoff()
+        last_seen_cutoff, last_fetched_cutoff = entity_age_cutoff
 
         dates_for_device = [
             {
@@ -186,7 +188,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 }
             },
             {
-                'data.last_seen': {
+                f'data.{LAST_SEEN_FIELD}': {
                     "$lt": last_seen_cutoff
                 }
             }
@@ -206,16 +208,16 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 }
             }
         }
-        return self.devices_db.find(dbfilter)
+        return entity_db.find(dbfilter)
 
-    def __archive_axonius_device(self, plugin_unique_name, device_id):
+    def __archive_axonius_device(self, plugin_unique_name, device_id, db_to_use):
         """
         Finds the axonius device with the given plugin_unique_name and device id,
         assumes that the axonius device has only this single adapter device.
 
         writes the device to the archive db, then deletes it
         """
-        axonius_device = self.devices_db.find_one_and_delete({
+        axonius_device = db_to_use.find_one_and_delete({
             'adapters': {
                 '$elemMatch': {
                     PLUGIN_UNIQUE_NAME: plugin_unique_name,
@@ -224,36 +226,29 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             }
         })
         if axonius_device is None:
-            logger.error(f"Trying to archive nonexisting device: {plugin_unique_name}: {device_id}")
+            logger.error(f"Tried to archive nonexisting device: {plugin_unique_name}: {device_id}")
             return False
 
         axonius_device['archived_at'] = datetime.utcnow()
         self.aggregator_db_connection['old_device_archive'].insert_one(axonius_device)
         return True
 
-    def clean_db(self):
+    def __clean_entity(self, age_cutoff, entity_type: EntityType):
         """
-        Figures out which devices are too old and removes them from the db.
-        Unlinks devices first if necessary.
-        :return: Amount of deleted devices
+        Removes entities from given type from a given age cutoff
+        :return:
         """
-        if self._last_seen_timedelta < timedelta(0) and self._last_fetched_timedelta < timedelta(0):
-            return 0
+        db_to_use = self._entity_db_map.get(entity_type)
+        deleted_entities_count = 0
+        for axonius_device in self.__find_old_axonius_entities(age_cutoff, db_to_use):
+            old_adapter_entities = self.__extract_old_entities_from_axonius_device(axonius_device,
+                                                                                   age_cutoff)
 
-        device_age_cutoff = self.__device_time_cutoff()
-        logger.info(f"Cleaning devices that are before {device_age_cutoff}")
-
-        deleted_adapter_devices_count = 0
-        for axonius_device in self.__find_old_axonius_devices(device_age_cutoff):
-
-            old_adapter_devices = self.__extract_old_adapter_devices_from_axonius_device(axonius_device,
-                                                                                         device_age_cutoff)
-
-            for index, adapter_device_to_remove in enumerate(old_adapter_devices):
+            for index, entity_to_remove in enumerate(old_adapter_entities):
                 if index < len(axonius_device['adapters']) - 1:
-                    logger.info(f"Unlinking device {adapter_device_to_remove}")
+                    logger.info(f"Unlinking entity {entity_to_remove}")
                     # if the above condition isn't met it means
-                    # that the current adapter_device is the last one (or even the only one)
+                    # that the current entity is the last one (or even the only one)
                     # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
                     response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
                         "plugin_type": "Plugin",
@@ -261,23 +256,41 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                             'Reason': 'The device is too old so it is going to be deleted'
                         },
                         "associated_adapters": [
-                            adapter_device_to_remove
+                            entity_to_remove
                         ],
                         "association_type": "Unlink",
-                        "entity": "devices"
+                        "entity": entity_type.value
                     })
                     if response.status_code != 200:
-                        logger.error(f"Unlink failed for {adapter_device_to_remove}," +
+                        logger.error(f"Unlink failed for {entity_to_remove}," +
                                      "not removing the device for consistency." +
                                      f"Error: {response.status_code}, {str(response.content)}")
 
                         continue
 
-                logger.info(f"Deleting device {adapter_device_to_remove}")
-                if self.__archive_axonius_device(*adapter_device_to_remove):
-                    deleted_adapter_devices_count += 1
+                logger.info(f"Deleting axonius device {entity_to_remove}")
+                if self.__archive_axonius_device(*entity_to_remove, db_to_use):
+                    deleted_entities_count += 1
 
-        return deleted_adapter_devices_count
+        return deleted_entities_count
+
+    def clean_db(self):
+        """
+        Figures out which devices are too old and removes them from the db.
+        Unlinks devices first if necessary.
+        :return: Amount of deleted devices
+        """
+        if self._last_seen_timedelta < timedelta(0) and self._last_fetched_timedelta < timedelta(0) and \
+                self.__user_last_fetched_timedelta < timedelta(0) and self.__user_last_seen_timedelta < timedelta(0):
+            return 0
+
+        device_age_cutoff = self.__device_time_cutoff()
+        user_age_cutoff = self.__user_time_cutoff()
+        logger.info(f"Cleaning devices and users that are before {device_age_cutoff}, {user_age_cutoff}")
+        devices_cleaned = self.__clean_entity(device_age_cutoff, EntityType.Devices)
+        users_cleaned = self.__clean_entity(user_age_cutoff, EntityType.Users)
+        logger.info(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
+        return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
 
     @add_rule("clean_devices", methods=["POST"])
     def clean_devices(self):
@@ -342,7 +355,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         skipped_count = 0
         users_ids = []
 
-        self._save_field_names_to_db(EntityType.Users)
+        cutoff_last_seen, _ = self.__user_time_cutoff()
 
         for parsed_user in self._parse_users_raw_data(raw_users):
             assert isinstance(parsed_user, UserAdapter)
@@ -356,7 +369,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
             parsed_user = parsed_user.to_dict()
             parsed_user = self._remove_big_keys(parsed_user, parsed_user.get('id', 'unidentified user'))
-            if self.is_old_user(parsed_user):
+            if self.__is_entity_old_by_last_seen(parsed_user, cutoff_last_seen):
                 skipped_count += 1
                 continue
 
@@ -374,23 +387,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         """
 
         return []
-
-    def is_old_user(self, parsed_user):
-        """ Check if the user is considered "old".
-
-        :param parsed_user: A parsed data of the user
-        :return: True if the user is old else False.
-        """
-        if self.__user_last_seen_timedelta < timedelta(0):
-            return False
-
-        if USER_LAST_SEEN_FIELD in parsed_user:
-            user_time = parsed_user[USER_LAST_SEEN_FIELD]
-            # Getting the time zone from the original device
-            now = datetime.now(tz=user_time.tzinfo)
-            return now - user_time > self.__user_last_seen_timedelta
-        else:
-            return False
 
     @add_rule('users_by_name', methods=['GET'])
     def users_by_name(self):
@@ -720,40 +716,43 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         """
         pass
 
-    def _is_adapter_old_by_last_seen(self, adapter_device, device_age_cutoff=None):
-        if self._last_seen_timedelta < timedelta(0):
+    def __is_old_entity(self, parsed_entity, cutoff: Tuple[date, date]) -> bool:
+        """ Check if the entity is considered "old".
+
+        :param parsed_entity: A parsed data of the entity
+        :return: If the entity is old or not.
+        """
+        seen_cutoff, fetched_cutoff = cutoff
+        return self.__is_entity_old_by_last_fetched(parsed_entity, fetched_cutoff) or \
+            self.__is_entity_old_by_last_seen(parsed_entity['data'], seen_cutoff)
+
+    @staticmethod
+    def __is_entity_old_by_last_seen(parsed_entity_data, seen_cutoff: date):
+        if not seen_cutoff:
             return False
-
-        last_seen_cutoff = device_age_cutoff or self.__device_time_cutoff()[1]
-
-        return LAST_SEEN_FIELD in adapter_device and \
-            adapter_device[LAST_SEEN_FIELD].astimezone(last_seen_cutoff.tzinfo) < last_seen_cutoff
-
-    def __is_adapter_device_old(self, adapter_device, device_age_cutoff: Tuple[date, date]) -> bool:
-        """
-        Whether or not the given adapter device is old according to policy and given cutoff.
-        """
-
-        last_seen_cutoff, last_fetched_cutoff = device_age_cutoff
-
-        if self._last_seen_timedelta > timedelta(0):
-            if self._is_adapter_old_by_last_seen(adapter_device['data'], last_seen_cutoff):
-                return True
-
-        if self._last_fetched_timedelta > timedelta(0):
-            if 'accurate_for_datetime' in adapter_device:
-                return adapter_device['accurate_for_datetime'].astimezone(
-                    last_fetched_cutoff.tzinfo) < last_fetched_cutoff
-
+        if LAST_SEEN_FIELD in parsed_entity_data:
+            return parsed_entity_data[LAST_SEEN_FIELD].astimezone(seen_cutoff.tzinfo) < seen_cutoff
         return False
 
-    def __extract_old_adapter_devices_from_axonius_device(self, axonius_device, device_age_cutoff: Tuple[date, date]) \
+    @staticmethod
+    def __is_entity_old_by_last_fetched(parsed_entity, fetched_cutoff: date):
+        if not fetched_cutoff:
+            return False
+        if 'accurate_for_datetime' in parsed_entity:
+            return parsed_entity['accurate_for_datetime'].astimezone(fetched_cutoff.tzinfo) < fetched_cutoff
+        return False
+
+    def _is_adapter_old_by_last_seen(self, adapter_device, device_age_cutoff=None):
+        seen_cutoff = device_age_cutoff or self.__device_time_cutoff()[0]
+        return self.__is_entity_old_by_last_seen(adapter_device, seen_cutoff)
+
+    def __extract_old_entities_from_axonius_device(self, axonius_device, entity_age_cutoff: Tuple[date, date]) \
             -> Iterable[Tuple[str, str]]:
         """
-        Finds all adapter devices that are old in an axonius device
+        Finds all entities that are old in an axonius device
         """
         for adapter in axonius_device['adapters']:
-            if self.__is_adapter_device_old(adapter, device_age_cutoff):
+            if self.__is_old_entity(adapter, entity_age_cutoff):
                 yield adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']
 
     def _remove_big_keys(self, key_to_check, entity_id):
@@ -800,7 +799,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             assert isinstance(parsed_device, DeviceAdapter)
 
             if should_check_for_unique_ids:
-                parsed_device_id = parsed_device.id   # we must have an id (its definitely not a scanner)
+                parsed_device_id = parsed_device.id  # we must have an id (its definitely not a scanner)
                 if parsed_device_id in devices_ids:
                     logger.critical(f"Error! device with id {parsed_device_id} already yielded! skipping")
                     continue
@@ -1009,8 +1008,17 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         until it is considered "old"
         """
         now = datetime.now(timezone.utc)
-        return (now - self._last_seen_timedelta,
-                now - self._last_fetched_timedelta)
+        return (now - self._last_seen_timedelta if self._last_seen_timedelta > timedelta(0) else None,
+                now - self._last_fetched_timedelta if self._last_fetched_timedelta > timedelta(0) else None)
+
+    def __user_time_cutoff(self) -> Tuple[date, date]:
+        """
+        Gets a cutoff date (last_seen, last_fetched) that represents the oldest a device can be
+        until it is considered "old"
+        """
+        now = datetime.now(timezone.utc)
+        return (now - self.__user_last_seen_timedelta if self.__user_last_seen_timedelta > timedelta(0) else None,
+                now - self.__user_last_fetched_timedelta if self.__user_last_fetched_timedelta > timedelta(0) else None)
 
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)
@@ -1029,7 +1037,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             "items": [
                 {
                     "name": "last_seen_threshold_hours",
-                    "title": "Old device last seen threshold hours",
+                    "title": "Old device last seen field threshold hours",
                     "type": "number"
                 },
                 {
@@ -1038,15 +1046,21 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     "type": "number"
                 },
                 {
-                    "name": "user_alive_threshold_hours",
-                    "title": "Old user last seen threshold hours",
+                    "name": "user_last_seen_threshold_hours",
+                    "title": "Old user last seen field threshold hours",
                     "type": "number"
                 },
+                {
+                    "name": "user_last_fetched_threshold_hours",
+                    "title": "Old user last fetched threshold hours",
+                    "type": "number"
+                }
             ],
             "required": [
                 "last_seen_threshold_hours",
                 "last_fetched_threshold_hours",
-                "user_alive_threshold_hours",
+                "user_last_seen_threshold_hours",
+                "user_last_fetched_threshold_hours"
             ],
             "pretty_name": "Adapter Configuration",
             "type": "array"
@@ -1057,5 +1071,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         return {
             "last_seen_threshold_hours": cls.DEFAULT_LAST_SEEN_THRESHOLD_HOURS,
             "last_fetched_threshold_hours": cls.DEFAULT_LAST_FETCHED_THRESHOLD_HOURS,
-            "user_alive_threshold_hours": cls.DEFAULT_USER_ALIVE_THRESHOLD_HOURS
+            "user_last_seen_threshold_hours": cls.DEFAULT_USER_LAST_SEEN,
+            "user_last_fetched_threshold_hours": cls.DEFAULT_USER_LAST_FETCHED
         }

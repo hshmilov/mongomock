@@ -1,5 +1,7 @@
 import uuid
 from datetime import datetime, timezone, timedelta
+
+from axonius.plugin_base import EntityType
 from flaky import flaky
 import pytest
 
@@ -45,6 +47,20 @@ class AdapterTestBase(object):
     def device_alive_thresh_last_fetched(self):
         return self.adapter_service.get_configurable_config('AdapterBase')['last_fetched_threshold_hours']
 
+    @property
+    def user_alive_thresh_last_seen(self):
+        return self.adapter_service.get_configurable_config('AdapterBase')['user_last_seen_threshold_hours']
+
+    @property
+    def user_alive_thresh_last_fetched(self):
+        return self.adapter_service.get_configurable_config('AdapterBase')['user_last_fetched_threshold_hours']
+
+    def get_last_threshold(self, entity_type: EntityType):
+        if entity_type == EntityType.Devices:
+            return self.device_alive_thresh_last_seen, self.device_alive_thresh_last_fetched
+        if entity_type == EntityType.Users:
+            return self.user_alive_thresh_last_seen, self.user_alive_thresh_last_fetched
+
     def drop_clients(self):
         self.axonius_system.db.client[self.adapter_service.unique_name].drop_collection('clients')
 
@@ -67,23 +83,29 @@ class AdapterTestBase(object):
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
 
     def test_devices_cleaning(self):
+        return self.do_test_entity_cleaning(EntityType.Devices)
+
+    def test_devices_cleaning(self):
+        return self.do_test_entity_cleaning(EntityType.Users)
+
+    def do_test_entity_cleaning(self, entity_type: EntityType):
         self.adapter_service.trigger_clean_db()  # first clean might not be empty
-        cleaned_count = self.adapter_service.trigger_clean_db()
-        assert cleaned_count == 0  # second clean should have no devices cleaned
+        cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
+        assert cleaned_count == 0  # second clean should have no entities cleaned
 
         now = datetime.now(tz=timezone.utc)
-
-        using_last_seen = self.device_alive_thresh_last_seen > 0
+        last_seen, last_fetched = self.get_last_threshold(entity_type)
+        using_last_seen = last_seen > 0
         if using_last_seen:
-            last_seen_long_time_ago = now - timedelta(hours=self.device_alive_thresh_last_seen * 5)
-        using_last_fetched = self.device_alive_thresh_last_fetched > 0
+            last_seen_long_time_ago = now - timedelta(hours=last_seen * 5)
+        using_last_fetched = last_fetched > 0
         if using_last_fetched:
-            last_fetched_long_time_ago = now - timedelta(hours=self.device_alive_thresh_last_fetched * 5)
+            last_fetched_long_time_ago = now - timedelta(hours=last_fetched * 5)
 
-        devices_db = self.axonius_system.db.client[AGGREGATOR_PLUGIN_NAME]['devices_db']
+        entity_db = self.axonius_system.db.get_entity_db(entity_type)
 
-        # this is a fake device that is "new" on all forms
-        devices_db.insert_one({
+        # this is a fake entity that is "new" on all forms
+        entity_db.insert_one({
             "internal_axon_id": "1-" + uuid.uuid4().hex,
             "accurate_for_datetime": now,
             "adapters": [
@@ -102,14 +124,14 @@ class AdapterTestBase(object):
             ],
             "tags": []
         })
-        cleaned_count = self.adapter_service.trigger_clean_db()
-        assert cleaned_count == 0  # the device added shouldn't be removed
+        cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
+        assert cleaned_count == 0  # the entity added shouldn't be removed
 
         if using_last_fetched:
-            # this is a fake device from a "long time ago" by last_fetched
-            deleted_device_id = "3-" + uuid.uuid4().hex
-            devices_db.insert_one({
-                "internal_axon_id": deleted_device_id,
+            # this is a fake entity from a "long time ago" by last_fetched
+            deleted_entity_id = "3-" + uuid.uuid4().hex
+            entity_db.insert_one({
+                "internal_axon_id": deleted_entity_id,
                 "accurate_for_datetime": now,
                 "adapters": [
                     {
@@ -127,15 +149,15 @@ class AdapterTestBase(object):
                 ],
                 "tags": []
             })
-            cleaned_count = self.adapter_service.trigger_clean_db()
-            assert cleaned_count == 1  # the device added is old and should be deleted
-            assert devices_db.count({'internal_axon_id': deleted_device_id}) == 0
+            cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
+            assert cleaned_count == 1  # the entity added is old and should be deleted
+            assert entity_db.count({'internal_axon_id': deleted_entity_id}) == 0
 
-            deleted_device_id = "5-" + uuid.uuid4().hex
-            deleted_adapter_device_id = "6-" + uuid.uuid4().hex
-            not_deleted_adapter_device_id = "7-" + uuid.uuid4().hex
-            devices_db.insert_one({
-                "internal_axon_id": deleted_device_id,
+            deleted_entity_id = "5-" + uuid.uuid4().hex
+            deleted_adapter_entity_id = "6-" + uuid.uuid4().hex
+            not_deleted_adapter_entity_id = "7-" + uuid.uuid4().hex
+            entity_db.insert_one({
+                "internal_axon_id": deleted_entity_id,
                 "accurate_for_datetime": now,
                 "adapters": [
                     {
@@ -145,7 +167,7 @@ class AdapterTestBase(object):
                         "plugin_unique_name": self.adapter_service.unique_name,
                         "accurate_for_datetime": last_fetched_long_time_ago,
                         "data": {
-                            "id": deleted_adapter_device_id,
+                            "id": deleted_adapter_entity_id,
                             "raw": {
                             },
                         }
@@ -159,25 +181,25 @@ class AdapterTestBase(object):
                         "data": {
                             "raw": {
                             },
-                            "id": not_deleted_adapter_device_id,
+                            "id": not_deleted_adapter_entity_id,
                         }
                     }
                 ],
                 "tags": []
             })
 
-            cleaned_count = self.adapter_service.trigger_clean_db()
-            assert cleaned_count == 1  # the device added is old and should be deleted
-            # only one of the adapter_devices should be removed, so the axonius device should stay
-            assert devices_db.count({'adapters.data.id': not_deleted_adapter_device_id}) == 1
-            # verify our device is deleted
-            assert devices_db.count({'adapters.data.id': deleted_adapter_device_id}) == 0
+            cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
+            assert cleaned_count == 1  # the entity added is old and should be deleted
+            # only one of the adapter_entitys should be removed, so the axonius entity should stay
+            assert entity_db.count({'adapters.data.id': not_deleted_adapter_entity_id}) == 1
+            # verify our entity is deleted
+            assert entity_db.count({'adapters.data.id': deleted_adapter_entity_id}) == 0
 
         if using_last_seen:
-            # this is a fake device from a "long time ago" according to `last_seen`
-            deleted_device_id = "8-" + uuid.uuid4().hex
-            devices_db.insert_one({
-                "internal_axon_id": deleted_device_id,
+            # this is a fake entity from a "long time ago" according to `last_seen`
+            deleted_entity_id = "8-" + uuid.uuid4().hex
+            entity_db.insert_one({
+                "internal_axon_id": deleted_entity_id,
                 "accurate_for_datetime": now,
                 "adapters": [
                     {
@@ -196,9 +218,9 @@ class AdapterTestBase(object):
                 ],
                 "tags": []
             })
-            cleaned_count = self.adapter_service.trigger_clean_db()
+            cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
             assert cleaned_count == 1
-            assert devices_db.count({'internal_axon_id': deleted_device_id}) == 0
+            assert entity_db.count({'internal_axon_id': deleted_entity_id}) == 0
 
     def test_restart(self):
         service = self.adapter_service

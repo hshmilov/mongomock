@@ -77,7 +77,7 @@ class ADPrinter(SmartJsonClass):
 class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Configurable):
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = -1
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 48
-    DEFAULT_USER_ALIVE_THRESHOLD_HOURS = 30 * 24
+    DEFAULT_USER_LAST_SEEN = 30 * 24
 
     class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
         ad_service_principal_name = Field(str, "AD Service Principal Name")
@@ -393,7 +393,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 # Last seen is the latest timestamp of use we have.
                 use_timestamps = sorted(use_timestamps, reverse=True)
                 if len(use_timestamps) > 0:
-                    user.last_seen_in_domain = use_timestamps[0]
+                    user.last_seen = use_timestamps[0]
 
                 lockout_time = user_raw.get("lockoutTime")
                 if is_date_real(lockout_time):

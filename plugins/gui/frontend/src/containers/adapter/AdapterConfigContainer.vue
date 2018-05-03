@@ -20,9 +20,11 @@
                      :key="i"
                      :title="config.schema.pretty_name || config_name"
                      :id="config_name" :selected="!i">
+                    <div class="mx-auto configuration">
                         <x-schema-form :schema="config.schema" v-model="config.config"
                                        @validate="serverModal.valid = $event"/>
                         <a class="x-btn great" @click="saveConfig(config_name, config.config)" tabindex="1">Save Config</a>
+                    </div>
                 </tab>
             </tabs>
 
@@ -216,5 +218,8 @@
         .form-group {
             padding-left: 12px;
         }
+    }
+    .configuration {
+        width: 600px;
     }
 </style>

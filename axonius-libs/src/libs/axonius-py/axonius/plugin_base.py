@@ -194,8 +194,8 @@ class EntityType(Enum):
     Possible axonius entities
     """
 
-    Users = 'user'
-    Devices = 'device'
+    Users = "users"
+    Devices = "devices"
 
 
 class PluginBase(Configurable, Feature):

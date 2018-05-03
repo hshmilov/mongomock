@@ -2,8 +2,9 @@ import os
 import pymongo
 import subprocess
 
+from axonius.plugin_base import EntityType
 from services.docker_service import DockerService
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from services.ports import DOCKER_PORTS
 
 
@@ -93,11 +94,11 @@ class MongoService(DockerService):
     def get_databases(self):
         return self.client.database_names()
 
-    def get_devices_db(self, aggregator_unique_name):
-        return self.client[aggregator_unique_name]['devices_db']
-
-    def get_users_db(self, aggregator_unique_name):
-        return self.client[aggregator_unique_name]['users_db']
+    def get_entity_db(self, entity_type: EntityType):
+        if entity_type == EntityType.Users:
+            return self.client[AGGREGATOR_PLUGIN_NAME]['users_db']
+        if entity_type == EntityType.Devices:
+            return self.client[AGGREGATOR_PLUGIN_NAME]['devices_db']
 
     def get_devices(self, aggregator_unique_name):
         return self.get_devices_db(aggregator_unique_name).find({})

@@ -6,6 +6,8 @@ import time
 import glob
 import os
 
+from axonius.plugin_base import EntityType
+
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from services import adapters
@@ -79,10 +81,10 @@ class AxoniusService(object):
             service.wait_for_service()
 
     def get_devices_db(self):
-        return self.db.get_devices_db(self.aggregator.unique_name)
+        return self.db.get_entity_db(EntityType.Devices)
 
     def get_users_db(self):
-        return self.db.get_users_db(self.aggregator.unique_name)
+        return self.db.get_entity_db(EntityType.Users)
 
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)

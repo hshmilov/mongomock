@@ -1,5 +1,7 @@
 import typing
 import datetime
+
+from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
@@ -26,10 +28,10 @@ class UserAdapter(SmartJsonClass):
     mail = Field(str, "mail")
     username = Field(str, 'User Name')  # Only username, no domain
     description = Field(str, 'Description')
-    domain = Field(str, "Domain")   # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
+    domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     is_admin = Field(bool, "Is Admin")
     last_seen_in_devices = Field(datetime.datetime, 'Last Seen In Devices')
-    last_seen_in_domain = Field(datetime.datetime, 'Last Seen In Domain')
+    last_seen = Field(datetime.datetime, 'Last Seen In Domain')
     associated_devices = ListField(UserAdapterDevice, "Associated Devices",
                                    json_format=JsonStringFormat.associated_device)
     is_local = Field(bool, "Is Local")  # If true, its a local user (self.domain == computer). else, its a domain user.
@@ -85,4 +87,4 @@ class UserAdapter(SmartJsonClass):
         self._extend_names('raw', raw_data)
 
 
-USER_LAST_SEEN_FIELD = UserAdapter.last_seen_in_domain.name
+assert UserAdapter.last_seen.name == LAST_SEEN_FIELD

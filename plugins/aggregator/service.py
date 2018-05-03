@@ -15,7 +15,7 @@ import uuid
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
-from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.utils.parsing import get_entity_id_for_plugin_name
 from axonius.mixins.triggerable import Triggerable
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
@@ -294,8 +294,8 @@ class AggregatorService(PluginBase, Triggerable):
         associated_adapters = sent_plugin.get('associated_adapters')
         entity = sent_plugin.get('entity')
 
-        if entity not in ['devices', 'users']:
-            return "Acceptable values for entity are: 'devices', 'users'"
+        if entity not in [EntityType.Devices.value, EntityType.Users.value]:
+            return return_error("Acceptable values for entity are: 'devices', 'users'")
 
         if association_type not in ['Tag', 'Multitag', 'Link', 'Unlink']:
             return "Acceptable values for association_type are: 'Tag', 'Multitag', 'Link', 'Unlink'"
@@ -323,10 +323,10 @@ class AggregatorService(PluginBase, Triggerable):
         sent_plugin[PLUGIN_UNIQUE_NAME], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
 
         # Get the specific lock we want
-        if entity == "devices":
+        if entity == EntityType.Devices.value:
             db_lock = self.devices_db_lock
             entities_db = self.devices_db
-        elif entity == "users":
+        elif entity == EntityType.Users.value:
             db_lock = self.users_db_lock
             entities_db = self.users_db
         else:
