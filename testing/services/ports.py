@@ -28,6 +28,7 @@ DOCKER_PORTS = {
     'puppet-adapter':                   5222,
     'chef-adapter':                     5223,
     'airwatch-adapter':                 5228,
+    'kaseya-adapter':                   5286,
     'nessus-adapter':                   5555,
     'general-info':                     5556,
     'symantec-adapter':                 5676,

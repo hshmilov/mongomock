@@ -34,6 +34,11 @@ export const pluginMeta = {
 			description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides ' +
 			'real-time monitoring of security solutions.'
 		},
+	    kaseya_adapter: {
+			title: 'Kaseya VSA',
+			description: 'Kaseya VSA is a next-gen remote monitoring and management solution' +
+			' for remote control,  discovery, patch management, and monitoring.'
+		},
 		puppet_adapter: {
 			title: 'Puppet',
 			description: 'Puppet is an open-source software configuration management tool.'
