@@ -133,7 +133,7 @@ export const alert = {
 		}
 	},
 	actions: {
-		[ FETCH_ALERTS ] ({dispatch, commit}, payload) {
+		[ FETCH_ALERTS ] ({dispatch}, payload) {
 			/*
 				Call to api for getting all alerts, according to skip, limit and filter
 				The mutation UPDATE_ALERTS is called with the returned controls or error, to fill it in the state
@@ -145,7 +145,7 @@ export const alert = {
 			if (payload.filter && Object.keys(payload.filter).length) {
 				param += `&filter=${JSON.stringify(payload.filter)}`
 			}
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: `reports${param}`,
 				type: UPDATE_ALERTS,
 				payload: {

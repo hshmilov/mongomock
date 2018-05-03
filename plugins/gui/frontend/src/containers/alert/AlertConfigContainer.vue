@@ -107,7 +107,7 @@
 
     import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_DATA_QUERIES } from '../../store/actions'
-    import { SET_ALERT, UPDATE_ALERT } from '../../store/modules/alert'
+    import { SET_ALERT, UPDATE_ALERT, FETCH_ALERTS } from '../../store/modules/alert'
 
 	export default {
 		name: 'alert-config-container',
@@ -137,7 +137,7 @@
         data() {
 			return {
                 /* Control of the criteria parameter with the use of two conditions */
-                alert: { },
+                alert: { triggers: {}, actions: [] },
                 actions: {
                 	notification: false, mail: false, tag: false
                 },
@@ -152,9 +152,11 @@
         },
         methods: {
             ...mapMutations({ setAlert: SET_ALERT }),
-            ...mapActions({ fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT }),
+            ...mapActions({ fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS }),
             fillAlert(alert) {
-				this.alert = { ...alert }
+				this.alert = { ...alert,
+                    triggers: { ...alert.triggers }
+                }
 				this.alert.actions.forEach((action) => {
 					switch (action.type) {
 						case 'create_notification':
@@ -199,13 +201,16 @@
             }
         },
         created() {
-			this.fillAlert(this.alertData)
 			/*
 			    If no alert from controls source, try and fetch it.
 			    Otherwise, if alert from controls source has correct id, update local alert controls with its values
 			 */
             if (!this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
-                this.setAlert(this.$route.params.id)
+                this.fetchAlerts({}).then(() => {
+                    this.setAlert(this.$route.params.id)
+                })
+            } else {
+			    this.fillAlert(this.alertData)
             }
 
 			/* Fetch all saved queries for offering user to base alert upon */
