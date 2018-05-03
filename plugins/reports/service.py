@@ -389,6 +389,15 @@ class ReportsService(PluginBase, Triggerable):
                 logger.info("Skipping reports trigger because there were no current results.")
                 return
             retrigger = report_data['retrigger']
+
+            if 'result' not in report_data:
+                # If this is the first time we are running this report (the 'result' is not set), set it for next time
+                # this happens after axonius system upgrade (where we only save the report and not the result, since
+                # it is going to change completely anyway...)
+                self._get_collection('reports').update_one({"_id": report_data['_id']},
+                                                           {"$set": {"result": current_result}})
+                return
+
             # DeepDiff(report_data['result'], current_result, ignore_order=True)
             result_difference = _diff(current_result, report_data['result'])
             # Checks to see what was triggered against the requested trigger list.

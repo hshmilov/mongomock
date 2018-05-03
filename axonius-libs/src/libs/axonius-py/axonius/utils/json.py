@@ -17,8 +17,8 @@ def default_with_generators(obj):
     return default(obj, json_options)
 
 
-def to_json(value):
-    return json.dumps(value, default=default_with_generators)
+def to_json(value, **kwargs):
+    return json.dumps(value, default=default_with_generators, **kwargs)
 
 
 def from_json(json_string):

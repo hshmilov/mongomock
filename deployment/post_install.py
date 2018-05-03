@@ -4,12 +4,12 @@ This script is run *from the install.py* and loads old saved data +
 """
 import argparse
 from cryptography.fernet import Fernet
-import json
 import os
 import sys
 import time
 
-from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state
+from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state, get_mongo_client
+from axonius.utils.json import from_json
 
 
 def main():
@@ -31,13 +31,18 @@ def load_state(path, key):
     if not os.path.isfile(path):
         print_state('  File not found - skipping')
         return
-    state = json.loads(decrypt(open(path, 'rb').read(), key))
+    state = from_json(decrypt(open(path, 'rb').read(), key))
     supported_state_file_version = 1
     while state['version'] < supported_state_file_version:
         state = upgrade_state(state)
     axonius_system = get_service()
+    mongo_client = get_mongo_client()
     axonius_system.take_process_ownership()
     load_providers(axonius_system, state['providers'])
+    load_queries(axonius_system, mongo_client, state['queries'])
+    load_views(axonius_system, mongo_client, state['views'])
+    load_dashboard_panels(axonius_system, mongo_client, state['panels'])
+    load_alerts(axonius_system, mongo_client, state['alerts'])
     load_diagnostics(axonius_system, state['diag_env'])  # SHOULD BE THE LAST STEP
 
 
@@ -66,6 +71,48 @@ def load_providers(axonius_system, adapters_providers):
         print(f'  - {adapter_name}')
         for provider in providers:
             adapter_service.add_client(provider)
+
+
+def load_queries(axonius_system, mongo, queries):
+    if not queries:
+        return
+    print_state('  Restoring queries')
+    for query_table, query_list in queries.items():
+        collection = mongo[axonius_system.gui.unique_name][query_table]
+        collection.remove({})
+        if query_list:
+            collection.insert_many(query_list)
+
+
+def load_views(axonius_system, mongo, views):
+    if not views:
+        return
+    print_state('  Restoring views')
+    for view_table, view_list in views.items():
+        collection = mongo[axonius_system.gui.unique_name][view_table]
+        collection.remove({})
+        if view_list:
+            collection.insert_many(view_list)
+
+
+def load_dashboard_panels(axonius_system, mongo, panels):
+    if not panels:
+        return
+    print_state('  Restoring dashboard panels')
+    collection = mongo[axonius_system.gui.unique_name]['dashboard']
+    collection.remove({})
+    if panels:
+        collection.insert_many(panels)
+
+
+def load_alerts(axonius_system, mongo, alerts):
+    if not alerts:
+        return
+    print_state('  Restoring alerts')
+    collection = mongo[axonius_system.reports.unique_name]['reports']
+    collection.remove({})
+    if alerts:
+        collection.insert_many(alerts)
 
 
 def load_diagnostics(axonius_system, diag_env):

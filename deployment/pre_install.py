@@ -3,14 +3,12 @@ This script is run *from the install.py* and saves current state data +
     system configuration (that will be loaded back to a new system using post_install.py).
 """
 import argparse
-from configparser import ConfigParser
 from cryptography.fernet import Fernet
-import json
-from pymongo import MongoClient
 import os
 import sys
 
-from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state
+from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state, get_mongo_client
+from axonius.utils.json import to_json
 
 
 def main():
@@ -48,12 +46,18 @@ def print_loaded():
 def save_state(path, key):
     print_state(f'Saving state to {path}')
     current_state_file_version = 1
+    mongo_client = get_mongo_client()
+    axonius_system = get_service()
     state = {
         'version': current_state_file_version,
-        'providers': get_all_providers(),
-        'diag_env': open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'r').read()
+        'providers': get_all_providers(mongo_client),
+        'queries': get_all_queries(axonius_system, mongo_client),
+        'views': get_all_views(axonius_system, mongo_client),
+        'panels': get_dashboard_panels(axonius_system, mongo_client),
+        'alerts': get_alerts(axonius_system, mongo_client),
+        'diag_env': open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'r').read(),
     }
-    state_string = json.dumps(state, indent=2)
+    state_string = to_json(state, indent=2)
     enc_state_binary = encrypt(state_string, key)
     with open(path, 'wb') as f:
         f.write(enc_state_binary)
@@ -64,28 +68,41 @@ def encrypt(data, key):
     return f.encrypt(data.encode('utf-8'))
 
 
-def get_all_providers():
-    print_state(f'  Extracting Providers')
-    client = get_mongo_client()
+def get_all_providers(mongo):
+    print_state(f'  Extracting providers')
     providers = {}
-    core_configs_db = client['core']['configs']
+    core_configs_db = mongo['core']['configs']
     for adapter_config in core_configs_db.find({'plugin_type': 'Adapter'}):
         adapter_name = adapter_config['plugin_name']
         plugin_unique_name = adapter_config['plugin_unique_name']
-        for provider in client[plugin_unique_name]['clients'].find():
+        for provider in mongo[plugin_unique_name]['clients'].find():
             providers.setdefault(adapter_name, []).append(provider['client_config'])
     return providers
 
 
-def get_mongo_client():
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'plugins', 'core', 'config.ini')
-    config = ConfigParser()
-    config.read(config_path)
+def get_all_queries(axonius_system, mongo):
+    print_state(f'  Extracting queries')
+    return {
+        'device_queries': list(mongo[axonius_system.gui.unique_name]['device_queries'].find(projection={'_id': 0})),
+        'user_queries': list(mongo[axonius_system.gui.unique_name]['user_queries'].find(projection={'_id': 0}))}
 
-    db_host = config['core_specific']['db_addr'].replace('mongo:', 'localhost:')
-    db_user = config['core_specific']['db_user']
-    db_password = config['core_specific']['db_password']
-    return MongoClient(db_host, username=db_user, password=db_password)
+
+def get_all_views(axonius_system, mongo):
+    print_state(f'  Extracting views')
+    return {'device_views': list(mongo[axonius_system.gui.unique_name]['device_views'].find(projection={'_id': 0})),
+            'user_views': list(mongo[axonius_system.gui.unique_name]['user_views'].find(projection={'_id': 0}))}
+
+
+def get_dashboard_panels(axonius_system, mongo):
+    print_state(f'  Extracting dashboard panels')
+    return list(mongo[axonius_system.gui.unique_name]['dashboard'].find(projection={'_id': 0}))
+
+
+def get_alerts(axonius_system, mongo):
+    print_state(f'  Extracting alerts')
+    # we discard 'result' (its data is invalid since we create a new DB)
+    # the report service will fetch the query and save it as the base line (under result) in the first run.
+    return list(mongo[axonius_system.reports.unique_name]['reports'].find(projection={'_id': 0, 'result': 0}))
 
 
 if __name__ == '__main__':

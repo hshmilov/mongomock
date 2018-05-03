@@ -82,3 +82,18 @@ if CORTEX_PATH is not None:
         # if not in path...
         sys.path.append(os.path.abspath(os.path.join(CORTEX_PATH, 'testing')))
         from services.axonius_service import get_service
+
+
+def get_mongo_client():
+    # Import inside so it won't fail on install when venv is not ready yet...
+    from configparser import ConfigParser
+    from pymongo import MongoClient
+
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'plugins', 'core', 'config.ini')
+    config = ConfigParser()
+    config.read(config_path)
+
+    db_host = config['core_specific']['db_addr'].replace('mongo:', 'localhost:')
+    db_user = config['core_specific']['db_user']
+    db_password = config['core_specific']['db_password']
+    return MongoClient(db_host, username=db_user, password=db_password)
