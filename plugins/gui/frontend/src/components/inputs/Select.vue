@@ -1,5 +1,5 @@
 <template>
-    <triggerable-dropdown :arrow="true" size="sm" class="x-select" ref="dropdown">
+    <triggerable-dropdown :arrow="true" size="sm" class="x-select" ref="dropdown" :size="size">
         <div slot="trigger" class="x-select-trigger" @keyup.down="incActiveOption" :tabindex="-1">
             <slot v-if="selectedOption" :option="selectedOption">
                 <div class="trigger-text" :title="selectedOption.title">{{selectedOption.title}}</div>
@@ -26,7 +26,7 @@
 	export default {
 		name: 'x-select',
         components: { TriggerableDropdown, SearchInput },
-        props: { options: {}, value: {}, placeholder: {}, searchable: {default: false} },
+        props: { options: {}, value: {}, placeholder: {}, searchable: {default: false}, size: {} },
         computed: {
 			currentOptions() {
 				if (!this.options) return []

@@ -122,10 +122,14 @@ h1, h2, h3 {
     text-align: right;
 }
 
-/* Heights */
+/* Sizes */
 .h-48 {
     height: 48px
 }
+.w-16 {
+    width: 16px;
+}
+
 
 /* COMPONENTS */
 .card-section {
@@ -133,17 +137,23 @@ h1, h2, h3 {
 }
 
 .card {
-    width: 300px;
+    width: 324px;
+    height: 256px;
     border: 1px solid #DEDEDE;
     border-radius: 4px;
     padding: 12px;
     display: inline-block;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 24px;
+}
+
+.card:nth-child(odd) {
+    margin-right: 24px;
 }
 
 .card.full {
     width: auto;
+    height: auto;
     display: block;
 }
 
@@ -152,4 +162,24 @@ h1, h2, h3 {
 
 .data-discovery .f-72 {
     line-height: 72px;
+}
+
+.histogram {
+    text-align: left;
+}
+
+.histogram .item {
+    position: relative;
+}
+
+.histogram .item .quantity {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-weight: 500;
+}
+
+.histogram .item .bar {
+    height: 100%;
+    border: 10px solid rgba(222, 222, 222, 0.4);
 }

@@ -100,7 +100,7 @@
                     text.classList.remove('scaling')
 					let box = path.getBBox()
 					text.setAttribute('x', box.x + box.width / 2)
-					text.setAttribute('y', box.y + box.height / 2 + (box.width >= 1 && box.width < 2 ? 0.2 : 0))
+					text.setAttribute('y', box.y + box.height / 2 + (box.width >= 0.9 && box.width < 2 ? 0.2 : 0))
 					text.classList.add('scaling')
 				})
             }

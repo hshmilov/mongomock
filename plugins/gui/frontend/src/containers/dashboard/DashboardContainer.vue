@@ -115,7 +115,7 @@
                 } else {
 					this.runFilter(properties.map((property) => {
 						return `specific_data.adapter_properties != '${property}'`
-                    }).join(' and '))
+                    }).join(' and '), 'device')
                 }
             },
             runChartFilter(chartInd, queryInd) {

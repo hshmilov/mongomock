@@ -1,5 +1,5 @@
 from datetime import datetime
-from math import pi, cos, sin, ceil
+from math import pi, cos, sin, floor
 
 from weasyprint import HTML, CSS
 from jinja2 import Environment, FileSystemLoader
@@ -44,7 +44,8 @@ class ReportGenerator(object):
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        open(f'{self.output_path}axonius-report_{timestamp}.html', 'w').write(html_data)
+        with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
+            file.write(html_data)
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
         HTML(string=html_data, base_url=self.template_path).write_pdf(
@@ -66,43 +67,59 @@ class ReportGenerator(object):
         :return:
         """
         card_template = self._get_template('summary/card')
-        data_discovery_template = self._get_template('summary/data_discovery')
         pie_template = self._get_template('summary/pie_chart')
         pie_slice_template = self._get_template('summary/pie_slice')
+        histogram_template = self._get_template('summary/histogram_chart')
+        histogram_bar_template = self._get_template('summary/histogram_bar')
 
         summary_content = []
-        # Adding main summary card - the data discovery
-        summary_content.append(card_template.render({
-            'title': 'Data Discovery',
-            'class': 'full',
-            'content': data_discovery_template.render({
-                'seen_count': self.report_data['adapter_devices']['total_gross'],
-                'unique_count': self.report_data['adapter_devices']['total_net']
-            })}))
-        # Adding remaining summary cards
-        for coverage_data in self.report_data['coverage']:
-            # open(f'{coverage_pie_file}.svg', 'w').write(
-                # self._create_coverage_pie(coverage_data['portion'], pie_template, pie_slice_template))
-            coverage_pie_filename = "_".join(coverage_data["title"].split(" ")) + '.png'
-            svg2png(bytestring=self._create_coverage_pie(coverage_data['portion'], pie_template, pie_slice_template),
-                    write_to=f'{self.output_path}{coverage_pie_filename}')
+        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('total_gross')\
+                and self.report_data['adapter_devices'].get('total_net'):
+            # Adding main summary card - the data discovery
+            data_discovery_template = self._get_template('summary/data_discovery')
             summary_content.append(card_template.render({
-                'title': f'{coverage_data["title"]} Coverage',
-                'content': f'<img src="{coverage_pie_filename}">'
+                'title': 'Data Discovery',
+                'class': 'full',
+                'content': data_discovery_template.render({
+                    'seen_count': self.report_data['adapter_devices']['total_gross'],
+                    'unique_count': self.report_data['adapter_devices']['total_net']
+                })}))
+
+        if self.report_data.get('coverage'):
+            # Adding cards with coverage of network roles
+            for coverage_data in self.report_data['coverage']:
+                coverage_pie_filename = "_".join(coverage_data["title"].split(" ")) + '.png'
+                svg2png(bytestring=self._create_coverage_pie(coverage_data['portion'], pie_template, pie_slice_template),
+                        write_to=f'{self.output_path}{coverage_pie_filename}')
+                summary_content.append(card_template.render({
+                    'title': f'{coverage_data["title"]} Coverage',
+                    'content': f'<img src="{coverage_pie_filename}">'
+                }))
+
+        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('adapter_count'):
+            # Adding card with histogram comparing amount of devices from each adapter
+            summary_content.append(card_template.render({
+                'title': 'Devices per Adapter',
+                'content': self._create_adapter_histogram(histogram_template, histogram_bar_template)
             }))
         return summary_content
 
     def _create_coverage_pie(self, portion, pie_template, pie_slice_template):
         """
+        Create a slice for the given portion, filled with a colour representing the quarter it is in
+        and with the percentage as a text to present..
+        Then, create a second slice with the remainder of the portion, coloured grey.
 
-        :param index:
+        :param portion:
+        :param pie_template:
+        :param pie_slice_template:
         :return:
         """
-        colours = ['', '#D0011B', '#F6A623', '#4796E4', '#0FBC18']
+        colours = ['#D0011B', '#F6A623', '#4796E4', '#0FBC18']
         paths = self._calculate_pie_paths([1 - portion, portion])
         slices = [
             pie_slice_template.render({'path': paths[0], 'colour': '#DEDEDE'}),
-            pie_slice_template.render({'path': paths[1], 'colour': colours[ceil(portion * 4)],
+            pie_slice_template.render({'path': paths[1], 'colour': colours[floor(portion * 4)],
                                        'text': f'{round(portion * 100)}%' if portion else '', 'x': 0.7, 'y': -0.1})
         ]
         return pie_template.render({
@@ -110,6 +127,13 @@ class ReportGenerator(object):
         })
 
     def _calculate_pie_paths(self, portions):
+        """
+        Calculate each slice's path, which starts at previous slice's position, arches to the point calculated
+        by adding current portion and ends in the center of the circle.
+
+        :param portions:
+        :return:
+        """
         paths = []
         cumulative_portion = 0
         for portion in portions:
@@ -120,4 +144,30 @@ class ReportGenerator(object):
         return paths
 
     def _calculate_coordinates(self, portion):
+        """
+        :param portion: Wanted percentage for the slice
+        :return: (x, y) for the point on the circle that represents given portion
+        """
         return (cos(2 * pi * portion), sin(2 * pi * portion))
+
+    def _create_adapter_histogram(self, histogram_template, histogram_bar_template):
+        """
+
+        :param adapter_count:
+        :param histogram_template:
+        :param histogram_bar_template:
+        :return:
+        """
+        bars = []
+        adapters = self.report_data['adapter_devices']['adapter_count']
+        adapters.sort(key=lambda x: x['count'], reverse=True)
+        max = adapters[0]['count']
+        for adapter in adapters[:6]:
+            if not adapter.get('name') or not adapter.get('count'):
+                continue
+            width = 20 + ((180 * adapter['count']) / max)
+            bars.append(histogram_bar_template.render({
+                'name': adapter['name'], 'quantity': adapter['count'], 'width': width
+            }))
+        return histogram_template.render({'content': ''.join(bars),
+                                          'remainder': f'+{len(adapters) - 6}' if len(adapters) > 6 else ''})

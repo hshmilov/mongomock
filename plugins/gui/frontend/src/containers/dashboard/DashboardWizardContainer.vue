@@ -18,7 +18,7 @@
                 <h5 class="grid-span3">Select up to 5 queries for comparisson:</h5>
                 <template v-for="query, index in dashboard.queries">
                     <x-select-symbol :options="moduleOptions" v-model="query.module" type="icon" placeholder="module..."/>
-                    <x-select :options="queries[query.module] || []" v-model="query.name" placeholder="query..."/>
+                    <x-select :options="queries[query.module] || []" v-model="query.name" placeholder="query..." size="md"/>
                     <div @click="removeQuery(index)" class="link" v-if="index > 1">x</div>
                     <div v-else></div>
                 </template>
@@ -29,12 +29,12 @@
                 <div></div>
 
                 <label>Main Query:</label>
-                <x-select :options="queries[parentQuery.module]" v-model="parentQuery.name" placeholder="query..."/>
+                <x-select :options="queries[parentQuery.module]" v-model="parentQuery.name" placeholder="query..." size="md"/>
                 <div></div>
 
                 <template v-for="query, index in dashboard.queries.slice(1)">
                     <label>Intersecting Query:</label>
-                    <x-select :options="queries[parentQuery.module]" v-model="query.name" placeholder="query..."/>
+                    <x-select :options="queries[parentQuery.module]" v-model="query.name" placeholder="query..." size="md"/>
                     <div @click="removeQuery(index)" class="link" v-if="index > 0">x</div>
                     <div v-else></div>
                 </template>
@@ -157,7 +157,7 @@
 
 <style lang="scss">
     .dashboard-wizard {
-        grid-template-columns: 160px auto 20px;
+        grid-template-columns: 160px 360px 20px;
         grid-column-gap: 8px;
         .dashboard-types {
             display: flex;

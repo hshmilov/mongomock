@@ -1583,8 +1583,7 @@ class GuiService(PluginBase):
     def get_adapter_devices(self):
         return jsonify(self._adapter_devices())
 
-    @add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
-    def get_dashboard_coverage(self):
+    def _get_dashboard_coverage(self):
         """
         Measures the coverage portion, according to sets of properties that devices' adapters may have.
         Portion is calculated out of total devices amount.
@@ -1597,7 +1596,7 @@ class GuiService(PluginBase):
         """
         devices_total = self.devices_db_view.count()
         if not devices_total:
-            return jsonify([])
+            return []
         coverage_list = [
             {'title': 'Managed Device', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
              'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},
@@ -1612,7 +1611,11 @@ class GuiService(PluginBase):
                     {'$in': item['properties']}
             })
             item['portion'] = devices_property / devices_total
-        return jsonify(coverage_list)
+        return coverage_list
+
+    @add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
+    def get_dashboard_coverage(self):
+        return jsonify(self._get_dashboard_coverage())
 
     @add_rule_unauthenticated("research_phase", methods=['POST'])
     def schedule_research_phase(self):
@@ -1709,7 +1712,8 @@ class GuiService(PluginBase):
         :return:
         """
         report_generator = ReportGenerator({
-            'adapter_devices': self._adapter_devices()
+            'adapter_devices': self._adapter_devices(),
+            'coverage': self._get_dashboard_coverage()
         }, 'gui/templates/report/')
         temp_report_filename = report_generator.generate()
         return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
