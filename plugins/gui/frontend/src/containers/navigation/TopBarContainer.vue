@@ -134,7 +134,7 @@
             this.intervals = []
             this.intervals.push(setInterval(function () {
                 this.loadNotifications()
-            }.bind(this), 60000))
+            }.bind(this), 3000))
             this.fetchLifecycle()
             this.intervals.push(setInterval(function () {
                 this.fetchLifecycle()
