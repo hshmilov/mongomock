@@ -159,7 +159,7 @@ class ChefAdapter(AdapterBase):
                 for cpu in (cpus or {}).items():
                     if 'core_id' in cpu:
                         device.add_cpu(name=cpu.get('model_name'),
-                                       ghz=float(cpu.get('mhz') or 0) / 1000.0)
+                                       ghz=float(cpu.get('mhz') or 0) / 1024.0)
             except:
                 logger.exception("Problem with adding CPU to Chef client")
             device.boot_time = device.last_seen - \

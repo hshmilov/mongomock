@@ -38,6 +38,7 @@ DOCKER_PORTS = {
     'eset-adapter':                     5682,
     'desktop-central-adapter':          5683,
     'fortigate-adapter':                5689,
+    'oracle-vm-adapter':                5694,
     'sccm-adapter':                     5699,
     'forcepoint-csv-adapter':           5770,
     'observeit-csv-adapter':            5773,

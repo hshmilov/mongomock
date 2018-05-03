@@ -179,6 +179,11 @@ export const pluginMeta = {
 		    description: 'ObserveIT provides insider threat security solutions, including employee monitoring, ' +
 			'user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
         },
+	    oracle_vm_adapter: {
+			title: 'OracleVM',
+			descriptions: ' Oracle\'s server virtualization products support x86 and SPARC architectures' +
+			' and a variety of workloads such as Linux, Windows and Oracle Solaris.'
+      },
 	    cisco_meraki_adapter: {
 			title: 'Cisco Meraki',
 			description: 'Cisco Meraki solutions include wireless, switching, security, EMM, communications, and' +

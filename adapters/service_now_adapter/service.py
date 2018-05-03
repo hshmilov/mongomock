@@ -111,7 +111,7 @@ class ServiceNowAdapter(AdapterBase):
                     device.device_serial = device_raw.get("serial_number")
                     ram_mb = device_raw.get("ram", "")
                     if ram_mb != "" and ram_mb != "-1" and ram_mb != -1:
-                        device.total_physical_memory = int(ram_mb) / 1000.0
+                        device.total_physical_memory = int(ram_mb) / 1024.0
                     host_name = device_raw.get("host_name", "")
                     if host_name != "":
                         device.hostname = host_name
