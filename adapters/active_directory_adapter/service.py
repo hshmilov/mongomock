@@ -762,7 +762,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     raise
 
                 # Putting the file using wmi_smb_path.
-                return [self._python_27_path, self._use_wmi_smb_path, domain_name, user_name, password, device_ip]
+                return [self._python_27_path, self._use_wmi_smb_path, domain_name, user_name, password, device_ip,
+                        "//./root/cimv2"]
         raise NoClientError()  # Couldn't find an appropriate client
 
     def put_files(self, device_data, files_path, files_content):

@@ -202,4 +202,8 @@ export const pluginMeta = {
 		    title: 'Adapter title',
 		    description: 'Adapter description'
         },
+        hyper_v_adapter: {
+            title: 'Hyper-V',
+            description: 'Hyper-V provides hardware virtualization. The Virtual Machine runs on virtual hardware, containing virtual hard drives, virtual switches, among other virtual devices.'
+        },
 }

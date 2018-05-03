@@ -17,7 +17,8 @@ ADDRESS = ad_client1_details["dc_name"]
 ACCOUNTDISABLE = 0x0002
 
 WMI_SMB_RUNNER_LOCATION = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "wmi_smb_runner", "wmi_smb_runner.py"))
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "axonius-libs", "src", "libs", "axonius-py", "axonius",
+                 "utils", "wmi_smb_runner", "wmi_smb_runner.py"))
 
 TEST_BINARY_LOCATION = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "tests", "test_binary", "test_binary.exe"))

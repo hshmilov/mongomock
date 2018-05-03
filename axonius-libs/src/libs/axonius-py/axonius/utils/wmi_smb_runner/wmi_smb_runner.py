@@ -529,7 +529,7 @@ def run_command(w, command_type, command_args):
 
 
 if __name__ == '__main__':
-    _, domain, username, password, address, commands = sys.argv
+    _, domain, username, password, address, namespace, commands = sys.argv
     tp = ThreadPool(processes=30)
     try:
         # Commands is a json formatted list of commands.
@@ -542,7 +542,7 @@ if __name__ == '__main__':
         for _ in range(MAX_NUM_OF_TRIES_OVERALL):
             # If we have something left, lets connect and run it.
             if any(queries_left):
-                with WmiSmbRunner(address, username, password, domain=domain) as w:
+                with WmiSmbRunner(address, username, password, domain=domain, namespace=namespace) as w:
                     # First, add every one needed.
                     for i, is_left in enumerate(queries_left):
                         if is_left is True:

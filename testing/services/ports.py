@@ -54,6 +54,7 @@ DOCKER_PORTS = {
     'device-control':                   6019,
     'cisco-prime-adapter':              6020,
     'json-file-adapter':                6021,
+    'hyper-v-adapter':                  6022,
     'mongo':                            27017,
 }
 
