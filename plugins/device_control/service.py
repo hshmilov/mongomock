@@ -3,7 +3,7 @@ import time
 import logging
 from axonius.plugin_base import PluginBase, return_error, add_rule
 from axonius.mixins.triggerable import Triggerable
-from axonius.utils.files import get_local_config_file
+from axonius.utils.files import get_local_config_file, get_random_uploaded_path_name
 from axonius.utils.parsing import get_exception_string
 from axonius.entities import AxoniusDevice
 
@@ -128,11 +128,21 @@ class DeviceControlService(PluginBase, Triggerable):
                  {os: [action_params['command']] for os in ["Windows", "Linux", "Mac", "iOS", "Android"]}}
             )
         elif action_type == "deploy":
+            # we need to store the binary file.
+            binary_arr = action_params['binary']
+            assert type(binary_arr) == list
+            random_filepath = get_random_uploaded_path_name("device_control_deploy_binary")
+            with open(random_filepath, "wb") as binary_file:
+                binary_file.write(bytes(binary_arr))
+
+            # We do not delete the file, assuming its small enough to just remain there and to be
+            # there for further inspection if we need it.
+
             p = device.request_action(
                 "execute_binary",
                 {
-                    "binary": action_params['binary'],
-                    "params": action_params['params']
+                    "binary_file_path": random_filepath,
+                    "binary_params": action_params['params']
                 }
             )
         else:
@@ -174,7 +184,14 @@ class DeviceControlService(PluginBase, Triggerable):
                         f"on device {device.internal_axon_id} "
                         f"on attempt {attempt_number}")
 
-            device.add_data(f"Action '{action_name}'", output["data"])
+            data_label = f"Acton type: {action_type}. "
+            if action_type == "shell":
+                data_label += f"Command: {action_params['command']}"
+            elif action_type == "deploy":
+                data_label += f"Binary file params: {action_params['params']}"
+
+            data_label += f"\nResult:\n{output['data']}"
+            device.add_data(f"Action '{action_name}'", data_label)
             device.add_label(f"Action '{action_name}' Success")
             device.add_label(f"Action '{action_name}' In Progress", False)
 
@@ -195,7 +212,9 @@ class DeviceControlService(PluginBase, Triggerable):
         :param exc: a string representing the error.
         :return:
         """
-        logger.info(f"Got failure for device {device.internal_axon_id}. exc is {str(exc)}")
+        logger.info(f"Got failure (attempt no {attempt_number}/{MAX_TRIES_FOR_EXECUTION_REQUEST}) for "
+                    f"device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. "
+                    f"exc is {str(exc)}")
         try:
             if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST:
                 logger.error(f"Reached maximum tries ({attempt_number}) with action {action_name}")
