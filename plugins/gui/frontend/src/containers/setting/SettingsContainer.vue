@@ -19,11 +19,9 @@
             <tab title="Email Settings" id="email-settings-tab">
                 <h3>Mail Server</h3>
                 <div class="grid grid-col-2">
-                    <label for="host" class="label">Host</label>
-                    <input id="host" type="text" v-model="emailHost">
-                    <label for="port" class="label">Port</label>
-                    <input id="port" type="text" v-model="emailPort">
-                    <div/><button class="btn confirm" @click="setEmailServer">Save</button>
+                    <x-schema-form :schema="schema" v-model="smtpSettings" @validate="updateValidity"
+                                   @submit="setEmailServer"/>
+                    <div/><button class="x-btn" :class="{'disabled':!complete}" @click="setEmailServer">Save</button>
                 </div>
             </tab>
             <tab title="System Settings" id="system-settings-tab">
@@ -51,6 +49,7 @@
 </template>
 
 <script>
+    import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import xPage from '../../components/layout/Page.vue'
 	import Card from '../../components/Card.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
@@ -71,7 +70,7 @@
 
 	export default {
 		name: 'settings-container',
-		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox},
+		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox, xSchemaForm},
 		computed: {
 			...mapState(['dashboard', 'settings']),
 			limit () {
@@ -80,6 +79,18 @@
 					from: `${new Date().toDateString()} ${new Date().toTimeString()}`
 				}]
 			},
+            schema() {
+                return {
+                    type: 'array', items: [
+                        {name: 'smtpHost', title: 'Host', type: 'string'},
+                        {name: 'smtpPort', title: 'Port', type: 'string'},
+                        {name: 'smtpUser', title: 'User Name', type: 'string'},
+                        {name: 'smtpPassword', title: 'Password', type: 'string', format: 'password'},
+                        {name: 'smtpKey', title: 'TLS 1.2 Key File', description: 'The binary contents of the key file', type: 'array', format: 'bytes', items: {type: 'integer', default: 0}},
+                        {name: 'smtpCert', title: 'TLS 1.2 Cert File', description: 'The binary contents of the cert file', type: 'array', format: 'bytes', items: {type: 'integer', default: 0}}
+                    ], required: ['smtpHost', 'smtpPort']
+                }
+            },
 			nextResearchStart () {
 				let tempDate = new Date(parseInt(this.dashboard.lifecycle.data.nextRunTime) * 1000)
 				return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
@@ -119,12 +130,19 @@
 		},
 		data () {
 			return {
-				emailHost: '',
-				emailPort: '',
+			    smtpSettings: {
+                    smtpHost: '',
+                    smtpPort: '',
+                    smtpUser: '',
+                    smtpPassword: '',
+                    smtpCert: '',
+                    smtpKey: ''
+                },
 				lifecycle: {
 					executionEnabled: false,
 					researchRate: 0
-				}
+				},
+                complete: false
 			}
 		},
 		methods: {
@@ -166,12 +184,16 @@
 				})
 			},
 			setEmailServer () {
+                if (!this.complete) return
 				this.fetchData({
 					rule: `email_server`,
 					method: 'POST',
-					data: {host: this.emailHost, port: this.emailPort}
+					data: this.smtpSettings
 				})
-			}
+			},
+            updateValidity(valid) {
+                this.complete = valid
+            },
 		},
 		created () {
 			this.fetchLifecycle()
@@ -188,8 +210,7 @@
 			this.fetchData({
 				rule: 'email_server'
 			}).then((response) => {
-				this.emailHost = response.data.host
-				this.emailPort = response.data.port
+			    if (response.data) this.smtpSettings = response.data
 			})
 		}
 	}

@@ -1,4 +1,7 @@
 import logging
+import os
+import tempfile
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -491,8 +494,41 @@ class CoreService(PluginBase):
         msg['Subject'] = data['title']
         msg['From'] = consts.mail_from_address
         msg['To'] = ", ".join(mailing_list) if len(mailing_list) > 1 else mailing_list[0]
+        logger.info(f"smtp Settings: {mail_server}")
         try:
-            server = smtplib.SMTP(mail_server['host'], mail_server['port'])
+            server = smtplib.SMTP(mail_server['smtpHost'], mail_server['smtpPort'])
+            if mail_server.get('smtpUser',  '') != '':
+                try:
+                    server.login(mail_server.get('smtpUser'), mail_server.get('smtpPassword', ''))
+                except:
+                    logger.exception("Failed to login to server.")
+
+            if 'smtpKey' in mail_server or 'smtpCert' in mail_server:
+                key_data = bytes(mail_server.get('smtpKey', ''))
+                cert_data = bytes(mail_server.get('smtpCert', ''))
+                key_file_path = None
+                cert_file_path = None
+                try:
+                    if key_data != '':
+                        key_file_descriptor, key_file_path = tempfile.mkstemp()
+                        with os.fdopen(key_file_descriptor, 'wb') as key_file:
+                            key_file.write(key_data)
+
+                    if cert_data != '':
+                        cert_file_descriptor, cert_file_path = tempfile.mkstemp()
+                        with os.fdopen(cert_file_descriptor, 'wb') as cert_file:
+                            cert_file.write(cert_data)
+
+                    server.starttls(key_file_path, cert_file_path)
+                except:
+                    logger.exception("Failed to connect with tls.")
+                finally:
+                    if key_file_path:
+                        os.remove(key_file_path)
+
+                    if cert_file_path:
+                        os.remove(cert_file_path)
+
             server.sendmail(consts.mail_from_address, mailing_list, msg.as_string())
         except Exception as err:
             logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")

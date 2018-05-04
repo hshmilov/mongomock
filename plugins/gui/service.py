@@ -1673,7 +1673,6 @@ class GuiService(PluginBase):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-
         response = self.request_remote_plugin('email_server', None, self.get_method(),
                                               json=self.get_request_data_as_object())
         if self.get_method() in ('POST', 'GET') and response.status_code == 200:

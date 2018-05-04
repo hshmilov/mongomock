@@ -47,6 +47,11 @@
                 	this.data[item.name] = undefined
                 })
             }
+        },
+        watch: {
+		    value(newValue) {
+		        this.data = { ...newValue }
+            }
         }
 	}
 </script>
