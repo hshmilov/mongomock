@@ -6,7 +6,9 @@
 }
 
 @page {
-    margin: 0;
+    size: A4;
+    margin: 3cm 0;
+
 }
 
 /* GENERAL */
@@ -26,8 +28,9 @@ h1, h2, h3 {
 
 .header {
     position: fixed;
-    top: 0;
+    top: -3cm;
     left: 0;
+    display: block;
     width: 100%;
     text-align: right;
 }
@@ -40,14 +43,12 @@ h1, h2, h3 {
 }
 
 .content {
-    padding: 24px;
-    margin-bottom: 84px;
-    margin-top: 100px;
+    padding: 0 24px;
 }
 
 .footer {
     position: fixed;
-    bottom: 0;
+    bottom: -3cm;
     left: 0;
     width: 100%;
     text-align: left;
@@ -73,10 +74,19 @@ h1, h2, h3 {
 .c-white {
     color: #ffffff;
 }
+.c-red {
+    color: #D0011B;
+}
 
 /* Backgrounds */
 .bg-black {
     background-color: #1D222C;
+}
+
+/* borders */
+.b-grey {
+    border: 1px solid #DEDEDE;
+    border-radius: 4px;
 }
 
 /* Fonts */
@@ -121,6 +131,9 @@ h1, h2, h3 {
 .t-right {
     text-align: right;
 }
+.va-middle {
+    vertical-align: middle;
+}
 
 /* Sizes */
 .h-48 {
@@ -132,33 +145,28 @@ h1, h2, h3 {
 
 
 /* COMPONENTS */
-.card-section {
-    column-count: 2;
+
+.section {
+    margin-top: 24px;
+    page-break-inside: avoid;
 }
 
 .card {
     width: 324px;
     height: 256px;
-    border: 1px solid #DEDEDE;
-    border-radius: 4px;
     padding: 12px;
     display: inline-block;
     text-align: center;
     margin-bottom: 24px;
 }
-
 .card:nth-child(odd) {
     margin-right: 24px;
 }
-
 .card.full {
     width: auto;
     height: auto;
     display: block;
 }
-
-
-/* SPECIFIC */
 
 .data-discovery .f-72 {
     line-height: 72px;
@@ -167,19 +175,28 @@ h1, h2, h3 {
 .histogram {
     text-align: left;
 }
-
 .histogram .item {
     position: relative;
+    line-height: 30px;
 }
-
 .histogram .item .quantity {
     position: absolute;
     top: 0;
     right: 0;
     font-weight: 500;
+    font-size: 18px;
 }
-
 .histogram .item .bar {
     height: 100%;
     border: 10px solid rgba(222, 222, 222, 0.4);
+}
+
+.box {
+    width: 324px;
+    display: inline-block;
+    padding: 12px;
+    margin-bottom: 24px;
+}
+.box:nth-child(even) {
+    margin-right: 24px;
 }

@@ -16,7 +16,7 @@
     export default {
         name: 'triggerable-dropdown',
         mixins: [ clickaway ],
-        props: {size: {default: 'sm'}, align: {default: 'left'}, alignSpace: {default: 0}, arrow: {default: true}},
+        props: {size: {default: ''}, align: {default: 'left'}, alignSpace: {default: 0}, arrow: {default: true}},
         computed: {
         	alignAuto() {
         		if (this.align === 'right') return 'left'

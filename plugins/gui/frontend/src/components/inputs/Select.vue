@@ -26,7 +26,7 @@
 	export default {
 		name: 'x-select',
         components: { TriggerableDropdown, SearchInput },
-        props: { options: {}, value: {}, placeholder: {}, searchable: {default: false}, size: {} },
+        props: { options: {}, value: {}, placeholder: {}, searchable: {default: false}, size: {default: 'sm'} },
         computed: {
 			currentOptions() {
 				if (!this.options) return []

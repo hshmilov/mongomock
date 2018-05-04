@@ -251,6 +251,8 @@ class GuiService(PluginBase):
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
 
+        self.add_default_reports('default_reports.ini')
+
     def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
         """
         Adds default queries.
@@ -261,7 +263,7 @@ class GuiService(PluginBase):
         # Load default queries and save them to the DB
         try:
             config = configparser.ConfigParser()
-            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), default_queries_ini_path)))
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_queries_ini_path}')))
 
             # Save default queries
             for name, query in config.items():
@@ -277,7 +279,7 @@ class GuiService(PluginBase):
 
     def add_default_views(self, entity_type: EntityType, default_views_ini_path):
         """
-        Adds default queries.
+        Adds default views.
         :param entity_type: EntityType
         :param default_views_ini_path: the file path with the queries
         :return:
@@ -285,9 +287,9 @@ class GuiService(PluginBase):
         # Load default queries and save them to the DB
         try:
             config = configparser.ConfigParser()
-            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), default_views_ini_path)))
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_views_ini_path}')))
 
-            # Save default queries
+            # Save default views
             for name, view in config.items():
                 if name == 'DEFAULT':
                     # ConfigParser always has a fake DEFAULT key, skip it
@@ -298,6 +300,22 @@ class GuiService(PluginBase):
                     logger.exception(f'Error adding default view {name}')
         except Exception:
             logger.exception(f'Error adding default views')
+
+    def add_default_reports(self, default_reports_ini_path):
+        try:
+            config = configparser.ConfigParser()
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_reports_ini_path}')))
+
+            for name, report in config.items():
+                if name == 'DEFAULT':
+                    # ConfigParser always has a fake DEFAULT key, skip it
+                    continue
+                try:
+                    self._insert_report(name, report)
+                except Exception as e:
+                    logger.exception(f'Error adding default report {name}. Reason: {repr(e)}')
+        except Exception as e:
+            logger.exception(f'Error adding default reports. Reason: {repr(e)}')
 
     def _insert_query(self, queries_collection, name, query_filter, query_expressions=[]):
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
@@ -320,6 +338,16 @@ class GuiService(PluginBase):
         result = views_collection.insert_one({'name': name, 'view': mongo_view})
         logger.info(f'Added view {name} id: {result.inserted_id}')
         return result.inserted_id
+
+    def _insert_report(self, name, report):
+        reports_collection = self._get_collection("reports", limited_user=False)
+        existed_report = reports_collection.find_one({'name': name})
+        if existed_report is not None and not existed_report.get('archived'):
+            logger.info(f'Report {name} already exists under id: {existed_report["_id"]}')
+            return
+
+        result = reports_collection.insert_one({'name': name, 'adapters': json.loads(report['adapters'])})
+        logger.info(f'Added report {name} id: {result.inserted_id}')
 
     ########
     # DATA #
@@ -354,8 +382,7 @@ class GuiService(PluginBase):
 
             # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
             # The reason is that sorting without the flag, causes exceeding of the memory limit.
-            data_list = self._entity_views_db_map[entity_type].aggregate(
-                pipeline, allowDiskUse=True)
+            data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
 
             if filter and not skip:
                 filter = request.args.get('filter')
@@ -1615,6 +1642,9 @@ class GuiService(PluginBase):
                 'specific_data.adapter_properties':
                     {'$in': item['properties']}
             })
+            # Update the count, in case we are in the middle of lifecycle and devices are being added
+            # Otherwise, count of devices for properties may be larger than total devices
+            devices_total = self.devices_db_view.count()
             item['portion'] = devices_property / devices_total
         return coverage_list
 
@@ -1712,16 +1742,49 @@ class GuiService(PluginBase):
     @add_rule_unauthenticated('export_report')
     def export_report(self):
         """
+        Gets definition of report from DB for the dynamic content.
+        Gets all the needed data for both pre-defined and dynamic content definitions.
+        Sends the complete data to the report generator to be composed to one document and generated as a pdf file.
+
+        TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
+        :return:
+        """
+        report_data = {
+            'adapter_devices': self._adapter_devices(),
+            'coverage': self._get_dashboard_coverage()
+        }
+        report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
+        if report.get('adapters'):
+            report_data['adapter_queries'] = self._get_adapter_queries(report['adapters'])
+
+        temp_report_filename = ReportGenerator(report_data, 'gui/templates/report/').generate()
+        return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
+                         attachment_filename=temp_report_filename)
+
+    def _get_adapter_queries(self, adapters):
+        """
+        Get the definition of the adapters to include in the report. For each adapter, get the queries defined for it
+        and execute each one, according to its entity, to get the amount of results for it.
 
         :return:
         """
-        report_generator = ReportGenerator({
-            'adapter_devices': self._adapter_devices(),
-            'coverage': self._get_dashboard_coverage()
-        }, 'gui/templates/report/')
-        temp_report_filename = report_generator.generate()
-        return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
-                         attachment_filename=temp_report_filename)
+        adapter_queries = []
+        for adapter in adapters:
+            queries = []
+            for query in adapter.get('queries', []):
+                if not query.get('name') or not query.get('entity'):
+                    continue
+                entity = EntityType(query['entity'])
+                filter = self._queries_db_map[entity].find_one({'name': query['name']}).get('filter')
+                if filter:
+                    logger.info(f'Executing filter {filter} on entity {entity.name}')
+                    queries.append({
+                        **query,
+                        'count': self._entity_views_db_map[entity].find(parse_filter(filter), {'_id': 1}).count()
+                    })
+            if queries:
+                adapter_queries.append({'name': adapter.get('name', 'Adapter'), 'queries': queries})
+        return adapter_queries
 
     @property
     def plugin_subtype(self):

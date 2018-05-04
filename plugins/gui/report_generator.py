@@ -22,7 +22,7 @@ class ReportGenerator(object):
 
     def generate(self):
         """
-        Builds HTML file representing a report that consists of:
+        Build HTML file representing a report that consists of:
         1. Summary - all Dashboard cards (except lifecycle)
         2. Section per adapter - containing predefined saved queries, with the amount of results for their execution.
         3. Saved Views - a snippet of the entity table's first page, for each saved view (of both entities)
@@ -32,15 +32,18 @@ class ReportGenerator(object):
         """
         report_template = self._get_template('axonius_report')
         section_template = self._get_template('report_section')
+        card_template = self._get_template('report_card')
 
         now = datetime.now()
-        html_data = report_template.render({
-            'date': now.strftime("%d/%m/%Y"),
-            'content': section_template.render({
-                'title': 'Summary',
-                'content': '\n'.join(self._create_summary())
-            })
-        })
+        sections = []
+        # Add summary section containing dashboard panels, pre- and user-defined
+        sections.append(section_template.render({'title': 'Summary', 'content': self._create_summary(card_template)}))
+        if self.report_data.get('adapter_queries'):
+            for adapter in self.report_data['adapter_queries']:
+                sections.append(section_template.render({'title': adapter['name'],
+                                                         'content': self._create_adapter(adapter['queries'])}))
+        # Join all sections as the content of the report
+        html_data = report_template.render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
@@ -60,20 +63,19 @@ class ReportGenerator(object):
         """
         return self.env.get_template(f'{self.template_path}{template_name}.html')
 
-    def _create_summary(self):
+    def _create_summary(self, card_template):
         """
         Create HTML part for each of the dashboard predefined charts as well as those defined by user.
 
         :return:
         """
-        card_template = self._get_template('summary/card')
         pie_template = self._get_template('summary/pie_chart')
         pie_slice_template = self._get_template('summary/pie_slice')
         histogram_template = self._get_template('summary/histogram_chart')
         histogram_bar_template = self._get_template('summary/histogram_bar')
 
         summary_content = []
-        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('total_gross')\
+        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('total_gross') \
                 and self.report_data['adapter_devices'].get('total_net'):
             # Adding main summary card - the data discovery
             data_discovery_template = self._get_template('summary/data_discovery')
@@ -89,8 +91,9 @@ class ReportGenerator(object):
             # Adding cards with coverage of network roles
             for coverage_data in self.report_data['coverage']:
                 coverage_pie_filename = "_".join(coverage_data["title"].split(" ")) + '.png'
-                svg2png(bytestring=self._create_coverage_pie(coverage_data['portion'], pie_template, pie_slice_template),
-                        write_to=f'{self.output_path}{coverage_pie_filename}')
+                svg2png(
+                    bytestring=self._create_coverage_pie(coverage_data['portion'], pie_template, pie_slice_template),
+                    write_to=f'{self.output_path}{coverage_pie_filename}')
                 summary_content.append(card_template.render({
                     'title': f'{coverage_data["title"]} Coverage',
                     'content': f'<img src="{coverage_pie_filename}">'
@@ -102,7 +105,7 @@ class ReportGenerator(object):
                 'title': 'Devices per Adapter',
                 'content': self._create_adapter_histogram(histogram_template, histogram_bar_template)
             }))
-        return summary_content
+        return '\n'.join(summary_content)
 
     def _create_coverage_pie(self, portion, pie_template, pie_slice_template):
         """
@@ -119,11 +122,11 @@ class ReportGenerator(object):
         paths = self._calculate_pie_paths([1 - portion, portion])
         slices = [
             pie_slice_template.render({'path': paths[0], 'colour': '#DEDEDE'}),
-            pie_slice_template.render({'path': paths[1], 'colour': colours[floor(portion * 4)],
+            pie_slice_template.render({'path': paths[1], 'colour': colours[int(floor(portion * 4))],
                                        'text': f'{round(portion * 100)}%' if portion else '', 'x': 0.7, 'y': -0.1})
         ]
         return pie_template.render({
-            'content': ''.join(slices)
+            'content': '\n'.join(slices)
         })
 
     def _calculate_pie_paths(self, portions):
@@ -169,5 +172,21 @@ class ReportGenerator(object):
             bars.append(histogram_bar_template.render({
                 'name': adapter['name'], 'quantity': adapter['count'], 'width': width
             }))
-        return histogram_template.render({'content': ''.join(bars),
+        return histogram_template.render({'content': '\n'.join(bars),
                                           'remainder': f'+{len(adapters) - 6}' if len(adapters) > 6 else ''})
+
+    def _create_adapter(self, queries):
+        """
+        Add a box for each query result count and name, with the appropriate colour if it's negative.
+
+        :param queries:
+        :return:
+        """
+        query_template = self._get_template('adapter/query_result_template')
+        results = []
+        for query in queries:
+            results.append(query_template.render({
+                'name': query['name'], 'count': query['count'],
+                'colour': 'red' if query.get('negative', False) else 'orange'
+            }))
+        return '\n'.join(results)
