@@ -6,6 +6,7 @@ export const UPDATE_MULTI_LINE = 'UPDATE_MULTI_LINE'
 export const FETCH_SETTINGS = 'FETCH_SETTINGS'
 export const UPDATE_SETTINGS = 'UPDATE_SETTINGS'
 export const SAVE_SETTINGS = 'SAVE_SETTINGS'
+export const DEFAULT_SORT_SETTINGS = 'DEFAULT_SORT_SETTINGS'
 
 
 export const settings = {
@@ -35,6 +36,10 @@ export const settings = {
 		[ UPDATE_MULTI_LINE ] (state, multiLine) {
 			if (multiLine === undefined || typeof multiLine !== 'boolean') return
 			state.data.multiLine = multiLine
+		},
+		[ DEFAULT_SORT_SETTINGS ] (state, defaultSort) {
+			if (defaultSort === undefined || typeof defaultSort !== 'boolean') return
+			state.data.defaultSort = defaultSort
 		}
 	},
 	actions: {

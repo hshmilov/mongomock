@@ -18,7 +18,8 @@ from axonius.adapter_base import is_plugin_adapter
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.utils.parsing import get_entity_id_for_plugin_name
 from axonius.mixins.triggerable import Triggerable
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, \
+    ADAPTERS_LIST_LENGTH
 from axonius.utils.threading import LazyMultiLocker
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
@@ -91,6 +92,8 @@ class AggregatorService(PluginBase, Triggerable):
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
         ], unique=True)
         self.aggregator_db_connection["devices_db"].create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
+        self.aggregator_db_connection["devices_db"].create_index(
+            [(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING), ('_id', pymongo.DESCENDING)])
 
         self.aggregator_db_connection["users_db"].create_index([
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
@@ -461,6 +464,9 @@ class AggregatorService(PluginBase, Triggerable):
                                                 PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
                                                     PLUGIN_UNIQUE_NAME],
                                             }
+                                        },
+                                        "$inc": {
+                                            ADAPTERS_LIST_LENGTH: -1
                                         }
             })
         for tag_to_remove_from_old in new_axonius_entity['tags']:
@@ -473,6 +479,7 @@ class AggregatorService(PluginBase, Triggerable):
                                                 f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
                                             }
                                         }})
+            new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(new_axonius_entity["adapters"])
         entities_db.insert_one(new_axonius_entity)
 
     def _link_entities(self, entities_candidates, entities_db):
@@ -510,6 +517,7 @@ class AggregatorService(PluginBase, Triggerable):
             "internal_axon_id": internal_axon_id,
             "accurate_for_datetime": datetime.now(),
             "adapters": all_unique_adapter_entities_data,
+            ADAPTERS_LIST_LENGTH: len(all_unique_adapter_entities_data),
             "tags": list(tags_for_new_device.values())  # Turn it to a list
         })
 

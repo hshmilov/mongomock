@@ -31,10 +31,15 @@
                 <div class="grid grid-col-2">
                     <label for="refresh-rate">Auto-Refresh Rate (seconds)</label>
                     <input id="refresh-rate" type="number" min="0" v-model="refreshRate">
+
                     <label for="single-adapter">Use Single Adapter View</label>
                     <checkbox id="single-adapter" v-model="singleAdapter"/>
+
                     <label for="multi-line">Use Table Multi Line View</label>
                     <checkbox id="multi-line" v-model="multiLine"/>
+
+                    <label for="default-sort">Sort by number of adapters in default view</label>
+                    <checkbox id="default-sort" v-model="defaultSort"/>
                     <div/>
                     <button class="btn confirm" @click="saveSettings">save</button>
                 </div>
@@ -58,6 +63,7 @@
 		UPDATE_REFRESH_RATE,
 		UPDATE_SINGLE_ADAPTER,
 		UPDATE_MULTI_LINE,
+        DEFAULT_SORT_SETTINGS,
 		SAVE_SETTINGS
 	} from '../../store/modules/settings'
 	import { REQUEST_API, START_RESEARCH_PHASE } from '../../store/actions'
@@ -101,6 +107,14 @@
 				set (multiLine) {
                     this.updateMultiLine(multiLine)
 				}
+			},
+			defaultSort: {
+				get () {
+					return this.settings.data.defaultSort
+				},
+				set (defaultSort) {
+                    this.updateDefaultSort(defaultSort)
+				}
 			}
 		},
 		data () {
@@ -117,7 +131,8 @@
 			...mapMutations({
 				updateRefreshRate: UPDATE_REFRESH_RATE,
 				updateSingleAdapter: UPDATE_SINGLE_ADAPTER,
-                updateMultiLine: UPDATE_MULTI_LINE
+                updateMultiLine: UPDATE_MULTI_LINE,
+                updateDefaultSort: DEFAULT_SORT_SETTINGS
 			}),
 			...mapActions({
 				fetchLifecycle: FETCH_LIFECYCLE,

@@ -45,7 +45,8 @@ import axonius.entities
 from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
+    ADAPTERS_LIST_LENGTH
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
@@ -994,7 +995,8 @@ class PluginBase(Configurable, Feature):
                             "internal_axon_id": uuid.uuid4().hex,
                             "accurate_for_datetime": datetime.now(),
                             "adapters": [parsed_to_insert],
-                            "tags": []
+                            "tags": [],
+                            ADAPTERS_LIST_LENGTH: 1
                         })
 
         if should_log_info is True:
@@ -1011,7 +1013,8 @@ class PluginBase(Configurable, Feature):
                     "internal_axon_id": uuid.uuid4().hex,
                     "accurate_for_datetime": datetime.now(),
                     "adapters": [parsed_to_insert],
-                    "tags": []
+                    "tags": [],
+                    ADAPTERS_LIST_LENGTH: 1
                 }
                     for parsed_to_insert
                     in all_parsed),

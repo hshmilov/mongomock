@@ -1,6 +1,8 @@
 import csv
 import logging
 
+from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
 
@@ -335,13 +337,16 @@ class GuiService(PluginBase):
                 projection['adapters'] = 1
                 projection['unique_adapter_names'] = 1
                 projection['labels'] = 1
+                projection[ADAPTERS_LIST_LENGTH] = 1
                 pipeline.append({'$project': projection})
             if sort:
                 pipeline.append({'$sort': sort})
-            else:
-                # Default sort by adapters list size and then Mongo id (giving order of insertion)
-                pipeline.append({'$addFields': {'adapters_size': {'$size': '$adapters'}}})
-                pipeline.append({'$sort': {'adapters_size': pymongo.DESCENDING, '_id': pymongo.DESCENDING}})
+            elif entity_type == EntityType.Devices:
+                settings = self._get_collection('settings', limited_user=False).find_one({}) or {}
+                if settings.get('defaultSort', False):
+                    # Default sort by adapters list size and then Mongo id (giving order of insertion)
+                    pipeline.append({'$sort': {ADAPTERS_LIST_LENGTH: pymongo.DESCENDING, '_id': pymongo.DESCENDING}})
+
             if skip:
                 pipeline.append({'$skip': skip})
             if limit:
