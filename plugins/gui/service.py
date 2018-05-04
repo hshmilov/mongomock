@@ -177,7 +177,7 @@ def sorted():
 
 
 # Caution! These decorators must come BEFORE @add_rule
-def projectioned():
+def projected():
     """
     Decorator stating that the view supports ?fields=["name","hostname",["os_type":"OS.type"]]
     """
@@ -498,7 +498,6 @@ class GuiService(PluginBase):
                 for field in entity_fields['specific'][type]:
                     if field['name'] in mongo_projection:
                         mongo_projection[field['name']] = field['title']
-
             for current_entity in entities:
                 del current_entity['internal_axon_id']
                 del current_entity['unique_adapter_names']
@@ -810,14 +809,14 @@ class GuiService(PluginBase):
     @paginated()
     @filtered()
     @sorted()
-    @projectioned()
+    @projected()
     @add_rule_unauthenticated("device")
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices))
 
     @filtered()
     @sorted()
-    @projectioned()
+    @projected()
     @add_rule_unauthenticated("device/csv")
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices)
@@ -868,14 +867,14 @@ class GuiService(PluginBase):
     @paginated()
     @filtered()
     @sorted()
-    @projectioned()
+    @projected()
     @add_rule_unauthenticated("user")
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users))
 
     @filtered()
     @sorted()
-    @projectioned()
+    @projected()
     @add_rule_unauthenticated("user/csv")
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users)
@@ -1751,7 +1750,8 @@ class GuiService(PluginBase):
         """
         report_data = {
             'adapter_devices': self._adapter_devices(),
-            'coverage': self._get_dashboard_coverage()
+            'coverage': self._get_dashboard_coverage(),
+            'views_data': self._get_saved_views_data()
         }
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
@@ -1785,6 +1785,47 @@ class GuiService(PluginBase):
             if queries:
                 adapter_queries.append({'name': adapter.get('name', 'Adapter'), 'queries': queries})
         return adapter_queries
+
+    def _get_saved_views_data(self):
+        """
+        For each entity in system, fetch all saved views.
+        For each view, fetch first page of entities - filtered, projected, sorted according to it's definition.
+
+        :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
+        """
+        def _get_sort(view):
+            sort_def = view.get('sort')
+            sort_obj = {}
+            if sort_def and sort_def.get('field'):
+                sort_obj[sort_def['field']] = pymongo.DESCENDING if (sort_def['desc']) else pymongo.ASCENDING
+            return sort_obj
+
+        def _get_field_titles(entity):
+            entity_fields = self._entity_fields(entity)
+            name_to_title = {}
+            for field in entity_fields['generic']:
+                name_to_title[field['name']] = field['title']
+            for type in entity_fields['specific']:
+                for field in entity_fields['specific'][type]:
+                    name_to_title[field['name']] = field['title']
+            return name_to_title
+
+        views_data = []
+        for entity in EntityType:
+            field_to_title = _get_field_titles(entity)
+            saved_views = self._views_db_map[entity].find(filter_archived())
+            for i, view_doc in enumerate(saved_views):
+                view = view_doc.get('view')
+                if view:
+                    field_list = view.get('fields', [])
+                    views_data.append({
+                        'name': view_doc.get('name', f'View {i}'),
+                        'fields': [{'name': field, 'title': field_to_title.get(field, field)} for field in field_list],
+                        'data': self._get_entities(view.get('pageSize', 20), 0,
+                                                   parse_filter(view.get('query', {}).get('filter', '')),
+                                                   _get_sort(view), {field: 1 for field in field_list}, entity)
+                    })
+        return views_data
 
     @property
     def plugin_subtype(self):

@@ -82,6 +82,9 @@ h1, h2, h3 {
 .bg-black {
     background-color: #1D222C;
 }
+.bg-orange {
+    background-color: #FF7D46;
+}
 
 /* borders */
 .b-grey {
@@ -105,7 +108,7 @@ h1, h2, h3 {
     line-height: 100px;
 }
 
-/* Margins */
+/* Spacing */
 .m-8 {
     margin: 8px;
 }
@@ -115,8 +118,17 @@ h1, h2, h3 {
 .mt-24 {
     margin-top: 24px;
 }
+.mb-12 {
+    margin-bottom: 12px;
+}
 .mh-48 {
     margin: 0 48px;
+}
+.p-12 {
+    padding: 12px;
+}
+.p-4 {
+    padding: 4px;
 }
 
 /* Displays */
@@ -143,12 +155,19 @@ h1, h2, h3 {
     width: 16px;
 }
 
+.no-break {
+    page-break-inside: avoid;
+}
+
 
 /* COMPONENTS */
 
-.section {
-    margin-top: 24px;
-    page-break-inside: avoid;
+.dot {
+    border-radius: 100%;
+    height: 8px;
+    width: 8px;
+    display: inline-block;
+    margin-bottom: -2px;
 }
 
 .card {
@@ -199,4 +218,24 @@ h1, h2, h3 {
 }
 .box:nth-child(even) {
     margin-right: 24px;
+}
+
+.table-container {
+    width: 100%;
+    overflow: auto;
+}
+.table-striped thead tr {
+    border-bottom: 2px dashed #DEDEDE;
+}
+.table-striped tbody tr:nth-child(odd) {
+    background: #F7F7F7;
+}
+.table-striped tr td, .table-striped tr th {
+    width: 130px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    min-height: 20px;
+}
+.table-striped tr th {
+    vertical-align: bottom;
 }

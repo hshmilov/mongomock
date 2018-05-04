@@ -1,5 +1,5 @@
 from datetime import datetime
-from math import pi, cos, sin, floor
+from math import pi, cos, sin, floor, ceil
 
 from weasyprint import HTML, CSS
 from jinja2 import Environment, FileSystemLoader
@@ -38,10 +38,15 @@ class ReportGenerator(object):
         sections = []
         # Add summary section containing dashboard panels, pre- and user-defined
         sections.append(section_template.render({'title': 'Summary', 'content': self._create_summary(card_template)}))
+        # Add section for each adapter with results of its queries
         if self.report_data.get('adapter_queries'):
             for adapter in self.report_data['adapter_queries']:
                 sections.append(section_template.render({'title': adapter['name'],
                                                          'content': self._create_adapter(adapter['queries'])}))
+        # Add section for all saved queries
+        if self.report_data.get('views_data'):
+            sections.append(section_template.render({'title': 'Data By View', 'content': self._create_data_views()}))
+
         # Join all sections as the content of the report
         html_data = report_template.render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
 
@@ -182,7 +187,7 @@ class ReportGenerator(object):
         :param queries:
         :return:
         """
-        query_template = self._get_template('adapter/query_result_template')
+        query_template = self._get_template('adapter/query_result')
         results = []
         for query in queries:
             results.append(query_template.render({
@@ -190,3 +195,37 @@ class ReportGenerator(object):
                 'colour': 'red' if query.get('negative', False) else 'orange'
             }))
         return '\n'.join(results)
+
+    def _create_data_views(self):
+        """
+
+        :param viewa_data:
+        :return:
+        """
+        view_template = self._get_template('view_data/view')
+        table_template = self._get_template('view_data/table')
+        row_template = self._get_template('view_data/table_row')
+        head_template = self._get_template('view_data/table_head')
+        data_template = self._get_template('view_data/table_data')
+
+        views = []
+        for view_data in self.report_data['views_data']:
+            tables = []
+            for i in range(len(view_data['fields']) // 5 + 1):
+                current_fields = view_data['fields'][(i * 5):(i * 5 + 5)]
+                heads = [head_template.render({'content': field['title']}) for field in current_fields]
+
+                rows = []
+                for item in view_data['data']:
+                    item_values = []
+                    for field in current_fields:
+                        value = item[field['name']]
+                        if isinstance(value, list):
+                            value = ','.join(value)
+                        item_values.append(data_template.render({'content': value}))
+                    rows.append(row_template.render({'content': '\n'.join(item_values)}))
+
+                tables.append(table_template.render({'head_content': row_template.render({'content': '\n'.join(heads)}),
+                                                     'body_content': '\n'.join(rows)}))
+            views.append(view_template.render({'title': view_data['name'], 'content': '\n'.join(tables)}))
+        return '\n'.join(views)
