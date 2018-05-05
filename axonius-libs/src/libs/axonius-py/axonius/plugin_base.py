@@ -10,7 +10,6 @@ import json
 from datetime import datetime, timedelta
 import sys
 import traceback
-from enum import Enum
 
 import requests
 import configparser
@@ -42,6 +41,7 @@ from promise import Promise
 from typing import Iterable
 
 import axonius.entities
+from axonius.entities import EntityType
 from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -188,15 +188,6 @@ def return_error(error_message, http_status=500, additional_data=None):
     :param int http_status: The http status to return, 500 by default
     """
     return jsonify({'status': 'error', 'message': error_message, 'additional_data': additional_data}), http_status
-
-
-class EntityType(Enum):
-    """
-    Possible axonius entities
-    """
-
-    Users = "users"
-    Devices = "devices"
 
 
 class PluginBase(Configurable, Feature):
@@ -1259,6 +1250,7 @@ class PluginBase(Configurable, Feature):
                                               data=json.dumps(tag_data, default=json_util.default))
         if response.status_code != 200:
             logger.error(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
+            logger.error(tag_data)
             raise TagDeviceError(f"Couldn't tag device. Reason: {response.status_code}, {str(response.content)}")
 
         return response

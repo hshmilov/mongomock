@@ -15,15 +15,43 @@ def test_empty():
     assert len(correlate([])) == 0
 
 
-def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None):
+def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associated_adapter_id, hostname=None, network_interfaces=None, os=None):
+    generated_unique_name = str(uuid.uuid1())
+    generate_name = str(uuid.uuid1())
     return {
+        "association_type": "Tag",
+        "associated_adapters": [
+            [
+                associated_adapter_unique_name, associated_adapter_id
+            ]
+        ],
+        "associated_adapter_plugin_name": associated_adapter_name,
+        "name": generated_unique_name,
+        "data": {
+            "hostname": hostname,
+            OS_FIELD: os,
+            NETWORK_INTERFACES_FIELD: network_interfaces,
+        },
+        "type": "adapterdata",
+        "entity": "devices",
+        "action_if_exists": "update",
+        PLUGIN_UNIQUE_NAME: generated_unique_name,
+        "plugin_name": generate_name
+    }
+
+
+def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None, tag_data=None):
+    generated_unique_name = str(uuid.uuid1())
+    generate_name = str(uuid.uuid1())
+    generated_id = str(uuid.uuid1())
+    val = {
         'tags': [],
         'adapters': [
             {
-                'plugin_name': str(uuid.uuid1()),
-                PLUGIN_UNIQUE_NAME: str(uuid.uuid1()),
+                'plugin_name': generate_name,
+                PLUGIN_UNIQUE_NAME: generated_unique_name,
                 'data': {
-                    'id': str(uuid.uuid1()),
+                    'id': generated_id,
                     OS_FIELD: os,
                     'hostname': hostname,
                     NETWORK_INTERFACES_FIELD: network_interfaces,
@@ -32,6 +60,9 @@ def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None)
             }
         ],
     }
+    if tag_data:
+        val['tags'] = [get_raw_tag(generated_unique_name, generate_name, generated_id, *tag_data)]
+    return val
 
 
 def test_no_correlation():
@@ -391,6 +422,14 @@ def test_negative_serial_correlation_not_simple():
     device1 = get_raw_device(serial="Some serial1")
     device2 = get_raw_device(serial="Some serial2")
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 0)
+
+
+def test_simple_tag_correlation():
+    network_interfaces = [{MAC_FIELD: "mymac"}]
+
+    device1 = get_raw_device(tag_data=[None, network_interfaces])
+    device2 = get_raw_device(network_interfaces=network_interfaces)
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC', 1)
 
 
 if __name__ == '__main__':

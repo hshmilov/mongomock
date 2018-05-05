@@ -15,8 +15,34 @@ adapter_device = NewType('adapter_device', dict)
 device_pair = NewType('DevicePair', Tuple)
 
 
+def _create_correlation_result(device1, device2, data_dict, reason) -> CorrelationResult:
+    """
+    Creates a CorrelationResult that will correlate given devices with the given data and reason.
+    :param device1: first device
+    :param device2: second device
+    :param data_dict: data dict
+    :param reason: reason for correlation
+    """
+    # If a device is actually "adapterdata" type of tag, then we should produce a correlation to the actual
+    # device and not to the plugin that created the tag. i.e. the correlation should be with the associated adapter
+
+    if device1.get('association_type') == "Tag":
+        device1_addressing = device1['associated_adapters'][0]
+    else:
+        device1_addressing = (device1[PLUGIN_UNIQUE_NAME], device1['data']['id'])
+
+    if device2.get('association_type') == "Tag":
+        device2_addressing = (device2['associated_adapter_plugin_name'], device2['associated_adapters'][0][1])
+    else:
+        device2_addressing = (device2[PLUGIN_NAME], device2['data']['id'])
+
+    return CorrelationResult(associated_adapters=[device1_addressing, device2_addressing],
+                             data=data_dict,  # not copying as they all have the same data
+                             reason=reason)
+
+
 def _compare_devices(devices_iterator: Iterable[device_pair], comparators: List[pair_comparator], data_dict: dict,
-                     reason: str):
+                     reason: CorrelationReason):
     """
     goes over the devices_iterator and compares each pair using all the comparators, if a pair has passed all the
         comparators a correlation is yielded
@@ -30,10 +56,7 @@ def _compare_devices(devices_iterator: Iterable[device_pair], comparators: List[
 
         if all(compare(device1, device2) for compare in comparators):
             # If we reached here that means that we should join this two devices according to this rule.
-            yield CorrelationResult(associated_adapters=[(device1[PLUGIN_UNIQUE_NAME], device1['data']['id']),
-                                                         (device2[PLUGIN_NAME], device2['data']['id'])],
-                                    data=data_dict,  # not copying as they all have the same data
-                                    reason=reason)
+            yield _create_correlation_result(device1, device2, data_dict, reason)
 
 
 def _process_product(bucket1: List[adapter_device], bucket2: List[adapter_device], comparators: List[pair_comparator],

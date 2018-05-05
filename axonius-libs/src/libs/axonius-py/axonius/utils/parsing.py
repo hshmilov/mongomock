@@ -4,10 +4,9 @@ ParsingUtils.py: Collection of utils that might be used by parsers, specifically
 
 import re
 import sys
-import base64
-import binascii
 from types import FunctionType
 from typing import NewType, Callable
+from axonius.entities import EntityType
 
 import dateutil.parser
 import ipaddress
@@ -535,6 +534,12 @@ def normalize_adapter_devices(devices):
     for device in devices:
         for adapter_device in device['adapters']:
             yield normalize_adapter_device(adapter_device)
+        for tag in device.get('tags', []):
+            if tag.get('entity') == EntityType.Devices.value and \
+                    tag.get('type') == 'adapterdata' and \
+                    tag.get('associated_adapter_plugin_name') and \
+                    len(tag.get('associated_adapters', [])) == 1:
+                yield normalize_adapter_device(tag)
 
 
 def normalize_adapter_device(adapter_device):
@@ -550,7 +555,7 @@ def normalize_adapter_device(adapter_device):
         adapter_device[NORMALIZED_MACS] = macs if len(macs) > 0 else None
     # Save the normalized hostname so we can later easily compare.
     # See further doc near definition of NORMALIZED_HOSTNAME.
-    adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_device['data'])
+    adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)
     if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
         adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
     return adapter_device

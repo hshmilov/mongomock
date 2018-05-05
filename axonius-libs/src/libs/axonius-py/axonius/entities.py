@@ -2,7 +2,18 @@
 Axonius entities class wrappers. Implement methods to be used on devices/users from the db.
 """
 import functools
+from enum import Enum
+
 from bson import ObjectId
+
+
+class EntityType(Enum):
+    """
+    Possible axonius entities
+    """
+
+    Users = "users"
+    Devices = "devices"
 
 
 class EntitiesNamespace(object):
@@ -75,14 +86,14 @@ class DevicesNamespace(EntitiesNamespace):
     """" Just a namespace for devices so that we could do self.devices.add_label """
 
     def __init__(self, plugin_base):
-        super().__init__(plugin_base, "devices")
+        super().__init__(plugin_base, EntityType.Devices.value)
 
 
 class UsersNamespace(EntitiesNamespace):
     """" Just a namespace for users so that we could do self.devices.add_label """
 
     def __init__(self, plugin_base):
-        super().__init__(plugin_base, "users")
+        super().__init__(plugin_base, EntityType.Users.value)
 
 
 class AxoniusEntity(object):

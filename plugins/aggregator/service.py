@@ -19,7 +19,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.utils.parsing import get_entity_id_for_plugin_name
 from axonius.mixins.triggerable import Triggerable
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH
+    ADAPTERS_LIST_LENGTH, PLUGIN_NAME
 from axonius.utils.threading import LazyMultiLocker
 from axonius.utils.files import get_local_config_file
 from axonius.utils.json import from_json
@@ -362,9 +362,16 @@ class AggregatorService(PluginBase, Triggerable):
                     # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
                     # then if it's not 1, its definitely 0
                     return "A tag must be associated with just one adapter, the entity provided is unavailable"
-
                 # take (assumed single) key from candidates
-                self._update_entity_with_tag(sent_plugin, entities_candidates[0], entities_db)
+                entities_candidates = entities_candidates[0]
+
+                if sent_plugin.get('type') == "adapterdata":
+                    relevant_adapter = [x for x in entities_candidates['adapters']
+                                        if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
+                    assert relevant_adapter, "Couldn't find adapter in axon device"
+                    sent_plugin['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
+
+                self._update_entity_with_tag(sent_plugin, entities_candidates, entities_db)
             elif association_type == 'Multitag':
                 for device in entities_candidates:
                     # here we tag all adapter_devices per axonius device candidate
@@ -374,6 +381,7 @@ class AggregatorService(PluginBase, Triggerable):
                         (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id'])
                         for adapter_device in device['adapters']
                     ]
+
                     for tag in sent_plugin['tags']:
                         self._update_entity_with_tag({**new_sent_plugin, **tag}, device, entities_db)
             elif association_type == 'Link':
