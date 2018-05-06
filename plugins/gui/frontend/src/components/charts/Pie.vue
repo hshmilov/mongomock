@@ -17,7 +17,8 @@
             </defs>
             <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
-                <text v-if="slice.anotate && slice.portion" text-anchor="middle">{{Math.round(slice.portion * 100)}}%</text>
+                <text v-if="slice.anotate && slice.portion" class="scaling" text-anchor="middle"
+                      :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.portion * 100)}}%</text>
             </g>
         </svg>
         <div v-show="hoverTitle" ref="tooltip" class="pie-tooltip">{{hoverTitle}}</div>
@@ -43,7 +44,9 @@
                 return this.completeData.map((slice, index) => {
                     // Starting slice at the end of previous one, and ending after percentage defined for item
                     const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion)
-                    cumulativePortion += slice.portion
+                    cumulativePortion += slice.portion / 2
+                    const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion)
+					cumulativePortion += slice.portion / 2
                     const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
 					return {
 						class: `extra-fill-${index % 6}`,  ...slice,
@@ -51,7 +54,8 @@
 							`M ${startX} ${startY}`, // Move
 							`A 1 1 0 ${slice.portion > .5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
 							`L 0 0`, // Line
-						].join(' ')
+						].join(' '),
+                        middle: { x: middleX * 0.7, y: middleY * (middleY > 0? 0.8: 0.5) }
 					}
                 })
             },
@@ -62,22 +66,7 @@
         },
         data() {
 			return {
-				inHover: -1,
-                pieChanged: false
-            }
-        },
-        watch: {
-			slices(newSlices, oldSlices) {
-				if (this.pieChanged) return
-				if (oldSlices.length !== newSlices.length) {
-					this.pieChanged = true
-					return
-				}
-                newSlices.forEach((slice, index) => {
-                    if (oldSlices[index].portion !== slice.portion) {
-                        this.pieChanged = true
-                    }
-                })
+				inHover: -1
             }
         },
         methods: {
@@ -92,26 +81,6 @@
                 if (!this.$refs || !this.$refs.tooltip) return
                 this.$refs.tooltip.style.top = event.clientY + 20 + 'px'
 				this.$refs.tooltip.style.left = event.clientX + 20 + 'px'
-            },
-            fixTexts() {
-				this.$el.querySelectorAll('path').forEach((path) => {
-					let text = path.nextElementSibling
-					if (!text) return
-                    text.classList.remove('scaling')
-					let box = path.getBBox()
-					text.setAttribute('x', box.x + box.width / 2)
-					text.setAttribute('y', box.y + box.height / 2 + (box.width >= 0.9 && box.width < 2 ? 0.2 : 0))
-					text.classList.add('scaling')
-				})
-            }
-        },
-        mounted() {
-			this.fixTexts()
-        },
-        updated() {
-			if (this.pieChanged) {
-				this.fixTexts()
-                this.pieChanged = false
             }
         }
 	}

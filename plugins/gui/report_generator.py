@@ -6,6 +6,10 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint.fonts import FontConfiguration
 from cairosvg import svg2png
 
+from gui.consts import ChartTypes
+
+GREY_COLOUR = '#DEDEDE'
+
 
 class ReportGenerator(object):
     def __init__(self, report_data, template_path, output_path='/tmp/'):
@@ -20,6 +24,17 @@ class ReportGenerator(object):
         self.output_path = output_path
         self.env = Environment(loader=FileSystemLoader('.'))
 
+        self.templates = {
+            'report': self._get_template('axonius_report'),
+            'section': self._get_template('report_section'),
+            'card': self._get_template('report_card'),
+            'pie': self._get_template('summary/pie_chart'),
+            'pie_slice': self._get_template('summary/pie_slice'),
+            'pie_gradient': self._get_template('summary/pie_gradient'),
+            'histogram': self._get_template('summary/histogram_chart'),
+            'histogram_bar': self._get_template('summary/histogram_bar')
+        }
+
     def generate(self):
         """
         Build HTML file representing a report that consists of:
@@ -30,25 +45,24 @@ class ReportGenerator(object):
 
         :return: The name of the generated pdf file
         """
-        report_template = self._get_template('axonius_report')
-        section_template = self._get_template('report_section')
-        card_template = self._get_template('report_card')
-
         now = datetime.now()
         sections = []
         # Add summary section containing dashboard panels, pre- and user-defined
-        sections.append(section_template.render({'title': 'Summary', 'content': self._create_summary(card_template)}))
+        sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
+
         # Add section for each adapter with results of its queries
         if self.report_data.get('adapter_queries'):
             for adapter in self.report_data['adapter_queries']:
-                sections.append(section_template.render({'title': adapter['name'],
-                                                         'content': self._create_adapter(adapter['queries'])}))
+                sections.append(self.templates['section'].render(
+                    {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'])}))
+
         # Add section for all saved queries
         if self.report_data.get('views_data'):
-            sections.append(section_template.render({'title': 'Data By View', 'content': self._create_data_views()}))
+            sections.append(
+                self.templates['section'].render({'title': 'Data By View', 'content': self._create_data_views()}))
 
         # Join all sections as the content of the report
-        html_data = report_template.render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
+        html_data = self.templates['report'].render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
@@ -68,23 +82,18 @@ class ReportGenerator(object):
         """
         return self.env.get_template(f'{self.template_path}{template_name}.html')
 
-    def _create_summary(self, card_template):
+    def _create_summary(self):
         """
         Create HTML part for each of the dashboard predefined charts as well as those defined by user.
 
         :return:
         """
-        pie_template = self._get_template('summary/pie_chart')
-        pie_slice_template = self._get_template('summary/pie_slice')
-        histogram_template = self._get_template('summary/histogram_chart')
-        histogram_bar_template = self._get_template('summary/histogram_bar')
-
         summary_content = []
         if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('total_gross') \
                 and self.report_data['adapter_devices'].get('total_net'):
             # Adding main summary card - the data discovery
             data_discovery_template = self._get_template('summary/data_discovery')
-            summary_content.append(card_template.render({
+            summary_content.append(self.templates['card'].render({
                 'title': 'Data Discovery',
                 'class': 'full',
                 'content': data_discovery_template.render({
@@ -92,49 +101,64 @@ class ReportGenerator(object):
                     'unique_count': self.report_data['adapter_devices']['total_net']
                 })}))
 
-        if self.report_data.get('coverage'):
+        if self.report_data.get('covered_devices'):
             # Adding cards with coverage of network roles
-            for coverage_data in self.report_data['coverage']:
+            for coverage_data in self.report_data['covered_devices']:
                 coverage_pie_filename = "_".join(coverage_data["title"].split(" ")) + '.png'
-                svg2png(
-                    bytestring=self._create_coverage_pie(coverage_data['portion'], pie_template, pie_slice_template),
-                    write_to=f'{self.output_path}{coverage_pie_filename}')
-                summary_content.append(card_template.render({
+                svg2png(bytestring=self._create_coverage_pie(coverage_data['portion']),
+                        write_to=f'{self.output_path}{coverage_pie_filename}')
+                summary_content.append(self.templates['card'].render({
                     'title': f'{coverage_data["title"]} Coverage',
                     'content': f'<img src="{coverage_pie_filename}">'
                 }))
 
         if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('adapter_count'):
             # Adding card with histogram comparing amount of devices from each adapter
-            summary_content.append(card_template.render({
+            summary_content.append(self.templates['card'].render({
                 'title': 'Devices per Adapter',
-                'content': self._create_adapter_histogram(histogram_template, histogram_bar_template)
+                'content': self._create_adapter_histogram()
             }))
+
+        if self.report_data.get('custom_charts'):
+            for i, custom_chart in enumerate(self.report_data['custom_charts']):
+                if not custom_chart.get('type') or not custom_chart.get('data'):
+                    continue
+                title = custom_chart.get('name', f'Custom Chart {i}')
+                if custom_chart['type'] == ChartTypes.compare.name:
+                    content = self._create_query_histogram(custom_chart['data'])
+                elif custom_chart['type'] == ChartTypes.intersect.name:
+                    query_pie_filename = "_".join(title.split(" ")) + '.png'
+                    svg2png(bytestring=self._create_query_pie(custom_chart['data']),
+                            write_to=f'{self.output_path}{query_pie_filename}')
+                    content = f'<img src="{query_pie_filename}">'
+                else:
+                    continue
+                summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
         return '\n'.join(summary_content)
 
-    def _create_coverage_pie(self, portion, pie_template, pie_slice_template):
+    def _create_coverage_pie(self, portion):
         """
         Create a slice for the given portion, filled with a colour representing the quarter it is in
         and with the percentage as a text to present..
         Then, create a second slice with the remainder of the portion, coloured grey.
 
         :param portion:
-        :param pie_template:
-        :param pie_slice_template:
         :return:
         """
         colours = ['#D0011B', '#F6A623', '#4796E4', '#0FBC18']
-        paths = self._calculate_pie_paths([1 - portion, portion])
-        slices = [
-            pie_slice_template.render({'path': paths[0], 'colour': '#DEDEDE'}),
-            pie_slice_template.render({'path': paths[1], 'colour': colours[int(floor(portion * 4))],
-                                       'text': f'{round(portion * 100)}%' if portion else '', 'x': 0.7, 'y': -0.1})
-        ]
-        return pie_template.render({
-            'content': '\n'.join(slices)
-        })
+        slice_defs = self._calculate_pie_slices([1 - portion, portion])
+        slices = [self.templates['pie_slice'].render({'path': slice_defs[0]['path'], 'colour': GREY_COLOUR})]
+        if portion:
+            slice_def = slice_defs[1]
+            slices.append(self.templates['pie_slice'].render({
+                'path': slice_def['path'], 'colour': colours[int(floor(portion * 4))],
+                'text': f'{round(portion * 100)}%' if portion else '',
+                'x': slice_def['text_x'], 'y': slice_def['text_y']
+            }))
 
-    def _calculate_pie_paths(self, portions):
+        return self.templates['pie'].render({'content': '\n'.join(slices)})
+
+    def _calculate_pie_slices(self, portions):
         """
         Calculate each slice's path, which starts at previous slice's position, arches to the point calculated
         by adding current portion and ends in the center of the circle.
@@ -142,14 +166,19 @@ class ReportGenerator(object):
         :param portions:
         :return:
         """
-        paths = []
+        slices = []
         cumulative_portion = 0
         for portion in portions:
             (start_x, start_y) = self._calculate_coordinates(cumulative_portion)
-            cumulative_portion += portion
+            cumulative_portion += portion / 2
+            (middle_x, middle_y) = self._calculate_coordinates(cumulative_portion)
+            cumulative_portion += portion / 2
             (end_x, end_y) = self._calculate_coordinates(cumulative_portion)
-            paths.append(f'M {start_x} {start_y} A 1 1 0 {1 if portion > .5 else 0} 1 {end_x} {end_y} L 0 0')
-        return paths
+            slices.append({
+                'path': f'M {start_x} {start_y} A 1 1 0 {1 if portion > .5 else 0} 1 {end_x} {end_y} L 0 0',
+                'text_x': middle_x * 0.7, 'text_y': middle_y * 0.5
+            })
+        return slices
 
     def _calculate_coordinates(self, portion):
         """
@@ -158,27 +187,73 @@ class ReportGenerator(object):
         """
         return (cos(2 * pi * portion), sin(2 * pi * portion))
 
-    def _create_adapter_histogram(self, histogram_template, histogram_bar_template):
+    def _create_adapter_histogram(self):
         """
+        Sort the adapters found in the report data by descending size and create a histogram for them
 
         :param adapter_count:
-        :param histogram_template:
-        :param histogram_bar_template:
+        :return:
+        """
+        adapters = self.report_data['adapter_devices']['adapter_count']
+        adapters.sort(key=lambda x: x['count'], reverse=True)
+        return self._create_histogram(adapters, 6)
+
+    def _create_query_histogram(self, queries_data):
+        return self._create_histogram(queries_data, 4, True)
+
+    def _create_histogram(self, data, limit, textual=False):
+        """
+        Create a bar for each item of given data, with width according to its count and relative to the largest data.
+        Combine create bars to a histogram, with remainder indicating amount of bars not shown due to limit.
+
+        :param data:
+        :param limit: How many bars to show - textual takes up double row per bar
+        :param textual:
         :return:
         """
         bars = []
-        adapters = self.report_data['adapter_devices']['adapter_count']
-        adapters.sort(key=lambda x: x['count'], reverse=True)
-        max = adapters[0]['count']
-        for adapter in adapters[:6]:
-            if not adapter.get('name') or not adapter.get('count'):
+        max = data[0].get('count', 1)
+        for item in data[:limit]:
+            if not item.get('name') or not item.get('count'):
                 continue
-            width = 20 + ((180 * adapter['count']) / max)
-            bars.append(histogram_bar_template.render({
-                'name': adapter['name'], 'quantity': adapter['count'], 'width': width
-            }))
-        return histogram_template.render({'content': '\n'.join(bars),
-                                          'remainder': f'+{len(adapters) - 6}' if len(adapters) > 6 else ''})
+            width = 20 + ((180 * item['count']) / max)
+            parameters = {'quantity': item['count'], 'width': width, 'name': item['name']}
+            if textual:
+                parameters['title'] = item['name']
+                parameters['class'] = 'd-none'
+            bars.append(self.templates['histogram_bar'].render(parameters))
+        return self.templates['histogram'].render({'content': '\n'.join(bars),
+                                                   'remainder': f'+{len(data) - limit}' if len(data) > limit else ''})
+
+    def _create_query_pie(self, queries_data):
+        """
+        Create slice for each data returned for the query, after converting each absolute count to be proportional to
+        the main query's count
+
+        :param queries_data:
+        :return:
+        """
+        total = queries_data[0].get('count', 1)
+        portions = []
+        for item in queries_data[1:]:
+            portions.append(item['count'] / total)
+            queries_data[0]['count'] = queries_data[0]['count'] - item['count']
+        portions.insert(0, queries_data[0]['count'] / total)
+
+        colours = [GREY_COLOUR, '#15C59E', 'url(#intersection)', '#1593C5']
+        slices = []
+        for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
+            parameters = {'path': slice_def['path'], 'colour': colours[i]}
+            if i:
+                parameters['text'] = f'{round(portions[i] * 100)}%' if i else ''
+                parameters['x'] = slice_def['text_x']
+                parameters['y'] = slice_def['text_y']
+            slices.append(self.templates['pie_slice'].render(parameters))
+
+        return self.templates['pie'].render({
+            'defs': self.templates['pie_gradient'].render({'colour1': colours[1], 'colour2': colours[3]}),
+            'content': '\n'.join(slices)
+        })
 
     def _create_adapter(self, queries):
         """
@@ -198,6 +273,8 @@ class ReportGenerator(object):
 
     def _create_data_views(self):
         """
+        Create tables containing each view's data according to given fields.
+        Number of coloumns is limited such that fits in a page.
 
         :param viewa_data:
         :return:
@@ -210,22 +287,21 @@ class ReportGenerator(object):
 
         views = []
         for view_data in self.report_data['views_data']:
-            tables = []
-            for i in range(len(view_data['fields']) // 5 + 1):
-                current_fields = view_data['fields'][(i * 5):(i * 5 + 5)]
-                heads = [head_template.render({'content': field['title']}) for field in current_fields]
+            current_fields = view_data['fields'][0:6]
+            heads = [head_template.render({'content': field['title']}) for field in current_fields]
 
-                rows = []
-                for item in view_data['data']:
-                    item_values = []
-                    for field in current_fields:
-                        value = item[field['name']]
-                        if isinstance(value, list):
-                            value = ','.join(value)
-                        item_values.append(data_template.render({'content': value}))
-                    rows.append(row_template.render({'content': '\n'.join(item_values)}))
+            rows = []
+            for item in view_data['data']:
+                item_values = []
+                for field in current_fields:
+                    value = item[field['name']]
+                    if isinstance(value, list):
+                        value = ','.join(value)
+                    item_values.append(data_template.render({'content': value}))
+                rows.append(row_template.render({'content': '\n'.join(item_values)}))
 
-                tables.append(table_template.render({'head_content': row_template.render({'content': '\n'.join(heads)}),
-                                                     'body_content': '\n'.join(rows)}))
-            views.append(view_template.render({'title': view_data['name'], 'content': '\n'.join(tables)}))
+            views.append(view_template.render({
+                'title': view_data['name'],
+                'content': table_template.render({'head_content': row_template.render({'content': '\n'.join(heads)}),
+                                                  'body_content': '\n'.join(rows)})}))
         return '\n'.join(views)

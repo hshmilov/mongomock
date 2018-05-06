@@ -115,6 +115,9 @@ h1, h2, h3 {
 .mt-8 {
     margin-top: 8px;
 }
+.mt-12 {
+    margin-top: 12px;
+}
 .mt-24 {
     margin-top: 24px;
 }
@@ -134,6 +137,9 @@ h1, h2, h3 {
 /* Displays */
 .d-inline-block {
     display: inline-block;
+}
+.d-none {
+    display: none;
 }
 
 /* Alignment */
@@ -157,6 +163,9 @@ h1, h2, h3 {
 
 .no-break {
     page-break-inside: avoid;
+}
+.after-break {
+    page-break-after: always;
 }
 
 
@@ -231,10 +240,26 @@ h1, h2, h3 {
     background: #F7F7F7;
 }
 .table-striped tr td, .table-striped tr th {
-    width: 130px;
-    text-overflow: ellipsis;
+    font-size: 10px;
+    position: relative;
+    width: 108px;
+}
+.table-striped .data {
+    width: 100px;
     overflow: hidden;
-    min-height: 20px;
+    white-space: nowrap;
+}
+.table-striped tr td:after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    height: 20px;
+    width: 24px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), #FFFFFF 90%);
+}
+.table-striped tr:nth-child(odd) td:after {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), #F7F7F7 90%);
 }
 .table-striped tr th {
     vertical-align: bottom;

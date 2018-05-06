@@ -1405,6 +1405,22 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
     def get_dashboard(self):
+        if request.method == 'GET':
+            return jsonify(self._get_dashboard())
+
+        # Handle 'POST' request method - save dashboard configuration
+        dashboard_data = self.get_request_data_as_object()
+        if not dashboard_data.get('name'):
+            return return_error('Name required in order to save Dashboard Chart', 400)
+        if not dashboard_data.get('queries'):
+            return return_error('At least one query required in order to save Dashboard Chart', 400)
+        update_result = self._get_collection('dashboard', limited_user=False).replace_one(
+            {'name': dashboard_data['name']}, dashboard_data, upsert=True)
+        if not update_result.upserted_id and not update_result.modified_count:
+            return return_error('Error saving dashboard chart', 400)
+        return str(update_result.upserted_id)
+
+    def _get_dashboard(self):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's queries and
         fetch devices_db_view with their view. Amount of results is mapped to each queries' name, under 'data' key,
@@ -1414,38 +1430,25 @@ class GuiService(PluginBase):
 
         :return:
         """
-        dashboard_collection = self._get_collection('dashboard', limited_user=False)
-        if request.method == 'GET':
-            dashboard_list = []
-            for dashboard in dashboard_collection.find(filter_archived()):
-                if not dashboard.get('name'):
-                    logger.info(f'No name for dashboard {dashboard["_id"]}')
-                elif not dashboard.get('queries'):
-                    logger.info(f'No queries found for dashboard {dashboard.get("name")}')
-                else:
-                    # Let's fetch and execute them query filters, depending on the chart's type
-                    try:
-                        if dashboard['type'] == ChartTypes.compare.name:
-                            dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['queries'])
-                        elif dashboard['type'] == ChartTypes.intersect.name:
-                            dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['queries'])
-                        dashboard_list.append(beautify_db_entry(dashboard))
-                    except Exception as e:
-                        # Since there is no data, not adding this chart to the list
-                        logger.exception(
-                            f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]}). Reason: {e}')
-            return jsonify(dashboard_list)
-
-        # Handle 'POST' request method - save dashboard configuration
-        dashboard_data = self.get_request_data_as_object()
-        if not dashboard_data.get('name'):
-            return return_error('Name required in order to save Dashboard Chart', 400)
-        if not dashboard_data.get('queries'):
-            return return_error('At least one query required in order to save Dashboard Chart', 400)
-        update_result = dashboard_collection.replace_one({'name': dashboard_data['name']}, dashboard_data, upsert=True)
-        if not update_result.upserted_id and not update_result.modified_count:
-            return return_error('Error saving dashboard chart', 400)
-        return str(update_result.upserted_id)
+        dashboard_list = []
+        for dashboard in self._get_collection('dashboard', limited_user=False).find(filter_archived()):
+            if not dashboard.get('name'):
+                logger.info(f'No name for dashboard {dashboard["_id"]}')
+            elif not dashboard.get('queries'):
+                logger.info(f'No queries found for dashboard {dashboard.get("name")}')
+            else:
+                # Let's fetch and execute them query filters, depending on the chart's type
+                try:
+                    if dashboard['type'] == ChartTypes.compare.name:
+                        dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['queries'])
+                    elif dashboard['type'] == ChartTypes.intersect.name:
+                        dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['queries'])
+                    dashboard_list.append(beautify_db_entry(dashboard))
+                except Exception as e:
+                    # Since there is no data, not adding this chart to the list
+                    logger.exception(
+                        f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]}). Reason: {e}')
+        return dashboard_list
 
     def _fetch_data_for_chart_compare(self, dashboard_queries):
         """
@@ -1750,13 +1753,13 @@ class GuiService(PluginBase):
         """
         report_data = {
             'adapter_devices': self._adapter_devices(),
-            'coverage': self._get_dashboard_coverage(),
+            'covered_devices': self._get_dashboard_coverage(),
+            'custom_charts': self._get_dashboard(),
             'views_data': self._get_saved_views_data()
         }
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
             report_data['adapter_queries'] = self._get_adapter_queries(report['adapters'])
-
         temp_report_filename = ReportGenerator(report_data, 'gui/templates/report/').generate()
         return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=temp_report_filename)
@@ -1793,6 +1796,7 @@ class GuiService(PluginBase):
 
         :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
         """
+
         def _get_sort(view):
             sort_def = view.get('sort')
             sort_obj = {}
