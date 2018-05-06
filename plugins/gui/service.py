@@ -253,6 +253,8 @@ class GuiService(PluginBase):
 
         self.add_default_reports('default_reports.ini')
 
+        self.add_default_dashboard_charts('default_dashboard_charts.ini')
+
     def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
         """
         Adds default queries.
@@ -317,6 +319,23 @@ class GuiService(PluginBase):
         except Exception as e:
             logger.exception(f'Error adding default reports. Reason: {repr(e)}')
 
+    def add_default_dashboard_charts(self, default_dashboard_charts_ini_path):
+        try:
+            config = configparser.ConfigParser()
+            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                     f'configs/{default_dashboard_charts_ini_path}')))
+
+            for name, data in config.items():
+                if name == 'DEFAULT':
+                    # ConfigParser always has a fake DEFAULT key, skip it
+                    continue
+                try:
+                    self._insert_dashboard_chart(name, data['type'], json.loads(data['queries']))
+                except Exception as e:
+                    logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
+        except Exception as e:
+            logger.exception(f'Error adding default dashboard chart. Reason: {repr(e)}')
+
     def _insert_query(self, queries_collection, name, query_filter, query_expressions=[]):
         existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
         if existed_query is not None and not existed_query.get('archived'):
@@ -348,6 +367,19 @@ class GuiService(PluginBase):
 
         result = reports_collection.insert_one({'name': name, 'adapters': json.loads(report['adapters'])})
         logger.info(f'Added report {name} id: {result.inserted_id}')
+
+    def _insert_dashboard_chart(self, dashboard_name, dashboard_type, dashboard_queries):
+        dashboard_collection = self._get_collection("dashboard", limited_user=False)
+        existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
+        if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
+            logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
+            return
+
+        result = dashboard_collection.insert_one({'name': dashboard_name,
+                                                  'type': dashboard_type,
+                                                  'queries': dashboard_queries})
+
+        logger.info(f'Added report {dashboard_name} id: {result.inserted_id}')
 
     ########
     # DATA #
