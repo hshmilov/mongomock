@@ -23,15 +23,15 @@
                     <li class="nav-item">
                         <a class="nav-link">
                             <triggerable-dropdown size="lg" align="right" :arrow="false">
-                                <div slot="trigger">
-                                    <svg-icon name="navigation/notifications" :original="true" height="20" />
+                                <div slot="trigger" @click="clearNotifications" v-on-clickaway="dropdownUp">
+                                    <svg-icon name="navigation/notifications" :original="true" height="20"/>
                                     <span class="badge" v-if="notification.notificationUnseen.data.count"
                                     >{{ notification.notificationUnseen.data.count }}</span>
                                 </div>
                                 <div slot="content" class="preview-table">
                                     <h5>Notifications</h5>
                                     <div class="notification">
-                                        <template v-for="notification in notification.notificationUnseen.data.list"
+                                        <template v-for="notification in notification.notificationList.data"
                                              @click="navigateNotification(notification.uuid)"
                                              v-bind:class="{ 'bold': !notification.seen }">
                                             <div class="notification-item">
@@ -41,7 +41,7 @@
                                             <div class="notification-item">{{ relativeDate(notification.date_fetched) }}</div>
                                         </template>
                                     </div>
-                                    <div v-if="!notification.notificationUnseen.data.list.length" class="item row empty">
+                                    <div v-if="!notification.notificationList.data.count" class="item row empty">
                                         <i class="icon-checkmark2"></i>
                                     </div>
                                     <div class="view-all">
@@ -63,6 +63,7 @@
 </template>
 
 <script>
+    import { mixin as clickaway } from 'vue-clickaway'
 	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
 	import StatusIcon from '../../components/StatusIcon.vue'
     import '../../components/icons'
@@ -71,9 +72,11 @@
     import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
 	import { TOGGLE_SIDEBAR } from '../../store/mutations'
 	import {
-		FETCH_NOTIFICATIONS_UNSEEN,
 		FETCH_NOTIFICATIONS_UNSEEN_COUNT,
-		FETCH_NOTIFICATION
+        FETCH_NOTIFICATIONS,
+        UPDATE_NOTIFICATIONS_SEEN,
+        FETCH_NOTIFICATIONS_UNSEEN,
+        FETCH_NOTIFICATION
 	} from '../../store/modules/notifications'
 	import '../../components/icons/logo'
     import { START_RESEARCH_PHASE } from '../../store/actions'
@@ -81,6 +84,7 @@
 	export default {
 		components: {TriggerableDropdown, StatusIcon},
 		name: 'top-bar-container',
+        mixins: [ clickaway ],
 		computed: {
             ...mapState(['interaction', 'notification', 'dashboard']),
             lifecycle () {
@@ -94,7 +98,8 @@
         },
         data() {
 			return {
-				interval: null
+				interval: null,
+                isDown: false
 			}
         },
 		methods: {
@@ -102,7 +107,9 @@
 			...mapActions({
 				fetchNotificationsUnseen: FETCH_NOTIFICATIONS_UNSEEN,
 				fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
-				fetchNotification: FETCH_NOTIFICATION,
+                fetchNotification: FETCH_NOTIFICATION,
+				fetchNotifications: FETCH_NOTIFICATIONS,
+                updateNotificationsSeen: UPDATE_NOTIFICATIONS_SEEN,
                 fetchLifecycle: FETCH_LIFECYCLE,
                 startResearch: START_RESEARCH_PHASE,
 
@@ -123,11 +130,17 @@
 			},
             loadNotifications() {
                 this.fetchNotificationsUnseenCount({})
-                this.fetchNotificationsUnseen({
-                    skip: 0, limit: 5
-                })
+                if (!this.isDown) this.fetchNotifications({})
+                this.fetchNotificationsUnseen({})
             },
-
+            clearNotifications() {
+			    this.updateNotificationsSeen(this.notification.notificationUnseen.data.list.map(item => item.uuid))
+                this.notification.notificationUnseen.data.count = 0
+                this.isDown = !this.isDown
+            },
+            dropdownUp() {
+                this.isDown = false
+            }
 		},
 		created () {
             this.loadNotifications()
@@ -263,6 +276,8 @@
         color: $theme-black;
         line-height: initial;
         font-size: 12px;
+        max-height: 30vh;
+        overflow: auto;
         .view-all {
             text-align: center;
             width: 100%;
