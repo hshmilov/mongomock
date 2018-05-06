@@ -61,7 +61,9 @@ class CiscoAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, ssh.CiscoSshClient) or isinstance(client_data, snmp.CiscoSnmpClient), client_data
         with client_data:
+            # Both generators returns objects that can later return devices using .get_devices() method (see abstract.py)
             yield from client_data.query_arp_table()
+            yield from client_data.query_dhcp_leases()
 
     def _clients_schema(self):
         return {

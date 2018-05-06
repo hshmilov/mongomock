@@ -33,6 +33,10 @@ class CiscoSnmpClient(AbstractCiscoClient):
                        ObjectType(ObjectIdentity(ARP_OID)),
                        lexicographicMode=False)
 
+    def _query_dhcp_leases():
+        logging.warning('dhcp isn\'t implemented yet - skipping')
+        yield from ()
+
     def _query_arp_table(self):
         for query_result in self.__query_arp_table():
             try:

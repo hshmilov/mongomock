@@ -2,7 +2,7 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 
 
-class AbstractCiscoClient:
+class AbstractCiscoClient(object):
     ''' Abstract class for cisco's clients. 
         each function must raise ClientConnectionException for creds errors '''
 
@@ -22,12 +22,20 @@ class AbstractCiscoClient:
         ''' This function should be overwritten by heir.'''
         raise NotImplementedError()
 
+    def _query_dhcp_leases(self):
+        ''' This function should be overwritten by heir.'''
+        raise NotImplementedError()
+
     def query_arp_table(self):
         assert self._in_context
         return self._query_arp_table()
 
+    def query_dhcp_leases(self):
+        assert self._in_context
+        return self._query_dhcp_leases()
 
-class AbstractCiscoData:
+
+class AbstractCiscoData(object):
     '''Abstract class for cisco data. 
         each cisco client query should return CiscoData class, 
         that will be yielded in _query_device_by_client.
@@ -36,10 +44,10 @@ class AbstractCiscoData:
     def __init__(self, raw_data):
         self._raw_data = raw_data
 
-    def parse(self):
+    def parse(self) -> dict:
         raise NotImplementedError()
 
-    def _get_devices(self, instance, create_device_callback):
+    def _get_devices(self, instance: dict, create_device_callback):
         if 'mac' not in instance:
             return None
 
@@ -49,6 +57,11 @@ class AbstractCiscoData:
         if 'ip' in instance:
             new_device.add_nic(instance['mac'], ips=[instance['ip']])
 
+        new_device.hostname = instance.get('name', '')
+
+        # TODO: the real raw data is self._raw_data
+        # but it isn't a dict so for now we only save the instance - which must be a dict
+        new_device.set_raw(instance)
         return new_device
 
     def get_devices(self, create_device_callback):
@@ -66,11 +79,21 @@ class ArpCiscoData(AbstractCiscoData):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 
-    def parse(self):
-        raise NotImplementedError()
-
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
             device.device_model = 'cisco neighbor'
+            device.id = 'arp_' + device.id
+        return device
+
+
+class DhcpCiscoData(AbstractCiscoData):
+    def __init__(self, raw_data):
+        super().__init__(raw_data)
+
+    def _get_devices(self, instance, create_device_callback):
+        device = super()._get_devices(instance, create_device_callback)
+        if device:
+            device.device_model = 'dhcp cisco neighbor'
+            device.id = 'dhcp_' + device.id
         return device
