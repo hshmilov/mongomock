@@ -125,7 +125,7 @@
 					this.linkedPageCount = Math.min(this.maxPages, 5)
 					/* Continue getting pages until linked amount is fulfilled, so user does not wait for it */
 					this.addData()
-				} else if (!this.fetching) {
+				} else if (!this.fetching && diff > 0) {
                     this.maxPages += parseInt(diff / this.pageSize)
 					if (diff % this.pageSize === 0 && this.maxPages > 0) {
 						this.maxPages--

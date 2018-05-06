@@ -31,8 +31,11 @@
             }),
             navigateNotification(notificationId) {
             	this.fetchNotification(notificationId)
-                this.$router.replace({path: `/notification/${notificationId}`})
+                this.$router.push({path: `/notification/${notificationId}`})
             }
+        },
+        created () {
+		    this.fetchNotifications()
         }
 	}
 </script>

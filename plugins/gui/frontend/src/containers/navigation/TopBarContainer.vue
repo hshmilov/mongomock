@@ -25,19 +25,19 @@
                             <triggerable-dropdown size="lg" align="right" :arrow="false">
                                 <div slot="trigger" @click="clearNotifications">
                                     <svg-icon name="navigation/notifications" :original="true" height="20"/>
-                                    <span class="badge" v-if="getUnseenNotifications().length"
-                                    >{{ getUnseenNotifications().length }}</span>
+                                    <span class="badge" v-if="notification.notificationUnseen.data"
+                                    >{{ notification.notificationUnseen.data }}</span>
                                 </div>
                                 <div slot="content" class="preview-table">
                                     <h5>Notifications</h5>
-                                    <div v-for="notification in notification.notificationList.data"
+                                    <div v-for="notification in notification.aggregatedNotificationList.data"
                                          @click="navigateNotification(notification.uuid)"
                                          class="notification" v-bind:class="{ 'bold': !notification.seen }">
                                         <div><status-icon :value="notification.severity"/></div>
                                         <div class="content">{{ notification.title }}</div>
                                         <div>{{ relativeDate(notification.date_fetched) }}</div>
                                     </div>
-                                    <div v-if="!notification.notificationList.data.length" class="row empty">
+                                    <div v-if="!notification.aggregatedNotificationList.data.length" class="row empty">
                                         <i class="icon-checkmark2"></i>
                                     </div>
                                     <div class="view-all">
@@ -105,6 +105,7 @@
                 fetchNotification: FETCH_NOTIFICATION,
 				fetchNotifications: FETCH_NOTIFICATIONS,
                 updateNotificationsSeen: UPDATE_NOTIFICATIONS_SEEN,
+                fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
                 fetchLifecycle: FETCH_LIFECYCLE,
                 startResearch: START_RESEARCH_PHASE,
 
@@ -125,15 +126,11 @@
 				return date.toLocaleDateString()
 			},
             loadNotifications() {
-                this.fetchNotifications({})
+                this.fetchNotifications({aggregate: true})
+                this.fetchNotificationsUnseenCount({})
             },
             clearNotifications() {
-			    this.updateNotificationsSeen(this.getUnseenNotifications().map(item => {
-                    return item.uuid
-                }))
-            },
-            getUnseenNotifications() {
-                return this.notification.notificationList.data.filter(notification => !notification.seen)
+			    this.updateNotificationsSeen([])
             },
             navigateNotifications() {
                 this.$el.click()

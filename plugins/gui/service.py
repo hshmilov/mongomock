@@ -18,6 +18,7 @@ from gui.report_generator import ReportGenerator
 import tarfile
 import io
 import os
+from itertools import groupby
 from datetime import date, datetime
 from flask import jsonify, request, session, after_this_request, make_response, send_file
 from passlib.hash import bcrypt
@@ -26,6 +27,7 @@ import requests
 import configparser
 import pymongo
 from bson import ObjectId
+from bson.son import SON
 import json
 from axonius.utils.parsing import parse_filter
 import re
@@ -1286,23 +1288,42 @@ class GuiService(PluginBase):
         """
         with self._get_db_connection(False) as db:
             notification_collection = db['core']['notifications']
+
+            # GET
             if request.method == 'GET':
-                return jsonify(beautify_db_entry(n) for n in
-                               notification_collection.find(mongo_filter, projection={
-                                   "_id": 1,
-                                   "who": 1,
-                                   "plugin_name": 1,
-                                   "type": 1,
-                                   "title": 1,
-                                   "seen": 1,
-                                   "severity": 1}).skip(skip).limit(limit))
+                should_aggregate = request.args.get('aggregate', False)
+                if should_aggregate:
+                    pipeline = [{"$group": {"_id": "$title", "count": {"$sum": 1}, "date": {"$last": "$_id"},
+                                            "severity": {"$last": "$severity"}, "seen": {"$last": "$seen"}}},
+                                {"$addFields": {"title": "$_id"}}]
+                    notifications = []
+                    for n in notification_collection.aggregate(pipeline):
+                        n['_id'] = n['date']
+                        n['title'] = f"{n['title']} ({n['count']})" if n['count'] > 1 else n['title']
+                        notifications.append(beautify_db_entry(n))
+                else:
+                    notifications = [beautify_db_entry(n) for n in notification_collection.find(mongo_filter,
+                                                                                                projection={"_id": 1,
+                                                                                                            "who": 1,
+                                                                                                            "plugin_name": 1,
+                                                                                                            "type": 1,
+                                                                                                            "title": 1,
+                                                                                                            "seen": 1,
+                                                                                                            "severity": 1}).skip(
+                        skip).limit(limit).sort([('_id', pymongo.DESCENDING)])]
+
+                return jsonify(notifications)
+            # POST
             elif request.method == 'POST':
+                # if no ID is sent all notifications will be changed to seen.
                 notifications_to_see = request.get_json(silent=True)
-                if notifications_to_see is None:
-                    return return_error("Invalid notification list", 400)
-                update_result = notification_collection.update_many(
-                    {"_id": {"$in": [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
-                     }, {"$set": {'seen': notifications_to_see.get('seen', True)}})
+                if notifications_to_see is None or len(notifications_to_see['notification_ids']) == 0:
+                    update_result = notification_collection.update_many(
+                        {"seen": False}, {"$set": {'seen': notifications_to_see.get('seen', True)}})
+                else:
+                    update_result = notification_collection.update_many(
+                        {"_id": {"$in": [ObjectId(x) for x in notifications_to_see.get('notification_ids', [])]}
+                         }, {"$set": {'seen': True}})
                 return str(update_result.modified_count), 200
 
     @filtered()
