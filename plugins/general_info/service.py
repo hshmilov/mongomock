@@ -272,8 +272,8 @@ class GeneralInfoService(PluginBase, Triggerable):
             user = user[0]
 
             for linked_user, linked_device in linked_devices_and_users_list:
-                device_caption = linked_device.get_first_data("name") or \
-                    linked_device.get_first_data("hostname") or \
+                device_caption = linked_device.get_first_data("hostname") or \
+                    linked_device.get_first_data("name") or \
                     linked_device.get_first_data("id")
 
                 logger.debug(f"Associating {device_caption} with user {username}")
