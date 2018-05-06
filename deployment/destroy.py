@@ -39,9 +39,7 @@ def main():
     axonius_system.stop(should_delete=True, remove_image=True)
     subprocess.check_call(['docker', 'rmi', 'axonius/axonius-libs', '--force'], stdout=subprocess.PIPE)
     subprocess.check_call(['docker', 'rmi', 'axonius/axonius-base-image', '--force'], stdout=subprocess.PIPE)
-    if 'axonius' in subprocess.check_output(['docker', 'network', 'ls',
-                                             '--filter', 'name=axonius']).decode('utf-8'):
-        subprocess.check_call(['docker', 'network', 'rm', 'axonius'], stdout=subprocess.PIPE)
+    axonius_system.delete_network()
 
     if not args.keep_logs:
         delete_logs()

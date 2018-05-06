@@ -35,9 +35,7 @@ def main():
 
     print(f'Starting system and {args.adapters + args.services}')
 
-    if 'axonius' not in subprocess.check_output(['docker', 'network', 'ls',
-                                                 '--filter', 'name=axonius']).decode('utf-8'):
-        subprocess.check_call(['docker', 'network', 'create', 'axonius'], stdout=subprocess.PIPE)
+    axonius_system.create_network()
     axonius_system.start_and_wait(mode, True, show_print=False)
     axonius_system.start_plugins(args.adapters, args.services, mode, True, show_print=False)
 

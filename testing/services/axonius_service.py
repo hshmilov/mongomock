@@ -30,6 +30,8 @@ def get_service():
 
 
 class AxoniusService(object):
+    _NETWORK_NAME = 'axonius'
+
     def __init__(self):
         self.db = MongoService()
         self.core = CoreService()
@@ -42,6 +44,23 @@ class AxoniusService(object):
 
         self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution,
                                  self.static_correlator, self.reports]
+
+    @classmethod
+    def get_is_network_exists(cls):
+        return cls._NETWORK_NAME in subprocess.check_output(['docker', 'network', 'ls', '--filter',
+                                                             f'name={cls._NETWORK_NAME}']).decode('utf-8')
+
+    @classmethod
+    def create_network(cls):
+        if cls.get_is_network_exists():
+            return
+        subprocess.check_call(['docker', 'network', 'create', cls._NETWORK_NAME], stdout=subprocess.PIPE)
+
+    @classmethod
+    def delete_network(cls):
+        if not cls.get_is_network_exists():
+            return
+        subprocess.check_call(['docker', 'network', 'rm', cls._NETWORK_NAME], stdout=subprocess.PIPE)
 
     def stop(self, should_delete, remove_image=False):
         # Not critical but lets stop in reverse order

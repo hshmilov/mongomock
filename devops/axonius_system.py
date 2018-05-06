@@ -105,6 +105,7 @@ def system_entry_point(args):
         axonius_system.build_libs(args.hard)
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
+        axonius_system.create_network()
         mode = 'prod' if args.prod else ''
         exclude_restart = (['diagnostics'] if args.all and args.restart and not args.hard else [])
         if args.restart:
