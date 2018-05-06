@@ -5,15 +5,13 @@ import concurrent.futures
 import threading
 import datetime
 import requests
-
 from bson.objectid import ObjectId
-from axonius.mixins.triggerable import Triggerable
-
-# pip modules
 from flask import jsonify, json
 
+from axonius.entities import EntityType
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 from axonius.consts import report_consts
+from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_filter
@@ -108,7 +106,7 @@ class ReportsService(PluginBase, Triggerable):
         """
         # Checks if requested query isn't already watched.
         try:
-            current_query_result = self.get_query_results(report_data['query'])
+            current_query_result = self.get_query_results(report_data['query'], report_data['queryEntity'])
             if current_query_result is None:
                 return return_error('Aggregator is down, please try again later.', 404)
 
@@ -117,6 +115,7 @@ class ReportsService(PluginBase, Triggerable):
                                'actions': report_data['actions'],
                                'result': current_query_result,
                                'query': report_data['query'],
+                               'query_entity': report_data['queryEntity'],
                                'retrigger': report_data['retrigger'],
                                'triggered': 0,
                                'name': report_data['name'],
@@ -157,15 +156,20 @@ class ReportsService(PluginBase, Triggerable):
         logger.info('Removed query from reports.')
         return '', 200
 
-    def get_query_results(self, query_name):
+    def get_queries_collection(self, query_entity):
+        plugins_available = requests.get(self.core_address + '/register').json()
+        gui_name = [name for name, plugin in plugins_available.items() if plugin['plugin_name'] == 'gui'][0]
+        collection_name = 'device_queries' if query_entity == EntityType.Devices.value else 'user_queries'
+        return self._get_collection(collection_name, gui_name)
+
+    def get_query_results(self, query_name, query_entity):
         """Gets a query's results from the aggregator devices_db_view.
 
         :param query_name: The query name.
+        :param query_entity: The query entity type name.
         :return: The results of the query.
         """
-        plugins_available = requests.get(self.core_address + '/register').json()
-        gui_name = [name for name, plugin in plugins_available.items() if plugin['plugin_name'] == 'gui'][0]
-        query = self._get_collection('device_queries', gui_name).find_one({'name': query_name})
+        query = self.get_queries_collection(query_entity).find_one({'name': query_name})
         if query is None:
             raise ValueError(f'Missing query "{query_name}"')
         parsed_query_filter = parse_filter(query['filter'])
@@ -384,7 +388,7 @@ class ReportsService(PluginBase, Triggerable):
                 self.update_report(report_data)
 
         try:
-            current_result = self.get_query_results(report_data['query'])
+            current_result = self.get_query_results(report_data['query'], report_data['query_entity'])
             if current_result is None:
                 logger.info("Skipping reports trigger because there were no current results.")
                 return

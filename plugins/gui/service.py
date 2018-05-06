@@ -1110,7 +1110,10 @@ class GuiService(PluginBase):
         if request.method == 'PUT':
             report_to_add = request.get_json(silent=True)
             query_name = report_to_add['query']
-            if self.device_queries.find_one({'name': query_name}) is None:
+            query_entity = report_to_add['queryEntity']
+            assert query_entity in [x.value for x in EntityType.__members__.values()]
+            queries = self.device_queries if query_entity == EntityType.Devices.value else self.user_queries
+            if queries.find_one({'name': query_name}) is None:
                 return return_error(f"Missing query {query_name} requested for creating alert")
 
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
@@ -1132,7 +1135,10 @@ class GuiService(PluginBase):
         if request.method == 'POST':
             report_to_update = request.get_json(silent=True)
             query_name = report_to_update['query']
-            if self.device_queries.find_one({'name': query_name}) is None:
+            query_entity = report_to_update['queryEntity']
+            assert query_entity in [x.value for x in EntityType.__members__.values()]
+            queries = self.device_queries if query_entity == EntityType.Devices.value else self.user_queries
+            if queries.find_one({'name': query_name}) is None:
                 return return_error(f"Missing query {query_name} requested for updating alert")
 
             response = self.request_remote_plugin(f"reports/{report_id}", "reports", method='post',

@@ -181,7 +181,7 @@ export const fetchDataQueries = ({state, dispatch}, payload) => {
 		filter += ` and ${payload.filter}`
 	}
 	let param = `?limit=${payload.limit}&skip=${payload.skip}&filter=${encodeURI(filter)}`
-	dispatch(REQUEST_API, {
+	return dispatch(REQUEST_API, {
 		rule: `${payload.module}/queries${param}`,
 		type: UPDATE_DATA_QUERIES,
 		payload: {module: payload.module, type: payload.type, skip: payload.skip}

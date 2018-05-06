@@ -24,6 +24,7 @@ const newAlert = {
 	},
 	actions: [],
 	query: '',
+	queryEntity: '',
 	retrigger: true,
 	triggered: false,
 	severity: 'info'

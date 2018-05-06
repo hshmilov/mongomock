@@ -14,8 +14,8 @@
                         </div>
                         <div class="form-group col-6">
                             <label class="form-label" for="alertQuery">Select Saved Query:</label>
-                            <select class="form-control" id="alertQuery" v-model="alert.query">
-                                <option v-for="query in currentQueryOptions" :value="query.name"
+                            <select class="form-control" id="alertQuery" v-model="currentQuery">
+                                <option v-for="query in currentQueryOptions" :value="query"
                                         :selected="query.name === alert.query">{{query.title || query.name}}</option>
                             </select>
                         </div>
@@ -117,7 +117,11 @@
             ...mapState({
                 alertData: state => state.alert.alertDetails.data,
                 currentQueryOptions(state) {
-                	let queries = state.device.queries.saved.data
+                	let queries = [ ...state.device.queries.saved.data.map((item) => {
+                        return { ...item, entity: 'devices' }
+                    }), ...state.user.queries.saved.data.map((item) => {
+                        return { ...item, entity: 'users' }
+                    }) ]
                 	if (!queries || !queries.length) return []
                     if (this.alert && this.alert.query) {
                         let hasCurrent = false
@@ -138,6 +142,7 @@
 			return {
                 /* Control of the criteria parameter with the use of two conditions */
                 alert: { triggers: {}, actions: [] },
+                currentQuery: {},
                 actions: {
                 	notification: false, mail: false, tag: false
                 },
@@ -175,7 +180,7 @@
 			saveAlert() {
             	/* Validation */
                 if (!this.alert.name) return
-                if (!this.alert.query) return
+                if (!this.currentQuery.name) return
 
                 if (this.actions.notification) {
                 	this.alert.actions.push({
@@ -192,6 +197,8 @@
                         type: 'tag_device', data: this.tagName
                     })
                 }
+                this.alert.query = this.currentQuery.name
+                this.alert.queryEntity = this.currentQuery.entity
                 /* Save and return to alerts page */
                 this.updateAlert(this.alert)
 				this.returnToAlerts()
@@ -214,7 +221,21 @@
             }
 
 			/* Fetch all saved queries for offering user to base alert upon */
-            this.fetchQueries({module: 'device', type: 'saved'})
+            Promise.all([this.fetchQueries({module: 'device', type: 'saved'}),
+                         this.fetchQueries({module: 'user', type: 'saved'})]).then(() => {
+                    if (this.alertData.query) {
+                        let matching = this.currentQueryOptions.filter(item =>
+                            (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.query)
+                        if (matching.length) {
+                            this.currentQuery = matching[0]
+                            this.alert.query = this.currentQuery.name
+                            this.alert.queryEntity = this.currentQuery.entity
+                        } else {
+                            this.alert.query = ''
+                        }
+                    }
+                }
+            )
         }
 	}
 </script>
