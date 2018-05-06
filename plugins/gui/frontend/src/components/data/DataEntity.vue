@@ -154,6 +154,9 @@
             .tab-content {
                 overflow: auto;
                 height: calc(100% - 40px);
+                .object {
+                    width: calc(100% - 24px);
+                }
             }
             .tag-edit {
                 text-align: right;

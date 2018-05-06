@@ -7,8 +7,6 @@ export const FETCH_NOTIFICATION = 'FETCH_NOTIFICATION'
 export const SET_NOTIFICATION = 'SET_NOTIFICATION'
 export const UPDATE_NOTIFICATIONS_SEEN = 'UPDATE_NOTIFICATIONS_SEEN'
 export const SAVE_NOTIFICATIONS_SEEN = 'SAVE_NOTIFICATIONS_SEEN'
-export const FETCH_NOTIFICATIONS_UNSEEN_COUNT = 'FETCH_NOTIFICATIONS_UNSEEN_COUNT'
-export const SET_NOTIFICATIONS_UNSEEN_COUNT = 'UPDATE_NEW_NOTIFICATIONS_COUNT'
 export const FETCH_NOTIFICATIONS_UNSEEN = 'FETCH_NOTIFICATIONS_UNSEEN'
 export const SET_NOTIFICATIONS_UNSEEN = 'SET_NOTIFICATIONS_UNSEEN'
 
@@ -21,7 +19,7 @@ export const notification = {
 		/* A single fetched notification, according to user selection */
 		notificationDetails: { fetching: false, data: { seen: false }, error: '' },
 
-		notificationUnseen: { fetching: false, data: { count: 0, list: [] }, error: ''},
+		notificationUnseen: { fetching: false, data: 0, error: ''},
 
 		fields: [
 			{ path: 'uuid', hidden: true },
@@ -41,7 +39,12 @@ export const notification = {
 			state.notificationList.fetching = payload.fetching
 			state.notificationList.error = payload.error
 			if (payload.data) {
-				state.notificationList.data = [ ...state.notificationList.data, ...payload.data ]
+                if (payload.restart) {
+                    state.notificationList.data = [...payload.data]
+                }
+                else {
+                    state.notificationList.data = [...state.notificationList.data, ...payload.data]
+				}
 			}
 		},
 		[ SET_NOTIFICATION ] (state, payload) {
@@ -58,35 +61,24 @@ export const notification = {
 					notification.seen = true
 				}
 			})
-			if (!state.notificationUnseen.data.count || state.notificationUnseen.data.count < notificationIds.length) { return }
-			state.notificationUnseen.data.count -= notificationIds.length
-			state.notificationUnseen.data.list = state.notificationUnseen.data.list.filter((notification) => {
-				return notificationIds.indexOf(notification.uuid) === -1
-			})
-		},
-		[ SET_NOTIFICATIONS_UNSEEN_COUNT ] (state, payload) {
-			state.notificationUnseen.fetching = payload.fetching
-			state.notificationUnseen.error = payload.error
-			if (payload.data) {
-				state.notificationUnseen.data.count = payload.data
-			}
+			if (!state.notificationUnseen.data || state.notificationUnseen.data < notificationIds.length) return
+			state.notificationUnseen.data -= notificationIds.length
 		},
 		[ SET_NOTIFICATIONS_UNSEEN ] (state, payload) {
 			state.notificationUnseen.fetching = payload.fetching
 			state.notificationUnseen.error = payload.error
 			if (payload.data) {
-				state.notificationUnseen.data.list = [ ...payload.data ]
+				state.notificationUnseen.data = payload.data
 			}
 		}
 	},
 	actions: {
-		[ FETCH_NOTIFICATIONS ] ({dispatch, commit}, payload) {
+		[ FETCH_NOTIFICATIONS ] ({dispatch}, payload) {
 			/*
 				Get notifications belonging to the page defined by payload.skip and payload.limit
 				If skip is 0 or not given, it is interpreted as first page and entire list is restarted
 				If limit is not given, returned amount is still limited by PAGINATION_LIMIT_MAX defined in backend
 			 */
-			if (!payload || !payload.skip) { commit(RESTART_NOTIFICATIONS) }
 			let params = []
 			if (payload && payload.skip) {
 				params.push(`skip=${payload.skip}`)
@@ -100,7 +92,8 @@ export const notification = {
 			}
 			dispatch(REQUEST_API, {
 				rule: rule,
-				type: UPDATE_NOTIFICATIONS
+				type: UPDATE_NOTIFICATIONS,
+				payload: {restart: !payload || !payload.skip}
 			})
 		},
 		[ FETCH_NOTIFICATION ] ({dispatch}, notificationId) {
@@ -120,13 +113,13 @@ export const notification = {
 				method: 'POST',
 				data: { 'notification_ids': notificationIds }
 			}).then((response) => {
-				if (parseInt(response) !== notificationIds.length) {
+				if (parseInt(response.data) !== notificationIds.length) {
 					return
 				}
 				commit(SAVE_NOTIFICATIONS_SEEN, notificationIds)
 			})
 		},
-		[ FETCH_NOTIFICATIONS_UNSEEN_COUNT ] ({dispatch}, payload) {
+		[ FETCH_NOTIFICATIONS_UNSEEN ] ({dispatch}, payload) {
 			/*
 				Request the number of unseen notifications, matching a filter, if given
 			 */
@@ -136,28 +129,6 @@ export const notification = {
 				payload.filter = `(${payload.filter}) and seen == false`
 			}
 			let rule = `notifications/count?filter=${payload.filter}`
-			dispatch(REQUEST_API, {
-				rule: rule,
-				type: SET_NOTIFICATIONS_UNSEEN_COUNT
-			})
-		},
-		[ FETCH_NOTIFICATIONS_UNSEEN ] ({dispatch}, payload) {
-			/*
-				Request unseen notifications, matching filter, if given,
-				and within the range of skip and limit, if given
-			 */
-			if (!payload.filter) {
-				payload.filter = "seen == false"
-			} else {
-				payload.filter = `(${payload.filter}) and seen == false`
-			}
-			let rule = `notifications?filter=${payload.filter}`
-			if (payload.skip) {
-				rule += `&skip=${payload.skip}`
-			}
-			if (payload.limit) {
-				rule += `&limit=${payload.limit}`
-			}
 			dispatch(REQUEST_API, {
 				rule: rule,
 				type: SET_NOTIFICATIONS_UNSEEN

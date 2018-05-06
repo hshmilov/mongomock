@@ -23,29 +23,25 @@
                     <li class="nav-item">
                         <a class="nav-link">
                             <triggerable-dropdown size="lg" align="right" :arrow="false">
-                                <div slot="trigger" @click="clearNotifications" v-on-clickaway="dropdownUp">
+                                <div slot="trigger" @click="clearNotifications">
                                     <svg-icon name="navigation/notifications" :original="true" height="20"/>
-                                    <span class="badge" v-if="notification.notificationUnseen.data.count"
-                                    >{{ notification.notificationUnseen.data.count }}</span>
+                                    <span class="badge" v-if="getUnseenNotifications().length"
+                                    >{{ getUnseenNotifications().length }}</span>
                                 </div>
                                 <div slot="content" class="preview-table">
                                     <h5>Notifications</h5>
-                                    <div class="notification">
-                                        <template v-for="notification in notification.notificationList.data"
-                                             @click="navigateNotification(notification.uuid)"
-                                             v-bind:class="{ 'bold': !notification.seen }">
-                                            <div class="notification-item">
-                                            <status-icon :value="notification.severity"/>
-                                            </div>
-                                            <div class="notification-item single-notification">{{ notification.title }}</div>
-                                            <div class="notification-item">{{ relativeDate(notification.date_fetched) }}</div>
-                                        </template>
+                                    <div v-for="notification in notification.notificationList.data"
+                                         @click="navigateNotification(notification.uuid)"
+                                         class="notification" v-bind:class="{ 'bold': !notification.seen }">
+                                        <div><status-icon :value="notification.severity"/></div>
+                                        <div class="content">{{ notification.title }}</div>
+                                        <div>{{ relativeDate(notification.date_fetched) }}</div>
                                     </div>
-                                    <div v-if="!notification.notificationList.data.count" class="item row empty">
+                                    <div v-if="!notification.notificationList.data.length" class="row empty">
                                         <i class="icon-checkmark2"></i>
                                     </div>
                                     <div class="view-all">
-                                        <router-link :to="{name: 'Notifications' }">View History</router-link>
+                                        <div @click="navigateNotifications" class="link">View History</div>
                                     </div>
                                 </div>
                             </triggerable-dropdown>
@@ -71,13 +67,13 @@
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
 	import { TOGGLE_SIDEBAR } from '../../store/mutations'
-	import {
-		FETCH_NOTIFICATIONS_UNSEEN_COUNT,
+    import {
+        FETCH_NOTIFICATIONS_UNSEEN_COUNT,
         FETCH_NOTIFICATIONS,
         UPDATE_NOTIFICATIONS_SEEN,
         FETCH_NOTIFICATIONS_UNSEEN,
-        FETCH_NOTIFICATION
-	} from '../../store/modules/notifications'
+        FETCH_NOTIFICATION, notification
+    } from '../../store/modules/notifications'
 	import '../../components/icons/logo'
     import { START_RESEARCH_PHASE } from '../../store/actions'
 
@@ -106,7 +102,6 @@
 			...mapMutations({toggleSidebar: TOGGLE_SIDEBAR}),
 			...mapActions({
 				fetchNotificationsUnseen: FETCH_NOTIFICATIONS_UNSEEN,
-				fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
                 fetchNotification: FETCH_NOTIFICATION,
 				fetchNotifications: FETCH_NOTIFICATIONS,
                 updateNotificationsSeen: UPDATE_NOTIFICATIONS_SEEN,
@@ -116,7 +111,8 @@
 			}),
 			navigateNotification (notificationId) {
 				this.fetchNotification(notificationId)
-				this.$router.replace({path: `/notification/${notificationId}`})
+                this.$el.click()
+				this.$router.push({path: `/notification/${notificationId}`})
 			},
 			relativeDate (timestamp) {
 				let date = new Date(timestamp)
@@ -129,17 +125,19 @@
 				return date.toLocaleDateString()
 			},
             loadNotifications() {
-                this.fetchNotificationsUnseenCount({})
-                if (!this.isDown) this.fetchNotifications({})
-                this.fetchNotificationsUnseen({})
+                this.fetchNotifications({})
             },
             clearNotifications() {
-			    this.updateNotificationsSeen(this.notification.notificationUnseen.data.list.map(item => item.uuid))
-                this.notification.notificationUnseen.data.count = 0
-                this.isDown = !this.isDown
+			    this.updateNotificationsSeen(this.getUnseenNotifications().map(item => {
+                    return item.uuid
+                }))
             },
-            dropdownUp() {
-                this.isDown = false
+            getUnseenNotifications() {
+                return this.notification.notificationList.data.filter(notification => !notification.seen)
+            },
+            navigateNotifications() {
+                this.$el.click()
+                this.$router.push({name: 'Notifications' })
             }
 		},
 		created () {
@@ -276,14 +274,24 @@
         color: $theme-black;
         line-height: initial;
         font-size: 12px;
-        max-height: 30vh;
-        overflow: auto;
+        .empty {
+            border-bottom: 1px solid $grey-2;
+            border-top: 1px solid $grey-2;
+            i {
+                margin: auto;
+            }
+        }
         .view-all {
             text-align: center;
             width: 100%;
             margin-bottom: -12px;
             line-height: 36px;
         }
+    }
+
+    .dropdown-menu {
+        max-height: 30vh;
+        overflow: auto;
     }
 
     .tooltip {
@@ -341,11 +349,9 @@
         grid-auto-flow: row;
         letter-spacing: 1px;
         grid-gap: 8px 4px;
-        .notification-item {
-            border-bottom: 1px solid $grey-2;
-            padding-bottom: 8px;
-        }
-        .single-notification {
+        border-bottom: 1px solid $grey-2;
+        padding: 8px 0;
+        .content {
             text-overflow: ellipsis;
             overflow: hidden;
         }
