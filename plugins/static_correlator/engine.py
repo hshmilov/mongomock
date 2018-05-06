@@ -4,7 +4,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, \
     ips_do_not_contradict, get_normalized_ip, compare_device_normalized_hostname, \
-    normalize_adapter_devices, get_serial, NORMALIZED_MACS
+    normalize_adapter_devices, get_serial, NORMALIZED_MACS, compare_macs
 from axonius.correlator_base import has_mac, has_hostname, has_serial, CorrelationReason
 
 
@@ -78,7 +78,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   [],
                                                   [],
                                                   [],
-                                                  [],
+                                                  [compare_macs],
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
 

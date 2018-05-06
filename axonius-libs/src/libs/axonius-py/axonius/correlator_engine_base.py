@@ -60,7 +60,7 @@ def _compare_devices(devices_iterator: Iterable[device_pair], comparators: List[
 
 
 def _process_product(bucket1: List[adapter_device], bucket2: List[adapter_device], comparators: List[pair_comparator],
-                     data_dict: dict, reason: str):
+                     data_dict: dict, reason: CorrelationReason):
     """
     process the product of bucket1 and bucket2, this means that no inner bucket compares are made just in between
         buckets
@@ -70,7 +70,7 @@ def _process_product(bucket1: List[adapter_device], bucket2: List[adapter_device
 
 
 def _process_combinations(bucket: List[adapter_device], comparators: List[pair_comparator],
-                          data_dict: dict, reason: str):
+                          data_dict: dict, reason: CorrelationReason):
     """
     process the combinations of bucket, this means that each device in the bucket is compared to all others.
     See doc for _compare_devices for elaboration
@@ -80,7 +80,7 @@ def _process_combinations(bucket: List[adapter_device], comparators: List[pair_c
 
 def _process_preconditioned_bucket(bucket: List[adapter_device],
                                    pair_correlation_preconditions: List[parameter_function],
-                                   inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: str):
+                                   inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: CorrelationReason):
     """
     separates the bucket into 2 -
         1. containing the devices with the precondition for a correlation
@@ -172,7 +172,7 @@ class CorrelatorEngineBase(ABC):
     def _bucket_correlate(self, adapters_to_correlate: List[adapter_device], sort_order: List[parameter_function],
                           bucket_insertion_comparators: List[pair_comparator],
                           pair_correlation_preconditions: List[parameter_function],
-                          inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: str):
+                          inner_bucket_comparators: List[pair_comparator], data_dict: dict, reason: CorrelationReason):
         """
         see docs for _bucket_creator and _process_preconditioned_bucket
         :param adapters_to_correlate: a list of the adapters to correlate
