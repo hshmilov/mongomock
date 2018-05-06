@@ -71,9 +71,9 @@ class DeviceAdapterBattery(SmartJsonClass):
 class DeviceAdapterUser(SmartJsonClass):
     """ A definition for users known by this device"""
 
-    username = Field(str, "Known")
-    last_use_date = Field(datetime.datetime, 'Last Use')
-    is_local = Field(bool, "Is Local")
+    username = Field(str, "User Known Name")
+    last_use_date = Field(datetime.datetime, 'User Last Use Time')
+    is_local = Field(bool, "User Is Local")
 
     # Where did this user really come from?
     origin_unique_adapter_name = Field(str)
@@ -83,16 +83,16 @@ class DeviceAdapterUser(SmartJsonClass):
 class DeviceAdapterSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    security_patch_id = Field(str, "Name")
+    security_patch_id = Field(str, "Security Patch Name")
     installed_on = Field(datetime.datetime)
 
 
 class DeviceAdapterInstalledSoftware(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
-    vendor = Field(str, "Vendor")
-    name = Field(str, "Name")
-    version = Field(str, "Version")
+    vendor = Field(str, "Software Vendor")
+    name = Field(str, "Software Name")
+    version = Field(str, "Software Version")
 
 
 class DeviceAdapter(SmartJsonClass):
