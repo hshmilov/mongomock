@@ -81,10 +81,6 @@ class AxoniusService(object):
             service.take_process_ownership()
 
     def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True):
-        if rebuild:
-            for service in self.axonius_services:
-                service.remove_image()
-
         if allow_restart:
             for service in self.axonius_services:
                 service.remove_container()
@@ -93,7 +89,7 @@ class AxoniusService(object):
         for service in self.axonius_services:
             if skip and service.get_is_container_up():
                 continue
-            service.start(mode=mode, allow_restart=allow_restart, hard=hard, show_print=show_print)
+            service.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
 
         # wait for all
         for service in self.axonius_services:
@@ -176,9 +172,6 @@ class AxoniusService(object):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         if exclude_restart is None:
             exclude_restart = []
-        if rebuild:
-            for plugin in plugins:
-                plugin.remove_image()
         if allow_restart:
             for plugin in plugins:
                 if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
@@ -192,7 +185,7 @@ class AxoniusService(object):
                 elif self.get_plugin_short_name(plugin) in exclude_restart:
                     print(f'Ignoring - {self.get_plugin_short_name(plugin)}')
                     continue
-            plugin.start(mode, allow_restart=allow_restart, hard=hard, show_print=show_print)
+            plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
         timeout = 60
         start = time.time()
         first = True
@@ -282,14 +275,10 @@ class AxoniusService(object):
         image_name = 'axonius/axonius-libs'
         output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
         image_exists = image_name in output
-        if image_exists:
-            if rebuild:
-                subprocess.call(['docker', 'rmi', image_name, '--force'],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            else:
-                if show_print:
-                    print('Image axonius-libs already built - skipping build step')
-                return image_name
+        if image_exists and not rebuild:
+            if show_print:
+                print('Image axonius-libs already built - skipping build step')
+            return image_name
         runner = ParallelRunner()
         runner.append_single('axonius-libs', ['docker', 'build', '.', '-t', image_name],
                              cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs')))
@@ -300,9 +289,6 @@ class AxoniusService(object):
         to_build = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
         if system:
             to_build = self.axonius_services + to_build
-        if rebuild:
-            for service in to_build:
-                service.remove_image()
         if hard:
             for service in to_build:
                 service.remove_volume()
@@ -311,17 +297,17 @@ class AxoniusService(object):
             runner = ParallelRunner()
             for service in to_build:
                 images.append(service.image)
-                if service.get_image_exists():
+                if not rebuild and service.get_image_exists():
                     continue
                 service.build(mode, runner)
                 time.sleep(1)  # We are getting resource busy. we suspect this is due parallel build storm
             assert runner.wait_for_all() == 0
         else:
             for service in to_build:
-                if service.get_image_exists():
+                images.append(service.image)
+                if not rebuild and service.get_image_exists():
                     continue
                 service.build(mode)
-                images.append(service.image)
         return images
 
     @staticmethod

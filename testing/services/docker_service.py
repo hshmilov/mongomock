@@ -129,7 +129,6 @@ else:
                 print(f'Container {self.container_name} already created - consider removing it and running again')
         if self.get_image_exists():
             if rebuild:
-                self.remove_image()
                 self.build(mode)
             elif show_print:
                 print(f'Container {self.container_name} already built - skipping build step')
