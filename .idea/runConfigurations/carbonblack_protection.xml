@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="carbonblack" type="PythonConfigurationType" factoryName="Python" folderName="Adapters" singleton="true">
+  <configuration default="false" name="carbonblack_protection" type="PythonConfigurationType" factoryName="Python" folderName="Adapters" singleton="true">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
@@ -13,7 +13,7 @@
     <module name="cortex" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/devops/axonius_system.py" />
-    <option name="PARAMETERS" value="adapter carbonblack up --restart" />
+    <option name="PARAMETERS" value="adapter carbonblack_protection up --restart" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

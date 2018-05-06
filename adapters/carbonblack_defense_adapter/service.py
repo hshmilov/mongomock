@@ -6,14 +6,14 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 
-from carbonblack_adapter.connection import CarbonblackConnection
-from carbonblack_adapter.exceptions import CarbonblackException
+from carbonblack_defense_adapter.connection import CarbonblackDefenseConnection
+from carbonblack_defense_adapter.exceptions import CarbonblackDefenseException
 import json
 from axonius.utils.parsing import parse_date
 import datetime
 
 
-class CarbonblackAdapter(AdapterBase):
+class CarbonblackDefenseAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         av_status = Field(str, 'AV Status')
@@ -26,26 +26,26 @@ class CarbonblackAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config['Carbonblack_Domain']
+        return client_config['CarbonblackDefense_Domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = CarbonblackConnection(
-                domain=client_config["Carbonblack_Domain"], verify_ssl=client_config["verify_ssl"])
+            connection = CarbonblackDefenseConnection(
+                domain=client_config["CarbonblackDefense_Domain"], verify_ssl=client_config["verify_ssl"])
             connection.set_credentials(apikey=client_config["apikey"],
                                        connector_id=client_config["connector_id"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except CarbonblackException as e:
+        except CarbonblackDefenseException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Carbonblack_Domain'], str(e))
+                client_config['CarbonblackDefense_Domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """
-        Get all devices from a specific Carbonblack domain
+        Get all devices from a specific CarbonblackDefense domain
 
         :param str client_name: The name of the client
         :param obj client_data: The data that represent a Carbonblack connection
@@ -57,15 +57,15 @@ class CarbonblackAdapter(AdapterBase):
 
     def _clients_schema(self):
         """
-        The schema CarbonblackAdapter expects from configs
+        The schema CarbonblackDefenseAdapter expects from configs
 
         :return: JSON scheme
         """
         return {
             "items": [
                 {
-                    "name": "Carbonblack_Domain",
-                    "title": "Carbonblack Domain",
+                    "name": "CarbonblackDefense_Domain",
+                    "title": "Carbonblack Defense Domain",
                     "type": "string"
                 },
                 {
@@ -86,7 +86,7 @@ class CarbonblackAdapter(AdapterBase):
                 }
             ],
             "required": [
-                "Carbonblack_Domain",
+                "CarbonblackDefense_Domain",
                 "apikey",
                 "connector_id",
                 "verify_ssl"
@@ -104,17 +104,21 @@ class CarbonblackAdapter(AdapterBase):
                 else:
                     device.id = str(device.id)
                 device.hostname = device_raw.get("name")
-                device.figure_os(device_raw.get("deviceType", "") + " " + device_raw.get("osVersion", ""))
+                device.hostname = ".".join(device.hostname.split('\\')[::-1])
+                try:
+                    device.figure_os((device_raw.get("deviceType") or "") + " " + (device_raw.get("osVersion") or ""))
+                except Exception:
+                    logger.exception(f"Problem adding os to :{device_raw}")
                 try:
                     if device_raw.get("lastInternalIpAddress"):
-                        device.add_nic(None, device_raw.get("lastInternalIpAddress", "").split(","))
-                except:
-                    logger.exception("Problem with adding nic to Carbonblack device")
+                        device.add_nic(None, (device_raw.get("lastInternalIpAddress") or "").split(","))
+                except Exception:
+                    logger.exception("Problem with adding nic to CarbonblackDefense device")
                 try:
                     device.last_seen = datetime.datetime.fromtimestamp(max(device_raw.get("lastReportedTime", 0),
                                                                            device_raw.get("lastContact", 0)) / 1000)
-                except:
-                    logger.exception("Problem getting Last seen in CarbonBlack")
+                except Exception:
+                    logger.exception("Problem getting Last seen in CarbonBlackDefense")
                 device.av_status = str(device_raw.get("avStatus"))
                 device.status = device_raw.get("status")
                 device.sensor_version = device_raw.get("sensorVersion")
@@ -122,8 +126,8 @@ class CarbonblackAdapter(AdapterBase):
                 device.public_ip = device_raw.get("lastExternalIpAddress")
                 device.set_raw(device_raw)
                 yield device
-            except:
-                logger.exception("Problem with fetching Carbonblack Device")
+            except Exception:
+                logger.exception("Problem with fetching CarbonblackDefense Device")
 
     @classmethod
     def adapter_properties(cls):

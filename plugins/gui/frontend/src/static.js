@@ -24,10 +24,20 @@ export const pluginMeta = {
 			description: 'Jamf Pro is an enterprise mobility management (EMM) tool that provides unified ' +
 			'endpoint management for Apple devices.'
 		},
-		carbonblack_adapter: {
-			title: 'CarbonBlack',
-			description: 'The Cb Predictive Security Cloud collects and analyzes endpoint data to make ' +
-			'predictions about, and protect against attacks.'
+		carbonblack_defense_adapter: {
+			title: 'CarbonBlack Defense',
+			description: 'Carbon Black Cb Defense includes next-generation antivirus + EDR in a cloud-delivered' +
+			' platform to stops commodity malware, advanced malware, non-malware attacks, and ransomware.'
+		},
+		carbonblack_protection_adapter: {
+			title: 'CarbonBlack Protection',
+			description: 'Carbon Black Cb Protection includes application control and critical infrastructure' +
+			' protection for critical systems and fixed-function devices in highly regulated environments.'
+		},
+		carbonblack_response_adapter: {
+			title: 'CarbonBlack Response',
+			description: 'Carbon Black Cb Response includes scalable, real-time EDR with unfiltered' +
+			' visibility for security operations centers and incident response teams.'
 		},
 		epo_adapter: {
 			title: 'McAfee ePO',

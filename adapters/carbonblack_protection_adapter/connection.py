@@ -2,15 +2,16 @@ import requests
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 
-from carbonblack_adapter.exceptions import CarbonblackAlreadyConnected, CarbonblackConnectionError, CarbonblackNotConnected, \
-    CarbonblackRequestException
+from carbonblack_protection_adapter.exceptions import CarbonblackProtectionAlreadyConnected, CarbonblackProtectionConnectionError,\
+    CarbonblackProtectionNotConnected, \
+    CarbonblackProtectionRequestException
 
 
-class CarbonblackConnection(object):
+class CarbonblackProtectionConnection(object):
     def __init__(self, domain, verify_ssl):
-        """ Initializes a connection to Carbonblack using its rest API
+        """ Initializes a connection to CarbonblackProtection using its rest API
 
-        :param str domain: domain address for Carbonblack
+        :param str domain: domain address for CarbonblackProtection
         """
         self.domain = domain
         url = domain
@@ -19,20 +20,18 @@ class CarbonblackConnection(object):
 
         if not url.endswith('/'):
             url += '/'
-        url += 'integrationServices/v3/'
+        url += 'api/bit9platform/v1/'
         self.url = url
         self.session = None
         self.verify_ssl = verify_ssl
         self.headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 
-    def set_credentials(self, apikey, connector_id):
+    def set_credentials(self, apikey):
         """ Set the connection credentials
 
         :param str apikey: The username
-        :param str connector_id: The password
         """
         self.apikey = apikey
-        self.connector_id = connector_id
 
     def _get_url_request(self, request_name):
         """ Builds and returns the full url for the request
@@ -49,18 +48,18 @@ class CarbonblackConnection(object):
     def connect(self):
         """ Connects to the service """
         if self.is_connected:
-            raise CarbonblackAlreadyConnected()
+            raise CarbonblackProtectionAlreadyConnected()
         session = requests.Session()
-        if self.connector_id is not None and self.apikey is not None:
-            self.headers['X-Auth-Token'] = self.apikey + "/" + self.connector_id
-            response = session.get(self._get_url_request('device'), params={
-                                   "rows": str(10), "start": str(1)}, verify=self.verify_ssl, headers=self.headers)
+        if self.apikey is not None:
+            self.headers['X-Auth-Token'] = self.apikey
+            response = session.get(self._get_url_request('computer'), params={
+                                   "offset": str(0), "limit": str(1)}, verify=self.verify_ssl, headers=self.headers)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
-                raise CarbonblackConnectionError(str(e))
+                raise CarbonblackProtectionConnectionError(str(e))
         else:
-            raise CarbonblackConnectionError("No user name or password")
+            raise CarbonblackProtectionConnectionError("No user name or password")
         self.session = session
 
     def __del__(self):
@@ -73,7 +72,7 @@ class CarbonblackConnection(object):
         self.session = None
 
     def _get(self, name, params=None):
-        """ Serves a GET request to Carbonblack API
+        """ Serves a GET request to CarbonblackProtection API
 
         :param str name: the name of the request
         :param dict params: Additional parameters
@@ -81,33 +80,40 @@ class CarbonblackConnection(object):
         :rtype: dict
         """
         if not self.is_connected:
-            raise CarbonblackNotConnected()
+            raise CarbonblackProtectionNotConnected()
         params = params or {}
         response = self.session.get(self._get_url_request(name), params=params,
                                     headers=self.headers, verify=self.verify_ssl)
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
-            raise CarbonblackRequestException(str(e))
+            raise CarbonblackProtectionRequestException(str(e))
         return response.json()
 
     def get_device_list(self, **kwargs):
         """ Returns a list of all agents
 
-        :param dict kwargs: api query *string* parameters (ses Carbonblack's API documentation for more info)
+        :param dict kwargs: api query *string* parameters (ses CarbonblackProtection's API documentation for more info)
         :return: the response
         :rtype: dict
         """
         devices_list = []
-        row_number = 1
-        raw_results = self._get('device', params={"rows": str(100), "start": str(row_number)})
-        total_count = raw_results["totalResults"]
-        devices_list += raw_results["results"]
+        offset = 0
+        raw_count = self._get('computer', params={"limit": str(-1)})
+        total_count = raw_count["count"]
+        logger.debug(f"CarbonBlack protection API Returned a count of {total_count} devices")
+        if total_count < 0:
+            # Negetive total_count means the server can't evaluate the amout of devices.
+            #  In such case we will query for a list 50,000 more device. The
+            total_count *= -1
+            total_count += 50000
+
         try:
-            while row_number + 100 <= total_count:
-                row_number += 100
-                devices_list += self._get('device', params={"rows": str(100), "start": str(row_number)})["results"]
-        except:
+            while offset <= total_count:
+                logger.debug(f"Getting {offset} devices offset")
+                devices_list += self._get('computer', params={"limit": str(1000), "offset": str(offset)})
+                offset += 1000
+        except Exception:
             logger.exception(f"Problem getting device in row number: {row_number}")
         return devices_list
 

@@ -94,7 +94,7 @@ class KaseyaConnection(object):
             try:
                 response.raise_for_status()
                 self.headers['Authorization'] = "Bearer " + response.json()["Result"]["Token"]
-                logger.info(f"Got this auth response {response.text}")
+                logger.debug(f"Got this auth response {response.text}")
             except requests.HTTPError as e:
                 raise KaseyaConnectionError(str(e))
         else:
