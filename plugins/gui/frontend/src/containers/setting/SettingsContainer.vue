@@ -36,7 +36,7 @@
                     <label for="multi-line">Use Table Multi Line View</label>
                     <checkbox id="multi-line" v-model="multiLine"/>
 
-                    <label for="default-sort">Sort by number of adapters in default view</label>
+                    <label for="default-sort">Sort by Number of Adapters in Default View</label>
                     <checkbox id="default-sort" v-model="defaultSort"/>
                     <div/>
                     <button class="btn confirm" @click="saveSettings">save</button>
