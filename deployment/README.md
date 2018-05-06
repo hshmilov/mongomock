@@ -24,7 +24,7 @@ axonius_install.py
 ```
 
 the install script will:
-* call pre_install.py (from the old sources) and save the providers credentials
+* call pre_install.py (from the old sources) and save the providers credentials, queries, views, panels, alerts...
 * call destroy.py (from the old sources) - will stop the system + remove all images and volumes
 * archive the old source folder
 * load new images
@@ -32,6 +32,6 @@ the install script will:
 * create a new venv
 * install requirements
 * call create.py (from the new sources) - will start the system
-* call post_install.py (from the new sources) - will input the old providers credentials
+* call post_install.py (from the new sources) - will reinsert the old providers, queries, views, panels, alerts...
 
 FIY: venv_wrapper.sh is a simple wrapper around calling the python from current venv with a provided script and arguments.
