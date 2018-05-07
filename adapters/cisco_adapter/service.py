@@ -8,12 +8,11 @@ from axonius.utils.parsing import get_exception_string
 
 import axonius.clients.cisco.ssh as ssh
 import axonius.clients.cisco.snmp as snmp
-from axonius.clients.cisco.abstract import InstanceParser
+from axonius.clients.cisco.abstract import InstanceParser, CiscoDevice
 
 
 class CiscoAdapter(AdapterBase):
-    class MyDeviceAdapter(DeviceAdapter):
-        pass
+    MyDeviceAdapter = CiscoDevice
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

@@ -95,7 +95,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
         """
         received_update = self.get_request_data_as_object()
         logger.info(
-            f"{self.get_caller_plugin_name()} notified that {received_update['adapter_name']} finished fetching data. f{received_update['portion_of_adapters_left']} left.")
+            f"{self.get_caller_plugin_name()} notified that {received_update['adapter_name']} finished fetching data. {received_update['portion_of_adapters_left']} left.")
         self.state[scheduler_consts.StateLevels.SubPhaseStatus.name] = received_update['portion_of_adapters_left']
         return ''
 

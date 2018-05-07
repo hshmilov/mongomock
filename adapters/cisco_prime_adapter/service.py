@@ -9,12 +9,11 @@ from cisco_prime_adapter.snmp import CiscoSnmpClient
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils import json
 from axonius.clients.cisco import snmp
-from axonius.clients.cisco.abstract import InstanceParser
+from axonius.clients.cisco.abstract import InstanceParser, CiscoDevice
 
 
 class CiscoPrimeAdapter(AdapterBase):
-    class MyDeviceAdapter(DeviceAdapter):
-        reachability = Field(str, "reachability")
+    MyDeviceAdapter = CiscoDevice
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))

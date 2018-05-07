@@ -1,6 +1,15 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 
+from axonius.devices.device_adapter import DeviceAdapter, Field, ListField, format_ip, JsonStringFormat
+
+
+class CiscoDevice(DeviceAdapter):
+    fetch_proto = Field(str, "Fetch Protocol", enum=['ARP', 'CDP', 'DHCP'])
+    related_ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip,
+                            description='A list of ips that routed through the device')
+    reachability = Field(str, "reachability")
+
 
 class AbstractCiscoClient(object):
     ''' Abstract class for cisco's clients. 
@@ -104,7 +113,7 @@ class ArpCiscoData(AbstractCiscoData):
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
-            device.device_model = 'cisco neighbor'
+            device.fetch_proto = 'ARP'
             device.id = 'arp_' + device.id
         return device
 
@@ -116,7 +125,7 @@ class DhcpCiscoData(AbstractCiscoData):
     def _get_devices(self, instance, create_device_callback):
         device = super()._get_devices(instance, create_device_callback)
         if device:
-            device.device_model = 'dhcp cisco neighbor'
+            device.fetch_proto = 'DHCP'
             device.id = 'dhcp_' + device.id
         return device
 
@@ -133,11 +142,13 @@ class CdpCiscoData(AbstractCiscoData):
         new_device = create_device_callback()
 
         new_device.id = instance['Device ID']
+        new_device.fetch_proto = 'CDP'
+
         if 'IP address' in instance:
             new_device.add_nic(ips=[instance['IP address']])
 
         new_device.hostname = instance.get('Device ID', '')
-        new_device.device_model = instance.get('Platform', 'cdp cisco neighbor')
+        new_device.device_model = instance.get('Platform', '')
 
         new_device.id = 'cdp_' + new_device.id
         new_device.figure_os('cisco')
@@ -159,6 +170,8 @@ class InstanceParser(object):
         devices = set(sum(map(lambda i: list(i.get_devices(create_device_callback)), self._instances), []))
         cdp_devices = set(filter(lambda device: device.id.startswith('cdp'), devices))
         other_devices = devices - cdp_devices
+
+        # correlate cdp
         for cdp_device in cdp_devices:
             for other_device in other_devices:
                 for nic in other_device.network_interfaces:
