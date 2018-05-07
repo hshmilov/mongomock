@@ -29,7 +29,7 @@ class Userdisabelable(Feature, ABC):
         users_ids = self.get_request_data_as_object()
         if not users_ids:
             return return_error("Invalid users ids given")
-        logger.info(f"Enabling the following device IDs: {users_ids}")
+        logger.info(f"Enabling the following user IDs: {users_ids}")
         err = ""
         for user_id in users_ids:
             with self.__lazy_lock.get_lock([user_id]):
@@ -56,7 +56,7 @@ class Userdisabelable(Feature, ABC):
         users_ids = self.get_request_data_as_object()
         if not users_ids:
             return return_error("Invalid users ids given")
-        logger.info(f"Enabling the following device IDs: {users_ids}")
+        logger.info(f"Disabling the following user IDs: {users_ids}")
         err = ""
         for user_id in users_ids:
             with self.__lazy_lock.get_lock([user_id]):

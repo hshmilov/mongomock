@@ -33,6 +33,14 @@ AD_DELEGATION_POLICY = ["Do Not Trust For Delegation",
                         "Trust For Delegation To Any Service",
                         "Trust For Delegation To Specified Services"]
 
+EXCHANGE_SERVER_ROLES_ENUM = ["Mailbox", "CAS", "Unified Messaging", "Hub Transport", "Edge Transport"]
+
+EXCHANGE_SERVER_MAILBOX_ROLE = 0x2
+EXCHANGE_SERVER_CAS_ROLE = 0x4
+EXCHANGE_SERVER_UNIFIED_MESSAGING_ROLE = 0x10
+EXCHANGE_SERVER_HUB_TRANSPORT_ROLE = 0x20
+EXCHANGE_SERVER_EDGE_TRANSPORT_ROLE = 0x40
+
 
 class ADEntity(object):
     ad_sid = Field(str, "AD objectSid")
@@ -88,6 +96,52 @@ class ADEntity(object):
 
     # Our own parsed things
     ad_object_type = Field(str, "Object Type", enum=AD_OBJECT_TYPE_ENUM)
+
+    # Special parsed vars
+    ad_site_name = Field(str, "AD Site Name")
+    ad_site_location = Field(str, "AD Site Location")
+    ad_subnet = Field(str, "AD Subnet")
+
+    # Values only for DC's
+    ad_is_dc = Field(bool, "AD Is Domain Controller (DC)")
+    ad_dc_gc = Field(bool, "AD DC Global Catalog")
+    ad_dc_infra_master = Field(bool, "AD DC Infrastructure Master")
+    ad_dc_rid_master = Field(bool, "AD DC RID Master")
+    ad_dc_pdc_emulator = Field(bool, "AD DC PDC Emulator")
+    ad_dc_naming_master = Field(bool, "AD Naming Master")
+    ad_dc_schema_master = Field(bool, "AD Schema Master")
+    ad_dc_is_dhcp_server = Field(bool, "AD DHCP Server")
+    ad_dc_is_nps_server = Field(bool, "AD NPS Server")
+
+    # Values only for exhange server
+    ad_is_exchange_server = Field(bool, "AD Exchange Server")
+    ad_exchange_server_organization = Field(str, "AD Exchange Server Organization")
+    ad_exchange_server_admin_group = Field(str, "AD Exchange Server Admin Group")
+    ad_exchange_server_name = Field(str, "AD Exchange Server Name")
+    ad_exchange_server_roles = ListField(str, "AD Exchange Server Roles")
+    ad_exchange_server_serial = Field(str, "AD Exchange Server Serial")
+    ad_exchange_server_product_id = Field(str, "AD Exchange Server Product ID")
+
+    def figure_out_exchange_server_roles(self, exchange_server_roles):
+        assert type(exchange_server_roles) == int
+
+        roles = []
+        if exchange_server_roles & EXCHANGE_SERVER_MAILBOX_ROLE > 0:
+            roles.append(EXCHANGE_SERVER_ROLES_ENUM[0])
+
+        if exchange_server_roles & EXCHANGE_SERVER_CAS_ROLE > 0:
+            roles.append(EXCHANGE_SERVER_ROLES_ENUM[1])
+
+        if exchange_server_roles & EXCHANGE_SERVER_UNIFIED_MESSAGING_ROLE > 0:
+            roles.append(EXCHANGE_SERVER_ROLES_ENUM[2])
+
+        if exchange_server_roles & EXCHANGE_SERVER_HUB_TRANSPORT_ROLE > 0:
+            roles.append(EXCHANGE_SERVER_ROLES_ENUM[3])
+
+        if exchange_server_roles & EXCHANGE_SERVER_EDGE_TRANSPORT_ROLE > 0:
+            roles.append(EXCHANGE_SERVER_ROLES_ENUM[4])
+
+        self.ad_exchange_server_roles = roles
 
     def figure_out_dial_in_policy(self, msNPAllowDialin):
         if msNPAllowDialin is None:

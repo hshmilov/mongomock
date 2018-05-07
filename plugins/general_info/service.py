@@ -49,6 +49,11 @@ class GeneralInfoService(PluginBase, Triggerable):
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
         self._number_of_triggers = 0
+
+        general_info_sync_enabled = self.config['DEFAULT']['general_info_sync_enabled'].lower()
+        assert general_info_sync_enabled in ['true', 'false']
+        self._general_info_sync_enabled = bool(general_info_sync_enabled)
+
         self._activate('execute')
 
     def _triggered(self, job_name: str, post_json: dict, *args):
@@ -61,7 +66,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             return return_error("Got bad trigger request for non-existent job", 400)
 
         self._number_of_triggers = self._number_of_triggers + 1
-        if self._number_of_triggers == 1:
+        if self._number_of_triggers == 1 and self._general_info_sync_enabled is True:
             # first trigger is blocking.
             logger.info(f"Running gather_general_info sync (number of triggers: {self._number_of_triggers})")
             self._gather_general_info()

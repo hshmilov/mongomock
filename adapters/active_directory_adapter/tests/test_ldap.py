@@ -9,8 +9,7 @@ from testing.test_credentials.test_ad_credentials import ad_client1_details
 from axonius.utils.parsing import ad_integer8_to_timedelta
 from datetime import timedelta
 
-DOMAIN = ad_client1_details["domain_name"]
-DOMAIN_NAME, USERNAME = ad_client1_details["user"].split("\\")
+USERNAME = ad_client1_details["user"]
 PASSWORD = ad_client1_details["password"]
 ADDRESS = ad_client1_details["dc_name"]
 
@@ -26,7 +25,7 @@ TEST_BINARY_LOCATION = os.path.abspath(
 
 @pytest.fixture(scope="module")
 def ldap_connection():
-    return LdapConnection(900, ADDRESS, DOMAIN, f"{DOMAIN_NAME}\\{USERNAME}",
+    return LdapConnection(900, ADDRESS, USERNAME,
                           PASSWORD, None, SSLState[SSLState.Unencrypted.name], bytes([]), bytes([]),
                           bytes([]), True, True)
 
@@ -51,7 +50,7 @@ def test_users(ldap_connection: LdapConnection):
 
 
 def test_devices(ldap_connection: LdapConnection):
-    devices = ldap_connection.get_device_list()
+    devices = ldap_connection.get_device_list(True)
     devices_dict = {}
     has_disabled_device = True
     for device in devices:
@@ -68,6 +67,10 @@ def test_devices(ldap_connection: LdapConnection):
     # assert there is at least one disabled device
     assert has_disabled_device is True
 
+    # assert that we have one-at-a-time ip address resolving
+    test_device = devices_dict["CN=DC1,OU=Domain Controllers,DC=TestDomain,DC=test"]
+    assert "192.168.20.25" in test_device["AXON_IP_ADDRESSES"]
+
 
 def test_printers(ldap_connection: LdapConnection):
     printers = ldap_connection.get_printers_list()
@@ -82,11 +85,106 @@ def test_printers(ldap_connection: LdapConnection):
     assert test_printer["serverName"] == "DESKTOP-MPP10U1.TestDomain.test"
 
 
+def test_get_fsmo_roles(ldap_connection: LdapConnection):
+    fsmo_dict = ldap_connection.get_fsmo_roles()
+    assert fsmo_dict['pdc_emulator'] == 'dc1.TestDomain.test'
+    assert fsmo_dict['rid_master'] == 'dc1.TestDomain.test'
+    assert fsmo_dict['infra_master'] == 'dc1.TestDomain.test'
+    assert fsmo_dict['naming_master'] == 'dc1.TestDomain.test'
+    assert fsmo_dict['schema_master'] == 'dc1.TestDomain.test'
+
+
+def test_get_global_catalogs(ldap_connection: LdapConnection):
+    global_catalogs = ldap_connection.get_global_catalogs()
+    assert "dc1.TestDomain.test" in global_catalogs
+    assert "raindc1.raindomain.test" in global_catalogs
+
+
+def test_get_dhcp_servers(ldap_connection: LdapConnection):
+    dhcp_servers = ldap_connection.get_dhcp_servers()
+    assert "dc2.testdomain.test" in dhcp_servers
+
+
 def test_get_domain_properties(ldap_connection: LdapConnection):
-    domain_properties = ldap_connection.domain_properties
+    domain_properties = ldap_connection.get_domain_properties()
     assert "maxPwdAge" in domain_properties
     assert domain_properties['name'] == 'TestDomain'
     assert ad_integer8_to_timedelta(domain_properties["maxPwdAge"]) == timedelta(days=42)
+
+
+def test_get_dc_properties(ldap_connection: LdapConnection):
+    dc_properties = ldap_connection.get_dc_properties()
+    assert dc_properties['defaultNamingContext'] == ['DC=TestDomain,DC=test']
+    assert dc_properties['configurationNamingContext'] == ['CN=Configuration,DC=TestDomain,DC=test']
+
+
+def test_get_dns_records(ldap_connection: LdapConnection):
+    dns_records = list(ldap_connection.get_dns_records())
+    assert ("dc", "192.168.20.25") in dns_records
+    assert ("DESKTOP-MPP10U1", "fc3b:db8:85a3:42:1000:8a2e:370:7334") in dns_records
+
+    only_one_dns_record = list(ldap_connection.get_dns_records("dc1"))
+    assert len(only_one_dns_record) == 1
+    assert ("dc1", "192.168.20.25") in only_one_dns_record
+
+
+def test_get_sites(ldap_connection: LdapConnection):
+    sites = ldap_connection.get_sites()
+    sites_dict = {}
+    for site in sites:
+        sites_dict[site['name']] = site
+
+    assert 'TestDomain-TelAviv' in sites_dict
+    assert 'CN=192.168.20.0/24,CN=Subnets,CN=Sites,CN=Configuration,DC=TestDomain,DC=test' in sites_dict[
+        'TestDomain-TelAviv']['siteObjectBL']
+
+
+def test_get_subnets(ldap_connection: LdapConnection):
+    subnets = ldap_connection.get_subnets()
+    subnets_dict = {}
+    for subnet in subnets:
+        subnets_dict[subnet['name']] = subnet
+
+    assert '10.0.2.0/24' in subnets_dict
+    assert subnets_dict['10.0.2.0/24']['description'] == ['Office Private Subnet']
+    assert subnets_dict['10.0.2.0/24']['location'] == "New York"
+
+
+def test_get_dfsr_shares(ldap_connection: LdapConnection):
+    dfsr_shares_dict = {}
+    for dfsr_replication_group_name, dfsr_replication_group_inner in ldap_connection.get_dfsr_shares():
+        dfsr_shares_dict[dfsr_replication_group_name] = dfsr_replication_group_inner
+
+    assert "Tools" in dfsr_shares_dict
+    assert "tools" in dfsr_shares_dict["Tools"]["content"]
+    assert 'CN=WESTDC1,OU=Domain Controllers,DC=west,DC=TestDomain,DC=test' in dfsr_shares_dict["Tools"]["servers"]
+
+
+def test_get_extended_devices(ldap_connection: LdapConnection):
+    keys = ['devices', 'printers', 'dns_records', 'dfsr_shares',
+            'sites', 'dhcp_servers', 'fsmo_roles', 'global_catalogs', 'exchange_servers']
+
+    extended_keys = ldap_connection.get_extended_devices_list(True).keys()
+
+    assert all([True if key in extended_keys else False for key in keys])
+
+
+def test_get_exchange_servers(ldap_connection: LdapConnection):
+    exchange_servers = ldap_connection.get_exchange_servers()
+    exchange_servers = {es['distinguishedName']: es for es in exchange_servers}
+
+    assert "CN=DC4,CN=Servers,CN=Exchange Administrative Group (FYDIBOHF23SPDLT),CN=Administrative Groups," \
+           "CN=Axonius TestDomain,CN=Microsoft Exchange,CN=Services," \
+           "CN=Configuration,DC=TestDomain,DC=test" in exchange_servers
+
+
+def pretty(d, indent=0):
+    for key, value in d.items():
+        if "dict" in str(type(value)).lower():
+            print('\t' * indent + str(key) + ": ")
+            pretty(value, indent + 1)
+        else:
+            print('\t' * (indent) + str(key) + ": " + str(value))
 
 
 @pytest.mark.skip("python2 is not installed on the tests machine")

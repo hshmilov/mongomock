@@ -380,6 +380,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         else:
             logger.warning("No old users filtered (did you choose ttl period on the config file?)")
 
+        self._save_field_names_to_db(EntityType.Users)
+
     def _parse_users_raw_data(self, user):
         """
         This needs to be implemented by the Adapter itself.
@@ -795,8 +797,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         devices_ids = []
         should_check_for_unique_ids = self.plugin_subtype == adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE
 
-        self._save_field_names_to_db(EntityType.Devices)
-
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
 
@@ -819,6 +819,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             logger.info(f"Skipped {skipped_count} old devices")
         else:
             logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
+
+        self._save_field_names_to_db(EntityType.Devices)
 
     @stoppable
     def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True):

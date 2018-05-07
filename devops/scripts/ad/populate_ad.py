@@ -13,12 +13,12 @@ import numpy
 from io import BytesIO
 from testing.test_credentials.test_ad_credentials import ad_client2_details
 
-LDAP_DN = ad_client2_details["domain_name"]
-DOMAIN_NAME, USERNAME = ad_client2_details["user"].split("\\")
+USERNAME = ad_client2_details["user"]
 PASSWORD = ad_client2_details["password"]
 ADDRESS = ad_client2_details["dc_name"]
 
 USE_SSL = False
+DN = "DC=TestSecDomain,DC=test"  # This could be retrieved automatically (see ldap_connection.py)
 DNS_SUFFIX = "TestSecDomain.test"
 USERS_ORGANIZATIONAL_UNIT = "OU=TestOrgUsers"  # root level ou in TestSecDomain.test
 COMPUTERS_ORGANIZATIONAL_UNIT = "OU=TestOrgComputers"  # root level ou in TestSecDomain.test
@@ -48,20 +48,18 @@ class AdPopulator(object):
     Populates Devices, Users and more into AD.
     """
 
-    def __init__(self, address, domain_name, username, password, dn, dns_suffix):
+    def __init__(self, address, username, password, dns_suffix):
         """
         :param address: The address of AD
-        :param domain_name: the domain, e.g. "TestSecDomain"
-        :param username:  the username, eg. "Administrator"
+        :param username:  the username, eg. "TestSecDomain\Administrator"
         :param password: The password
-        :param dn: The dn, e.g. "DC=TestSecDomain ,DC=test"
         :param dns_suffix: dns suffix, like "testsecdomain.test"
         """
 
-        self.dn = dn
+        self.dn = DN
         self.dns_suffix = dns_suffix
         self.ldap_server = ldap3.Server(address, connect_timeout=10, use_ssl=USE_SSL)
-        self.ldap_connection = ldap3.Connection(self.ldap_server, user=f"{domain_name}\\{username}", password=password,
+        self.ldap_connection = ldap3.Connection(self.ldap_server, user=username, password=password,
                                                 raise_exceptions=True, receive_timeout=10)
         self.ldap_connection.bind()
 
@@ -158,7 +156,7 @@ class AdPopulator(object):
 
 def main():
     print("Initializing ADPopulator...")
-    ad_populator = AdPopulator(ADDRESS, DOMAIN_NAME, USERNAME, PASSWORD, LDAP_DN, DNS_SUFFIX)
+    ad_populator = AdPopulator(ADDRESS, USERNAME, PASSWORD, DNS_SUFFIX)
 
     print("Inserting computers...")
     ad_populator.insert_random_computers(1, COMPUTERS_ORGANIZATIONAL_UNIT)

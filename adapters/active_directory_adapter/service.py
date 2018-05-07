@@ -1,6 +1,7 @@
 import logging
 from typing import Tuple, List
 
+from axonius.devices import ad_entity
 from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 
@@ -19,6 +20,7 @@ import tempfile
 import threading
 import time
 import subprocess
+import ipaddress
 
 from collections import defaultdict
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
@@ -27,8 +29,8 @@ from active_directory_adapter.exceptions import LdapException, IpResolveError, N
 from axonius.adapter_exceptions import ClientConnectionException, TagDeviceError
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS
-from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD, DeviceAdapter
+from axonius.consts.adapter_consts import DEVICES_DATA, DNS_RESOLVE_STATUS, IPS_FIELDNAME, NETWORK_INTERFACES_FIELDNAME
+from axonius.devices.device_adapter import DeviceAdapter
 from axonius.devices.dns_resolvable import DNSResolvableDevice
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.dns_resolvable import DNSResolveStatus
@@ -74,6 +76,13 @@ class ADPrinter(SmartJsonClass):
     driver_name = Field(str, "Printer Driver Name")
 
 
+class ADDfsrShare(SmartJsonClass):
+    """ A definition for a domain DFSR Share"""
+
+    name = Field(str, "Name")
+    content = ListField(str, "Content")
+
+
 class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Configurable):
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = -1
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 48
@@ -82,6 +91,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
         ad_service_principal_name = Field(str, "AD Service Principal Name")
         ad_printers = ListField(ADPrinter, "AD Attached Printers")
+        ad_dfsr_shares = ListField(ADDfsrShare, "AD DFSR Shares")
 
     class MyUserAdapter(UserAdapter, ADEntity):
         ad_user_principal_name = Field(str, "AD User Principal Name")
@@ -121,6 +131,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _on_config_update(self, config):
         logger.info(f"Loading AD config: {config}")
         self.__sync_resolving = config['sync_resolving']
+        self.__ldap_dns_resolving_one_at_a_time = config['ldap_dns_resolving_one_at_a_time']
 
     @property
     def _python_27_path(self):
@@ -141,7 +152,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         try:
             return LdapConnection(self._ldap_page_size,
                                   dc_details['dc_name'],
-                                  dc_details['domain_name'],
                                   dc_details['user'],
                                   dc_details['password'],
                                   dc_details.get('dns_server_address'),
@@ -175,12 +185,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             "items": [
                 {
                     "name": "dc_name",
-                    "title": "DC Name",
-                    "type": "string"
-                },
-                {
-                    "name": "domain_name",
-                    "title": "Domain Name",
+                    "title": "DC Address",
                     "type": "string"
                 },
                 {
@@ -191,6 +196,17 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 {
                     "name": "password",
                     "title": "Password",
+                    "type": "string",
+                    "format": "password"
+                },
+                {
+                    "name": "wmi_smb_user",
+                    "title": "WMI/SMB User",
+                    "type": "string"
+                },
+                {
+                    "name": "wmi_smb_password",
+                    "title": "WMI/SMB Password",
                     "type": "string",
                     "format": "password"
                 },
@@ -268,7 +284,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
-        return client_data.get_device_list(), client_data.get_printers_list()
+        return client_data.get_extended_devices_list(self.__ldap_dns_resolving_one_at_a_time)
 
     def _query_users_by_client(self, client_name, client_data):
         """
@@ -442,24 +458,27 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         resolved_hosts = []
         for host in hosts:
             time_before_resolve = datetime.now()
-            dns_name = host['raw'].get('AXON_DNS_ADDR')
-            dc_name = host['raw'].get('AXON_DC_ADDR')
+            dns_name = host.get('AXON_DNS_ADDR')
+            dc_name = host.get('AXON_DC_ADDR')
             current_resolved_host = dict(host)
             try:
-                ips = self._resolve_device_name(host['hostname'],
-                                                {"dns_name": dns_name,
-                                                 "dc_name": dc_name})
-                network_interfaces = [{MAC_FIELD: None, IPS_FIELD: [ip]} for ip, _ in ips]
-                current_resolved_host[NETWORK_INTERFACES_FIELD] = network_interfaces
+                ips_and_dns_servers = self._resolve_device_name(host['hostname'],
+                                                                {"dns_name": dns_name,
+                                                                 "dc_name": dc_name})
+                ips = [ip for ip, _ in ips_and_dns_servers]
+                ips = list(set(ips))    # make it unique
+
+                current_resolved_host[IPS_FIELDNAME] = ips
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
 
-            except Exception as e:
+            except Exception:
                 # Don't log here, it will happen for every failed resolving (Can happen a lot of times)
                 current_resolved_host = dict(host)
+                current_resolved_host[IPS_FIELDNAME] = []
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Failed.name
             else:
                 try:
-                    available_ips = {ip: dns for ip, dns in ips}
+                    available_ips = {ip: dns for ip, dns in ips_and_dns_servers}
                     if len(available_ips) > 1:
                         # If we have more than one key in available_ips that means
                         # that this device got two different IP's
@@ -498,8 +517,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             hosts = self._get_collection(DEVICES_DATA).find({DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name},
                                                             projection={'_id': True,
                                                                         'id': True,
-                                                                        'raw.AXON_DNS_ADDR': True,
-                                                                        'raw.AXON_DC_ADDR': True,
+                                                                        'AXON_DNS_ADDR': True,
+                                                                        'AXON_DC_ADDR': True,
                                                                         'hostname': True})
 
             logger.debug(f"Going to resolve for {hosts.count()} hosts")
@@ -507,19 +526,20 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             did_one_resolved = False
 
             for resolved_host in self._resolve_hosts_addresses(hosts):
-                if resolved_host.get(NETWORK_INTERFACES_FIELD) is not None:
+                if resolved_host.get(IPS_FIELDNAME) is not None:
                     if resolved_host[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
                         did_one_resolved = True
-                    self._get_collection(DEVICES_DATA).update_one({"_id": resolved_host["_id"]},
-                                                                  {'$set':
-                                                                   {NETWORK_INTERFACES_FIELD:
-                                                                    resolved_host[NETWORK_INTERFACES_FIELD],
-                                                                    DNS_RESOLVE_STATUS:
-                                                                    resolved_host[DNS_RESOLVE_STATUS]}})
+                    self._get_collection(DEVICES_DATA).update_one(
+                        {"_id": resolved_host["_id"]},
+                        {'$set':
+                         {IPS_FIELDNAME: resolved_host[IPS_FIELDNAME],
+                          DNS_RESOLVE_STATUS: resolved_host[DNS_RESOLVE_STATUS]}
+                         }
+                    )
 
             if not did_one_resolved and hosts.count() != 0:
                 # Raise log message only if no host could get resolved
-                logger.error("Couldn't resolve IP's. Maybe dns is incorrect?")
+                logger.debug("Couldn't resolve IP's. Maybe dns is incorrect?")
             return
 
     def _resolve_change_status_thread(self):
@@ -544,37 +564,139 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         self._resolver_scheduler.wakeup()
         return ''
 
-    def _parse_raw_data(self, devices_and_printers_raw_data):
-        devices_raw_data, printers_raw_data = devices_and_printers_raw_data
+    def __parse_exchange_servers(self, exchange_servers_raw_data):
+        try:
+            if exchange_servers_raw_data is None:
+                exchange_servers_raw_data = []
+            exchange_servers = {es['cn'].lower(): es for es in exchange_servers_raw_data}
+        except Exception:
+            exchange_servers = {}
+            logger.exception(f"Exception while parsing exchange servers {exchange_servers_raw_data}. Continuing")
 
-        devices_collection = self._get_collection(DEVICES_DATA)
-        all_devices = devices_collection.find({}, projection={'_id': False, 'id': True,
-                                                              NETWORK_INTERFACES_FIELD: True,
-                                                              DNS_RESOLVE_STATUS: True})
-        all_devices_ids = {device['id']: {NETWORK_INTERFACES_FIELD: device[NETWORK_INTERFACES_FIELD],
-                                          DNS_RESOLVE_STATUS: device[DNS_RESOLVE_STATUS]}
-                           for device in all_devices}
-        to_insert = []
+        return exchange_servers
+
+    def __parse_dfsr_shares(self, dfsr_shares_raw_data):
+        try:
+            dfsr_shares_by_dn = defaultdict(list)
+            if dfsr_shares_raw_data is None:
+                dfsr_shares_raw_data = []
+
+            for dfsr_replication_group_name, dfsr_replication_group_inner in dfsr_shares_raw_data:
+                # "content" and "servers" are things that are defined in LdapConnection, they are always present.
+                content = dfsr_replication_group_inner['content']
+                servers = dfsr_replication_group_inner['servers']
+
+                for server in servers:
+                    if type(server) == str:
+                        dfsr_shares_by_dn[server.lower()].append(
+                            ADDfsrShare(name=dfsr_replication_group_name, content=content))
+        except Exception:
+            dfsr_shares_by_dn = {}
+            logger.exception(f"Exception while pasring dfsr shares {dfsr_shares_raw_data}. Continuing")
+
+        return dfsr_shares_by_dn
+
+    def __parse_fsmo_roles(self, fsmo_roles_raw_data):
+        fsmo_roles = {}
+        try:
+            for role, server in fsmo_roles_raw_data.items():
+                fsmo_roles[role] = server.lower()
+        except Exception:
+            logger.exception(f"Error while parsing FSMO shares {fsmo_roles_raw_data}. Continuing")
+
+        return fsmo_roles
+
+    def __parse_global_catalogs(self, global_catalogs_raw_data):
+        try:
+            global_catalogs = [gc.lower() for gc in global_catalogs_raw_data]
+        except Exception:
+            global_catalogs = []
+            logger.exception(f"Error while parsing global catalogs {global_catalogs_raw_data}. Continuing")
+
+        return global_catalogs
+
+    def __parse_dhcp_servers(self, dhcp_servers_raw_data):
+        try:
+            dhcp_servers = [dhcp_server.lower() for dhcp_server in dhcp_servers_raw_data]
+        except Exception:
+            dhcp_servers = []
+            logger.exception(f"Error while parsing dhcp servers {dhcp_servers_raw_data}. Continuing")
+
+        return dhcp_servers
+
+    def __parse_dns_records(self, dns_records_raw_data):
+        dns_records = {}
+        try:
+            if dns_records_raw_data is None:
+                dns_records_raw_data = []
+            for (name, ip) in dns_records_raw_data:
+                dns_records[name.lower()] = ip
+        except Exception:
+            logger.exception(f"Error while parsing dns records {dns_records_raw_data}. Continuing")
+
+        return dns_records
+
+    def __parse_sites_and_subnets(self, sites_raw_data):
+        sites_and_subnets = []
+        try:
+            if sites_raw_data is None:
+                sites_raw_data = []
+            for site in sites_raw_data:
+                subnets = site.get("siteObjectBL")
+                if type(subnets) == list:
+                    for subnet_raw in subnets:
+                        # its a dn. e.g. 'CN=192.168.20.0/24,CN=Subnets,CN=Sites...'
+                        try:
+                            subnet = ipaddress.ip_network(subnet_raw.split(",")[0][3:])  # [3:] to remove "CN="
+                            sites_and_subnets.append((subnet, site.get("name"), site.get("location")))
+                        except Exception:
+                            logger.exception(f"Exception parsing subnet {subnet_raw}.")
+        except Exception:
+            logger.exception(f"Error while parsing sites and subnets {sites_raw_data}. Continuing")
+
+        return sites_and_subnets
+
+    def __parse_printers(self, printers_raw_data):
+        try:
+            if printers_raw_data is None:
+                printers_raw_data = []
+
+            printers_raw_dict = defaultdict(list)
+            for printer_raw in printers_raw_data:
+                dn = printer_raw.get("shortServerName")
+                if dn is not None:
+                    printers_raw_dict[dn].append(printer_raw)
+                else:
+                    logger.error(f"Found printer without shortServerName: {printer_raw}")
+        except Exception:
+            printers_raw_dict = []
+            logger.exception(f"Error while parsing printers {printers_raw_data}. Continuing")
+
+        return printers_raw_dict
+
+    def _parse_raw_data(self, extended_devices_list):
+        devices_raw_data = extended_devices_list['devices']
+
+        # Note that we have to convert all hostnames to lower since ldap sometimes returns them in their
+        # original form, but sometimes it lowers them.
+
+        exchange_servers = self.__parse_exchange_servers(extended_devices_list['exchange_servers'])
+        dfsr_shares_by_dn = self.__parse_dfsr_shares(extended_devices_list['dfsr_shares'])
+        fsmo_roles = self.__parse_fsmo_roles(extended_devices_list['fsmo_roles'])
+        global_catalogs = self.__parse_global_catalogs(extended_devices_list['global_catalogs'])
+        dhcp_servers = self.__parse_dhcp_servers(extended_devices_list['dhcp_servers'])
+        dns_records = self.__parse_dns_records(extended_devices_list['dns_records'])
+        sites_and_subnets = self.__parse_sites_and_subnets(extended_devices_list['sites'])
+        printers_raw_dict = self.__parse_printers(extended_devices_list['printers'])
+
+        # DNS Resolving - active thread
+        dns_resolved_devices_collection = self._get_collection(DEVICES_DATA)
+        dns_resolving_devices_to_insert_to_db = []
         no_timestamp_count = 0
 
-        # These are generators but just to be sure if there are no devices or printers
-        # I want them to be [] and not None.
+        # Now, Lets parse the devices
         if devices_raw_data is None:
             devices_raw_data = []
-
-        if printers_raw_data is None:
-            printers_raw_data = []
-
-        # First, parse the printers, because we are going to assign them to devices.
-        printers_raw_dict = defaultdict(list)
-        for printer_raw in printers_raw_data:
-            dn = printer_raw.get("shortServerName")
-            if dn is not None:
-                printers_raw_dict[dn].append(printer_raw)
-            else:
-                logger.error(f"Found printer without shortServerName: {printer_raw}")
-
-        # Now, Lets parse the devices
 
         for device_raw in devices_raw_data:
             try:
@@ -603,8 +725,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
                 device.part_of_domain = True
                 device.organizational_unit = get_organizational_units_from_dn(device.id)
-                device.ad_service_principal_name = device_raw.get("servicePrincipalName")
-                device.set_raw(device_raw)
+                device.ad_service_principal_name = device_raw.get("servicePrincipalName")   # only for devices
 
                 # OS. we must change device.os only after figure_os which initializes it
                 device.figure_os(device_raw.get('operatingSystem', ''))
@@ -616,6 +737,30 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 user_account_control = device_raw.get("userAccountControl")
                 if user_account_control is not None and type(user_account_control) == int:
                     device.device_disabled = bool(user_account_control & LDAP_ACCOUNTDISABLE)
+
+                    # Is this a Domain Controller? If so, parse some more things
+                    if user_account_control == (ad_entity.TRUSTED_FOR_DELEGATION | ad_entity.SERVER_TRUST_ACCOUNT) \
+                            or "OU=Domain Controllers" in device_raw['distinguishedName']:
+                        device.ad_is_dc = True
+
+                        hostname_lower = device_raw.get('dNSHostName', '').lower()
+                        device.ad_dc_gc = hostname_lower in global_catalogs
+                        device.ad_dc_infra_master = fsmo_roles['infra_master'] == hostname_lower
+                        device.ad_dc_rid_master = fsmo_roles['rid_master'] == hostname_lower
+                        device.ad_dc_pdc_emulator = fsmo_roles['pdc_emulator'] == hostname_lower
+                        device.ad_dc_naming_master = fsmo_roles['naming_master'] == hostname_lower
+                        device.ad_dc_schema_master = fsmo_roles['schema_master'] == hostname_lower
+
+                        device.ad_dc_is_dhcp_server = hostname_lower in dhcp_servers
+
+                        # Registered NPS Servers are part of "RAS and IAS Servers" group.
+                        device.ad_dc_is_nps_server = any(["ras and ias servers" in mo.lower()
+                                                          for mo in device.ad_member_of])
+                    else:
+                        device.ad_is_dc = False
+
+                # parse dfsr shares
+                device.ad_dfsr_shares = dfsr_shares_by_dn.get(device_raw['distinguishedName'].lower())
 
                 # Add all printers associated to this device
                 device_raw_cn = device_raw.get("cn")
@@ -634,29 +779,121 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                             driver_name=printer_raw.get("driverName")
                         ))
 
-                device_interfaces = all_devices_ids.get(device_raw['distinguishedName'])
+                # Is it an exchange server?
+                if device_raw_cn is not None and device_raw_cn.lower() in exchange_servers:
+                    try:
+                        exchange_server_info = exchange_servers[device_raw_cn.lower()]
+                        device_raw["exchange_server_info"] = exchange_server_info
+
+                        device.ad_is_exchange_server = True
+
+                        # Parse organization and admin group. distinguished name always looks like:
+                        # CN=[cn],CN=Servers,CN=[admin group],CN=Administrative Groups,CN=[org name]
+                        distinguished_name_groups = [dn[3:]
+                                                     for dn in exchange_server_info["distinguishedName"].split(",")]
+                        device.ad_exchange_server_admin_group = distinguished_name_groups[2]
+                        device.ad_exchange_server_organization = distinguished_name_groups[4]
+                        device.ad_exchange_server_name = exchange_server_info.get("name")
+                        device.ad_exchange_server_serial = exchange_server_info.get("serialNumber")
+                        device.ad_exchange_server_product_id = exchange_server_info.get("msExchProductID")
+
+                        exchange_server_roles = exchange_server_info.get("msExchCurrentServerRoles")
+                        if exchange_servers is not None:
+                            device.figure_out_exchange_server_roles(exchange_server_roles)
+                    except Exception:
+                        logger.exception("problem while parsing is exchange server. continuing")
+
+                else:
+                    device.ad_is_exchange_server = False
+
+                # Get all ip's known to us from the ip search thread
+                ips_list = []
+
+                # Its better to find_one each time then getting the whole table into the memory.
+                device_interfaces = dns_resolved_devices_collection.find_one({"id": device_raw['distinguishedName']})
                 if device_interfaces is not None:
-                    device.network_interfaces = device_interfaces[NETWORK_INTERFACES_FIELD]
+                    ips_list = device_interfaces.get(IPS_FIELDNAME, [])
                     device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]
                 else:
                     device_as_dict = device.to_dict()
+                    # Instead of putting the whole device (this will result in a huge number of devices inserted)
+                    # Lets just put whats important
+                    device_as_dict_for_resolving = {
+                        "id": device_as_dict['id'],
+                        "hostname": device_as_dict['hostname'],
+                        "AXON_DNS_ADDR": device_raw['AXON_DNS_ADDR'],
+                        "AXON_DC_ADDR": device_raw['AXON_DC_ADDR'],
+                        "dns_resolve_status": device_as_dict['dns_resolve_status']
+                    }
+
                     if self.__sync_resolving:
                         device.network_interfaces = []
-                        for resolved_device in self._resolve_hosts_addresses([device_as_dict]):
+                        for resolved_device in self._resolve_hosts_addresses([device_as_dict_for_resolving]):
                             if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
-                                device.network_interfaces.append(resolved_device[NETWORK_INTERFACES_FIELD][0])
+                                ips_list = resolved_device[IPS_FIELDNAME]
                                 device.dns_resolve_status = DNSResolveStatus[resolved_device[DNS_RESOLVE_STATUS]]
+
+                    # Note that we always need to put devices into our db, since the rest of the code (like wmi exec)
+                    # uses this db to understand if this device is resolvable.
 
                     if not self._is_adapter_old_by_last_seen(device_as_dict):
                         # That means that the device is new (As determined in adapter_base code)
-                        to_insert.append(device_as_dict)
+                        dns_resolving_devices_to_insert_to_db.append(device_as_dict_for_resolving)
+
+                        # optimization in memory
+                        if len(dns_resolving_devices_to_insert_to_db) >= 1000:
+                            dns_resolved_devices_collection.insert_many(dns_resolving_devices_to_insert_to_db)
+                            dns_resolving_devices_to_insert_to_db = []
+
+                # Lets add ip's from ldap.
+                # note that i want it to be the last one. this is, becuase, in the next loop we are
+                # going to parse subnet and site. if for some reason there are multiple associations,
+                # the last one will be the result.
+                if device.ad_name.lower() in dns_records:
+                    ip = dns_records[device.ad_name.lower()]
+                    if ip not in ips_list:
+                        ips_list.append(ip)
+
+                # Finally, maybe the device was resolved by a one-at-a-time resolving option.
+                axon_ip_addresses = device_raw.get("AXON_IP_ADDRESSES")
+                if axon_ip_addresses is not None:
+                    logger.debug(f"One-at-a-time dns resolving ip addresses: {axon_ip_addresses}")
+                    for axon_ip in axon_ip_addresses:
+                        if axon_ip not in ips_list:
+                            ips_list.append(axon_ip)
+
+                # ips_list is a list. Make it unique, if somehow it inclues the same ip's.
+                ips_list = list(set(ips_list))
+
+                # Try to resolve the subnet and site location by the list of ip's.
+                # Note that we assume that the list of ip's here will reflect only one subnet (== site).
+                # In case there are multiple subnets that affect multiple sites - we can't know how to associate.
+                subnets_list = []
+                for ip in ips_list:
+                    try:
+                        for (subnet, site_name, site_location) in sites_and_subnets:
+                            if ipaddress.ip_address(ip) in subnet:
+                                device.ad_site_name = site_name
+                                device.ad_site_location = site_location
+                                device.ad_subnet = str(subnet)
+
+                                # convert subnet to ip format
+                                subnets_list.append(str(subnet.netmask))
+                    except Exception:
+                        logger.exception("Exception in ip to subnet parsing. Might be an ipv6 ip, continuing..")
+
+                # make the subnets list unique
+                subnets_list = list(set(subnets_list))
+                device.add_nic(ips=ips_list, subnets=subnets_list)
+
+                device.set_raw(device_raw)
 
                 yield device
             except Exception:
                 logger.exception(f"Exception when parsing device {device_raw.get('distinguishedName')}, bypassing")
 
-        if len(to_insert) > 0:
-            devices_collection.insert_many(to_insert)
+        if len(dns_resolving_devices_to_insert_to_db) > 0:
+            dns_resolved_devices_collection.insert_many(dns_resolving_devices_to_insert_to_db)
         if no_timestamp_count != 0:
             logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
 
@@ -731,27 +968,34 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         for client_config in clients_config:
             client_config = client_config['client_config']
             if client_config["dc_name"] == wanted_client:
+                # If wmi/smb user was not supplied, use the default one.
+                client_username = client_config.get("wmi_smb_user")
+                if client_username is None or client_username == "":
+                    client_username = client_config['user']
+
+                # If wmi/smb password was not supplied, use the default one.
+                client_password = client_config.get("wmi_smb_password")
+                if client_password is None or client_password == "":
+                    client_password = client_config['password']
+
                 # We have found the correct client. Getting credentials
-                if '\\' in client_config['user']:
-                    domain_name, user_name = client_config['user'].split('\\')
+                if '\\' in client_username:
+                    domain_name, user_name = client_username.split('\\')
                 else:
                     # This is a legitimate flow. Do not try to build the domain name from the configurations.
-                    domain_name, user_name = "", client_config['user']
+                    domain_name, user_name = "", client_username
 
                 wanted_hostname = device_data['data']['hostname']
-                password = client_config['password']
+                password = client_password
                 try:
                     # We resolve ip only for devices who have been resolved before.
                     # We do this to reduce the time execution tasks take for devices that we are sure
                     # will not be resolved.
-                    num_of_previously_resolved_devices = self._get_collection(DEVICES_DATA).find(
-                        {
-                            "hostname": wanted_hostname,  # get all queries with this hostname
-                            'network_interfaces.ips': {'$not': {'$size': 0}}  # which have at least one ip
-                        },
-                        projection={'_id': True}).count()
+                    number_of_previously_resolved_ips = 0
+                    for ip in device_data['data'].get(NETWORK_INTERFACES_FIELDNAME, []):
+                        number_of_previously_resolved_ips += len(ip.get(IPS_FIELDNAME, []))
 
-                    if num_of_previously_resolved_devices > 0:
+                    if number_of_previously_resolved_ips > 0:
                         # If a device has been resolved already, our theory is that the resolving time will be
                         # close to immediate. that is why we re-resolve it.
                         device_ip, _ = self._resolve_device_name(wanted_hostname, client_config)[0]
@@ -894,6 +1138,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         # Temp debugging to find a really rare race condition
         logger.info(f"Success in execute_wmi_smb, requested {command_list} and got {command_stdout}")
+        logger.info(f"stderr is {command_stderr}")
 
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
@@ -928,20 +1173,20 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _enable_user(self, user_data, client_data):
         dn = user_data['raw'].get('distinguishedName')
         assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
-        assert client_data.change_user_enabled_state(dn, True), "Failed enabling user"
+        assert client_data.change_entity_enabled_state(dn, True), "Failed enabling user"
 
     def _disable_user(self, user_data, client_data):
         dn = user_data['raw'].get('distinguishedName')
         assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
-        assert client_data.change_user_enabled_state(dn, False), "Failed disabling user"
+        assert client_data.change_entity_enabled_state(dn, False), "Failed disabling user"
 
     def _enable_device(self, device_data, client_data):
-        dn = device_data['id']
-        assert client_data.change_device_enabled_state(dn, True), "Failed enabling device"
+        dn = device_data['raw'].get('distinguishedName')
+        assert client_data.change_entity_enabled_state(dn, True), "Failed enabling device"
 
     def _disable_device(self, device_data, client_data):
-        dn = device_data['id']
-        assert client_data.change_device_enabled_state(dn, False), "Failed disabling device"
+        dn = device_data['raw'].get('distinguishedName')
+        assert client_data.change_entity_enabled_state(dn, False), "Failed disabling device"
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -952,9 +1197,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "title": "Wait for DNS resolving",
                     "type": "bool"
                 },
+                {
+                    "name": "ldap_dns_resolving_one_at_a_time",
+                    "title": "Query LDAP for DNS one-at-a-time",
+                    "type": "bool",
+                }
             ],
             "required": [
                 "sync_resolving",
+                "ldap_dns_resolving_one_at_a_time",
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -964,6 +1215,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _db_config_default(cls):
         return {
             "sync_resolving": False,
+            "ldap_dns_resolving_one_at_a_time": False,
         }
 
     @classmethod

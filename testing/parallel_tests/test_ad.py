@@ -60,6 +60,37 @@ class TestAdAdapter(AdapterTestBase):
         )
         assert len(printers_list) == 1, f"Did not find printer {PRINTER_NAME_FOR_CLIENT1}"
 
+        # Check DC
+        dc_list = self.axonius_system.get_devices_with_condition(
+            {
+                "adapters.data.id": CLIENT1_DC1_ID,
+                "adapters.data.ad_is_dc": True,
+                "adapters.data.ad_dc_gc": True,
+                "adapters.data.ad_dc_infra_master": True,
+                "adapters.data.ad_dc_rid_master": True,
+                "adapters.data.ad_dc_pdc_emulator": True,
+                "adapters.data.ad_dc_naming_master": True,
+                "adapters.data.ad_dc_schema_master": True,
+                "adapters.data.ad_dc_is_dhcp_server": False,
+                "adapters.data.ad_dfsr_shares.name": "Tools",
+                "adapters.data.ad_site_name": "TestDomain-TelAviv",
+                "adapters.data.ad_site_location": "Tel Aviv",
+                "adapters.data.ad_subnet": "192.168.20.0/24"
+            }
+        )
+
+        assert len(dc_list) == 1, f"device {CLIENT1_DC1_ID} hasn't been filled with all AD info"
+
+        # Check Exchange Servers
+        exchange_servers_list = self.axonius_system.get_devices_with_condition(
+            {
+                "adapters.data.id": CLIENT1_DC4_ID,
+                "adapters.data.ad_exchange_server_product_id": "02064-004-0074055-02417"
+            }
+        )
+
+        assert len(exchange_servers_list) == 1, f"device {CLIENT1_DC4_ID} is not an exchange server, but it should be!"
+
     def test_fetch_users(self):
         # I'm going to assume this has already been aggregated. TODO: Change test_fetch_devices to test_fetch_data
         # and check that there.
