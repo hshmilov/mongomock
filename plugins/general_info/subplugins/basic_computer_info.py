@@ -2,7 +2,13 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.parsing import parse_date
 from axonius.utils import str2bool
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
-from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands
+from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, \
+    smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, reg_view_parse_int
+
+
+BAD_CONFIGURATIONS_COMMANDS = [
+    r'reg query HKLM\SYSTEM\CurrentControlSet\Control\Lsa\ '
+]
 
 
 class GetBasicComputerInfo(GeneralInfoSubplugin):
@@ -32,7 +38,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             "select SerialNumber from Win32_BaseBoard",
             "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration"
         ]
-        )
+        ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS)
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
@@ -47,6 +53,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         win32_timezone = result[7]["data"]
         win32_baseboard = result[8]["data"]
         win32_networkadapterconfiguration = result[9]["data"]
+        bad_configuration_lsa = result[10]
 
         # Win32_Processor
         try:
@@ -256,7 +263,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         except Exception:
             self.logger.exception(f"Win32_TimeZone {win32_timezone}")
 
-        # Last but not least, add network interfaces
+        # Add network interfaces
         try:
             for nic in win32_networkadapterconfiguration:
                 ip_enabled = nic.get("IPEnabled")
@@ -267,5 +274,22 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     )
         except Exception:
             self.logger.exception(f"Win32_NetworkAdapterConfiguration {win32_networkadapterconfiguration}")
+
+        # Bad Configurations Config
+
+        try:
+            assert is_wmi_answer_ok(bad_configuration_lsa)
+            data = reg_view_output_to_dict(bad_configuration_lsa["data"])
+
+            adapterdata_device.ad_bad_config_no_lm_hash = reg_view_parse_int(data.get("nolmhash"))
+            adapterdata_device.ad_bad_config_force_guest = reg_view_parse_int(data.get("forceguest"))
+            adapterdata_device.ad_bad_config_authentication_packages = data.get("authentication packages")
+            adapterdata_device.ad_bad_config_lm_compatibility_level = reg_view_parse_int(
+                data.get("lmcompatibilitylevel"))
+            adapterdata_device.ad_bad_config_disabled_domain_creds = reg_view_parse_int(data.get("disableddomaincreds"))
+            adapterdata_device.ad_bad_config_secure_boot = reg_view_parse_int(data.get("secureboot"))
+
+        except Exception:
+            self.logger.exception(f"bad_configuration_lsa is not ok: {bad_configuration_lsa}")
 
         return True

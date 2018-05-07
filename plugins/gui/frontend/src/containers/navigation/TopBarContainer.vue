@@ -13,15 +13,15 @@
                 </div>
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a v-if="isRunning" class="nav-link">
+                        <a v-if="runningResearch" class="nav-link">
                             <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a v-if="!isRunning" v-tooltip.bottom="'Discover Now'" @click="startResearch" class="nav-link">
+                        <a v-if="!runningResearch" v-tooltip.bottom="'Discover Now'" @click="startResearchNow" class="nav-link">
                             <svg-icon name="action/lifecycle/run" :original="true" height="20"/>
                         </a>
-                        <a v-if="isRunning" v-tooltip.bottom="'Stop Discovery'" @click="stopResearch" class="nav-link">
+                        <a v-if="runningResearch" v-tooltip.bottom="'Stop Discovery'" @click="stopResearchNow" class="nav-link">
                             <svg-icon name="action/lifecycle/stop" :original="true" height="20"/>
                         </a>
                     </li>
@@ -92,15 +92,13 @@
                 if (!this.dashboard.lifecycle.data.subPhases) return []
 
                 return this.dashboard.lifecycle.data.subPhases
-            },
-            isRunning () {
-                return this.lifecycle.reduce((sum, item) => sum + item.status, 0) !== this.lifecycle.length
             }
         },
         data() {
 			return {
 				interval: null,
-                isDown: false
+                isDown: false,
+                runningResearch: false
 			}
         },
 		methods: {
@@ -141,6 +139,14 @@
             navigateNotifications() {
                 this.$el.click()
                 this.$router.push({name: 'Notifications' })
+            },
+            startResearchNow() {
+                this.runningResearch = true
+                this.startResearch()
+            },
+            stopResearchNow() {
+                this.runningResearch = false
+                this.stopResearch()
             }
 		},
 		created () {
@@ -151,7 +157,9 @@
             }.bind(this), 3000))
             this.fetchLifecycle()
             this.intervals.push(setInterval(function () {
-                this.fetchLifecycle()
+                this.fetchLifecycle().then((response) => {
+                    this.runningResearch = this.lifecycle.reduce((sum, item) => sum + item.status, 0) !== this.lifecycle.length
+                })
             }.bind(this), 10000))
 		},
 		beforeDestroy () {

@@ -87,3 +87,31 @@ def check_wmi_answers_integrity(answers):
                 logger.error(f"Query {i} exception: {a['data']}")
 
     return ok
+
+
+def reg_view_output_to_dict(output):
+    kv = {}
+    for line in output[1:].split("\n"):
+        # Notice that the first line doesn't matter since we cut it
+        # when we split(r"HKEY_LOCAL_MACHINE\Software")
+        try:
+            line_name, line_type, line_value = line.strip().split("    ")
+            line_name = line_name.lower()
+            kv[line_name] = line_value.strip()
+
+            if line_type.upper() == "REG_MULTI_SZ":
+                kv[line_name] = kv[line_name].split("\x00")
+        except Exception:
+            pass
+
+    return kv
+
+
+def reg_view_parse_int(st):
+    try:
+        return int(st)
+    except Exception:
+        try:
+            return int(st, 16)
+        except Exception:
+            return None

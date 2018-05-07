@@ -16,7 +16,7 @@ from axonius.utils.files import get_local_config_file
 from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares
 from general_info.subplugins.user_logons import GetUserLogons
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from datetime import datetime
 
 
@@ -37,6 +37,13 @@ subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo
 class GeneralInfoService(PluginBase, Triggerable):
     class MyDeviceAdapter(DeviceAdapter):
         general_info_last_success_execution = Field(datetime, "Last General Info Success")
+
+        ad_bad_config_no_lm_hash = Field(int, "Bad Config - No LMHash")
+        ad_bad_config_force_guest = Field(int, "Bad Config - Force Guest")
+        ad_bad_config_authentication_packages = ListField(str, "Bad Config - Authentication Packages")
+        ad_bad_config_lm_compatibility_level = Field(int, "Bad Config - Compatibility Level")
+        ad_bad_config_disabled_domain_creds = Field(int, "Bad Config - Disabled Domain Creds")
+        ad_bad_config_secure_boot = Field(int, "Bad Config - Secure Boot")
 
     class MyUserAdapter(UserAdapter):
         pass
