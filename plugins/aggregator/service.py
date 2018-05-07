@@ -392,7 +392,14 @@ class AggregatorService(PluginBase, Triggerable):
                 # or all the entities are already linked. In any case, if a real merge isn't done
                 # it means someone made a mistake.
                 if len(entities_candidates) < 2:
-                    return ""
+                    return f'Found less than two candidates, got {len(entities_candidates)}'
+
+                if len(associated_adapters) != 2:
+                    return f'Link with wrong number of devices {len(associated_adapters)}'
+
+                if associated_adapters[0] == associated_adapters[1]:
+                    return f'Got link of the same device {associated_adapters}'
+
                 self._link_entities(entities_candidates, entities_db)
             elif association_type == 'Unlink':
                 if len(entities_candidates) != 1:

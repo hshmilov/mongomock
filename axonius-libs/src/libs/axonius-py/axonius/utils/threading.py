@@ -1,4 +1,4 @@
-from threading import Lock
+from threading import RLock
 import logging
 
 logger = logging.getLogger(f"axonius.{__name__}")
@@ -69,7 +69,7 @@ class LazyMultiLocker(object):
         :param indexes: List of anything sortable that act as indexes
         :return:
         """
-        return MultiLocker([self.__locks.setdefault(i, Lock()) for i in sorted(str(x) for x in indexes)])
+        return MultiLocker([self.__locks.setdefault(i, RLock()) for i in sorted(str(x) for x in indexes)])
 
     def is_any_locked(self) -> bool:
         """
