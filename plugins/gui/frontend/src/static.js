@@ -210,7 +210,7 @@ export const pluginMeta = {
 			' including IT services management (ITSM), IT operations management (ITOM) and IT business management (ITBM).'
 		},
 		general_info: {
-			title: 'General Info',
+			title: 'WMI Info',
 			description: ''
 		},
 		json_file_adapter: {

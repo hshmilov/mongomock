@@ -48,10 +48,6 @@
             overflow: visible !important;
             .cov-date-body {
                 position: absolute;
-                -webkit-transform: none;
-                -moz-transform: none;
-                -ms-transform: none;
-                -o-transform: none;
                 transform: none;
                 top: 0;
                 left: 0;
@@ -61,7 +57,7 @@
                         .hour-item, .min-item {
                             font-size: 20px !important;
                             &.active {
-                                background-color: $color-theme-light;
+                                background-color: $theme-white;
                             }
                         }
                     }
@@ -76,7 +72,12 @@
                         vertical-align: middle;
                         direction: rtl;
                         width: 80%;
+                        font-size: 18px;
                         br { display: none; }
+                        span:last-child {
+                            float: left;
+                            margin-left: 20px;
+                        }
                     }
                     .cov-date-previous, .cov-date-next {
                         height: 40px;
@@ -90,20 +91,19 @@
                     }
                 }
                 .cov-date-box {
-                    height: 200px;
+                    height: 240px;
                     .cov-picker-box {
                         padding: 0;
-                        height: 200px;
-                        overflow: hidden;
+                        height: 240px;
                         .week {
-                            background-color: $color-theme-dark !important;
+                            background-color: $theme-black !important;
                             ul li {
-                                color: $color-theme-light !important;
+                                color: $theme-white !important;
                                 font-weight: 200 !important;
                             }
                         }
                         .day.checked {
-                            background-color: $color-theme-light !important;
+                            background-color: $theme-white !important;
                         }
                     }
                 }
@@ -111,12 +111,13 @@
                     padding: 0;
                     display: flex;
                     height: 40px;
+                    border-top: 1px solid $grey-2;
                     span {
                         flex: 50%;
                         line-height: 20px;
                         text-align: center;
                         &:hover {
-                            background-color: #E3E3E3;
+                            background-color: $grey-2;
                         }
                     }
                 }

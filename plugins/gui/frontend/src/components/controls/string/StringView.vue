@@ -23,6 +23,7 @@
         methods: {
 			format(value) {
 				if (this.schema.format === 'date-time') {
+					if (!value) return ''
 					let dateTime = new Date(value)
 					if (dateTime === 'Invalid Date') return value
 

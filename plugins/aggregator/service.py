@@ -120,7 +120,8 @@ class AggregatorService(PluginBase, Triggerable):
                                                              {'$and': [{'$eq': ['$$tag.type', 'label']},
                                                                        {'$eq': ['$$tag.data', True]}]}
                                                              }
-                                                 }
+                                                 },
+                                      ADAPTERS_LIST_LENGTH: 1
                                       }
                          },
                         {'$project': {'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1,
@@ -128,7 +129,7 @@ class AggregatorService(PluginBase, Triggerable):
                                       'adapters_data': {'$map': {'input': '$specific_data', 'as': 'data', 'in': {
                                           '$arrayToObject': {'$concatArrays': [[], [{'k': '$$data.plugin_name',
                                                                                      'v': '$$data.data'}]]}}}},
-                                      'specific_data': 1}
+                                      'specific_data': 1, ADAPTERS_LIST_LENGTH: 1}
                          }
                     ]
                 })

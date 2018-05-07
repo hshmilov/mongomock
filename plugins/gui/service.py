@@ -486,7 +486,7 @@ class GuiService(PluginBase):
                     """
 
                     def same_string(x, y):
-                        return type(x) != 'str' or (re.match(x, y, re.I) or re.match(y, x, re.I))
+                        return type(x) != str or (re.match(x, y, re.I) or re.match(y, x, re.I))
 
                     if type(value) == str:
                         return len([child for child in children if same_string(child, value)]) == 0
@@ -496,7 +496,7 @@ class GuiService(PluginBase):
                         # For a dict, check if there is an element of whom all keys are identical to value's keys
                         return len([item for item in children if len([key for key in item.keys()
                                                                       if same_string(item[key], value[key])]) > 0]) == 0
-                    return False
+                    return True
 
                 if type(child_value) == list:
                     # Check which elements of found value can be added to children

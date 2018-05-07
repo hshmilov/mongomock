@@ -250,6 +250,10 @@
                     margin: auto;
                 }
             }
+            .dropdown-menu {
+                max-height: 30vh;
+                overflow: auto;
+            }
         }
         &.collapse {
             display: block;
@@ -284,6 +288,7 @@
         .empty {
             border-bottom: 1px solid $grey-2;
             border-top: 1px solid $grey-2;
+            padding: 8px 0;
             i {
                 margin: auto;
             }
@@ -294,11 +299,6 @@
             margin-bottom: -12px;
             line-height: 36px;
         }
-    }
-
-    .dropdown-menu {
-        max-height: 30vh;
-        overflow: auto;
     }
 
     .tooltip {
