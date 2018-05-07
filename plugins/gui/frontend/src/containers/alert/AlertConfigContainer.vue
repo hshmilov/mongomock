@@ -159,10 +159,7 @@
             ...mapMutations({ setAlert: SET_ALERT }),
             ...mapActions({ fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS }),
             fillAlert(alert) {
-				this.alert = { ...alert,
-                    triggers: { ...alert.triggers }
-                }
-				this.alert.actions.forEach((action) => {
+				alert.actions.forEach((action) => {
 					switch (action.type) {
 						case 'create_notification':
 							this.actions.notification = true
@@ -176,6 +173,10 @@
                             this.tagName = action.data
 					}
 				})
+				this.alert = { ...alert,
+                    triggers: { ...alert.triggers },
+                    actions: []
+                }
             },
 			saveAlert() {
             	/* Validation */
