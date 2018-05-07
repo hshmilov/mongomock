@@ -145,7 +145,7 @@ class TestDevices(object):
                 assert len(scripts) > 0
                 for s in scripts:
                     assert s.script_device_association.device_name == d.name
-            except:
+            except Exception:
                 pass
 
     def test_devices_softwares(self):
@@ -156,7 +156,7 @@ class TestDevices(object):
             try:
                 sws = d.associated_softwares.get()
                 assert len(sws) >= 0
-            except:
+            except Exception:
                 pass
 
     def test_devices_change_requests(self):

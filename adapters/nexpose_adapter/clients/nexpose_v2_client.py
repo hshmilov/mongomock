@@ -9,6 +9,7 @@ from axonius.adapter_exceptions import ClientConnectionException, AdapterExcepti
 from nexpose.nexpose import NexposeSession
 from nexpose.nexpose_status import NexposeStatus
 from nexpose_adapter.clients.nexpose_base_client import NexposeClient
+from axonius.thread_stopper import stoppable
 
 
 class NexposeV2Client(NexposeClient):
@@ -31,7 +32,7 @@ class NexposeV2Client(NexposeClient):
         session.Open()
         try:
             yield session
-        except:
+        except Exception:
             raise AdapterException('An exception occurred while in session')
         finally:
             session.Close()
@@ -60,6 +61,7 @@ class NexposeV2Client(NexposeClient):
         :param session: The NexposeSession to use.
         :return: A list of all devices (dicts).
         """
+        @stoppable
         def get_details_worker(device_summary, device_number, session):
             device_details = {}
             try:

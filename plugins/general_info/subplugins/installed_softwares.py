@@ -42,7 +42,7 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
                     if i.get("InstallState") == 5:
                         # 5 means it's installed
                         installed_software.add((i['Vendor'], i['Name'], i['Version']))
-            except:
+            except Exception:
                 self.logger.exception("Exception while handling win32_product")
 
         # Each software contains firstly the registry key, the following one appears in all of them.

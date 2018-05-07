@@ -134,11 +134,11 @@ class OracleVmAdapter(AdapterBase):
                             ip_addresses = ip_addresses.split(',')
                         if mac_address != "" or ip_addresses != []:
                             device.add_nic(mac_address, ip_addresses)
-                    except:
+                    except Exception:
                         logger.exception(f"Problem adding nic from ethernet port {ethernet_port_data}")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching OracleVm Device")
         for device_raw in vms:
             try:
@@ -163,11 +163,11 @@ class OracleVmAdapter(AdapterBase):
                         ip_addresses = virtual_nic_data.get("ipAddresses", [])
                         if mac_address != "" or ip_addresses != []:
                             device.add_nic(mac_address, ip_addresses)
-                    except:
+                    except Exception:
                         logger.exception(f"Problem adding nic from virtual nic {virtual_nic_data}")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching OracleVm Device")
 
     @classmethod

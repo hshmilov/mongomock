@@ -148,7 +148,7 @@ class QualysScansAdapter(ScannerAdapterBase):
 
                 # Parsing the timestamp.
                 last_seen = dateutil.parser.parse(last_seen)
-            except:
+            except Exception:
                 logger.exception("An Exception was raised while getting and parsing the last_seen field.")
                 continue
 

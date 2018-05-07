@@ -103,12 +103,12 @@ class GotoassistAdapter(AdapterBase):
                     ip_address = device_raw.get("ipAddresses")
                     if ip_address is not None:
                         device.add_nic(None, ip_address)
-                except:
+                except Exception:
                     logger.exception("Problem with adding nic to Gotoassist device")
                 device.company_id = device_raw.get("companyId")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Gotoassist Device: {str(device_raw)}")
 
     @classmethod

@@ -46,7 +46,7 @@ def tag_device(spc, device, tag_name):
     try:
         # Check if a tag exists already with the given name
         tag = spc.tag_management.tags.get(filter_={'name': tag_name})[0]
-    except:
+    except Exception:
         # Create a new public tag with the given name
         tag = factory.make_resource('tag_management.tag', spc)
         tag.name, tag.type = tag_name, 'public'

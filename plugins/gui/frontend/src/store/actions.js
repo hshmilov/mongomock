@@ -316,3 +316,10 @@ export const runAction = ({dispatch}, payload) => {
 		data: payload.data
 	})
 }
+
+export const STOP_RESEARCH_PHASE = 'STOP_RESEARCH_PHASE'
+export const stopResearch= ({dispatch}) => {
+    dispatch(REQUEST_API, {
+        rule: `stop_research_phase`,
+        method: 'POST'
+    })}

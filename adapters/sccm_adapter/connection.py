@@ -52,7 +52,7 @@ class SccmConnection(object):
             try:
                 self.db.close()
                 self.db = None
-            except:
+            except Exception:
                 pass
 
     def query(self, sql, *args):

@@ -94,7 +94,7 @@ class SymantecConnection(object):
         if hasattr(self, 'session') and self.is_connected:
             try:
                 self.logout()
-            except:
+            except Exception:
                 pass
             self.close()
 

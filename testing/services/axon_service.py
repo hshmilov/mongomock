@@ -30,7 +30,7 @@ class AxonService(ABC):
                 assert self.is_up()
                 success = True
                 break
-            except:
+            except Exception:
                 time.sleep(0.25)
 
         if not success:

@@ -165,7 +165,7 @@ class Method(base._SpaceBase):
                 if self._meta_object.remove_default_xmlns:
                     src = xmlutil.remove_default_namespace(src)
                 return xmlutil.xml2obj(src)
-        except:
+        except Exception:
             raise rest.RestException("Failed to parse XML response for %s " % url, response)
 
     def get(self, accept=None):

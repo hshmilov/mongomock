@@ -103,7 +103,7 @@ class DesktopCentralAdapter(AdapterBase):
                     if device_raw.get("mac_address") or device_raw.get("ip_address"):
                         device.add_nic(device_raw.get("mac_address"), device_raw.get(
                             "ip_address", "").split(","))
-                except:
+                except Exception:
                     logger.exception("Problem with adding nic to desktop central device")
                 device.agent_version = device_raw.get("agent_version", "")
                 if "resource_id" not in device_raw:
@@ -123,7 +123,7 @@ class DesktopCentralAdapter(AdapterBase):
                 device.last_used_users = device_raw.get("agent_logged_on_users", "").split(",")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Desktop Central Device")
 
     @classmethod

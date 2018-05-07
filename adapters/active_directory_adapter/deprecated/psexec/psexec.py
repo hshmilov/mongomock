@@ -83,7 +83,7 @@ class PSEXEC(object):
         try:
             # This putFile is done inside the smbconnection.py file
             connection.putFile('ADMIN$', pathname, fh.read)
-        except:
+        except BaseException:
             logging.critical(
                 "Error uploading file %s, aborting....." % dst_name)
             raise
@@ -105,7 +105,7 @@ class PSEXEC(object):
         pathname = string.replace(remote_path, '/', '\\')
         try:
             connection.getFile('ADMIN$', pathname, fh.write)
-        except:
+        except BaseException:
             logging.critical(
                 "Error downloading file %s, aborting....." % remote_path)
             raise
@@ -132,7 +132,7 @@ class PSEXEC(object):
             else:
                 # Something else happened, raising the error
                 raise
-        except:
+        except BaseException:
             logging.critical(
                 "Error deleting file %s, aborting....." % remote_path)
             raise

@@ -122,7 +122,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.network_id = device_raw.get("network_name")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching CiscoMeraki Device")
 
         for client_raw in clients_raw_date:
@@ -147,7 +147,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.associated_device = client_raw.get("associated_device")
                 device.set_raw(client_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching CiscoMeraki Device")
 
     @classmethod

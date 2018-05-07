@@ -118,7 +118,7 @@ class ServiceNowAdapter(AdapterBase):
                     device.description = device_raw.get("short_description")
                     device.set_raw(device_raw)
                     yield device
-                except:
+                except Exception:
                     logger.exception("Problem with fetching ServiceNow Device")
 
     @classmethod

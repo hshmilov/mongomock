@@ -129,10 +129,10 @@ class OracleVmConnection(object):
                 for ethernet_port_id in ethernet_port_ids:
                     try:
                         etherent_ports_data.append(self._get(ethernet_port_id.get("uri"), ""))
-                    except:
+                    except Exception:
                         logger.exception(f"Problem getting ethernet port for server {server_raw}")
                 server_raw['ethernet_ports_data'] = etherent_ports_data
-        except:
+        except Exception:
             logger.exception("Problem getting servers")
         try:
             vms_raw = self._get('Vm')
@@ -142,10 +142,10 @@ class OracleVmConnection(object):
                 for virtual_nic_id in virtual_nics_ids:
                     try:
                         virtual_nics_data.append(self._get(virtual_nic_id.get("uri"), ""))
-                    except:
+                    except Exception:
                         logger.exception(f"Problem getting virtual nic for vm {vm_raw}")
             vm_raw['virtual_nics_data'] = virtual_nics_data
-        except:
+        except Exception:
             logger.exception("Problem getting vms")
         return {'servers': servers_raw, 'vms': vms_raw}
 

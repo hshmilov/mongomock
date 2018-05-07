@@ -71,7 +71,7 @@ CSI_ITEM = 'csi_item'
 def csi_to_string(ctx):
     try:
         return ClinicalStatusItemType(ctx.csi_type_numeric).name
-    except:
+    except Exception:
         return str(ctx.csi_type_numeric)
 
 

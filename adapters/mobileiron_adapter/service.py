@@ -112,7 +112,7 @@ class MobileironAdapter(AdapterBase):
                     if device_raw.get("common.ethernet_mac")or device_raw.get("common.ip_address"):
                         device.add_nic(device_raw.get("common.wifi_mac_address"), device_raw.get(
                             "common.ip_address", "").split(","))
-                except:
+                except Exception:
                     logger.exception("Problem adding nic to a device")
                 device.agent_version = device_raw.get("common.client_version", "")
                 device.device_model = device_raw.get("common.model")
@@ -127,12 +127,12 @@ class MobileironAdapter(AdapterBase):
                 try:
                     for app in device_raw.get("appInventory", []):
                         device.add_installed_software(name=app["name"], version=app["version"])
-                except:
+                except Exception:
                     logger.exception("Problem adding apps to a decvice")
 
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching MobileIron Device")
 
     @classmethod

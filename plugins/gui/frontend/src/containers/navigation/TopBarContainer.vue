@@ -13,11 +13,16 @@
                 </div>
                 <ul class="navbar-nav">
                     <li class="nav-item">
+                        <a v-if="isRunning" class="nav-link">
+                            <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a v-if="!isRunning" v-tooltip.bottom="'Discover Now'" @click="startResearch" class="nav-link">
                             <svg-icon name="action/lifecycle/run" :original="true" height="20"/>
                         </a>
-                        <a v-if="isRunning" class="nav-link">
-                            <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
+                        <a v-if="isRunning" v-tooltip.bottom="'Stop Discovery'" @click="stopResearch" class="nav-link">
+                            <svg-icon name="action/lifecycle/stop" :original="true" height="20"/>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -75,7 +80,7 @@
         FETCH_NOTIFICATION, notification
     } from '../../store/modules/notifications'
 	import '../../components/icons/logo'
-    import { START_RESEARCH_PHASE } from '../../store/actions'
+    import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
 
 	export default {
 		components: {TriggerableDropdown, StatusIcon},
@@ -108,6 +113,7 @@
                 fetchNotificationsUnseenCount: FETCH_NOTIFICATIONS_UNSEEN_COUNT,
                 fetchLifecycle: FETCH_LIFECYCLE,
                 startResearch: START_RESEARCH_PHASE,
+                stopResearch: STOP_RESEARCH_PHASE,
 
 			}),
 			navigateNotification (notificationId) {
@@ -257,6 +263,10 @@
         }
         .dropdown-toggle:after {
             display: none;
+        }
+        .svg-bg {
+            stroke: $grey-1;
+            fill: $grey-1;
         }
     }
 

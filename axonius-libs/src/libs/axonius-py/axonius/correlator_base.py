@@ -1,8 +1,7 @@
 import logging
-
-from funcy import chunks
-
 logger = logging.getLogger(f"axonius.{__name__}")
+from axonius.thread_stopper import stoppable
+from funcy import chunks
 import threading
 import multiprocessing
 from abc import ABC, abstractmethod
@@ -148,8 +147,8 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
             devices_to_correlate = list(post_json)
         acquired = False
         try:
-            if self._correlation_lock.acquire(False):
-                acquired = True
+            acquired = self._correlation_lock.acquire(False)
+            if acquired:
                 self.__correlate(devices_to_correlate)
             else:
                 raise RuntimeError("Correlation is already taking place, try again later")
@@ -175,6 +174,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
                     }
                 }))
 
+    @stoppable
     def __correlate(self, devices_ids=None):
         """
         Correlate and process devices

@@ -110,7 +110,7 @@ class EnsiloConnection(object):
                     break
                 devices_list += device_list_page
                 logger.info(f"Got {len(device_list_page)} devices at page {page_number}")
-        except:
+        except Exception:
             pass
         return devices_list
 

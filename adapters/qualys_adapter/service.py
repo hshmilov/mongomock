@@ -121,7 +121,7 @@ class QualysAdapter(AdapterBase):
                 for mac, ip_ifaces in groupby(ifaces, lambda i: i['HostAssetInterface']['macAddress']):
                     device.add_nic(mac, [ip_iface['HostAssetInterface']['address']
                                          for ip_iface in ip_ifaces])
-            except:
+            except Exception:
                 logger.exception("Problem with adding nic to Qualys agent")
             device.id = device_raw['agentInfo']['agentId']
             device.last_seen = parse_date(str(device_raw.get('agentInfo', {}).get("lastCheckedIn", "")))
@@ -133,7 +133,7 @@ class QualysAdapter(AdapterBase):
                 for software_raw in device_raw.get("software", {}).get("list", []):
                     device.add_installed_software(name=software_raw["HostAssetSoftware"]["name"],
                                                   version=software_raw["HostAssetSoftware"]["version"])
-            except:
+            except Exception:
                 logger.exception("Problem with adding software to Qualys agent")
             device.set_raw(device_raw)
             yield device

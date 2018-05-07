@@ -12,6 +12,7 @@ from typing import Tuple, List
 
 from axonius.mixins.feature import Feature
 
+from axonius.thread_stopper import stoppable
 from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_SUBTYPE, ADAPTER_PLUGIN_TYPE
 
@@ -191,7 +192,8 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _try_query_data_by_client(self, client_name, entity_type: EntityType):
+    @stoppable
+    def _try_query_data_by_client(self, client_name, entity_type: EntityType, use_cache=True):
         raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
         parsed_data = list(parsed_data)  # the following code assumes it is a materialized list
 

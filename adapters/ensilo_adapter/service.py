@@ -113,13 +113,13 @@ class EnsiloAdapter(AdapterBase):
                                 device.add_nic(mac_address, ip_addresses)
                             else:
                                 device.add_nic(mac_address, None)
-                except:
+                except Exception:
                     logger.exception("Problem with adding nic to ensilo device")
                 device.agent_version = device_raw.get("version", "")
                 device.last_seen = parse_date(str(device_raw.get("lastSeenTime", "")))
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Ensilo Device")
 
     @classmethod

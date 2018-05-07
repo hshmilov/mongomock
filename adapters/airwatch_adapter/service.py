@@ -124,7 +124,7 @@ class AirwatchAdapter(AdapterBase):
                             ipaddresses.append(ipaddresses_raw[ipaddress_raw])
                     if ipaddresses != [] or mac_address is not None:
                         device.add_nic(mac_address, ipaddresses)
-                except:
+                except Exception:
                     logger.exception("Problem adding nic to Airwatch")
                 device.serial_number = device_raw.get("SerialNumber")
                 device.udid = device_raw.get("Udid")
@@ -135,11 +135,11 @@ class AirwatchAdapter(AdapterBase):
                     for app_raw in device_raw.get("DeviceApps", []):
                         device.add_installed_software(name=app_raw.get("ApplicationName"),
                                                       version=app_raw.get("Version"))
-                except:
+                except Exception:
                     logger.exception("Problem adding software to Airwatch")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Airwatch Device")
 
     @classmethod

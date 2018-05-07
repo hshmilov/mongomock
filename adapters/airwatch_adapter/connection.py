@@ -132,7 +132,7 @@ class AirwatchConnection(object):
                 continue
             try:
                 device_raw["Network"] = self._get('/mdm/devices/' + str(device_id) + '/network')
-            except:
+            except Exception:
                 logger.exception("Problem fetching network")
 
             try:
@@ -147,8 +147,7 @@ class AirwatchConnection(object):
                     device_apps_list += apps_search_raw.get("DeviceApps", [])
                     pages_count += 1
                 device_raw["DeviceApps"] = device_apps_list
-
-            except:
+            except Exception:
                 logger.exception("Problem fetching apps")
         return devices_raw_list
 

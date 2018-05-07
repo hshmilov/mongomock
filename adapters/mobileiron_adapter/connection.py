@@ -128,7 +128,7 @@ class MobileironConnection(object):
                                                        params={'deviceUuids': str(device_uuid),
                                                                'adminDeviceSpaceId': device_space_id})["results"][0]["appInventory"]
 
-        except:
+        except Exception:
             logger.exception("Problem fetching apps")
         return devices_list
 

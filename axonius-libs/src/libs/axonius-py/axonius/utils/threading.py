@@ -1,4 +1,8 @@
 from threading import Lock
+import logging
+
+logger = logging.getLogger(f"axonius.{__name__}")
+from axonius.thread_stopper import StopThreadException
 
 
 def run_in_executor_helper(executor, method_to_call, resolve, reject, *_, args=[], kwargs={}, **__):
@@ -17,6 +21,8 @@ def run_in_executor_helper(executor, method_to_call, resolve, reject, *_, args=[
         try:
             resolve(method_to_call(*args, **kwargs))
         except Exception as e:
+            reject(e)
+        except StopThreadException as e:
             reject(e)
 
     executor.submit(resolver)

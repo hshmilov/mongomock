@@ -14,6 +14,7 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
     def json_record(self, message, extra, record):
         try:
             extra['level'] = record.levelname
+            extra['thread'] = record.thread
             extra['message'] = message
             if record.exc_info:
                 extra['exc_info'] = self.formatException(record.exc_info)

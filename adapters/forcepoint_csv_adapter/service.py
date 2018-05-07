@@ -71,7 +71,7 @@ class ForcepointCsvAdapter(AdapterBase):
                 device.last_seen = parse_date(str(device_raw.get("Last Update", "")))
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception(f"Problem adding device: {str(device_raw)}")
 
     @classmethod

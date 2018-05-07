@@ -122,13 +122,13 @@ class ChefAdapter(AdapterBase):
             device.instance_id = (device_raw_data.get('ec2') or {}).get('instance_id')
             try:
                 device.last_seen = datetime.datetime.fromtimestamp(device_raw_data['ohai_time'])
-            except:
+            except Exception:
                 logger.warn("something is really wrong with the device - chef doesn't have a last check-in for it")
             device.time_zone = (device_raw_data.get('time') or {}).get('timezone')
             try:
                 if device.time_zone:
                     device.last_seen = pytz.timezone(device.time_zone).localize(device.last_seen).astimezone(pytz.UTC)
-            except:
+            except Exception:
                 logger.exception("Error adjusting client's timezone")
             # domain assign won't work for cloud clients (but hostname will contain the domain)
             device.domain = device_raw_data.get('domain')
@@ -137,14 +137,14 @@ class ChefAdapter(AdapterBase):
                     device.add_installed_software(name=software_name,
                                                   version=' '.join([(software_params.get('version') or ''),
                                                                     (software_params.get('release') or '')]))
-            except:
+            except Exception:
                 logger.exception("Problem with adding software to Chef client")
             try:
                 for software_name, software_params in (device_raw_data.get("chef_packages") or {}).items():
                     device.add_installed_software(name=software_name,
                                                   vendor='chef',
                                                   version=(software_params.get('version') or ''))
-            except:
+            except Exception:
                 logger.exception("Problem with adding software to Chef client")
             dmi = device_raw_data.get('dmi') or {}
             systeminfo = dmi.get('system')
@@ -160,7 +160,7 @@ class ChefAdapter(AdapterBase):
                     if 'core_id' in cpu:
                         device.add_cpu(name=cpu.get('model_name'),
                                        ghz=float(cpu.get('mhz') or 0) / 1024.0)
-            except:
+            except Exception:
                 logger.exception("Problem with adding CPU to Chef client")
             device.boot_time = device.last_seen - \
                 datetime.timedelta(seconds=(device_raw_data.get('uptime_seconds') or 0))
@@ -184,7 +184,7 @@ class ChefAdapter(AdapterBase):
                         else:
                             mac = format_mac(addr)
                     device.add_nic(mac=mac, ips=ip_addrs)
-            except:
+            except Exception:
                 logger.exception("Problem with adding nic to Chef client")
 
             # MongoDB can only store up to 8-byte ints :(

@@ -94,7 +94,7 @@ class PluginService(DockerService):
         try:
             # Will trigger the plugin to check if he is registered. If not, the plugin will exit immediately
             self.get('trigger_registration_check', timeout=15)
-        except:
+        except Exception:
             pass
 
     def logger(self):
@@ -116,7 +116,7 @@ class PluginService(DockerService):
             self.trigger_check_registered()
             r = self.version()
             return r.status_code == 200
-        except:
+        except Exception:
             return False
 
     @property

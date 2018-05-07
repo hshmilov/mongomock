@@ -6,7 +6,7 @@ def try_until_not_thrown(times, sleep_period, runnable, *args, **kwargs):
     while True:
         try:
             return runnable(*args, **kwargs)
-        except:
+        except Exception:
             i = i + 1
             if i == times:
                 raise

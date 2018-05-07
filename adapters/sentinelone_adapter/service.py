@@ -147,7 +147,7 @@ class SentineloneAdapter(AdapterBase):
                 for interface in net_info.get('interfaces', []):
                     device.add_nic(interface.get('physical'), interface.get(
                         'inet6', []) + interface.get('inet', []))
-            except:
+            except Exception:
                 logger.exception(f"Problem adding nic {str(interfaces)} to SentinelOne")
             device.agent_version = device_raw.get('agent_version')
             device.id = device_raw['id']

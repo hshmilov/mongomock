@@ -41,7 +41,7 @@ class NessusConnection(object):
         if hasattr(self, SESSION) and self._is_connected:
             try:
                 self.disconnect()
-            except:
+            except Exception:
                 pass
             self._close()
 

@@ -237,7 +237,7 @@ def is_valid_ip(ip):
     try:
         ipaddress.ip_address(ip)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -254,7 +254,7 @@ def format_mac(mac: str):
 def format_ip(value):
     try:
         return str(ipaddress.ip_address(value))
-    except:
+    except Exception:
         raise ValueError(f'Invalid IP address: {value}')
 
 
@@ -289,7 +289,7 @@ def bytes_image_to_base64(value):
         else:
             raise ValueError("Invalid image. header is {header}, cannot determine if jpeg/png/gif.")
         return "data:image/{0};base64,{1}".format(header, base64.b64encode(value).decode("utf-8"))
-    except:
+    except Exception:
         raise ValueError(f'Invalid Image. Exception is {get_exception_string()}')
 
 
@@ -303,7 +303,7 @@ def format_ip_raw(value):
         # decimal128_ctx = create_decimal128_context()
         # with decimal.localcontext(decimal128_ctx) as ctx:
         # return Decimal128(ctx.create_decimal(str(address._ip)))
-    except:
+    except Exception:
         raise ValueError(f'Invalid raw IP address: {value}')
 
 

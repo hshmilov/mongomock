@@ -24,6 +24,7 @@ import concurrent.futures
 import threading
 import time
 from jnpr.space import rest, factory
+from axonius.thread_stopper import stoppable
 
 remaining = 0
 lock = threading.Lock()
@@ -89,6 +90,7 @@ def collect_inv(spc, num_threads):
     print("\nAll Over!!!")
 
 
+@stoppable
 def process_device(spc, device):
     """
     Process inventory collection for a given device.
@@ -121,11 +123,11 @@ def process_device(spc, device):
                 '/configuration/system/domain-name',
                 '/configuration/routing-options/router-id',
                 '/configuration/interfaces/interface[name="lo0"]'])
-        except:
+        except Exception:
             pass
 
         return device.name
-    except:
+    except Exception:
         raise Exception("Failed to process %s due to %s" % (device.name, sys.exc_info()[1]))
 
 

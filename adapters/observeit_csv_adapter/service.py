@@ -80,7 +80,7 @@ class ObserveitCsvAdapter(AdapterBase):
                                               " " + device_raw.get("Last Heartbeat Time", ""))
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception(f"Problem adding device: {str(device_raw)}")
 
     @classmethod

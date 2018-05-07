@@ -278,7 +278,7 @@ class WmiSmbRunner(object):
                         break
 
                     time.sleep(1)
-                except:
+                except Exception:
                     # execquery can fail occasionally when it runs too much. if it happens too much
                     # raise an exception here.
                     num_of_execquery_exceptions = num_of_execquery_exceptions + 1
@@ -306,8 +306,6 @@ class WmiSmbRunner(object):
                                  "to be terminated".format(pid, binary_path, binary_params[:20]))
 
             return self.getfile(output_filename)
-        except:
-            raise
         finally:
             if is_process_created is True:
                 self.deletefile(output_filename)
@@ -341,8 +339,6 @@ class WmiSmbRunner(object):
             binary_path = "axonius_binary_{0}.exe".format(str(time.time()), )
             did_put_file = self.putfile(binary_path, binary_file)
             return self._exec_generic("cmd.exe", "/Q /c {0} {1}".format(binary_path, binary_params))
-        except:
-            raise
         finally:
             if did_put_file is True:
                 self.deletefile(binary_path)
@@ -432,7 +428,7 @@ class WmiSmbRunner(object):
 
         try:
             smb_connection.logout()
-        except:
+        except Exception:
             pass
 
     def close(self):
@@ -446,7 +442,7 @@ class WmiSmbRunner(object):
                 self.iWbemServices.RemRelease()
             if self.dcom is not None:
                 self.dcom.disconnect()
-        except:
+        except Exception:
             pass
 
 

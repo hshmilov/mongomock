@@ -500,7 +500,7 @@ class CoreService(PluginBase):
             if mail_server.get('smtpUser',  '') != '':
                 try:
                     server.login(mail_server.get('smtpUser'), mail_server.get('smtpPassword', ''))
-                except:
+                except Exception:
                     logger.exception("Failed to login to server.")
 
             if 'smtpKey' in mail_server or 'smtpCert' in mail_server:
@@ -520,7 +520,7 @@ class CoreService(PluginBase):
                             cert_file.write(cert_data)
 
                     server.starttls(key_file_path, cert_file_path)
-                except:
+                except Exception:
                     logger.exception("Failed to connect with tls.")
                 finally:
                     if key_file_path:
@@ -535,5 +535,5 @@ class CoreService(PluginBase):
         finally:
             try:
                 server.quit()
-            except:
+            except Exception:
                 logger.exception("Exception was raised while trying to quit the e-mail server connection.")

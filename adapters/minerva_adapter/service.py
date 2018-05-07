@@ -105,7 +105,7 @@ class MinervaAdapter(AdapterBase):
                 try:
                     if device_raw.get("reportedIpAddress"):
                         device.add_nic(None, device_raw.get("reportedIpAddress", "").split(","))
-                except:
+                except Exception:
                     logger.exception("Problem with adding nic to Minerva device")
                 device.agent_version = device_raw.get("armorVersion", "")
                 device.agent_status = device_raw.get("agentStatus")
@@ -113,7 +113,7 @@ class MinervaAdapter(AdapterBase):
                 device.last_seen = parse_date(device_raw.get("lastSeenOnline", ""))
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Minerva Device")
 
     @classmethod

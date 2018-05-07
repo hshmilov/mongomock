@@ -13,6 +13,7 @@ from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_N
 from axonius.consts import report_consts
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_filter
 
@@ -344,6 +345,7 @@ class ReportsService(PluginBase, Triggerable):
         if report_consts.Triggers.No_Change.name in triggered_triggers:
             return f'stayed the same.'
 
+    @stoppable
     def _check_current_query_result(self, report_data):
         """This function checks if a specific report should be generated.
 

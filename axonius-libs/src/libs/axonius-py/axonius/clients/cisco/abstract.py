@@ -71,7 +71,7 @@ class AbstractCiscoData(object):
                 new_device = self._get_devices(instance, create_device_callback)
                 if new_device:
                     yield new_device
-            except:
+            except Exception:
                 logger.exception('Exception while getting devices')
 
 

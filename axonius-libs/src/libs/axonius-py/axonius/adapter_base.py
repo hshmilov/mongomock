@@ -3,11 +3,11 @@ AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
 import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 
+from axonius.thread_stopper import stoppable
 from axonius.mixins.configurable import Configurable
 from axonius.users.user_adapter import UserAdapter
-
-logger = logging.getLogger(f"axonius.{__name__}")
 import threading
 from abc import ABC, abstractmethod
 
@@ -162,7 +162,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     for client in configured_clients:
                         # client id from DB not sent to verify it is updated
                         self._add_client(client['client_config'], str(client['_id']))
-                except:
+                except Exception:
                     logger.exception('Error while loading clients from config')
                     if blocking:
                         raise
@@ -401,6 +401,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
     # End of users
 
+    @stoppable
     @add_rule('insert_to_db', methods=['PUT'])
     def insert_data_to_db(self):
         """
@@ -483,7 +484,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     @add_rule('clients/<client_unique_id>', methods=['DELETE'])
     def update_client(self, client_unique_id):
         """
-        Update config of or delete and existing client for the adapter, by their client id
+        Update config of or delete an existing client for the adapter, by their client id
 
         :param client_key:
         :return:
@@ -552,7 +553,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
         # Verifying update succeeded and returning the matched id and final status
         if not result.modified_count and result.upserted_id:
-            return {"id": str(result.upserted_id), "status": status, "error": error_msg}
+            return {"id": str(result.upserted_id), "client_id": client_id, "status": status, "error": error_msg}
 
         return {}
 
@@ -595,6 +596,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                                    data=json.dumps({"status": status, "output": output}))
         # TODO: Think of a better way to implement status
 
+    @stoppable
     def _run_action_thread(self, func, device_data, action_id, **kwargs):
         """ Function for running new action.
 
@@ -818,7 +820,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         else:
             logger.warning("No old devices filtered (did you choose ttl period on the config file?)")
 
-    def _try_query_data_by_client(self, client_id, entity_type: EntityType):
+    @stoppable
+    def _try_query_data_by_client(self, client_id, entity_type: EntityType, use_cache=True):
         """
         Try querying data for given client. If fails, try reconnecting to client.
         If successful, try querying data with new connection to the original client, up to 3 times.
@@ -881,9 +884,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                         parsed_data = self._parse_users_raw_data_hook(raw_data)
                     else:
                         raise ValueError(f"expected {entity_type} to be devices/users.")
-                except:
+                except Exception:
                     # No devices despite a working connection
-                    logger.exception(f"Problem querying {entity_type} for client {0}".format(client_id))
+                    logger.exception(f"Problem querying {entity_type} for client {client_id}")
                     _update_client_status("error")
                     raise
         _update_client_status("success")

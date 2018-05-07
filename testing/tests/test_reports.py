@@ -417,7 +417,7 @@ def wait_for_notification(axonius_fixture, notification_db, notification, interv
             assert got_notified(curent_num_of_notifications)
             success = True
             break
-        except:
+        except Exception:
             time.sleep(interval)
 
     if not success:

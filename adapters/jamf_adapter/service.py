@@ -129,7 +129,7 @@ class JamfAdapter(AdapterBase):
                     site = general_info.get('site')
                     if site:
                         device.site = JamfSite(id=int(site.get('id')), name=site.get('name'))
-                except:
+                except Exception:
                     logger.exception(f'device site is unexpected {device_raw}')
 
                 device.device_serial = general_info.get("serial_number")
@@ -140,7 +140,7 @@ class JamfAdapter(AdapterBase):
                     try:
                         device.add_nic(general_info.get('mac_address', ''), [general_info.get('last_reported_ip', '')])
                         device.add_nic(general_info.get('alt_mac_address', ''))
-                    except:
+                    except Exception:
                         logger.exception(f"Problem adding nic to Jamf {str(device_raw)}")
 
                     hardware = device_raw['hardware']
@@ -232,7 +232,7 @@ class JamfAdapter(AdapterBase):
                     for profile in profiles:
                         try:
                             device.profiles.append(JamfProfile(**profile))
-                        except:
+                        except Exception:
                             logger.exception(f"Unexpected profile {profile}")
                 applications = [applications] if type(applications) != list else applications
                 for app in applications:

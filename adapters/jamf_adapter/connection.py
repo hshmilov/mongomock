@@ -11,6 +11,7 @@ from jamf_adapter.exceptions import JamfConnectionError, JamfRequestException
 from jamf_adapter import consts
 from axonius.utils.xml2json_parser import Xml2Json
 from axonius.smart_json_class import SmartJsonClass
+from axonius.thread_stopper import stoppable
 
 
 class JamfPolicy(SmartJsonClass):
@@ -135,6 +136,7 @@ class JamfConnection(object):
         logger.info("Finished getting all device data.")
 
     def threaded_get_devices(self, url, device_list_name, device_type):
+        @stoppable
         def get_device(device, device_number):
             try:
                 device_id = device['id']
@@ -142,7 +144,7 @@ class JamfConnection(object):
                 if device_number % print_modulo == 0:
                     logger.info(f"Got {device_number} devices out of {num_of_devices}.")
                 device_list.append(device_details)
-            except:
+            except Exception:
                 logger.exception(f'error retrieving details of device id {device_id}')
         devices = (self.get(url).get(device_list_name) or {})
         num_of_devices = devices.get('size')
@@ -160,6 +162,7 @@ class JamfConnection(object):
         return device_list
 
     def threaded_get_policy_history(self, devices):
+        @stoppable
         def get_history_worker(device, device_number):
             device_details = {}
             try:

@@ -143,13 +143,13 @@ class AwsAdapter(AdapterBase):
 
             try:
                 described_images = _describe_images_from_client_by_id(client_data, amis)
-            except:
+            except Exception:
                 described_images = {}
                 logger.exception("Couldn't describe aws images")
 
             try:
                 described_vpcs = _describe_vpcs_from_client(client_data)
-            except:
+            except Exception:
                 described_vpcs = {}
                 logger.exception("Couldn't describe aws vpcs")
 

@@ -110,7 +110,7 @@ class HyperVConnection(object):
                     for current_switch in switch_data:
                         if current_switch['SystemName'] == current_vm['Name']:
                             current_vm[u'Switches'].append(current_switch)
-                except:
+                except Exception:
                     logger.exception('No switches information returned from wmi (no MAC addresses).')
 
                 try:
@@ -119,7 +119,7 @@ class HyperVConnection(object):
                     for current_disk in disk_drive_data:
                         if current_disk['SystemName'] == current_vm['Name']:
                             current_vm[u'DiskDrives'].append(current_disk)
-                except:
+                except Exception:
                     logger.exception('No hard drive information returned from wmi.')
 
                 try:
@@ -128,7 +128,7 @@ class HyperVConnection(object):
                     for current_cpu in cpu_data:
                         if current_cpu['SystemName'] == current_vm['Name']:
                             current_vm[u'Cpus'].append(current_cpu)
-                except:
+                except Exception:
                     logger.exception('No cpu information returned from wmi.')
 
                 try:
@@ -137,9 +137,9 @@ class HyperVConnection(object):
                     for current_network in network_data:
                         if current_vm['Name'] in current_network['InstanceID']:
                             current_vm[u'Networks'].append(current_network)
-                except:
+                except Exception:
                     logger.exception('No network information returned from wmi (IP addresses.')
-        except:
+        except Exception:
             logger.exception('WMI returned no vm information.')
             raise GetDevicesError('WMI returned no vm information.')
 

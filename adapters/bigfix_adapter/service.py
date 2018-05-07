@@ -110,7 +110,7 @@ class BigfixAdapter(AdapterBase):
                 try:
                     device.add_nic(None, device_raw.get("IP Address", "").split(",") +
                                    device_raw.get("IPv6 Address", "").split(","))
-                except:
+                except Exception:
                     logger.exception("Problem adding nic to Bigfix")
                 device.agent_version = device_raw.get("Agent Version", "")
                 device.last_used_users = device_raw.get("User Name", "").split(",")
@@ -119,7 +119,7 @@ class BigfixAdapter(AdapterBase):
                 device.bigfix_computre_type = device_raw.get("Computer Type", "")
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Bigfix Device")
 
     @classmethod

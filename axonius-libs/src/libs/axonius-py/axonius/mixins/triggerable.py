@@ -1,8 +1,9 @@
 import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 
+from axonius import thread_stopper
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
-logger = logging.getLogger(f"axonius.{__name__}")
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
@@ -233,6 +234,10 @@ class Triggerable(Feature, ABC):
                 on_success(trigger_response)
             except Exception as err:
                 logger.exception(f'An exception was raised while triggering job: {job_name}')
+                on_failed(err)
+                raise
+            except thread_stopper.StopThreadException as err:
+                logger.info(f'Gracefully stopped: {job_name}')
                 on_failed(err)
                 raise
 

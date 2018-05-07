@@ -21,6 +21,7 @@ DOCKER_PORTS = {
     'traiana-lab-machines-adapter':     5113,
     'stresstest-adapter':               5114,
     'bomgar-adapter':                   5115,
+    'infinite-sleep-adapter':           5116,
     'service-now-adapter':              5117,
     'cisco-meraki-adapter':             5130,
     'gotoassist-adapter':               5200,

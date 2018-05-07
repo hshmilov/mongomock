@@ -147,14 +147,14 @@ class PuppetAdapter(AdapterBase):
                     device.add_nic(inet.get(MAC_FIELD, ''),
                                    [x['address'] for x in inet.get('bindings', []) if x.get('address')] +
                                    [x['address'] for x in inet.get('bindings6', []) if x.get('address')])
-            except:
+            except Exception:
                 logger.exception("Problem adding nic to puppte")
             device.version = device_raw.get("puppetversion", '')
             device.number_of_processes = device_raw.get("processors", {}).get("count")
             try:
                 for software_name in device_raw.get("apt_package_dist_updates", []):
                     device.add_installed_software(name=software_name)
-            except:
+            except Exception:
                 logger.exception("Problemn adding software to Puppet")
             device.last_seen = parse_date(str(device_raw.get("facts_timestamp", "")))
             device.set_raw(device_raw)

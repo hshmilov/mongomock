@@ -20,7 +20,7 @@ class CoreService(PluginService):
         try:
             r = self.version()
             return r.status_code == 200
-        except:
+        except Exception:
             return False
 
     def get_registered_plugins(self):

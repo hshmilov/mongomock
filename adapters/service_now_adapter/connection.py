@@ -139,7 +139,7 @@ class ServiceNowConnection(object):
                     break
                 table_results += table_resuls_paged.get("result", [])
 
-            except:
+            except Exception:
                 logger.exception(f"Got exception in offset {sysparm_offset} with table {table_name}")
                 break
         logger.info(f"Got {len(table_results)} devices from table: {table_name}")

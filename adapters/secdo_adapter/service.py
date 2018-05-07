@@ -98,7 +98,7 @@ class SecdoAdapter(AdapterBase):
                 device.figure_os(device_raw.get("osName", ""))
                 try:
                     device.add_nic(None, device_raw.get("interfaces", "").split(","))
-                except:
+                except Exception:
                     logger.exception("Problem with fetching Secdo Device nic")
                 device.agent_version = device_raw.get("version", "")
                 device.agent_state = device_raw.get("agentState")
@@ -107,7 +107,7 @@ class SecdoAdapter(AdapterBase):
                                                                        device_raw.get("lastKeepAlive", 0), device_raw.get("lastTransmission", 0)))
                 device.set_raw(device_raw)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Problem with fetching Secdo Device")
 
     @classmethod

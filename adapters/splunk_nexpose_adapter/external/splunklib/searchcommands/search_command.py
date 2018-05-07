@@ -618,7 +618,7 @@ class SearchCommand(object):
             self.flush()
             raise
 
-        except:
+        except Exception:
             self._report_unexpected_error()
             self.flush()
             exit(1)
@@ -675,7 +675,7 @@ class SearchCommand(object):
                 raise RuntimeError('%s.metadata.searchinfo.dispatch_dir is undefined'.format(class_name))
 
             debug('  tempfile.tempdir=%r', tempfile.tempdir)
-        except:
+        except Exception:
             self._record_writer = RecordWriterV2(ofile)
             self._report_unexpected_error()
             self.finish()
@@ -754,7 +754,7 @@ class SearchCommand(object):
             self._record_writer.write_metadata(self._configuration)
             self.finish()
             raise
-        except:
+        except Exception:
             self._record_writer.write_metadata(self._configuration)
             self._report_unexpected_error()
             self.finish()
@@ -772,7 +772,7 @@ class SearchCommand(object):
         except SystemExit:
             self.finish()
             raise
-        except:
+        except Exception:
             self._report_unexpected_error()
             self.finish()
             exit(1)

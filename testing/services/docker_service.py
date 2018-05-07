@@ -284,7 +284,7 @@ else:
                     if subprocess.check_output(['docker', 'exec', '-it',
                                                 self.container_name, '/bin/ls']).decode('utf-8') == '':
                         print('Mount failed - please check host sharing settings')
-                except:
+                except Exception:
                     pass
             timeout -= 3
         try:

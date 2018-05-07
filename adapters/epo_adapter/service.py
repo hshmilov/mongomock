@@ -41,7 +41,7 @@ def parse_network(device_raw, device):
         ipv4 = (raw_ipv4 & 0xffffffff) ^ 0x80000000
         parsed_ipv4 = str(ipaddress.IPv4Address(ipv4))
         ip_list.add(parsed_ipv4)
-    except:
+    except Exception:
         logger.info(f"Error reading IPv4 {raw_ipv4}")
 
     raw_ipv6 = device_raw.get('EPOComputerProperties.IPV6')
@@ -58,13 +58,13 @@ def parse_network(device_raw, device):
                 # But we noticed that mapped ipv6 addresses tend to have the correct value
                 # In such a case we add the mapped ipv4 address
                 ip_list.add(str(ipv4mapped))
-    except:
+    except Exception:
         logger.warning(f"Failed to populate populate ipv4/6 address raw_ipv4={raw_ipv4} raw_ipv6={raw_ipv6}")
 
     raw_mac = device_raw.get('EPOComputerProperties.NetAddress')
     try:
         mac = format_mac(raw_mac)
-    except:
+    except Exception:
         logger.info(f"Failed formatting {raw_mac}")
 
     device.add_nic(mac, list(ip_list))
@@ -185,10 +185,8 @@ class EpoAdapter(AdapterBase):
                     speed=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
                     name=device_raw.get("EPOComputerProperties.CPUType")
                 )
-
-            except:
+            except Exception:
                 logger.exception("Couldn't set some epo info")
-
             device.set_raw(device_raw)
             yield device
 

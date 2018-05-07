@@ -41,7 +41,7 @@ def check_addr(message):
             if addr == '':
                 return addr
             return str(ipaddress.ip_address(addr))
-        except:
+        except Exception:
             print(f'Invalid addr {addr}')
 
 
@@ -55,7 +55,7 @@ def check_domain(message):
                     raise Exception()
 
             return domain
-        except:
+        except Exception:
             pass
 
 

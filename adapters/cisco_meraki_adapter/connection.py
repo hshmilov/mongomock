@@ -120,7 +120,7 @@ class CiscoMerakiConnection(object):
                 for client_raw in clients_device_raw:
                     client_raw["associated_device"] = serial
                 clients.extend(clients_device_raw)
-            except:
+            except Exception:
                 logger.exception(f"Problem getting clients for device {str(device)}")
         logger.info(f"Got number of clients: {len(clients)}")
 

@@ -50,7 +50,7 @@ class TestTag(object):
                 filter_="name starts-with 'ApiTestTag'")
             for t in tags_list:
                 t.delete()
-        except:
+        except Exception:
             pass
 
     def test_create_resource_error_1(self):

@@ -70,7 +70,7 @@ class QcoreAdapter(AdapterBase):
             mac = connectivity['mac']
             ip = connectivity['ip_address']
             device.add_nic(mac=mac, ips=[ip])
-        except:
+        except Exception:
             logger.exception(f"failed to populate nic info")
 
     def populate_infusion_status(self, device, pump_document):
@@ -105,7 +105,7 @@ class QcoreAdapter(AdapterBase):
                         or periodic_status[CSI_SEQUENCE_NUMBER] > aperiodic_inf_state[CSI_SEQUENCE_NUMBER]:
                     self.populate_infusion_state(device, periodic_status)
 
-        except:
+        except Exception:
             logger.exception("Failed to populate infusion status")
 
     def populate_infusion_state(self, device, infusion):

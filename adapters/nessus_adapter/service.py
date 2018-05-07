@@ -167,7 +167,7 @@ class NessusAdapter(ScannerAdapterBase):
                     new_vulnerability.severity_index = vulnerability_raw.get("severity_index")
                     new_vulnerability.vuln_index = vulnerability_raw.get("vuln_index")
                     device.vulnerabilites.append(new_vulnerability)
-                except:
+                except Exception:
                     logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
             device.scanner = True
             device.set_raw(device_raw)

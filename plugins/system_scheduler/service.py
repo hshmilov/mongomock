@@ -1,6 +1,11 @@
 import logging
+
+import pymongo
+
 logger = logging.getLogger(f"axonius.{__name__}")
 import concurrent.futures
+from retrying import retry
+from concurrent.futures import ALL_COMPLETED, wait
 import threading
 import dateutil.parser
 from datetime import datetime
@@ -14,6 +19,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts
 from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.thread_stopper import stoppable, ThreadStopper
 from axonius.mixins.triggerable import Triggerable
 import axonius.plugin_exceptions
 from axonius.consts import plugin_consts
@@ -25,6 +31,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
+        self.current_phase = scheduler_consts.Phases.Stable.name
 
         self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
         self.system_research_rate = int(self.config['DEFAULT']['system_research_rate_in_seconds'])
@@ -33,7 +40,7 @@ class SystemSchedulerService(PluginBase, Triggerable):
 
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
-        self._research_phase_scheduler.add_job(func=self._research_phase_thread,
+        self._research_phase_scheduler.add_job(func=self._restart_research,
                                                trigger=IntervalTrigger(seconds=self.system_research_rate),
                                                next_run_time=datetime.now(),
                                                name=scheduler_consts.RESEARCH_THREAD_ID,
@@ -153,6 +160,11 @@ class SystemSchedulerService(PluginBase, Triggerable):
         logger.info(f"Scheduling a {scheduler_consts.Phases.Research.name} Phase for {time_to_run}.")
         return ""
 
+    def _restart_research(self):
+        self.stop_research_phase()
+        self._research_phase_thread()
+
+    @stoppable
     def _research_phase_thread(self):
         """
         Manages a research phase and it's sub phases.
@@ -255,3 +267,66 @@ class SystemSchedulerService(PluginBase, Triggerable):
     @property
     def plugin_subtype(self):
         return "Core"
+
+    def stop_research_phase(self):
+        @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
+        def _wait_for_stable():
+            return self.current_phase == scheduler_consts.Phases.Stable.name
+        logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
+        try:
+            self._stop_plugins()
+        except Exception:
+            logger.exception('An exception was raised while stopping all plugins')
+        try:
+            _wait_for_stable()
+        except Exception:
+            logger.exception("Couldn't stop plugins for more than a 100 seconds")
+            raise axonius.plugin_exceptions.PluginException("Couldn't stop plugins for more than a 100 seconds")
+
+    @add_rule('stop_all', should_authenticate=False, methods=['POST'])
+    def stop_all(self):
+        self.stop_research_phase()
+        return '', 204
+
+    def get_all_plugins(self):
+        """
+        :return: all the currently registered plugins - used when we want to stop everything in the system towards a
+                 clean discovery phase
+        """
+        plugins_available = requests.get(self.core_address + '/register').json()
+        for plugin_unique_name in plugins_available:
+            yield plugin_unique_name
+
+    def _stop_plugins(self):
+        """
+        For each plugin in the system create a stop_plugin request.
+        It does so asynchronously and waits for every plugin to return ensuring the system is always displaying its
+        correct state - not in stable state until it really is.
+        """
+        def _stop_plugin(plugin):
+            try:
+                logger.debug(f'stopping {plugin}')
+                response = self.request_remote_plugin('stop_plugin', plugin)
+                if response.status_code != 204:
+                    logger.error(f"{plugin} didn't stop properly, returned: {response.content}")
+            except Exception:
+                logger.exception(f'error stopping {plugin}')
+                pass
+
+        plugins_to_stop = frozenset(self.get_all_plugins())
+        if len(plugins_to_stop) == 0:
+            return
+        logger.info("Starting {0} worker threads.".format(len(plugins_to_stop)))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(plugins_to_stop)) as executor:
+            try:
+                futures = []
+                # Creating a future for all the device summaries to be executed by the executors.
+                for plugin in plugins_to_stop:
+                    futures.append(executor.submit(
+                        _stop_plugin, plugin))
+
+                wait(futures, timeout=None, return_when=ALL_COMPLETED)
+            except Exception as err:
+                logger.exception("An exception was raised while stopping all plugins.")
+
+        logger.info("Finished stopping all plugins.")

@@ -18,7 +18,8 @@ import {
 	DISABLE_DATA, disableData,
 	FETCH_DATA_BY_ID, fetchDataByID,
 	REMOVE_DATA_QUERY, removeDataQuery,
-	RUN_ACTION, runAction
+	RUN_ACTION, runAction,
+    STOP_RESEARCH_PHASE, stopResearch
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
@@ -103,7 +104,8 @@ export default new Vuex.Store({
 		[ DISABLE_DATA ]: disableData,
 		[ FETCH_DATA_BY_ID ]: fetchDataByID,
 		[ REMOVE_DATA_QUERY ]: removeDataQuery,
-		[ RUN_ACTION ]: runAction
+		[ RUN_ACTION ]: runAction,
+        [ STOP_RESEARCH_PHASE ]: stopResearch
     },
     modules: {
         /*

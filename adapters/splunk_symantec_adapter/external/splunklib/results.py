@@ -36,7 +36,7 @@ from __future__ import absolute_import
 import six
 try:
     import xml.etree.cElementTree as et
-except:
+except Exception:
     import xml.etree.ElementTree as et
 
 from collections import OrderedDict

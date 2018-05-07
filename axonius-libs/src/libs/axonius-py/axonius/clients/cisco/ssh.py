@@ -114,7 +114,7 @@ class SshDhcpCiscoData(DhcpCiscoData):
     def parse(self):
         try:
             table = self._parse_dhcp_table(self._raw_data)
-        except:
+        except Exception:
             logging.exception('Exception while parsing dhcp raw data')
             return
 
@@ -122,7 +122,7 @@ class SshDhcpCiscoData(DhcpCiscoData):
         for line in table[1:]:
             try:
                 yield self._parse_dhcp_line(line)
-            except:
+            except Exception:
                 logging.exception('Exception while paring dchp line')
 
 

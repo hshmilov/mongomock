@@ -1018,18 +1018,16 @@ class GuiService(PluginBase):
 
         # if there's no aggregator, that's fine
         try:
-            self.request_remote_plugin(f"trigger/{adapter_unique_name}",
-                                       plugin_consts.AGGREGATOR_PLUGIN_NAME, method='post')
-            research_state = self.request_remote_plugin(f"state",
-                                                        plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='get').json()
-            if research_state[StateLevels.Phase.name] == Phases.Stable.name:
-                logger.info('System is stable, triggering static correlator')
-                self.request_remote_plugin(
-                    f"trigger/execute", plugin_consts.STATIC_CORRELATOR_PLUGIN_NAME, method='post')
-            else:
-                logger.info('System is in research phase, not triggering static correlator')
-        except Exception:
+            response = self.request_remote_plugin(f"insert_to_db?client_name={response.json()['client_id']}",
+                                                  adapter_unique_name, method='PUT')
+            if not (response.status_code == 400 and response.json()['message'] == 'Gracefully stopped'):
+                response.raise_for_status()
+                response = self.request_remote_plugin('trigger/execute', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                                      'POST')
+                response.raise_for_status()
+        except Exception as err:
             # if there's no aggregator, there's nothing we can do
+            logger.exception(f"Error fetching devices from {adapter_unique_name} for client {client_to_add}")
             pass
         return response.text, response.status_code
 
@@ -1729,6 +1727,21 @@ class GuiService(PluginBase):
             logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
             return return_error(f"Could not schedule research phase to: {data if data else 'Now'}",
                                 response.status_code)
+
+        return ''
+
+    @add_rule_unauthenticated("stop_research_phase", methods=['POST'])
+    def stop_research_phase(self):
+        """
+        Stops currently running research phase.
+        """
+        logger.info("stopping research phase")
+        response = self.request_remote_plugin('stop_all', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
+
+        if response.status_code != 204:
+            logger.error(
+                f"Could not stop research phase. returned code: {response.status_code}, reason: {str(response.content)}")
+            return return_error(f"Could not stop research phase {str(response.content)}", response.status_code)
 
         return ''
 

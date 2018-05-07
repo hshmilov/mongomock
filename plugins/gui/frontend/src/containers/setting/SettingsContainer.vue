@@ -65,7 +65,7 @@
         DEFAULT_SORT_SETTINGS,
 		SAVE_SETTINGS
 	} from '../../store/modules/settings'
-	import { REQUEST_API, START_RESEARCH_PHASE } from '../../store/actions'
+	import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
@@ -156,7 +156,8 @@
 				fetchLifecycle: FETCH_LIFECYCLE,
 				fetchData: REQUEST_API,
 				saveSettings: SAVE_SETTINGS,
-                startResearch: START_RESEARCH_PHASE
+                startResearch: START_RESEARCH_PHASE,
+                stopResearch: STOP_RESEARCH_PHASE
 			}),
 			toggleExecution (executionEnabled) {
 				let param = `enable`

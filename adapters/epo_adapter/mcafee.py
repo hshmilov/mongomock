@@ -219,14 +219,14 @@ class _CommandInvoker:
         try:
             self.protocols.index(protocol)
             self.protocol = protocol
-        except:
+        except Exception:
             log_and_raise_error(
                 logging.ERROR, 'Unsupported protocol: ' + protocol)
 
         try:
             self.outputs.index(output)
             self.output = output
-        except:
+        except Exception:
             log_and_raise_error(logging.ERROR, 'Unsupported output: ' + output)
 
         if (display != None):
@@ -360,7 +360,7 @@ class _CommandInvoker:
             else:
                 code = 0
             d = {'status': status, 'code': code, 'result': result}
-        except:  # for thoroughness, in case there's no colon in the output or something else
+        except Exception:  # for thoroughness, in case there's no colon in the output or something else
             # Or there was an error parsing the returned result from the server
             d = {'status': 'Error', 'code': code,
                  'result': 'Unable to parse the server\'s response'}
@@ -454,7 +454,7 @@ def _get_command_prefixes(invoker):
         prefix = fullName[:fullName.index('.')]
         try:
             cmds[prefix].append('')  # value appended is unimportant
-        except:
+        except Exception:
             cmds[prefix] = []
     return list(cmds.keys())
 

@@ -1,7 +1,7 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
 import logging
-
+from concurrent.futures import ALL_COMPLETED
 from funcy import chunks
 
 logger = logging.getLogger(f"axonius.{__name__}")
@@ -15,13 +15,13 @@ import requests
 import configparser
 import os
 import threading
+import functools
 import socket
 import ssl
 import urllib3
 import pymongo
 import concurrent
 import uuid
-import functools
 import multiprocessing
 
 from axonius.consts.adapter_consts import IGNORE_DEVICE
@@ -35,6 +35,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
+import concurrent.futures
 from retrying import retry
 from pathlib import Path
 from promise import Promise
@@ -51,6 +52,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
 from axonius.mixins.feature import Feature
+from axonius.thread_stopper import StopThreadException, ThreadStopper, stoppable
 from axonius.utils.debug import is_debug_attached
 
 # Starting the Flask application
@@ -157,6 +159,16 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True, allow_on_d
                 except Exception as second_err:
                     return json.dumps({"status": "error", "type": type(second_err).__name__,
                                        "message": str(second_err)}), 400
+                except StopThreadException:
+                    if logger:
+                        # Adding exception details for the json logger
+                        logger.info(f"Gracefully stopped {threading.get_ident()}")
+                        return return_error(f"Gracefully stopped.", 400)
+            except StopThreadException:
+                if logger:
+                    # Adding exception details for the json logger
+                    logger.info(f"Gracefully stopped {threading.get_ident()}")
+                    return return_error(f"Gracefully stopped.", 400)
 
         return actual_wrapper
 
@@ -432,6 +444,7 @@ class PluginBase(Configurable, Feature):
 
             # Upsert new fields
             fields_collection = self._get_db_connection(True)[self.plugin_unique_name][collection_name]
+
             fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
             if entity_fields['first_fields_change']:
                 fields_collection.update({'name': 'parsed'},
@@ -679,6 +692,16 @@ class PluginBase(Configurable, Feature):
                 raise plugin_exceptions.PluginNotFoundException(
                     "There is no plugin {0} currently registered".format(plugin_name))
             return found_plugins
+
+    @add_rule('stop_plugin', should_authenticate=False)
+    def stop_plugin(self):
+        ThreadStopper.stopped.set()
+        try:
+            logger.info(f"received stop request for plugin: {self.plugin_unique_name}")
+            ThreadStopper.stop_all()
+        finally:
+            ThreadStopper.stopped.clear()
+        return '', 204
 
     @add_rule('supported_features', should_authenticate=False, allow_on_disabled=True)
     def get_supported_features(self):
@@ -929,6 +952,7 @@ class PluginBase(Configurable, Feature):
         db_to_use = self._entity_db_map.get(entity_type)
         assert db_to_use, f"got unexpected {entity_type}"
 
+        @stoppable
         def insert_data_to_db(data_to_update, parsed_to_insert):
             """
             Insert data (devices/users/...) into the DB
@@ -998,6 +1022,7 @@ class PluginBase(Configurable, Feature):
             inserted_data_count = 0
             promises = []
 
+            @stoppable
             def insert_quickpath_to_db(devices):
                 all_parsed = (self._create_axonius_entity(client_name, data, entity_type) for data in devices)
                 db_to_use.insert_many(({

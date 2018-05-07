@@ -1,5 +1,8 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
+
+from axonius.thread_stopper import stoppable
+
 import time
 import threading
 import functools
@@ -96,9 +99,10 @@ class GeneralInfoService(PluginBase, Triggerable):
 
         try:
             self._gather_general_info()
-        except:
+        except Exception:
             logger.exception("Run gather_general_info asynchronously: Got an exception.")
 
+    @stoppable
     def _gather_general_info(self):
         """
         Runs wmi queries on windows devices to understand important stuff.
@@ -108,8 +112,8 @@ class GeneralInfoService(PluginBase, Triggerable):
         logger.info("Gathering General info started.")
         acquired = False
         try:
-            if self.work_lock.acquire(False):
-                acquired = True
+            acquired = self.work_lock.acquire(False)
+            if acquired:
                 logger.debug("acquired work lock")
 
                 # First, gather general info about devices
@@ -280,7 +284,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 try:
                     adapterdata_user.last_seen_in_devices = \
                         max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
-                except:
+                except Exception:
                     # Last seen does not exist
                     adapterdata_user.last_seen_in_devices = linked_user['last_use_date']
 

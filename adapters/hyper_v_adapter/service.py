@@ -113,7 +113,7 @@ class HyperVAdapter(AdapterBase):
 
                 device.set_raw(raw_device)
                 yield device
-            except:
+            except Exception:
                 logger.exception("Failed to parse device.")
 
     @classmethod

@@ -112,7 +112,7 @@ class GetUserLogons(GeneralInfoSubplugin):
             # For some reason last_use_time is sometimes 0....
             try:
                 last_use_time = wmi_date_to_datetime(last_use_time)
-            except:
+            except Exception:
                 self.logger.exception(f"Error parsing LastUseTime ({last_use_time}). Setting to 1 Jan 01")
                 last_use_time = datetime.datetime(1, 1, 1)
 

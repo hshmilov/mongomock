@@ -422,7 +422,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         if type(thumbnail_photo) == list:
                             thumbnail_photo = thumbnail_photo[0]        # I think this can happen from some reason..
                         user.image = bytes_image_to_base64(thumbnail_photo)
-                except:
+                except Exception:
                     logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")
 
                 # User Personal Details
