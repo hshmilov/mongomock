@@ -5,7 +5,7 @@ export const FETCH_DEVICE = 'FETCH_DEVICE'
 export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 
 
-export const device = {
+export const devices = {
 	state: {
 		content: { data: [], fetching: false, error: ''},
 		count: { data: 0, fetching: false, error: ''},

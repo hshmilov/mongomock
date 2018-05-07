@@ -846,41 +846,41 @@ class GuiService(PluginBase):
     @filtered()
     @sorted()
     @projected()
-    @add_rule_unauthenticated("device")
+    @add_rule_unauthenticated("devices")
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices))
 
     @filtered()
     @sorted()
     @projected()
-    @add_rule_unauthenticated("device/csv")
+    @add_rule_unauthenticated("devices/csv")
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices)
 
-    @add_rule_unauthenticated("device/<device_id>", methods=['GET'])
+    @add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
     def device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'security_patches', 'users'])
 
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("device/queries", methods=['POST', 'GET'])
+    @add_rule_unauthenticated("devices/queries", methods=['POST', 'GET'])
     def device_queries_do(self, limit, skip, mongo_filter):
         return self._entity_queries(limit, skip, mongo_filter, EntityType.Devices)
 
-    @add_rule_unauthenticated("device/queries/<query_id>", methods=['DELETE'])
+    @add_rule_unauthenticated("devices/queries/<query_id>", methods=['DELETE'])
     def device_queries_delete(self, query_id):
         return self._entity_queries_delete(EntityType.Devices, query_id)
 
     @filtered()
-    @add_rule_unauthenticated("device/count")
+    @add_rule_unauthenticated("devices/count")
     def get_devices_count(self, mongo_filter):
         return self._get_entities_count(mongo_filter, EntityType.Devices)
 
-    @add_rule_unauthenticated("device/fields")
+    @add_rule_unauthenticated("devices/fields")
     def device_fields(self):
         return jsonify(self._entity_fields(EntityType.Devices))
 
-    @add_rule_unauthenticated("device/views", methods=['GET', 'POST'])
+    @add_rule_unauthenticated("devices/views", methods=['GET', 'POST'])
     def device_views(self):
         """
         Save or fetch views over the devices db
@@ -888,11 +888,11 @@ class GuiService(PluginBase):
         """
         return self._entity_views(request.method, EntityType.Devices)
 
-    @add_rule_unauthenticated("device/labels", methods=['GET', 'POST', 'DELETE'])
+    @add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
     def device_labels(self):
         return self._entity_labels(self.devices_db_view, self.devices)
 
-    @add_rule_unauthenticated("device/disable", methods=['POST'])
+    @add_rule_unauthenticated("devices/disable", methods=['POST'])
     def disable_device(self):
         return self._disable_entity(EntityType.Devices)
 
@@ -904,49 +904,49 @@ class GuiService(PluginBase):
     @filtered()
     @sorted()
     @projected()
-    @add_rule_unauthenticated("user")
+    @add_rule_unauthenticated("users")
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users))
 
     @filtered()
     @sorted()
     @projected()
-    @add_rule_unauthenticated("user/csv")
+    @add_rule_unauthenticated("users/csv")
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users)
 
-    @add_rule_unauthenticated("user/<user_id>", methods=['GET'])
+    @add_rule_unauthenticated("users/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
 
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("user/queries", methods=['POST', 'GET'])
+    @add_rule_unauthenticated("users/queries", methods=['POST', 'GET'])
     def user_queries(self, limit, skip, mongo_filter):
         return self._entity_queries(limit, skip, mongo_filter, EntityType.Users)
 
-    @add_rule_unauthenticated("user/queries/<query_id>", methods=['DELETE'])
+    @add_rule_unauthenticated("users/queries/<query_id>", methods=['DELETE'])
     def user_queries_delete(self, query_id):
         return self._entity_queries_delete(EntityType.Users, query_id)
 
     @filtered()
-    @add_rule_unauthenticated("user/count")
+    @add_rule_unauthenticated("users/count")
     def get_users_count(self, mongo_filter):
         return self._get_entities_count(mongo_filter, EntityType.Users)
 
-    @add_rule_unauthenticated("user/fields")
+    @add_rule_unauthenticated("users/fields")
     def user_fields(self):
         return jsonify(self._entity_fields(EntityType.Users))
 
-    @add_rule_unauthenticated("user/disable", methods=['POST'])
+    @add_rule_unauthenticated("users/disable", methods=['POST'])
     def disable_user(self):
         return self._disable_entity(EntityType.Users)
 
-    @add_rule_unauthenticated("user/views", methods=['GET', 'POST'])
+    @add_rule_unauthenticated("users/views", methods=['GET', 'POST'])
     def user_views(self):
         return self._entity_views(request.method, EntityType.Users)
 
-    @add_rule_unauthenticated("user/labels", methods=['GET', 'POST', 'DELETE'])
+    @add_rule_unauthenticated("users/labels", methods=['GET', 'POST', 'DELETE'])
     def user_labels(self):
         return self._entity_labels(self.users_db_view, self.users)
 
@@ -1549,13 +1549,13 @@ class GuiService(PluginBase):
         for query in dashboard_queries:
             # Can be optimized by taking all names in advance and querying each module's collection once
             # But since list is very short the simpler and more readable implementation is fine
-            query_object = self._get_collection(f'{query["module"]}_queries', limited_user=False).find_one(
-                {'name': query['name']})
+            entity = EntityType(query['module']) if query.get('module') else EntityType.Devices
+            query_object = self._queries_db_map[entity].find_one({'name': query['name']})
             if not query_object or not query_object.get('filter'):
                 raise Exception(f'No filter found for query {query["name"]}')
             data.append({'name': query['name'], 'filter': query_object['filter'], 'module': query['module'],
-                         'count': self.aggregator_db_connection[f'{query["module"]}s_db_view'].find(
-                             parse_filter(query_object['filter']), {'_id': 1}).count()})
+                         'count': self._entity_views_db_map[entity].find(parse_filter(query_object['filter']),
+                                                                         {'_id': 1}).count()})
         return data
 
     def _fetch_data_for_chart_intersect(self, dashboard_queries):
@@ -1572,10 +1572,11 @@ class GuiService(PluginBase):
         """
         if not dashboard_queries or len(dashboard_queries) < 2:
             raise Exception('Pie chart requires at least two queries')
-        module = dashboard_queries[0]['module']
+        entity = EntityType(dashboard_queries[0]['module']) if dashboard_queries[0].get(
+            'module') else EntityType.Devices
         # Query and data collections according to given parent's module
-        queries_collection = self._get_collection(f'{module}_queries', limited_user=False)
-        data_collection = self.aggregator_db_connection[f'{module}s_db_view']
+        queries_collection = self._queries_db_map[entity]
+        data_collection = self._entity_views_db_map[entity]
 
         parent_name = dashboard_queries[0]['name']
         parent_filter = parse_filter(queries_collection.find_one({'name': parent_name})['filter'])

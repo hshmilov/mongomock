@@ -61,7 +61,7 @@
     import { FETCH_DATA_QUERIES } from '../../store/actions'
     import { SAVE_DASHBOARD } from '../../store/modules/dashboard'
 
-    const modules = ['device', 'user']
+    const modules = ['devices', 'users']
 	const dashboardQuery = { name: '', module: ''}
 
 	export default {

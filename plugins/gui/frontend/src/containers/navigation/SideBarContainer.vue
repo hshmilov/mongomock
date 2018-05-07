@@ -14,12 +14,12 @@
         <nav class="x-menu">
             <nested-nav-bar>
                 <nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
-                <nested-nav-item route-name="Devices" icon-name="device">
+                <nested-nav-item route-name="Devices" icon-name="devices">
                     <nested-nav-bar nest-level="1" class="collapse">
                         <nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved" />
                     </nested-nav-bar>
                 </nested-nav-item>
-                <nested-nav-item route-name="Users" icon-name="user">
+                <nested-nav-item route-name="Users" icon-name="users">
                     <nested-nav-bar nest-level="1" class="collapse">
                         <nested-nav-item route-name="Saved Queries" router-path="/users/query/saved" />
                     </nested-nav-bar>

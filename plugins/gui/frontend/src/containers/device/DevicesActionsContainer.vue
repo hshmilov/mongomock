@@ -1,5 +1,5 @@
 <template>
-    <x-data-action-menu module="device" :selected="devices">
+    <x-data-action-menu module="devices" :selected="devices">
         <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy...">
             <h3 class="mb-2">Deploy Executable</h3>
             <x-schema-form :schema="deployFormSchema" v-model="deploy.data" api-upload="actions"
@@ -92,7 +92,7 @@
 				Blacklist is currently implemented by checking for a designated tag,
 				Therefore, adding this tag to selected devices
 				 */
-                return this.addLabels({module: 'device', data: {entities: this.devices, labels: ['do_not_execute']}})
+                return this.addLabels({module: 'devices', data: {entities: this.devices, labels: ['do_not_execute']}})
 			},
 			saveDeploy () {
 				return new Promise((resolve, reject) => {

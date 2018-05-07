@@ -1,7 +1,7 @@
 /* eslint-disable */
 var icon = require('vue-svgicon')
 icon.register({
-  'navigation/device': {
+  'navigation/devices': {
     width: 24,
     height: 16,
     viewBox: '0 0 24 16',

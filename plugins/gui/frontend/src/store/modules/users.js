@@ -1,7 +1,5 @@
-export const DISABLE_USERS = 'DISABLE_USERS'
 
-
-export const user = {
+export const users = {
     state: {
         content: {data: [], fetching: false, error: ''},
         count: {data: 0, fetching: false, error: ''},

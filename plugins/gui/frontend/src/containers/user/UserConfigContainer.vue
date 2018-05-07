@@ -3,7 +3,7 @@
     	{ title: 'users', path: { name: 'Users'}},
     	{ title: userName }
     ]">
-        <x-data-entity module="user" />
+        <x-data-entity module="users" />
     </x-page>
 </template>
 
@@ -19,7 +19,7 @@
         computed: {
             ...mapState({
                 userName(state) {
-                	let current = state.user.current.data
+                	let current = state.users.current.data
                     if (!current || !current.generic) return
 
                 	let name = current.generic.basic['specific_data.data.username']

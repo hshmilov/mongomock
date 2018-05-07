@@ -117,9 +117,9 @@
             ...mapState({
                 alertData: state => state.alert.alertDetails.data,
                 currentQueryOptions(state) {
-                	let queries = [ ...state.device.queries.saved.data.map((item) => {
+                	let queries = [ ...state.devices.queries.saved.data.map((item) => {
                         return { ...item, entity: 'devices' }
-                    }), ...state.user.queries.saved.data.map((item) => {
+                    }), ...state.users.queries.saved.data.map((item) => {
                         return { ...item, entity: 'users' }
                     }) ]
                 	if (!queries || !queries.length) return []
@@ -222,8 +222,8 @@
             }
 
 			/* Fetch all saved queries for offering user to base alert upon */
-            Promise.all([this.fetchQueries({module: 'device', type: 'saved'}),
-                         this.fetchQueries({module: 'user', type: 'saved'})]).then(() => {
+            Promise.all([this.fetchQueries({module: 'devices', type: 'saved'}),
+                         this.fetchQueries({module: 'users', type: 'saved'})]).then(() => {
                     if (this.alertData.query) {
                         let matching = this.currentQueryOptions.filter(item =>
                             (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.query)

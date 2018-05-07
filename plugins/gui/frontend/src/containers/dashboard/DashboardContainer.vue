@@ -106,16 +106,16 @@
                 this.fetchDashboardCoverage()
 			},
 			runAdapterFilter (index) {
-				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'device')
+				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')
 			},
             runCoverageFilter(properties, covered) {
 				if (!properties || !properties.length) return
                 if (covered) {
-                    this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`, 'device')
+                    this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`, 'devices')
                 } else {
 					this.runFilter(properties.map((property) => {
 						return `specific_data.adapter_properties != '${property}'`
-                    }).join(' and '), 'device')
+                    }).join(' and '), 'devices')
                 }
             },
             runChartFilter(chartInd, queryInd) {

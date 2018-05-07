@@ -43,8 +43,8 @@ import {
 	GET_DATA_BY_ID, getDataByID
 } from './getters'
 import { settings } from '../store/modules/settings'
-import { device } from '../store/modules/device'
-import { user } from '../store/modules/user'
+import { devices } from './modules/devices'
+import { users } from './modules/users'
 import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
@@ -113,8 +113,8 @@ export default new Vuex.Store({
             Module stores controls and manages the way of obtaining it.
          */
         settings,
-        device,
-		user,
+        devices,
+		users,
 		plugin,
 		adapter,
 		alert,

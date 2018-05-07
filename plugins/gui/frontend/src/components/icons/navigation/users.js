@@ -1,7 +1,7 @@
 /* eslint-disable */
 var icon = require('vue-svgicon')
 icon.register({
-  'navigation/user': {
+  'navigation/users': {
     width: 22,
     height: 14,
     viewBox: '0 0 22 14',

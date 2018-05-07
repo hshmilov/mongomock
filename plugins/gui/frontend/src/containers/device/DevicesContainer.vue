@@ -1,14 +1,14 @@
 <template>
     <x-page title="devices">
-        <x-data-query module="device" />
-        <x-data-table module="device" id-field="internal_axon_id"
+        <x-data-query :module="module" />
+        <x-data-table :module="module" id-field="internal_axon_id"
                       v-model="selectedDevices" @click-row="configDevice" title="Devices">
             <template slot="actions">
                 <!-- Available actions for performing on currently selected group of devices --->
                 <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices" />
-                <x-data-view-menu module="device" />
+                <x-data-view-menu :module="module" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
-                <x-data-field-menu module="device" class="link" />
+                <x-data-field-menu :module="module" class="link" />
                 <div class="link" @click="exportCSV">Export csv</div>
             </template>
         </x-data-table>
@@ -32,6 +32,11 @@
 		components: {
 			xPage, xDataQuery, xDataTable, DevicesActionsContainer, xDataFieldMenu, xDataViewMenu
 		},
+        computed: {
+			module() {
+				return 'devices'
+            }
+        },
         data() {
 			return {
 				selectedDevices: []
@@ -44,10 +49,10 @@
 			configDevice (deviceId) {
 				if (this.selectedDevices && this.selectedDevices.length) return
 
-				this.$router.push({path: `devices/${deviceId}`})
+				this.$router.push({path: `${this.module}/${deviceId}`})
 			},
             exportCSV() {
-				this.fetchContentCSV({ module: 'device' })
+				this.fetchContentCSV({ module: this.module })
             }
 		}
 	}

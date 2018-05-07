@@ -3,7 +3,7 @@
     	{ title: 'devices', path: { name: 'Devices'}},
     	{ title: deviceName }
     ]">
-        <x-data-entity module="device"/>
+        <x-data-entity module="devices"/>
     </x-page>
 </template>
 
@@ -19,7 +19,7 @@
 		computed: {
 			...mapState({
                 deviceName(state) {
-                	let current = state.device.current.data
+                	let current = state.devices.current.data
                     if (!current || !current.generic) return ''
 
                     let name = current.generic.basic['specific_data.data.hostname']

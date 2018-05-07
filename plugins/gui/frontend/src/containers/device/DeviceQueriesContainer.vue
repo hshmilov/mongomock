@@ -1,6 +1,6 @@
 <template>
     <x-page title="saved queries">
-        <x-data-queries-table module="device" :actions="[{triggerIcon: 'navigation/alert', handler: createAlert}]" />
+        <x-data-queries-table module="devices" :actions="[{triggerIcon: 'navigation/alert', handler: createAlert}]" />
     </x-page>
 </template>
 

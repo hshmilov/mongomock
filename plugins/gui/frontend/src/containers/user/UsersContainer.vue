@@ -1,12 +1,12 @@
 <template>
     <x-page title="users">
-        <x-data-query module="user" />
-        <x-data-table module="user" v-model="selectedUsers" id-field="internal_axon_id" title="Users" @click-row="configUser">
+        <x-data-query :module="module" />
+        <x-data-table :module="module" v-model="selectedUsers" id-field="internal_axon_id" title="Users" @click-row="configUser">
             <template slot="actions">
-                <x-data-action-menu v-show="selectedUsers && selectedUsers.length" module="user" :selected="selectedUsers" />
-                <x-data-view-menu module="user" />
+                <x-data-action-menu v-show="selectedUsers && selectedUsers.length" :module="module" :selected="selectedUsers" />
+                <x-data-view-menu :module="module" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
-                <x-data-field-menu module="user" class="link" />
+                <x-data-field-menu :module="module" class="link" />
                 <div class="link" @click="exportCSV">Export csv</div>
             </template>
         </x-data-table>
@@ -27,6 +27,11 @@
 	export default {
 		name: 'users-container',
         components: { xPage, xDataQuery, xDataTable, xDataViewMenu, xDataFieldMenu, xDataActionMenu },
+        computed: {
+			module() {
+				return 'users'
+            }
+        },
         data() {
             return {
                 selectedUsers: []
@@ -39,10 +44,10 @@
 			configUser (userId) {
 				if (this.selectedUsers && this.selectedUsers.length) return
 
-				this.$router.push({path: `users/${userId}`})
+				this.$router.push({path: `${this.module}/${userId}`})
 			},
 			exportCSV() {
-				this.fetchContentCSV({ module: 'device' })
+				this.fetchContentCSV({ module: this.module })
 			}
         }
     }
