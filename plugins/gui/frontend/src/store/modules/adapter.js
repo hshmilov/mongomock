@@ -1,6 +1,7 @@
 import {REQUEST_API} from '../actions'
 import { pluginMeta } from '../../static.js'
 
+export const SET_ADAPTER = 'SET_ADAPTER'
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'
 export const FETCH_ADAPTER_SERVERS = 'FETCH_ADAPTER_SERVERS'
@@ -74,6 +75,9 @@ export const adapter = {
 				state.adapterList.error = payload.error
 			}
 		},
+        [ SET_ADAPTER ] (state, adapterId) {
+            state.currentAdapter.data.adapterId = adapterId
+        },
 		[ SET_ADAPTER_SERVERS ] (state, payload) {
 			/*
 				Called first before API request for a specific adapter, in order to update state to fetching
@@ -87,7 +91,7 @@ export const adapter = {
 					clients: payload.data.clients.map((client) => {
 						client['date_fetched'] = undefined
 						return client
-					})
+					}),
 				}
 
 			}
@@ -127,17 +131,20 @@ export const adapter = {
 				type: UPDATE_ADAPTERS
 			})
 		},
-		[ FETCH_ADAPTER_SERVERS ] ({dispatch}, adapterId) {
+		[ FETCH_ADAPTER_SERVERS ] ({dispatch, commit}, adapterId) {
 			/*
 				Fetch a single adapter with all its clients and schema and stuff, according to given id
 			 */
 			if (!adapterId) { return }
+
+            commit(SET_ADAPTER, adapterId)
+
 			dispatch(REQUEST_API, {
 				rule: `adapters/${adapterId}/clients`,
 				type: SET_ADAPTER_SERVERS
 			})
 		},
-		[ SAVE_ADAPTER_SERVER ] ({dispatch, commit}, payload) {
+		[ SAVE_ADAPTER_SERVER ] ({dispatch, commit, state}, payload) {
 			/*
 				Call API to save given server controls to adapter by the given adapter id,
 				either adding a new server or updating and existing one, if id is provided with the controls
@@ -165,6 +172,7 @@ export const adapter = {
 				method: 'PUT',
 				data: payload.serverData
 			}).then(() => {
+				if (state.currentAdapter.data.adapterId !== payload.adapterId) return
 				dispatch(FETCH_ADAPTER_SERVERS, payload.adapterId)
 			})
 		},
