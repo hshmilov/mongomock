@@ -16,13 +16,17 @@
             <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex">
                 <nested-menu v-if="savedQueries && savedQueries.length">
                     <div class="title">Saved Queries</div>
-                    <nested-menu-item v-for="query, index in savedQueries" :key="index" :title="query.name"
-                                      :selected="queryMenuIndex === index" @click="selectQuery(query)" />
+                    <div class="menu-content">
+                        <nested-menu-item v-for="query, index in savedQueries" :key="index" :title="query.name"
+                                          :selected="queryMenuIndex === index" @click="selectQuery(query)" />
+                    </div>
                 </nested-menu>
                 <nested-menu v-if="historyQueries && historyQueries.length">
                     <div class="title">History</div>
-                    <nested-menu-item v-for="query, index in historyQueries" :key="index" :title="query.filter"
-                                      :selected="queryMenuIndex - savedQueries.length === index" @click="selectQuery(query)" />
+                    <div class="menu-content">
+                        <nested-menu-item v-for="query, index in historyQueries" :key="index" :title="query.filter"
+                                          :selected="queryMenuIndex - savedQueries.length === index" @click="selectQuery(query)" />
+                    </div>
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
                     <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"
@@ -78,10 +82,10 @@
 		computed: {
 			...mapState({
                 savedQueries(state) {
-                	return state[this.module].queries.saved.data.slice(0, this.limit)
+                	return state[this.module].queries.saved.data
                 },
 				historyQueries(state) {
-					return state[this.module].queries.history.data.slice(0, this.limit)
+					return state[this.module].queries.history.data
 				},
                 query(state) {
                 	return state[this.module].view.query
@@ -173,13 +177,12 @@
 			...mapActions({
 				fetchQueries: FETCH_DATA_QUERIES, saveQuery: SAVE_DATA_QUERY,
 			}),
-            focusInput() {
+            focusInput () {
 				this.$refs.greatInput.focus()
             },
 			searchQuery () {
 				if (this.complexSearch || this.queryMenuIndex !== -1) return
-				Promise.all([this.filterQueries('saved', 'name'), this.filterQueries('history', 'filter')])
-					.catch((error) => console.log(error))
+				return Promise.all([this.filterQueries('saved', 'name'), this.filterQueries('history', 'filter')])
 			},
 			filterQueries (type, filterField) {
 				return this.fetchQueries({
@@ -256,7 +259,14 @@
             }
 		},
         created() {
-			this.searchQuery()
+			this.searchQuery().then(() => {
+                if (this.$route.query.query) {
+                    let requestedQuery = this.savedQueries.filter(query => query.name === this.$route.query.query)
+                    if (requestedQuery && requestedQuery.length) {
+                        this.queryFilter = requestedQuery[0].filter
+                    }
+                }
+            })
             if (this.queryFilter) {
 				this.searchValue = this.queryFilter
             }
@@ -288,6 +298,10 @@
                 border-bottom: 1px solid $grey-2;
                 &:last-child {
                     border: 0;
+                }
+                .menu-content {
+                    max-height: 150px;
+                    overflow: auto;
                 }
                 .menu-item .item-content {
                     text-overflow: ellipsis;

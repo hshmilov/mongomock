@@ -3,7 +3,7 @@
         <x-array-edit v-model="data" :schema="schema" @input="$emit('input', data)" @validate="updateValidity" />
         <div class="error-text">
             <template v-if="error">{{error}}</template>
-            <template v-else-if="invalid.length">Complete "{{invalid[0]}}" to save data</template>
+            <template v-else-if="invalid.length">'{{invalid[0]}}' requires a value</template>
             <template v-else>&nbsp;</template>
         </div>
     </form>

@@ -41,6 +41,9 @@ export default {
 			if (newValue !== oldValue) {
 				this.data = newValue
 			}
+			if (newValue) {
+				this.validate()
+			}
 		}
 	},
 	methods: {

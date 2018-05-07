@@ -21,7 +21,7 @@ let host = ''
 
     @param {commit} - Vue action mechanism provides this
     @param payload - An object containing: {
-        method: HTTP method for the request [defaulted GET]
+        method: HTTP meth.od for the request [defaulted GET]
         rule: Entry in the API to call, including request parameters, if needed
         controls: Object with controls, for HTTP methods that allow sending it, if needed,
         type: Mutation type to call
@@ -138,7 +138,7 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 export const FETCH_DATA_VIEWS = 'FETCH_DATA_VIEWS'
 export const fetchDataViews = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
-	dispatch(REQUEST_API, {
+	return dispatch(REQUEST_API, {
 		rule: payload.module + '/views',
 		type: UPDATE_DATA_VIEWS,
 		payload: {module: payload.module}

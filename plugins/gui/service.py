@@ -31,9 +31,12 @@ from bson.son import SON
 import json
 from axonius.utils.parsing import parse_filter
 import re
+from urllib3.util.url import parse_url
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
+
+SYSTEM_CONFIG_COLLECTION = 'system_config'
 
 
 def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
@@ -252,10 +255,10 @@ class GuiService(PluginBase):
         }
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
-
         self.add_default_reports('default_reports.ini')
-
         self.add_default_dashboard_charts('default_dashboard_charts.ini')
+        if not self.system_collection.find({'type': 'server'}):
+            self.system_collection.insert_one({'type': 'server', 'server_name': 'localhost'})
 
     def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
         """
@@ -1374,6 +1377,10 @@ class GuiService(PluginBase):
         if not bcrypt.verify(password, user_from_db['password']):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
+        if request and request.referrer and 'localhost' not in request.referrer:
+            self.system_collection.replace_one({'type': 'server'},
+                                               {'type': 'server', 'server_name': parse_url(request.referrer).host},
+                                               upsert=True)
         session['user'] = user_from_db
         return ""
 
@@ -1832,7 +1839,10 @@ class GuiService(PluginBase):
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
             report_data['adapter_queries'] = self._get_adapter_queries(report['adapters'])
-        temp_report_filename = ReportGenerator(report_data, 'gui/templates/report/').generate()
+
+        system_config = self.system_collection.find_one({'type': 'server'}) or {}
+        temp_report_filename = ReportGenerator(report_data, 'gui/templates/report/',
+                                               host=system_config.get('server_name', 'localhost')).generate()
         return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=temp_report_filename)
 
@@ -1895,7 +1905,7 @@ class GuiService(PluginBase):
                 if view:
                     field_list = view.get('fields', [])
                     views_data.append({
-                        'name': view_doc.get('name', f'View {i}'),
+                        'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                         'fields': [{'name': field, 'title': field_to_title.get(field, field)} for field in field_list],
                         'data': self._get_entities(view.get('pageSize', 20), 0,
                                                    parse_filter(view.get('query', {}).get('filter', '')),
@@ -1906,3 +1916,7 @@ class GuiService(PluginBase):
     @property
     def plugin_subtype(self):
         return "Core"
+
+    @property
+    def system_collection(self):
+        return self._get_collection(SYSTEM_CONFIG_COLLECTION, limited_user=False)

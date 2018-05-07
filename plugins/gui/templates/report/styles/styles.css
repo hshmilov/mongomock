@@ -23,6 +23,10 @@ h1, h2, h3 {
     text-align: left;
 }
 
+a {
+    text-decoration: none;
+}
+
 
 /* STRUCTURE */
 
@@ -104,6 +108,9 @@ h1, h2, h3 {
 }
 
 /* Line heights */
+.lh-72 {
+    line-height: 72px;
+}
 .lh-100 {
     line-height: 100px;
 }
@@ -111,6 +118,9 @@ h1, h2, h3 {
 /* Spacing */
 .m-8 {
     margin: 8px;
+}
+.mt-0 {
+    margin-top: 0;
 }
 .mt-8 {
     margin-top: 8px;
@@ -120,6 +130,9 @@ h1, h2, h3 {
 }
 .mt-24 {
     margin-top: 24px;
+}
+.mb-0 {
+    margin-bottom: 0;
 }
 .mb-12 {
     margin-bottom: 12px;
@@ -180,24 +193,19 @@ h1, h2, h3 {
 }
 
 .card {
-    width: 324px;
+    width: 320px;
     height: 256px;
     padding: 12px;
     display: inline-block;
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
 }
 .card:nth-child(odd) {
-    margin-right: 24px;
+    margin-right: 12px;
 }
 .card.full {
     width: auto;
-    height: auto;
-    display: block;
-}
-
-.data-discovery .f-72 {
-    line-height: 72px;
+    height: 100%;
 }
 
 .histogram {
@@ -220,13 +228,13 @@ h1, h2, h3 {
 }
 
 .box {
-    width: 324px;
+    width: 320px;
     display: inline-block;
     padding: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
 }
 .box:nth-child(even) {
-    margin-right: 24px;
+    margin-right: 12px;
 }
 
 .table-container {
@@ -247,19 +255,7 @@ h1, h2, h3 {
 .table-striped .data {
     width: 100px;
     overflow: hidden;
-    white-space: nowrap;
-}
-.table-striped tr td:after {
-    content: '';
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    height: 20px;
-    width: 24px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), #FFFFFF 90%);
-}
-.table-striped tr:nth-child(odd) td:after {
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), #F7F7F7 90%);
+    overflow-wrap: break-word;
 }
 .table-striped tr th {
     vertical-align: bottom;

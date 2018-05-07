@@ -80,7 +80,14 @@
             }
         },
         created() {
-			this.fetchViews({ module: this.module })
+			this.fetchViews({ module: this.module }).then(() => {
+                if (this.$route.query.view) {
+                    let requestedView = this.views.filter(view => view.name === this.$route.query.view)
+                    if (requestedView && requestedView.length) {
+                    	this.updateModuleView(requestedView[0].view)
+                    }
+                }
+            })
         }
 	}
 </script>

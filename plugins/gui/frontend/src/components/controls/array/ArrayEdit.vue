@@ -5,7 +5,7 @@
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
                 <component :is="`x-${item.type}-edit`" :schema="item" v-model="data[item.name]"
-                           @input="$emit('input', data)" :validator="validator" @focusout="emitFocus" />
+                           @input="onInput" :validator="validator" @focusout="onFocusout" />
             </x-type-wrap>
         </div>
     </div>
@@ -40,9 +40,12 @@
             }
         },
         methods : {
-			emitFocus() {
+			onFocusout() {
 				this.validator.$emit('focusout')
 			},
+            onInput() {
+				this.$emit('input', this.data)
+            }
         },
         created() {
 			this.validator.$on('validate', (valid) => this.$emit('validate', valid))

@@ -28,30 +28,30 @@ export default new Router({
 			component: DashboardContainer
         },
         {
-            path: '/device',
+            path: '/devices',
             name: 'Devices',
             component: DevicesContainer,
         },
 		{
-			path: '/device/:id',
+			path: '/devices/:id',
 			component: DeviceConfigContainer,
 		},
 		{
-			path: '/device/query/saved',
+			path: '/devices/query/saved',
 			name: 'Device Queries',
 			component: DeviceQueriesContainer
 		},
 		{
-			path: '/user',
+			path: '/users',
 			name: 'Users',
 			component: UsersContainer
 		},
 		{
-			path: '/user/:id',
+			path: '/users/:id',
 			component: UserConfigContainer
 		},
 		{
-			path: '/user/query/saved',
+			path: '/users/query/saved',
 			name: 'User Queries',
 			component: UserQueriesContainer
 		},

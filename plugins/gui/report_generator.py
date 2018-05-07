@@ -12,7 +12,7 @@ GREY_COLOUR = '#DEDEDE'
 
 
 class ReportGenerator(object):
-    def __init__(self, report_data, template_path, output_path='/tmp/'):
+    def __init__(self, report_data, template_path, output_path='/tmp/', host='localhost'):
         """
 
         :param report_data:
@@ -22,6 +22,7 @@ class ReportGenerator(object):
         self.report_data = report_data
         self.template_path = template_path
         self.output_path = output_path
+        self.host = host
         self.env = Environment(loader=FileSystemLoader('.'))
 
         self.templates = {
@@ -58,8 +59,8 @@ class ReportGenerator(object):
 
         # Add section for all saved queries
         if self.report_data.get('views_data'):
-            sections.append(
-                self.templates['section'].render({'title': 'Data By View', 'content': self._create_data_views()}))
+            sections.append(self.templates['section'].render(
+                {'title': 'Saved Devices Views', 'content': self._create_data_views()}))
 
         # Join all sections as the content of the report
         html_data = self.templates['report'].render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
@@ -104,9 +105,8 @@ class ReportGenerator(object):
         if self.report_data.get('covered_devices'):
             # Adding cards with coverage of network roles
             for coverage_data in self.report_data['covered_devices']:
-                coverage_pie_filename = "_".join(coverage_data["title"].split(" ")) + '.png'
-                svg2png(bytestring=self._create_coverage_pie(coverage_data['portion']),
-                        write_to=f'{self.output_path}{coverage_pie_filename}')
+                coverage_pie_filename = f'{self.output_path}{"_".join(coverage_data["title"].split(" "))}.png'
+                svg2png(bytestring=self._create_coverage_pie(coverage_data['portion']), write_to=coverage_pie_filename)
                 summary_content.append(self.templates['card'].render({
                     'title': f'{coverage_data["title"]} Coverage',
                     'content': f'<img src="{coverage_pie_filename}">'
@@ -127,11 +127,10 @@ class ReportGenerator(object):
                 if custom_chart['type'] == ChartTypes.compare.name:
                     content = self._create_query_histogram(custom_chart['data'])
                 elif custom_chart['type'] == ChartTypes.intersect.name:
-                    query_pie_filename = "_".join(title.split(" ")) + '.png'
-                    svg2png(bytestring=self._create_query_pie(custom_chart['data']),
-                            write_to=f'{self.output_path}{query_pie_filename}')
+                    query_pie_filename = f'{self.output_path}{"_".join(title.split(" "))}.png'
+                    svg2png(bytestring=self._create_query_pie(custom_chart['data']), write_to=query_pie_filename)
                     content = f'<img src="{query_pie_filename}">'
-                else:
+                if not content:
                     continue
                 summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
         return '\n'.join(summary_content)
@@ -176,7 +175,7 @@ class ReportGenerator(object):
             (end_x, end_y) = self._calculate_coordinates(cumulative_portion)
             slices.append({
                 'path': f'M {start_x} {start_y} A 1 1 0 {1 if portion > .5 else 0} 1 {end_x} {end_y} L 0 0',
-                'text_x': middle_x * 0.7, 'text_y': middle_y * 0.5
+                'text_x': middle_x * 0.7, 'text_y': middle_y * (0.8 if middle_y > 0 else 0.5)
             })
         return slices
 
@@ -222,6 +221,8 @@ class ReportGenerator(object):
                 parameters['title'] = item['name']
                 parameters['class'] = 'd-none'
             bars.append(self.templates['histogram_bar'].render(parameters))
+        if not bars:
+            return ''
         return self.templates['histogram'].render({'content': '\n'.join(bars),
                                                    'remainder': f'+{len(data) - limit}' if len(data) > limit else ''})
 
@@ -236,11 +237,12 @@ class ReportGenerator(object):
         total = queries_data[0].get('count', 1)
         portions = []
         for item in queries_data[1:]:
-            portions.append(item['count'] / total)
-            queries_data[0]['count'] = queries_data[0]['count'] - item['count']
+            if item.get('count'):
+                portions.append(item['count'] / total)
+                queries_data[0]['count'] = queries_data[0]['count'] - item['count']
         portions.insert(0, queries_data[0]['count'] / total)
 
-        colours = [GREY_COLOUR, '#15C59E', 'url(#intersection)', '#1593C5']
+        colours = [GREY_COLOUR, '#1593C5', 'url(#intersection)', '#15C59E']
         slices = []
         for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
             parameters = {'path': slice_def['path'], 'colour': colours[i]}
@@ -250,6 +252,8 @@ class ReportGenerator(object):
                 parameters['y'] = slice_def['text_y']
             slices.append(self.templates['pie_slice'].render(parameters))
 
+        if not slices:
+            return ''
         return self.templates['pie'].render({
             'defs': self.templates['pie_gradient'].render({'colour1': colours[1], 'colour2': colours[3]}),
             'content': '\n'.join(slices)
@@ -266,6 +270,7 @@ class ReportGenerator(object):
         results = []
         for query in queries:
             results.append(query_template.render({
+                'host': self.host, 'entity': query['entity'],
                 'name': query['name'], 'count': query['count'],
                 'colour': 'red' if query.get('negative', False) else 'orange'
             }))
@@ -287,9 +292,11 @@ class ReportGenerator(object):
 
         views = []
         for view_data in self.report_data['views_data']:
+            if not view_data.get('name') or not view_data.get('data'):
+                continue
+
             current_fields = view_data['fields'][0:6]
             heads = [head_template.render({'content': field['title']}) for field in current_fields]
-
             rows = []
             for item in view_data['data']:
                 item_values = []
@@ -301,7 +308,10 @@ class ReportGenerator(object):
                 rows.append(row_template.render({'content': '\n'.join(item_values)}))
 
             views.append(view_template.render({
-                'title': view_data['name'],
-                'content': table_template.render({'head_content': row_template.render({'content': '\n'.join(heads)}),
-                                                  'body_content': '\n'.join(rows)})}))
+                'title': view_data['name'], 'host': self.host, 'entity': view_data['entity'],
+                'cols_total': len(view_data['fields']), 'content': table_template.render({
+                    'head_content': row_template.render({'content': '\n'.join(heads)}),
+                    'body_content': '\n'.join(rows)
+                })
+            }))
         return '\n'.join(views)

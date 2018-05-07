@@ -97,6 +97,12 @@
         }
         .x-checkbox {
             flex-basis: 25%;
+            .x-checkbox-container {
+                vertical-align: top;
+            }
+            .x-checkbox-label {
+                width: calc(100% - 30px);
+            }
         }
     }
 </style>

@@ -16,12 +16,12 @@
                 <nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
                 <nested-nav-item route-name="Devices" icon-name="device">
                     <nested-nav-bar nest-level="1" class="collapse">
-                        <nested-nav-item route-name="Saved Queries" router-path="/device/query/saved" />
+                        <nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved" />
                     </nested-nav-bar>
                 </nested-nav-item>
                 <nested-nav-item route-name="Users" icon-name="user">
                     <nested-nav-bar nest-level="1" class="collapse">
-                        <nested-nav-item route-name="Saved Queries" router-path="/user/query/saved" />
+                        <nested-nav-item route-name="Saved Queries" router-path="/users/query/saved" />
                     </nested-nav-bar>
                 </nested-nav-item>
                 <nested-nav-item route-name="Alerts" icon-name="alert"/>
