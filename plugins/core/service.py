@@ -154,7 +154,7 @@ class CoreService(PluginBase):
             final_url = uritools.uricompose(scheme='https', host=data['plugin_ip'], port=data['plugin_port'],
                                             path=data['path'])
 
-            check_response = requests.get(final_url, timeout=3)
+            check_response = requests.get(final_url, timeout=2)
 
             if check_response.status_code == 200:
                 responder_name = check_response.json()[PLUGIN_UNIQUE_NAME]
@@ -227,19 +227,19 @@ class CoreService(PluginBase):
                 # If we reached here than plugin is not registered, returning error
                 return return_error('Plugin not registered', 404)
 
+        # method == POST
+        data = self.get_request_data_as_object()
+
+        plugin_name = data['plugin_name']
+        plugin_type = data['plugin_type']
+        plugin_subtype = data['plugin_subtype']
+        plugin_port = data['plugin_port']
+        supported_features = data['supported_features']
+        plugin_is_debug = data.get('is_debug', False)
+
+        logger.info(f"Got registration request : {data} from {request.remote_addr}")
+
         with self.adapters_lock:  # Locking the adapters list, in case "register" will get called from 2 plugins
-            # method == POST
-            data = self.get_request_data_as_object()
-
-            plugin_name = data['plugin_name']
-            plugin_type = data['plugin_type']
-            plugin_subtype = data['plugin_subtype']
-            plugin_port = data['plugin_port']
-            supported_features = data['supported_features']
-            plugin_is_debug = data.get('is_debug', False)
-
-            logger.info(f"Got registration request : {data} from {request.remote_addr}")
-
             relevant_doc = None
 
             if PLUGIN_UNIQUE_NAME in data:

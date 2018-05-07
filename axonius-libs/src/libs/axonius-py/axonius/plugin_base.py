@@ -225,7 +225,7 @@ class PluginBase(Configurable, Feature):
 
         :raise KeyError: In case of environment variables missing
         """
-        print(f"Hello docker from {type(self)}")
+        print(f"{datetime.now()} Hello docker from {type(self)}")
         super().__init__(*args, **kwargs)
 
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
@@ -253,7 +253,7 @@ class PluginBase(Configurable, Feature):
             "first_fields_change": True,
             "fields_db_lock": threading.RLock()
         } for entity_type in [EntityType.Devices, EntityType.Users]}
-        print(f"{self.plugin_name} is starting")
+        print(f"{datetime.now()} {self.plugin_name} is starting")
 
         # Debug values. On production, flask is not the server, its just a wsgi app that uWSGI uses.
         try:

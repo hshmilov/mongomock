@@ -18,6 +18,7 @@ nginx <-> uwsgi <-> (api rest server) <- message queue -> a constantly running p
 import sys
 import requests
 import time
+from datetime import datetime
 
 URL = "https://localhost/api/version?whoami=periodic_api_version_runner"
 SLEEP_COUNT = 10  # In seconds.
@@ -34,8 +35,8 @@ def debug_print(s):
 def main():
     while True:
         try:
-            debug_print("Sending get to {0}...".format(URL))
-            r = requests.get(URL, verify=False)
+            debug_print(f"{datetime.now()} - Sending get to {0}...".format(URL))
+            r = requests.get(URL, verify=False, timeout=10)
             debug_print("Got status {0}.".format(r.status_code))
         except Exception as e:
             debug_print("Got exception {0}".format(e))

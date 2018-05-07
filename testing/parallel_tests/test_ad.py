@@ -216,10 +216,10 @@ class TestAdAdapter(AdapterTestBase):
             }
         )
 
-        @retry(wait_fixed=500,
+        @retry(wait_fixed=7000,
                stop_max_delay=15000)
         def has_run_shell_success_tags():
-            assert len(self.axonius_system.get_devices_with_condition(
+            result = self.axonius_system.get_devices_with_condition(
                 {
                     "tags": {
                         '$elemMatch': {
@@ -228,9 +228,9 @@ class TestAdAdapter(AdapterTestBase):
                             "data": {"$ne": "False"}
                         }
                     }
-                }
-            )) > 0
-            assert len(self.axonius_system.get_devices_with_condition(
+                })
+            assert len(result) > 0, str(result)
+            result = self.axonius_system.get_devices_with_condition(
                 {
                     "tags": {
                         '$elemMatch': {
@@ -240,7 +240,16 @@ class TestAdAdapter(AdapterTestBase):
                         }
                     }
                 }
-            )) > 0
+            )
+            assert len(result) > 0, self.axonius_system.get_devices_with_condition(
+                {
+                    "tags": {
+                        '$elemMatch': {
+                            "name": "Action 'Test Action'",
+                            "type": "data"
+                        }
+                    }
+                })
 
         has_run_shell_success_tags()
 
