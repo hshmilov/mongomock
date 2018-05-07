@@ -23,6 +23,7 @@ import subprocess
 import ipaddress
 
 from collections import defaultdict
+from flask import jsonify
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
     LDAP_PASSWORD_NOT_REQUIRED, LDAP_DONT_EXPIRE_PASSWORD
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
@@ -131,7 +132,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _on_config_update(self, config):
         logger.info(f"Loading AD config: {config}")
         self.__sync_resolving = config['sync_resolving']
-        self.__ldap_dns_resolving_one_at_a_time = config['ldap_dns_resolving_one_at_a_time']
 
     @property
     def _python_27_path(self):
@@ -269,7 +269,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
-        return client_data.get_extended_devices_list(self.__ldap_dns_resolving_one_at_a_time)
+        return client_data.get_extended_devices_list()
 
     def _query_users_by_client(self, client_name, client_data):
         """
@@ -537,6 +537,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 self._get_collection(DEVICES_DATA).update_many({}, {'$set': {DNS_RESOLVE_STATUS:
                                                                              DNSResolveStatus.Pending.name}})
             return
+
+    @add_rule('get_report', methods=['GET'])
+    def get_report(self):
+        d = {}
+        for client_name, client_data in self._clients.copy().items():
+            logger.info(f"Starting Statistics Report for client {client_name}")
+            d[client_name] = client_data.get_report_statistics()
+
+        return jsonify(d)
 
     @add_rule('resolve_ip', methods=['POST'], should_authenticate=False)
     def resolve_ip_now(self):
@@ -838,14 +847,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     ip = dns_records[device.ad_name.lower()]
                     if ip not in ips_list:
                         ips_list.append(ip)
-
-                # Finally, maybe the device was resolved by a one-at-a-time resolving option.
-                axon_ip_addresses = device_raw.get("AXON_IP_ADDRESSES")
-                if axon_ip_addresses is not None:
-                    logger.debug(f"One-at-a-time dns resolving ip addresses: {axon_ip_addresses}")
-                    for axon_ip in axon_ip_addresses:
-                        if axon_ip not in ips_list:
-                            ips_list.append(axon_ip)
 
                 # ips_list is a list. Make it unique, if somehow it inclues the same ip's.
                 ips_list = list(set(ips_list))
@@ -1189,8 +1190,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 }
             ],
             "required": [
-                "sync_resolving",
-                "ldap_dns_resolving_one_at_a_time",
+                "sync_resolving"
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -1199,8 +1199,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     @classmethod
     def _db_config_default(cls):
         return {
-            "sync_resolving": False,
-            "ldap_dns_resolving_one_at_a_time": False,
+            "sync_resolving": False
         }
 
     @classmethod

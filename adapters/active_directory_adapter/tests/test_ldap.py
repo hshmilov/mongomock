@@ -50,7 +50,7 @@ def test_users(ldap_connection: LdapConnection):
 
 
 def test_devices(ldap_connection: LdapConnection):
-    devices = ldap_connection.get_device_list(True)
+    devices = ldap_connection.get_device_list()
     devices_dict = {}
     has_disabled_device = True
     for device in devices:
@@ -66,10 +66,6 @@ def test_devices(ldap_connection: LdapConnection):
 
     # assert there is at least one disabled device
     assert has_disabled_device is True
-
-    # assert that we have one-at-a-time ip address resolving
-    test_device = devices_dict["CN=DC1,OU=Domain Controllers,DC=TestDomain,DC=test"]
-    assert "192.168.20.25" in test_device["AXON_IP_ADDRESSES"]
 
 
 def test_printers(ldap_connection: LdapConnection):
@@ -164,7 +160,7 @@ def test_get_extended_devices(ldap_connection: LdapConnection):
     keys = ['devices', 'printers', 'dns_records', 'dfsr_shares',
             'sites', 'dhcp_servers', 'fsmo_roles', 'global_catalogs', 'exchange_servers']
 
-    extended_keys = ldap_connection.get_extended_devices_list(True).keys()
+    extended_keys = ldap_connection.get_extended_devices_list().keys()
 
     assert all([True if key in extended_keys else False for key in keys])
 
@@ -178,13 +174,40 @@ def test_get_exchange_servers(ldap_connection: LdapConnection):
            "CN=Configuration,DC=TestDomain,DC=test" in exchange_servers
 
 
+def test_get_domains_in_forest(ldap_connection: LdapConnection):
+    domains_in_forest = {d['nETBIOSName']: d for d in ldap_connection.get_domains_in_forest()}
+    assert domains_in_forest['WEST']['name'] == 'WEST'
+    assert domains_in_forest['RAINDOMAIN']['msDS-Behavior-Version'] == 7
+
+
+def test_get_report_statistics(ldap_connection: LdapConnection):
+    fs = ldap_connection.get_report_statistics()
+    """
+    assert fs['Groups']['Builtin'] == 29
+    assert fs["Forest Summary"]['Naming Master'] == "dc1.TestDomain.test"
+    assert fs["Forest Features"]['Exchange Version'] == "2016"
+    """
+    # print("---")
+    # pretty(fs)
+
+
 def pretty(d, indent=0):
+    print('\t' * indent + "{")
+    if "dict" not in str(type(d)).lower():
+        print('\t' * (indent) + str(d))
+        return
     for key, value in d.items():
         if "dict" in str(type(value)).lower():
-            print('\t' * indent + str(key) + ": ")
+            print('\t' * indent + str(key) + ":")
             pretty(value, indent + 1)
+        elif "list" in str(type(value)).lower():
+            print('\t' * indent + str(key) + ": [")
+            for l in value:
+                pretty(l, indent + 1)
+            print('\t' * indent + "]")
         else:
             print('\t' * (indent) + str(key) + ": " + str(value))
+    print('\t' * indent + "}")
 
 
 @pytest.mark.skip("python2 is not installed on the tests machine")
