@@ -8,6 +8,7 @@ from axonius.utils.parsing import get_exception_string
 
 import axonius.clients.cisco.ssh as ssh
 import axonius.clients.cisco.snmp as snmp
+from axonius.clients.cisco.abstract import InstanceParser
 
 
 class CiscoAdapter(AdapterBase):
@@ -61,9 +62,8 @@ class CiscoAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, ssh.CiscoSshClient) or isinstance(client_data, snmp.CiscoSnmpClient), client_data
         with client_data:
-            # Both generators returns objects that can later return devices using .get_devices() method (see abstract.py)
-            yield from client_data.query_arp_table()
-            yield from client_data.query_dhcp_leases()
+            # Returns objects that can later return devices using .get_devices() method (see abstract.py)
+            yield from client_data.query_all()
 
     def _clients_schema(self):
         return {
@@ -111,8 +111,7 @@ class CiscoAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, instances):
-        for instance in instances:
-            yield from instance.get_devices(self._new_device_adapter)
+        return InstanceParser(instances).get_devices(self._new_device_adapter)
 
     def _get_client_id(self, client_config):
         # TODO: is there a better place to set default values for client_config?

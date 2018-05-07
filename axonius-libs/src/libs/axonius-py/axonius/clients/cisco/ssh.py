@@ -6,7 +6,7 @@ import re
 from axonius.adapter_exceptions import AdapterException
 from axonius.utils.parsing import format_mac
 
-from axonius.clients.cisco.abstract import ArpCiscoData, DhcpCiscoData, AbstractCiscoClient
+from axonius.clients.cisco.abstract import *
 
 
 class CiscoSshClient(AbstractCiscoClient):
@@ -49,6 +49,74 @@ class CiscoSshClient(AbstractCiscoClient):
             yield SshDhcpCiscoData(lines)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
+
+    def _query_cdp_table(self):
+        try:
+            lines = self._sess.send_command("show cdp neighbors detail")
+            yield SshCdpCiscoData(lines)
+        except Exception:
+            logger.exception("Exception in query dhcp Leases")
+
+
+class SshCdpCiscoData(CdpCiscoData):
+
+    @staticmethod
+    def _parse_cdp_table(text):
+        '''-------------------------
+    Device ID: dhcp-slave
+    Entry address(es): 
+      IP address: 10.0.0.3
+    Platform: Cisco 2691,  Capabilities: Switch IGMP 
+    Interface: FastEthernet0/1,  Port ID (outgoing port): FastEthernet0/0
+    Holdtime : 136 sec
+
+    Version :
+    Cisco IOS Software, 2600 Software (C2691-ENTSERVICESK9-M), Version 12.4(13b), RELEASE SOFTWARE (fc3)
+    Technical Support: http://www.cisco.com/techsupport
+    Copyright (c) 1986-2007 by Cisco Systems, Inc.
+    Compiled Tue 24-Apr-07 15:33 by prod_rel_team
+
+    advertisement version: 2
+    VTP Management Domain: ''
+    Duplex: half
+        '''
+        text = text.expandtabs(tabsize=8)
+
+        # Split to entries, skip the header
+        entries = text.split('-------------------------')[1:]
+        logger.info(f'got {len(entries)} entries')
+        return entries
+
+    @staticmethod
+    def parse_entry_block(block):
+        block = block.strip()
+        if block.splitlines()[0].strip().endswith(':'):
+            assert block.splitlines()[0].count(':') == 1
+            return [tuple(map(str.strip, block.split(':', 1)))]
+        lines = sum(list(line.split(',  ') for line in block.splitlines()), [])
+        return list(map(lambda line: tuple(map(str.strip, line.split(':', 1))), lines))
+
+    @staticmethod
+    def parse_entry(entry):
+        entry = entry.strip()
+        # TODO: We are converting the data to dict, but it may appear more then once,
+        # (For example IP address) . I wasn't able to achive this state so for now
+        # we'll throw anything that appear more then once.
+        return dict(sum(map(SshCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
+
+    def parse(self):
+        try:
+            table = self._parse_cdp_table(self._raw_data)
+        except Exception:
+            logger.exception('Exception while parsing cdp raw data')
+            return
+
+         # Skip the headers line
+        for line in table:
+            try:
+                yield self.parse_entry(line)
+            except Exception:
+                logger.exception('Exception while paring cdp line')
 
 
 class SshDhcpCiscoData(DhcpCiscoData):
@@ -115,7 +183,7 @@ class SshDhcpCiscoData(DhcpCiscoData):
         try:
             table = self._parse_dhcp_table(self._raw_data)
         except Exception:
-            logging.exception('Exception while parsing dhcp raw data')
+            logger.exception('Exception while parsing dhcp raw data')
             return
 
         # Skip the headers line
@@ -123,7 +191,7 @@ class SshDhcpCiscoData(DhcpCiscoData):
             try:
                 yield self._parse_dhcp_line(line)
             except Exception:
-                logging.exception('Exception while paring dchp line')
+                logger.exception('Exception while paring dchp line')
 
 
 class SshArpCiscoData(ArpCiscoData):

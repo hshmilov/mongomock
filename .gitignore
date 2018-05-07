@@ -291,3 +291,4 @@ deploy_artifacts/*
 
 # Vim 
 *.swp
+*.swo

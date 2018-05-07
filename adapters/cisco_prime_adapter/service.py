@@ -9,6 +9,7 @@ from cisco_prime_adapter.snmp import CiscoSnmpClient
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils import json
 from axonius.clients.cisco import snmp
+from axonius.clients.cisco.abstract import InstanceParser
 
 
 class CiscoPrimeAdapter(AdapterBase):
@@ -52,7 +53,7 @@ class CiscoPrimeAdapter(AdapterBase):
         community, ip, port = self._get_snmp_creds(raw_device, session)
         if community is not None:
             with snmp.CiscoSnmpClient(community, ip, port) as client:
-                yield from client.query_arp_table()
+                yield from client.query_all()
 
     def _query_devices_by_client(self, client_name, session):
         raw_devices = []
@@ -139,6 +140,7 @@ class CiscoPrimeAdapter(AdapterBase):
         return device
 
     def _parse_raw_data(self, raw_data):
+        instances = []
         for raw_device in raw_data:
             try:
                 type_, raw_device = raw_device
@@ -147,12 +149,12 @@ class CiscoPrimeAdapter(AdapterBase):
                     if device:
                         yield device
                 elif type_ == 'neighbor':
-                    instance = raw_device
-                    yield from instance.get_devices(self._new_device_adapter)
+                    instances.append(raw_device)
                 else:
                     raise ValueError(f'invalid type {type_}')
             except Exception:
                 logger.exception(f'Got exception while creating device: {raw_device}')
+        yield from InstanceParser(instances).get_devices(self._new_device_adapter)
 
     @classmethod
     def adapter_properties(cls):
