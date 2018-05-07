@@ -849,7 +849,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     raise adapter_exceptions.CredentialErrorException(
                         f"Could not update client {client_id} with status {status}")
 
-        clients_collection = self._get_db_connection(True)[self.plugin_unique_name]["clients"]
+        clients_collection = self._get_collection('clients')
         try:
             if entity_type == EntityType.Devices:
                 raw_data = self._query_devices_by_client(client_id, self._clients[client_id])
@@ -972,7 +972,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     def _get_clients_config(self):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
-        return self._get_db_connection(True)[self.plugin_unique_name]['clients'].find()
+        return self._get_collection('clients').find()
 
     def _update_clients_schema_in_db(self, schema):
         """

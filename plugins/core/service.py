@@ -465,7 +465,11 @@ class CoreService(PluginBase):
         """ Endpoint for getting, setting and deleting the mail_server.
         """
         if self.get_method() == 'GET':
-            return jsonify(self._get_email_server())
+            email_server = self._get_email_server()
+            if not email_server:
+                return jsonify({})
+            del email_server['_id']
+            return jsonify(email_server)
         elif self.get_method() == 'POST':
             data = self.get_request_data_as_object()
             data['type'] = 'email_server'
@@ -504,8 +508,8 @@ class CoreService(PluginBase):
                     logger.exception("Failed to login to server.")
 
             if 'smtpKey' in mail_server or 'smtpCert' in mail_server:
-                key_data = bytes(mail_server.get('smtpKey', ''))
-                cert_data = bytes(mail_server.get('smtpCert', ''))
+                key_data = self._grab_file_contents(mail_server.get('smtpKey', ''))
+                cert_data = self._grab_file_contents(mail_server.get('smtpCert', ''))
                 key_file_path = None
                 cert_file_path = None
                 try:

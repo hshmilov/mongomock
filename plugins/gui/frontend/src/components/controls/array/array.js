@@ -10,7 +10,7 @@
 
 export default {
 	props: {
-		'schema': {required: true}, 'value': {required: true}
+		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}
 	},
 	computed: {
 		schemaItems () {
@@ -27,7 +27,6 @@ export default {
 				})
 			}
 			schemaItems.forEach((schema) => {
-				// An array of bytes is handled by 'file' type
 				if (this.isFile(schema)) {
 					schema.type = 'file'
 				}
@@ -65,7 +64,7 @@ export default {
 			return data
 		},
 		isFile (schema) {
-			return (schema.items instanceof Object) && (schema.format === 'bytes')
+			return (schema.type == 'file')
 		}
 	}
 }

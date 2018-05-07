@@ -1,7 +1,8 @@
-from json_file_adapter.service import DATA
+from adapters.json_file_adapter.service import DATA
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 client_details = {
-    DATA: list(b'''
+    DATA: FileForCredentialsMock(DATA, b'''
     {
        "devices" : [
            {"id": "cb_id1",

@@ -20,7 +20,7 @@
                 <h3>Mail Server</h3>
                 <div class="grid grid-col-2">
                     <x-schema-form :schema="schema" v-model="smtpSettings" @validate="updateValidity"
-                                   @submit="setEmailServer"/>
+                                   @submit="setEmailServer" api-upload="email_server"/>
                     <div/><button class="x-btn" :class="{'disabled':!complete}" @click="setEmailServer">Save</button>
                 </div>
             </tab>
@@ -86,8 +86,8 @@
                         {name: 'smtpPort', title: 'Port', type: 'string'},
                         {name: 'smtpUser', title: 'User Name', type: 'string'},
                         {name: 'smtpPassword', title: 'Password', type: 'string', format: 'password'},
-                        {name: 'smtpKey', title: 'TLS 1.2 Key File', description: 'The binary contents of the key file', type: 'array', format: 'bytes', items: {type: 'integer', default: 0}},
-                        {name: 'smtpCert', title: 'TLS 1.2 Cert File', description: 'The binary contents of the cert file', type: 'array', format: 'bytes', items: {type: 'integer', default: 0}}
+                        {name: 'smtpKey', title: 'TLS 1.2 Key File', description: 'The binary contents of the key file', type: 'file'},
+                        {name: 'smtpCert', title: 'TLS 1.2 Cert File', description: 'The binary contents of the cert file', type: 'file'}
                     ], required: ['smtpHost', 'smtpPort']
                 }
             },

@@ -912,6 +912,27 @@ class PluginBase(Configurable, Feature):
             db_name = self.plugin_unique_name
         return self._get_db_connection(limited_user)[db_name][collection_name]
 
+    def _grab_file(self, field_data):
+        """
+        Fetches the file pointed by `field_data` from the DB.
+        The user should not assume anything about the internals of the file.
+        :param field_data:
+        :return: stream like object
+        """
+        if field_data:
+            import gridfs
+            return gridfs.GridFS(self._get_db_connection()[self.plugin_unique_name]).get(ObjectId(field_data['uuid']))
+
+    def _grab_file_contents(self, field_data):
+        """
+        Fetches the file pointed by `field_data` from the DB.
+        The user should not assume anything about the internals of the file.
+        :param field_data:
+        :return: stream like object
+        """
+        if field_data:
+            return self._grab_file(field_data).read()
+
     @add_rule('schema/<schema_type>', methods=['GET'])
     def schema(self, schema_type):
         """ /schema - Get the schema the plugin expects from configs. 

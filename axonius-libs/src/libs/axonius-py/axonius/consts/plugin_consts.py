@@ -4,5 +4,6 @@ VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
 AGGREGATOR_PLUGIN_NAME = 'aggregator'
 STATIC_CORRELATOR_PLUGIN_NAME = 'static_correlator'
 SYSTEM_SCHEDULER_PLUGIN_NAME = 'system_scheduler'
+DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'

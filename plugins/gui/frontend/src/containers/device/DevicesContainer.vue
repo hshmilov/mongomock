@@ -44,7 +44,7 @@
 			configDevice (deviceId) {
 				if (this.selectedDevices && this.selectedDevices.length) return
 
-				this.$router.push({path: `device/${deviceId}`})
+				this.$router.push({path: `devices/${deviceId}`})
 			},
             exportCSV() {
 				this.fetchContentCSV({ module: 'device' })

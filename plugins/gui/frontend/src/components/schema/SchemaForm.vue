@@ -1,6 +1,7 @@
 <template>
     <form class="schema-form" @keyup.enter.stop="$emit('submit')">
-        <x-array-edit v-model="data" :schema="schema" @input="$emit('input', data)" @validate="updateValidity" />
+        <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload"
+                      @input="$emit('input', data)" @validate="updateValidity" />
         <div class="error-text">
             <template v-if="error">{{error}}</template>
             <template v-else-if="invalid.length">'{{invalid[0]}}' requires a value</template>
@@ -22,7 +23,7 @@
 	export default {
 		name: 'x-schema-form',
         components: { xArrayEdit },
-        props: ['value', 'schema', 'error'],
+        props: ['value', 'schema', 'error', 'apiUpload'],
         data() {
 			return {
                 data: { ...this.value },

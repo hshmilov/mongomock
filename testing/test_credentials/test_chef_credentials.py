@@ -1,8 +1,9 @@
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 client_details = {
     "domain": "https://10.0.2.42",
     "organization": "axonius",
-    "client_key": list(b'''-----BEGIN RSA PRIVATE KEY-----
+    "client_key": FileForCredentialsMock("client_key", b'''-----BEGIN RSA PRIVATE KEY-----
 MIIEpQIBAAKCAQEArnbBgRiDYFfePxhy1a94YSZoUBSAnX2HOwL47bhOFamTnT11
 ZYxvIYWgSSgsWOZqg4bPSZoofzUfLaBQpy2OJtjOsUB42zkursodOlL0UGr+WuVW
 t+3sbRm5ULNtOgNUqV2SUVcpzN8MsgplhBzUW/D4Xfh0UbX8qpPDBBIAC4DbaJbb

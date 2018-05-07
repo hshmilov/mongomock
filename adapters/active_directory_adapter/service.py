@@ -156,9 +156,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                   dc_details['password'],
                                   dc_details.get('dns_server_address'),
                                   SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
-                                  bytes(dc_details.get('ca_file', [])),
-                                  bytes(dc_details.get('cert_file', [])),
-                                  bytes(dc_details.get('private_key', [])),
+                                  self._grab_file_contents(dc_details.get('ca_file')),
+                                  self._grab_file_contents(dc_details.get('cert_file')),
+                                  self._grab_file_contents(dc_details.get('private_key')),
                                   dc_details.get('fetch_disabled_devices', False),
                                   dc_details.get('fetch_disabled_users', False)
                                   )
@@ -226,34 +226,19 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "name": "ca_file",
                     "title": "CA File",
                     "description": "The binary contents of the ca_file",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file",
                 },
                 {
                     "name": "cert_file",
                     "title": "Certificate File",
                     "description": "The binary contents of the cert_file",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file",
                 },
                 {
                     "name": "private_key",
                     "title": "Private Key File",
                     "description": "The binary contents of the private_key",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0
-                    }
+                    "type": "file",
                 },
                 {
                     "name": "fetch_disabled_devices",

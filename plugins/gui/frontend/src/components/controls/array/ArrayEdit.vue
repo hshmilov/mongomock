@@ -5,7 +5,7 @@
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
                 <component :is="`x-${item.type}-edit`" :schema="item" v-model="data[item.name]"
-                           @input="onInput" :validator="validator" @focusout="onFocusout" />
+                           @input="onInput" :validator="validator" @focusout="onFocusout" :api-upload="apiUpload" />
             </x-type-wrap>
         </div>
     </div>

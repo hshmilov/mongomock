@@ -68,7 +68,8 @@ class DeviceControlService(PluginBase, Triggerable):
                 action_params['command'] = request_content['command']
             elif action_type == 'deploy':
                 action_params['binary'] = request_content['binary']
-                action_params['params'] = request_content['params']
+                # Optional parameters
+                action_params['params'] = request_content.get('params', '')
             else:
                 raise ValueError(f"expected action type to be shell/deploy but got {action_type}")
 
@@ -129,11 +130,11 @@ class DeviceControlService(PluginBase, Triggerable):
             )
         elif action_type == "deploy":
             # we need to store the binary file.
-            binary_arr = action_params['binary']
-            assert type(binary_arr) == list
+            binary_arr = self._grab_file_contents(action_params['binary'])
+            assert type(binary_arr) == bytes
             random_filepath = get_random_uploaded_path_name("device_control_deploy_binary")
             with open(random_filepath, "wb") as binary_file:
-                binary_file.write(bytes(binary_arr))
+                binary_file.write(binary_arr)
 
             # We do not delete the file, assuming its small enough to just remain there and to be
             # there for further inspection if we need it.

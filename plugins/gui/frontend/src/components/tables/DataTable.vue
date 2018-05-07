@@ -254,9 +254,9 @@
                     }
                 }
             }
-        }
-        .item > div {
-            display: inline;
+            .item > div {
+                display: inline;
+            }
         }
         .x-pagination {
             justify-content: space-between;

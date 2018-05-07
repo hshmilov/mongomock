@@ -39,7 +39,7 @@ class JsonFileAdapter(AdapterBase):
         return client_config
 
     def _query_devices_by_client(self, client_name, client_data):
-        as_string = bytes(client_data[DATA]).decode()
+        as_string = self._grab_file_contents(client_data[DATA]).decode()
         return json.loads(as_string)
 
     def _clients_schema(self):
@@ -49,12 +49,7 @@ class JsonFileAdapter(AdapterBase):
                     "name": DATA,
                     "title": "Connection details",
                     "description": "Connection details",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file"
                 }
             ],
             "required": [

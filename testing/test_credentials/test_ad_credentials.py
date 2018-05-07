@@ -1,5 +1,4 @@
 from test_helpers.machines import FAKE_DNS_IP
-import os
 
 fakednsaddr = FAKE_DNS_IP
 

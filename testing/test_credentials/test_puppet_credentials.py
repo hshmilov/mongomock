@@ -1,7 +1,8 @@
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 client_details = {
     "puppet_server_name": "puppet",
-    "ca_file": list(b'''-----BEGIN CERTIFICATE-----
+    "ca_file": FileForCredentialsMock("ca_file", b'''-----BEGIN CERTIFICATE-----
 MIIGIzCCBAugAwIBAgIBATANBgkqhkiG9w0BAQsFADBdMVswWQYDVQQDDFJQdXBw
 ZXQgRW50ZXJwcmlzZSBDQSBnZW5lcmF0ZWQgb24gcHVwcGV0LmF4b25pdXMubGFu
 IGF0ICsyMDE4LTA0LTA5IDEyOjEzOjU0ICswMDAwMB4XDTE4MDQwODEyMTQyOFoX
@@ -36,7 +37,7 @@ ZWmS23HT8U4AKkik7exM9R6h3e6jWT2kRnqSDQE4xMf1+nwY6S8oE+sdqFwAw3vX
 AaC+lcplYxSiliAad1FYaTw5jcQ2eJs0YW+blk07MXd4ZgHnhtZtoRkDxuT8iMtW
 k0LjkY2XV0ZNAXrgNEiPa0hvkWeGLD47KUyZyI1uV5eWNTFCmKQt
 -----END CERTIFICATE-----'''),
-    "cert_file": list(b'''-----BEGIN CERTIFICATE-----
+    "cert_file": FileForCredentialsMock("cert_file", b'''-----BEGIN CERTIFICATE-----
 MIIF2TCCA8GgAwIBAgIBAjANBgkqhkiG9w0BAQsFADBdMVswWQYDVQQDDFJQdXBw
 ZXQgRW50ZXJwcmlzZSBDQSBnZW5lcmF0ZWQgb24gcHVwcGV0LmF4b25pdXMubGFu
 IGF0ICsyMDE4LTA0LTA5IDEyOjEzOjU0ICswMDAwMB4XDTE4MDQwODEyMTQzMVoX
@@ -70,7 +71,7 @@ aZRVwB2ZHjYX3vHbE9Q8WWbhZQXSvE9lggSA0IIx2Z6dZC/mL1ZoFTieVixLWQDB
 KQD/wWAw4P1rgMARQ1FieaQSNqZKTJRs6j4kfxNRCEOQXt+tTpbCfreNs4p3CBMH
 H4pFWJo4Osyql6D7cA==
 -----END CERTIFICATE-----'''),
-    "private_key": list(b'''-----BEGIN RSA PRIVATE KEY-----
+    "private_key": FileForCredentialsMock("private_key", b'''-----BEGIN RSA PRIVATE KEY-----
 MIIJKQIBAAKCAgEAx+lf1Ojb4x6xdlrg1Mi/ZxhiW23mmAF30CYHrDJ7/cEgaeP+
 cYdtN1ACpRrT7OYVZBQf4UMWp8iOVPY3eRiyWpDJ4KeuvZSeOkuiTS6I8epBhTUQ
 YmXUhrChHG/Y16lXayvKLW8Y1kHp9hT5Nm8FN4cXiWBlbILywgOGnfrnxSfwreaZ

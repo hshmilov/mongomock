@@ -34,7 +34,7 @@ class ChefAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = ChefConnection(client_config[CHEF_DOMAIN], client_config[ORGANIZATION],
-                                        bytes(client_config[CLIENT_KEY]), client_config[CLIENT],
+                                        self._grab_file_contents(client_config[CLIENT_KEY]), client_config[CLIENT],
                                         client_config[SSL_VERIFY])
             with connection:
                 pass
@@ -78,12 +78,7 @@ class ChefAdapter(AdapterBase):
                     "name": CLIENT_KEY,
                     "title": "Client Key File (pem)",
                     "description": "The binary contents of the key_file",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file"
                 },
                 {
                     "name": CLIENT,

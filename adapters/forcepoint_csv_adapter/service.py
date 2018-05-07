@@ -24,7 +24,8 @@ class ForcepointCsvAdapter(AdapterBase):
         return client_config
 
     def _query_devices_by_client(self, client_name, client_data):
-        csv_data = bytearray(client_data['csv']).decode('utf-8')
+        filedata = self._grab_file_contents(client_data['csv'])
+        csv_data = filedata.decode('utf-8')
         return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data[:1024]))
 
     def _clients_schema(self):
@@ -39,12 +40,8 @@ class ForcepointCsvAdapter(AdapterBase):
                     "name": "csv",
                     "title": "CSV File",
                     "description": "The binary contents of the csv",
-                    "format": "bytes",
-                    "type": "array",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file",
+
                 },
             ],
             "required": [

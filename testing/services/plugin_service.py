@@ -10,6 +10,7 @@ from services.debug_template import py_charm_debug_template, py_charm_debug_port
 from services.docker_service import DockerService
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
+from test_helpers.file_mock_credentials import FileForCredentialsMock
 
 API_KEY_HEADER = "x-api-key"
 UNIQUE_KEY_PARAM = "unique_name"
@@ -189,10 +190,25 @@ class AdapterService(PluginService):
         assert response.status_code == 200, str(response)
         return from_json(response.content)
 
+    def _process_clients_for_adapter(self, client_data):
+        if isinstance(client_data, dict):
+            client_data = {k: self._process_clients_for_adapter(v) for k, v in client_data.items()}
+            return client_data
+        if isinstance(client_data, list):
+            client_data = [self._process_clients_for_adapter(x) for x in client_data]
+            return client_data
+        if isinstance(client_data, FileForCredentialsMock):
+            import gridfs
+            fs = gridfs.GridFS(self.db.client[self.unique_name])
+            written_file = fs.put(client_data.file_contents, filename=client_data.filename)
+            return {"uuid": str(written_file), "filename": client_data.filename}
+        return client_data
+
     def clients(self, client_data=None):
         if not client_data:
             response = requests.post(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key})
         else:
+            client_data = self._process_clients_for_adapter(client_data)
             response = requests.put(self.req_url + "/clients", headers={API_KEY_HEADER: self.api_key},
                                     json=client_data)
         assert response.status_code == 200, str(response)

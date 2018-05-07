@@ -39,7 +39,7 @@
 			configUser (userId) {
 				if (this.selectedUsers && this.selectedUsers.length) return
 
-				this.$router.push({path: `user/${userId}`})
+				this.$router.push({path: `users/${userId}`})
 			},
 			exportCSV() {
 				this.fetchContentCSV({ module: 'device' })

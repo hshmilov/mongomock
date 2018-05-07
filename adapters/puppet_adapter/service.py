@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
@@ -37,9 +38,9 @@ class PuppetAdapter(AdapterBase):
         try:
             return PuppetConnection(
                 client_config['puppet_server_name'],
-                bytes(client_config['ca_file']),
-                bytes(client_config['cert_file']),
-                bytes(client_config['private_key']))
+                self._grab_file_contents(client_config['ca_file']),
+                self._grab_file_contents(client_config['cert_file']),
+                self._grab_file_contents(client_config['private_key']))
         except PuppetException as e:
             message = "Error getting information from puppet server {0}. reason: {1}".format(
                 client_config["puppet_server_name"],
@@ -71,34 +72,19 @@ class PuppetAdapter(AdapterBase):
                     "name": "ca_file",
                     "title": "CA File",
                     "description": "The binary contents of the ca_file",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file"
                 },
                 {
                     "name": "cert_file",
                     "title": "Certificate File",
                     "description": "The binary contents of the cert_file",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file"
                 },
                 {
                     "name": "private_key",
                     "title": "Private Key File",
                     "description": "The binary contents of the private_key",
-                    "type": "array",
-                    "format": "bytes",
-                    "items": {
-                        "type": "integer",
-                        "default": 0
-                    }
+                    "type": "file"
                 }
             ],
             "required": [

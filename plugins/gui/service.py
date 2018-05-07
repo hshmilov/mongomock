@@ -1,8 +1,6 @@
 import csv
 import logging
 
-from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
-
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
 
@@ -10,7 +8,8 @@ from axonius.utils.files import get_local_config_file
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
-from axonius.consts import plugin_consts
+from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes
 from gui.report_generator import ReportGenerator
@@ -706,19 +705,19 @@ class GuiService(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = list(db_connection['core']['configs'].find({}).
-                                   sort([(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
+                                   sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
-                if not plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
+                if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
                     continue
-                plugin_fields = db_connection[plugin[plugin_consts.PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
+                plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
                 if not plugin_fields:
                     continue
                 plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
                 if not plugin_fields_record:
                     continue
-                fields['schema']['specific'][plugin[plugin_consts.PLUGIN_NAME]] = plugin_fields_record['schema']
-                fields['specific'][plugin[plugin_consts.PLUGIN_NAME]] = self._flatten_fields(
-                    plugin_fields_record['schema'], f'adapters_data.{plugin[plugin_consts.PLUGIN_NAME]}', ['scanner'])
+                fields['schema']['specific'][plugin[PLUGIN_NAME]] = plugin_fields_record['schema']
+                fields['specific'][plugin[PLUGIN_NAME]] = self._flatten_fields(
+                    plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
 
         return fields
 
@@ -764,21 +763,21 @@ class GuiService(PluginBase):
             entities_ids_by_adapters = {}
             for axonius_device in entities:
                 for adapter_entity in axonius_device['adapters']:
-                    entities_ids_by_adapters.setdefault(adapter_entity[plugin_consts.PLUGIN_UNIQUE_NAME], []).append(
+                    entities_ids_by_adapters.setdefault(adapter_entity[PLUGIN_UNIQUE_NAME], []).append(
                         adapter_entity['data']['id'])
 
                     # all adapters that are disabelable and that theres atleast one
-                    entitydisabelables_adapters = [x[plugin_consts.PLUGIN_UNIQUE_NAME]
+                    entitydisabelables_adapters = [x[PLUGIN_UNIQUE_NAME]
                                                    for x in
                                                    db_connection['core']['configs'].find(
                                                        filter={
                                                            'supported_features': feature,
-                                                           plugin_consts.PLUGIN_UNIQUE_NAME: {
+                                                           PLUGIN_UNIQUE_NAME: {
                                                                "$in": list(entities_ids_by_adapters.keys())
                                                            }
                                                        },
                                                        projection={
-                                                           plugin_consts.PLUGIN_UNIQUE_NAME: 1
+                                                           PLUGIN_UNIQUE_NAME: 1
                                                        }
                     )]
         return entitydisabelables_adapters, entities_ids_by_adapters
@@ -828,7 +827,7 @@ class GuiService(PluginBase):
 
             entities = [db.find_one({'internal_axon_id': entity_id})['specific_data'][0]
                         for entity_id in entities_and_labels['entities']]
-            entities = [(entity[plugin_consts.PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
+            entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
 
             response = namespace.add_many_labels(entities, labels=entities_and_labels['labels'],
                                                  are_enabled=request.method == 'POST')
@@ -981,10 +980,10 @@ class GuiService(PluginBase):
         with self._get_db_connection(False) as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
                                                                               {'plugin_type': 'ScannerAdapter'}]}).sort(
-                [(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
-                adapter_name = adapter[plugin_consts.PLUGIN_UNIQUE_NAME]
+                adapter_name = adapter[PLUGIN_UNIQUE_NAME]
                 if adapter_name not in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
@@ -1025,7 +1024,7 @@ class GuiService(PluginBase):
                                                   adapter_unique_name, method='PUT')
             if not (response.status_code == 400 and response.json()['message'] == 'Gracefully stopped'):
                 response.raise_for_status()
-                response = self.request_remote_plugin('trigger/execute', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME,
+                response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME,
                                                       'POST')
                 response.raise_for_status()
         except Exception as err:
@@ -1033,6 +1032,24 @@ class GuiService(PluginBase):
             logger.exception(f"Error fetching devices from {adapter_unique_name} for client {client_to_add}")
             pass
         return response.text, response.status_code
+
+    @add_rule_unauthenticated("adapters/<adapter_unique_name>/upload_file", methods=['POST'])
+    def adapter_upload_file(self, adapter_unique_name):
+        return self._upload_file(adapter_unique_name)
+
+    def _upload_file(self, plugin_unique_name):
+        import gridfs
+        field_name = request.form.get('field_name')
+        if not field_name:
+            return return_error("Field name must be specified", 401)
+        file = request.files.get("userfile")
+        if not file or file.filename == '':
+            return return_error("File must exist", 401)
+        filename = file.filename
+        with self._get_db_connection(False) as db_connection:
+            fs = gridfs.GridFS(db_connection[plugin_unique_name])
+            written_file = fs.put(file, filename=filename)
+        return jsonify({'uuid': str(written_file)})
 
     @paginated()
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'])
@@ -1047,8 +1064,9 @@ class GuiService(PluginBase):
         with self._get_db_connection(False) as db_connection:
             if request.method == 'GET':
                 client_collection = db_connection[adapter_unique_name]['clients']
+                schema = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']
                 return jsonify({
-                    'schema': self._get_plugin_schemas(db_connection, adapter_unique_name)['clients'],
+                    'schema': schema,
                     'clients': [beautify_db_entry(client) for client in
                                 client_collection.find().skip(skip).limit(limit)]
                 })
@@ -1081,8 +1099,7 @@ class GuiService(PluginBase):
 
         # The format of data is defined in device_control\service.py::run_shell
         try:
-            device_control_unique_name = self.get_plugin_by_name("device_control")['plugin_unique_name']
-            response = self.request_remote_plugin('run_action', device_control_unique_name, 'post', json=action_data)
+            response = self.request_remote_plugin('run_action', self.device_control_plugin, 'post', json=action_data)
             if response.status_code != 200:
                 logger.error(
                     f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
@@ -1091,6 +1108,10 @@ class GuiService(PluginBase):
             return '', 200
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
+
+    @add_rule_unauthenticated("actions/upload_file", methods=['POST'])
+    def actions_upload_file(self):
+        return self._upload_file(self.device_control_plugin)
 
     @add_rule_unauthenticated("reports", methods=['GET', 'PUT'])
     def reports(self):
@@ -1104,7 +1125,7 @@ class GuiService(PluginBase):
             with self._get_db_connection(False) as db_connection:
                 reports_to_return = []
                 report_service = self.get_plugin_by_name('reports')
-                for report in db_connection[report_service[plugin_consts.PLUGIN_UNIQUE_NAME]]['reports'].find(
+                for report in db_connection[report_service[PLUGIN_UNIQUE_NAME]]['reports'].find(
                         projection={'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1,
                                     'retrigger': 1, 'query': 1}).sort([('report_creation_time', pymongo.DESCENDING)]):
                     reports_to_return.append(beautify_db_entry(report))
@@ -1165,11 +1186,11 @@ class GuiService(PluginBase):
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection(False) as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
-                [(plugin_consts.PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             plugins_to_return = []
             for plugin in plugins_from_db:
                 # TODO check supported features
-                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [plugin_consts.AGGREGATOR_PLUGIN_NAME,
+                if plugin['plugin_type'] != "Plugin" or plugin['plugin_name'] in [AGGREGATOR_PLUGIN_NAME,
                                                                                   "gui",
                                                                                   "watch_service",
                                                                                   "execution",
@@ -1177,17 +1198,17 @@ class GuiService(PluginBase):
                     continue
 
                 processed_plugin = {'plugin_name': plugin['plugin_name'],
-                                    'unique_plugin_name': plugin[plugin_consts.PLUGIN_UNIQUE_NAME],
+                                    'unique_plugin_name': plugin[PLUGIN_UNIQUE_NAME],
                                     'status': 'error',
                                     'state': 'Disabled'
                                     }
-                if plugin[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
+                if plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
                     processed_plugin['status'] = 'warning'
                     response = self.request_remote_plugin(
-                        "trigger_state/execute", plugin[plugin_consts.PLUGIN_UNIQUE_NAME])
+                        "trigger_state/execute", plugin[PLUGIN_UNIQUE_NAME])
                     if response.status_code != 200:
                         logger.error("Error getting state of plugin {0}".format(
-                            plugin[plugin_consts.PLUGIN_UNIQUE_NAME]))
+                            plugin[PLUGIN_UNIQUE_NAME]))
                         processed_plugin['status'] = 'error'
                     else:
                         processed_plugin['state'] = response.json()
@@ -1611,7 +1632,7 @@ class GuiService(PluginBase):
          - Portion of work remaining for the current sub-phase
          - The time next cycle is scheduled to run
         """
-        state_response = self.request_remote_plugin('state', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME)
+        state_response = self.request_remote_plugin('state', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if state_response.status_code != 200:
             return return_error(f"Error fetching status of system scheduler. Reason: {state_response.text}")
 
@@ -1633,7 +1654,7 @@ class GuiService(PluginBase):
                 # Set 0 or 1, depending if reached current status yet
                 sub_phases.append({'name': sub_phase.name, 'status': 0 if found_current else 1})
 
-        run_time_response = self.request_remote_plugin('next_run_time', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME)
+        run_time_response = self.request_remote_plugin('next_run_time', SYSTEM_SCHEDULER_PLUGIN_NAME)
         if run_time_response.status_code != 200:
             return return_error(f"Error fetching run time of system scheduler. Reason: {run_time_response.text}")
 
@@ -1645,11 +1666,11 @@ class GuiService(PluginBase):
 
         """
         if self.get_method() == 'GET':
-            response = self.request_remote_plugin('research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME)
+            response = self.request_remote_plugin('research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME)
             return response.content
         elif self.get_method() == 'POST':
             response = self.request_remote_plugin(
-                'research_rate', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST',
+                'research_rate', SYSTEM_SCHEDULER_PLUGIN_NAME, method='POST',
                 json=self.get_request_data_as_object())
             logger.info(f"response code: {response.status_code} response crap: {response.content}")
             return ''
@@ -1666,7 +1687,7 @@ class GuiService(PluginBase):
             adapter_devices['total_net'] = self.devices_db.count()
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
             for adapter in adapters_from_db:
-                if not adapter[plugin_consts.PLUGIN_UNIQUE_NAME] in plugins_available:
+                if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
                 devices_count = self.devices_db.count({'adapters.plugin_name': adapter['plugin_name']})
@@ -1728,7 +1749,7 @@ class GuiService(PluginBase):
         data = self.get_request_data_as_object()
         logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
         response = self.request_remote_plugin(
-            'trigger/execute', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
+            'trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST', json=data)
 
         if response.status_code != 200:
             logger.error(f"Could not schedule research phase to: {data if data else 'Now'}")
@@ -1743,7 +1764,7 @@ class GuiService(PluginBase):
         Stops currently running research phase.
         """
         logger.info("stopping research phase")
-        response = self.request_remote_plugin('stop_all', plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
+        response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
 
         if response.status_code != 204:
             logger.error(
@@ -1790,6 +1811,10 @@ class GuiService(PluginBase):
             return jsonify(response.json())
         else:
             return response.content, response.status_code
+
+    @add_rule_unauthenticated("email_server/upload_file", methods=['POST'])
+    def email_server_upload_file(self):
+        return self._upload_file('core')
 
     @add_rule_unauthenticated("execution/<plugin_state>", methods=['POST'])
     def toggle_execution(self, plugin_state):
@@ -1920,3 +1945,7 @@ class GuiService(PluginBase):
     @property
     def system_collection(self):
         return self._get_collection(SYSTEM_CONFIG_COLLECTION, limited_user=False)
+
+    @property
+    def device_control_plugin(self):
+        return self.get_plugin_by_name(DEVICE_CONTROL_PLUGIN_NAME)[PLUGIN_UNIQUE_NAME]

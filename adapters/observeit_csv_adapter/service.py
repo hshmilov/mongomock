@@ -24,7 +24,7 @@ class ObserveitCsvAdapter(AdapterBase):
         return client_config
 
     def _query_devices_by_client(self, client_name, client_data):
-        return {'csv': make_dict_from_csv(bytearray(client_data['csv']).decode('utf-8')), 'domain': client_data['domain']}
+        return {'csv': make_dict_from_csv(self._grab_file_contents(client_data['csv']).decode('utf-8')), 'domain': client_data['domain']}
 
     def _clients_schema(self):
         return {
@@ -38,12 +38,7 @@ class ObserveitCsvAdapter(AdapterBase):
                     "name": "csv",
                     "title": "CSV File",
                     "description": "The binary contents of the csv",
-                    "format": "bytes",
-                    "type": "array",
-                    "items": {
-                        "type": "integer",
-                        "default": 0,
-                    }
+                    "type": "file"
                 },
                 {
                     "name": "domain",

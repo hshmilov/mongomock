@@ -21,8 +21,7 @@
                      :title="config.schema.pretty_name || config_name"
                      :id="config_name" :selected="!i">
                     <div class="mx-auto configuration">
-                        <x-schema-form :schema="config.schema" v-model="config.config"
-                                       @validate="serverModal.valid = $event"/>
+                        <x-schema-form :schema="config.schema" v-model="config.config" @validate="serverModal.valid = $event"/>
                         <a class="x-btn great" @click="saveConfig(config_name, config.config)" tabindex="1">Save Config</a>
                     </div>
                 </tab>
@@ -42,6 +41,7 @@
                     <div class="mt-3">
                         <div class="mb-2">Basic system credentials</div>
                         <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
+                                       :api-upload="`adapters/${adapterUniquePluginName}`"
                                        @submit="saveServer" @validate="serverModal.valid = $event"/>
                     </div>
                 </div>

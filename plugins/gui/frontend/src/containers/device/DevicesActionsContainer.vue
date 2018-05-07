@@ -2,7 +2,8 @@
     <x-data-action-menu module="device" :selected="devices">
         <x-data-action-item :handle-save="saveDeploy" message="Deployment initiated" title="Deploy...">
             <h3 class="mb-2">Deploy Executable</h3>
-            <x-schema-form :schema="deployFormSchema" v-model="deploy.data" @validate="deploy.valid = $event" />
+            <x-schema-form :schema="deployFormSchema" v-model="deploy.data" api-upload="actions"
+                           @validate="deploy.valid = $event" />
         </x-data-action-item>
         <x-data-action-item :handle-save="saveRun" message="Started running" title="Run...">
             <h3 class="mb-2">Run Command</h3>
@@ -42,11 +43,7 @@
                         {
                         	name: 'binary',
                             title: 'File To Execute',
-                        	type: 'array',
-                            format: 'bytes',
-                            items: {
-                        		type: 'integer', default: 0
-                            }
+                        	type: 'file'
                         },
                         {
                         	name: 'params',
@@ -101,7 +98,10 @@
 				return new Promise((resolve, reject) => {
             	    if (!this.deploy.valid) reject()
 					this.runAction({type: 'deploy', data: { ...this.deploy.data, internal_axon_ids: this.devices}})
-						.then(response => resolve(response))
+						.then((response) => {
+							this.deploy.data = {}
+							resolve(response)
+						})
 						.catch(error => reject(error.response.data))
 				})
 			},
