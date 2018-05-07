@@ -318,6 +318,10 @@ class CorrelatorEngineBase(ABC):
                 correlations_with_unavailable_devices.append(result.associated_adapters)
                 continue
 
+            if first_axonius_device == second_axonius_device:
+                # self correlations are obvious :)
+                continue
+
             # fix the second adapter - it might be plugin_name or unique_plugin_name according to "Reason"
             result.associated_adapters = [(first_name, first_id),
                                           (second_adapter_device[PLUGIN_UNIQUE_NAME], second_id)]
@@ -349,7 +353,7 @@ class CorrelatorEngineBase(ABC):
         for a, b in pairwise(sorted_unavailable_devices_correlations):
             # because the iterator is now sorted by dst, we can use pairwise to find src->dst, src2->dst
             # type correlations and then deduce src->src2 correlations
-            if a[1] == b[1]:
+            if a[1] == b[1] and a[0] != b[0]:
                 # this means they've got the same dst!
                 yield CorrelationResult((a[0], b[0]),
                                         data={

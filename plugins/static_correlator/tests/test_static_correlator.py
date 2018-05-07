@@ -15,7 +15,8 @@ def test_empty():
     assert len(correlate([])) == 0
 
 
-def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associated_adapter_id, hostname=None, network_interfaces=None, os=None):
+def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associated_adapter_id, hostname=None,
+                network_interfaces=None, os=None):
     generated_unique_name = str(uuid.uuid1())
     generate_name = str(uuid.uuid1())
     return {
@@ -61,7 +62,7 @@ def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None,
         ],
     }
     if tag_data:
-        val['tags'] = [get_raw_tag(generated_unique_name, generate_name, generated_id, *tag_data)]
+        val['tags'] = [get_raw_tag(generated_unique_name, generate_name, generated_id, *data) for data in tag_data]
     return val
 
 
@@ -427,9 +428,65 @@ def test_negative_serial_correlation_not_simple():
 def test_simple_tag_correlation():
     network_interfaces = [{MAC_FIELD: "mymac"}]
 
-    device1 = get_raw_device(tag_data=[None, network_interfaces])
+    device1 = get_raw_device(tag_data=[[None, network_interfaces]])
     device2 = get_raw_device(network_interfaces=network_interfaces)
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC', 1)
+
+
+def test_no_tag_self_correlation():
+    network_interfaces = [{MAC_FIELD: "mymac"}]
+    device1 = get_raw_device(network_interfaces=network_interfaces, tag_data=[[None, network_interfaces]])
+    assert_success(correlate([device1]), [device1], 'They have the same MAC', 0)
+
+
+def test_no_tag_self_correlation():
+    network_interfaces = [{MAC_FIELD: "mymac"}]
+
+    # creating a device with 2 adapters (no MAC)
+    # and 5 tags (all with the same MAC): 3 are to the first adapter, 2 are to the second
+    # no correlation should occur because they are all the same axonius device
+    device1 = get_raw_device(
+        tag_data=[[None, network_interfaces], [None, network_interfaces], [None, network_interfaces]])
+    device1['adapters'].append({
+        'plugin_name': 'pn',
+        PLUGIN_UNIQUE_NAME: 'pun',
+        'data': {
+            'id': 'id1',
+        }
+    })
+    device1['tags'].append({
+        "association_type": "Tag",
+        "associated_adapters": [
+            [
+                'pun', 'id1'
+            ]
+        ],
+        "associated_adapter_plugin_name": 'pn',
+        "name": 'some_name',
+        "data": {
+            NETWORK_INTERFACES_FIELD: network_interfaces,
+        },
+        "type": "adapterdata",
+        "entity": "devices",
+        "action_if_exists": "update",
+    })
+    device1['tags'].append({
+        "association_type": "Tag",
+        "associated_adapters": [
+            [
+                'pun', 'id1'
+            ]
+        ],
+        "associated_adapter_plugin_name": 'pn',
+        "name": 'some_name2',
+        "data": {
+            NETWORK_INTERFACES_FIELD: network_interfaces,
+        },
+        "type": "adapterdata",
+        "entity": "devices",
+        "action_if_exists": "update",
+    })
+    assert_success(correlate([device1]), [device1], 'They have the same MAC', 0)
 
 
 if __name__ == '__main__':
