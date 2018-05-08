@@ -59,6 +59,7 @@ DOCKER_PORTS = {
     'cisco-prime-adapter':              6020,
     'json-file-adapter':                6021,
     'hyper-v-adapter':                  6022,
+    'stresstest-scanner-adapter':       6023,
     'mongo':                            27017,
 }
 

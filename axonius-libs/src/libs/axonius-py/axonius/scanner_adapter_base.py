@@ -8,7 +8,7 @@ See https://axonius.atlassian.net/wiki/spaces/AX/pages/415858710/ScannerAdapter+
 from axonius.plugin_base import EntityType
 import uuid
 from abc import ABC
-from typing import Tuple, List
+from typing import Tuple, List, Iterable
 
 from axonius.mixins.feature import Feature
 
@@ -193,27 +193,31 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         super().__init__(*args, **kwargs)
 
     @stoppable
+    def __correlate_devices(self, parsed_data) -> Iterable:
+        """
+        Uses the DB and the `_get_scanner_correlator` logic to correlate the devices
+        """
+        with self._get_db_connection(True) as db:
+            aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
+            devices = aggregator_db['devices_db'].find()
+        scanner = self._get_scanner_correlator(devices, self.plugin_name)
+        device_count = 0
+
+        for device in parsed_data:
+            device['correlates'] = scanner.find_correlation({"data": device,
+                                                             PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
+                                                             PLUGIN_NAME: self.plugin_name,
+                                                             'plugin_type': self.plugin_type})
+            yield device
+            device_count += 1
+            if device_count % 1000 == 0:
+                logger.info(f"Got {device_count} devices.")
+
+    @stoppable
     def _try_query_data_by_client(self, client_name, entity_type: EntityType, use_cache=True):
         raw_data, parsed_data = super()._try_query_data_by_client(client_name, entity_type)
-        parsed_data = list(parsed_data)  # the following code assumes it is a materialized list
-
         if entity_type == EntityType.Devices:
-            with self._get_db_connection(True) as db:
-                aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
-                devices = aggregator_db['devices_db'].find()
-            scanner = self._get_scanner_correlator(devices, self.plugin_name)
-
-            num_of_devices = len(parsed_data)
-            print_modulo = max(int(num_of_devices / 10), 1)
-            device_number = 0
-            for device in parsed_data:
-                device['correlates'] = scanner.find_correlation({"data": device,
-                                                                 PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
-                                                                 PLUGIN_NAME: self.plugin_name,
-                                                                 'plugin_type': self.plugin_type})
-                device_number += 1
-                if device_number % print_modulo == 0:
-                    logger.info(f"Got {device_number} devices out of {num_of_devices}.")
+            return raw_data, self.__correlate_devices(parsed_data)
         return raw_data, parsed_data
 
     @property

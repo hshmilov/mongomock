@@ -2,7 +2,7 @@ import uuid
 import time
 import random
 
-from axonius.adapter_base import AdapterBase
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
@@ -16,7 +16,7 @@ OPERATION_SYSTEMS_EXAMPLES = [
 ]
 
 
-class StresstestAdapter(AdapterBase):
+class StresstestScannerAdapter(ScannerAdapterBase):
     """
     An adapter for stress testing.
 
@@ -176,13 +176,13 @@ class StresstestAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             device = self._new_device_adapter()
-            device.id = f"{device_raw['sa_name']}-{device_raw['index']}"
             device.name = f"avigdor no# {device_raw['index']}"
             device.figure_os(device_raw['config']['guestFullName'])
             for iface in device_raw.get('networking', []):
                 ips = [addr['ipAddress'] for addr in iface.get('ipAddresses', [])]
                 if ips:
-                    device.add_nic(iface.get('macAddress'), ips)
+                    #device.add_nic(iface.get('macAddress'), ips)
+                    device.add_nic(None, ips)  # No macs to make correlation work
             device.hostname = device_raw['guest'].get('hostName')
             device.vm_tools_status = device_raw['guest'].get('toolsStatus')
             device.set_raw(device_raw)

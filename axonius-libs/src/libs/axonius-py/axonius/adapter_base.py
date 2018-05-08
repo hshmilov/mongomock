@@ -309,7 +309,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         Accepts:
            GET - Finds all available devices, and returns them
         """
-        return to_json(dict(self._query_data(EntityType.Devices)))
+        return jsonify(dict(self._query_data(EntityType.Devices)))
 
     @add_rule('devices_by_name', methods=['GET'])
     def devices_by_client(self):
