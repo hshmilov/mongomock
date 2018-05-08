@@ -49,7 +49,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH
+    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
@@ -891,6 +891,10 @@ class PluginBase(Configurable, Feature):
         else:
             return MongoClient(self.db_host, username=self.db_user, password=self.db_password)
 
+    def _get_db_with_limit(self, db_name):
+        limited_user = False if self.plugin_name == GUI_NAME else True
+        return self._get_db_connection(limited_user)[db_name]
+
     def _get_collection(self, collection_name, db_name=None, limited_user=True):
         """
         Returns all configs for the current plugin.
@@ -904,26 +908,29 @@ class PluginBase(Configurable, Feature):
             db_name = self.plugin_unique_name
         return self._get_db_connection(limited_user)[db_name][collection_name]
 
-    def _grab_file(self, field_data):
+    def _grab_file(self, field_data, stored_locally=True):
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
         :param field_data:
+        :param db_name: Name of the DB that file is stored in
         :return: stream like object
         """
         if field_data:
             import gridfs
-            return gridfs.GridFS(self._get_db_connection()[self.plugin_unique_name]).get(ObjectId(field_data['uuid']))
+            db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
+            return gridfs.GridFS(self._get_db_with_limit(db_name)).get(ObjectId(field_data['uuid']))
 
-    def _grab_file_contents(self, field_data):
+    def _grab_file_contents(self, field_data, stored_locally=True):
         """
         Fetches the file pointed by `field_data` from the DB.
         The user should not assume anything about the internals of the file.
         :param field_data:
+        :param stored_locally: Is the file stored in current plugin or in core (so it's generally available)
         :return: stream like object
         """
         if field_data:
-            return self._grab_file(field_data).read()
+            return self._grab_file(field_data, stored_locally).read()
 
     @add_rule('schema/<schema_type>', methods=['GET'])
     def schema(self, schema_type):
@@ -1316,8 +1323,8 @@ class PluginBase(Configurable, Feature):
 
     @property
     def mail_sender(self):
-        mail_server = self._get_collection('email_configs', 'core',
-                                           limited_user=False).find_one({'type': 'email_server'})
+        mail_server = self._get_db_with_limit('core')['email_configs'].find_one({'type': 'email_server'})
         return EmailServer(mail_server['smtpHost'], mail_server['smtpPort'],
                            mail_server.get('smtpUser'), mail_server.get('smtpPassword'),
-                           mail_server.get('smtpKey'), mail_server.get('smtpCert'))
+                           self._grab_file_contents(mail_server.get('smtpKey'), stored_locally=False),
+                           self._grab_file_contents(mail_server.get('smtpCert'), stored_locally=False))

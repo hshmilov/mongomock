@@ -13,7 +13,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, CORE_UNIQUE_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT
 from gui.report_generator import ReportGenerator
@@ -33,7 +33,6 @@ import requests
 import configparser
 import pymongo
 from bson import ObjectId
-from bson.son import SON
 import json
 from axonius.utils.parsing import parse_filter
 import re
@@ -1835,7 +1834,7 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated("email_server/upload_file", methods=['POST'])
     def email_server_upload_file(self):
-        return self._upload_file('core')
+        return self._upload_file(CORE_UNIQUE_NAME)
 
     @add_rule_unauthenticated("execution/<plugin_state>", methods=['POST'])
     def toggle_execution(self, plugin_state):
@@ -1999,8 +1998,12 @@ class GuiService(PluginBase):
 
     @add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):
-        self._send_report_thread()
-        return ""
+        try:
+            self._send_report_thread()
+            return ""
+        except Exception:
+            logger.exception('Failed sending test report by email.')
+            return return_error('Failed sending test report by email', 400)
 
     def _get_exec_report_settings(self, exec_reports_settings_collection):
         settings_object = exec_reports_settings_collection.find_one({}, projection={'_id': False, 'period': True,

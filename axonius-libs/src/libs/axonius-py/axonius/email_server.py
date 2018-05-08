@@ -31,8 +31,8 @@ class EmailServer(object):
         self.port = port
         self.user = user
         self.password = password
-        self.key = bytes(key) if key is not None and key != '' else None
-        self.cert = bytes(cert) if cert is not None and cert != '' else None
+        self.key = key if key is not None and key != '' else None
+        self.cert = cert if cert is not None and cert != '' else None
         self.source = source
         self._smtp = None
 
@@ -121,3 +121,4 @@ class Email(object):
                 self.server._smtp.send_message(msg)
         except Exception:
             logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
+            raise

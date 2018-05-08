@@ -127,7 +127,7 @@
 				this.updateView({module, view: {
 						page: 0, query: { filter, expressions: [] }
 					}})
-				this.$router.push({path: `${module}s`})
+				this.$router.push({path: module})
             },
             createNewDashboard() {
 				if (!this.$refs.wizard) return
