@@ -1993,7 +1993,7 @@ class GuiService(PluginBase):
         }
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
-            report_data['adapter_queries'] = self._get_adapter_data(report['adapters'])
+            report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
         return ReportGenerator(report_data, 'gui/templates/report/').generate_report_pdf()
 
     @add_rule_unauthenticated('test_exec_report', methods=['POST'])
