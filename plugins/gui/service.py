@@ -408,13 +408,13 @@ class GuiService(PluginBase):
     # DATA #
     ########
 
-    def _get_entities(self, limit, skip, filter, sort, projection, entity_type: EntityType):
+    def _get_entities(self, limit, skip, query_filter, sort, projection, entity_type: EntityType, include_history=False):
         """
         Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
         """
         logger.debug(f'Fetching data for entity {entity_type.name}')
         with self._get_db_connection(False) as db_connection:
-            pipeline = [{'$match': filter}]
+            pipeline = [{'$match': query_filter}]
             if projection:
                 projection['internal_axon_id'] = 1
                 projection['adapters'] = 1
@@ -439,10 +439,12 @@ class GuiService(PluginBase):
             # The reason is that sorting without the flag, causes exceeding of the memory limit.
             data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
 
-            if filter and not skip:
+            if query_filter and not skip and request and include_history:
+                # getting the original filter text on purpose.
+                query_filter = request.args.get('filter')
                 self._queries_db_map[entity_type].replace_one(
-                    {'name': {'$exists': False}, 'filter': filter},
-                    {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
+                    {'name': {'$exists': False}, 'filter': query_filter},
+                    {'filter': query_filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
                     upsert=True)
             if not projection:
                 return [beautify_db_entry(entity) for entity in data_list]
@@ -866,7 +868,7 @@ class GuiService(PluginBase):
     @projected()
     @add_rule_unauthenticated("devices")
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices))
+        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices, True))
 
     @filtered()
     @sorted()
@@ -924,7 +926,7 @@ class GuiService(PluginBase):
     @projected()
     @add_rule_unauthenticated("users")
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users))
+        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users, True))
 
     @filtered()
     @sorted()

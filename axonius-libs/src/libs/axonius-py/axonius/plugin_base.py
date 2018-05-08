@@ -1317,7 +1317,7 @@ class PluginBase(Configurable, Feature):
     @property
     def mail_sender(self):
         mail_server = self._get_collection('email_configs', 'core',
-                                           limited_user=True).find_one({'type': 'email_server'})
+                                           limited_user=False).find_one({'type': 'email_server'})
         return EmailServer(mail_server['smtpHost'], mail_server['smtpPort'],
                            mail_server.get('smtpUser'), mail_server.get('smtpPassword'),
                            mail_server.get('smtpKey'), mail_server.get('smtpCert'))
