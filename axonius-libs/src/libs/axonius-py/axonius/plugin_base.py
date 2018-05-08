@@ -4,6 +4,8 @@ import logging
 from concurrent.futures import ALL_COMPLETED
 from funcy import chunks
 
+from axonius.email_server import EmailServer
+
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.mixins.configurable import Configurable
 import json
@@ -654,16 +656,6 @@ class PluginBase(Configurable, Feature):
                                                                title=title,
                                                                content=content,
                                                                seen=False)).inserted_id
-
-    def send_email(self, title, emails, content='', severity_type='info'):
-        data = {
-            'title': title,
-            'content': content,
-            'severity_type': severity_type,
-            'recipient_list': emails
-        }
-        logger.info(f"Sent an email titled: {title}")
-        self.request_remote_plugin('send_email', None, 'post', json=data)
 
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
@@ -1321,3 +1313,11 @@ class PluginBase(Configurable, Feature):
     def update_config(self):
         self.renew_config_from_db()
         return ""
+
+    @property
+    def mail_sender(self):
+        mail_server = self._get_collection('email_configs', 'core',
+                                           limited_user=True).find_one({'type': 'email_server'})
+        return EmailServer(mail_server['smtpHost'], mail_server['smtpPort'],
+                           mail_server.get('smtpUser'), mail_server.get('smtpPassword'),
+                           mail_server.get('smtpKey'), mail_server.get('smtpCert'))

@@ -1,24 +1,31 @@
+import calendar
 import csv
 import logging
+import threading
+import time
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
 
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import next_weekday
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
-from gui.consts import ChartTypes
+from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT
 from gui.report_generator import ReportGenerator
 
 import tarfile
+from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
+from axonius.background_scheduler import LoggedBackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 import io
 import os
-from itertools import groupby
 from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 from flask import jsonify, request, session, after_this_request, make_response, send_file
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
@@ -259,6 +266,18 @@ class GuiService(PluginBase):
         if not self.system_collection.find({'type': 'server'}):
             self.system_collection.insert_one({'type': 'server', 'server_name': 'localhost'})
 
+        # Start exec report scheduler
+        self.exec_report_lock = threading.RLock()
+
+        executors = {'default': ThreadPoolExecutorApscheduler(1)}
+        self._exec_report_scheduler = LoggedBackgroundScheduler(executors=executors)
+
+        exec_report_setting_collection = self._get_collection('exec_reports_settings', limited_user=False)
+        current_exec_report_setting = self._get_exec_report_settings(exec_report_setting_collection)
+        if current_exec_report_setting != {}:
+            self._schedule_exec_report(exec_report_setting_collection, current_exec_report_setting)
+        self._exec_report_scheduler.start()
+
     def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
         """
         Adds default queries.
@@ -421,7 +440,6 @@ class GuiService(PluginBase):
             data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
 
             if filter and not skip:
-                filter = request.args.get('filter')
                 self._queries_db_map[entity_type].replace_one(
                     {'name': {'$exists': False}, 'filter': filter},
                     {'filter': filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
@@ -1944,6 +1962,115 @@ class GuiService(PluginBase):
                                                    _get_sort(view), {field: 1 for field in field_list}, entity)
                     })
         return views_data
+
+    # Executive Report
+
+    @add_rule_unauthenticated('export_report')
+    def export_report(self):
+        """
+        Gets definition of report from DB for the dynamic content.
+        Gets all the needed data for both pre-defined and dynamic content definitions.
+        Sends the complete data to the report generator to be composed to one document and generated as a pdf file.
+
+        TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
+        :return:
+        """
+        report_path = self.generate_report()
+        return send_file(report_path, mimetype='application/pdf', as_attachment=True,
+                         attachment_filename=report_path)
+
+    def generate_report(self):
+        """
+        Generates the report and returns file path.
+        :return: the generated report file path.
+        """
+        report_data = {
+            'adapter_devices': self._adapter_devices(),
+            'covered_devices': self._get_dashboard_coverage(),
+            'custom_charts': self._get_dashboard(),
+            'views_data': self._get_saved_views_data()
+        }
+        report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
+        if report.get('adapters'):
+            report_data['adapter_queries'] = self._get_adapter_data(report['adapters'])
+        return ReportGenerator(report_data, 'gui/templates/report/').generate_report_pdf()
+
+    @add_rule_unauthenticated('test_exec_report', methods=['POST'])
+    def test_exec_report(self):
+        self._send_report_thread()
+        return ""
+
+    def _get_exec_report_settings(self, exec_reports_settings_collection):
+        settings_object = exec_reports_settings_collection.find_one({}, projection={'_id': False, 'period': True,
+                                                                                    'recipients': True})
+        return settings_object or {}
+
+    def _schedule_exec_report(self, exec_reports_settings_collection, exec_report_data):
+        logger.info("rescheduling exec_report")
+        time_period = exec_report_data['period']
+        current_date = datetime.now()
+        next_run_time = None
+        new_interval_triggger = None
+
+        if time_period == 'weekly':
+            # Next beginning of the work week (monday for most of the world).
+            next_run_time = next_weekday(current_date, 0)
+            next_run_time = next_run_time.replace(hour=8, minute=0)
+            new_interval_triggger = CronTrigger(year='*', month='*', week='*', day_of_week=0, hour=8, minute=0)
+        elif time_period == 'monthly':
+            # Sets the beginning of next month (1st day no matter if it's saturday).
+            next_run_time = current_date + relativedelta(months=+1)
+            next_run_time = next_run_time.replace(day=1, hour=8, minute=0)
+            new_interval_triggger = CronTrigger(month='1-12', week=1, day_of_week=0, hour=8, minute=0)
+        elif time_period == 'daily':
+            # sets it for tomorrow at 8 and reccuring every work day at 8.
+            next_run_time = current_date + relativedelta(days=+1)
+            next_run_time = next_run_time.replace(hour=8, minute=0)
+            new_interval_triggger = CronTrigger(year='*', month='*', week='*', day_of_week='0-4', hour=8, minute=0)
+        else:
+            raise ValueError("period have to be in ('daily', 'monthly', 'weekly').")
+
+        exec_report_job = self._exec_report_scheduler.get_job(EXEC_REPORT_THREAD_ID)
+
+        # If job dosen't exist generate it
+        if exec_report_job is None:
+            self._exec_report_scheduler.add_job(func=self._send_report_thread,
+                                                trigger=new_interval_triggger,
+                                                next_run_time=next_run_time,
+                                                name=EXEC_REPORT_THREAD_ID,
+                                                id=EXEC_REPORT_THREAD_ID,
+                                                max_instances=1)
+        else:
+            exec_report_job.modify(next_run_time=next_run_time)
+            self._exec_report_scheduler.reschedule_job(EXEC_REPORT_THREAD_ID, trigger=new_interval_triggger)
+
+        exec_reports_settings_collection.replace_one({}, exec_report_data, upsert=True)
+        logger.info(f"Scheduling an exec_report sending for {next_run_time} and period of {time_period}.")
+        return "Scheduled next run."
+
+    @add_rule_unauthenticated('exec_report', methods=['POST', 'GET'])
+    def exec_report(self):
+        """
+        Makes the apscheduler schedule a research phase right now.
+        :return:
+        """
+        exec_reports_settings_collection = self._get_collection('exec_reports_settings', limited_user=False)
+        if request.method == 'GET':
+            return jsonify(self._get_exec_report_settings(exec_reports_settings_collection))
+
+        elif request.method == 'POST':
+            exec_report_data = self.get_request_data_as_object()
+            return self._schedule_exec_report(exec_reports_settings_collection, exec_report_data)
+
+    def _send_report_thread(self):
+        with self.exec_report_lock:
+            exec_report_settings = self._get_collection('exec_reports_settings', limited_user=False).find_one()
+            report_path = self.generate_report()
+
+            email = self.mail_sender.new_email(EXEC_REPORT_TITLE, exec_report_settings['recipients'])
+            with open(report_path, 'rb') as report_file:
+                email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
+            email.send(EXEC_REPORT_EMAIL_CONTENT)
 
     @property
     def plugin_subtype(self):

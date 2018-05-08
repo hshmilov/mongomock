@@ -2,6 +2,7 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 # Standard modules
 import concurrent.futures
+from collections import Iterable
 import threading
 import datetime
 import requests
@@ -280,14 +281,11 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
-        self.send_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']),
-                        action_data,
-                        report_consts.REPORT_CONTENT_HTML.format(query_name=report_data['name'],
-                                                                 num_of_triggers=report_data['triggered'],
-                                                                 trigger_message=self._parse_action_content(
-                                                                     report_data['triggers'], triggered),
-                                                                 num_of_current_devices=current_num_of_devices),
-                        report_data['severity'])
+        self.mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data)\
+            .send(report_consts.REPORT_CONTENT_HTML.format(
+                query_name=report_data['name'], num_of_triggers=report_data['triggered'],
+                trigger_message=self._parse_action_content(report_data['triggers'], triggered),
+                num_of_current_devices=current_num_of_devices))
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):
@@ -385,8 +383,14 @@ class ReportsService(PluginBase, Triggerable):
             if report_data['retrigger'] or report_data['triggered'] == 0:
                 report_data['triggered'] += 1
                 for action in report_data['actions']:
-                    getattr(self, f"_handle_action_{action['type']}")(
-                        report_data, triggers, result_difference, len(current_result), action.get('data'))
+                    try:
+                        getattr(self, f"_handle_action_{action['type']}")(
+                            report_data, triggers, result_difference, len(current_result), action.get('data'))
+                    except Exception:
+                        logger.exception(
+                            f'Error performing action {action} with parameters '
+                            f'{report_data, triggers, result_difference} '
+                            f'{(len(current_result) if isinstance(current_result, Iterable) else current_result)}')
                 self.update_report(report_data)
 
         try:

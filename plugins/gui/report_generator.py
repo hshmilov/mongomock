@@ -41,7 +41,7 @@ class ReportGenerator(object):
             'data': self._get_template('view_data/table_data')
         }
 
-    def generate(self):
+    def generate_report_pdf(self):
         """
         Build HTML file representing a report that consists of:
         1. Summary - all Dashboard cards (except lifecycle)

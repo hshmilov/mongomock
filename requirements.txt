@@ -15,7 +15,6 @@ elasticsearch-dsl==5.3.0
 Flask==0.12.2
 idna==2.6
 itsdangerous==0.24
-Jinja2==2.9.6
 JSON-log-formatter==0.2.0
 MarkupSafe==1.0
 paramiko==2.3.1
@@ -54,3 +53,6 @@ numpy==1.14.2
 username-generator==2.0.0
 pypng==0.0.18
 netaddr==0.7.19
+weasyprint==0.42
+jinja2==2.10
+cairosvg==2.1.3
