@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export CORTEX_ROOT=`cd "$(dirname "$0")" && pwd`
+export CORTEX_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 source $CORTEX_ROOT/venv/bin/activate
 
