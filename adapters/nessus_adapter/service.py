@@ -74,34 +74,40 @@ class NessusAdapter(ScannerAdapterBase):
         :return:
         """
         try:
-            with client_data:
-                device_dict = {}
-                devices_count = 0
-                # Get all scans for client
-                for scan in client_data.get_scans():
-                    if scan.get('id') is None:
-                        continue
-                    # Get all hosts for scan
+            client_data.connect()
+            device_dict = {}
+            devices_count = 0
+            # Get all scans for client
+            for scan in client_data.get_scans():
+                if scan.get('id') is None:
+                    continue
+                # Get all hosts for scan
+                try:
                     for host in client_data.get_hosts(scan['id']):
-                        if host.get('host_id') is None:
-                            continue
-                        devices_count += 1
-                        if devices_count % 1000 == 0:
-                            logger.info(f"Got {devices_count} hosts requests so far")
-                        # Get specific details of the host
-                        host_details = client_data.get_host_details(scan['id'], host['host_id'])
-                        if not host_details:
-                            continue
+                        try:
+                            if host.get('host_id') is None:
+                                continue
+                            devices_count += 1
+                            if devices_count % 1000 == 0:
+                                logger.info(f"Got {devices_count} hosts requests so far")
+                            # Get specific details of the host
+                            host_details = client_data.get_host_details(scan['id'], host['host_id'])
+                            if not host_details:
+                                continue
 
-                        host_id = host.get('host_id')
-                        if host_id not in device_dict:
-                            # Add host that is not yet listed in dict
-                            host_details['scans'] = {}
-                            device_dict[host_id] = host_details
-                        # Add current scan info to the host, by scan id
-                        device_dict[host_id]['scans'][scan['id']] = host
-
-                return device_dict.values()
+                            host_id = host.get('host_id')
+                            if host_id not in device_dict:
+                                # Add host that is not yet listed in dict
+                                host_details['scans'] = {}
+                                device_dict[host_id] = host_details
+                            # Add current scan info to the host, by scan id
+                            device_dict[host_id]['scans'][scan['id']] = host
+                            yield device_dict[host_id]
+                        except Exception:
+                            logger.exception(f"Got problems getting host {str(host)}")
+                except Exception:
+                    logger.exception(f"Got problems getting scan {str(scan)}")
+            client_data.disconnect()
         except NessusException:
             logger.exception(f'Error querying devices from client {client_name}')
             raise AdapterException('Nessus Adapter failed querying devices for {0}'.format(client_name))
