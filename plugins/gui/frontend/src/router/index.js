@@ -94,7 +94,7 @@ export default new Router({
 		},
 		{
 			path: '/report',
-			name: 'Reports',
+			name: 'Reporting',
 			component: ReportContainer
 		}
     ]

@@ -2,7 +2,10 @@
     <x-page title="Reporting">
         <x-box class="x-report">
             <div class="x-report-download">
-                <a class="x-btn great" @click="downloadReport" tabindex="1">Download Now</a>
+                <a class="x-btn great" @click="startDownload" tabindex="1" :class="{disabled: downloading}">
+                    <template v-if="downloading">GENERATING...</template>
+                    <template v-else>Download Now</template>
+                </a><div class="error-text">{{error}}</div>
             </div>
             <h3>Periodical Report Email</h3>
             <div class="x-content">
@@ -46,11 +49,31 @@
 				emailReport: {
 					period: 'weekly',
                     emails: []
-				}
+				},
+                downloading: false,
+                error: ''
             }
         },
         methods: {
-            ...mapActions({downloadReport: DOWNLOAD_REPORT})
+            ...mapActions({downloadReport: DOWNLOAD_REPORT}),
+			startDownload() {
+            	if (this.downloading) return
+            	this.downloading = true
+                this.downloadReport().then((response) => {
+                	this.downloading = false
+					let blob = new Blob([response.data], { type: response.headers["content-type"]} )
+					let link = document.createElement('a')
+					link.href = window.URL.createObjectURL(blob)
+					let now = new Date()
+					let formattedDate = now.toLocaleDateString().replace(/\//g,'')
+					let formattedTime = now.toLocaleTimeString().replace(/:/g,'')
+					link.download = `axonius-report_${formattedDate}-${formattedTime}.pdf`
+					link.click()
+				}).catch((error) => {
+                    this.downloading = false
+                    this.error = error.message
+                })
+            }
         }
 	}
 </script>
@@ -61,6 +84,10 @@
             margin-bottom: 24px;
             .x-btn {
                 background-color: $theme-orange;
+            }
+            .error-text {
+                display: inline-block;
+                margin-left: 8px;
             }
         }
         .x-grid {

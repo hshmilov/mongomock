@@ -33,7 +33,12 @@ class ReportGenerator(object):
             'pie_slice': self._get_template('summary/pie_slice'),
             'pie_gradient': self._get_template('summary/pie_gradient'),
             'histogram': self._get_template('summary/histogram_chart'),
-            'histogram_bar': self._get_template('summary/histogram_bar')
+            'histogram_bar': self._get_template('summary/histogram_bar'),
+            'view': self._get_template('view_data/view'),
+            'table': self._get_template('view_data/table'),
+            'row': self._get_template('view_data/table_row'),
+            'head': self._get_template('view_data/table_head'),
+            'data': self._get_template('view_data/table_data')
         }
 
     def generate(self):
@@ -52,23 +57,23 @@ class ReportGenerator(object):
         sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
 
         # Add section for each adapter with results of its queries
-        if self.report_data.get('adapter_queries'):
-            for adapter in self.report_data['adapter_queries']:
+        if self.report_data.get('adapter_data'):
+            for adapter in self.report_data['adapter_data']:
                 sections.append(self.templates['section'].render(
-                    {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'])}))
+                    {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
 
         # Add section for all saved queries
         if self.report_data.get('views_data'):
             sections.append(self.templates['section'].render(
-                {'title': 'Saved Devices Views', 'content': self._create_data_views()}))
+                {'title': 'Saved Views', 'content': self._create_data_views()}))
 
         # Join all sections as the content of the report
         html_data = self.templates['report'].render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
-            file.write(html_data)
+        # with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
+        #     file.write(html_data)
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
         HTML(string=html_data, base_url=self.template_path).write_pdf(
@@ -259,7 +264,7 @@ class ReportGenerator(object):
             'content': '\n'.join(slices)
         })
 
-    def _create_adapter(self, queries):
+    def _create_adapter(self, queries, views):
         """
         Add a box for each query result count and name, with the appropriate colour if it's negative.
 
@@ -274,9 +279,23 @@ class ReportGenerator(object):
                 'name': query['name'], 'count': query['count'],
                 'colour': 'red' if query.get('negative', False) else 'orange'
             }))
+        for view_data in views:
+            if not view_data.get('name') or not view_data.get('data'):
+                continue
+
+            results.append(self._create_data_view(view_data))
         return '\n'.join(results)
 
     def _create_data_views(self):
+        views = []
+        for view_data in self.report_data['views_data']:
+            if not view_data.get('name') or not view_data.get('data'):
+                continue
+
+            views.append(self._create_data_view(view_data))
+        return '\n'.join(views)
+
+    def _create_data_view(self, view_data):
         """
         Create tables containing each view's data according to given fields.
         Number of coloumns is limited such that fits in a page.
@@ -284,34 +303,26 @@ class ReportGenerator(object):
         :param viewa_data:
         :return:
         """
-        view_template = self._get_template('view_data/view')
-        table_template = self._get_template('view_data/table')
-        row_template = self._get_template('view_data/table_row')
-        head_template = self._get_template('view_data/table_head')
-        data_template = self._get_template('view_data/table_data')
+        current_fields = view_data['fields'][0:6]
+        heads = [self.templates['head'].render({'content': list(field.keys())[0]}) for field in current_fields]
+        rows = []
+        for item in view_data['data']:
+            item_values = []
+            for field in current_fields:
+                value = item[list(field.values())[0]]
+                if isinstance(value, list):
+                    canonized_value = [str(x) for x in value]
+                    value = ','.join(canonized_value)
+                item_values.append(self.templates['data'].render({'content': value}))
+            rows.append(self.templates['row'].render({'content': '\n'.join(item_values)}))
 
-        views = []
-        for view_data in self.report_data['views_data']:
-            if not view_data.get('name') or not view_data.get('data'):
-                continue
-
-            current_fields = view_data['fields'][0:6]
-            heads = [head_template.render({'content': field['title']}) for field in current_fields]
-            rows = []
-            for item in view_data['data']:
-                item_values = []
-                for field in current_fields:
-                    value = item[field['name']]
-                    if isinstance(value, list):
-                        value = ','.join(value)
-                    item_values.append(data_template.render({'content': value}))
-                rows.append(row_template.render({'content': '\n'.join(item_values)}))
-
-            views.append(view_template.render({
-                'title': view_data['name'], 'host': self.host, 'entity': view_data['entity'],
-                'cols_total': len(view_data['fields']), 'content': table_template.render({
-                    'head_content': row_template.render({'content': '\n'.join(heads)}),
-                    'body_content': '\n'.join(rows)
-                })
-            }))
-        return '\n'.join(views)
+        fields_len = len(view_data['fields'])
+        return self.templates['view'].render({
+            'title': view_data['name'], 'cols_total': fields_len, 'cols_current': min(fields_len, 6),
+            'view_all': '' if not view_data.get('entity') else
+            f' - <a href="https://{self.host}/{view_data["entity"]}?view={view_data["name"]}" class="c-blue">view all</a>',
+            'content': self.templates['table'].render({
+                'head_content': self.templates['row'].render({'content': '\n'.join(heads)}),
+                'body_content': '\n'.join(rows)
+            })
+        })

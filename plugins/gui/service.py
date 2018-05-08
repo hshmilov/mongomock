@@ -1864,7 +1864,7 @@ class GuiService(PluginBase):
         }
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
-            report_data['adapter_queries'] = self._get_adapter_queries(report['adapters'])
+            report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
 
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         temp_report_filename = ReportGenerator(report_data, 'gui/templates/report/',
@@ -1872,15 +1872,18 @@ class GuiService(PluginBase):
         return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
                          attachment_filename=temp_report_filename)
 
-    def _get_adapter_queries(self, adapters):
+    def _get_adapter_data(self, adapters):
         """
         Get the definition of the adapters to include in the report. For each adapter, get the queries defined for it
         and execute each one, according to its entity, to get the amount of results for it.
 
         :return:
         """
-        adapter_queries = []
+        adapter_data = []
         for adapter in adapters:
+            if not adapter.get('name'):
+                continue
+
             queries = []
             for query in adapter.get('queries', []):
                 if not query.get('name') or not query.get('entity'):
@@ -1893,9 +1896,12 @@ class GuiService(PluginBase):
                         **query,
                         'count': self._entity_views_db_map[entity].find(parse_filter(filter), {'_id': 1}).count()
                     })
-            if queries:
-                adapter_queries.append({'name': adapter.get('name', 'Adapter'), 'queries': queries})
-        return adapter_queries
+            adapter_reports = self.request_remote_plugin('get_report', self.get_plugin_unique_name(adapter['name']))
+            report_list = []
+            for client, reports in adapter_reports.json().items():
+                report_list = report_list + reports
+            adapter_data.append({'name': adapter['title'], 'queries': queries, 'views': report_list})
+        return adapter_data
 
     def _get_saved_views_data(self):
         """
@@ -1932,7 +1938,7 @@ class GuiService(PluginBase):
                     field_list = view.get('fields', [])
                     views_data.append({
                         'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
-                        'fields': [{'name': field, 'title': field_to_title.get(field, field)} for field in field_list],
+                        'fields': [{field_to_title.get(field, field): field} for field in field_list],
                         'data': self._get_entities(view.get('pageSize', 20), 0,
                                                    parse_filter(view.get('query', {}).get('filter', '')),
                                                    _get_sort(view), {field: 1 for field in field_list}, entity)
@@ -1950,3 +1956,6 @@ class GuiService(PluginBase):
     @property
     def device_control_plugin(self):
         return self.get_plugin_by_name(DEVICE_CONTROL_PLUGIN_NAME)[PLUGIN_UNIQUE_NAME]
+
+    def get_plugin_unique_name(self, plugin_name):
+        return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]

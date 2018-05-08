@@ -1336,10 +1336,9 @@ class LdapConnection(object):
             domain_trusts = []
             logger.exception("error parsing domain trusts")
 
-        return {
-            "Groups": {
+        return [{
                 "name": "Groups",
-                "fields": [{"Group", "group_name"}, {"Count", "count"}],
+                "fields": [{"Group": "group_name"}, {"Count": "count"}],
                 "data": [
                     {"group_name": "Total Groups", "count": total_groups},
                     {"group_name": "Builtin", "count": builtin},
@@ -1350,8 +1349,8 @@ class LdapConnection(object):
                     {"group_name": "Domain Local Security", "count": domain_local_security},
                     {"group_name": "Domain Local Distribution", "count": domain_local_distribution},
                 ]
-            },
-            "Forest Summary": {
+                },
+                {
                 "name": "Forest Summary",
                 "fields": [{"Name": "name"}, {"Value": "value"}],
                 "data": [
@@ -1365,8 +1364,8 @@ class LdapConnection(object):
                     {"name": "GC Server Count", "value": global_catalogs_count},
                     {"name": "Exchange Server Count", "value": exchange_servers_count},
                 ]
-            },
-            "Forest Features": {
+                },
+                {
                 "name": "Forest Features",
                 "fields": [{"Name": "name"}, {"Value": "value"}],
                 "data": [
@@ -1374,8 +1373,8 @@ class LdapConnection(object):
                     {"name": "Tombstone Lifetime", "value": tombstone_lifetime},
                     {"name": "Exchange Version", "value": exchange_version},
                 ]
-            },
-            "Site Summary": {
+                },
+                {
                 "name": "Site Summary",
                 "fields": [{"Name": "name"}, {"Value": "value"}],
                 "data": [
@@ -1388,8 +1387,8 @@ class LdapConnection(object):
                     {"name": "Sites Without Subnets", "value": forest_site_without_subnets},
                     {"name": "Sites Without Servers", "value": forest_site_without_servers},
                 ]
-            },
-            "Forest Site Summary": {
+                },
+                {
                 "name": "Forest Site Summary",
                 "fields": [
                     {"Name": "name"},
@@ -1399,8 +1398,8 @@ class LdapConnection(object):
                     {"Subnets": "subnets"}
                 ],
                 "data": forest_sites_summary
-            },
-            "Site Details": {
+                },
+                {
                 "name": "Forest Site Details",
                 "fields": [
                     {"Name": "name"},
@@ -1411,8 +1410,8 @@ class LdapConnection(object):
                     {"Adjacent Sites": "adjacent_sites"}
                 ],
                 "data": forest_site_details
-            },
-            "Site Subnets": {
+                },
+                {
                 "name": "Site Subnets",
                 "fields": [
                     {"Name": "name"},
@@ -1420,8 +1419,8 @@ class LdapConnection(object):
                     {"Location": "location"}
                 ],
                 "data": forest_subnets
-            },
-            "Site Connections": {
+                },
+                {
                 "name": "Site Connections",
                 "fields": [
                     {"Enabled": "connection_enabled"},
@@ -1430,8 +1429,8 @@ class LdapConnection(object):
                     {"To": "sc_to"}
                 ],
                 "data": site_connections
-            },
-            "Site Links": {
+                },
+                {
                 "name": "Site Links",
                 "fields": [
                     {"Name": "name"},
@@ -1442,8 +1441,8 @@ class LdapConnection(object):
                     {"Change Notification Enabled": "change_notification_enabled"}
                 ],
                 "data": site_links
-            },
-            "Domains": {
+                },
+                {
                 "name": "Domains",
                 "fields": [
                     {"Name": "name"},
@@ -1454,8 +1453,8 @@ class LdapConnection(object):
                     {"RIDs Remaining": "rids_remaining"}
                 ],
                 "data": domains_desc
-            },
-            "Domain Password Policies": {
+                },
+                {
                 "name": "Domain Password Policies",
                 "fields": [
                     {"Domain Name": "domain_name"},
@@ -1467,8 +1466,8 @@ class LdapConnection(object):
                     {"Min Password Length": "min_password_length"}
                 ],
                 "data": password_policies
-            },
-            "Domain Trusts": {
+                },
+                {
                 "name": "Domain Trusts",
                 "fields": [
                     {"Domain Name": "domain"},
@@ -1480,8 +1479,8 @@ class LdapConnection(object):
                     {"When Changed": "changed"}
                 ],
                 "data": domain_trusts
-            },
-            "Domain Integrated DNS Zones": {
+                },
+                {
                 "name": "Domain Integrated DNS Zones",
                 "fields": [
                     {"Domain": "domain"},
@@ -1492,8 +1491,8 @@ class LdapConnection(object):
                     {"When Changed": "zone_record_changed"}
                 ],
                 "data": dns_zones
-            },
-            "Domain GPOs": {
+                },
+                {
                 "name": "Domain GPOs",
                 "fields": [
                     {"Name": "name"},
@@ -1501,5 +1500,5 @@ class LdapConnection(object):
                     {"When Changed": "when_changed"}
                 ],
                 "data": gpo_table
-            }
-        }
+                }
+                ]
