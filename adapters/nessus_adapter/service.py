@@ -21,9 +21,9 @@ PASSWORD = 'password'
 class NessusVulnerability(SmartJsonClass):
     plugin_id = Field(str, "Plugin ID")
     plugin_name = Field(str, "Plugin Name")
-    severity = Field(int, "Severity")
-    severity_index = Field(int, "Severity Index")
-    vuln_index = Field(int, "Vulnerability Index")
+    severity = Field(str, "Severity")
+    severity_index = Field(str, "Severity Index")
+    vuln_index = Field(str, "Vulnerability Index")
 
 
 class NessusAdapter(ScannerAdapterBase):
@@ -163,10 +163,10 @@ class NessusAdapter(ScannerAdapterBase):
                     new_vulnerability = NessusVulnerability()
                     new_vulnerability.plugin_id = vulnerability_raw.get("plugin_id")
                     new_vulnerability.plugin_name = vulnerability_raw.get("plugin_name")
-                    new_vulnerability.severity = vulnerability_raw.get("severity")
-                    new_vulnerability.severity_index = vulnerability_raw.get("severity_index")
-                    new_vulnerability.vuln_index = vulnerability_raw.get("vuln_index")
-                    device.vulnerabilites.append(new_vulnerability)
+                    new_vulnerability.severity = str(vulnerability_raw.get("severity"))
+                    new_vulnerability.severity_index = str(vulnerability_raw.get("severity_index"))
+                    new_vulnerability.vuln_index = str(vulnerability_raw.get("vuln_index"))
+                    device.vulnerabilities.append(new_vulnerability)
                 except Exception:
                     logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
             device.scanner = True
