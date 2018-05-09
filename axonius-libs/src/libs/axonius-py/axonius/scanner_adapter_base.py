@@ -19,8 +19,7 @@ from axonius.consts.adapter_consts import IGNORE_DEVICE, SCANNER_ADAPTER_PLUGIN_
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \
     extract_all_macs, get_hostname, macs_do_not_contradict, hostnames_do_not_contradict, \
-    or_function, compare_macs, compare_device_normalized_hostname, ips_do_not_contradict, \
-    NORMALIZED_IPS, remove_duplicates_by_reference
+    ips_do_not_contradict, NORMALIZED_IPS, remove_duplicates_by_reference, NORMALIZED_MACS, NORMALIZED_HOSTNAME_STRING
 
 
 def newest(devices):
@@ -43,6 +42,7 @@ class ScannerCorrelatorBase(object):
         super().__init__(*args, **kwargs)
         self._plugin_name = plugin_name
         self._all_devices = list(all_devices)
+        # not using `normalize_adapter_devices` to not correlate with adapterdata
         self._all_adapter_devices = [normalize_adapter_device(adapter) for adapters in self._all_devices for adapter in
                                      adapters['adapters']]
         self._all_adapter_devices_from_same_plugin = [x for x in self._all_adapter_devices if
@@ -54,10 +54,25 @@ class ScannerCorrelatorBase(object):
             ips = adapter.get(NORMALIZED_IPS)
             if ips:
                 for ip in ips:
-                    self._all_adapters_by_ips.setdefault(ip, []).append(adapter)
+                    if ip:
+                        self._all_adapters_by_ips.setdefault(ip, []).append(adapter)
 
-    def find_suitable(self, parsed_device, normalizations: List[parameter_function],
-                      predicates: List[pair_comparator], adapter_list: list = None) -> Tuple[str, str]:
+        self._all_adapters_by_mac_from_same_plugin = {}
+        for adapter in self._all_adapter_devices_from_same_plugin:
+            macs = adapter.get(NORMALIZED_MACS)
+            if macs:
+                for mac in macs:
+                    if mac:
+                        self._all_adapters_by_mac_from_same_plugin.setdefault(mac, []).append(adapter)
+
+        self._all_adapters_by_hostname_from_same_plugin = {}
+        for adapter in self._all_adapter_devices_from_same_plugin:
+            hostname = adapter.get(NORMALIZED_HOSTNAME_STRING)
+            if hostname:
+                self._all_adapters_by_hostname_from_same_plugin.setdefault(hostname, []).append(adapter)
+
+    def find_suitable(self, parsed_device, normalizations: List[parameter_function] = [],
+                      predicates: List[pair_comparator] = [], adapter_list: list = None) -> Tuple[str, str]:
         """
         Returns all devices that are compatible with all given predicates
         :param parsed_device: Compare with this device
@@ -104,7 +119,7 @@ class ScannerCorrelatorBase(object):
 
     def find_suitable_no_ip_contradictions(self, parsed_device, *args, **kwargs) -> Tuple[str, str]:
         devices = list(self.find_suitable(parsed_device, *args, **kwargs))
-        if len(devices) >= 1:
+        if len(devices) > 0:
             device = next(filter(lambda dev: ips_do_not_contradict(dev, parsed_device), devices), None)
         else:
             return None
@@ -119,11 +134,25 @@ class ScannerCorrelatorBase(object):
         :param parsed_device:
         :return: Tuple(UNIQUE_PLUGIN_NAME, id)
         """
+        macs = parsed_device.get(NORMALIZED_MACS) or []
+        hostname = parsed_device.get(NORMALIZED_HOSTNAME_STRING)
+
+        adapters_with_same_mac = [adapter
+                                  for mac in macs
+                                  for adapter in
+                                  self._all_adapters_by_mac_from_same_plugin.get(mac, [])]
+
+        # Not using the full fledged compare_hostname here:
+        # if a device exists in the DB from this scanner, and this scanner has a MAC, it will almost certainly
+        # be exactly the same mac, so this heuristic is unnecessary and saves a lot of complication.
+        adapters_with_same_hostname = self._all_adapters_by_hostname_from_same_plugin.get(hostname, [])
+
+        adapters_with_same_mac = remove_duplicates_by_reference(adapters_with_same_mac)
+
         return self.find_suitable_no_ip_contradictions(parsed_device,
-                                                       normalizations=[],
-                                                       predicates=[or_function(compare_macs,
-                                                                               compare_device_normalized_hostname)],
-                                                       adapter_list=self._all_adapter_devices_from_same_plugin)
+                                                       adapter_list=adapters_with_same_mac) or \
+            self.find_suitable_no_ip_contradictions(parsed_device,
+                                                    adapter_list=adapters_with_same_hostname)
 
     def _find_correlation_with_real_adapter(self, parsed_device) -> Tuple[str, str]:
         """

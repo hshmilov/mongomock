@@ -31,6 +31,9 @@ mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 # Currently (28/01/2018) this means removing LOCAL and WORKGROUP.
 # Also we want to split the hostname on "." and make sure one split list is the beginning of the other.
 NORMALIZED_HOSTNAME = 'normalized_hostname'
+# In some cases we don't want to use compare_hostnames because indexing using it is complicated
+# and in some cases indexsing is performance critical
+NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
 DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP']
 # NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.
 # Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
@@ -560,6 +563,8 @@ def normalize_adapter_device(adapter_device):
     # Save the normalized hostname so we can later easily compare.
     # See further doc near definition of NORMALIZED_HOSTNAME.
     adapter_device[NORMALIZED_HOSTNAME] = normalize_hostname(adapter_data)
+    if adapter_device[NORMALIZED_HOSTNAME]:
+        adapter_device[NORMALIZED_HOSTNAME_STRING] = '.'.join(adapter_device[NORMALIZED_HOSTNAME])
     if adapter_data.get(OS_FIELD) is not None and adapter_data.get(OS_FIELD, {}).get('type'):
         adapter_data[OS_FIELD]['type'] = adapter_data[OS_FIELD]['type'].upper()
     return adapter_device
