@@ -7,7 +7,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import get_organizational_units_from_dn
+from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string
 from sccm_adapter.connection import SccmConnection
 import sccm_adapter.consts as consts
 
@@ -37,10 +37,10 @@ class SccmAdapter(AdapterBase):
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except Exception:
-            message = f"Error connecting to client with parameters {str(client_config)} "
+        except Exception as err:
+            message = f"Error connecting to client host: {str(client_config[consts.SCCM_HOST])}  database: {str(client_config[consts.SCCM_DATABASE])}"
             logger.exception(message)
-            raise ClientConnectionException(message)
+            raise ClientConnectionException(get_exception_string())
 
     def _query_devices_by_client(self, client_name, client_data):
         try:
