@@ -173,7 +173,8 @@ class SshDhcpCiscoData(DhcpCiscoData):
         info = bytes.fromhex(info.replace('.', '')).decode('utf-8')
         info = info.replace('\x00', '')
         name, mac, iface = info.split('-')
-        return {'ip': ip, 'name': name, 'mac': format_mac(mac), 'iface': iface, 'ip-expires': expires, 'ip-type': type_}
+        # name is constant cisco?
+        return {'ip': ip, 'mac': format_mac(mac), 'iface': iface, 'ip-expires': expires, 'ip-type': type_}
 
     def _parse(self):
         try:
