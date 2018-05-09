@@ -111,9 +111,6 @@
             fields() {
 				return this.getDataFieldsListSpread(this.module)
             },
-            fetching() {
-				return (!this.fields.length || this.content.fetching || this.count.fetching) && !this.pageData.length
-            },
             viewFields() {
 				return this.fields.filter((field) => field.name && this.view.fields.includes(field.name))
             },
@@ -157,6 +154,9 @@
             },
             pageLinkNumbers() {
 				this.fetchLinkedPages()
+            },
+            view() {
+                this.loading = true
             }
         },
         methods: {
@@ -203,12 +203,7 @@
             }
         },
 		created() {
-			if (this.content.data.length && this.view.page !== 0) {
-				this.loading = false
-			} else {
-				this.fetchContent({module: this.module, skip: 0, limit: this.view.pageSize})
-                    .then(() => this.loading = false)
-            }
+			this.fetchLinkedPages()
             if (this.refresh) {
                 this.interval = setInterval(function () {
 					this.fetchLinkedPages()

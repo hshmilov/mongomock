@@ -331,7 +331,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
 }
 
 .dropdown-menu {
-  z-index: 10;
+  z-index: 200;
   top: 96%;
   width: 100%;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);

@@ -57,7 +57,7 @@
                         .hour-item, .min-item {
                             font-size: 20px !important;
                             &.active {
-                                background-color: $theme-white;
+                                background-color: $grey-2;
                             }
                         }
                     }
