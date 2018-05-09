@@ -73,6 +73,8 @@ def system_entry_point(args):
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
     parser.add_argument('--exclude', metavar='N', type=str, nargs='*', help='Adapters and Services to exclude',
                         default=[])
+    parser.add_argument('--expose-db', action='store_true', default=False,
+                        help='Expose db port outside of this machine.')
 
     try:
         args = parser.parse_args(args)
@@ -115,7 +117,7 @@ def system_entry_point(args):
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
 
-        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip)
+        axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db)
         axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip,
                                      exclude_restart=exclude_restart)
     elif args.mode == 'down':

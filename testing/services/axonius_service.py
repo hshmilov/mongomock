@@ -80,7 +80,7 @@ class AxoniusService(object):
         for service in self.axonius_services:
             service.take_process_ownership()
 
-    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True):
+    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True, expose_db=False):
         if allow_restart:
             for service in self.axonius_services:
                 service.remove_container()
@@ -88,6 +88,10 @@ class AxoniusService(object):
         # Start in parallel
         for service in self.axonius_services:
             if skip and service.get_is_container_up():
+                continue
+            if expose_db and service is self.db:
+                service.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild,
+                              hard=hard, show_print=show_print, expose_port=True)
                 continue
             service.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
 

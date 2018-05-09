@@ -93,7 +93,7 @@ else:
     def docker_network(self):
         return 'axonius'
 
-    def start(self, mode='', allow_restart=False, rebuild=False, hard=False, show_print=True):
+    def start(self, mode='', allow_restart=False, rebuild=False, hard=False, show_print=True, expose_port=False):
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
@@ -102,7 +102,7 @@ else:
         docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
 
         publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
-        if mode != 'prod' or self.override_exposed_port:
+        if mode != 'prod' or self.override_exposed_port or expose_port:
             publish_port_mode = ''  # if in debug mode or override_exposed_port is set, bind on all ips on host
 
         for exposed in self.exposed_ports:
