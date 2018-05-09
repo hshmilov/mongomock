@@ -75,8 +75,8 @@ class ReportGenerator(object):
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        # with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
-        #     file.write(html_data)
+        with open(f'{self.output_path}axonius-report_{timestamp}.html', 'wb') as file:
+            file.write(bytes(html_data.encode('utf-8')))
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
         HTML(string=html_data, base_url=self.template_path).write_pdf(
@@ -323,12 +323,17 @@ class ReportGenerator(object):
             rows.append(self.templates['row'].render({'content': '\n'.join(item_values)}))
 
         fields_len = len(view_data['fields'])
-        return self.templates['view'].render({
-            'title': view_data['name'], 'cols_total': fields_len, 'cols_current': min(fields_len, 6),
-            'view_all': '' if not view_data.get('entity') else
-            f' - <a href="https://{self.host}/{view_data["entity"]}?view={view_data["name"]}" class="c-blue">view all</a>',
+        render_params = {
+            'title': view_data['name'],
+            'cols_total': fields_len, 'cols_current': min(fields_len, 6),
             'content': self.templates['table'].render({
                 'head_content': self.templates['row'].render({'content': '\n'.join(heads)}),
                 'body_content': '\n'.join(rows)
             })
-        })
+        }
+        if view_data.get('entity'):
+            render_params['link_start'] = f'<a href="https://{self.host}/{view_data["entity"]}' \
+                                          f'?view={view_data["name"]}" class="c-blue">'
+            render_params['link_end'] = '</a>'
+            render_params['view_all'] = f' - {render_params["link_start"]}view all{render_params["link_end"]}'
+        return self.templates['view'].render(render_params)

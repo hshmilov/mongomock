@@ -1973,7 +1973,6 @@ class GuiService(PluginBase):
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
             report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
-
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         return ReportGenerator(report_data, 'gui/templates/report/',
                                host=system_config.get('server_name', 'localhost')).generate_report_pdf()
