@@ -475,7 +475,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     return return_error("Invalid client")
                 add_client_result = self._add_client(client_config)
                 if len(add_client_result) == 0:
-                    return_error("Could not save client with given config", 400)
+                    return return_error("Could not save client with given config", 400)
                 return jsonify(add_client_result), 200
 
             if self.get_method() == 'POST':
@@ -506,6 +506,18 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 logger.info("No connected client {0} to remove".format(client_id))
             return '', 200
 
+    def _write_client_to_db(self, client_id, client_config, status, error_msg):
+        if client_id is not None:
+            logger.info(f"Setting {client_id} status to {status}")
+            return self._get_collection('clients').replace_one({'client_id': client_id},
+                                                               {'client_id': client_id,
+                                                                'client_config': client_config,
+                                                                'status': status,
+                                                                'error': error_msg[0] if error_msg else None},
+                                                               upsert=True)
+        else:
+            return None
+
     def _add_client(self, client_config: dict, id=None):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
@@ -518,44 +530,36 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         assumes self._clients_lock is locked by the current thread
         """
         client_id = None
-        status = "error"
+        status = "warning"
         error_msg = None
+
         try:
             client_id = self._get_client_id(client_config)
+            self._write_client_to_db(client_id, client_config, status, error_msg)  # Writing initial client to db
+            status = "error"  # Default is error
             self._clients[client_id] = self._connect_client(client_config)
             # Got here only if connection succeeded
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
             error_msg = e.args
             id_for_log = client_id if client_id else (id if id else '')
-            logger.exception(
-                f"Got error while handling client {id_for_log} - \
-                possibly compliance problem with schema. Details: {repr(e)}")
+            logger.exception(f"Got error while handling client {id_for_log} - possibly compliance problem with schema.")
             if client_id in self._clients:
                 del self._clients[client_id]
 
-        if client_id is not None:
-            # Updating DB according to the axiom that client_id is a unique field across clients
-            logger.info(f"Setting {client_id} status to {status}")
-            result = self._get_collection('clients').replace_one({'client_id': client_id},
-                                                                 {
-                                                                     'client_id': client_id,
-                                                                     'client_config': client_config,
-                                                                     'status': status,
-                                                                     'error': error_msg[0] if error_msg else None
-            }, upsert=True)
-        elif id is not None:
+        result = self._write_client_to_db(client_id, client_config, status, error_msg)
+        if result is None and id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
             result = self._get_collection('clients').update_one({'_id': ObjectId(id)}, {'$set': {'status': status}})
-        else:
+        elif result is None:
             # No way of updating other than logs and no return value
             logger.error("Not updating client since no DB id and no client id exist")
             return {}
 
         # Verifying update succeeded and returning the matched id and final status
-        if not result.modified_count and result.upserted_id:
-            return {"id": str(result.upserted_id), "client_id": client_id, "status": status, "error": error_msg}
+        if result.modified_count or result.upserted_id:
+            return {"id": str(result.upserted_id or ''), "client_id": client_id, "status": status, "error": error_msg}
 
         return {}
 

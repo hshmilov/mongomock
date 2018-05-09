@@ -17,6 +17,7 @@ from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAM
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT
 from gui.report_generator import ReportGenerator
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
 import tarfile
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
@@ -267,6 +268,8 @@ class GuiService(PluginBase):
 
         # Start exec report scheduler
         self.exec_report_lock = threading.RLock()
+
+        self._client_insertion_threadpool = LoggedThreadPoolExecutor(max_workers=20)  # Only for client insertion
 
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._exec_report_scheduler = LoggedBackgroundScheduler(executors=executors)
@@ -1033,24 +1036,27 @@ class GuiService(PluginBase):
 
         # adding client to specific adapter
         response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
-        if response.status_code != 200:
-            # failed, return immediately
-            return response.text, response.status_code
+        if response.status_code == 200:
+            self._client_insertion_threadpool.submit(self._fetch_after_clients_thread, adapter_unique_name,
+                                                     response.json()['client_id'], client_to_add)
+        return response.text, response.status_code
 
+    def _fetch_after_clients_thread(self, adapter_unique_name, client_id, client_to_add):
         # if there's no aggregator, that's fine
         try:
-            response = self.request_remote_plugin(f"insert_to_db?client_name={response.json()['client_id']}",
+            logger.info(f"Requesting {adapter_unique_name} to fetch data from newly added client {client_id}")
+            response = self.request_remote_plugin(f"insert_to_db?client_name={client_id}",
                                                   adapter_unique_name, method='PUT')
+            logger.info(f"{adapter_unique_name} finished fetching data for {client_id}")
             if not (response.status_code == 400 and response.json()['message'] == 'Gracefully stopped'):
                 response.raise_for_status()
-                response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                                      'POST')
+                response = self.request_remote_plugin('trigger/execute', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
                 response.raise_for_status()
-        except Exception as err:
+        except Exception:
             # if there's no aggregator, there's nothing we can do
             logger.exception(f"Error fetching devices from {adapter_unique_name} for client {client_to_add}")
             pass
-        return response.text, response.status_code
+        return
 
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/upload_file", methods=['POST'])
     def adapter_upload_file(self, adapter_unique_name):
