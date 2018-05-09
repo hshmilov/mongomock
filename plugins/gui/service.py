@@ -1865,32 +1865,6 @@ class GuiService(PluginBase):
 
         return 'enabled' if enabled else 'disabled'
 
-    @add_rule_unauthenticated('export_report')
-    def export_report(self):
-        """
-        Gets definition of report from DB for the dynamic content.
-        Gets all the needed data for both pre-defined and dynamic content definitions.
-        Sends the complete data to the report generator to be composed to one document and generated as a pdf file.
-
-        TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
-        :return:
-        """
-        report_data = {
-            'adapter_devices': self._adapter_devices(),
-            'covered_devices': self._get_dashboard_coverage(),
-            'custom_charts': self._get_dashboard(),
-            'views_data': self._get_saved_views_data()
-        }
-        report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
-        if report.get('adapters'):
-            report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
-
-        system_config = self.system_collection.find_one({'type': 'server'}) or {}
-        temp_report_filename = ReportGenerator(report_data, 'gui/templates/report/',
-                                               host=system_config.get('server_name', 'localhost')).generate()
-        return send_file(temp_report_filename, mimetype='application/pdf', as_attachment=True,
-                         attachment_filename=temp_report_filename)
-
     def _get_adapter_data(self, adapters):
         """
         Get the definition of the adapters to include in the report. For each adapter, get the queries defined for it
@@ -1994,7 +1968,10 @@ class GuiService(PluginBase):
         report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
         if report.get('adapters'):
             report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
-        return ReportGenerator(report_data, 'gui/templates/report/').generate_report_pdf()
+
+        system_config = self.system_collection.find_one({'type': 'server'}) or {}
+        return ReportGenerator(report_data, 'gui/templates/report/',
+                               host=system_config.get('server_name', 'localhost')).generate_report_pdf()
 
     @add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):
