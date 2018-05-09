@@ -114,6 +114,17 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
+    def test_report_generator(self):
+        self.adapter_service.generate_report()
+
+        def assert_report_generated():
+            report = self.axonius_system.db_find(self.adapter_service.unique_name,
+                                                 "report",
+                                                 {"name": "report", "data": {"$exists": True}})
+            assert len(report) > 0
+
+        try_until_not_thrown(50, 5, assert_report_generated)
+
     def test_dns_conflicts(self):
         @retry(wait_fixed=5000,
                stop_max_delay=125000)  # it can take up to 2 minutes for the tag to appear

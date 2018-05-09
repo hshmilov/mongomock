@@ -1417,7 +1417,7 @@ class GuiService(PluginBase):
         if not bcrypt.verify(password, user_from_db['password']):
             logger.info(f"User {user_name} tried logging in with wrong password")
             return return_error("Wrong user name or password", 401)
-        if request and request.referrer and 'localhost' not in request.referrer:
+        if request and request.referrer and 'localhost' not in request.referrer and '127.0.0.1' not in request.referrer:
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
@@ -1889,11 +1889,16 @@ class GuiService(PluginBase):
                         **query,
                         'count': self._entity_views_db_map[entity].find(parse_filter(filter), {'_id': 1}).count()
                     })
-            adapter_reports = self.request_remote_plugin('get_report', self.get_plugin_unique_name(adapter['name']))
-            report_list = []
-            for client, reports in adapter_reports.json().items():
-                report_list = report_list + reports
-            adapter_data.append({'name': adapter['title'], 'queries': queries, 'views': report_list})
+            adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
+            try:
+                adapter_reports_db = self._get_db_connection(False)[adapter_unique_name]
+                report = adapter_reports_db['report'].find_one({"name": "report"})
+            except Exception:
+                logger.exception("Error contacting the report db for adapter {adapter_unique_name}")
+
+            if report is not None:
+                report = report.get('data')
+            adapter_data.append({'name': adapter['title'], 'queries': queries, 'views': report})
         return adapter_data
 
     def _get_saved_views_data(self):

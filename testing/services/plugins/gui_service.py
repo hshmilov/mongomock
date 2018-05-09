@@ -12,6 +12,14 @@ class GuiService(PluginService):
         self.override_exposed_port = True
 
     @property
+    def exposed_ports(self):
+        """
+        :return: list of pairs (exposed_port, inner_port)
+        """
+        # The only container that listens to 80 and redirects to 80 is the gui, to allow http to https redirection.
+        return [(80, 80)] + super().exposed_ports
+
+    @property
     def volumes_override(self):
         # GUI supports debug, but to use, you have to build your *local* node modules
         local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
@@ -19,7 +27,12 @@ class GuiService(PluginService):
         if os.path.isdir(local_npm) and os.path.isdir(local_dist):
             return super().volumes_override
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
-        return [f'{libs}:/home/axonius/libs:ro']
+        volumes = [f'{libs}:/home/axonius/libs:ro']
+
+        # extend volumes by mapping specifically each python file, to be able to debug much better.
+        volumes.extend([f"{self.service_dir}/{fn}:/home/axonius/app/{self.package_name}/{fn}:ro"
+                        for fn in os.listdir(self.service_dir) if fn.endswith(".py")])
+        return volumes
 
     def get_dockerfile(self, mode=''):
         dev = '' if mode == 'prod' else 'dev-'

@@ -104,6 +104,9 @@ class AxoniusService(object):
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)
 
+    def db_find(self, db_name, collection_name, cond):
+        return list(self.db.get_collection(db_name, collection_name).find(cond))
+
     def get_devices_with_condition(self, cond):
         cursor = self.get_devices_db().find(cond)
         return list(cursor)

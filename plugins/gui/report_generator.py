@@ -1,3 +1,6 @@
+import logging
+
+logger = logging.getLogger(f"axonius.{__name__}")
 from datetime import datetime
 from math import pi, cos, sin, floor, ceil
 
@@ -72,8 +75,8 @@ class ReportGenerator(object):
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
-            file.write(html_data)
+        # with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
+        #     file.write(html_data)
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
         HTML(string=html_data, base_url=self.template_path).write_pdf(
@@ -279,11 +282,14 @@ class ReportGenerator(object):
                 'name': query['name'], 'count': query['count'],
                 'colour': 'red' if query.get('negative', False) else 'orange'
             }))
-        for view_data in views:
-            if not view_data.get('name') or not view_data.get('data'):
-                continue
+        if views is not None:
+            for client_name, views in views.items():
+                results.append(f"<h3>{client_name}</h3>")
+                for view_data in views:
+                    if not view_data.get('name') or not view_data.get('data'):
+                        continue
 
-            results.append(self._create_data_view(view_data))
+                    results.append(self._create_data_view(view_data))
         return '\n'.join(results)
 
     def _create_data_views(self):

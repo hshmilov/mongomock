@@ -105,33 +105,92 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         self._resolving_thread_lock = threading.RLock()
 
-        executors = {'default': ThreadPoolExecutor(2)}
-        self._resolver_scheduler = LoggedBackgroundScheduler(executors=executors)
+        executors = {'default': ThreadPoolExecutor(3)}
+        self._background_scheduler = LoggedBackgroundScheduler(executors=executors)
 
         # Thread for resolving IP addresses of devices
-        self._resolver_scheduler.add_job(func=self._resolve_hosts_addr_thread,
-                                         trigger=IntervalTrigger(minutes=2),
-                                         next_run_time=datetime.now(),
-                                         name='resolve_host_thread',
-                                         id='resolve_host_thread',
-                                         max_instances=1)
+        self._background_scheduler.add_job(func=self._resolve_hosts_addr_thread,
+                                           trigger=IntervalTrigger(minutes=2),
+                                           next_run_time=datetime.now(),
+                                           name='resolve_host_thread',
+                                           id='resolve_host_thread',
+                                           max_instances=1)
         # Thread for resetting the resolving process
-        self._resolver_scheduler.add_job(func=self._resolve_change_status_thread,
-                                         trigger=IntervalTrigger(seconds=60 * 60 * 5),  # Every five hours
-                                         next_run_time=datetime.now() + timedelta(hours=2),
-                                         name='change_resolve_status_thread',
-                                         id='change_resolve_status_thread',
-                                         max_instances=1)
+        self._background_scheduler.add_job(func=self._resolve_change_status_thread,
+                                           trigger=IntervalTrigger(seconds=60 * 60 * 5),  # Every five hours
+                                           next_run_time=datetime.now() + timedelta(hours=2),
+                                           name='change_resolve_status_thread',
+                                           id='change_resolve_status_thread',
+                                           max_instances=1)
 
-        self._resolver_scheduler.start()
+        # Thread for inserting reports
+        self._background_scheduler.add_job(func=self.generate_report,
+                                           trigger=IntervalTrigger(minutes=self.__report_generation_interval),
+                                           next_run_time=datetime.now(),
+                                           name='report_generation_thread',
+                                           id='report_generation_thread',
+                                           max_instances=1
+                                           )
+
+        self._background_scheduler.start()
 
         # create temp files dir
         os.makedirs(TEMP_FILES_FOLDER, exist_ok=True)
         # TODO: Weiss: Ask why not using tempfile to creage dir.
 
+    @add_rule('generate_report_now', methods=['POST'], should_authenticate=False)
+    def generate_report_now(self):
+        jobs = self._background_scheduler.get_jobs()
+        report_generation_thread_job = next(job for job in jobs if job.name == 'report_generation_thread')
+        report_generation_thread_job.modify(next_run_time=datetime.now())
+        self._background_scheduler.wakeup()
+
+        return ''
+
+    def generate_report(self):
+        """
+        Generates a report about this adapter. This usually means getting data (in a specific format defined
+        by the reporting mechanism of the gui) that isn't device-centralized, e.g. all subnets in the network.
+        :return:
+        """
+        try:
+            time_needed = datetime.now()
+            d = {}
+            for client_name, client_data in self._clients.copy().items():
+                logger.info(f"Starting Statistics Report for client {client_name}")
+                d[client_name] = client_data.get_report_statistics()
+
+            update_result = self._get_collection("report").update_one({"name": "report"},
+                                                                      {
+                                                                          "$set": {
+                                                                              "name": "report",
+                                                                              "date": datetime.now(),
+                                                                              "data": d
+                                                                          }
+            },
+                upsert=True)
+
+            time_needed = datetime.now() - time_needed
+            logger.info(f"Statistics end (took {time_needed}), modified {update_result.modified_count} document in db")
+        except Exception:
+            self._get_collection("report").delete({"name": "report"})
+            logger.exception("Exception while generating report")
+
     def _on_config_update(self, config):
         logger.info(f"Loading AD config: {config}")
         self.__sync_resolving = config['sync_resolving']
+        self.__report_generation_interval = config['report_generation_interval']
+
+        # Change interval of report generation thread
+        try:
+            jobs = self._background_scheduler.get_jobs()
+            report_generation_thread_job = next(job for job in jobs if job.name == 'report_generation_thread')
+            report_generation_thread_job.reschedule(trigger=IntervalTrigger(minutes=self.__report_generation_interval))
+        except AttributeError:
+            # Current design calls _on_config_update from Configurable, which is initialized before this class's
+            # init is called. so _background_scheduler isn't there yet, and an AttributeError is thrown.
+            # This is why i catch this legitimate error.
+            pass
 
     @property
     def _python_27_path(self):
@@ -538,24 +597,15 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                                                              DNSResolveStatus.Pending.name}})
             return
 
-    @add_rule('get_report', methods=['GET'])
-    def get_report(self):
-        d = {}
-        for client_name, client_data in self._clients.copy().items():
-            logger.info(f"Starting Statistics Report for client {client_name}")
-            d[client_name] = client_data.get_report_statistics()
-
-        return jsonify(d)
-
     @add_rule('resolve_ip', methods=['POST'], should_authenticate=False)
     def resolve_ip_now(self):
-        jobs = self._resolver_scheduler.get_jobs()
+        jobs = self._background_scheduler.get_jobs()
         reset_job = next(job for job in jobs if job.name == 'change_resolve_status_thread')
         reset_job.modify(next_run_time=datetime.now())
-        self._resolver_scheduler.wakeup()
+        self._background_scheduler.wakeup()
         resolve_job = next(job for job in jobs if job.name == 'resolve_host_thread')
         resolve_job.modify(next_run_time=datetime.now())
-        self._resolver_scheduler.wakeup()
+        self._background_scheduler.wakeup()
         return ''
 
     def __parse_exchange_servers(self, exchange_servers_raw_data):
@@ -1184,13 +1234,14 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     "type": "bool"
                 },
                 {
-                    "name": "ldap_dns_resolving_one_at_a_time",
-                    "title": "Query LDAP for DNS one-at-a-time",
-                    "type": "bool",
+                    "name": "report_generation_interval",
+                    "title": "Report Generation Interval (Minutes)",
+                    "type": "number",
                 }
             ],
             "required": [
-                "sync_resolving"
+                "sync_resolving",
+                "report_generation_interval"
             ],
             "pretty_name": "Active Directory Configuration",
             "type": "array"
@@ -1199,7 +1250,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     @classmethod
     def _db_config_default(cls):
         return {
-            "sync_resolving": False
+            "sync_resolving": False,
+            "report_generation_interval": 30
         }
 
     @classmethod

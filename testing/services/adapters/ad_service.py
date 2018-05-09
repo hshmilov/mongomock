@@ -11,6 +11,9 @@ class AdService(AdapterService):
     def resolve_ip(self):
         self.post('resolve_ip', None, None)
 
+    def generate_report(self):
+        self.post('generate_report_now')
+
 
 @pytest.fixture(scope="module", autouse=True)
 def ad_fixture(request):

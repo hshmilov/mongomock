@@ -96,7 +96,7 @@ class Configurable(object):
 
             # Call _on_config_update on the class if it was implemented
             if does_method_belongs_to_class(inheritor._on_config_update, inheritor):
-                inheritor._on_config_update(inheritor, config_to_save)
+                inheritor._on_config_update(self, config_to_save)
 
     def _update_schema(self):
         """
