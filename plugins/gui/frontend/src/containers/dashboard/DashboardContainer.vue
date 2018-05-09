@@ -1,8 +1,5 @@
 <template>
     <x-page title="axonius dashboard" class="dashboard">
-        <div slot="action">
-            <a class="x-btn link" @click="exportPDF">Export PDF</a>
-        </div>
         <div class="dashboard-charts">
             <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
                              :portion="item.portion" :title="item.title" :description="item.description"
@@ -132,9 +129,6 @@
             createNewDashboard() {
 				if (!this.$refs.wizard) return
                 this.$refs.wizard.activate()
-            },
-            exportPDF() {
-				window.print()
             }
 		},
 		created () {
