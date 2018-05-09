@@ -72,8 +72,8 @@ class ReportGenerator(object):
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
         temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        # with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
-        #     file.write(html_data)
+        with open(f'{self.output_path}axonius-report_{timestamp}.html', 'w') as file:
+            file.write(html_data)
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
         HTML(string=html_data, base_url=self.template_path).write_pdf(

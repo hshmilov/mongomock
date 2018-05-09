@@ -137,8 +137,8 @@ a {
 .mb-12 {
     margin-bottom: 12px;
 }
-.mh-48 {
-    margin: 0 48px;
+.m-8-12 {
+    margin: 8px 12px;
 }
 .p-12 {
     padding: 12px;
@@ -204,7 +204,7 @@ a {
     margin-right: 12px;
 }
 .card.full {
-    width: auto;
+    width: 672px;
     height: 100%;
 }
 
