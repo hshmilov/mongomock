@@ -123,7 +123,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                            id='change_resolve_status_thread',
                                            max_instances=1)
 
-        # Thread for inserting reports. Start in 30 seconds to allow the system to initialize
+        # Thread for inserting reports. Start in 30 minutes to allow the system to initialize
         # and especially the clients themselves -> it might take a couple of seconds to connect.
         self._background_scheduler.add_job(func=self.generate_report,
                                            trigger=IntervalTrigger(minutes=self.__report_generation_interval),
@@ -159,7 +159,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             d = {}
             for client_name, client_data in self._clients.copy().items():
                 logger.info(f"Starting Statistics Report for client {client_name}")
-                d[client_name] = client_data.get_report_statistics()
+                d[client_name] = client_data.get_session("reports").get_report_statistics()
 
             update_result = self._get_collection("report").update_one({"name": "report"},
                                                                       {
@@ -1213,20 +1213,21 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     def _enable_user(self, user_data, client_data):
         dn = user_data['raw'].get('distinguishedName')
         assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
-        assert client_data.change_entity_enabled_state(dn, True), "Failed enabling user"
+        assert client_data.get_session("user_enabler").change_entity_enabled_state(dn, True), "Failed enabling user"
 
     def _disable_user(self, user_data, client_data):
         dn = user_data['raw'].get('distinguishedName')
         assert dn, f"distinguishedName isn't in 'raw' for {user_data}"
-        assert client_data.change_entity_enabled_state(dn, False), "Failed disabling user"
+        assert client_data.get_session("user_disabler").change_entity_enabled_state(dn, False), "Failed disabling user"
 
     def _enable_device(self, device_data, client_data):
         dn = device_data['raw'].get('distinguishedName')
-        assert client_data.change_entity_enabled_state(dn, True), "Failed enabling device"
+        assert client_data.get_session("device_enabler").change_entity_enabled_state(dn, True), "Failed enabling device"
 
     def _disable_device(self, device_data, client_data):
         dn = device_data['raw'].get('distinguishedName')
-        assert client_data.change_entity_enabled_state(dn, False), "Failed disabling device"
+        assert client_data.get_session("device_disabler").change_entity_enabled_state(
+            dn, False), "Failed disabling device"
 
     @classmethod
     def _db_config_schema(cls) -> dict:

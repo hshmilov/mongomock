@@ -112,6 +112,9 @@ class LdapConnection(object):
         self.__use_ssl = use_ssl
         self.should_fetch_disabled_devices = should_fetch_disabled_devices
         self.should_fetch_disabled_users = should_fetch_disabled_users
+        self.ca_file_data_param = ca_file_data
+        self.cert_file_param = cert_file
+        self.private_key_param = private_key
 
         if self.__use_ssl != SSLState.Unencrypted:
             self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
@@ -119,6 +122,25 @@ class LdapConnection(object):
             self.__private_key_file = create_temp_file(private_key) if private_key else None
 
         self._connect_to_server()
+
+        self.extra_sessions = {}
+
+    def get_session(self, name):
+        """
+        returns a new LdapConnection. This must be used to create different sessions for different therads.
+        :param: a unique name indicating the the running thread.
+        :return:
+        """
+
+        if name not in self.extra_sessions:
+            logger.info(f"{self.server_addr}: Created new LdapConnection for name '{name}'")
+            self.extra_sessions[name] = LdapConnection(
+                self.ldap_page_size, self.server_addr, self.user_name, self.user_password,
+                self.dns_server, self.__use_ssl, self.ca_file_data_param, self.cert_file_param,
+                self.private_key_param, self.should_fetch_disabled_devices,
+                self.should_fetch_disabled_users)
+
+        return self.extra_sessions[name]
 
     def _connect_to_server(self):
         """This function will connect to the LDAP server.
@@ -138,7 +160,7 @@ class LdapConnection(object):
                 ldap_server = ldap3.Server(self.server_addr, connect_timeout=10)
             self.ldap_connection = ldap3.Connection(
                 ldap_server, user=self.user_name, password=self.user_password,
-                raise_exceptions=True, receive_timeout=10)
+                raise_exceptions=True, receive_timeout=20)
             self.ldap_connection.bind()
 
             # Get domain configurations. The following have to be, they are critical values
@@ -203,6 +225,7 @@ class LdapConnection(object):
         except ldap3.core.exceptions.LDAPException:
             # No need to do that a couple of times. There is a logic in the adapters themselves
             # that tries more times if that fails.
+            logger.exception("ldap paged search exception, retrying to connect.")
             self._connect_to_server()
             entry_generator = ldap_paged_search()
 
