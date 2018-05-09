@@ -79,7 +79,7 @@
                                            no-data-text="Type mail addresses..." :default-first-option="true"/>
                                 </template>
                                 <template v-if="alert.triggers.increase">
-                                    <checkbox :class="{'grid-span2': !actions.tag}" label="Tag Devices" v-model="actions.tag"/>
+                                    <checkbox :class="{'grid-span2': !actions.tag}" label="Tag Entities" v-model="actions.tag"/>
                                     <template v-if="actions.tag">
                                         <input class="form-control" id="tagName" v-model="tagName">
                                     </template>
@@ -168,7 +168,7 @@
 							this.actions.mail = true
 							this.mailList = action.data
 							break
-                        case 'tag_device':
+                        case 'tag_entities':
                             this.actions.tag = true
                             this.tagName = action.data
 					}
@@ -195,7 +195,7 @@
                 }
                 if (this.actions.tag) {
                     this.alert.actions.push({
-                        type: 'tag_device', data: this.tagName
+                        type: 'tag_entities', data: this.tagName
                     })
                 }
                 this.alert.query = this.currentQuery.name

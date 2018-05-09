@@ -308,7 +308,7 @@ class ReportsService(PluginBase, Triggerable):
                                                                      num_of_current_devices=current_num_of_devices),
                                  report_data['severity'])
 
-    def _handle_action_tag_device(self, report_data, triggered, trigger_data, current_num_of_devices, action_data=None):
+    def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices, action_data=None):
         """ Sends an email to the list of e-mails
 
         :param dict report_data: The report settings.
@@ -316,14 +316,14 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
-        device_collection = self._get_collection('devices_db', db_name=AGGREGATOR_PLUGIN_NAME)
-        devices = [device_collection.find_one({'internal_axon_id': device[1]['internal_axon_id']})['adapters'][0]
-                   for device in
-                   trigger_data]
-        devices = [(device[PLUGIN_UNIQUE_NAME], device['data']['id'])
-                   for device in devices]
+        entity_db = f"{report_data['query_entity']}_db_view"
+        entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
 
-        self.add_many_labels_to_entity(devices, labels=[action_data])
+        entities = [entities_collection.find_one({'internal_axon_id': entity[1]['internal_axon_id']})['specific_data'][0]
+                    for entity in trigger_data]
+        entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
+
+        self.add_many_labels_to_entity(entities, labels=[action_data], entity=report_data['query_entity'])
 
     def _parse_action_content(self, triggers_data, triggered_triggers):
         """ Creates a readable message for the different actions.
