@@ -5,7 +5,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 import ssl
 import ipaddress
 import struct
-import ctypes
+import itertools
 import ldap3
 
 from enum import Enum, auto
@@ -189,43 +189,39 @@ class LdapConnection(object):
         if search_scope is None:
             search_scope = ldap3.SUBTREE
 
+        # We are using paged search, as documented here:
+        # http://ldap3.readthedocs.io/searches.html#simple-paged-search
+        # The filter is an ldap filter that will filter only computer objects that are enabled. Can be found here:
+        # https://www.experts-exchange.com/questions/26393164/LDAP-Filter-Active-Directory-Query-for-Enabled-Computers.html
+
+        # Note! We must make a try except here and not a @retry of the function.
+        # 1. retry doesn't support generators
+        # 2. even if it did support, if we have an exception in the middle of a generator
+        # we don't wanna re-start it from the beginning - in that case we have to raise an exception.
+
+        # TODO: what if the connection ends in the middle? check that scenario.
+        # TODO: Also, if too much info returns, this can cause this to make stuck. also check scenario.
+
+        def ldap_paged_search():
+            return self.ldap_connection.extend.standard.paged_search(
+                search_base=search_base,
+                search_filter=search_filter,
+                search_scope=search_scope,
+                attributes=attributes,
+                paged_size=self.ldap_page_size,
+                generator=True)
+
         try:
-            # We are using paged search, as documented here:
-            # http://ldap3.readthedocs.io/searches.html#simple-paged-search
-            # The filter is an ldap filter that will filter only computer objects that are enabled. Can be found here:
-            # https://www.experts-exchange.com/questions/26393164/LDAP-Filter-Active-Directory-Query-for-Enabled-Computers.html
-
-            # Note! We must make a try except here and not a @retry of the function.
-            # 1. retry doesn't support generators
-            # 2. even if it did support, if we have an exception in the middle of a generator
-            # we don't wanna re-start it from the beginning - in that case we have to raise an exception.
-
-            # TODO: what if the connection ends in the middle? check that scenario.
-            # TODO: Also, if too much info returns, this can cause this to make stuck. also check scenario.
-
-            def ldap_paged_search():
-                return self.ldap_connection.extend.standard.paged_search(
-                    search_base=search_base,
-                    search_filter=search_filter,
-                    search_scope=search_scope,
-                    attributes=attributes,
-                    paged_size=self.ldap_page_size,
-                    generator=True)
-
-            try:
-                entry_generator = ldap_paged_search()
-            except ldap3.core.exceptions.LDAPException:
-                # No need to do that a couple of times. There is a logic in the adapters themselves
-                # that tries more times if that fails.
-                self._connect_to_server()
-                entry_generator = ldap_paged_search()
-
-            for entry in entry_generator:
-                if entry['type'] == 'searchResEntry':
-                    yield entry['attributes']
-
+            entry_generator = ldap_paged_search()
         except ldap3.core.exceptions.LDAPException:
-            raise LdapException(get_exception_string())
+            # No need to do that a couple of times. There is a logic in the adapters themselves
+            # that tries more times if that fails.
+            self._connect_to_server()
+            entry_generator = ldap_paged_search()
+
+        for entry in entry_generator:
+            if entry['type'] == 'searchResEntry':
+                yield entry['attributes']
 
     def _ldap_modify(self, distinguished_name, changes_dict):
         """
@@ -240,30 +236,27 @@ class LdapConnection(object):
             assert key not in changes
             changes[key] = [(ldap3.MODIFY_REPLACE, [value])]
 
+        # Note! We must make a try except here and not a @retry of the function:
+        # 1. retry doesn't support generators
+        # 2. even if it did support, if we have an exception in the middle of a generator
+        # we don't wanna re-start it from the beginning - in that case we have to raise an exception.
+
+        def ldap_connection_modify():
+            return self.ldap_connection.modify(distinguished_name, changes)
+
         try:
-            # Note! We must make a try except here and not a @retry of the function:
-            # 1. retry doesn't support generators
-            # 2. even if it did support, if we have an exception in the middle of a generator
-            # we don't wanna re-start it from the beginning - in that case we have to raise an exception.
-
-            def ldap_connection_modify():
-                return self.ldap_connection.modify(distinguished_name, changes)
-
-            try:
-                result = ldap_connection_modify()
-            except ldap3.core.exceptions.LDAPException:
-                # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
-                # No need to do that a couple of times. There is a logic in the adapters themselves
-                # that tries more times if that fails.
-                self._connect_to_server()
-                result = ldap_connection_modify()
-
-            if result is not True:
-                raise ValueError("ldap3 connection modify returned False")
-
-            return result
+            result = ldap_connection_modify()
         except ldap3.core.exceptions.LDAPException:
-            raise LdapException(get_exception_string())
+            # Try reconnecting. Usually, when we don't use the connection a lot, it gets disconnected.
+            # No need to do that a couple of times. There is a logic in the adapters themselves
+            # that tries more times if that fails.
+            self._connect_to_server()
+            result = ldap_connection_modify()
+
+        if result is not True:
+            raise ValueError("ldap3 connection modify returned False")
+
+        return result
 
     def get_dc_properties(self):
         """
@@ -595,23 +588,37 @@ class LdapConnection(object):
         :return: yields (name, ip_addr) where name is string and ip_addr is ipv4/ipv6 object from the ipaddress module.
         """
 
+        if name is None:
+            search_query = f"(&(objectClass=dnsNode)" \
+                           f"(|(dnsRecord={IPV4_ENTRY_PREFIX}*)(dnsRecord={IPV6_ENTRY_PREFIX}*)))"
+        else:
+            search_query = f"(&(objectClass=dnsNode)(name={name})" \
+                           f"(|(dnsRecord={IPV4_ENTRY_PREFIX}*)(dnsRecord={IPV6_ENTRY_PREFIX}*)))"
+
+        # Sometimes the dns records are in domaindnszone, but sometimes they are in forestdnszone.
+        # query both objects (only the base) to see what exists.
+        dns_zone_name = convert_ldap_searchpath_to_domain_name(self.domain_name)
+        dns_generators = []
+        for zone in [self.domaindnszones_naming_context, self.forestdnszones_naming_context]:
+            try:
+                full_search_base = f"DC={dns_zone_name},CN=MicrosoftDNS,{zone}"
+                zone_object = list(self._ldap_search("(cn=*)",
+                                                     attributes=[ldap3.NO_ATTRIBUTES],
+                                                     search_base=full_search_base,
+                                                     search_scope=ldap3.BASE))
+                # If there is no such object, this should throw an exception by now.
+                # so now we can just append the generator itself.
+                dns_generators.append(self._ldap_search(
+                    search_query,
+                    attributes=['dnsRecord', 'name'],
+                    search_base=full_search_base
+                ))
+            except ldap3.core.exceptions.LDAPNoSuchObjectResult:
+                pass
+
         try:
-            if name is None:
-                search_query = f"(&(objectClass=dnsNode)" \
-                               f"(|(dnsRecord={IPV4_ENTRY_PREFIX}*)(dnsRecord={IPV6_ENTRY_PREFIX}*)))"
-            else:
-                search_query = f"(&(objectClass=dnsNode)(name={name})" \
-                               f"(|(dnsRecord={IPV4_ENTRY_PREFIX}*)(dnsRecord={IPV6_ENTRY_PREFIX}*)))"
-
-            # The dns records for this particular domain reside in "DomainDnsZones.[Domain_DN]".
-            dns_records = self._ldap_search(search_query,
-                                            attributes=['dnsRecord', 'name'],
-                                            search_base="DC={0},CN=MicrosoftDNS,{1}".format(
-                                                convert_ldap_searchpath_to_domain_name(self.domain_name),
-                                                self.domaindnszones_naming_context))
-
             dns_record_i = 0
-            for dns_record in dns_records:
+            for dns_record in itertools.chain(*dns_generators):
                 try:
                     # Parse binary format.
                     dns_record_binary = dns_record['dnsRecord']

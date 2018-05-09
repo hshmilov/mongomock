@@ -123,10 +123,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                            id='change_resolve_status_thread',
                                            max_instances=1)
 
-        # Thread for inserting reports
+        # Thread for inserting reports. Start in 30 seconds to allow the system to initialize
+        # and especially the clients themselves -> it might take a couple of seconds to connect.
         self._background_scheduler.add_job(func=self.generate_report,
                                            trigger=IntervalTrigger(minutes=self.__report_generation_interval),
-                                           next_run_time=datetime.now(),
+                                           next_run_time=datetime.now() + timedelta(seconds=30),
                                            name='report_generation_thread',
                                            id='report_generation_thread',
                                            max_instances=1
@@ -499,7 +500,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 logger.exception(f"Exception while parsing user {user_raw.get('distinguishedName')}, bypassing")
 
     def _resolve_hosts_addresses(self, hosts):
-        resolved_hosts = []
         for host in hosts:
             time_before_resolve = datetime.now()
             dns_name = host.get('AXON_DNS_ADDR')
@@ -546,12 +546,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     logger.exception("Exception while checking for DNS conflicts")
 
             finally:
-                resolved_hosts.append(current_resolved_host)
+                # yield first, so that if the handling takes more then the dns resolving time we won't wait it
+                yield current_resolved_host
                 resolve_time = (datetime.now() - time_before_resolve).microseconds / 1e6  # seconds
                 time_to_sleep = max(0.0, 0.05 - resolve_time)
                 time.sleep(time_to_sleep)
-
-        return resolved_hosts
 
     def _resolve_hosts_addr_thread(self):
         """ Thread for ip resolving of devices.
@@ -735,6 +734,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         # DNS Resolving - active thread
         dns_resolved_devices_collection = self._get_collection(DEVICES_DATA)
+        dns_resolved_devices_db = dns_resolved_devices_collection.find(
+            {},
+            projection={'_id': False, 'id': True, IPS_FIELDNAME: True, DNS_RESOLVE_STATUS: True}
+        )
+        dns_resolved_devices_db = {device['id']: device for device in dns_resolved_devices_db}
         dns_resolving_devices_to_insert_to_db = []
         no_timestamp_count = 0
 
@@ -854,7 +858,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 ips_list = []
 
                 # Its better to find_one each time then getting the whole table into the memory.
-                device_interfaces = dns_resolved_devices_collection.find_one({"id": device_raw['distinguishedName']})
+                device_interfaces = dns_resolved_devices_db.get(device_raw['distinguishedName'])
                 if device_interfaces is not None:
                     ips_list = device_interfaces.get(IPS_FIELDNAME, [])
                     device.dns_resolve_status = DNSResolveStatus[device_interfaces[DNS_RESOLVE_STATUS]]

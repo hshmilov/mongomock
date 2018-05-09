@@ -290,7 +290,7 @@ def bytes_image_to_base64(value):
         elif header == b"47494638":
             header = "gif"
         else:
-            raise ValueError("Invalid image. header is {header}, cannot determine if jpeg/png/gif.")
+            raise ValueError(f"Invalid image. header is {header}, cannot determine if jpeg/png/gif.")
         return "data:image/{0};base64,{1}".format(header, base64.b64encode(value).decode("utf-8"))
     except Exception:
         raise ValueError(f'Invalid Image. Exception is {get_exception_string()}')
