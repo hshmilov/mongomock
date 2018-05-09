@@ -25,8 +25,10 @@ class SymantecAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = SymantecConnection(domain=client_config["SEPM_Address"],
-                                            port=(client_config["SEPM_Port"] if "SEPM_Port" in client_config else None))
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+                                            port=(client_config["SEPM_Port"] if "SEPM_Port" in client_config else None),
+                                            verify_ssl=client_config["verify_ssl"])
+            connection.set_credentials(username=client_config["username"], password=client_config["password"],
+                                       domain=client_config.get("domain") or "")
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -86,12 +88,23 @@ class SymantecAdapter(AdapterBase):
                     "title": "Password",
                     "type": "string",
                     "format": "password"
+                },
+                {
+                    "name": "domain",
+                    "title": "Domain",
+                    "type": "string"
+                },
+                {
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
+                    "type": "bool"
                 }
             ],
             "required": [
                 "SEPM_Address",
                 "username",
-                "password"
+                "password",
+                "verify_ssl"
             ],
             "type": "array"
         }

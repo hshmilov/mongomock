@@ -7,7 +7,7 @@ DEFAULT_SYMANTEC_PORT = 8446
 
 
 class SymantecConnection(object):
-    def __init__(self, domain, port):
+    def __init__(self, domain, port, verify_ssl):
         """ Initializes a connection to Symantec using its rest API
 
         :param str domain: domain address for Symantec
@@ -27,6 +27,8 @@ class SymantecConnection(object):
         self.session = None
         self.username = None
         self.password = None
+        self.domain = None
+        self.verify_ssl = verify_ssl
         self.headers = {'Content-Type': 'application/json'}
 
     def set_token(self, token, adminId):
@@ -39,14 +41,16 @@ class SymantecConnection(object):
         self.adminId = adminId
         self.headers = {'Authorization': 'Bearer ' + self.token}
 
-    def set_credentials(self, username, password):
+    def set_credentials(self, username, password, domain):
         """ Set the connection credentials
 
         :param str username: The username
         :param str password: The password
+        :param str domain: The domain of the user
         """
         self.username = username
         self.password = password
+        self.domain = domain
 
     def _get_url_request(self, request_name):
         """ Builds and returns the full url for the request
@@ -65,15 +69,16 @@ class SymantecConnection(object):
         if self.is_connected:
             raise SymantecAlreadyConnected()
         session = requests.Session()
-        if self.username is not None and self.password is not None:
+        if self.username is not None and self.password is not None and self.domain is not None:
             connection_dict = {
                 'username': self.username,
                 'password': self.password,
-                "domain": ""
+                "domain": self.domain
             }
-            response = session.post(self._get_url_request('identity/authenticate'), headers={'Content-Type': 'application/json'},
+            response = session.post(self._get_url_request('identity/authenticate'),
+                                    headers={'Content-Type': 'application/json'},
                                     json=connection_dict,
-                                    verify=False)
+                                    verify=self.verify_ssl)
             try:
                 response.raise_for_status()
             except requests.HTTPError as e:
