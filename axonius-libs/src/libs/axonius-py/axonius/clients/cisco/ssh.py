@@ -32,28 +32,24 @@ class CiscoSshClient(AbstractCiscoClient):
     def _query_arp_table(self):
         try:
             lines = self._sess.send_command("show arp")
-            for line in lines.split('\n'):
-                try:
-                    line = line.strip().lower()
-                    if not line.startswith('internet'):
-                        continue
-                    yield SshArpCiscoData(line)
-                except Exception:
-                    logger.exception(f"Invalid line {line}")
+            lines = lines.split('\n')
+            lines = list(filter(lambda x: x.startswith('internet'),
+                                map(lambda x: x.lower().expandtabs(tabsize=8).strip(), lines)))
+            return SshArpCiscoData(lines)
         except Exception:
             logger.exception("Running shell arp command failed")
 
     def _query_dhcp_leases(self):
         try:
             lines = self._sess.send_command("show ip dhcp binding")
-            yield SshDhcpCiscoData(lines)
+            return SshDhcpCiscoData(lines)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
     def _query_cdp_table(self):
         try:
             lines = self._sess.send_command("show cdp neighbors detail")
-            yield SshCdpCiscoData(lines)
+            return SshCdpCiscoData(lines)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
@@ -104,7 +100,7 @@ class SshCdpCiscoData(CdpCiscoData):
         # we'll throw anything that appear more then once.
         return dict(sum(map(SshCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
 
-    def parse(self):
+    def _parse(self):
         try:
             table = self._parse_cdp_table(self._raw_data)
         except Exception:
@@ -179,7 +175,7 @@ class SshDhcpCiscoData(DhcpCiscoData):
         name, mac, iface = info.split('-')
         return {'ip': ip, 'name': name, 'mac': format_mac(mac), 'iface': iface, 'ip-expires': expires, 'ip-type': type_}
 
-    def parse(self):
+    def _parse(self):
         try:
             table = self._parse_dhcp_table(self._raw_data)
         except Exception:
@@ -196,7 +192,11 @@ class SshDhcpCiscoData(DhcpCiscoData):
 
 class SshArpCiscoData(ArpCiscoData):
 
-    def parse(self):
-        entry = self._raw_data.split()
-        mac, ip, iface = format_mac(entry[3]), entry[1], entry[5]
-        yield {'mac': mac, 'ip': ip}
+    def _parse(self):
+        for entry in self._raw_data:
+            try:
+                entry = entry.split()
+                mac, ip, iface = format_mac(entry[3]), entry[1], entry[5]
+                yield {'mac': mac, 'ip': ip}
+            except Exception:
+                logger.exception('Exception while paring arp line')

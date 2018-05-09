@@ -38,9 +38,10 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
     def _query_dhcp_leases(self):
         logger.warning('dhcp isn\'t implemented yet - skipping')
-        yield from ()
+        return None
 
     def _query_arp_table(self):
+        results = []
         for query_result in self._next_cmd(ARP_OID):
             try:
                 # for now ignore errors
@@ -50,9 +51,10 @@ class CiscoSnmpClient(AbstractCiscoClient):
                 if error:
                     logger.error(f'Unable to query arp table for {self._ip} error: {error}')
                     continue
-                yield SnmpArpCiscoData(result)
+                results.append(result)
             except Exception as e:
                 logger.exception('Exception while quering arp table')
+        return SnmpArpCiscoData(results)
 
     @staticmethod
     def _group_cdp(results):
@@ -69,22 +71,21 @@ class CiscoSnmpClient(AbstractCiscoClient):
         results = list(map(lambda x: x[3], data))
         if any(errors):
             logger.error(f'Unable to query cdp table for {self._ip} errors: {errors}')
-            return []
+            return None
 
         results = self._group_cdp(results)
-        return list(map(lambda x: SnmpCdpCiscoData(x), results))
+        return SnmpCdpCiscoData(results)
 
 
 class SnmpArpCiscoData(ArpCiscoData):
-    def parse(self):
-        try:
-            entry = self._raw_data
-            ip = extract_ip_from_mib(entry[0][0])
-            mac = unpack_mac(str(entry[0][1]))
-            yield {'mac': mac, 'ip': ip}
-        except Exception:
-            logger.exception('Exception while parsing arp data')
-            return
+    def _parse(self):
+        for entry in self._raw_data:
+            try:
+                ip = extract_ip_from_mib(entry[0][0])
+                mac = unpack_mac(str(entry[0][1]))
+                yield {'mac': mac, 'ip': ip}
+            except Exception:
+                logger.exception('Exception while parsing arp data')
 
 
 class SnmpCdpCiscoData(CdpCiscoData):
@@ -109,19 +110,22 @@ class SnmpCdpCiscoData(CdpCiscoData):
     def parse_platform(oid, value):
         return str(value)
 
-    def parse(self):
-        result = {}
-        entries = self._raw_data
-        for entry in entries:
-            try:
-                oid, value = entry[0][0], entry[0][1]
-                parse_function, key = CDP_INFO_TABLE.get(oid[-3], (self.parse_unhandled, None))
-                value = parse_function(oid, value)
-                if key and value:
-                    result[key] = value
-            except Exception:
-                logger.exception('Exception while parsing cdp data')
-        yield result
+    def _parse(self):
+        for entries in self._raw_data:
+            result = {}
+            for entry in entries:
+                try:
+                    oid, value = entry[0][0], entry[0][1]
+                    parse_function, key = CDP_INFO_TABLE.get(oid[-3], (self.parse_unhandled, None))
+                    if not value:
+                        logging.info(f'{oid} skipping empty value {key}')
+                        continue
+                    value = parse_function(oid, value)
+                    if key and value:
+                        result[key] = value
+                except Exception:
+                    logger.exception('Exception while parsing cdp data')
+            yield result
 
 
 CDP_INFO_TABLE = {
@@ -132,12 +136,11 @@ CDP_INFO_TABLE = {
 }
 
 if __name__ == "__main__":
-    a = list(CiscoSnmpClient('public', '80.55.163.190')._query_cdp_table())
-    # print(a)
-    #a=list(CiscoSnmpClient('public', '192.168.20.35')._query_cdp_table())
-    b = list(map(lambda x: list(x.parse()), a))
-    print(b)
-    # for i in b:
-    #    pprint.pprint(i)
-    #    print('----')
-    #list(map(lambda x: x.parse(), a))
+    import pprint
+    import logging
+    from logging import info, warning, debug, error
+
+    logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
+    a = CiscoSnmpClient('public', 'x.x.x.x')._query_cdp_table()
+    b = a.get_parsed_data()
+    pprint.pprint(b)
