@@ -13,6 +13,7 @@ from collections import defaultdict
 from active_directory_adapter.exceptions import LdapException
 from axonius.utils.parsing import get_exception_string, convert_ldap_searchpath_to_domain_name, \
     ad_integer8_to_timedelta, parse_date
+from axonius.utils.ldap import ldap_get, ldap_must_get, ldap_must_get_str
 from axonius.utils.files import create_temp_file
 
 
@@ -143,23 +144,9 @@ class LdapConnection(object):
             # Get domain configurations. The following have to be, they are critical values
             # like 'distinguishedName'.
             self.root_dse = self.get_dc_properties()
-            self.domain_name = self.root_dse['defaultNamingContext']
-            self.configuration_naming_context = self.root_dse['configurationNamingContext']
-            self.schema_naming_context = self.root_dse['schemaNamingContext']
-
-            if type(self.domain_name) == list:
-                # This returns as a list, but according to all info in the internet its an only string
-                # (a dc can't handle two domains..)
-                if len(self.domain_name) != 1:
-                    logger.warning(f"domain_name is not of length 1: {self.domain_name}")
-                self.domain_name = self.domain_name[0]   # If this fails, its a critical problem. raise an exception.
-
-            if type(self.configuration_naming_context) == list:
-                # same - only one configuration naming context.
-                if len(self.configuration_naming_context) != 1:
-                    logger.warning(f"domain_name is not of length 1: {self.configuration_naming_context}")
-                # If this fails, its a critical problem. raise an exception.
-                self.configuration_naming_context = self.configuration_naming_context[0]
+            self.domain_name = ldap_must_get_str(self.root_dse, 'defaultNamingContext')
+            self.configuration_naming_context = ldap_must_get_str(self.root_dse, 'configurationNamingContext')
+            self.schema_naming_context = ldap_must_get_str(self.root_dse, "schemaNamingContext")
 
             # This is constant.
             self.domaindnszones_naming_context = f"DC=DomainDnsZones,{self.domain_name}"
@@ -316,7 +303,7 @@ class LdapConnection(object):
                 # And they have to be in a very specific. always under the site's servers!
                 # CN=NTDS Settings,CN=DC1,CN=Servers,CN=TestDomain-TelAviv,
                 # CN=Sites,CN=Configuration,DC=TestDomain,DC=test
-                dn = gc_ntdsa['distinguishedName'].replace("CN=NTDS Settings,", "")
+                dn = ldap_must_get_str(gc_ntdsa, 'distinguishedName').replace("CN=NTDS Settings,", "")
 
                 # Now Lets query for the dnshostname of this object. This is in the config schema.
                 try:
@@ -326,7 +313,7 @@ class LdapConnection(object):
                                                      search_scope=ldap3.BASE)
 
                     # There should always be 1 here. because its the parent of an object we already found.
-                    gc_list.append(list(dns_hostname)[0]['dnsHostName'])
+                    gc_list.append(ldap_must_get_str(list(dns_hostname)[0], 'dnsHostName'))
                 except Exception:
                     logger.exception(f"Couldn't find a gc hostname {dn}")
         except Exception:
@@ -353,7 +340,7 @@ class LdapConnection(object):
             """
             try:
                 # There should be only one
-                role_owner_dn = list(query_answer)[0]['fSMORoleOwner']
+                role_owner_dn = ldap_must_get_str(list(query_answer)[0], 'fSMORoleOwner')
 
                 # This always starts with CN=NTDS Settings, we need the parent.
                 # It has to be in this specific format.
@@ -366,7 +353,7 @@ class LdapConnection(object):
                                                      search_base=role_owner_dn,
                                                      search_scope=ldap3.BASE)
 
-                    return list(dns_hostname)[0]["dnsHostName"]
+                    return ldap_must_get_str(list(dns_hostname)[0], "dnsHostName")
                 except Exception:
                     logger.exception(f"error pasring dnshostname of fsmo role {role_owner_dn}")
             except Exception:
@@ -415,11 +402,8 @@ class LdapConnection(object):
                                          search_base=self.configuration_naming_context)
         for ds in dhcp_servers:
             try:
-                dhcp_servers_list = ds.get('dhcpServers')
-                if dhcp_servers_list is not None and dhcp_servers_list != "" and dhcp_servers_list != []:
-                    if type(dhcp_servers_list) == str:
-                        dhcp_servers_list = [dhcp_servers_list]
-
+                dhcp_servers_list = ldap_get(ds, 'dhcpServers', list)
+                if dhcp_servers_list is not None and dhcp_servers_list != "":
                     # the format is defined here https://msdn.microsoft.com/en-us/library/ee915492.aspx
                     # an example of a record: "i10.0.2.199$rcn=dc3.testdomain.test$f0x00000000$sdc3.testdomain.test$"
                     for dhcp_servers_string in dhcp_servers_list:
@@ -448,7 +432,7 @@ class LdapConnection(object):
             # there should only be one objectclass like this.
             dfsr_configuration_object = list(self._ldap_search("(objectClass=msDFSR-GlobalSettings)"))
             assert len(dfsr_configuration_object) == 1
-            search_base = dfsr_configuration_object[0]['distinguishedName']
+            search_base = ldap_must_get_str(dfsr_configuration_object[0], 'distinguishedName')
         except Exception:
             search_base = f"CN=DFSR-GlobalSettings,CN=System,{self.domain_name}"
 
@@ -471,11 +455,11 @@ class LdapConnection(object):
 
             # Organize by classes
             for dfsr_item in dfsr_configurations_subtree:
-                if "msDFSR-ReplicationGroup" in dfsr_item['objectClass']:
+                if "msDFSR-ReplicationGroup" in ldap_must_get(dfsr_item, 'objectClass', list):
                     dfsr_replication_groups.append(dfsr_item)
-                elif "msDFSR-ContentSet" in dfsr_item['objectClass']:
+                elif "msDFSR-ContentSet" in ldap_must_get(dfsr_item, 'objectClass', list):
                     dfsr_content_sets.append(dfsr_item)
-                elif "msDFSR-Member" in dfsr_item['objectClass']:
+                elif "msDFSR-Member" in ldap_must_get(dfsr_item, 'objectClass', list):
                     dfsr_members.append(dfsr_item)
 
             # build tree. dfsr shares is a dict of replication groups, with their content and servers.
@@ -483,16 +467,16 @@ class LdapConnection(object):
             # dfsr_shares = {"SHARE": {"content": ["share1", "share2"], "servers": ["dc1.testdomain.test"]}}
 
             for rg in dfsr_replication_groups:
-                dfsr_shares[rg['cn']] = {"content": [], "servers": []}
+                dfsr_shares[ldap_must_get_str(rg, 'cn')] = {"content": [], "servers": []}
 
             for content_set in dfsr_content_sets:
                 # dn should look like "CN={content_name},CN=Content,CN={replication_group_name},..."
-                replication_group_cn = content_set['distinguishedName'].split(",")[2][3:]
+                replication_group_cn = ldap_must_get_str(content_set, 'distinguishedName').split(",")[2][3:]
                 dfsr_shares[replication_group_cn]['content'].append(content_set['cn'])
 
             for server in dfsr_members:
                 # dn should look like "CN={member_name},CN=Topology,CN={replication_group_name},..."
-                replication_group_cn = server['distinguishedName'].split(",")[2][3:]
+                replication_group_cn = ldap_must_get_str(server, 'distinguishedName').split(",")[2][3:]
                 if "msDFSR-ComputerReference" in server:
                     dfsr_shares[replication_group_cn]['servers'].append(server['msDFSR-ComputerReference'])
 
@@ -546,7 +530,7 @@ class LdapConnection(object):
             devices_count += 1
 
             if devices_count % 1000 == 0:
-                logger.info(f"Got {devices_count} devices so far")
+                logger.debug(f"Got {devices_count} devices so far")     # this is also printer in pluginbase
             yield device_dict
 
         if one_device is None:
@@ -621,12 +605,7 @@ class LdapConnection(object):
             for dns_record in itertools.chain(*dns_generators):
                 try:
                     # Parse binary format.
-                    dns_record_binary = dns_record['dnsRecord']
-                    if type(dns_record_binary) == str:
-                        # Some objects can have multiple ip's. for example, a computer that has ipv4 and ivp6 addr.
-                        # so sometimes you get a list and sometimes not.
-                        dns_record_binary = [dns_record_binary]
-
+                    dns_record_binary = ldap_must_get(dns_record, 'dnsRecord', list)
                     for record_binary in dns_record_binary:
                         # the binary format is as follows:
                         # https://msdn.microsoft.com/en-us/library/ee898781.aspx
@@ -645,7 +624,7 @@ class LdapConnection(object):
                             # ip_address can get a big-endian bytes object. ip_address automatically
                             # understands if its in ipv4 or ipv6 at creates the appropriate object.
                             ip_addr = ipaddress.ip_address(record_binary[24:])
-                            yield (dns_record['name'], str(ip_addr))
+                            yield (ldap_must_get_str(dns_record, 'name'), str(ip_addr))
 
                 except Exception:
                     logger.exception(f"Error in parsing dns record {dns_record}")
@@ -715,7 +694,7 @@ class LdapConnection(object):
         if len(entity) != 1:
             raise ValueError(f"searched entity with dn {distinguished_name}, expected len() ==1 but got {entity}")
 
-        user_account_control = entity[0]['userAccountControl']
+        user_account_control = ldap_must_get(entity[0], 'userAccountControl', int)
 
         if enabled:
             new_user_account_control = user_account_control & (~LDAP_ACCOUNTDISABLE)
@@ -760,7 +739,7 @@ class LdapConnection(object):
 
                     # groupType defines bits to understand the group type. For more information:
                     # https://msdn.microsoft.com/en-us/library/ms675935(v=vs.85).aspx
-                    group_type = group.get("groupType", 0)
+                    group_type = int(ldap_get(group, "groupType", int, 0))
                     # if group_type < 0:
                     #     group_type = ctypes.c_ulong(group_type).value  # convert signed to unsigned
 
@@ -803,18 +782,12 @@ class LdapConnection(object):
             schema_master = fsmo_roles.get("schema_master", "")
 
             # convert forest name to string
-            forest_name = dc.get('rootDomainNamingContext', '')
-            if type(forest_name) == list:
-                forest_name = forest_name[0]
+            forest_name = ldap_get(dc, 'rootDomainNamingContext', str, '')
             forest_name = convert_ldap_searchpath_to_domain_name(forest_name)
 
             # convert forest functionality to string
-            forest_functionality = dc.get("forestFunctionality", -1)
-            if type(forest_functionality) == list:
-                forest_functionality = forest_functionality[0]
-
-            if type(forest_functionality) == str:
-                forest_functionality = int(forest_functionality)
+            forest_functionality = ldap_get(dc, "forestFunctionality", int, -1)
+            forest_functionality = int(forest_functionality)
 
             forest_functionality = FUNCTIONALITY_WINDOWS_VERSIONS.get(forest_functionality, "Unknown")
         except Exception:
@@ -851,10 +824,7 @@ class LdapConnection(object):
                                                         attributes=["msDS-EnabledFeature"],
                                                         search_base=f"CN=Partitions,{self.configuration_naming_context}",
                                                         search_scope=ldap3.BASE)
-            forest_enabled_features = list(forest_enabled_features)[0].get("msDS-EnabledFeature")
-            if type(forest_enabled_features) == str:
-                forest_enabled_features = [forest_enabled_features]
-
+            forest_enabled_features = ldap_get(list(forest_enabled_features)[0], "msDS-EnabledFeature", list, [])
             recycle_bin_enabled = any(
                 [True if "Recycle Bin" in feature else False for feature in forest_enabled_features])
         except Exception:
@@ -867,7 +837,7 @@ class LdapConnection(object):
                                                    attributes=["tombstoneLifetime"],
                                                    search_scope=ldap3.BASE,
                                                    search_base=f"CN=Directory Service,CN=Windows NT,CN=Services,{self.configuration_naming_context}")
-            tombstone_lifetime = int(list(tombstone_lifetime)[0].get("tombstoneLifetime", -1))
+            tombstone_lifetime = int(ldap_get(list(tombstone_lifetime)[0], "tombstoneLifetime", int, -1))
         except Exception:
             tombstone_lifetime = ""
             logger.exception("Can't get Tombstone Lifetime.")
@@ -888,10 +858,8 @@ class LdapConnection(object):
 
             # we are going to loop through all servers and get their version.
             for es in exchange_servers:
+                es_serial_number = ldap_get(es, "serialNumber", str, "")
                 for version, version_name in EXCHANGE_VERSIONS.items():
-                    es_serial_number = es.get("serialNumber", [])
-                    if type(es_serial_number) == list and len(es_serial_number) == 1:
-                        es_serial_number = es_serial_number[0]
                     if version in es_serial_number:
                         exchange_version.add(version_name)
                         break
@@ -919,13 +887,13 @@ class LdapConnection(object):
             )
             for site_link in site_links_object:
                 forest_site_link_count += 1
-                site_link_name = site_link.get("name", "")
-                site_link_repl_interval = site_link.get("replInterval", "")
+                site_link_name = ldap_get(site_link, "name", str, "")
+                site_link_repl_interval = str(ldap_get(site_link, "replInterval", int, ""))
                 site_link_cost = str(site_link.get("cost", "0"))
-                site_link_type = site_link["distinguishedName"].split(",")[1][3:]
-                site_link_sitelist = [sl.split(",")[0][3:] for sl in site_link.get('siteList')]
-                site_link_change_notification_enabled = (site_link.get(
-                    "options", 0) & SITE_LINK_OPTIONS_USE_NOTIFICATION) > 0
+                site_link_type = ldap_must_get_str(site_link, "distinguishedName").split(",")[1][3:]
+                site_link_sitelist = [sl.split(",")[0][3:] for sl in ldap_get(site_link, 'siteList', list, [])]
+                site_link_change_notification_enabled = (
+                    ldap_get(site_link, "options", int, 0) & SITE_LINK_OPTIONS_USE_NOTIFICATION) > 0
 
                 site_links.append({
                     "name": site_link_name,
@@ -964,11 +932,10 @@ class LdapConnection(object):
             # go through each site, query its subnets, dc's, and domains.
             for site in self.get_sites():
                 forest_sites_count += 1
-                site_cn = site['cn']
-                site_name = site.get("name", "")
-                site_location = site.get("location", "")
-
-                site_subnets = site.get("siteObjectBL", [])
+                site_cn = ldap_must_get_str(site, 'cn')
+                site_name = ldap_get(site, "name", str, "")
+                site_location = ldap_get(site, "location", str, "")
+                site_subnets = ldap_get(site, "siteObjectBL", list, [])
                 if type(site_subnets) == list:
                     # each member looks like "CN=192.168.20.0/24,CN=Subnet,CN=..."
                     try:
@@ -998,15 +965,15 @@ class LdapConnection(object):
                     forest_dc_count += 1
                     site_servers_count += 1
 
-                    dc_hostname = server.get("DNSHostName")
+                    dc_hostname = ldap_get(server, "DNSHostName", str)
                     if dc_hostname is not None:
                         site_dcs.append(dc_hostname)
 
-                    site_domain = server.get("serverReference")
+                    site_domain = ldap_get(server, "serverReference", str)
                     if site_domain is not None:
                         site_domains.add(convert_ldap_searchpath_to_domain_name(site_domain))
 
-                    bh = server.get("bridgeheadTransportList")
+                    bh = ldap_get(server, "bridgeheadTransportList", list, [])
                     if bh is not None and type(bh) == list and len(bh) > 0:
                         # bh is a dn, parse it
                         try:
@@ -1042,10 +1009,8 @@ class LdapConnection(object):
 
                 # Should be the only one.
                 if len(site_settings) == 1:
-                    istg = site_settings[0].get("interSiteTopologyGenerator")
+                    istg = ldap_get(site_settings[0], "interSiteTopologyGenerator", str)
                     if istg is not None:
-                        if type(istg) == list and len(istg) == 1:
-                            istg = istg[0]
                         # search for its dnshostname
                         try:
                             # We need to get to its parent. so remove the parent element
@@ -1082,7 +1047,7 @@ class LdapConnection(object):
                                                             search_base=site['distinguishedName'])
                 for site_connection in site_connections_object:
                     sc_enabled = bool(site_connection.get("enabledConnection", False))
-                    sc_options = site_connection.get("options")
+                    sc_options = ldap_get(site_connection, "options", int, 0)
                     try:
                         sc_options_int = int(sc_options)
                         if sc_options_int & NTDS_CONNECTION_TWO_WAY_SYNC > 0:
@@ -1092,11 +1057,11 @@ class LdapConnection(object):
                     except Exception:
                         sc_options = ""
 
-                    sc_from = site_connection.get("fromServer")
+                    sc_from = ldap_get(site_connection, "fromServer", str)
                     if sc_from is not None:
                         # Its a DN. Take the second part, remove "CN=".
                         sc_from = sc_from.split(",")[1][3:]
-                    sc_to = site_connection['distinguishedName'].split(",")[2][3:]
+                    sc_to = ldap_must_get_str(site_connection, 'distinguishedName').split(",")[2][3:]
 
                     site_connections.append({
                         "connection_enabled": sc_enabled,
@@ -1128,11 +1093,11 @@ class LdapConnection(object):
         try:
             forest_subnets = []
             for subnet in self.get_subnets():
-                subnet_name = subnet.get("name", "")
-                subnet_location = subnet.get("location", "")
+                subnet_name = ldap_get(subnet, "name", str, "")
+                subnet_location = ldap_get(subnet, "location", str, "")
 
                 # subnet site is a dn (CN=site-name,CN=Sites)
-                site_object = subnet.get("siteObject")
+                site_object = ldap_get(subnet, "siteObject", str)
                 if site_object is not None:
                     try:
                         subnet_site = site_object.split(",")[0][3:]
@@ -1158,14 +1123,8 @@ class LdapConnection(object):
             domains_obj = self.get_domains_in_forest()
 
             for dom in domains_obj:
-                dom_name = dom.get("dnsRoot", "")
-                if type(dom_name) == list and len(dom_name) == 1:
-                    dom_name = dom_name[0]
-
-                dom_netbios_name = dom.get("nETBIOSName", "")
-                if type(dom_netbios_name) == list and len(dom_netbios_name) == 1:
-                    dom_netbios_name = dom_netbios_name[0]
-
+                dom_name = ldap_get(dom, "dnsRoot", str, "")
+                dom_netbios_name = ldap_get(dom, "nETBIOSName", str, "")
                 function_level = dom.get("msDS-Behavior-Version", -1)
                 try:
                     function_level = FUNCTIONALITY_WINDOWS_VERSIONS.get(int(function_level), "")
@@ -1174,7 +1133,7 @@ class LdapConnection(object):
 
                 # Indicating wether the current domain is the root of the forest. Each forest in AD has a forest root,
                 # which is the first domain that was created in the forest.
-                dom_forest_root = forest_name.lower() == dom_name.lower()
+                dom_forest_root = forest_name.lower() == dom_name.lower() and dom_name != ""
 
                 # RID's issued & remaining is very complicated since we need to contact the RID master.
                 # Contacting different servers is not a thing we can do now.
@@ -1238,9 +1197,9 @@ class LdapConnection(object):
                 search_base=self.forestdnszones_naming_context)))
 
             for dns_zone_record in dns_zones_records:
-                dn = dns_zone_record['distinguishedName']
+                dn = ldap_must_get_str(dns_zone_record, 'distinguishedName')
                 dns_zone_record_partition = "Domain" if "domaindnszones" in dn.lower() else "Forest"
-                dns_zone_record_name = dns_zone_record.get("name")
+                dns_zone_record_name = ldap_get(dns_zone_record, "name", str, "")
                 dns_zone_record_created = parse_date(dns_zone_record.get("whenCreated"))
                 dns_zone_record_changed = parse_date(dns_zone_record.get("whenChanged"))
 
@@ -1272,7 +1231,7 @@ class LdapConnection(object):
             gpo_table = []
 
             for gpo in self._ldap_search("(objectClass=groupPolicyContainer)"):
-                gpo_name = gpo.get("displayName", "")
+                gpo_name = ldap_get(gpo, "displayName", str, "")
                 gpo_when_created = parse_date(gpo.get("whenCreated"))
                 gpo_when_changed = parse_date(gpo.get("whenChanged"))
 
@@ -1291,13 +1250,13 @@ class LdapConnection(object):
             domain_trusts = []
 
             for dt in self._ldap_search("(objectClass=trustedDomain)"):
-                domain_trust_name = dt.get("name", "")
+                domain_trust_name = ldap_get(dt, "name", str, "")
                 domain_trust_when_created = parse_date(dt.get("whenCreated"))
                 domain_trust_when_changed = parse_date(dt.get("whenChanged"))
 
-                trust_direction = dt.get("trustDirection")
-                trust_attributes = dt.get("trustAttributes")
-                trust_type = dt.get("trustType")
+                trust_direction = ldap_get(dt, "trustDirection", int)
+                trust_attributes = ldap_get(dt, "trustAttributes", int)
+                trust_type = ldap_get(dt, "trustType", int)
 
                 if trust_direction is not None:
                     domain_trust_direction = {

@@ -158,7 +158,7 @@ class ReportGenerator(object):
         if portion:
             slice_def = slice_defs[1]
             slices.append(self.templates['pie_slice'].render({
-                'path': slice_def['path'], 'colour': colours[int(floor(portion * 4))],
+                'path': slice_def['path'], 'colour': colours[int(floor(portion * 3.9))],
                 'text': f'{round(portion * 100)}%' if portion else '',
                 'x': slice_def['text_x'], 'y': slice_def['text_y']
             }))
