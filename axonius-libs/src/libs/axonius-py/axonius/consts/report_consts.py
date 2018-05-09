@@ -24,7 +24,7 @@ REPORT_CONTENT_HTML = """\
 <html>
   <head></head>
   <body>
-    <p>A Report For query: {query_name} has been triggered<br>
+    <p><span style="text-transform: uppercase;">{severity}:</span> A Report For query: {query_name} has been triggered<br>
        This is the {num_of_triggers} time this has happened.<br>
        It was triggered because the number of devices has {trigger_message}.<br>
        The number of devices returned by the query is {num_of_current_devices}.

@@ -152,7 +152,9 @@ class CdpCiscoData(AbstractCiscoData):
 
         new_device = create_device_callback()
 
+        # TODO: we must add the interface as part of the id so correlation will work
         new_device.id = instance['Device ID']
+        new_device.id = 'cdp_' + new_device.id
         new_device.fetch_proto = 'CDP'
 
         if 'IP address' in instance:
@@ -162,8 +164,7 @@ class CdpCiscoData(AbstractCiscoData):
         new_device.hostname = instance.get('Device ID', '')
         new_device.device_model = instance.get('Platform', '')
 
-        new_device.id = 'cdp_' + new_device.id
-        new_device.figure_os('cisco')
+        new_device.figure_os(instance.get('Platform', ''))
         new_device.os.build = instance.get('Version', '')
 
         new_device.set_raw(instance)

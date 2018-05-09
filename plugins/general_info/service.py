@@ -286,7 +286,6 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
-
             for linked_user, linked_device in linked_devices_and_users_list:
                 device_caption = linked_device.get_first_data("hostname") or \
                     linked_device.get_first_data("name") or \
@@ -309,7 +308,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.
-
+            adapterdata_user.id = username
             user.add_adapterdata(adapterdata_user.to_dict())
 
         self._save_field_names_to_db(EntityType.Users)
@@ -367,6 +366,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # All of these plugins might have inserted new devices, lets get it.
             adapterdata_device.general_info_last_success_execution = datetime.now()
             new_data = adapterdata_device.to_dict()
+            new_data['id'] = executer_info["adapter_unique_id"]
 
             # Add the final one
             self.devices.add_adapterdata(

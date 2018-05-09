@@ -164,8 +164,11 @@ class ReportsService(PluginBase, Triggerable):
         collection_name = 'device_queries' if query_entity == EntityType.Devices.value else 'user_queries'
         return self._get_collection(collection_name, gui_name)
 
+    def get_entities_collection(self, query_entity):
+        return self._get_collection(f'{query_entity}_db_view', db_name=AGGREGATOR_PLUGIN_NAME)
+
     def get_query_results(self, query_name, query_entity):
-        """Gets a query's results from the aggregator devices_db_view.
+        """Gets a query's results from the aggregator devices_db.
 
         :param query_name: The query name.
         :param query_entity: The query entity type name.
@@ -175,7 +178,7 @@ class ReportsService(PluginBase, Triggerable):
         if query is None:
             raise ValueError(f'Missing query "{query_name}"')
         parsed_query_filter = parse_filter(query['filter'])
-        return list(self._get_collection('devices_db_view', db_name=AGGREGATOR_PLUGIN_NAME).find(parsed_query_filter))
+        return list(self.get_entities_collection(query_entity).find(parsed_query_filter))
 
     def update_report(self, report_data):
         """update a report data.
@@ -281,11 +284,12 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
+
         self.mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data)\
             .send(report_consts.REPORT_CONTENT_HTML.format(
                 query_name=report_data['name'], num_of_triggers=report_data['triggered'],
                 trigger_message=self._parse_action_content(report_data['triggers'], triggered),
-                num_of_current_devices=current_num_of_devices))
+                num_of_current_devices=current_num_of_devices, severity=report_data['severity']))
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):
@@ -356,12 +360,9 @@ class ReportsService(PluginBase, Triggerable):
             diff = list()
             for result in current_result:
                 any_result_match = False
-                for current_adapter_data in result['adapters_data']:
-                    # The reason for the "list(current_adapter_data.values())[0]['id']" is because
-                    # For some reason we currently keep a list of dicts in "adapters_data" with a key of adapter name
-                    # For each correlated adapter...
-                    if any(list(current_adapter_data.values())[0]['id'] == list(adapter_data.values())[0]['id'] for
-                           current_device in old_result for adapter_data in current_device['adapters_data']):
+                for current_adapter_data in result['specific_data']:
+                    if any(current_adapter_data['data']['id'] == adapter_data['data']['id'] for
+                           current_device in old_result for adapter_data in current_device['specific_data']):
                         any_result_match = True
                         break
                 if not any_result_match:
@@ -369,10 +370,9 @@ class ReportsService(PluginBase, Triggerable):
 
             for result in old_result:
                 any_result_match = False
-                for old_adapter_data in result['adapters_data']:
-                    # Same as above...
-                    if any(list(old_adapter_data.values())[0]['id'] == list(adapter_data.values())[0]['id'] for
-                           current_device in current_result for adapter_data in current_device['adapters_data']):
+                for old_adapter_data in result['specific_data']:
+                    if any(old_adapter_data['data']['id'] == adapter_data['data']['id'] for
+                           current_device in current_result for adapter_data in current_device['specific_data']):
                         any_result_match = True
                         break
                 if not any_result_match:

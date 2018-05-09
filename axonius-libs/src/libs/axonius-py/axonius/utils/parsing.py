@@ -179,8 +179,11 @@ def figure_out_os(s):
         if distribution not in esx_distributions:
             distribution = "(?) " + distribution
 
-    elif s == 'cisco':
+    elif 'cisco' in s.lower():
         os_type = 'Cisco'
+
+    elif 'mikrotik' in s.lower():
+        os_type = 'Mikrotik'
 
     return {"type": os_type,
             "distribution": distribution,

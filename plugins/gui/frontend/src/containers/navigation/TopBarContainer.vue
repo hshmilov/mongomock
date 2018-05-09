@@ -147,19 +147,23 @@
             stopResearchNow() {
                 this.runningResearch = false
                 this.stopResearch()
+            },
+            updateLifecycle() {
+				this.fetchLifecycle().then(() => {
+					this.runningResearch = this.lifecycle.reduce(
+						(sum, item) => sum + item.status, 0) !== this.lifecycle.length
+				})
             }
 		},
 		created () {
-            this.loadNotifications()
             this.intervals = []
+            this.loadNotifications()
             this.intervals.push(setInterval(function () {
                 this.loadNotifications()
             }.bind(this), 3000))
-            this.fetchLifecycle()
+            this.updateLifecycle()
             this.intervals.push(setInterval(function () {
-                this.fetchLifecycle().then((response) => {
-                    this.runningResearch = this.lifecycle.reduce((sum, item) => sum + item.status, 0) !== this.lifecycle.length
-                })
+                this.updateLifecycle()
             }.bind(this), 10000))
 		},
 		beforeDestroy () {
