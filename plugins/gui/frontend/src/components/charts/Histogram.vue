@@ -8,7 +8,7 @@
                 </div>
                 <div class="quantity">{{item.count}}</div>
             </div>
-            <div v-if="type ==='text'" class="item-title">{{item.name}}</div>
+            <div v-if="type ==='text'" class="item-title" :title="item.name">{{item.name}}</div>
         </div>
         <div v-if="processedData.length > limit" class="remainder">+{{processedData.length - limit}}</div>
     </div>
@@ -29,12 +29,18 @@
 				return this.processedData.slice(0, this.limit)
 			},
 			maxQuantity () {
-				return this.processedData[0].count
+				let max = this.processedData[0].count
+                this.processedData.slice(1).forEach((item) => {
+                	if (item.count > max) {
+                		max = item.count
+					}
+                })
+				return max
 			}
 		},
 		methods: {
 			calculateBarHeight (quantity) {
-				return 20 + ((180 * quantity) / this.maxQuantity)
+				return ((180 * quantity) / this.maxQuantity)
 			}
 		}
 	}
@@ -59,10 +65,10 @@
                     margin-right: 8px;
                 }
                 .bar {
-                    height: 100%;
-                    border: 10px solid rgba($grey-2, 0.4);
+                    height: 20px;
+                    background-color: rgba($grey-2, 0.4);
                     &:hover {
-                        border-color: $grey-2;
+                        background-color: $grey-2;
                     }
                 }
                 .quantity {

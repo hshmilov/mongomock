@@ -2,17 +2,12 @@
     <table class="dynamic-table">
         <thead>
             <tr class="table-row">
-                <th class="table-head"></th>
                 <th class="table-head" v-for="field in visibleFields">{{ field.name }}</th>
                 <th>&nbsp;</th>
             </tr>
         </thead>
         <tbody>
             <tr v-for="record in data" class="table-row" @click="$emit('select', record['id'])">
-                <td>&nbsp;
-                    <!-- Check for connecting to server and uncheck to stop connection -->
-                    <!--<checkbox class="mr-2"></checkbox>-->
-                </td>
                 <generic-table-cell class="table-data" v-for="field in visibleFields" :key="field.path"
                                     :value="record[field.path]" :type="field.type"/>
                 <td class="table-data action">
@@ -21,7 +16,6 @@
             </tr>
             <tr class="table-row" @click="$emit('select', 'new')">
                 <!-- Entire row for clicking in order to add a newly configured row -->
-                <td></td>
                 <td class="table-data table-btn" :colspan="visibleFields.length + 1">{{ addNewDataLabel }}<i
                         class="icon-plus-square"></i></td>
             </tr>
@@ -72,7 +66,7 @@
                 .status-icon {
                     font-size: 16px;
                 }
-                &:nth-child(2) {
+                &:first-of-type {
                     padding-left: 2px;
                     border-bottom-left-radius: 4px;
                     border-top-left-radius: 4px;
@@ -85,6 +79,7 @@
                 }
                 &.table-btn {
                     color: $color-disabled;
+                    margin-right: 40px;
                     i {
                         float: right;
                         margin-top: 2px;

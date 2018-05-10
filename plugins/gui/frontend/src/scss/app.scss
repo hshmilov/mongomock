@@ -292,6 +292,7 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
     width: 100%;
     .form-group-header {
       color: $color-theme-light;
+      font-size: 20px;
       &.disabled-text {
         color: $color-disabled;
       }
@@ -301,7 +302,6 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
       .svg-fill {
         fill: $color-theme-light
       }
-      font-size: 20px;
       .form-group-title {
         margin-left: 8px;
       }

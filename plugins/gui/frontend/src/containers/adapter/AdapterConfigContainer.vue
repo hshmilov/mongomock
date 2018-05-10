@@ -2,38 +2,30 @@
     <x-page :breadcrumbs="[
     	{ title: 'adapters', path: { name: 'Adapters'}},
     	{ title: adapterName }
-    ]">
-            <div class="server-list-container row">
+    ]" class="adapter-config">
+            <div class="server-list-container">
                 <div class="form-group">
                     <!-- Container for list of configured servers - both enabled and disabled -->
                     <div class="form-group-header">
-                        <svg-icon name="navigation/device" width="24" height="24" :original="true"></svg-icon>
-                        <span class="form-group-title">Add / update Servers</span>
+                        <span class="form-group-title">Servers</span>
                     </div>
-                    <dynamic-table v-if="schemaFields" :data="adapterClients" :fields="tableFields" class="mt-3"
+                    <dynamic-table v-if="schemaFields" :data="adapterClients" :fields="tableFields"
                                    add-new-data-label="Add a server" @select="configServer" @delete="deleteServer">
                     </dynamic-table>
                 </div>
             </div>
             <tabs v-if="currentAdapter">
-                <tab v-for="config, config_name, i in currentAdapter.config_data"
-                     :key="i"
-                     :title="config.schema.pretty_name || config_name"
-                     :id="config_name" :selected="!i">
-                    <div class="mx-auto configuration">
+                <tab v-for="config, config_name, i in currentAdapter.config_data" :key="i"
+                     :title="config.schema.pretty_name || config_name" :id="config_name" :selected="!i">
+                    <div class="configuration">
                         <x-schema-form :schema="config.schema" v-model="config.config" @validate="serverModal.valid = $event"/>
                         <a class="x-btn great" @click="saveConfig(config_name, config.config)" tabindex="1">Save Config</a>
                     </div>
                 </tab>
             </tabs>
 
-            <div class="row">
-                <div class="form-group place-right">
-                    <a class="btn btn-inverse" @click="returnToAdapters">back</a>
-                </div>
-            </div>
             <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
-                   class="config-server" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
+                   class="server-config" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
                 <div slot="body">
                     <!-- Container for configuration of a single selected / added server -->
                     <status-icon-logo-text :logoValue="adapterPluginName" status-icon-value="empty"
@@ -149,13 +141,6 @@
 			returnToAdapters () {
 				this.$router.push({name: 'Adapters'})
 			},
-			saveAdapter () {
-				/* Validation */
-
-				/* Save and return to adapters page */
-//				this.updateAdapter(this.adapterData)
-				this.returnToAdapters()
-			},
 			configServer (serverId) {
 				this.serverModal.valid = true
 				if (serverId === 'new') {
@@ -214,12 +199,24 @@
 </script>
 
 <style lang="scss">
-    .config-server {
-        .form-group {
-            padding-left: 12px;
+    .adapter-config {
+        .server-list-container {
+            .form-group-header {
+                font-size: 20px;
+                color: $theme-orange;
+            }
         }
-    }
-    .configuration {
-        width: 600px;
+        .tabs {
+            margin-top: 36px;
+            .configuration {
+                width: 600px;
+                padding: 24px;
+            }
+        }
+        .server-config {
+            .form-group {
+                padding-left: 12px;
+            }
+        }
     }
 </style>

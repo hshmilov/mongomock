@@ -220,11 +220,15 @@ class ReportGenerator(object):
         """
         bars = []
         max = data[0].get('count', 1)
+        for item in data[1:]:
+            if item.get('count', 1) > max:
+                max = item['count']
         for item in data[:limit]:
-            if not item.get('name') or not item.get('count'):
+            if not item.get('name'):
                 continue
-            width = 20 + ((180 * item['count']) / max)
-            parameters = {'quantity': item['count'], 'width': width, 'name': item['name']}
+            count = item.get('count', 0)
+            width = ((180 * count) / max)
+            parameters = {'quantity': count, 'width': width, 'name': item['name']}
             if textual:
                 parameters['title'] = item['name']
                 parameters['class'] = 'd-none'

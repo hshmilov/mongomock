@@ -59,11 +59,11 @@
 				 */
 				if (!alertId) { return }
                 this.setAlert(alertId)
-				this.$router.replace({path: `alert/${alertId}`})
+				this.$router.push({path: `alert/${alertId}`})
             },
             createAlert() {
 				this.restartAlert()
-				this.$router.replace({path: '/alert/new'});
+				this.$router.push({path: '/alert/new'});
             },
             removeAlert(alertId) {
                 this.archiveAlert(alertId)
