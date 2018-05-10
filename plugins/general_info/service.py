@@ -422,6 +422,10 @@ class GeneralInfoService(PluginBase, Triggerable):
                 logger.debug(f"No executing adapters for device {device['internal_axon_id']}, continuing")
                 return
 
+            if "This usually means the device is blacklisted" in str(exc):
+                logger.debug(f"Device {device['internal_axon_id']} is blacklisted")
+                return
+
             logger.info("Failed running wmi query on device {0}! error: {1}"
                         .format(device["internal_axon_id"], str(exc)))
 

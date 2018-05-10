@@ -85,12 +85,12 @@ class GetUserLogons(GeneralInfoSubplugin):
                 self.logger.error(f"Couldn't find Caption/SID/LocalAccount in user_accounts_data: {user} "
                                   f"not enriching")
             else:
+                local_hostname, local_username = caption.split("\\")
                 if sid in sids_to_users:
                     # If it exists it means we have seen it in the user db. Just change the is local account
                     # which should be false but might be on weird circumstances true? (deleting user etc?)
                     sids_to_users[1] = bool(is_local_account)
                 else:
-                    local_hostname, local_username = caption.split("\\")
                     sids_to_users[sid] = f"{local_username}@{local_hostname}", bool(is_local_account)
 
         # Now, go over all users, parse their last use time date and add them to the array.

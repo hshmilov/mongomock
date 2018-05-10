@@ -85,7 +85,7 @@ class ExecutionService(PluginBase):
             if result is None:
                 logger.error("could not find device. Are you sure the device exists?")
                 raise ValueError("could not find device. Are you sure the device exists?")
-            if any(tag['name'] == 'do_not_execute' and tag['data'] == True for tag in result['tags']):
+            if any(tag['name'] == 'do_not_execute' and tag['data'] is True for tag in result['tags']):
                 logger.debug(f"Device {device_id} skipped from execution due to blacklist")
                 return
             try:
@@ -324,6 +324,10 @@ class ExecutionService(PluginBase):
                                                             f"Got status {result.status_code} with " \
                                                             f"data {result.content}"
                 adapters_count += 1
+
+            if len(adapters_tuple) == 0:
+                accumulated_error = "Couldn't find any adapters to execute code with. This usually means the device" \
+                                    "is blacklisted."
 
             # Inform issuer.
             self.request_remote_plugin('action_update/{0}'.format(action_id),
