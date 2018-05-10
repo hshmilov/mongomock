@@ -313,7 +313,8 @@ class ReportGenerator(object):
         :param viewa_data:
         :return:
         """
-        current_fields = view_data['fields'][0:6]
+        good_fields = [field for field in view_data['fields'] if list(field.values())[0] != 'specific_data.data.image']
+        current_fields = good_fields[0:6]
         heads = [self.templates['head'].render({'content': list(field.keys())[0]}) for field in current_fields]
         rows = []
         for item in view_data['data']:
@@ -326,10 +327,9 @@ class ReportGenerator(object):
                 item_values.append(self.templates['data'].render({'content': value}))
             rows.append(self.templates['row'].render({'content': '\n'.join(item_values)}))
 
-        fields_len = len(view_data['fields'])
         render_params = {
             'title': view_data['name'],
-            'cols_total': fields_len, 'cols_current': min(fields_len, 6),
+            'cols_total': len(view_data['fields']), 'cols_current': min(len(good_fields), 6),
             'content': self.templates['table'].render({
                 'head_content': self.templates['row'].render({'content': '\n'.join(heads)}),
                 'body_content': '\n'.join(rows)
