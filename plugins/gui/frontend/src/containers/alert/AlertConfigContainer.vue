@@ -191,7 +191,7 @@
             	/* Validation */
                 if (!this.alert.name) return
                 if (!this.currentQuery.name) return
-                if (this.alerts.some(e => e.name === this.alert.name)) {
+                if ((this.alertData.id === "new" || this.alert.name !== this.alertData.name) && this.alerts.some(e => e.name === this.alert.name)) {
                     this.error = 'An Alert with that name already exists, please choose a different one.'
                     return
                 }

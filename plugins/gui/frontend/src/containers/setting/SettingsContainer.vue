@@ -186,6 +186,11 @@
 				})
 			},
 			setResearchRate () {
+                if (!this.lifecycle.researchRate || this.lifecycle.researchRate <= 0) {
+                    this.message = 'The Inserted Auto-Refresh Rate is invalid, please insert a number larger than 0.'
+                    return
+                }
+
 				this.fetchData({
 					rule: `dashboard/lifecycle_rate`,
 					method: 'POST',
@@ -214,7 +219,7 @@
                 this.complete = valid
             },
             saveSystemSettings() {
-			    if (typeof(this.lifecycle.researchRate) !==  typeof(0) || this.lifecycle.researchRate < 0) {
+			    if (!this.refreshRate || this.refreshRate <= 0) {
 			        this.message = 'The Inserted Auto-Refresh Rate is invalid, please insert a number larger than 0.'
                     return
                 }
