@@ -52,7 +52,7 @@ class BomgarAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Domain",
+                    "name": "domain",
                     "title": "Domain",
                     "type": "string"
                 },
