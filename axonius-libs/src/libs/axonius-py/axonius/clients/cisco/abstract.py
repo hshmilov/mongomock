@@ -183,52 +183,54 @@ class InstanceParser(object):
         cdp_instance = list(filter(lambda x: isinstance(x, CdpCiscoData), self._instances))
         arp_instance = list(filter(lambda x: isinstance(x, ArpCiscoData), self._instances))
 
+        # For each cdp device - check if we also see it in any other table (arp and dhcp) if we do - copy mac for correlation
         if cdp_instance:
             cdp_instance = cdp_instance[0]
+
+            for cdp_data in cdp_instance.get_parsed_data():
+                try:
+                    if cdp_data.get('mac'):
+                        continue
+
+                    for other_data in sum(list(map(lambda x: x.get_parsed_data(), filter(lambda x: not isinstance(x, CdpCiscoData), self._instances))), []):
+                        if cdp_data.get('IP address') == other_data.get('ip'):
+                            cdp_data['mac'] = other_data.get('mac')
+                            break
+                except Exception:
+                    logger.exception('Error while tring to correlate cdp')
+
+        # For each arp device - we want to set ip as realted_ip if we haven't seen it in any other protocol
         if arp_instance:
             arp_instance = arp_instance[0]
 
-        # For each cdp device - check if we also see it in any other table (arp and dhcp) if we do - copy mac for correlation
-        for cdp_data in cdp_instance.get_parsed_data():
             try:
-                if cdp_data.get('mac'):
-                    continue
+                mac_ip_correlation = defaultdict(set)
+                for data in arp_instance.get_parsed_data():
+                    mac = data.get('mac')
+                    ip = data.get('ip') or data.get('IP address')
+                    if mac and ip:
+                        mac_ip_correlation[mac].add(ip)
 
-                for other_data in sum(list(map(lambda x: x.get_parsed_data(), filter(lambda x: not isinstance(x, CdpCiscoData), self._instances))), []):
-                    if cdp_data.get('IP address') == other_data.get('ip'):
-                        cdp_data['mac'] = other_data.get('mac')
-                        break
+                new_arp_data = list(
+                    map(lambda x: dict([('mac', x[0]), ('related_ips', list(x[1]))]), mac_ip_correlation.items()))
+
+                arp_instance.parsed_data = new_arp_data
+
+                for arp_data in new_arp_data:
+                    if len(arp_data['related_ips']) != 1:
+                        continue
+
+                    ip = arp_data['related_ips'][0]
+
+                    if not ip in map(lambda x: x.get('ip') or x.get('IP address'), sum(map(lambda x: x.get_parsed_data(), filter(lambda x: not isinstance(x, ArpCiscoData), self._instances)), [])):
+                        continue
+
+                    # found colrreation
+                    arp_data['ip'] = ip
+                    del arp_data['related_ips']
+
+                arp_instance.parsed_data = new_arp_data
             except Exception:
                 logger.exception('Error while tring to correlate cdp')
-
-        try:
-            mac_ip_correlation = defaultdict(set)
-            for data in arp_instance.get_parsed_data():
-                mac = data.get('mac')
-                ip = data.get('ip') or data.get('IP address')
-                if mac and ip:
-                    mac_ip_correlation[mac].add(ip)
-
-            new_arp_data = list(
-                map(lambda x: dict([('mac', x[0]), ('related_ips', list(x[1]))]), mac_ip_correlation.items()))
-
-            arp_instance.parsed_data = new_arp_data
-
-            for arp_data in new_arp_data:
-                if len(arp_data['related_ips']) != 1:
-                    continue
-
-                ip = arp_data['related_ips'][0]
-
-                if not ip in map(lambda x: x.get('ip') or x.get('IP address'), sum(map(lambda x: x.get_parsed_data(), filter(lambda x: not isinstance(x, ArpCiscoData), self._instances)), [])):
-                    continue
-
-                # found colrreation
-                arp_data['ip'] = ip
-                del arp_data['related_ips']
-
-            arp_instance.parsed_data = new_arp_data
-        except Exception:
-            logger.exception('Error while tring to correlate cdp')
 
         return itertools.chain.from_iterable(map(lambda x: x.get_devices(create_device_callback), self._instances))
