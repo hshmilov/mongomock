@@ -59,7 +59,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
         general_info_sync_enabled = self.config['DEFAULT']['general_info_sync_enabled'].lower()
         assert general_info_sync_enabled in ['true', 'false']
-        self._general_info_sync_enabled = bool(general_info_sync_enabled)
+        self._general_info_sync_enabled = general_info_sync_enabled.strip().lower() == 'true'
 
         self._activate('execute')
 
@@ -135,7 +135,9 @@ class GeneralInfoService(PluginBase, Triggerable):
                 self._associate_users_with_devices()
 
             else:
-                raise RuntimeError("General info gathering is already taking place, try again later")
+                msg = "General info was called and is already taking place, try again later"
+                logger.error(msg)
+                raise RuntimeError(msg)
         finally:
             if acquired:
                 self.work_lock.release()
@@ -164,25 +166,24 @@ class GeneralInfoService(PluginBase, Triggerable):
                         'adapters.data.name': True,
                         'tags': True})
 
-        windows_devices = list(windows_devices)  # no cursors needed.
-        logger.info(f"Found {len(windows_devices)} windows devices to run queries on.")
+        windows_devices_count = windows_devices.count()
+        logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
         # We don't wanna burst thousands of queries here, so we are going to have a thread that always
         # keeps count of the number of requests, and shoot new ones in case needed.
         self.number_of_active_execution_requests = 0
 
-        for device_i, device in enumerate(windows_devices):
+        device_i = 0
+        for device in windows_devices:
             # a number that increases if we don't shoot any new requests. If we are stuck too much time,
             # we might have an error in the execution. in such a case we bail out.
+            device_i += 1
             self.seconds_stuck = 0
 
             while self.number_of_active_execution_requests >= MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS:
                 # Wait a few sec to re-check again.
                 time.sleep(SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS)
                 self.seconds_stuck = self.seconds_stuck + SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS
-
-                if self.seconds_stuck % 60 == 0:
-                    logger.info(f"Execution progress: {device_i} out of {len(windows_devices)} devices executed")
 
                 if self.seconds_stuck > MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS:
                     # The current execution requests sent will still be handled, everything in general will
@@ -192,6 +193,9 @@ class GeneralInfoService(PluginBase, Triggerable):
                                  f"requests but we still have {self.number_of_active_execution_requests} "
                                  f"threads active")
                     return False
+
+            if device_i % 1000 == 0:
+                logger.info(f"Execution progress: {device_i} out of {windows_devices_count} devices executed")
 
             # shoot another one!
             self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
@@ -312,6 +316,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             user.add_adapterdata(adapterdata_user.to_dict())
 
         self._save_field_names_to_db(EntityType.Users)
+        logger.info("Finished associating users with devices")
 
     def _handle_wmi_execution_success(self, device, data):
         try:
@@ -422,8 +427,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                 logger.debug(f"No executing adapters for device {device['internal_axon_id']}, continuing")
                 return
 
-            if "This usually means the device is blacklisted" in str(exc):
-                logger.debug(f"Device {device['internal_axon_id']} is blacklisted")
+            if "[BLACKLIST]" in str(exc):
+                logger.info(f"Failure because of blacklist in device {device['internal_axon_id']}")
                 return
 
             logger.info("Failed running wmi query on device {0}! error: {1}"

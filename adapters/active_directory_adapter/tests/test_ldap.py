@@ -210,6 +210,11 @@ def pretty(d, indent=0):
     print('\t' * indent + "}")
 
 
+def get_basic_wmi_smb_command():
+    domain, username = USERNAME.split("\\")
+    return ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, domain, username, PASSWORD, ADDRESS, '//./root/cimv2']
+
+
 @pytest.mark.skip("python2 is not installed on the tests machine")
 def test_wmi():
     commands = [
@@ -222,9 +227,8 @@ def test_wmi():
         # {"type": "deletefile", "args": ["c:\\a.txt"]},
     ]
 
-    p = subprocess.Popen(
-        ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, DOMAIN, USERNAME, PASSWORD, ADDRESS,
-         json.dumps(commands)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(get_basic_wmi_smb_command() + [json.dumps(commands)],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     start = time.time()
     stdout, stderr = p.communicate()
@@ -232,6 +236,7 @@ def test_wmi():
 
     assert (end - start) < 60
     assert stderr == b""
+    assert p.returncode == 0
     response = json.loads(stdout)
     assert len(response) == len(commands)
 

@@ -326,8 +326,8 @@ class ExecutionService(PluginBase):
                 adapters_count += 1
 
             if len(adapters_tuple) == 0:
-                accumulated_error = "Couldn't find any adapters to execute code with. This usually means the device" \
-                                    "is blacklisted."
+                accumulated_error = "[BLACKLIST] Couldn't find any adapters to execute code with. This usually means " \
+                                    "the device is blacklisted."
 
             # Inform issuer.
             self.request_remote_plugin('action_update/{0}'.format(action_id),

@@ -67,7 +67,7 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 TIME_WAIT_FOR_REGISTER = 60 * 5
 
 # After this time, the execution promise will be rejected.
-TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 60 * 2
+TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 150
 
 # Removing ssl_verify false warnings from appearing in the logs on all the plugins.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -440,7 +440,7 @@ class PluginBase(Configurable, Feature):
             return
 
         with entity_fields['fields_db_lock']:
-            logger.info(f"Persisting {entity_type.name} fields to DB")
+            logger.debug(f"Persisting {entity_type.name} fields to DB")
             fields = list(entity_fields['fields_set'])  # copy
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 

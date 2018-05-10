@@ -142,6 +142,27 @@ class LdapConnection(object):
 
         return self.extra_sessions[name]
 
+    def reconnect(self):
+        """
+        Reconnect to the server.
+        :return:
+        """
+
+        try:
+            self.disconnect()
+        except Exception:
+            pass
+
+        self._connect_to_server()
+
+    def disconnect(self):
+        """
+        Disconnect from the server.
+        :return:
+        """
+
+        self.ldap_connection.unbind()
+
     def _connect_to_server(self):
         """This function will connect to the LDAP server.
 

@@ -17,7 +17,7 @@ import ntpath
 import json
 import time
 import socket
-import datetime
+import threading
 
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.dcom import wmi
@@ -35,8 +35,18 @@ MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 1  # 1 min timeout. if there are large files which take more time to transfer change that.
 MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
-MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 30  # The amount of seconds we wait for the created shell process to finish
+MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 50  # The amount of seconds we wait for the created shell process to finish
 DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
+
+__global_counter = 0
+__global_counter_lock = threading.Lock()
+
+
+def get_global_counter():
+    global __global_counter
+    with __global_counter_lock:
+        __global_counter += 1
+        return __global_counter - 1
 
 
 def get_exception_string():
@@ -245,7 +255,7 @@ class WmiSmbRunner(object):
         """
 
         win32_process, _ = self.iWbemServices.GetObject("Win32_Process")
-        output_filename = "axonius_output_{0}.txt".format(str(time.time()), )
+        output_filename = "axonius_output_{0}_{1}.txt".format(get_global_counter(), str(time.time()), )
         command_to_run = r"{0} {1} 1> \\127.0.0.1\{2}\{3} 2>&1".format(
             binary_path, binary_params, DEFAULT_SHARE, output_filename)
         is_process_created = False
@@ -337,7 +347,7 @@ class WmiSmbRunner(object):
         try:
             with open(binary_file_path, "rb") as f:
                 binary_file = f.read()
-            binary_path = "axonius_binary_{0}.exe".format(str(time.time()), )
+            binary_path = "axonius_binary_{0}_{1}.exe".format(get_global_counter(), str(time.time()), )
             did_put_file = self.putfile(binary_path, binary_file)
             return self._exec_generic("cmd.exe", "/Q /c {0} {1}".format(binary_path, binary_params))
         finally:
@@ -525,11 +535,6 @@ def run_command(w, command_type, command_args):
     return result
 
 
-def stderr(s):
-    sys.stderr.write("%s - %s" % (datetime.datetime.now(), s))
-    sys.stderr.flush()
-
-
 if __name__ == '__main__':
     _, domain, username, password, address, namespace, commands = sys.argv
     tp = ThreadPool(processes=30)
@@ -542,10 +547,8 @@ if __name__ == '__main__':
         # We are going to try to get each one of these queries a couple of times.
         # Between each try, we'll query only what we haven't queried yet, and we'll reconnect.
         for _ in range(MAX_NUM_OF_TRIES_OVERALL):
-            stderr("new try round")
             # If we have something left, lets connect and run it.
             if any(queries_left):
-                stderr("queries left. Initializing wmi-smb-runner")
                 with WmiSmbRunner(address, username, password, domain=domain, namespace=namespace) as w:
                     # First, add every one needed.
                     for i, is_left in enumerate(queries_left):
@@ -553,15 +556,11 @@ if __name__ == '__main__':
                             #  We need to run command[i]
                             command_type, command_args = (commands[i]['type'], commands[i]['args'])
                             final_result_array[i] = tp.apply_async(run_command, (w, command_type, command_args))
-                            stderr("initialized query %d with %s-%s. apply_async is %s" %
-                                   (i, command_type, command_args, final_result_array[i]))
 
                     # Now wait for all of the added ones to finish to finish
                     for i, is_left in enumerate(queries_left):
                         if is_left is True:
-                            stderr("trying to get result from query %d. apply async is %s")
                             final_result_array[i] = final_result_array[i].get()
-                            stderr("query %d returned with data %s" % (i, final_result_array[i]))
 
                             # Check if we are done with it.
                             if final_result_array[i]["status"] == "ok":

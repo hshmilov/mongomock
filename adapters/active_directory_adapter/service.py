@@ -159,7 +159,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             d = {}
             for client_name, client_data in self._clients.copy().items():
                 logger.info(f"Starting Statistics Report for client {client_name}")
-                d[client_name] = client_data.get_session("reports").get_report_statistics()
+                cd = client_data.get_session("reports")
+                cd.reconnect()
+                d[client_name] = cd.get_report_statistics()
 
             update_result = self._get_collection("report").update_one({"name": "report"},
                                                                       {
@@ -329,6 +331,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         :return: iter(dict) with all the attributes returned from the DC per client
         """
+        client_data.reconnect()
         return client_data.get_extended_devices_list()
 
     def _query_users_by_client(self, client_name, client_data):
@@ -1152,12 +1155,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             raise ValueError(err_log)
         except subprocess.SubprocessError:
             # This is a base class for all the rest of subprocess excpetions.
-            err_log = f"General Execution error! command {command_list}, exception: {get_exception_string()}"
+            err_log = f"General Execution error! command {wmi_smb_commands}, exception: {get_exception_string()}"
             logger.error(err_log)
             raise ValueError(err_log)
 
         if subprocess_handle.returncode != 0:
-            err_log = f"Execution Error! command {command_list} returned returncode " \
+            err_log = f"Execution Error! command {wmi_smb_commands} returned returncode " \
                       f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
             logger.error(err_log)
             raise ValueError(err_log)
@@ -1172,13 +1175,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # Some more validity check
         if len(product) != len(wmi_smb_commands):
             err_log = f"Error, needed to run {wmi_smb_commands} and expected the same length in return " \
-                      f"but got {product}"
+                      f"but got {product}, stdout {command_stdout} stderr {command_stderr}"
             logger.error(err_log)
             raise ValueError(err_log)
-
-        # Temp debugging to find a really rare race condition
-        logger.info(f"Success in execute_wmi_smb, requested {command_list} and got {command_stdout}")
-        logger.info(f"stderr is {command_stderr}")
 
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}
@@ -1199,8 +1198,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         commands_list = []
         for command in shell_command_windows:
             commands_list.append({"type": "shell", "args": [command]})
-
-        logger.info(f"Got execute shell {shell_commands}, now sending {commands_list}")
 
         return self.execute_wmi_smb(device_data, commands_list)
 
