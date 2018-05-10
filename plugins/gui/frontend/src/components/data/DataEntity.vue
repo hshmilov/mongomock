@@ -29,8 +29,8 @@
                      :logo="item.plugin_name" :outdated="item.outdated">
                     <div class="d-flex tab-header">
                         <div class="flex-expand">Data From: {{ item.client_used }}</div>
-                        <div v-if="viewBasic" @click="viewBasic=false" class="link">View advanced</div>
-                        <div v-if="!viewBasic" @click="viewBasic=true" class="link">View basic</div>
+                        <div v-if="viewBasic" @click="toggleView" class="link">View advanced</div>
+                        <div v-if="!viewBasic" @click="toggleView" class="link">View basic</div>
                     </div>
                     <x-schema-list v-if="viewBasic && fields.specific[item.plugin_name]"
                                    :data="item.data" :schema="fields.schema.specific[item.plugin_name]"/>
@@ -55,6 +55,10 @@
     import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
 	import { pluginMeta } from '../../static.js'
 
+    const lastSeenByModule = {
+		'users': 'last_seen_in_devices',
+        'devices': 'last_seen'
+    }
 	export default {
 		name: 'x-data-entity',
         components: {Tabs, Tab, xSchemaList, xCustomData, xTagModal},
@@ -92,8 +96,8 @@
 				let lastSeen = new Set()
 				return [ ...this.entity.specific].sort((first, second) => {
 					// Adapters with no last_seen field go first
-					if (!second.data.last_seen) return 1
-					if (!first.data.last_seen) return -1
+					if (!second.data[lastSeenByModule[this.module]]) return 1
+					if (!first.data[lastSeenByModule[this.module]]) return -1
 					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
 					return new Date(second.data.last_seen) - new Date(first.data.last_seen)
 				}).map((item) => {
@@ -122,7 +126,10 @@
 			activateTag() {
 				if (!this.$refs || !this.$refs.tagModal) return
 				this.$refs.tagModal.activate()
-			}
+			},
+            toggleView() {
+            	this.viewBasic = !this.viewBasic
+            }
         },
 		created () {
 			if (!this.fields || !this.fields.generic) {

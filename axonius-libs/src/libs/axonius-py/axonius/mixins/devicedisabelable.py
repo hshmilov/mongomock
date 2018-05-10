@@ -76,7 +76,7 @@ class Devicedisabelable(Feature, ABC):
 
     @property
     def __entity_finder(self):
-        return EntityFinder(self.users_db, self._clients, self.plugin_unique_name)
+        return EntityFinder(self.devices_db, self._clients, self.plugin_unique_name)
 
     @abstractmethod
     def _enable_device(self, device_data, client_data):

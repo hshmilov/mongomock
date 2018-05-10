@@ -29,6 +29,10 @@
 	import { GET_DATA_BY_ID } from '../../store/getters'
     import { DISABLE_DATA } from '../../store/actions'
 
+    const disableableByModule = {
+		'devices': 'Devicedisabelable',
+        'users': 'Userdisabelable'
+    }
 	export default {
 		name: 'x-data-action-menu',
         components: {
@@ -59,7 +63,7 @@
 				})
 				return labels
             },
-            capitalizedModule() {
+            disableable() {
 				return this.module.charAt(0).toUpperCase() + this.module.substr(1)
             },
             disableable() {
@@ -68,7 +72,7 @@
 					if (!entity) return false
 					return entity.unique_adapter_names.some((uniqueName) => {
                         let adapter = this.getAdapterByUniqueName[uniqueName]
-                        return adapter && adapter.supported_features.includes(`${this.capitalizedModule}disabelable`)
+                        return adapter && adapter.supported_features.includes(disableableByModule[this.module])
                     })
 				})
             }
