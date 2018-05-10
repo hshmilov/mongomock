@@ -154,7 +154,8 @@
 					return 'Logical operator is needed to add expression to the filter'
 				} else if (!this.expression.compOp && this.fieldOpsList.length) {
 					return 'Comparison operator is needed to add expression to the filter'
-				} else if (this.showValue && !this.expression.value) {
+				} else if (this.showValue && typeof this.expression.value !== 'number'
+                    && (!this.expression.value || !this.expression.value.length)) {
 					return 'A value to compare is needed to add expression to the filter'
 				}
 			},
