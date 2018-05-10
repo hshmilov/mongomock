@@ -59,7 +59,7 @@ class CiscoPrimeClient:
         except CiscoPrimeException as e:
             raise ClientConnectionException(f'Invalid creds for api test')
         except Exception as e:
-            raise ClientConnectionException(e)
+            raise ClientConnectionException(str(e))
         logger.debug(f'Connected to cisco prime {self._url}')
 
     def _get_devices(self, first_result=0, max_results=100):

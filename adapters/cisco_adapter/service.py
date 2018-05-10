@@ -56,7 +56,7 @@ class CiscoAdapter(AdapterBase):
             message = "Error connecting to client with {0}: {1}".format(
                 self._get_client_id(client_config), get_exception_string())
             logger.exception(message)
-            raise
+            raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, ssh.CiscoSshClient) or isinstance(client_data, snmp.CiscoSnmpClient), client_data

@@ -100,7 +100,8 @@ const createContentRequest = (state, payload) => {
 		params.push(`filter=${encodeURI(view.query.filter)}`)
 	}
 	if (view.sort && view.sort.field) {
-		params.push(`sort=${view.sort.field}${view.sort.desc? '-' : '+'}`)
+		params.push(`sort=${view.sort.field}`)
+		params.push(`desc=${view.sort.desc? '1' : '0'}`)
 	}
 	return params.join('&')
 }

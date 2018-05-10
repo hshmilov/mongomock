@@ -6,9 +6,11 @@ from axonius.clients.cisco.abstract import *
 from pysnmp.hlapi import *
 from collections import defaultdict
 import socket
+from axonius.adapter_exceptions import ClientConnectionException
 
 ARP_OID = '.1.3.6.1.2.1.3.1.1.2'
 CDP_OID = '.1.3.6.1.4.1.9.9.23.1.2'
+SYSTEM_DESCRIPTION_OID = '1.3.6.1.2.1.1.1.0'
 
 
 def unpack_mac(s):
@@ -36,6 +38,17 @@ class CiscoSnmpClient(AbstractCiscoClient):
                        ObjectType(ObjectIdentity(oid)),
                        lexicographicMode=False)
 
+    def __enter__(self):
+        """ Snmp is a connection-less protocol.
+            So in order to simulate connection - we are going to get one mib and check for errors"""
+        super().__enter__()
+        self._next_cmd(SYSTEM_DESCRIPTION_OID)
+        data = list(self._next_cmd(CDP_OID))
+        errors = list(map(lambda x: x[0], data))
+        if any(errors):
+            raise ClientConnectionException(f'Unable to query system description errors: {errors}')
+        return self
+
     def _query_dhcp_leases(self):
         logger.warning('dhcp isn\'t implemented yet - skipping')
         return None
@@ -44,8 +57,6 @@ class CiscoSnmpClient(AbstractCiscoClient):
         results = []
         for query_result in self._next_cmd(ARP_OID):
             try:
-                # for now ignore errors
-                # TODO: raise ClientConnectionError for creds error
                 logger.info(f'my_result= {query_result}')
                 error, _, _, result = query_result
                 if error:
@@ -66,7 +77,6 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
     def _query_cdp_table(self):
         data = list(self._next_cmd(CDP_OID))
-        # TODO: raise ClientConnectionError for creds error
         errors = list(map(lambda x: x[0], data))
         results = list(map(lambda x: x[3], data))
         if any(errors):

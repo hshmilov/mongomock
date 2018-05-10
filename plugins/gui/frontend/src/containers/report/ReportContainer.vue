@@ -6,7 +6,6 @@
                     <template v-if="downloading">GENERATING...</template>
                     <template v-else>Download Now</template>
                 </a>
-                <div class="error-text">{{error}}</div>
             </div>
             <h3>Periodical Report Email</h3>
             <div class="x-content">
@@ -27,17 +26,24 @@
                                no-data-text="Type mail addresses..." :default-first-option="true"/>
                 </div>
                 <div class="x-section x-btn-container">
-                    <a class="x-btn" tabindex="6" @click="schedule_exec_report">Save</a>
-                    <a class="x-btn inverse" tabindex="7" @click="test_exec_report">Test Now</a>
+                    <a class="x-btn" :class="{disabled: !valid}" tabindex="6" @click="schedule_exec_report">Save</a>
+                    <a class="x-btn inverse" :class="{disabled: !valid}" tabindex="7" @click="test_exec_report">Test Now</a>
                 </div>
             </div>
         </x-box>
+        <modal v-if="error">
+            <div slot="body">
+                <div class="show-space">{{error}}</div>
+            </div>
+            <button class="x-btn" slot="footer" @click="closeError">OK</button>
+        </modal>
     </x-page>
 </template>
 
 <script>
     import xPage from '../../components/layout/Page.vue'
     import xBox from '../../components/layout/Box.vue'
+    import Modal from '../../components/popover/Modal.vue'
 
     import {mapActions} from 'vuex'
     import {DOWNLOAD_REPORT} from '../../store/modules/report'
@@ -45,7 +51,12 @@
 
     export default {
         name: 'report-container',
-        components: {xPage, xBox},
+        components: {xPage, xBox, Modal},
+        computed: {
+        	valid() {
+        		return this.execReportSettings.recipients.length > 0 && this.execReportSettings.period
+            }
+        },
         data() {
             return {
                 execReportSettings: {
@@ -73,21 +84,31 @@
                     link.click()
                 }).catch((error) => {
                     this.downloading = false
-                    this.error = error.message
+                    this.error = error.response.data.message
                 })
             },
             test_exec_report() {
+            	if (!this.execReportSettings.recipients.length) {
+            		return
+                }
                 this.fetchData({
                     rule: `test_exec_report`,
-                    method: 'POST'
-                })
+                    method: 'POST',
+                    data: this.execReportSettings.recipients
+                }).then(() => this.error = '').catch(error => this.error = error.response.data.message)
             },
             schedule_exec_report() {
+				if (!this.valid) {
+					return
+				}
                 this.fetchData({
                     rule: `exec_report`,
                     method: 'POST',
                     data: this.execReportSettings
                 })
+            },
+            closeError() {
+            	this.error = ''
             }
         },
         created() {

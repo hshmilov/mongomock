@@ -7,6 +7,7 @@ See https://axonius.atlassian.net/wiki/spaces/AX/pages/415858710/ScannerAdapter+
 """
 from axonius.plugin_base import EntityType
 import uuid
+import copy
 from abc import ABC
 from typing import Tuple, List, Iterable
 
@@ -173,8 +174,9 @@ class ScannerCorrelatorBase(object):
         :param parsed_device: parsed device
         :return: (plugin_unique_name, id)
         """
-        parsed_device = normalize_adapter_device(dict(parsed_device))
-        self_correlation = self._find_correlation_with_self(parsed_device)
+        parsed_device_copy = copy.deepcopy(parsed_device)  # Deepcopy to prevent changes on parsed device
+        parsed_device_copy = normalize_adapter_device(parsed_device_copy)
+        self_correlation = self._find_correlation_with_self(parsed_device_copy)
         if self_correlation:
             # Case "A": The device has been found to be the same as a previous result
             # meaning that it should get an `id` but not a "correlate" field
@@ -185,7 +187,7 @@ class ScannerCorrelatorBase(object):
         # generate a fake id
         parsed_device['data']['id'] = uuid.uuid4().hex
 
-        remote_correlation = self._find_correlation_with_real_adapter(parsed_device)
+        remote_correlation = self._find_correlation_with_real_adapter(parsed_device_copy)
         if remote_correlation:
             # If a remote correlation is found (but a self correction is not)
             # it might be because of an edge case: self correlation is weaker than remote correlation.

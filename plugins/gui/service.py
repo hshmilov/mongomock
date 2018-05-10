@@ -173,11 +173,10 @@ def sorted():
             sort_obj = {}
             try:
                 sort_param = request.args.get('sort')
+                desc_param = request.args.get('desc')
                 if sort_param:
                     logger.debug(f'Parsing sort: {sort_param}')
-                    sort_field = sort_param[:-1]
-                    sort_direction = sort_param[-1]
-                    sort_obj[sort_field] = pymongo.DESCENDING if (sort_direction == '-') else pymongo.ASCENDING
+                    sort_obj[sort_param] = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
             except Exception as e:
                 return return_error("Could not create mongo sort. Details: {0}".format(e), 400)
             return func(self, mongo_sort=sort_obj, *args, **kwargs)
@@ -274,10 +273,9 @@ class GuiService(PluginBase):
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._exec_report_scheduler = LoggedBackgroundScheduler(executors=executors)
 
-        exec_report_setting_collection = self._get_collection('exec_reports_settings', limited_user=False)
-        current_exec_report_setting = self._get_exec_report_settings(exec_report_setting_collection)
+        current_exec_report_setting = self._get_exec_report_settings(self.exec_report_collection)
         if current_exec_report_setting != {}:
-            self._schedule_exec_report(exec_report_setting_collection, current_exec_report_setting)
+            self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
         self._exec_report_scheduler.start()
 
     def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
@@ -547,6 +545,7 @@ class GuiService(PluginBase):
             # Beautifying the resulting csv.
             del mongo_projection['internal_axon_id']
             del mongo_projection['unique_adapter_names']
+            del mongo_projection[ADAPTERS_LIST_LENGTH]
             # Getting pretty titles for all generic fields as well as specific
             entity_fields = self._entity_fields(entity_type)
             for field in entity_fields['generic']:
@@ -555,19 +554,23 @@ class GuiService(PluginBase):
             for type in entity_fields['specific']:
                 for field in entity_fields['specific'][type]:
                     if field['name'] in mongo_projection:
-                        mongo_projection[field['name']] = field['title']
+                        mongo_projection[field['name']] = f'{" ".join(type.split("_")).capitalize()}: {field["title"]}'
             for current_entity in entities:
                 del current_entity['internal_axon_id']
                 del current_entity['unique_adapter_names']
+                del current_entity[ADAPTERS_LIST_LENGTH]
                 for field in mongo_projection.keys():
                     # Replace field paths with their pretty titles
                     if field in current_entity:
                         current_entity[mongo_projection[field]] = current_entity[field]
                         del current_entity[field]
+                        if isinstance(current_entity[mongo_projection[field]], list):
+                            canonized_values = [str(val) for val in current_entity[mongo_projection[field]]]
+                            current_entity[mongo_projection[field]] = ','.join(canonized_values)
             dw = csv.DictWriter(string_output, mongo_projection.values())
             dw.writeheader()
             dw.writerows(entities)
-            output = make_response(string_output.getvalue())
+            output = make_response(string_output.getvalue().encode('utf-8'))
             timestamp = datetime.now().strftime("%d%m%Y-%H%M%S")
             output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
             output.headers['Content-type'] = 'text/csv'
@@ -1895,16 +1898,16 @@ class GuiService(PluginBase):
                         **query,
                         'count': self._entity_views_db_map[entity].find(parse_filter(filter), {'_id': 1}).count()
                     })
-            adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
+            adapter_clients_report = {}
             try:
+                # Exception thrown if adapter is down or report missing, and section will appear with queries only
+                adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
                 adapter_reports_db = self._get_db_connection(False)[adapter_unique_name]
-                report = adapter_reports_db['report'].find_one({"name": "report"})
+                adapter_clients_report = adapter_reports_db['report'].find_one({"name": "report"}).get('data', {})
             except Exception:
                 logger.exception("Error contacting the report db for adapter {adapter_unique_name}")
 
-            if report is not None:
-                report = report.get('data')
-            adapter_data.append({'name': adapter['title'], 'queries': queries, 'views': report})
+            adapter_data.append({'name': adapter['title'], 'queries': queries, 'views': adapter_clients_report})
         return adapter_data
 
     def _get_saved_views_data(self):
@@ -1986,11 +1989,12 @@ class GuiService(PluginBase):
     @add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):
         try:
-            self._send_report_thread()
+            recipients = self.get_request_data_as_object()
+            self._send_report_thread(recipients=recipients)
             return ""
-        except Exception:
+        except Exception as e:
             logger.exception('Failed sending test report by email.')
-            return return_error('Failed sending test report by email', 400)
+            return return_error(f'Problem testing report by email:\n{str(e.args[0]) if e.args else e}', 400)
 
     def _get_exec_report_settings(self, exec_reports_settings_collection):
         settings_object = exec_reports_settings_collection.find_one({}, projection={'_id': False, 'period': True,
@@ -2046,20 +2050,22 @@ class GuiService(PluginBase):
         Makes the apscheduler schedule a research phase right now.
         :return:
         """
-        exec_reports_settings_collection = self._get_collection('exec_reports_settings', limited_user=False)
         if request.method == 'GET':
-            return jsonify(self._get_exec_report_settings(exec_reports_settings_collection))
+            return jsonify(self._get_exec_report_settings(self.exec_report_collection))
 
         elif request.method == 'POST':
             exec_report_data = self.get_request_data_as_object()
-            return self._schedule_exec_report(exec_reports_settings_collection, exec_report_data)
+            return self._schedule_exec_report(self.exec_report_collection, exec_report_data)
 
-    def _send_report_thread(self):
+    def _send_report_thread(self, recipients=None):
         with self.exec_report_lock:
-            exec_report_settings = self._get_collection('exec_reports_settings', limited_user=False).find_one()
+            if not recipients:
+                exec_report = self.exec_report_collection.find_one()
+                if exec_report:
+                    recipients = exec_report.get('recipients', [])
             report_path = self.generate_report()
 
-            email = self.mail_sender.new_email(EXEC_REPORT_TITLE, exec_report_settings['recipients'])
+            email = self.mail_sender.new_email(EXEC_REPORT_TITLE, recipients)
             with open(report_path, 'rb') as report_file:
                 email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
             email.send(EXEC_REPORT_EMAIL_CONTENT)
@@ -2071,6 +2077,10 @@ class GuiService(PluginBase):
     @property
     def system_collection(self):
         return self._get_collection(SYSTEM_CONFIG_COLLECTION, limited_user=False)
+
+    @property
+    def exec_report_collection(self):
+        return self._get_collection('exec_reports_settings', limited_user=False)
 
     @property
     def device_control_plugin(self):

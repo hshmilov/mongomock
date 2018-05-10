@@ -1324,6 +1324,8 @@ class PluginBase(Configurable, Feature):
     @property
     def mail_sender(self):
         mail_server = self._get_db_with_limit('core')['email_configs'].find_one({'type': 'email_server'})
+        if not mail_server:
+            raise Exception('No Mail Server configured')
         return EmailServer(mail_server['smtpHost'], mail_server['smtpPort'],
                            mail_server.get('smtpUser'), mail_server.get('smtpPassword'),
                            self._grab_file_contents(mail_server.get('smtpKey'), stored_locally=False),
