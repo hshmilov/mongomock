@@ -160,7 +160,7 @@
             this.loadNotifications()
             this.intervals.push(setInterval(function () {
                 this.loadNotifications()
-            }.bind(this), 3000))
+            }.bind(this), 9000))
             this.updateLifecycle()
             this.intervals.push(setInterval(function () {
                 this.updateLifecycle()

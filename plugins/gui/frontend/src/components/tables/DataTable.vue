@@ -149,14 +149,14 @@
             }
         },
         watch: {
-			fetching(newFetching) {
-                this.loading = newFetching
-            },
             pageLinkNumbers() {
 				this.fetchLinkedPages()
             },
-            view() {
-                this.loading = true
+            view(newView, oldView) {
+            	if (newView.query.filter !== oldView.query.filter ||
+                    Math.abs(newView.page - oldView.page) > 3) {
+                    this.loading = true
+                }
             }
         },
         methods: {

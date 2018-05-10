@@ -510,7 +510,7 @@ class GuiService(PluginBase):
                     if type(value) == str:
                         return len([child for child in children if same_string(child, value)]) == 0
                     if type(value) == int:
-                        return value in children
+                        return value not in children
                     if type(value) == dict:
                         # For a dict, check if there is an element of whom all keys are identical to value's keys
                         return len([item for item in children if len([key for key in item.keys()

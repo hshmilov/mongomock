@@ -173,6 +173,9 @@ a {
 .h-48 {
     height: 48px
 }
+.min-h-60 {
+    min-height: 60px;
+}
 .w-16 {
     width: 16px;
 }
