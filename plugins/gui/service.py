@@ -149,7 +149,7 @@ def filtered():
             filter_obj = dict()
             try:
                 filter_expr = request.args.get('filter')
-                if filter_expr:
+                if filter_expr and filter_expr != "":
                     logger.debug("Parsing filter: {0}".format(filter_expr))
                     filter_obj = parse_filter(filter_expr)
             except Exception as e:

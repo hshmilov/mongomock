@@ -615,6 +615,8 @@ def parse_filter(filter):
     :param filter:
     :return:
     """
+    if filter is None or filter == '':
+        return {}
     matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter)
     if not matches:
         return pql.find(filter)
