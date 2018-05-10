@@ -1,18 +1,16 @@
 <template>
-    <div>
-        <triggerable-dropdown :arrow="false" align="right">
+    <div class="data-view-menu">
+        <triggerable-dropdown :arrow="false" align="right" size="lg">
             <div slot="trigger" class="link">View</div>
             <nested-menu slot="content">
-                <nested-menu-item title="Save" @click="openSaveView" />
-                <nested-menu-item title="Load">
-                    <dynamic-popover size="sm" left="-236" top="0">
-                        <nested-menu class="inner" v-if="views && views.length">
-                            <nested-menu-item v-for="{name, view} in views" :key="name" :title="name"
-                                              @click="updateModuleView(view)"/>
-                        </nested-menu>
-                        <div v-else>No saved views</div>
-                    </dynamic-popover>
-                </nested-menu-item>
+                <nested-menu-item title="Save Current" @click="openSaveView" />
+                <template v-if="views && views.length">
+                    <div class="title">Saved Views</div>
+                    <div class="content">
+                        <nested-menu-item v-for="{name, view} in views" :key="name" :title="name"
+                                          @click="updateModuleView(view)"/>
+                    </div>
+                </template>
             </nested-menu>
         </triggerable-dropdown>
         <modal v-if="saveModal.isActive" @close="closeSaveView" approveText="save" @confirm="confirmSaveView">
@@ -93,5 +91,19 @@
 </script>
 
 <style lang="scss">
-
+    .data-view-menu {
+        .menu {
+            .title {
+                font-size: 12px;
+                font-weight: 400;
+                text-transform: uppercase;
+                padding-left: 6px;
+                margin-top: 6px;
+            }
+            .content {
+                max-height: 40vh;
+                overflow: auto;
+            }
+        }
+    }
 </style>
