@@ -39,12 +39,18 @@
                     <label for="default-sort">Sort by Number of Adapters in Default View</label>
                     <checkbox id="default-sort" v-model="defaultSort"/>
                     <div/>
-                    <button class="btn confirm" @click="saveSettings">save</button>
+                    <button class="btn confirm" @click="saveSystemSettings">save</button>
                 </div>
                 <div class="row">
                 </div>
             </tab>
         </tabs>
+        <modal v-if="message">
+            <div slot="body">
+                <div class="show-space">{{message}}</div>
+            </div>
+            <button class="x-btn" slot="footer" @click="closeModal">OK</button>
+        </modal>
     </x-page>
 </template>
 
@@ -56,6 +62,7 @@
 	import Tab from '../../components/tabs/Tab.vue'
 	import xDateEdit from '../../components/controls/string/DateEdit.vue'
 	import Checkbox from '../../components/Checkbox.vue'
+    import Modal from '../../components/popover/Modal.vue'
 
 	import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
 	import {
@@ -70,7 +77,7 @@
 
 	export default {
 		name: 'settings-container',
-		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox, xSchemaForm},
+		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox, xSchemaForm, Modal},
 		computed: {
 			...mapState(['dashboard', 'settings']),
 			limit () {
@@ -142,7 +149,8 @@
 					executionEnabled: false,
 					researchRate: 0
 				},
-                complete: false
+                complete: false,
+                message: ''
 			}
 		},
 		methods: {
@@ -182,7 +190,12 @@
 					rule: `dashboard/lifecycle_rate`,
 					method: 'POST',
 					data: {system_research_rate: this.lifecycle.researchRate * 60 * 60}
-				})
+				}).then((response) => {
+                    if (response.status === 200) {
+                        this.message = 'Saved Successfully.'
+                    }
+
+                })
 			},
 			setEmailServer () {
                 if (!this.complete) return
@@ -190,11 +203,31 @@
 					rule: `email_server`,
 					method: 'POST',
 					data: this.smtpSettings
-				})
+				}).then((response) => {
+                    if (response.status === 201) {
+                        this.message = 'Saved Successfully.'
+                    }
+
+                })
 			},
             updateValidity(valid) {
                 this.complete = valid
             },
+            saveSystemSettings() {
+			    if (typeof(this.lifecycle.researchRate) !==  typeof(0) || this.lifecycle.researchRate < 0) {
+			        this.message = 'The Inserted Auto-Refresh Rate is invalid, please insert a number larger than 0.'
+                    return
+                }
+
+			    this.saveSettings().then((response) => {
+                    if (response.status === 200) {
+                        this.message = 'Saved Successfully.'
+                    }
+                })
+            },
+            closeModal() {
+                this.message = ''
+            }
 		},
 		created () {
 			this.fetchLifecycle()

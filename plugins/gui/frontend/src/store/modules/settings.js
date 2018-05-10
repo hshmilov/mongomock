@@ -50,7 +50,7 @@ export const settings = {
 			})
 		},
 		[ SAVE_SETTINGS ] ({ dispatch, state }) {
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: 'settings',
 				method: 'POST',
 				data: state.data

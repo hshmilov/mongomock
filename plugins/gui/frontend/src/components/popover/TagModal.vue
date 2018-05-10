@@ -60,7 +60,6 @@
 				this.isActive = true
             },
 			saveTags () {
-				if (!this.selected || !this.selected.length) return
 				/* Separate added and removed tags and create an uber promise returning after both are updated */
 				let added = this.selected.filter((tag) => {
 					return (!this.tags.includes(tag))

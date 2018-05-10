@@ -96,6 +96,12 @@
                 </form>
             </template>
         </card>
+        <modal v-if="error">
+            <div slot="body">
+                <div class="show-space">{{error}}</div>
+            </div>
+            <button class="x-btn" slot="footer" @click="closeError">OK</button>
+        </modal>
     </x-page>
 </template>
 
@@ -104,6 +110,7 @@
     import Card from '../../components/Card.vue'
     import Checkbox from '../../components/Checkbox.vue'
     import StatusIcon from '../../components/StatusIcon.vue'
+    import Modal from '../../components/popover/Modal.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_DATA_QUERIES } from '../../store/actions'
@@ -112,10 +119,11 @@
 	export default {
 		name: 'alert-config-container',
 		components: {
-            xPage, Card, Checkbox, StatusIcon },
+            xPage, Card, Checkbox, StatusIcon, Modal },
 		computed: {
             ...mapState({
                 alertData: state => state.alert.alertDetails.data,
+                alerts: state => state.alert.alertList.data,
                 currentQueryOptions(state) {
                 	let queries = [ ...state.devices.queries.saved.data.map((item) => {
                         return { ...item, entity: 'devices' }
@@ -147,7 +155,8 @@
                 	notification: false, mail: false, tag: false
                 },
                 mailList: [],
-                tagName: ''
+                tagName: '',
+                error: ''
             }
 		},
         watch: {
@@ -182,6 +191,10 @@
             	/* Validation */
                 if (!this.alert.name) return
                 if (!this.currentQuery.name) return
+                if (this.alerts.some(e => e.name === this.alert.name)) {
+                    this.error = 'An Alert with that name already exists, please choose a different one.'
+                    return
+                }
 
                 if (this.actions.notification) {
                 	this.alert.actions.push({
@@ -206,6 +219,9 @@
             },
             returnToAlerts() {
 				this.$router.push({name: 'Alerts'})
+            },
+            closeError() {
+                this.error = ''
             }
         },
         created() {

@@ -31,11 +31,11 @@
                 </div>
             </div>
         </x-box>
-        <modal v-if="error">
+        <modal v-if="message">
             <div slot="body">
-                <div class="show-space">{{error}}</div>
+                <div class="show-space">{{message}}</div>
             </div>
-            <button class="x-btn" slot="footer" @click="closeError">OK</button>
+            <button class="x-btn" slot="footer" @click="closeModal">OK</button>
         </modal>
     </x-page>
 </template>
@@ -64,7 +64,7 @@
                     recipients: []
                 },
                 downloading: false,
-                error: ''
+                message: ''
             }
         },
         methods: {
@@ -84,7 +84,7 @@
                     link.click()
                 }).catch((error) => {
                     this.downloading = false
-                    this.error = error.response.data.message
+                    this.message = error.response.data.message
                 })
             },
             test_exec_report() {
@@ -95,7 +95,7 @@
                     rule: `test_exec_report`,
                     method: 'POST',
                     data: this.execReportSettings.recipients
-                }).then(() => this.error = '').catch(error => this.error = error.response.data.message)
+                }).then(() => this.message = '').catch(error => this.message = error.response.data.message)
             },
             schedule_exec_report() {
 				if (!this.valid) {
@@ -105,10 +105,14 @@
                     rule: `exec_report`,
                     method: 'POST',
                     data: this.execReportSettings
+                }).then((response) => {
+                    if (response.status === 200) {
+                        this.message = 'Saved Successfully.'
+                    }
                 })
             },
-            closeError() {
-            	this.error = ''
+            closeModal() {
+            	this.message = ''
             }
         },
         created() {

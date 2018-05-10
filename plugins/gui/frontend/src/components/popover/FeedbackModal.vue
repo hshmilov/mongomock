@@ -1,5 +1,5 @@
 <template>
-    <modal v-show="launch" approveText="Save" @confirm="handleConfirm" @close="handleClose" :disabled="disabled">
+    <modal v-show="launch" @confirm="handleConfirm" @close="handleClose" :disabled="disabled" >
         <div slot="body" class="feedback-modal-body" @keyup.esc="handleClose">
             <template v-if="status.processing">
                 <pulse-loader :loading="true" color="#26dad2"></pulse-loader>
@@ -15,6 +15,12 @@
             </template>
             <template v-else>
                 <slot></slot>
+            </template>
+        </div>
+        <div slot="footer">
+            <template v-if="!status.success && !status.processing">
+                <button class="x-btn link" @click="$emit('close')">Cancel</button>
+                <button class="x-btn" :class="{disabled}" @click="handleConfirm">Save</button>
             </template>
         </div>
     </modal>
