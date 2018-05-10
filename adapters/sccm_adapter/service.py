@@ -38,7 +38,8 @@ class SccmAdapter(AdapterBase):
                 pass  # check that the connection credentials are valid
             return connection
         except Exception as err:
-            message = f"Error connecting to client host: {str(client_config[consts.SCCM_HOST])}  database: {str(client_config[consts.SCCM_DATABASE])}"
+            message = f"Error connecting to client host: {str(client_config[consts.SCCM_HOST])}  " \
+                      f"database: {str(client_config[consts.SCCM_DATABASE])}"
             logger.exception(message)
             raise ClientConnectionException(get_exception_string())
 

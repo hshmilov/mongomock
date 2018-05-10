@@ -513,7 +513,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                                                                {'client_id': client_id,
                                                                 'client_config': client_config,
                                                                 'status': status,
-                                                                'error': error_msg[0] if error_msg else None},
+                                                                'error': error_msg},
                                                                upsert=True)
         else:
             return None
@@ -541,7 +541,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             # Got here only if connection succeeded
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
-            error_msg = e.args
+            error_msg = str(e.args[0] if e.args else '')
             id_for_log = client_id if client_id else (id if id else '')
             logger.exception(f"Got error while handling client {id_for_log} - possibly compliance problem with schema.")
             if client_id in self._clients:
@@ -839,7 +839,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :raises Exception: If client connection or client data query errored 3 times
         """
 
-        def _update_client_status(status):
+        def _update_client_status(status, error_msg=None):
             """
             Update client document matching given match object with given status, to indicate method's result
 
@@ -848,7 +848,12 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             :return:
             """
             with self._clients_lock:
-                result = clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
+                if error_msg:
+                    result = clients_collection.update_one({'client_id': client_id},
+                                                           {'$set': {'status': status, 'error': error_msg}})
+                else:
+                    result = clients_collection.update_one({'client_id': client_id}, {'$set': {'status': status}})
+
                 if not result or result.matched_count != 1:
                     raise adapter_exceptions.CredentialErrorException(
                         f"Could not update client {client_id} with status {status}")
@@ -878,7 +883,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 self.create_notification("Connection error to client {0}.".format(client_id), str(e2))
                 logger.exception(
                     "Problem establishing connection for client {0}. Reason: {1}".format(client_id, str(e2)))
-                _update_client_status("error")
+                _update_client_status("error", str(e2))
                 raise
             else:
                 try:
@@ -890,12 +895,12 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                         parsed_data = self._parse_users_raw_data_hook(raw_data)
                     else:
                         raise ValueError(f"expected {entity_type} to be devices/users.")
-                except Exception:
+                except Exception as e3:
                     # No devices despite a working connection
                     logger.exception(f"Problem querying {entity_type} for client {client_id}")
-                    _update_client_status("error")
+                    _update_client_status("error", str(e3))
                     raise
-        _update_client_status("success")
+        _update_client_status("success", '')
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
     def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[str, str]]:
