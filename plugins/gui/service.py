@@ -495,7 +495,7 @@ class GuiService(PluginBase):
         for item in entity_data:
             # Continue recursively for current element of the list
             child_value = self._find_entity_field(item, field_path)
-            if child_value:
+            if child_value is not None:
                 def new_instance(value):
                     """
                     Test if given value is not yet found in the children list, according to comparison rules.
