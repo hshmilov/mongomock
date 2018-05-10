@@ -94,12 +94,18 @@
 			sortedSpecificData () {
 				if (!this.entity.specific) return []
 				let lastSeen = new Set()
-				return [ ...this.entity.specific].sort((first, second) => {
+				return this.entity.specific.filter((item) => {
+					if (item['plugin_type'] && item['plugin_type'].toLowerCase().includes('plugin')) return false
+
+                    return true
+				}).sort((first, second) => {
 					// Adapters with no last_seen field go first
-					if (!second.data[lastSeenByModule[this.module]]) return 1
-					if (!first.data[lastSeenByModule[this.module]]) return -1
+          let firstSeen = first.data[lastSeenByModule[this.module]]
+          let secondSeen = second.data[lastSeenByModule[this.module]]
+					if (!secondSeen) return 1
+					if (!firstSeen) return -1
 					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
-					return new Date(second.data.last_seen) - new Date(first.data.last_seen)
+					return new Date(secondSeen) - new Date(firstSeen)
 				}).map((item) => {
                     item.pretty_name = item.plugin_name
                     if (pluginMeta[item.plugin_name] && pluginMeta[item.plugin_name].title) {
