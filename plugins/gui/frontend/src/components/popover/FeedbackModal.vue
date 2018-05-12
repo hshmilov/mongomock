@@ -19,7 +19,7 @@
         </div>
         <div slot="footer">
             <template v-if="!status.success && !status.processing">
-                <button class="x-btn link" @click="$emit('close')">Cancel</button>
+                <button class="x-btn link" @click="handleClose">Cancel</button>
                 <button class="x-btn" :class="{disabled}" @click="handleConfirm">Save</button>
             </template>
         </div>
@@ -51,6 +51,7 @@
 		},
 		methods: {
 			handleConfirm () {
+				if (this.disabled) return
 				if (this.status.error || this.status.success || this.status.processing) { this.handleClose() }
 				this.status.processing = true
 				this.handleSave().then(() => {
