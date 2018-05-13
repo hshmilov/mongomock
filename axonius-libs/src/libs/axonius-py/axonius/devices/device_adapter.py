@@ -249,7 +249,6 @@ class DeviceAdapter(SmartJsonClass):
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name
-SCANNER_FIELD = DeviceAdapter.scanner.name
 LAST_SEEN_FIELD = DeviceAdapter.last_seen.name
 OS_FIELD = DeviceAdapter.os.name
 

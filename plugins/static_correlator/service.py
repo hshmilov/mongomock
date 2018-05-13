@@ -1,7 +1,6 @@
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.correlator_base import CorrelatorBase
-from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, SCANNER_FIELD, OS_FIELD
-from axonius.thread_stopper import stoppable
+from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, OS_FIELD
 from axonius.utils.files import get_local_config_file
 
 from static_correlator.engine import StaticCorrelatorEngine
@@ -59,7 +58,6 @@ class StaticCorrelatorService(CorrelatorBase):
                                 'data': {
                                     'id': '$$adapter.data.id',
                                     OS_FIELD: '$$adapter.data.os',
-                                    SCANNER_FIELD: f'$$adapter.data.{SCANNER_FIELD}',
                                     'hostname': '$$adapter.data.hostname',
                                     NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces'
                                 }

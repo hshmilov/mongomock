@@ -419,17 +419,6 @@ def compare_hostname(adapter_device1, adapter_device2):
     return adapter_device1['data']['hostname'] == adapter_device2['data']['hostname']
 
 
-def is_a_scanner(adapter_device):
-    """
-    checks if the adapters is the result of a scanner device
-    :param adapter_device: an adapter device to check
-    """
-    from axonius.devices.device_adapter import SCANNER_FIELD
-    if adapter_device['data'].get(SCANNER_FIELD, False):
-        return True
-    return False
-
-
 def is_different_plugin(adapter_device1, adapter_device2):
     return adapter_device1['plugin_name'] != adapter_device2['plugin_name']
 
