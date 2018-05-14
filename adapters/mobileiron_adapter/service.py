@@ -34,7 +34,7 @@ class MobileironAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = MobileironConnection(domain=client_config["Mobileiron_Domain"],
-                                              verify_ssl=client_config["verify_ssl"])
+                                              verify_ssl=client_config["verify_ssl"], fetch_apps=client_config["fetch_apps"])
             connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
@@ -54,8 +54,9 @@ class MobileironAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the MobileIron Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        client_data.connect()
+        yield from client_data.get_device_list()
+        client_data.close()
 
     def _clients_schema(self):
         """
@@ -85,13 +86,19 @@ class MobileironAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "fetch_apps",
+                    "title": "Fetch Applications",
+                    "type": "bool"
                 }
             ],
             "required": [
                 "Mobileiron_Domain",
                 "username",
                 "password",
-                "verify_ssl"
+                "verify_ssl",
+                "fetch_apps"
             ],
             "type": "array"
         }

@@ -47,6 +47,7 @@ DOCKER_PORTS = {
     'forcepoint-csv-adapter':           5770,
     'observeit-csv-adapter':            5773,
     'qualys-scans-adapter':             5777,
+    'nessus-csv-adapter':               5796,
     'cisco-adapter':                    6001,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,

@@ -50,6 +50,7 @@ class ObserveitCsvAdapter(AdapterBase):
             "required": [
                 "user_id",
                 "csv",
+                "domain"
             ],
             "type": "array"
         }
@@ -61,7 +62,7 @@ class ObserveitCsvAdapter(AdapterBase):
             logger.error("No domain")
             return
         if "Endpoint Name" not in raw_data['csv'].fieldnames:
-            logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
+            logger.error(f"Bad fields names{str(raw_data['csv'].fieldnames)}")
             return
         for device_raw in raw_data['csv']:
             try:

@@ -92,6 +92,10 @@ export const pluginMeta = {
 			title: 'Tenable Nessus',
 			description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
 		},
+	    nessus_csv_adapter: {
+			title: 'Tenable Nessus CSV File',
+			description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
+		},
 		esx_adapter: {
 			title: 'VMware ESXi',
 			description: 'VMware ESXi is an entreprise-class, type-1 hypervisor for deploying and serving virtual computers. '

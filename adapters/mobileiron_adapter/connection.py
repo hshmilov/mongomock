@@ -7,11 +7,12 @@ from mobileiron_adapter.exceptions import MobileironAlreadyConnected, Mobileiron
 
 
 class MobileironConnection(object):
-    def __init__(self, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl, fetch_apps):
         """ Initializes a connection to Mobileiron using its rest API
 
         :param str domain: domain address for Mobileiron
         :param bool verify_ssl Verify the ssl
+        :param bool fetch_apps A bool to decide if we want to fetch apps which is very slow
         """
         self.domain = domain
         url = domain
@@ -23,6 +24,7 @@ class MobileironConnection(object):
         self.username = None
         self.password = None
         self.verify_ssl = verify_ssl
+        self.fetch_apps = fetch_apps
         self.headers = {'Content-Type': 'application/json'}
 
     def set_credentials(self, username, password):
@@ -106,31 +108,36 @@ class MobileironConnection(object):
             fields += field_raw["name"] + ","
         fields = fields[:-1]
         offset = 0
-        devices_list = []
         while count > 0:
-            logger.info(f"Fetching devices {offset} to {offset+200}")
-            devices_list += self._get("devices", params={'adminDeviceSpaceId': device_space_id, 'limit': 200,
-                                                         'count': 50, 'offset': offset, 'query': "",
-                                                         'fields': fields,
-                                                         'sortOrder': 'ASC',
-                                                         'sortField': 'user.display_name'})["results"]
+            try:
+                logger.debug(f"Fetching devices {offset} to {offset+200}")
+                paged_devices_list = self._get("devices", params={'adminDeviceSpaceId': device_space_id, 'limit': 200,
+                                                                  'count': 50, 'offset': offset, 'query': "",
+                                                                  'fields': fields,
+                                                                  'sortOrder': 'ASC',
+                                                                  'sortField': 'user.display_name'})["results"]
+                if self.fetch_apps:
+                    app_devices_count = 0
+                    for device_raw in paged_devices_list:
+                        try:
+                            app_devices_count += 1
+                            if app_devices_count % 100 == 0:
+                                logger.debug(f"Got apps for {app_devices_count} devices")
+                            device_uuid = device_raw.get("common.uuid")
+                            if device_uuid is not None:
+                                device_raw["appInventory"] = self._get("devices/appinventory",
+                                                                       params={'deviceUuids': str(device_uuid), 'adminDeviceSpaceId': device_space_id})["results"][0]["appInventory"]
+                        except Exception:
+                            logger.exception(f"Problem fetching apps of device {device_raw}")
+                        yield device_raw
+                else:
+                    for device_raw in paged_devices_list:
+                        yield device_raw
+            except Exception:
+                logger.exception(f"Problem fetching devices at offset {offset}")
             count -= 200
             offset += 200
-        try:
-            app_devices_count = 0
-            for device in devices_list:
-                app_devices_count += 1
-                if app_devices_count % 100 == 0:
-                    logger.info(f"Got apps for {app_devices_count} devices")
-                device_uuid = device.get("common.uuid")
-                if device_uuid:
-                    device["appInventory"] = self._get("devices/appinventory",
-                                                       params={'deviceUuids': str(device_uuid),
-                                                               'adminDeviceSpaceId': device_space_id})["results"][0]["appInventory"]
-
-        except Exception:
-            logger.exception("Problem fetching apps")
-        return devices_list
+        return
 
     def __enter__(self):
         self.connect()

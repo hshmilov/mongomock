@@ -108,10 +108,11 @@ def figure_out_os(s):
 
     if 'windows' in s or 'win' in s:
         os_type = 'Windows'
-        windows_distribution = ['Vista', 'XP', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
+        # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne
+        windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
                                 'Windows Server 2003', 'Win10', 'Win7', 'Win8', 'Windows 2016',
                                 'Windows 2008', 'Windows 2012',
-                                'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016']
+                                'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016', 'XP']
         for dist in windows_distribution:
             if dist.lower() in s:
                 distribution = dist.replace("Windows ", "").replace("Win", "")
