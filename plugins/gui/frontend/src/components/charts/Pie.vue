@@ -8,7 +8,7 @@
                         <stop :class="`extra-stop-${!(n % 2) ? 3 : 1}`" :offset="`${n}0%`"></stop>
                         <stop :class="`extra-stop-${!(n % 2) ? 1 : 3}`" :offset="`${n}0%`"></stop>
                     </template>
-                    <stop class="extra-stop-1" offset="100%"></stop>
+                    <stop class="extra-stop-3" offset="100%"></stop>
                 </linearGradient>
             </defs>
             <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)">
@@ -45,7 +45,7 @@
 					cumulativePortion += slice.portion / 2
                     const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
 					return {
-						class: `extra-fill-${index % 6}`,  ...slice,
+						...slice,
                         path: [
 							`M ${startX} ${startY}`, // Move
 							`A 1 1 0 ${slice.portion > .5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc

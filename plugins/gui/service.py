@@ -364,12 +364,12 @@ class GuiService(PluginBase):
         if existed_query is not None and not existed_query.get('archived'):
             logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
             return existed_query['_id']
-        result = queries_collection.update({'name': name}, {'$set': {'name': name, 'filter': query_filter,
-                                                                     'expressions': query_expressions,
-                                                                     'query_type': 'saved', 'timestamp': datetime.now(),
-                                                                     'archived': False}}, upsert=True)
-        logger.info(f'Added query {name} id: {result.get("inserted_id", "")}')
-        return result.get('inserted_id', '')
+        result = queries_collection.update_one({'name': name}, {'$set': {'name': name, 'filter': query_filter,
+                                                                         'expressions': query_expressions,
+                                                                         'query_type': 'saved', 'timestamp': datetime.now(),
+                                                                         'archived': False}}, upsert=True)
+        logger.info(f'Added query {name} id: {result.upserted_id or ""}')
+        return result.upserted_id or ''
 
     def _insert_view(self, views_collection, name, mongo_view):
         existed_view = views_collection.find_one({'name': name})

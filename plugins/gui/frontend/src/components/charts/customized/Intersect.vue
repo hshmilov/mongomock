@@ -18,6 +18,8 @@
                     let newItem = { title: item.name, portion: item.count / total, anotate: true }
                     if (index === 1) {
                     	newItem.class = 'fill-intersection-1-2'
+                    } else {
+						newItem.class = `extra-fill-${(index % 6) + 1}`
                     }
                     return newItem
                 })

@@ -90,7 +90,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
     DEFAULT_USER_LAST_SEEN = 30 * 24
 
     class MyDeviceAdapter(DeviceAdapter, DNSResolvableDevice, ADEntity):
-        ad_service_principal_name = Field(str, "AD Service Principal Name")
+        ad_service_principal_name = ListField(str, "AD Service Principal Name")
         ad_printers = ListField(ADPrinter, "AD Attached Printers")
         ad_dfsr_shares = ListField(ADDfsrShare, "AD DFSR Shares")
 
@@ -776,7 +776,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
                 device.part_of_domain = True
                 device.organizational_unit = get_organizational_units_from_dn(device.id)
-                device.ad_service_principal_name = device_raw.get("servicePrincipalName")   # only for devices
+                service_principal_name = device_raw.get("servicePrincipalName")   # only for devices
+                if not isinstance(service_principal_name, list):
+                    service_principal_name = [str(service_principal_name)]
+                device.ad_service_principal_name = service_principal_name   # only for devices
 
                 # OS. we must change device.os only after figure_os which initializes it
                 device.figure_os(device_raw.get('operatingSystem', ''))
