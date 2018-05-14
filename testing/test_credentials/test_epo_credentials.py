@@ -1,10 +1,10 @@
 
 
 client_details = {
-    "host": "10.0.255.180",
+    "host": "10.0.2.155",
     "port": 8443,
     "user": "administrator",
-    "password": "6c=xz@OACxaefu)h38MFLD%dpiTeQu$="
+    "password": "Password2"
 }
 
-SOME_DEVICE_ID = '6D57ECC5-88FA-4B77-BB7C-76D1EB7AEE4B'
+SOME_DEVICE_ID = '7FDDD6DA-7886-40EC-9082-EA6F407145AE'

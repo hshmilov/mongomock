@@ -22,16 +22,6 @@ class TestEpoAdapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 
-    @pytest.mark.skip("EPO License expired")
-    def test_fetch_devices(self):
-        """
-        We put it here to disable the super().test_fetch_devices func which will fail.
-        Once we have a license, remove this func.
-        :return:
-        """
-        pass
-
-    @pytest.mark.skip("EPO License Expired")
     def test_client_status_change(self):
         """
         This tests that client status changes if some change occurred in the credentials given for a client.
