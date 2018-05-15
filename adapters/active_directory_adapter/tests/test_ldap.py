@@ -105,7 +105,7 @@ def test_get_domain_properties(ldap_connection: LdapConnection):
     domain_properties = ldap_connection.get_domain_properties()
     assert "maxPwdAge" in domain_properties
     assert domain_properties['name'] == 'TestDomain'
-    assert ad_integer8_to_timedelta(domain_properties["maxPwdAge"]) == timedelta(days=42)
+    assert ad_integer8_to_timedelta(domain_properties["maxPwdAge"]) == timedelta(days=999)
 
 
 def test_get_dc_properties(ldap_connection: LdapConnection):

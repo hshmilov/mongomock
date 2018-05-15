@@ -169,9 +169,9 @@ class EpoAdapter(AdapterBase):
                     device.os.build = str(os_build_num)
 
                 # Set up memory
-                device.free_physical_memory = int(device_raw.get("EPOComputerProperties.FreeMemory")) / (1024**2)
+                device.free_physical_memory = int(device_raw.get("EPOComputerProperties.FreeMemory")) / (1024**3)
                 device.total_physical_memory = int(device_raw.get(
-                    "EPOComputerProperties.TotalPhysicalMemory")) / (1024**2)
+                    "EPOComputerProperties.TotalPhysicalMemory")) / (1024**3)
 
                 # Set up hard disks
                 device.add_hd(
