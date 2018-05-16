@@ -7,7 +7,7 @@ export const UPDATE_DEVICE = 'UPDATE_DEVICE'
 
 export const devices = {
 	state: {
-		content: { data: [], fetching: false, error: ''},
+		content: { data: [], fetching: false, error: '', rule: ''},
 		count: { data: 0, fetching: false, error: ''},
 		view: {
 			page: 0, pageSize: 20, fields: [

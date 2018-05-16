@@ -4,9 +4,9 @@
             <div class="x-title">{{ title }} ({{count.data}})</div>
             <div class="x-actions"><slot name="actions"/></div>
         </div>
-        <div class="v-spinner-bg" v-if="loading"></div>
-        <pulse-loader :loading="loading" color="#FF7D46" />
         <div class="x-table-container" :tabindex="-1" ref="greatTable">
+            <div class="v-spinner-bg" v-if="loading"></div>
+            <pulse-loader :loading="loading" color="#FF7D46" />
             <table class="x-striped-table">
                 <thead>
                     <tr class="x-row clickable">
@@ -163,10 +163,14 @@
             ...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({fetchContent: FETCH_DATA_CONTENT}),
             fetchLinkedPages() {
-            	this.fetchContent({
+            	return this.fetchContent({
 					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
                     limit: this.pageLinkNumbers.length * this.view.pageSize
-				}).then(() => this.loading = false)
+				}).then(() => {
+					if (!this.content.fetching) {
+					    this.loading = false
+                    }
+				})
             },
             onClickRow(id) {
 				if (!document.getSelection().isCollapsed) return
@@ -203,21 +207,24 @@
             }
         },
 		created() {
-			this.fetchLinkedPages()
+			if (!this.pageData || !this.pageData.length) {
+			    this.fetchLinkedPages()
+            } else {
+				this.loading = false
+            }
             if (this.refresh) {
-                this.interval = setInterval(function () {
-					this.fetchLinkedPages()
-                }.bind(this), this.refresh * 1000);
+                const fetchAuto = () => {
+					this.fetchLinkedPages().then(() => this.timer = setTimeout(fetchAuto, this.refresh * 1000))
+                }
+				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
             }
 		},
         mounted() {
 			this.$refs.greatTable.focus()
         },
-		beforeDestroy() {
-			if (this.refresh && this.interval) {
-			    clearInterval(this.interval);
-            }
-		}
+        beforeDestroy() {
+			clearTimeout(this.timer)
+        }
 	}
 </script>
 
@@ -240,6 +247,7 @@
         .x-table-container {
             overflow: auto;
             max-height: calc(100% - 80px);
+            position: relative;
             .x-striped-table {
                 .x-row {
                     height: 30px;

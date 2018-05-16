@@ -32,7 +32,7 @@ export const requestApi = ({commit}, payload) => {
 	if (!payload.rule) return
 
 	if (payload.type) {
-		commit(payload.type, {fetching: true, error: '', ...payload.payload})
+		commit(payload.type, {rule: payload.rule, fetching: true, error: '', ...payload.payload})
 	}
 	if (!payload.method) payload.method = 'GET'
 
@@ -42,7 +42,7 @@ export const requestApi = ({commit}, payload) => {
 	return new Promise((resolve, reject) => axios(request_config)
 		.then((response) => {
 			if (payload.type) {
-				commit(payload.type, {fetching: false, data: response.data, ...payload.payload})
+				commit(payload.type, {rule: payload.rule, fetching: false, data: response.data, ...payload.payload})
 			}
 			resolve(response)
 		})

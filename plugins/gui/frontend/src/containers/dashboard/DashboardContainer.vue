@@ -97,11 +97,6 @@
 				fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
 				fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE
 			}),
-			getDashboardData () {
-				this.fetchAdapterDevices()
-				this.fetchDashboard()
-                this.fetchDashboardCoverage()
-			},
 			runAdapterFilter (index) {
 				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')
 			},
@@ -132,14 +127,15 @@
             }
 		},
 		created () {
-			this.getDashboardData()
-			this.interval = setInterval(function () {
-				this.getDashboardData()
-			}.bind(this), 10000)
+			const getDashboardData = () => {
+            	Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
+                    .then(() => this.timer = setTimeout(getDashboardData, 10000))
+            }
+            getDashboardData()
 		},
-		beforeDestroy () {
-			clearInterval(this.interval)
-		}
+        beforeDestroy() {
+			clearTimeout(this.timer)
+        }
 	}
 </script>
 

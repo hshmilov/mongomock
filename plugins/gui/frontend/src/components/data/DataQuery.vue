@@ -3,10 +3,9 @@
         <!-- Dropdown component for selecting a query --->
         <x-dropdown :arrow="false" class="flex-expand">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
-            <search-input slot="trigger" class="form-control" v-model="searchValue" ref="greatInput"
-                   @input="searchQuery" @keyup.enter.stop="submitFilter" :tabindex="1"
-                   placeholder="Insert your query or start typing to filter recent Queries"
-                   @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex" />
+            <search-input slot="trigger" v-model="searchValue" ref="greatInput" @input="searchQuery" :tabindex="1"
+                          @keyup.enter.stop="submitFilter" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex"
+                          placeholder="Insert your query or start typing to filter recent Queries" />
             <!--
             Content is a list composed of 3 sections:
             1. Saved queries, filtered to whose names contain the value 'searchValue'
@@ -200,19 +199,19 @@
             },
 			rebuildFilter() {
                 this.rebuild = true
-				this.$refs.greatInput.parentElement.click()
+				this.$refs.greatInput.$parent.close()
             },
             submitFilter () {
             	if (!this.filterValid) return
                 this.queryFilter = this.searchValue
             	this.executeFilter()
-				this.$refs.greatInput.parentElement.click()
+				this.$refs.greatInput.$parent.close()
             },
 			selectQuery ({ filter, expressions }) {
             	this.queryExpressions = expressions || [ { ...expression } ]
 				this.updateFilter(filter)
 				this.focusInput()
-				this.$refs.greatInput.parentElement.click()
+				this.$refs.greatInput.$parent.close()
 			},
             updateFilter (filter) {
             	this.rebuild = false
@@ -278,9 +277,6 @@
         > .x-dropdown {
             .search-input {
                 padding: 0 12px 0 0;
-                .input-value {
-                    font-size: 12px;
-                }
             }
             .query-quick {
                 .x-nested-menu {

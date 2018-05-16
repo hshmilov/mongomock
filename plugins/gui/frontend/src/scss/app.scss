@@ -218,23 +218,23 @@ Components
 }
 
 .v-spinner-bg {
-  height: calc(100vh - 300px);
-  width: calc(100vw - 108px);
+  height: 100%;
+  width: 100%;
   background: $grey-3;
   opacity: 0.4;
-  top: 200px;
+  top: 0;
   position: absolute;
   z-index: 100;
   transition: opacity .3s ease;
 }
 .v-spinner {
-  height: calc(100vh - 300px);
-  width: calc(100vw - 108px);
+  height: 100%;
+  width: 100%;
   position: absolute;
   z-index: 101;
   .v-pulse {
     position: absolute;
-    top: 40%;
+    top: 50%;
     &.v-pulse1 {
       left: 48%;
     }

@@ -258,8 +258,7 @@
         grid-gap: 8px;
         margin-bottom: 20px;
         select, input:not([type=checkbox]) {
-            height: 30px;
-            width: 100%;
+            height: 26px;
         }
         .checkbox-label {
             margin-bottom: 0;

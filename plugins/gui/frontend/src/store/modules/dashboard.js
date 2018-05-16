@@ -83,13 +83,13 @@ export const dashboard = {
             })
         },
 		[ FETCH_ADAPTER_DEVICES ] ({dispatch}) {
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: 'dashboard/adapter_devices',
 				type: UPDATE_ADAPTER_DEVICES
 			})
 		},
 		[ FETCH_DASHBOARD ] ({dispatch}) {
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: 'dashboard',
 				type: UPDATE_DASHBOARD
 			})

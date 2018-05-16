@@ -77,23 +77,21 @@
             stopResearchNow() {
                 this.runningResearch = false
                 this.stopResearch()
-            },
-            updateLifecycle() {
-				this.fetchLifecycle().then(() => {
-					this.runningResearch = this.lifecycle.reduce(
-						(sum, item) => sum + item.status, 0) !== this.lifecycle.length
-				})
             }
 		},
 		created () {
-            this.updateLifecycle()
-            this.interval = setInterval(function () {
-                this.updateLifecycle()
-            }.bind(this), 10000)
+			const updateLifecycle = () => {
+				this.fetchLifecycle().then(() => {
+					this.runningResearch = this.lifecycle.reduce(
+						(sum, item) => sum + item.status, 0) !== this.lifecycle.length
+                    this.timer = setTimeout(updateLifecycle, 3000)
+				})
+            }
+            updateLifecycle()
 		},
-		beforeDestroy () {
-            clearInterval(this.interval)
-		}
+        beforeDestroy() {
+			clearTimeout(this.timer)
+        }
 	}
 </script>
 

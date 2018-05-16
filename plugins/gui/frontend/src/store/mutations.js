@@ -21,7 +21,12 @@ export const UPDATE_DATA_CONTENT = 'UPDATE_DATA_CONTENT'
 export const updateDataContent = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const content = state[payload.module].content
+	if (content.fetching && !payload.fetching && content.rule !== payload.rule) {
+		return
+	}
+
 	content.fetching = payload.fetching
+	content.rule = payload.rule
 	content.error = payload.error
 	if (payload.data) {
 		content.data = payload.data

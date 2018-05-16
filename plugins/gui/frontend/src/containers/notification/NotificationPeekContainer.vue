@@ -72,10 +72,6 @@
 				this.$refs.notifications.close()
 				this.$router.push({path: `/notification/${notificationId}`})
 			},
-			loadNotifications() {
-				this.fetchAggregateNotifications()
-				this.fetchNotificationsUnseenCount({})
-			},
 			clearNotifications() {
 				this.updateNotificationsSeen([])
 			},
@@ -85,14 +81,15 @@
 			}
         },
         created() {
-			this.loadNotifications()
-			this.interval = setInterval(function () {
-				this.loadNotifications()
-			}.bind(this), 9000)
+			const loadNotifications = () => {
+				Promise.all([this.fetchAggregateNotifications(), this.fetchNotificationsUnseenCount({})])
+                    .then(() => this.timer = setTimeout(loadNotifications, 9000))
+            }
+            loadNotifications()
         },
-		beforeDestroy () {
-			clearInterval(this.interval)
-		}
+        beforeDestroy() {
+			clearTimeout(this.timer)
+        }
 	}
 </script>
 

@@ -2,9 +2,9 @@
     <div class="search-input" @keyup.esc="$emit('keyup.esc')">
         <input type="text" v-model="searchValue" class="input-value" @input="updateSearchValue()" :placeholder="placeholder"
                ref="input" @keydown.prevent.down="$emit('keydown.down')" @keydown.prevent.up="$emit('keydown.up')">
-        <span class="input-addon">
+        <div class="input-addon">
             <svg-icon name="action/search" :original="true" height="18"></svg-icon>
-        </span>
+        </div>
     </div>
 </template>
 
@@ -15,6 +15,11 @@
         data() {
             return {
                 searchValue: this.value
+            }
+        },
+        watch: {
+        	value(newValue) {
+        		this.searchValue = newValue
             }
         },
         methods: {
@@ -34,8 +39,7 @@
         position: relative;
         .input-value {
             width: 100%;
-            border: 0;
-            border-bottom: 1px solid $grey-2;
+            border: 1px solid $grey-2;
             padding: 4px;
             &:focus {
                 border-color: $theme-blue;
@@ -48,10 +52,9 @@
             right: 0;
             top: 0;
             z-index: 100;
-            height: 30px;
             padding: 0 12px;
             background-color: transparent;
-            font-size: 150%;
+            line-height: 30px;
             .svg-fill { fill: $theme-black }
             .svg-stroke { stroke: $theme-black }
         }
