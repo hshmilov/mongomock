@@ -122,8 +122,8 @@
             xPage, Card, Checkbox, StatusIcon, Modal },
 		computed: {
             ...mapState({
-                alertData: state => state.alert.alertDetails.data,
-                alerts: state => state.alert.alertList.data,
+                alertData: state => state.alert.current.data,
+                alerts: state => state.alert.content.data,
                 currentQueryOptions(state) {
                 	let queries = [ ...state.devices.queries.saved.data.map((item) => {
                         return { ...item, entity: 'devices' }

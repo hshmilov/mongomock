@@ -1145,8 +1145,12 @@ class GuiService(PluginBase):
     def actions_upload_file(self):
         return self._upload_file(self.device_control_plugin)
 
-    @add_rule_unauthenticated("reports", methods=['GET', 'PUT'])
-    def reports(self):
+    @paginated()
+    @filtered()
+    @sorted()
+    @projected()
+    @add_rule_unauthenticated("alert", methods=['GET', 'PUT', 'DELETE'])
+    def alert(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         """
         GET results in list of all currently configured alerts, with their query id they were created with
         PUT Send report_service a new report to be configured
@@ -1154,14 +1158,15 @@ class GuiService(PluginBase):
         :return:
         """
         if request.method == 'GET':
-            with self._get_db_connection(False) as db_connection:
-                reports_to_return = []
-                report_service = self.get_plugin_by_name('reports')
-                for report in db_connection[report_service[PLUGIN_UNIQUE_NAME]]['reports'].find(
-                        projection={'name': 1, 'report_creation_time': 1, 'severity': 1, 'actions': 1, 'triggers': 1,
-                                    'retrigger': 1, 'query': 1}).sort([('report_creation_time', pymongo.DESCENDING)]):
-                    reports_to_return.append(beautify_db_entry(report))
-                return jsonify(reports_to_return)
+            report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
+            sort = []
+            for field, direction in mongo_sort.items():
+                sort.append((field, direction))
+            if not sort:
+                sort.append(('report_creation_time', pymongo.DESCENDING))
+            return jsonify([beautify_db_entry(report) for report in
+                            self._get_collection('reports', db_name=report_service, limited_user=False).find(
+                                mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)])
 
         if request.method == 'PUT':
             report_to_add = request.get_json(silent=True)
@@ -1175,34 +1180,44 @@ class GuiService(PluginBase):
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
             return response.text, response.status_code
 
-    @add_rule_unauthenticated("reports/<report_id>", methods=['DELETE', 'POST'])
-    def alerts_update(self, report_id):
+        # Since other method types cause the function to return - here we have DELETE request
+        report_ids = self.get_request_data_as_object()
+        if report_ids is None or len(report_ids) == 0:
+            logger.error('No alert provided to be deleted')
+            return ''
+        response = self.request_remote_plugin("reports", "reports", method='DELETE', json=report_ids)
+        if response is None:
+            return return_error("No response whether alert was removed")
+        return response.text, response.status_code
+
+    @filtered()
+    @add_rule_unauthenticated("alert/count")
+    def alert_count(self, mongo_filter):
+        with self._get_db_connection(False) as db_connection:
+            report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
+            return jsonify(db_connection[report_service]['reports'].find(mongo_filter).count())
+
+    @add_rule_unauthenticated("alert/<alert_id>", methods=['POST'])
+    def alerts_update(self, alert_id):
         """
 
         :param alert_id:
         :return:
         """
-        if request.method == 'DELETE':
-            response = self.request_remote_plugin(f"reports/{report_id}", "reports", method='delete')
-            if response is None:
-                return return_error("No response whether alert was removed")
-            return response.text, response.status_code
+        alert_to_update = request.get_json(silent=True)
+        query_name = alert_to_update['query']
+        query_entity = alert_to_update['queryEntity']
+        assert query_entity in [x.value for x in EntityType.__members__.values()]
+        queries = self.device_queries if query_entity == EntityType.Devices.value else self.user_queries
+        if queries.find_one({'name': query_name}) is None:
+            return return_error(f"Missing query {query_name} requested for updating alert")
 
-        if request.method == 'POST':
-            report_to_update = request.get_json(silent=True)
-            query_name = report_to_update['query']
-            query_entity = report_to_update['queryEntity']
-            assert query_entity in [x.value for x in EntityType.__members__.values()]
-            queries = self.device_queries if query_entity == EntityType.Devices.value else self.user_queries
-            if queries.find_one({'name': query_name}) is None:
-                return return_error(f"Missing query {query_name} requested for updating alert")
+        response = self.request_remote_plugin(f"reports/{alert_id}", "reports", method='post',
+                                              json=alert_to_update)
+        if response is None:
+            return return_error("No response whether alert was updated")
 
-            response = self.request_remote_plugin(f"reports/{report_id}", "reports", method='post',
-                                                  json=report_to_update)
-            if response is None:
-                return return_error("No response whether alert was updated")
-
-            return response.text, response.status_code
+        return response.text, response.status_code
 
     @filtered()
     @add_rule_unauthenticated("plugins")

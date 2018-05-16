@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 # Standard modules
 import concurrent.futures
@@ -146,13 +147,17 @@ class ReportsService(PluginBase, Triggerable):
         :param report_data: The report query to delete
         :return: Correct HTTP response.
         """
-        delete_query = {'query': json.dumps(report_data['query'])} if isinstance(report_data, dict) else {
-            '_id': ObjectId(report_data)}
-
-        delete_result = self._get_collection('reports').delete_one(delete_query)
+        if isinstance(report_data, list):
+            report_ids = [ObjectId(report_id) for report_id in report_data]
+            delete_result = self._get_collection('reports').delete_many({'_id': {'$in': report_ids}})
+        elif isinstance(report_data, str):
+            delete_result = self._get_collection('reports').delete_one({'_id': ObjectId(report_data)})
+        else:
+            logger.error('Request to DELETE with unexpected data - not string (id) or list (of ids)')
+            return return_error('Request to DELETE with unexpected data - not string (id) or list (of ids)', 400)
 
         if delete_result.deleted_count == 0:
-            logger.error('Attempted to delete an non-existing report.')
+            logger.error('Attempted to delete a non-existing report.')
             return return_error('Attempted to delete non-existing reports.', 404)
 
         logger.info('Removed query from reports.')
@@ -285,7 +290,7 @@ class ReportsService(PluginBase, Triggerable):
         :param action_data: List of email addresses to send to.
         """
 
-        self.mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data)\
+        self.mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data) \
             .send(report_consts.REPORT_CONTENT_HTML.format(
                 query_name=report_data['name'], num_of_triggers=report_data['triggered'],
                 trigger_message=self._parse_action_content(report_data['triggers'], triggered),
@@ -308,7 +313,8 @@ class ReportsService(PluginBase, Triggerable):
                                                                      num_of_current_devices=current_num_of_devices),
                                  report_data['severity'])
 
-    def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices, action_data=None):
+    def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                    action_data=None):
         """ Sends an email to the list of e-mails
 
         :param dict report_data: The report settings.
@@ -319,8 +325,9 @@ class ReportsService(PluginBase, Triggerable):
         entity_db = f"{report_data['query_entity']}_db_view"
         entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
 
-        entities = [entities_collection.find_one({'internal_axon_id': entity[1]['internal_axon_id']})['specific_data'][0]
-                    for entity in trigger_data]
+        entities = [
+            entities_collection.find_one({'internal_axon_id': entity[1]['internal_axon_id']})['specific_data'][0]
+            for entity in trigger_data]
         entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
 
         self.add_many_labels_to_entity(entities, labels=[action_data], entity=report_data['query_entity'])
