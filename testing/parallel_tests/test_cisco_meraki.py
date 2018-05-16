@@ -9,10 +9,6 @@ class TestCiscoMerakiAdapter(AdapterTestBase):
         return CiscoMerakiService()
 
     @property
-    def adapter_name(self):
-        return 'cisco_meraki_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['CiscoMeraki_Domain']
 

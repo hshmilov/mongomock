@@ -22,12 +22,15 @@ def extract_ip_from_mib(mib):
 
 
 class CiscoSnmpClient(AbstractCiscoClient):
-    def __init__(self, community, ip, port=161):
+    def __init__(self, **kwargs):
         super().__init__()
+        for required_arg in ('host', 'community', 'port'):
+            if required_arg not in kwargs:
+                raise ClientConnectionException(f'SNMP - missing required parmeter "{required_arg}"')
 
-        self._community = community
-        self._ip = ip
-        self._port = port
+        self._community = kwargs['community']
+        self._ip = kwargs['host']
+        self._port = kwargs['port']
         self._engine = SnmpEngine()
 
     def _next_cmd(self, oid):

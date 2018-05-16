@@ -9,20 +9,26 @@ from axonius.utils.parsing import format_mac
 from axonius.clients.cisco.abstract import *
 
 
-class CiscoSshClient(AbstractCiscoClient):
-    def __init__(self, host, username, password, port=22):
+class CiscoConsoleClient(AbstractCiscoClient):
+    def __init__(self, **kwargs):
         super().__init__()
+        for required_arg in ('host', 'username', 'password', 'port'):
+            if required_arg not in kwargs:
+                raise ClientConnectionException(f'CONSOLE - missing required parmeter "{required_arg}"')
 
-        self.host = host
-        self.username = username
-        self.password = password
-        self.port = port
+        self.host = kwargs['host']
+        self.username = kwargs['username']
+        self.password = kwargs['password']
+        self.port = kwargs['port']
         self._sess = None
+
+    def get_device_type(self):
+        raise NotImplementedError()
 
     def __enter__(self):
         super().__enter__()
-        self._sess = ConnectHandler(device_type='cisco_ios', ip=self.host, username=self.username,
-                                    password=self.password)
+        self._sess = ConnectHandler(device_type=self.get_device_type(), ip=self.host, username=self.username,
+                                    password=self.password, port=self.port)
         return self
 
     def __exit__(self, *args):
@@ -35,26 +41,36 @@ class CiscoSshClient(AbstractCiscoClient):
             lines = lines.split('\n')
             lines = list(filter(lambda x: x.startswith('internet'),
                                 map(lambda x: x.lower().expandtabs(tabsize=8).strip(), lines)))
-            return SshArpCiscoData(lines)
+            return ConsoleArpCiscoData(lines)
         except Exception:
             logger.exception("Running shell arp command failed")
 
     def _query_dhcp_leases(self):
         try:
             lines = self._sess.send_command("show ip dhcp binding")
-            return SshDhcpCiscoData(lines)
+            return ConsoleDhcpCiscoData(lines)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
     def _query_cdp_table(self):
         try:
             lines = self._sess.send_command("show cdp neighbors detail")
-            return SshCdpCiscoData(lines)
+            return ConsoleCdpCiscoData(lines)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
 
-class SshCdpCiscoData(CdpCiscoData):
+class CiscoSshClient(CiscoConsoleClient):
+    def get_device_type(self):
+        return 'cisco_ios'
+
+
+class CiscoTelnetClient(CiscoConsoleClient):
+    def get_device_type(self):
+        return 'cisco_ios_telnet'
+
+
+class ConsoleCdpCiscoData(CdpCiscoData):
 
     @staticmethod
     def _parse_cdp_table(text):
@@ -108,7 +124,7 @@ class SshCdpCiscoData(CdpCiscoData):
         # TODO: We are converting the data to dict, but it may appear more then once,
         # (For example IP address) . I wasn't able to achive this state so for now
         # we'll throw anything that appear more then once.
-        data = dict(sum(map(SshCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
+        data = dict(sum(map(ConsoleCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
         return SshCdpCiscoData.translate_entry(data)
 
     def _parse(self):
@@ -126,7 +142,7 @@ class SshCdpCiscoData(CdpCiscoData):
                 logger.exception('Exception while paring cdp line')
 
 
-class SshDhcpCiscoData(DhcpCiscoData):
+class ConsoleDhcpCiscoData(DhcpCiscoData):
 
     @staticmethod
     def _parse_dhcp_table(text):
@@ -202,7 +218,7 @@ class SshDhcpCiscoData(DhcpCiscoData):
                 logger.exception('Exception while paring dchp line')
 
 
-class SshArpCiscoData(ArpCiscoData):
+class ConsoleArpCiscoData(ArpCiscoData):
 
     def _parse(self):
         for entry in self._raw_data:

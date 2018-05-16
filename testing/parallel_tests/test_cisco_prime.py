@@ -10,10 +10,6 @@ class TestCiscoPrimeAdapter(AdapterTestBase):
         return CiscoPrimeService()
 
     @property
-    def adapter_name(self):
-        return 'cisco_prime_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['url']
 

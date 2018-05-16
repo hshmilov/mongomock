@@ -57,7 +57,7 @@ MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
 
 # TODO ofir: Change the return values protocol
 class AvailableIp(SmartJsonClass):
-    """ A definition for the json-scheme for an available IP and its origin"""
+    """ A definition for the json-schema for an available IP and its origin"""
     ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
     source_dns = Field(str, 'DNS server that gave the result')
 
