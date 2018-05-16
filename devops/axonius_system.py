@@ -26,7 +26,7 @@ def main():
 {name} [-h] {system,adapter,service} [<args>]
        {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
-       {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard]
+       {name} {adapter,service} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--build-libs]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
     parser.add_argument('target', choices=['system', 'adapter', 'service', 'ls'])
@@ -66,7 +66,7 @@ def system_entry_point(args):
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
     parser.add_argument('--hard', action='store_true', default=False,
-                        help='Rebuild Image after rebuilding axonius-libs')
+                        help='Rebuild Image after rebuilding axonius-libs and remove old volumes')
     parser.add_argument('--pull-base-image', action='store_true', default=False, help='Pull base image before rebuild')
     parser.add_argument('--skip', action='store_true', default=False, help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
@@ -133,15 +133,16 @@ def system_entry_point(args):
 
 def service_entry_point(target, args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard]
+{name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--build-libs]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('name')
     parser.add_argument('mode', choices=['up', 'down', 'build'])
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
-    parser.add_argument('--hard', action='store_true', default=False,
-                        help='Rebuild Image after rebuilding axonius-libs')
+    parser.add_argument('--hard', action='store_true', default=False, help='Removes old volume')
+    parser.add_argument('--build-libs', action='store_true', default=False,
+                        help='Rebuild Image after rebuilding axonius-libs and remove old volume')
 
     try:
         args = parser.parse_args(args)
@@ -158,9 +159,12 @@ def service_entry_point(target, args):
         services.append(args.name)
 
     axonius_system = get_service()
-    if args.hard:
+    if args.build_libs:
         assert args.mode in ('up', 'build')
         axonius_system.build_libs(True)
+        args.hard = True
+    if args.hard:
+        assert args.mode in ('up', 'build')
         args.rebuild = True
     if args.mode == 'up':
         print(f'Starting {args.name}')

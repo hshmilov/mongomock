@@ -3,8 +3,9 @@ This directory contains the scripts related to a clean install and an upgrade to
 **How to use:**
 
 1. On our production-build server, git clone the source code.
-2. Login to docker hub
-3. run the next line to build the final installer, with the next possible arguments:
+2. Create venv 
+3. Login to docker hub
+4. run the next line to build the final installer, inside the venv, with the next possible arguments:
 ```bash
 make.py
 # --out output file path for the installer
@@ -16,11 +17,11 @@ make.py
 # --winpip will include python packages for offline windows installer as well as the default linux ones
 # --exclude exclude a list of services and adapters from the installer (both images + source code)
 ```
-4. Copy the output installer to the target machine and run, with the next possible arguments:
+5. Copy the output installer to the target machine and run, with the next possible arguments:
 ```bash
 axonius_install.py
 # --first-time for a clean first-time installation rather than an upgrade
-# --print-key will print the encryption key for the providers credentials file
+# --print-key will print the encryption key for the old-state-json-file
 ```
 
 the install script will:
@@ -35,3 +36,12 @@ the install script will:
 * call post_install.py (from the new sources) - will reinsert the old providers, queries, views, panels, alerts...
 
 FIY: venv_wrapper.sh is a simple wrapper around calling the python from current venv with a provided script and arguments.
+
+example:
+```bash
+# make
+make.py --pull --compress --version 1.2 --exclude qcore stresstest
+
+# and install:
+axonius_install.py --first-time
+```

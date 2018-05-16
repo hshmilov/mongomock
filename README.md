@@ -40,5 +40,21 @@ Examples:
 ./axonius.sh service watch up [--prod]
 ./axonius.sh service watch down [--prod]
 
+# List all available adapters and services
 ./axonius.sh ls
+
+# restarts the container
+./axonius.sh system up --restart
+# restarts the container after rebuilding images
+./axonius.sh system up --restart --rebuild
+# clean old volumes, rebuilds axonius-libs plus --rebuild (rebuilding images)
+./axonius.sh system up --restart --hard
+# pulls axonius-base-image plus --hard (clean old volumes, rebuilds axonius-libs) plus --rebuild (rebuilding images) 
+./axonius.sh system up --restart --pull-base-image
+
+# restart the GUI service *after building it with new source*
+# this *does not* rebuild axonius-libs in order to be fast
+./axonius.sh service gui up --restart --hard
+# in order to *also* build axonius-libs use --build-libs instead
+./axonius.sh service gui up --restart --build-libs
 ```
