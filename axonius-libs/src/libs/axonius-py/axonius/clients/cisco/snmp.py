@@ -120,6 +120,10 @@ class SnmpCdpCiscoData(CdpCiscoData):
     def parse_platform(oid, value):
         return str(value)
 
+    @staticmethod
+    def parse_port_id(oid, value):
+        return str(value)
+
     def _parse(self):
         for entries in self._raw_data:
             result = {}
@@ -139,10 +143,11 @@ class SnmpCdpCiscoData(CdpCiscoData):
 
 
 CDP_INFO_TABLE = {
-    4: (SnmpCdpCiscoData.parse_ip, 'IP address'),
-    5: (SnmpCdpCiscoData.parse_version, 'Version'),
-    6: (SnmpCdpCiscoData.parse_device_id, 'Device ID'),
-    8: (SnmpCdpCiscoData.parse_platform, 'Platform'),
+    4: (SnmpCdpCiscoData.parse_ip, 'ip'),
+    5: (SnmpCdpCiscoData.parse_version, 'version'),
+    6: (SnmpCdpCiscoData.parse_device_id, 'hostname'),
+    7: (SnmpCdpCiscoData.parse_port_id, 'iface'),
+    8: (SnmpCdpCiscoData.parse_platform, 'device_model'),
 }
 
 if __name__ == "__main__":

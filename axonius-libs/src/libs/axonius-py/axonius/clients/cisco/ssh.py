@@ -93,12 +93,23 @@ class SshCdpCiscoData(CdpCiscoData):
         return list(map(lambda line: tuple(map(str.strip, line.split(':', 1))), lines))
 
     @staticmethod
+    def translate_entry(entry):
+        result = {}
+        for key, value in [('IP address', 'ip'), ('Version', 'version'), ('Device ID', 'hostname'),
+                           ('Port ID (outgoing port)', 'iface'), ('Platform', 'device_model')]:
+            if key in entry:
+                logger.debug(f'entry = {entry}')
+                result[value] = entry[key]
+        return result
+
+    @staticmethod
     def parse_entry(entry):
         entry = entry.strip()
         # TODO: We are converting the data to dict, but it may appear more then once,
         # (For example IP address) . I wasn't able to achive this state so for now
         # we'll throw anything that appear more then once.
-        return dict(sum(map(SshCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
+        data = dict(sum(map(SshCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
+        return SshCdpCiscoData.translate_entry(data)
 
     def _parse(self):
         try:
@@ -198,6 +209,6 @@ class SshArpCiscoData(ArpCiscoData):
             try:
                 entry = entry.split()
                 mac, ip, iface = format_mac(entry[3]), entry[1], entry[5]
-                yield {'mac': mac, 'ip': ip}
+                yield {'mac': mac, 'ip': ip, 'iface': iface}
             except Exception:
                 logger.exception('Exception while paring arp line')
