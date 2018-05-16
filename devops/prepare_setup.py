@@ -28,5 +28,6 @@ if __name__ == '__main__':
     runner.append_single('venv', safe_run_bash(['./create_venv.sh']))
     assert runner.wait_for_all() == 0
 
+    # build
     runner.append_single('system', safe_run_bash(['./axonius.sh', 'system', 'build', '--all', '--prod', '--hard']))
     assert runner.wait_for_all() == 0

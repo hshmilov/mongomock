@@ -5,7 +5,6 @@ This script starts the system [in production (--prod)]
                               [with specific services & adapters (--services & --adapters)]
 """
 import argparse
-import subprocess
 import sys
 
 from utils import AutoOutputFlush, get_service

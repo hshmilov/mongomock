@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
 export CORTEX_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 source $CORTEX_ROOT/venv/bin/activate
 
-export PYTHONPATH="$PYTHONPATH:$CORTEX_ROOT:\
-$CORTEX_ROOT/axonius-libs/src/libs/axonius-py:\
-$CORTEX_ROOT/plugins:\
-$CORTEX_ROOT/adapters:\
-$CORTEX_ROOT/devops:\
-$CORTEX_ROOT/testing"
+#docker shortcuts
+alias dkill='docker kill $(docker ps -q)'
+alias drm='docker rm $(docker ps -a -q)'
+alias drmi='docker rmi $(docker images -q -f dangling=true)'
+alias dclear='dkill;drm;drmi'
+alias drvol='docker volume rm $(docker volume ls -q)'
+alias dlogs='find ${CORTEX_ROOT}/logs | grep "\.log" | xargs rm'
+alias softclean='dkill;drm;drvol;dlogs'
+alias dstat='docker stats $(docker ps --format={{.Names}})'
