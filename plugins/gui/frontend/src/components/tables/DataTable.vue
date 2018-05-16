@@ -154,7 +154,8 @@
             },
             view(newView, oldView) {
             	if (newView.query.filter !== oldView.query.filter ||
-                    Math.abs(newView.page - oldView.page) > 3) {
+                    Math.abs(newView.page - oldView.page) > 3 ||
+                    newView.fields.length > oldView.fields.length) {
                     this.loading = true
                 }
             }
