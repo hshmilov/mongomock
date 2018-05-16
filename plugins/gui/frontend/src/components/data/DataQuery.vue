@@ -1,19 +1,19 @@
 <template>
-    <div class="data-query">
+    <div class="x-data-query">
         <!-- Dropdown component for selecting a query --->
-        <triggerable-dropdown :arrow="false">
+        <x-dropdown :arrow="false" class="flex-expand">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
-            <input slot="trigger" class="form-control" v-model="searchValue" ref="greatInput"
+            <search-input slot="trigger" class="form-control" v-model="searchValue" ref="greatInput"
                    @input="searchQuery" @keyup.enter.stop="submitFilter" :tabindex="1"
                    placeholder="Insert your query or start typing to filter recent Queries"
-                   @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex">
+                   @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex" />
             <!--
             Content is a list composed of 3 sections:
             1. Saved queries, filtered to whose names contain the value 'searchValue'
             2. Historical queries, filtered to whose filter contain the value 'searchValue'
             3. Option to search for 'searchValue' everywhere in data (compares to every text field)
             -->
-            <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex">
+            <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex" class="query-quick">
                 <nested-menu v-if="savedQueries && savedQueries.length">
                     <div class="title">Saved Queries</div>
                     <div class="menu-content">
@@ -34,10 +34,11 @@
                 </nested-menu>
                 <div v-if="noResults">No results</div>
             </div>
-        </triggerable-dropdown>
-        <triggerable-dropdown class="form-control" align="right" size="xl">
-            <div slot="trigger" class="link" :tabindex="2">Query</div>
-            <div slot="content" class="query-wizard">
+        </x-dropdown>
+        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery">Save Query</a>
+        <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false">
+            <div slot="trigger" class="x-btn link" :tabindex="2">+ New Query</div>
+            <div slot="content">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
                                  @error="filterValid = false" :rebuild="rebuild"/>
                 <div class="place-right">
@@ -45,25 +46,19 @@
                     <a class="x-btn" @click="rebuildFilter" @keyup.enter="rebuildFilter" :tabindex="4">Search</a>
                 </div>
             </div>
-        </triggerable-dropdown>
-        <!-- Button controlling the execution of currently filled query -->
-        <a class="x-btn right" @click="submitFilter" :tabindex="5">
-            <svg-icon name="action/search" :original="true" height="24"></svg-icon>
-        </a>
-        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery" :tabindex="6">
-            <svg-icon name="action/save" :original="true" height="18"></svg-icon>
-        </a>
-        <modal v-if="saveModal.isActive" @close="closeSaveQuery" approveText="save" @confirm="confirmSaveQuery">
-            <div slot="body" class="form-group">
-                <label class="form-label" for="saveName">Save as:</label>
-                <input class="form-control" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveQuery">
+        </x-dropdown>
+        <modal v-if="saveModal.isActive" @close="closeSaveQuery" approveText="Save" @confirm="confirmSaveQuery" size="md">
+            <div slot="body" class="query-save">
+                <label for="saveName">Save as:</label>
+                <input class="flex-expand" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveQuery">
             </div>
         </modal>
     </div>
 </template>
 
 <script>
-	import TriggerableDropdown from '../popover/TriggerableDropdown.vue'
+	import xDropdown from '../popover/Dropdown.vue'
+    import SearchInput from '../../components/inputs/SearchInput.vue'
     import NestedMenu from '../menus/NestedMenu.vue'
     import NestedMenuItem from '../menus/NestedMenuItem.vue'
     import xSchemaFilter from '../schema/SchemaFilter.vue'
@@ -77,7 +72,9 @@
 
 	export default {
 		name: 'x-data-query',
-		components: { TriggerableDropdown, NestedMenu, NestedMenuItem, xSchemaFilter, Modal },
+		components: {
+			xDropdown, SearchInput, NestedMenu, NestedMenuItem, xSchemaFilter, Modal
+        },
 		props: {module: {required: true}, limit: {default: 5}},
 		computed: {
 			...mapState({
@@ -228,7 +225,7 @@
 				this.updateView({ module: this.module, view: { page: 0 } })
             },
             openSaveQuery() {
-                if (this.searchValue === '') return
+                if (this.disableSaveButton || this.searchValue === '') return
             	this.saveModal.isActive = true
             },
             closeSaveQuery() {
@@ -275,62 +272,58 @@
 </script>
 
 <style lang="scss">
-    .data-query {
+    .x-data-query {
         display: flex;
         width: 100%;
-        > .dropdown {
-            flex: auto;
-            .dropdown-toggle {
-                padding: 0;
-                line-height: 20px;
-                .form-control {
-                    border-radius: 0;
-                    border-right: 0;
-                }
-            }
-            &.form-control {
-                border-radius: 0;
-                border-left: 0;
-                flex: 0;
-                padding-right: 36px;
-            }
-            .menu {
-                border-bottom: 1px solid $grey-2;
-                &:last-child {
-                    border: 0;
-                }
-                .menu-content {
-                    max-height: 150px;
-                    overflow: auto;
-                }
-                .menu-item .item-content {
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    overflow: hidden;
-                }
-                .title {
+        > .x-dropdown {
+            .search-input {
+                padding: 0 12px 0 0;
+                .input-value {
                     font-size: 12px;
-                    font-weight: 400;
-                    text-transform: uppercase;
-                    padding-left: 6px;
-                    margin-top: 6px;
                 }
-                &:first-child {
+            }
+            .query-quick {
+                .x-nested-menu {
+                    border-bottom: 1px solid $grey-2;
+                    &:last-child {
+                        border: 0;
+                    }
+                    .menu-content {
+                        max-height: 150px;
+                        overflow: auto;
+                    }
+                    .menu-item .item-content {
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        overflow: hidden;
+                    }
                     .title {
-                        margin-top: 0;
+                        font-size: 12px;
+                        font-weight: 400;
+                        text-transform: uppercase;
+                        padding-left: 6px;
+                        margin-top: 6px;
+                    }
+                    &:first-child {
+                        .title {
+                            margin-top: 0;
+                        }
                     }
                 }
             }
         }
         .query-wizard {
-            padding: 12px;
-            .x-btn.link {
-                margin-right: 8px;
+            .content {
+                padding: 12px;
+                .x-btn.link {
+                    margin-right: 8px;
+                }
             }
         }
-        .disabled {
-            pointer-events: none;
-            opacity: 0.4;
+        .query-save {
+            display: flex;
+            align-items: center;
+
         }
     }
 </style>

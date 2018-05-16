@@ -333,19 +333,19 @@ class ReportsService(PluginBase, Triggerable):
         :return:
         """
         if report_consts.Triggers.Increase.name in triggered_triggers:
-            return f'shown an Increase for the specified saved query.'
+            return f'shown an Increase for the specified saved query'
 
         if report_consts.Triggers.Above.name in triggered_triggers:
-            return f'shown an increase of above {triggers_data[report_consts.Triggers.Above.name.lower()]} for the specified saved query.'
+            return f'shown an increase of above {triggers_data[report_consts.Triggers.Above.name.lower()]} for the specified saved query'
 
         if report_consts.Triggers.Decrease.name in triggered_triggers:
-            return f'shown a decrease for the specified saved query.'
+            return f'shown a decrease for the specified saved query'
 
         if report_consts.Triggers.Below.name in triggered_triggers:
-            return f'shown a decrease of below {triggers_data[report_consts.Triggers.Above.name.lower()]} for the specified saved query.'
+            return f'shown a decrease of below {triggers_data[report_consts.Triggers.Above.name.lower()]} for the specified saved query'
 
         if report_consts.Triggers.No_Change.name in triggered_triggers:
-            return f'stayed the same.'
+            return f'stayed the same'
 
     @stoppable
     def _check_current_query_result(self, report_data):

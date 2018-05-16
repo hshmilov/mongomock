@@ -18,7 +18,7 @@
 </template>
 
 <script>
-	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
+	import TriggerableDropdown from '../popover/Dropdown.vue'
 	import NestedMenu from '../../components/menus/NestedMenu.vue'
 	import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
     import xDataActionItem from '../../components/data/DataActionItem.vue'

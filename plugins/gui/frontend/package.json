@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development webpack-dev-server --hot --host 0.0.0.0",
     "build": "cross-env NODE_ENV=production webpack --hide-modules",
-    "dev-build": "cross-env NODE_ENV=development webpack"
+    "dev-build": "cross-env NODE_ENV=test webpack"
   },
   "dependencies": {
     "axios": "^0.16.2",

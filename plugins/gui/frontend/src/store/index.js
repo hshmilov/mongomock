@@ -48,7 +48,7 @@ import { users } from './modules/users'
 import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
-import { notification } from '../store/modules/notifications'
+import { notifications } from '../store/modules/notifications'
 import { auth } from './modules/auth'
 import { dashboard } from '../store/modules/dashboard'
 import { report } from '../store/modules/report'
@@ -118,7 +118,7 @@ export default new Vuex.Store({
 		plugin,
 		adapter,
 		alert,
-        notification,
+        notifications,
         auth,
         dashboard,
 		report

@@ -5,7 +5,7 @@
     -->
     <div id="app">
         <!-- Nested navigation linking to routes defined in router/index.js -->
-        <template v-if="auth.data.user_name">
+        <template v-if="auth.data.user_name || isDev">
             <top-bar-container class="print-exclude"/>
             <side-bar-container class="print-exclude"/>
             <router-view/>
@@ -24,13 +24,19 @@
     import { FETCH_ADAPTERS } from '../store/modules/adapter'
     import { FETCH_SETTINGS } from '../store/modules/settings'
 	import { mapState, mapActions } from 'vuex'
+	import '../components/icons'
 
-    export default {
+	export default {
         name: 'app',
         components: {
 			LoginContainer,
 			TopBarContainer, SideBarContainer },
-        computed: mapState(['auth']),
+        computed: {
+            ...mapState(['auth']),
+            isDev() {
+				return process.env.NODE_ENV === 'development'
+            }
+		},
         methods: mapActions({
             getUser: GET_USER,
             fetchAdapters: FETCH_ADAPTERS,
@@ -49,7 +55,7 @@
 
 <style lang="scss">
     @import '../assets/plugins/fonts/icons/style.css';
-    @import '../assets/plugins/css/bootstrap.min.css';
+    /*@import '../assets/plugins/css/bootstrap.min.css';*/
     @import '../scss/app';
     @import '../scss/styles';
 

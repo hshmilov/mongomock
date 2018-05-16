@@ -15,7 +15,8 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, CORE_UNIQUE_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
-from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT
+from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
+    EXEC_REPORT_EMAIL_CONTENT
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 
@@ -175,7 +176,7 @@ def sorted():
                 sort_param = request.args.get('sort')
                 desc_param = request.args.get('desc')
                 if sort_param:
-                    logger.debug(f'Parsing sort: {sort_param}')
+                    logger.info(f'Parsing sort: {sort_param}')
                     sort_obj[sort_param] = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
             except Exception as e:
                 return return_error("Could not create mongo sort. Details: {0}".format(e), 400)
@@ -408,7 +409,8 @@ class GuiService(PluginBase):
     # DATA #
     ########
 
-    def _get_entities(self, limit, skip, query_filter, sort, projection, entity_type: EntityType, include_history=False):
+    def _get_entities(self, limit, skip, query_filter, sort, projection, entity_type: EntityType,
+                      include_history=False):
         """
         Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
         """
@@ -873,7 +875,8 @@ class GuiService(PluginBase):
     @projected()
     @add_rule_unauthenticated("devices")
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices, True))
+        return jsonify(
+            self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices, True))
 
     @filtered()
     @sorted()
@@ -931,7 +934,8 @@ class GuiService(PluginBase):
     @projected()
     @add_rule_unauthenticated("users")
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
-        return jsonify(self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users, True))
+        return jsonify(
+            self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users, True))
 
     @filtered()
     @sorted()
@@ -1328,8 +1332,9 @@ class GuiService(PluginBase):
 
     @paginated()
     @filtered()
+    @sorted()
     @add_rule_unauthenticated("notifications", methods=['POST', 'GET'])
-    def notifications(self, limit, skip, mongo_filter):
+    def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications
         :param limit: limit for pagination
@@ -1349,18 +1354,16 @@ class GuiService(PluginBase):
                     notifications = []
                     for n in notification_collection.aggregate(pipeline):
                         n['_id'] = n['date']
-                        n['title'] = f"{n['title']} ({n['count']})" if n['count'] > 1 else n['title']
                         notifications.append(beautify_db_entry(n))
                 else:
-                    notifications = [beautify_db_entry(n) for n in notification_collection.find(mongo_filter,
-                                                                                                projection={"_id": 1,
-                                                                                                            "who": 1,
-                                                                                                            "plugin_name": 1,
-                                                                                                            "type": 1,
-                                                                                                            "title": 1,
-                                                                                                            "seen": 1,
-                                                                                                            "severity": 1}).skip(
-                        skip).limit(limit).sort([('_id', pymongo.DESCENDING)])]
+                    sort = []
+                    for field, direction in mongo_sort.items():
+                        sort.append(('_id' if field == 'date_fetched' else field, direction))
+                    if not sort:
+                        sort.append(('_id', pymongo.DESCENDING))
+                    notifications = [beautify_db_entry(n) for n in notification_collection.find(
+                        mongo_filter, projection={"_id": 1, "who": 1, "plugin_name": 1, "type": 1, "title": 1,
+                                                  "seen": 1, "severity": 1}).sort(sort).skip(skip).limit(limit)]
 
                 return jsonify(notifications)
             # POST

@@ -206,7 +206,7 @@
                 color: $theme-orange;
             }
         }
-        .tabs {
+        .x-tabs {
             margin-top: 36px;
             .configuration {
                 width: 600px;

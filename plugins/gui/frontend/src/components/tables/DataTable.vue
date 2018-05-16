@@ -10,7 +10,7 @@
             <table class="x-striped-table">
                 <thead>
                     <tr class="x-row clickable">
-                        <th v-if="value">
+                        <th v-if="value" class="w-14">
                             <x-checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
                                       :value="ids" @change="$emit('input', $event)" :tabindex="100"/>
                         </th>
@@ -23,7 +23,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="item, i in pageData" @click="onClickRow(item[idField])" class="x-row clickable">
-                        <td v-if="value">
+                        <td v-if="value" class="w-14">
                             <x-checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)"
                                         :tabindex="200 + i" />
                         </td>
@@ -251,6 +251,9 @@
             }
             .item > div {
                 display: inline;
+            }
+            .array.inline {
+                height: 24px;
             }
         }
         .x-pagination {

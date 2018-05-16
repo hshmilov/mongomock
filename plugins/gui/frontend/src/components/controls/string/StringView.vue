@@ -2,6 +2,7 @@
     <img :src="value" v-if="schema.format && schema.format === 'image'" height="24" :style="{borderRadius: '50%'}">
     <img :src="`/src/assets/images/logos/${value}.png`" height="24"
          v-else-if="schema.format && schema.format === 'logo'" class="logo">
+    <svg-icon :name="`symbols/${value}`" :original="true" v-else-if="schema.format && schema.format === 'icon'" height="16"></svg-icon>
     <div :class="{tag: schema.format && schema.format === 'tag'}" :title="processedData"
          v-else>{{ processedData }}</div>
 </template>

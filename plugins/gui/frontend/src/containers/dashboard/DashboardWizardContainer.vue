@@ -182,9 +182,6 @@
                 cursor: pointer;
             }
         }
-        h5 {
-            margin: 0;
-        }
         .x-select {
             text-transform: capitalize;
         }

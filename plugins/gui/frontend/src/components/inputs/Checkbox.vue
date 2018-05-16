@@ -64,25 +64,26 @@
     .x-checkbox {
         cursor: pointer;
         .x-checkbox-container {
-            width: 20px;
-            min-width: 20px;
-            height: 20px;
+            width: 12px;
+            height: 12px;
             position: relative;
             border-radius: 2px;
-            border: 2px solid $grey-4;
+            border: 2px solid $grey-3;
             transition: .4s cubic-bezier(.25,.8,.25,1);
             display: inline-block;
             vertical-align: middle;
+            &:hover {
+                border-color: $grey-5;
+            }
             input {
                 position: absolute;
                 left: -999em;
             }
             &:after {
-                width: 6px;
-                height: 13px;
-                top: 0;
-                left: 5px;
-                z-index: 7;
+                width: 4px;
+                height: 9px;
+                top: -1px;
+                left: 3px;
                 border: 2px solid transparent;
                 border-top: 0;
                 border-left: 0;
@@ -94,14 +95,14 @@
                 content: ' ';
             }
             &.x-checkbox-semi {
-                background-color: $theme-black;
-                border-color: $theme-black;
+                background-color: $grey-5;
+                border-color: $grey-5;
                 &:after {
                     opacity: 1;
-                    width: 2px;
-                    height: 10px;
-                    top: 3px;
-                    left: 7px;
+                    width: 0px;
+                    height: 8px;
+                    top: 2px;
+                    left: 5px;
                     -webkit-transform: rotate(90deg) scale3D(1,1,1);
                     transform: rotate(90deg) scale3D(1,1,1);
                     transition: .4s cubic-bezier(.25,.8,.25,1);
@@ -110,8 +111,8 @@
             }
         }
         &.x-checked .x-checkbox-container {
-            background-color: $theme-black;
-            border-color: $theme-black;
+            background-color: $grey-5;
+            border-color: $grey-5;
             &:after {
                 opacity: 1;
                 -webkit-transform: rotate(45deg) scale3D(1,1,1);

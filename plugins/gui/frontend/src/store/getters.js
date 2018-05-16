@@ -25,7 +25,7 @@ export const getDataFieldListSpread =  (state) => (module) => {
 
 	return fields.generic.filter((field) => {
 		return !(field.type === 'array' && (Array.isArray(field.items) || field.items.type === 'array'))
-	}).concat(Object.keys(fields.specific).reduce((list, name) => {
+	}).concat(Object.keys(fields.specific || []).reduce((list, name) => {
 		if (!fields.specific[name]) return list
 		list = [...list, ...fields.specific[name].map((field) => {
 			if (state['settings'].data.singleAdapter) return field

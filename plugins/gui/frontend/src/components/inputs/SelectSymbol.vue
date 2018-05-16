@@ -32,8 +32,8 @@
             height: 24px;
             text-align: center;
             display: inline-block;
+            vertical-align: middle;
             img {
-                margin: auto;
                 max-width: 30px;
                 max-height: 24px;
             }

@@ -72,6 +72,11 @@ $extra-mauve: #8A32BB;
 $extra-purple: #5A32BB;
 $extra-colours: $extra-cyan, $extra-turquoise, $extra-blue, $extra-pink, $extra-mauve, $extra-purple;
 
+/* Borders and Shadows */
+
+$text-shadow: 1px 1px rgba(0, 0, 0, 0.2);
+$popup-shadow: 0 2px 4px 0 rgba(0, 0, 0, .4), 0 2px 42px 0 rgba(0, 0, 0, .2);
+
 
 /* Mixins */
 

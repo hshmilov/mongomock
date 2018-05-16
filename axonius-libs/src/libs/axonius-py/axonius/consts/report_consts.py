@@ -33,4 +33,4 @@ REPORT_CONTENT_HTML = """\
 </html>
 """
 
-REPORT_CONTENT = "A Report For query: {query_name} has been triggered.\n This is the {num_of_triggers} time this has happened.\n It was triggered because the number of devices has {trigger_message}.\nThe number of devices returned by the query is {num_of_current_devices}."
+REPORT_CONTENT = "A Report For query: {query_name} has been triggered.\nThis is the {num_of_triggers} time this has happened.\n It was triggered because the number of devices has {trigger_message}.\nThe number of devices returned by the query is {num_of_current_devices}."

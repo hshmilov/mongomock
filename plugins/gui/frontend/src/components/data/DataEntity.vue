@@ -151,23 +151,13 @@
 <style lang="scss">
     .x-data-entity {
         height: 100%;
-        .tabs {
+        .x-tabs {
             width: 100%;
             height: 48%;
             margin-bottom: 12px;
-            padding-bottom: 24px;
-            .tab-header {
-                border-bottom: 1px solid #ddd;
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-                margin-left: -12px;
-                margin-right: -12px;
-                padding-left: 12px;
-                padding-right: 12px;
-            }
-            .tab-content {
+            .content {
                 overflow: auto;
-                height: calc(100% - 60px);
+                height: calc(100% - 80px);
                 .object {
                     width: calc(100% - 24px);
                 }

@@ -35,7 +35,7 @@
         background: $grey-1;
         padding: 12px 24px 24px 264px;
         position: relative;
-        width: 100%;
+        width: calc(100vw - 108px);
         height: 100vh;
         &.collapse {
             display: flex;
@@ -44,7 +44,6 @@
         }
         > .x-header {
             display: flex;
-            width: 100%;
             text-transform: capitalize;
             z-index: 100;
             color: $theme-black;
@@ -57,7 +56,7 @@
                 flex: 1 0 auto;
                 font-weight: 200;
                 letter-spacing: 1px;
-                margin-bottom: 0;
+                margin: 0;
                 vertical-align: middle;
                 line-height: 30px;
                 display: inline-block;

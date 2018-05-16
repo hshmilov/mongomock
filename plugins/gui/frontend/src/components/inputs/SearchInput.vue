@@ -36,7 +36,6 @@
             width: 100%;
             border: 0;
             border-bottom: 1px solid $grey-2;
-            height: 30px;
             padding: 4px;
             &:focus {
                 border-color: $theme-blue;

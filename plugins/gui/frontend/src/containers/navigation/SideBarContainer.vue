@@ -7,42 +7,40 @@
             </div>
             <div class="x-user-actions">
                 <a @click="logout" data-toggle="tooltip" title="Logout">
-                    <svg-icon name="navigation/logout" height="16" :original="true"/>
+                    <svg-icon name="navigation/logout" height="16" :original="true" />
                 </a>
             </div>
         </div>
-        <nav class="x-menu">
-            <nested-nav-bar>
-                <nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
-                <nested-nav-item route-name="Devices" icon-name="devices">
-                    <nested-nav-bar nest-level="1" class="collapse">
-                        <nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved" />
-                    </nested-nav-bar>
-                </nested-nav-item>
-                <nested-nav-item route-name="Users" icon-name="users">
-                    <nested-nav-bar nest-level="1" class="collapse">
-                        <nested-nav-item route-name="Saved Queries" router-path="/users/query/saved" />
-                    </nested-nav-bar>
-                </nested-nav-item>
-                <nested-nav-item route-name="Alerts" icon-name="alert"/>
-                <nested-nav-item route-name="Adapters" icon-name="adapter"/>
-                <nested-nav-item route-name="Reporting" icon-name="report"/>
-            </nested-nav-bar>
-        </nav>
+        <x-nested-nav>
+            <x-nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
+            <x-nested-nav-item route-name="Devices" icon-name="devices">
+                <x-nested-nav nest-level="1" class="collapse">
+                    <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved"/>
+                </x-nested-nav>
+            </x-nested-nav-item>
+            <x-nested-nav-item route-name="Users" icon-name="users">
+                <x-nested-nav nest-level="1" class="collapse">
+                    <x-nested-nav-item route-name="Saved Queries" router-path="/users/query/saved"/>
+                </x-nested-nav>
+            </x-nested-nav-item>
+            <x-nested-nav-item route-name="Alerts" icon-name="alert"/>
+            <x-nested-nav-item route-name="Adapters" icon-name="adapter"/>
+            <x-nested-nav-item route-name="Reporting" icon-name="report"/>
+        </x-nested-nav>
     </aside>
 </template>
 
 <script>
     import '../../components/icons/navigation'
 
-    import NestedNavBar from '../../components/menus/NestedNavBar.vue'
-    import NestedNavItem from '../../components/menus/NestedNavItem.vue'
+    import xNestedNav from '../../components/menus/NestedNav.vue'
+    import xNestedNavItem from '../../components/menus/NestedNavItem.vue'
     import { LOGOUT } from '../../store/modules/auth'
     import { mapState, mapActions } from 'vuex'
 
     export default {
-        name: 'x-side-bar-container',
-        components: { NestedNavBar, NestedNavItem },
+        name: 'side-bar-container',
+        components: { xNestedNav, xNestedNavItem },
         computed: mapState([ 'auth', 'interaction' ]),
         methods: mapActions({ logout: LOGOUT })
     }
@@ -54,7 +52,7 @@
         width: 240px;
         transition: all ease-in 0.2s;
         height: 100%;
-        z-index: 20;
+        z-index: 200;
         background: $theme-black;
         padding-bottom: 60px;
         display: flex;
@@ -66,6 +64,7 @@
             width: 100%;
             overflow-x: hidden;
             transition: all ease-in 0.2s;
+            margin-bottom: 48px;
             .x-user-profile {
                 text-align: center;
                 margin: 0 auto;
@@ -101,18 +100,17 @@
                 }
             }
         }
-        .x-menu {
-            overflow: auto;
-            flex: 1 0 auto;
-            background: $theme-black;
-            padding: 0px;
-            padding-top: 30px;
-            .nav-nest {
-                transition: all ease-in 0.2s;
+        > .x-nested-nav > .x-nested-nav-item {
+            border-left: 2px solid transparent;
+            &.active {
+                border-left: 2px solid $theme-orange;
             }
-            .nav-link.has-arrow::after {
-                transition: all ease-in 0.2s;
-                opacity: 1;
+            .x-nested-nav {
+                display: none;
+
+            }
+            &.active > .x-nested-nav {
+                display: block;
             }
         }
     }
@@ -127,38 +125,6 @@
                 h5 {
                     opacity: 0;
                 }
-            }
-        }
-        .x-menu {
-            overflow: visible;
-            .nav-nest .nav-link span {
-                opacity: 0;
-            }
-            .nav-item {
-                overflow: hidden;
-                .nav-nest.collapse {
-                    display: none;
-                    transition: all ease-in 0.2s;
-                }
-                &:hover {
-                    overflow: visible;
-                    position: relative;
-                    .nav-nest.collapse {
-                        left: 56px;
-                        margin-left: 0;
-                        top: 0;
-                        position: absolute;
-                        background-color: $theme-black;
-                        display: block;
-                        .nav-link span {
-                            transition: all ease-in 0.5s;
-                            opacity: 1;
-                        }
-                    }
-                }
-            }
-            .nav-link.has-arrow::after {
-                opacity: 0;
             }
         }
     }

@@ -24,7 +24,7 @@
 
 <script>
 	import Modal from '../../components/popover/Modal.vue'
-	import TriggerableDropdown from '../../components/popover/TriggerableDropdown.vue'
+	import TriggerableDropdown from '../popover/Dropdown.vue'
 	import NestedMenu from '../../components/menus/NestedMenu.vue'
 	import NestedMenuItem from '../../components/menus/NestedMenuItem.vue'
 	import DynamicPopover from '../../components/popover/DynamicPopover.vue'

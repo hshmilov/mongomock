@@ -20,7 +20,7 @@
 </template>
 
 <script>
-    import TriggerableDropdown from '../popover/TriggerableDropdown.vue'
+    import TriggerableDropdown from '../popover/Dropdown.vue'
     import SearchInput from '../inputs/SearchInput.vue'
 
 	export default {

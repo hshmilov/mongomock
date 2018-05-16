@@ -2,7 +2,7 @@
     <transition name="modal">
         <div class="modal-mask" @click.stop="$emit('close')" @keyup.esc="$emit('close')">
             <div class="modal-wrapper">
-                <div class="modal-container" @click.stop="">
+                <div :class="`modal-container w-${size}`" @click.stop="">
                     <div class="modal-body">
                         <slot name="body" @submit="$emit('confirm')">
                             Are you sure?
@@ -23,7 +23,8 @@
 <script>
 	export default {
 		name: 'modal',
-        props: { approveText: { default: 'OK' }, dismissText: { default: 'Cancel' }, disabled: {default: false} },
+        props: { approveText: { default: 'OK' }, dismissText: { default: 'Cancel' },
+            disabled: {default: false}, size: {default: 'xl'} },
         methods: {
 			onApprove() {
 				if (this.disabled) return
@@ -53,7 +54,6 @@
             display: table-cell;
             vertical-align: middle;
             .modal-container {
-                width: 600px;
                 margin: 0px auto;
                 padding: 20px 30px;
                 background-color: $theme-white;
@@ -70,6 +70,7 @@
                 .modal-footer {
                     border: 0;
                     padding: 0;
+                    text-align: right;
                 }
             }
         }

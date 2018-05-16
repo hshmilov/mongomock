@@ -10,9 +10,9 @@ import {
 } from './mutations'
 
 let host = ''
-// if (process.env.NODE_ENV !== 'production') {
-// 	host = 'http://10.0.240.119'
-// }
+if (process.env.NODE_ENV === 'development') {
+	host = 'https://localhost'
+}
 
 /*
     A generic wrapper for requests to server.
@@ -21,7 +21,7 @@ let host = ''
 
     @param {commit} - Vue action mechanism provides this
     @param payload - An object containing: {
-        method: HTTP meth.od for the request [defaulted GET]
+        method: HTTP method for the request [defaulted GET]
         rule: Entry in the API to call, including request parameters, if needed
         controls: Object with controls, for HTTP methods that allow sending it, if needed,
         type: Mutation type to call

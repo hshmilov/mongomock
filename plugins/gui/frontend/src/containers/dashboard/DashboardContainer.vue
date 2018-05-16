@@ -148,7 +148,7 @@
 
     .dashboard-charts {
         display: grid;
-        grid-template-columns: repeat(auto-fill, 320px);
+        grid-template-columns: repeat(auto-fill, 344px);
         grid-gap: 12px;
         width: 100%;
         .x-card {

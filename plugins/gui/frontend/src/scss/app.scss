@@ -21,18 +21,6 @@ body {
   height: 100%;
 }
 
-a, a:hover, a:focus {
-  text-decoration: none;
-  cursor: pointer;
-}
-
-a {
-  color: $theme-black;
-  &.link:hover, &.link:focus {
-    color: $theme-black;
-  }
-}
-
 .img-responsive {
   width: 100%;
   height: auto;
@@ -202,15 +190,6 @@ Components
     border: 0;
   }
 }
-
-a.btn:not([href]):not([tabindex]) {
-  color: $color-light;
-}
-
-a.btn.btn-inverse:not([href]):not([tabindex]) {
-  color: $color-theme-light;
-}
-
 .tag {
   display: inline;
   border: 1px solid $grey-4;
@@ -268,20 +247,6 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   }
 }
 
-.badge {
-  background-color: $color-theme-light;
-  color: $color-theme-dark;
-  border-radius: 100%;
-  width: 16px;
-  height: 16px;
-  position: absolute;
-  padding: 4px;
-  text-align: center;
-  letter-spacing: 0;
-  top: 0;
-  left: 0;
-}
-
 .row {
   margin-left: -12px;
   margin-right: -12px;
@@ -328,28 +293,4 @@ a.btn.btn-inverse:not([href]):not([tabindex]) {
   overflow-x: hidden;
   position: relative;
   margin: -12px;
-}
-
-.dropdown-menu {
-  z-index: 200;
-  top: 96%;
-  width: 100%;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
-  border-color: $border-color;
-  padding: 12px;
-  &.w-xl {
-    width: 800px;
-  }
-  &.w-lg {
-    width: 480px;
-  }
-  &.w-md {
-    width: 360px;
-  }
-  &.w-sm {
-    width: 240px;
-  }
-  &.w-xs {
-    width: 120px;
-  }
 }

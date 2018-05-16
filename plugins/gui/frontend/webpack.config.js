@@ -70,6 +70,11 @@ module.exports = {
 	},
 	devtool: '#eval-source-map',
 	plugins: [
+		new webpack.DefinePlugin({
+			'process.env': {
+				NODE_ENV: '"' + process.env.NODE_ENV + '"',
+			},
+		}),
 		new HtmlWebpackPlugin({
 			hash: true,
 			template: __dirname + '/index.html',
@@ -83,11 +88,6 @@ module.exports = {
 if (process.env.NODE_ENV === 'production') {
 	module.exports.devtool = ''
 	module.exports.plugins = (module.exports.plugins || []).concat([
-		new webpack.DefinePlugin({
-			'process.env': {
-				NODE_ENV: '"production"',
-			},
-		}),
 		new webpack.optimize.UglifyJsPlugin({
 			compress: {
 				warnings: false,

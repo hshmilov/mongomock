@@ -1,28 +1,31 @@
 <template>
     <x-page :breadcrumbs="[
     	{title: 'notifications', path: {'name': 'Notifications'}},
-        {title: notification.notificationDetails.data.title}
+        {title: notifications.current.data.title}
         ]">
-        <div>{{notification.notificationDetails.data.content}}</div>
+        <x-box>
+            <div class="show-space">{{notifications.current.data.content}}</div>
+        </x-box>
     </x-page>
 </template>
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
+    import xBox from '../../components/layout/Box.vue'
 
 	import { mapState, mapActions } from 'vuex'
 	import { FETCH_NOTIFICATION, UPDATE_NOTIFICATIONS_SEEN } from '../../store/modules/notifications'
 
 	export default {
 		name: 'notification-view-container',
-		components: {xPage},
+		components: { xPage, xBox },
 		computed: {
-			...mapState(['notification']),
+			...mapState(['notifications']),
 			notificationId () {
 				return this.$route.params.id
 			},
             notificationData () {
-				return this.notification.notificationDetails.data
+				return this.notifications.current.data
             }
 		},
         watch: {

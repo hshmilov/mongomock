@@ -1,17 +1,17 @@
 <template>
-    <div class="menu">
+    <div class="x-nested-menu">
         <slot></slot>
     </div>
 </template>
 
 <script>
 	export default {
-		name: 'nested-menu'
+		name: 'x-nested-menu'
 	}
 </script>
 
 <style lang="scss">
-    .menu {
+    .x-nested-menu {
         margin: 0 -12px;
     }
 </style>
