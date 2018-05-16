@@ -19,16 +19,18 @@ RUN apt-get update && \
 
 RUN /bin/bash -c 'echo -e "[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini'
 
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
-
-COPY requirements2.txt .
-RUN pip2 install -r requirements2.txt
-
 # Install more gui dependencies.
 
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
     apt-get install -y nodejs && nodejs -v && node -v && npm -v
+
+# Install python requirements
+
+COPY requirements2.txt .
+RUN pip2 install -r requirements2.txt
+
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt
 
 # Set a label for this image.
 LABEL "com.axonius.image-type"="axonius"

@@ -73,7 +73,8 @@ export default {
 		if (this.schema.default) {
 			this.data = this.schema.default
 		}
-		this.data = this.value
-
+		if (this.value) {
+			this.data = this.value
+		}
 	}
 }

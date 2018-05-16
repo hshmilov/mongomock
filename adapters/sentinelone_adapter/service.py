@@ -143,12 +143,11 @@ class SentineloneAdapter(AdapterBase):
             device.domain = net_info.get('domain')
             device.figure_os(' '.join([soft_info.get('os_name', ''), soft_info.get(
                 'os_arch', ''), soft_info.get('os_revision', '')]))
-            try:
-                for interface in net_info.get('interfaces', []):
-                    device.add_nic(interface.get('physical'), interface.get(
-                        'inet6', []) + interface.get('inet', []))
-            except Exception:
-                logger.exception(f"Problem adding nic {str(interfaces)} to SentinelOne")
+            for interface in net_info.get('interfaces', []):
+                try:
+                    device.add_nic(interface.get('physical'), interface.get('inet6', []) + interface.get('inet', []))
+                except Exception:
+                    logger.exception(f"Problem adding nic {str(interface)} to SentinelOne")
             device.agent_version = device_raw.get('agent_version')
             device.id = device_raw['id']
             device.last_seen = parse_date(str(device_raw.get('last_active_date', '')))
