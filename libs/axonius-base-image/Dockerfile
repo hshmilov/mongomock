@@ -10,7 +10,7 @@ RUN apt-get update && \
     supervisor software-properties-common python-software-properties freetds-dev freetds-bin unixodbc-dev tdsodbc && \
     add-apt-repository ppa:jonathonf/python-3.6 && \
     apt-get update && \
-    apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip && \
+    apt-get install -y python3.6 python3.6-dev python3.6-venv ipython python-pip python3-distutils && \
     curl https://bootstrap.pypa.io/get-pip.py | python3.6 && \
     ln -s /usr/bin/python3.6 /usr/local/bin/python3 && \
     apt-get install -y libpango1.0-0 && \
