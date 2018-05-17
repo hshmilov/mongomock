@@ -6,6 +6,7 @@ export const SET_USER = 'SET_USER'
 export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
+export const GET_OKTA_SETTINGS = 'GET_OKTA_SETTINGS'
 
 const USER_IMAGE_PATH = '/src/assets/images/users/'
 
@@ -41,6 +42,11 @@ export const auth = {
 			return dispatch(REQUEST_API, {
 				rule: 'login',
 				type: SET_USER
+			})
+		} ,
+		[ GET_OKTA_SETTINGS ] ({dispatch}) {
+			return dispatch(REQUEST_API, {
+				rule: 'get_okta_status',
 			})
 		} ,
 		[ LOGIN ] ({dispatch, commit}, payload) {

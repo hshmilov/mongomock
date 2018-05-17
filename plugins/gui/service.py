@@ -2,7 +2,9 @@ import calendar
 import csv
 import logging
 import threading
-import time
+
+from axonius.mixins.configurable import Configurable
+from gui.okta_login import try_connecting_using_okta
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
@@ -26,9 +28,9 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from flask import jsonify, request, session, after_this_request, make_response, send_file
+from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
 import requests
@@ -62,8 +64,6 @@ def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
 
 
 # Caution! These decorators must come BEFORE @add_rule
-
-
 def requires_connected(func):
     """
     Decorator stating that the view requires the user to be connected
@@ -79,8 +79,6 @@ def requires_connected(func):
 
 
 # Caution! These decorators must come BEFORE @add_rule
-
-
 def gzipped_downloadable(filename, extension):
     filename = filename.format(date.today())
 
@@ -228,7 +226,7 @@ def filter_archived():
     return {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
 
 
-class GuiService(PluginBase):
+class GuiService(PluginBase, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
         self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
@@ -1286,28 +1284,35 @@ class GuiService(PluginBase):
             }
         return plugin_data
 
-    @add_rule_unauthenticated("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST'])
+    @add_rule_unauthenticated("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST', 'GET'])
     def plugins_configs_set(self, plugin_unique_name, config_name):
         """
         Set a specific config on a specific plugin
         """
-        config_to_set = request.get_json(silent=True)
-        if config_to_set is None:
-            return return_error("Invalid config", 400)
+        if plugin_unique_name == 'gui':
+            plugin_unique_name = self.plugin_unique_name
+        if request.method == 'POST':
+            config_to_set = request.get_json(silent=True)
+            if config_to_set is None:
+                return return_error("Invalid config", 400)
 
-        with self._get_db_connection(False) as db_connection:
-            config_collection = db_connection[plugin_unique_name]['configs']
+            with self._get_db_connection(False) as db_connection:
+                config_collection = db_connection[plugin_unique_name]['configs']
 
-            config_collection.replace_one(filter={
-                'config_name': config_name
-            },
-                replacement={
-                    "config_name": config_name,
-                    "config": config_to_set
-            })
-            self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
+                config_collection.replace_one(filter={
+                    'config_name': config_name
+                },
+                    replacement={
+                        "config_name": config_name,
+                        "config": config_to_set
+                })
+                self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
 
-        return ""
+            return ""
+        if request.method == 'GET':
+            with self._get_db_connection(False) as db_connection:
+                config_collection = db_connection[plugin_unique_name]['configs']
+                return jsonify(config_collection.find_one({'config_name': config_name}))
 
     @add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
@@ -1418,6 +1423,15 @@ class GuiService(PluginBase):
             notification_collection = db['core']['notifications']
             return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
+    @add_rule("get_okta_status", should_authenticate=False)
+    def get_okta_status(self):
+        return jsonify({
+            'okta_enabled': self.__okta['okta_enabled'],
+            "okta_client_id": self.__okta['okta_client_id'],
+            "okta_url": self.__okta['okta_url'],
+            "gui_url": self.__okta['gui_url']
+        })
+
     @add_rule("login", methods=['GET', 'POST'], should_authenticate=False)
     def login(self):
         """
@@ -1428,7 +1442,8 @@ class GuiService(PluginBase):
             user = session.get('user')
             if user is None:
                 return return_error('', 401)
-            del user['password']
+            if 'password' in user:
+                del user['password']
             return jsonify(user), 200
 
         users_collection = self._get_collection('users', limited_user=False)
@@ -1450,6 +1465,11 @@ class GuiService(PluginBase):
                                                upsert=True)
         session['user'] = user_from_db
         return ""
+
+    @add_rule("okta-redirect", methods=['GET'], should_authenticate=False)
+    def okta_redirect(self):
+        try_connecting_using_okta(self.__okta)
+        return redirect("/", code=302)
 
     @add_rule_unauthenticated("logout", methods=['GET'])
     def logout(self):
@@ -2106,3 +2126,58 @@ class GuiService(PluginBase):
 
     def get_plugin_unique_name(self, plugin_name):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]
+
+    def _on_config_update(self, config):
+        logger.info(f"Loading GuiService config: {config}")
+        self.__okta = config
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    "name": "okta_enabled",
+                    "title": "Whether or not to allow Okta logins",
+                    "type": "bool"
+                },
+                {
+                    "name": "okta_client_id",
+                    "title": "Okta application client id",
+                    "type": "string"
+                },
+                {
+                    "name": "okta_client_secret",
+                    "title": "Okta application client secret",
+                    "type": "string"
+                },
+                {
+                    "name": "okta_url",
+                    "title": "Okta application URL",
+                    "type": "string"
+                },
+                {
+                    "name": "gui_url",
+                    "title": "The URL of Axonius GUI",
+                    "type": "string"
+                }
+            ],
+            "required": [
+                "okta_enabled",
+                "okta_client_id",
+                "okta_client_secret",
+                "okta_url",
+                "gui_url"
+            ],
+            "pretty_name": "GUI Configuration",
+            "type": "array"
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            "okta_enabled": False,
+            "okta_client_id": "",
+            "okta_client_secret": "",
+            "okta_url": "https://axonius.okta.com",
+            "gui_url": "https://127.0.0.1"
+        }

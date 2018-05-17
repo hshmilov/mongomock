@@ -44,6 +44,29 @@
                 <div class="row">
                 </div>
             </tab>
+            <tab title="Okta Settings" id="okta-settings-tab">
+                <h3>Okta enabled</h3>
+                    <toggle-button id="toggle" :value="okta.okta_enabled" color="#FF7D46" :sync="true" :labels="true"
+                    @change="okta.okta_enabled = !okta.okta_enabled"/>
+
+                <div class="grid grid-col-2" v-if="okta.okta_enabled">
+                    <label for="okta-client-id">Client ID</label>
+                    <input id="okta-client-id" type="text" min="0" v-model="okta.okta_client_id">
+
+                    <label for="okta-client-secret">Client Secret</label>
+                    <input id="okta-client-secret" type="text" min="0" v-model="okta.okta_client_secret">
+
+                    <label for="okta-url">Okta server URL</label>
+                    <input id="okta-url" type="text" min="0" v-model="okta.okta_url">
+
+                    <label for="app-url">GUI URL</label>
+                    <input id="app-url" type="text" min="0" v-model="okta.gui_url">
+                    <div/>
+                </div>
+                <div class="row">
+                </div>
+                <button class="btn confirm" @click="saveOktaSettings">save</button>
+            </tab>
         </tabs>
         <modal v-if="message">
             <div slot="body">
@@ -74,6 +97,7 @@
 	} from '../../store/modules/settings'
 	import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
 	import { mapState, mapMutations, mapActions } from 'vuex'
+    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG} from "../../store/modules/plugin";
 
 	export default {
 		name: 'settings-container',
@@ -149,6 +173,13 @@
 					executionEnabled: false,
 					researchRate: 0
 				},
+                okta: {
+			        okta_enabled: false,
+                    okta_client_id: null,
+                    okta_client_secret: null,
+                    okta_url: null,
+                    gui_url: null,
+                },
                 complete: false,
                 message: ''
 			}
@@ -165,7 +196,9 @@
 				fetchData: REQUEST_API,
 				saveSettings: SAVE_SETTINGS,
                 startResearch: START_RESEARCH_PHASE,
-                stopResearch: STOP_RESEARCH_PHASE
+                stopResearch: STOP_RESEARCH_PHASE,
+                updatePluginConfig: SAVE_PLUGIN_CONFIG,
+                loadPluginConfig: LOAD_PLUGIN_CONFIG
 			}),
 			toggleExecution (executionEnabled) {
 				let param = `enable`
@@ -230,6 +263,18 @@
                     }
                 })
             },
+            saveOktaSettings() {
+                this.updatePluginConfig({
+                    pluginId: 'gui',
+                    config_name: 'GuiService',
+                    config: this.okta
+                }).then(response =>{
+                    if (response.status === 200) {
+                        this.message = 'Saved Successfully.'
+                    }
+
+                })
+            },
             closeModal() {
                 this.message = ''
             }
@@ -251,6 +296,12 @@
 			}).then((response) => {
 			    if (response.data) this.smtpSettings = response.data
 			})
+            this.loadPluginConfig({
+                pluginId: 'gui',
+                configName: 'GuiService'
+            }).then((response) => {
+                this.okta = response.data.config
+            })
 		}
 	}
 </script>

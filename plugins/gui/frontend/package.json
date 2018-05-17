@@ -10,6 +10,7 @@
     "dev-build": "cross-env NODE_ENV=test webpack"
   },
   "dependencies": {
+    "@okta/okta-auth-js": "^1.17.0",
     "axios": "^0.16.2",
     "ip": "^1.1.5",
     "npm": "^5.8.0",

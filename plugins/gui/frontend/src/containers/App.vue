@@ -11,7 +11,7 @@
             <router-view/>
         </template>
         <template v-else>
-            <login-container/>
+            <login-container :okta="okta_config"/>
         </template>
     </div>
 </template>
@@ -20,7 +20,7 @@
     import TopBarContainer from './navigation/TopBarContainer.vue'
     import SideBarContainer from './navigation/SideBarContainer.vue'
     import LoginContainer from './auth/LoginContainer.vue'
-    import { GET_USER } from '../store/modules/auth'
+    import {GET_OKTA_SETTINGS, GET_USER} from '../store/modules/auth'
     import { FETCH_ADAPTERS } from '../store/modules/adapter'
     import { FETCH_SETTINGS } from '../store/modules/settings'
 	import { mapState, mapActions } from 'vuex'
@@ -37,8 +37,16 @@
 				return process.env.NODE_ENV === 'development'
             }
 		},
+        data() {
+            return {
+                okta_config: {
+                    okta_enabled: false
+                }
+            }
+        },
         methods: mapActions({
             getUser: GET_USER,
+            getOkta: GET_OKTA_SETTINGS,
             fetchAdapters: FETCH_ADAPTERS,
             fetchSettings: FETCH_SETTINGS
         }),
@@ -47,6 +55,11 @@
         		if (response.status === 200) {
                     this.fetchAdapters()
                     this.fetchSettings()
+                }
+            })
+            this.getOkta().then(response =>{
+                if (response.status == 200){
+                    this.okta_config = response.data
                 }
             })
         }

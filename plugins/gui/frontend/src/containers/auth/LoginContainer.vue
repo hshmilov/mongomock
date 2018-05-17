@@ -10,6 +10,7 @@
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="updateValidity"
                                @submit="onLogin" :error="auth.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
+                <a @click="oktaclick" v-if="okta.okta_enabled">Login with okta</a>
             </div>
         </div>
     </div>
@@ -17,45 +18,57 @@
 
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
-    import { LOGIN, INIT_ERROR } from '../../store/modules/auth'
-	import '../../components/icons/logo'
-    import { mapState, mapMutations, mapActions } from 'vuex'
+    import {LOGIN, INIT_ERROR} from '../../store/modules/auth'
+    import '../../components/icons/logo'
+    import {mapState, mapMutations, mapActions} from 'vuex'
+    import * as OktaAuth from '@okta/okta-auth-js';
 
-	export default {
-		name: 'login-container',
-        components: { xSchemaForm },
+    export default {
+        name: 'login-container',
+        components: {xSchemaForm},
         computed: {
-			schema() {
-				return {
-					type: 'array', items: [
-						{name: 'user_name', title: 'User Name', type: 'string'},
-						{name: 'password', title: 'Password', type: 'string', format: 'password'}
-					], required: ['user_name', 'password']
-				}
+            schema() {
+                return {
+                    type: 'array', items: [
+                        {name: 'user_name', title: 'User Name', type: 'string'},
+                        {name: 'password', title: 'Password', type: 'string', format: 'password'}
+                    ], required: ['user_name', 'password']
+                }
             },
             ...mapState(['auth'])
         },
+        props: ['okta'],
         data() {
-			return {
-				credentials: {
-					user_name: '',
+            return {
+                credentials: {
+                    user_name: '',
                     password: ''
                 },
                 complete: false
             }
         },
         methods: {
-            ...mapMutations({ initError: INIT_ERROR }),
-            ...mapActions({ login: LOGIN }),
+            ...mapMutations({initError: INIT_ERROR}),
+            ...mapActions({login: LOGIN}),
             updateValidity(valid) {
-            	this.complete = valid
+                this.complete = valid
             },
             onLogin() {
-            	if (!this.complete) return
+                if (!this.complete) return
                 this.login(this.credentials)
+            },
+            oktaclick() {
+                var x = new OktaAuth({
+                    url: this.okta.okta_url,
+                    issuer: this.okta.okta_url,
+                    clientId: this.okta.okta_client_id,
+                    redirectUri: `${this.okta.gui_url}/api/okta-redirect`,
+                    scope: 'openid'
+                });
+                x.token.getWithRedirect({ responseType: 'code' });
             }
-		}
-	}
+        }
+    }
 </script>
 
 <style lang="scss">
