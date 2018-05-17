@@ -25,8 +25,8 @@
         <template v-if="fields.specific">
             <tabs>
                 <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
-                     :key="item.data.id+item.plugin_unique_name" :selected="!i" :title="item.pretty_name"
-                     :logo="item.plugin_name" :outdated="item.outdated">
+                     :key="item.data.id+item.plugin_unique_name" :selected="!i" :title="item.plugin_name"
+                     :logo="true" :outdated="item.outdated">
                     <div class="d-flex tab-header">
                         <div class="flex-expand">Data From: {{ item.client_used }}</div>
                         <div v-if="viewBasic" @click="toggleView" class="link">View advanced</div>
@@ -53,7 +53,6 @@
 
     import { mapState, mapActions } from 'vuex'
     import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
-	import { pluginMeta } from '../../static.js'
 
     const lastSeenByModule = {
 		'users': 'last_seen_in_devices',
@@ -107,10 +106,6 @@
 					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
 					return new Date(secondSeen) - new Date(firstSeen)
 				}).map((item) => {
-                    item.pretty_name = item.plugin_name
-                    if (pluginMeta[item.plugin_name] && pluginMeta[item.plugin_name].title) {
-						item.pretty_name = pluginMeta[item.plugin_name].title
-                    }
 					if (lastSeen.has(item.plugin_name)) return { ...item, outdated: true }
 					lastSeen.add(item.plugin_name)
 					return item

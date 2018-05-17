@@ -6,7 +6,7 @@
                 <thead>
                     <tr>
                         <th class="table-head checkbox-container" v-if="value">
-                            <checkbox v-if="value !== undefined" v-model="selectAllRecords" @change="updateSelectedAll()"/>
+                            <x-checkbox v-if="value !== undefined" v-model="selectAllRecords" @change="updateSelectedAll()"/>
                         </th>
                         <th class="table-head" v-for="field in fields" v-if="!field.hidden">{{ field.name }}</th>
                         <th class="table-head" v-if="actions !== undefined"></th>
@@ -19,7 +19,7 @@
                         v-for="record in data.slice(currentPage * pageSize, (currentPage + 1) * pageSize)"
                         @click="handleRowClick(record[idField])">
                         <td class="table-row-data" v-if="value">
-                            <checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]" @change="updateSelected"/>
+                            <x-checkbox v-if="value !== undefined" v-model="recordSelection[record[idField]]" @change="updateSelected"/>
                         </td>
                         <generic-table-cell class="table-row-data" v-for="field,index in fields" :key="index"
                                             v-if="!field.hidden" :type="field.type" :value="record[field.path]">
@@ -54,7 +54,7 @@
 </template>
 
 <script>
-	import Checkbox from '../Checkbox.vue'
+	import xCheckbox from '../inputs/Checkbox.vue'
     import GenericTableCell from '../tables/GenericTableCell.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
     import '../icons'
@@ -67,7 +67,7 @@
 
 	export default {
 		name: 'paginated-table',
-		components: { Checkbox, GenericTableCell, PulseLoader,
+		components: { xCheckbox, GenericTableCell, PulseLoader,
             xStringView, xNumberView, xIntegerView, xBoolView, xFileView, xArrayView},
 		props: {
 			'fetching': {}, 'data': {}, 'error': {}, 'fetchData': {}, 'filter': {}, 'value': {},

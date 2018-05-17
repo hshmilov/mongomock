@@ -78,7 +78,7 @@ export const notifications = {
 				If skip is 0 or not given, it is interpreted as first page and entire list is restarted
 				If limit is not given, returned amount is still limited by PAGINATION_LIMIT_MAX defined in backend
 			 */
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: 'notifications?aggregate=true',
 				type: UPDATE_AGGREGATE_NOTIFICATIONS
 			})
@@ -115,7 +115,7 @@ export const notifications = {
                 payload.filter = `(${payload.filter}) and seen == false`
             }
             let rule = `notifications/count?filter=${payload.filter}`
-            dispatch(REQUEST_API, {
+            return dispatch(REQUEST_API, {
                 rule: rule,
                 type: SET_NOTIFICATIONS_UNSEEN_COUNT
             })

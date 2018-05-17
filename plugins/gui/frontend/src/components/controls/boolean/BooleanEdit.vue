@@ -1,15 +1,15 @@
 <template>
-    <checkbox v-model="data" @focusout.stop="validate" @change="input" :class="{'invalid': !valid}"></checkbox>
+    <x-checkbox v-model="data" @focusout.stop="validate" @change="input" :class="{'invalid': !valid}"></x-checkbox>
 </template>
 
 <script>
-    import Checkbox from '../../Checkbox.vue'
+    import xCheckbox from '../../inputs/Checkbox.vue'
     import PrimitiveMixin from '../primitive.js'
 
 	export default {
 		name: 'x-bool-edit',
         mixins: [PrimitiveMixin],
-        components: { Checkbox },
+        components: { xCheckbox },
         methods: {
 			isEmpty() {
 				return this.data === undefined || typeof this.data !== 'boolean'

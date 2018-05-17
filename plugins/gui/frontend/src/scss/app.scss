@@ -247,38 +247,6 @@ Components
   }
 }
 
-.row {
-  margin-left: -12px;
-  margin-right: -12px;
-  position: relative;
-  .form-group {
-    padding: 12px 24px;
-    margin-bottom: 0;
-    width: 100%;
-    .form-group-header {
-      color: $color-theme-light;
-      font-size: 20px;
-      &.disabled-text {
-        color: $color-disabled;
-      }
-      .svg-stroke {
-        stroke: $color-theme-light
-      }
-      .svg-fill {
-        fill: $color-theme-light
-      }
-      .form-group-title {
-        margin-left: 8px;
-      }
-    }
-  }
-}
-
-.row.row-divider {
-  border-top: 1px solid $border-color;
-  padding: 12px 0;
-}
-
 .custom-select {
   font-size: 14px;
   -webkit-appearance: none;

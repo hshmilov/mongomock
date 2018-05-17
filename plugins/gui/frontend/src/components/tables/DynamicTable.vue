@@ -24,12 +24,11 @@
 </template>
 
 <script>
-    import Checkbox from '../Checkbox.vue'
     import GenericTableCell from './GenericTableCell.vue'
 
 	export default {
 		name: 'dynamic-table',
-        components: { Checkbox, GenericTableCell },
+        components: { GenericTableCell },
         props: ['data', 'fields', 'addNewDataLabel', 'value'],
         computed: {
 			visibleFields() {

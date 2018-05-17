@@ -13,16 +13,13 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
     import xDataTable from '../../components/tables/DataTable.vue'
-    import Card from '../../components/Card.vue'
-	import ActionBar from '../../components/ActionBar.vue'
-    import PaginatedTable from '../../components/tables/PaginatedTable.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_ALERTS, SET_ALERT, ARCHIVE_ALERTS } from '../../store/modules/alert'
 
     export default {
         name: 'alert-container',
-        components: { xPage, xDataTable, Card, ActionBar, PaginatedTable },
+        components: { xPage, xDataTable },
 		computed: {
             ...mapState(['alert'])
 		},
@@ -50,6 +47,7 @@
 				this.$router.push({path: `alert/${alertId}`})
             },
             createAlert() {
+				this.setAlert('new')
 				this.$router.push({path: '/alert/new'});
             },
             removeAlerts() {

@@ -19,17 +19,15 @@
                     </div>
                 </div>
                 <div slot="footer">
-                    <button class="btn" @click="showError = false">OK</button>
+                    <button class="x-btn" @click="showError = false">OK</button>
                 </div>
             </modal>
         </template>
         <template v-else-if="type === 'status'">
-            <status-icon :value="value"></status-icon>
+            <svg-icon :name="`symbols/${value}`" :original="true" height="20px"></svg-icon>
         </template>
-        <template v-else-if="type === 'status-icon-logo-text'">
-            <status-icon-logo-text :textValue="value.text"
-                                   :logoValue="value.logo"
-                                   :statusIconValue="value.status"></status-icon-logo-text>
+        <template v-else-if="type === 'logo'">
+            <x-logo-name :name="value"></x-logo-name>
         </template>
         <template v-else-if="type === 'type'">
             <type-icon :value="value"></type-icon>
@@ -48,15 +46,14 @@
 
 <script>
     import ObjectList from '../ObjectList.vue'
-    import StatusIcon from '../StatusIcon.vue'
-    import StatusIconLogoText from '../StatusIconLogoText.vue'
     import TypeIcon from '../TypeIcon.vue'
     import Modal from '../popover/Modal.vue'
+    import xLogoName from '../titles/LogoName.vue'
     import '../icons'
 
     export default {
         name: 'generic-table-cell',
-        components: {ObjectList, StatusIcon, StatusIconLogoText, TypeIcon, Modal},
+        components: {ObjectList, TypeIcon, Modal, xLogoName},
         props: ['value', 'type', 'wide'],
         methods: {
             prettyTimestamp(timestamp) {

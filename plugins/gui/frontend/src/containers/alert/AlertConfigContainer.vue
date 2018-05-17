@@ -3,99 +3,82 @@
     	{ title: 'alerts', path: {name: 'Alerts'}},
     	{ title: (alertData.name? alertData.name : 'new alert')}
     ]">
-        <card title="configure" class="alert-config">
-            <template slot="cardContent">
-                <form @keyup.enter="saveAlert">
-                    <div class="row">
-                        <!-- Section for alert name and query to run by -->
-                        <div class="form-group col-6">
-                            <label class="form-label" for="alertName">Alert Name:</label>
-                            <input class="form-control" id="alertName" v-model="alert.name">
+        <x-box class="alert-config">
+            <form @keyup.enter="saveAlert">
+                    <!-- Section for alert name and query to run by -->
+                <div class="x-grid x-grid-col-2">
+                    <label class="form-label" for="alertName">Alert Name:</label>
+                    <input class="form-control" id="alertName" v-model="alert.name">
+                    <label class="form-label" for="alertQuery">Select Saved Query:</label>
+                    <select class="form-control" id="alertQuery" v-model="currentQuery">
+                        <option v-for="query in currentQueryOptions" :value="query"
+                                :selected="query.name === alert.query">{{query.title || query.name}}</option>
+                    </select>
+                </div>
+                <!-- Section for defining the condition which match of will trigger the alert -->
+                <div class="configuration">
+                    <div class="header">Alert Trigger</div>
+                    <div>Monitor selected query and test whether devices number...</div>
+                    <div class="content">
+                        <x-checkbox :class="{'grid-span2': !alert.triggers.increase}" label="Increased"
+                                  v-model="alert.triggers.increase"/>
+                        <div class="form-inline" v-if="alert.triggers.increase">
+                            <label for="TriggerAbove">Above:</label>
+                            <input id="TriggerAbove" type="number" v-model="alert.triggers.above"  min="0">
                         </div>
-                        <div class="form-group col-6">
-                            <label class="form-label" for="alertQuery">Select Saved Query:</label>
-                            <select class="form-control" id="alertQuery" v-model="currentQuery">
-                                <option v-for="query in currentQueryOptions" :value="query"
-                                        :selected="query.name === alert.query">{{query.title || query.name}}</option>
-                            </select>
+                        <x-checkbox :class="{'grid-span2': !alert.triggers.decrease}" label="Decrease"
+                                  v-model="alert.triggers.decrease" />
+                        <div class="form-inline" v-if="alert.triggers.decrease">
+                            <label for="TriggerBelow">Below:</label>
+                            <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0">
+                        </div>
+                        <x-checkbox class="grid-span2" label="Not Changed" v-model="alert.triggers.no_change"/>
+                    </div>
+                </div>
+                <div class="configuration">
+                    <div class="header">Alert Severity</div>
+                    <div class="content">
+                        <div class="grid-span2">
+                            <input id="SeverityInfo" type="radio" value="info" v-model="alert.severity">
+                            <label for="SeverityInfo" class="ml-2">
+                                <svg-icon name="symbols/info" :original="true" height="16"></svg-icon>Info</label>
+                        </div>
+                        <div class="grid-span2">
+                            <input id="SeverityWarning" type="radio" value="warning" v-model="alert.severity">
+                            <label for="SeverityWarning" class="ml-2">
+                                <svg-icon name="symbols/warning" :original="true" height="16"></svg-icon>Warning</label>
+                        </div>
+                        <div class="grid-span2">
+                            <input id="SeverityError" type="radio" value="error" v-model="alert.severity">
+                            <label for="SeverityError" class="ml-2">
+                                <svg-icon name="symbols/error" :original="true" height="16"></svg-icon>Error</label>
                         </div>
                     </div>
-                    <div class="row row-divider">
-                        <!-- Section for defining the condition which match of will trigger the alert -->
-                        <div class="form-group col-6">
-                            <div class="form-group-header">
-                                <i class="icon-equalizer2"></i>
-                                <span class="form-group-title">Alert Trigger</span>
-                            </div>
-                            <div>Monitor selected query and test whether devices number...</div>
-                            <div class="form-group-content">
-                                <checkbox :class="{'grid-span2': !alert.triggers.increase}" label="Increased"
-                                          v-model="alert.triggers.increase"/>
-                                <div class="form-inline" v-if="alert.triggers.increase">
-                                    <label for="TriggerAbove">Above:</label>
-                                    <input id="TriggerAbove" type="number" v-model="alert.triggers.above"  min="0">
-                                </div>
-                                <checkbox :class="{'grid-span2': !alert.triggers.decrease}" label="Decrease"
-                                          v-model="alert.triggers.decrease" />
-                                <div class="form-inline" v-if="alert.triggers.decrease">
-                                    <label for="TriggerBelow">Below:</label>
-                                    <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0">
-                                </div>
-                                <checkbox class="grid-span2" label="Not Changed" v-model="alert.triggers.no_change"/>
-                            </div>
-                        </div>
-                        <div class="form-group col-6">
-                            <div class="form-group-header">
-                                <i class="icon-exclamation-triangle"></i>
-                                <span class="form-group-title">Alert Severity</span>
-                            </div>
-                            <div class="form-group-content">
-                                <div class="grid-span2">
-                                    <input id="SeverityInfo" type="radio" value="info" v-model="alert.severity">
-                                    <label for="SeverityInfo" class="ml-2"><status-icon value="info"/>Info</label>
-                                </div>
-                                <div class="grid-span2">
-                                    <input id="SeverityWarning" type="radio" value="warning" v-model="alert.severity">
-                                    <label for="SeverityWarning" class="ml-2"><status-icon value="warning"/>Warning</label>
-                                </div>
-                                <div class="grid-span2">
-                                    <input id="SeverityError" type="radio" value="error" v-model="alert.severity">
-                                    <label for="SeverityError" class="ml-2"><status-icon value="error"/>Error</label>
-                                </div>
-                            </div>
-                        </div>
+                </div>
+                <!-- group for defining what action will occur upon trigger -->
+                <div class="configuration">
+                    <div class="header">Action</div>
+                    <div class="content">
+                        <x-checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
+                        <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email" v-model="actions.mail"/>
+                        <template v-if="actions.mail">
+                            <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
+                                   no-data-text="Type mail addresses..." :default-first-option="true"/>
+                        </template>
+                        <template v-if="alert.triggers.increase">
+                            <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag Entities" v-model="actions.tag"/>
+                            <template v-if="actions.tag">
+                                <input class="form-control" id="tagName" v-model="tagName">
+                            </template>
+                        </template>
                     </div>
-                    <div class="row row-divider">
-                        <!-- group for defining what action will occur upon trigger -->
-                        <div class="form-group">
-                            <div class="form-group-header">
-                                <i class="icon-bell-o"></i><span class="form-group-title">Action</span>
-                            </div>
-                            <div class="form-group-content">
-                                <checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
-                                <checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email" v-model="actions.mail"/>
-                                <template v-if="actions.mail">
-                                    <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
-                                           no-data-text="Type mail addresses..." :default-first-option="true"/>
-                                </template>
-                                <template v-if="alert.triggers.increase">
-                                    <checkbox :class="{'grid-span2': !actions.tag}" label="Tag Entities" v-model="actions.tag"/>
-                                    <template v-if="actions.tag">
-                                        <input class="form-control" id="tagName" v-model="tagName">
-                                    </template>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="form-group place-right">
-                            <a class="btn btn-inverse" @click="returnToAlerts">cancel</a>
-                            <a class="btn" @click="saveAlert">save</a>
-                        </div>
-                    </div>
-                </form>
-            </template>
-        </card>
+                </div>
+                <div class="row btn-container">
+                    <a class="x-btn link" @click="returnToAlerts">Cancel</a>
+                    <a class="x-btn" @click="saveAlert">Save</a>
+                </div>
+            </form>
+        </x-box>
         <modal v-if="error">
             <div slot="body">
                 <div class="show-space">{{error}}</div>
@@ -107,9 +90,8 @@
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-    import Card from '../../components/Card.vue'
-    import Checkbox from '../../components/Checkbox.vue'
-    import StatusIcon from '../../components/StatusIcon.vue'
+    import xBox from '../../components/layout/Box.vue'
+    import xCheckbox from '../../components/inputs/Checkbox.vue'
     import Modal from '../../components/popover/Modal.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
@@ -119,7 +101,7 @@
 	export default {
 		name: 'alert-config-container',
 		components: {
-            xPage, Card, Checkbox, StatusIcon, Modal },
+            xPage, xBox, xCheckbox, Modal },
 		computed: {
             ...mapState({
                 alertData: state => state.alert.current.data,
@@ -259,31 +241,39 @@
 
 <style lang="scss">
     .alert-config {
+        width: 60vw;
         .checkbox.inline.checked {
             display: inline;
         }
-    }
-    .form-group {
-        .form-group-content {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            align-items: center;
-            grid-gap: 8px;
-            margin-left: 24px;
-            margin-top: 12px;
-            .vm-select {
-                .vm-select-input__inner {
-                    width: 100%;
-                }
+        .btn-container {
+            text-align: right;
+        }
+        .configuration {
+            margin: 24px 0;
+            .header {
+                color: $theme-orange;
+                font-size: 18px;
             }
-            .form-inline {
+            .content {
                 display: grid;
-                grid-template-columns: 1fr 3fr;
+                grid-template-columns: 1fr 2fr;
                 align-items: center;
-            }
-            .status-icon {
-                border-radius: 4px;
-                margin-right: 4px;
+                grid-gap: 8px;
+                margin-left: 24px;
+                margin-top: 12px;
+                .vm-select {
+                    .vm-select-input__inner {
+                        width: 100%;
+                    }
+                }
+                .form-inline {
+                    display: grid;
+                    grid-template-columns: 1fr 3fr;
+                    align-items: center;
+                }
+                .svg-icon {
+                    margin-right: 8px;
+                }
             }
         }
     }

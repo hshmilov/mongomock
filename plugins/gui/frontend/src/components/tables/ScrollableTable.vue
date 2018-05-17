@@ -28,15 +28,12 @@
 </template>
 
 <script>
-	import StatusIconLogoText from '../StatusIconLogoText.vue'
 	import GenericTableCell from '../tables/GenericTableCell.vue'
 	import '../icons'
 
 	export default {
 		name: 'scrollable-table',
-		components: {
-			GenericTableCell,
-			StatusIconLogoText },
+		components: {GenericTableCell},
 		props: ['data', 'fetching', 'error', 'fields', 'actions'],
 		methods: {}
 	}

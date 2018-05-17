@@ -28,8 +28,7 @@
                    class="server-config" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
                 <div slot="body">
                     <!-- Container for configuration of a single selected / added server -->
-                    <status-icon-logo-text :logoValue="adapterPluginName" status-icon-value="empty"
-                                           :textValue="serverModal.serverName" />
+                    <x-logo-name :name="adapterPluginName" />
                     <div class="mt-3">
                         <div class="mb-2">Basic system credentials</div>
                         <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
@@ -44,11 +43,11 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
 	import DynamicTable from '../../components/tables/DynamicTable.vue'
-	import StatusIconLogoText from '../../components/StatusIconLogoText.vue'
 	import Modal from '../../components/popover/Modal.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
+    import xLogoName from '../../components/titles/LogoName.vue'
     import '../../components/icons/navigation'
 
 	import { mapState, mapActions } from 'vuex'
@@ -62,7 +61,7 @@
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, StatusIconLogoText, Tabs, Tab, xPage, DynamicTable, xSchemaForm},
+		components: {Modal, xLogoName, Tabs, Tab, xPage, DynamicTable, xSchemaForm},
 		computed: {
 			...mapState(['adapter']),
 			adapterUniquePluginName () {

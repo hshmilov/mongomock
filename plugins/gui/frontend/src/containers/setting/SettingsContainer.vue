@@ -9,7 +9,7 @@
                     <label for="research_rate" class="label">Schedule Rate (hours)</label>
                     <div class="grid-item">
                         <input id="research_rate" type="number" min="0" v-model="lifecycle.researchRate">
-                        <a class="btn set" @click="setResearchRate">Set</a>
+                        <a class="x-btn right" @click="setResearchRate">Set</a>
                     </div>
                 </div>
                 <h3>Execution</h3>
@@ -31,17 +31,17 @@
                     <input id="refresh-rate" type="number" min="0" v-model="refreshRate">
 
                     <label for="single-adapter">Use Single Adapter View</label>
-                    <checkbox id="single-adapter" v-model="singleAdapter"/>
+                    <x-checkbox id="single-adapter" v-model="singleAdapter"/>
 
                     <label for="multi-line">Use Table Multi Line View</label>
-                    <checkbox id="multi-line" v-model="multiLine"/>
+                    <x-checkbox id="multi-line" v-model="multiLine" />
 
                     <label for="default-sort">Sort by Number of Adapters in Default View</label>
-                    <checkbox id="default-sort" v-model="defaultSort"/>
+                    <x-checkbox id="default-sort" v-model="defaultSort"/>
                     <div/>
-                    <button class="btn confirm" @click="saveSystemSettings">save</button>
+                    <button class="x-btn" @click="saveSystemSettings">save</button>
                 </div>
-                <div class="row">
+                <div>
                 </div>
             </tab>
             <tab title="Okta Settings" id="okta-settings-tab">
@@ -72,7 +72,9 @@
             <div slot="body">
                 <div class="show-space">{{message}}</div>
             </div>
-            <button class="x-btn" slot="footer" @click="closeModal">OK</button>
+            <div slot="footer">
+                <button class="x-btn" @click="closeModal">OK</button>
+            </div>
         </modal>
     </x-page>
 </template>
@@ -80,11 +82,10 @@
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import xPage from '../../components/layout/Page.vue'
-	import Card from '../../components/Card.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
 	import xDateEdit from '../../components/controls/string/DateEdit.vue'
-	import Checkbox from '../../components/Checkbox.vue'
+	import xCheckbox from '../../components/inputs/Checkbox.vue'
     import Modal from '../../components/popover/Modal.vue'
 
 	import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
@@ -101,7 +102,7 @@
 
 	export default {
 		name: 'settings-container',
-		components: {xPage, Card, Tabs, Tab, xDateEdit, Checkbox, xSchemaForm, Modal},
+		components: {xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, Modal},
 		computed: {
 			...mapState(['dashboard', 'settings']),
 			limit () {
@@ -321,9 +322,9 @@
             .grid-item {
                 text-align: right;
             }
-        }
-        .btn {
-            width: auto;
+            .x-btn {
+                justify-self: end;
+            }
         }
         #research_rate {
             width: 80px;
@@ -333,9 +334,6 @@
         }
         label {
             margin-bottom: 0;
-        }
-        .btn.confirm {
-            justify-self: end;
         }
     }
 </style>

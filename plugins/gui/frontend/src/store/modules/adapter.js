@@ -22,10 +22,10 @@ export const adapter = {
 
 		/* Statically defined fields that should be presented for each adapter, in this order  */
 		adapterFields: [
+			{path: 'status', name: 'Status', type: 'status'},
 			{path: 'unique_plugin_name', name: '', hidden: true},
-			{path: 'plugin_name', name: 'Name', type: 'status-icon-logo-text'},
+			{path: 'plugin_name', name: 'Name', type: 'logo'},
 			{path: 'description', name: 'Description'},
-			{path: 'status', name: '', hidden: true}
 		],
 
 		/* Data about a specific adapter that is currently being configured */
@@ -52,20 +52,13 @@ export const adapter = {
 			if (payload.data) {
 				state.adapterList.data = []
 				payload.data.forEach((adapter) => {
-					let pluginText = adapter.plugin_name
 					let pluginDescription = ''
 					if (pluginMeta[adapter.plugin_name]) {
-						pluginText = pluginMeta[adapter.plugin_name].title
 						pluginDescription = pluginMeta[adapter.plugin_name].description
 					}
 					state.adapterList.data.push({
 						...adapter,
 						id: adapter.unique_plugin_name,
-						plugin_name: {
-							text: pluginText,
-							logo: adapter.plugin_name,
-							status: adapter.status
-						},
 						description: pluginDescription,
 						supported_features: adapter.supported_features
 					})

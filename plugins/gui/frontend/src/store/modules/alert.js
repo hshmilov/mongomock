@@ -84,12 +84,15 @@ export const alert = {
 				The controls is expected to be fields and values of a specific alert and is stored for use in the
 				alert configuration page
 			 */
-			if (!alertId) { return }
+			if (!alertId) return
+			let found = false
 			state.content.data.forEach((alert) => {
 				if (alert.uuid === alertId) {
 					state.current.data = alert
+					found = true
 				}
 			})
+			if (!found) state.current.data = { ...newAlert }
 		},
 		[ REMOVE_ALERTS ] (state, alertIds) {
 			/*
