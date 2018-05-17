@@ -6,4 +6,4 @@ client_details = {
     "verify_ssl": True
 }
 
-SOME_DEVICE_ID = 'axoniusca75cfacd57af9dcf8f2613928e87898'
+SOME_DEVICE_ID = 'axoniusbe8d02676a6e8eca5aee1a84a5d84497'
