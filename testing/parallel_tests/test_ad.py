@@ -52,13 +52,13 @@ class TestAdAdapter(AdapterTestBase):
         # # self.axonius_system.assert_device_aggregated(self.adapter_service, client_id_2, DEVICE_ID_FOR_CLIENT_2)
 
         # Check Printers
-        printers_list = self.axonius_system.get_devices_with_condition(
-            {
-                "adapters.data.id": DEVICE_ID_FOR_CLIENT_1,
-                "adapters.data.ad_printers.name": PRINTER_NAME_FOR_CLIENT1
-            }
-        )
-        assert len(printers_list) == 1, f"Did not find printer {PRINTER_NAME_FOR_CLIENT1}"
+        # printers_list = self.axonius_system.get_devices_with_condition(
+        #     {
+        #         "adapters.data.id": DEVICE_ID_FOR_CLIENT_1,
+        #         "adapters.data.ad_printers.name": PRINTER_NAME_FOR_CLIENT1
+        #     }
+        # )
+        # assert len(printers_list) == 1, f"Did not find printer {PRINTER_NAME_FOR_CLIENT1}"
 
         # Check DC
         dc_list = self.axonius_system.get_devices_with_condition(
