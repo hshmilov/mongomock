@@ -47,6 +47,7 @@ class UserAdapter(SmartJsonClass):
     last_password_change = Field(datetime.datetime, "Last Password Change")
     last_logoff = Field(datetime.datetime, "Domain Last Logoff Date")
     last_logon = Field(datetime.datetime, "Domain Last Logon Date")
+    last_logon_timestamp = Field(datetime.datetime, "Domain Last Logon Timestamp Date")
     user_created = Field(datetime.datetime, "User Creation Date")
 
     user_title = Field(str, "User Title")

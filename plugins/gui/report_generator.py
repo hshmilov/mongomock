@@ -64,6 +64,7 @@ class ReportGenerator(object):
             for adapter in self.report_data['adapter_data']:
                 sections.append(self.templates['section'].render(
                     {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
+                logger.info(f'Report Generator, Adapter Section: Added {adapter["name"]} section')
 
         # Add section for all saved queries
         if self.report_data.get('views_data'):
@@ -74,13 +75,18 @@ class ReportGenerator(object):
         html_data = self.templates['report'].render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
 
         timestamp = now.strftime("%d%m%Y-%H%M%S")
-        temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        with open(f'{self.output_path}axonius-report_{timestamp}.html', 'wb') as file:
+        temp_html_filename = f'{self.output_path}axonius-report_{timestamp}.html'
+        with open(temp_html_filename, 'wb') as file:
             file.write(bytes(html_data.encode('utf-8')))
+            logger.info(f'Report Generator: HTML created and saved to ${temp_html_filename}')
+
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
+
+        temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
         HTML(string=html_data, base_url=self.template_path).write_pdf(
             temp_report_filename, stylesheets=[css], font_config=font_config)
+        logger.info(f'Report Generator: PDF generated and saved to ${temp_report_filename}')
         return temp_report_filename
 
     def _get_template(self, template_name):
@@ -97,6 +103,7 @@ class ReportGenerator(object):
 
         :return:
         """
+        logger.info('Report Generator, Summary Section: Begin')
         summary_content = []
         if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('total_gross') \
                 and self.report_data['adapter_devices'].get('total_net'):
@@ -109,6 +116,7 @@ class ReportGenerator(object):
                     'seen_count': self.report_data['adapter_devices']['total_gross'],
                     'unique_count': self.report_data['adapter_devices']['total_net']
                 })}))
+            logger.info('Report Generator, Summary Section: Added Data Discovery Panel')
 
         if self.report_data.get('covered_devices'):
             # Adding cards with coverage of network roles
@@ -119,6 +127,8 @@ class ReportGenerator(object):
                     'title': f'{coverage_data["title"]} Coverage',
                     'content': f'<img src="{coverage_pie_filename}">'
                 }))
+            logger.info(
+                f'Report Generator, Summary Section: Added {len(self.report_data["covered_devices"])} Coverage Panels')
 
         if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('adapter_count'):
             # Adding card with histogram comparing amount of devices from each adapter
@@ -126,8 +136,10 @@ class ReportGenerator(object):
                 'title': 'Devices per Adapter',
                 'content': self._create_adapter_histogram()
             }))
+            logger.info('Report Generator, Summary Section: Added Adapter Devices Histogram Panel')
 
         if self.report_data.get('custom_charts'):
+            charts_added = 0
             for i, custom_chart in enumerate(self.report_data['custom_charts']):
                 if not custom_chart.get('type') or not custom_chart.get('data'):
                     continue
@@ -140,7 +152,9 @@ class ReportGenerator(object):
                     content = f'<img src="{query_pie_filename}">'
                 if not content:
                     continue
+                charts_added += 1
                 summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
+            logger.info(f'Report Generator, Summary Section: Added {charts_added} Custom Panels')
         return '\n'.join(summary_content)
 
     def _create_coverage_pie(self, portion):
@@ -298,11 +312,15 @@ class ReportGenerator(object):
 
     def _create_data_views(self):
         views = []
+        added_views = 0
         for view_data in self.report_data['views_data']:
             if not view_data.get('name') or not view_data.get('data'):
                 continue
 
             views.append(self._create_data_view(view_data))
+            added_views += 1
+
+        logger.info(f'Report Generator, Saved Views: Added {added_views}')
         return '\n'.join(views)
 
     def _create_data_view(self, view_data):

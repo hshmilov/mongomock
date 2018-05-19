@@ -504,7 +504,9 @@ class GuiService(PluginBase, Configurable):
                     :return: True, if value is new to the children list and False otherwise
                     """
 
-                    def same_string(x, y):
+                    def same_string(raw_x, raw_y):
+                        x = re.escape(raw_x)
+                        y = re.escape(raw_y)
                         return type(x) != str or (re.match(x, y, re.I) or re.match(y, x, re.I))
 
                     if type(value) == str:
@@ -2021,8 +2023,9 @@ class GuiService(PluginBase, Configurable):
         if report.get('adapters'):
             report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
-        return ReportGenerator(report_data, 'gui/templates/report/',
-                               host=system_config.get('server_name', 'localhost')).generate_report_pdf()
+        server_name = system_config.get('server_name', 'localhost')
+        logger.info(f'All data for report gathered - about to generate for server {server_name}')
+        return ReportGenerator(report_data, 'gui/templates/report/', host=server_name).generate_report_pdf()
 
     @add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):

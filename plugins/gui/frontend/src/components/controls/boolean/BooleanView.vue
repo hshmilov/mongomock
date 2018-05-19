@@ -3,9 +3,9 @@
     <div v-else-if="processedData">
         <div class="checkmark"></div>
     </div>
-    <div class="d-flex flex-column" v-else>
-        <div class="cross top"></div>
-        <div class="cross bottom"></div>
+    <div class="cross" v-else>
+        <div class="top"></div>
+        <div class="bottom"></div>
     </div>
 </template>
 
@@ -41,18 +41,22 @@
         margin-left: 4px;
     }
     .cross {
-        width: 6px;
-        height: 6px;
-        border-top: 1px solid;
-        border-left: 1px solid;
-        &.top {
+        display: flex;
+        flex-direction: column;
+        .top, .bottom {
+            width: 6px;
+            height: 6px;
+            border-top: 1px solid;
+            border-left: 1px solid;
+        }
+        .top {
             -webkit-transform: rotate(225deg);
             -moz-transform: rotate(225deg);
             -ms-transform: rotate(225deg);
             -o-transform: rotate(225deg);
             transform: rotate(225deg);
         }
-        &.bottom {
+        .bottom {
             margin-top: 2px;
             -webkit-transform: rotate(45deg);
             -moz-transform: rotate(45deg);

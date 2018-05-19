@@ -1,5 +1,7 @@
 <template>
     <div class="x-data-entity">
+        <div class="v-spinner-bg" v-if="loading"></div>
+        <pulse-loader :loading="loading" color="#FF7D46" />
         <template v-if="fields.generic && entity.generic">
             <tabs>
                 <tab title="Basic Info" id="basic" key="basic" :selected="true">
@@ -50,6 +52,7 @@
 	import xSchemaList from '../../components/schema/SchemaList.vue'
 	import xCustomData from '../../components/schema/CustomData.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
+	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
     import { mapState, mapActions } from 'vuex'
     import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
@@ -60,12 +63,13 @@
     }
 	export default {
 		name: 'x-data-entity',
-        components: {Tabs, Tab, xSchemaList, xCustomData, xTagModal},
+        components: { Tabs, Tab, xSchemaList, xCustomData, xTagModal, PulseLoader },
         props: { module: {required: true}},
 		data () {
 			return {
 				viewBasic: true,
-				entities: [this.$route.params.id]
+				entities: [this.$route.params.id],
+                loading: true
 			}
 		},
         computed: {
@@ -137,8 +141,10 @@
 				this.fetchDataFields({ module: this.module })
 			}
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId) {
-				this.fetchDataByID({ module: this.module, id: this.entityId })
-			}
+				this.fetchDataByID({ module: this.module, id: this.entityId }).then(() => this.loading = false)
+			} else {
+				this.loading = true
+            }
 		}
 	}
 </script>

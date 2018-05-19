@@ -450,6 +450,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                     user.last_logon = last_logon
                     use_timestamps.append(last_logon)
 
+                last_logon_timestamp = parse_date(user_raw.get("lastLogonTimestamp"))
+                if is_date_real(last_logon_timestamp):
+                    user.last_logon_timestamp = last_logon_timestamp
+                    use_timestamps.append(last_logon_timestamp)
+
                 user.user_created = parse_date(user_raw.get("whenCreated"))
 
                 user.logon_count = user_raw.get("logonCount")

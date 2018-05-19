@@ -15,6 +15,8 @@ import base64
 import datetime
 import pql
 import csv
+import axonius
+import os
 
 osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
@@ -43,6 +45,22 @@ NORMALIZED_MACS = 'normalized_macs'
 
 pair_comparator = NewType('lambda x,y -> bool', FunctionType)
 parameter_function = NewType('lambda x -> paramter of x', Callable)
+
+oui_data = open(os.path.join(axonius.__path__[0], 'oui.csv'), encoding='utf8').read()
+
+# dict: MAC 3 first bytes to manufacturer data
+mac_manufacturer_details = {x[1]: x for x in
+                            csv.DictReader(oui_data.splitlines(), csv.Sniffer().sniff(oui_data[:1024])).reader}
+del oui_data
+
+
+def get_manufacturer_from_mac(mac: str) -> str:
+    if mac:
+        mac = format_mac(mac).replace(':', '')[:6]
+        manufacturer = mac_manufacturer_details.get(mac)
+        if manufacturer is None:
+            return None
+        return f"{manufacturer[2]} ({manufacturer[3]})"
 
 
 def get_exception_string():

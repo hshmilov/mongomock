@@ -4,7 +4,7 @@
              @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
         </div>
-        <div :class="`content w-${size}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}">
+        <div :class="`content ${sizeClass}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}">
             <slot name="content"></slot>
         </div>
     </div>
@@ -21,6 +21,12 @@
         	alignAuto() {
         		if (this.align === 'right') return 'left'
                 return 'right'
+            },
+            sizeClass() {
+        		if (this.size) {
+        			return `w-${this.size}`
+                }
+                return 'expand'
             }
         },
         data() {
@@ -61,6 +67,9 @@
             padding: 12px;
             border-radius: 4px;
             box-shadow: $popup-shadow;
+            &.expand {
+                width: calc(100% - 24px);
+            }
         }
         &.active {
             > .content {

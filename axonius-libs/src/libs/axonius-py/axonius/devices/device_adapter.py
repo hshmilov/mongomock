@@ -4,7 +4,7 @@ import datetime
 import typing
 
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw
+from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, get_manufacturer_from_mac
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
 
@@ -31,6 +31,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     name = Field(str, 'Iface Name')
     mac = Field(str, 'Mac', converter=format_mac)
+    manufacturer = Field(str, 'Manufacturer')
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
     subnets = ListField(str, 'Subnets', converter=format_ip, json_format=JsonStringFormat.ip,
                         description='A list of subnets in ip format, that correspond the IPs')
@@ -170,14 +171,12 @@ class DeviceAdapter(SmartJsonClass):
     def add_nic(self, mac=None, ips=None, subnets=None, name=None):
         """
         Add a new network interface card to this device.
-        :param mac: the mac
-        :param ips: an IP list
-        :param logger: a python logger, if provided will record and suppress all parsing exceptions
         """
         nic = DeviceAdapterNetworkInterface()
         if mac is not None:
             try:
                 nic.mac = mac
+                nic.manufacturer = get_manufacturer_from_mac(mac)
             except (ValueError, TypeError):
                 if logger is None:
                     raise

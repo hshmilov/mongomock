@@ -56,12 +56,8 @@
                     return
                 }
 				this.bracketWeights[index] = payload.bracketWeight
-				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
-				if (totalBrackets !== 0) {
-					this.error = (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket'
-					this.$emit('error')
-					return
-				}
+                if (!this.validateBrackets()) return
+
 				// No compilation error - propagating
 				this.error = ''
 				this.$emit('input', this.expressions)
@@ -75,6 +71,9 @@
 				if (index >= this.expressions.length) return
 				this.expressions.splice(index, 1)
 				this.filters.splice(index, 1)
+                this.bracketWeights.splice(index, 1)
+				if (!this.validateBrackets()) return
+
 				if (!index && this.expressions.length) {
 					this.expressions[index].logicOp = ''
 					if (this.filters.length) {
@@ -82,7 +81,16 @@
 					}
 				}
 				this.$emit('change', this.filters.join(' '))
-			}
+			},
+            validateBrackets() {
+				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
+				if (totalBrackets !== 0) {
+					this.error = (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket'
+					this.$emit('error')
+					return false
+				}
+				return true
+            }
 		},
 		created () {
 			if (this.value && this.value.length) {
