@@ -37,6 +37,12 @@
                     </div>
                 </div>
             </modal>
+        <modal v-if="message">
+            <div slot="body">
+                <div class="show-space">{{message}}</div>
+            </div>
+            <button class="x-btn" slot="footer" @click="closeModal">OK</button>
+        </modal>
     </x-page>
 </template>
 
@@ -127,7 +133,8 @@
                     serverName: 'New Server',
                     uuid: null,
                     valid: true
-				}
+				},
+                message: ''
 			}
 		},
 		methods: {
@@ -182,7 +189,10 @@
                     pluginId: this.adapterUniquePluginName,
                     config_name: config_name,
                     config: config
-                })
+                }).then(() => this.message = 'Adapter Configuration Saved.')
+            },
+            closeModal() {
+                this.message = ''
             }
 		},
 		created () {
