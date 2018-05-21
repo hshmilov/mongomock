@@ -184,6 +184,11 @@ export const pluginMeta = {
 			title: 'OpenStack',
 			description: 'OpenStack is an open source software for creating private and public clouds.'
 		},
+	    infoblox_adapter: {
+			title: 'Infoblox DDI',
+			description: 'Infoblox DDI consolidates DNS, DHCP, IP address management, ' +
+			'and other core network services into a single platform, managed from a common console'
+		},
 		chef_adapter: {
 			title: 'Chef',
 			description: 'Continuous automation for building, deploying, and managing infrastructure, ' +
