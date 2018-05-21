@@ -989,7 +989,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         This logic is ran when the adapter starts
         :return:
         """
-        with self._get_db_connection(True) as db_connection:
+        with self._get_db_connection() as db_connection:
             collection = db_connection[self.plugin_unique_name]['adapter_schema']
             collection.replace_one(filter={'adapter_name': self.plugin_unique_name,
                                            'adapter_version': self.version},

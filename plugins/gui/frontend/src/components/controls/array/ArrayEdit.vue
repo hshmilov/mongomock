@@ -1,6 +1,6 @@
 <template>
     <div class="array">
-        <label v-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
+        <label v-if="schema.title" :title="schema.description || ''" class="label title_header">{{schema.title}}</label>
         <div v-for="item in schemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
@@ -61,5 +61,9 @@
             display: inline-block;
             vertical-align: top;
         }
+    }
+
+    .title_header {
+        font-size: 20px
     }
 </style>

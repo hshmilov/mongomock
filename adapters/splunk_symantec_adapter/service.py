@@ -57,13 +57,13 @@ class SplunkSymantecAdapter(AdapterBase):
             raise ClientConnectionException(message)
 
     def get_last_query_ts(self, name):
-        ts_collection = self._get_collection('queries_ts', limited_user=True)
+        ts_collection = self._get_collection('queries_ts')
         for item in ts_collection.find({'query_name': name}):
             return item['ts']
         return None
 
     def set_last_query_ts(self, name, ts):
-        ts_collection = self._get_collection('queries_ts', limited_user=True)
+        ts_collection = self._get_collection('queries_ts')
         ts_collection.update({'query_name': name}, {'query_name': name, 'ts': ts}, upsert=True)
 
     def _update_new_raw_devices(self, client_data, queries_collection):
@@ -91,7 +91,7 @@ class SplunkSymantecAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Splunk Server
         """
         with client_data:
-            queries_collection = self._get_collection('symantec_queries', limited_user=True)
+            queries_collection = self._get_collection('symantec_queries')
             # Update all_devices from splunk
             self._update_new_raw_devices(client_data, queries_collection)
 

@@ -1,6 +1,6 @@
 import logging
-import os
-import tempfile
+
+from axonius.mixins.configurable import Configurable
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
@@ -11,24 +11,20 @@ from flask import jsonify, request, Response
 import random
 import requests
 from requests.exceptions import ReadTimeout, Timeout, ConnectionError
-import string
 import threading
 import uritools
 import uuid
-import smtplib
-from email.mime.text import MIMEText
 
 from axonius.plugin_base import PluginBase, add_rule, return_error, VOLATILE_CONFIG_PATH
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
-from core import consts
 
 CHUNK_SIZE = 1024
 
 
-class CoreService(PluginBase):
+class CoreService(PluginBase, Configurable):
     def __init__(self, **kwargs):
         """ Initialize all needed configurations
         """
@@ -65,14 +61,14 @@ class CoreService(PluginBase):
                      "api_key": api_key,
                      "status": "ok"}
 
+        self.online_plugins = {}
+
         # Initialize the base plugin (will initialize http server)
         # No registration process since we are sending core_data
         super().__init__(get_local_config_file(__file__), core_data=core_data, **kwargs)
 
         # Get the needed docker socket
         # self.docker_client = docker.APIClient(base_url='unix://var/run/docker.sock')
-
-        self.online_plugins = {}
 
         self._setup_images()  # TODO: Check if we should move it to another function
         # (so we wont get register request before initializing the server here)
@@ -136,8 +132,15 @@ class CoreService(PluginBase):
         pass
 
     def _get_config(self, plugin_unique_name):
-        collection = self._get_collection('configs', limited_user=False)
+        collection = self._get_collection('configs')
         return collection.find_one({"plugin_unique_name": plugin_unique_name})
+
+    def _request_plugin(self, resource, plugin_unique_name, method='get', **kwargs):
+        data = self._translate_url(plugin_unique_name + f"/{resource}")
+        final_url = uritools.uricompose(scheme='https', host=data['plugin_ip'], port=data['plugin_port'],
+                                        path=data['path'])
+
+        return requests.request(method=method, url=final_url, timeout=2, **kwargs)
 
     def _check_plugin_online(self, plugin_unique_name):
         """ Function for checking if a plugin is online.
@@ -150,11 +153,7 @@ class CoreService(PluginBase):
         """
         try:
             # Trying a simple GET request for the version
-            data = self._translate_url(plugin_unique_name + "/version")
-            final_url = uritools.uricompose(scheme='https', host=data['plugin_ip'], port=data['plugin_port'],
-                                            path=data['path'])
-
-            check_response = requests.get(final_url, timeout=2)
+            check_response = self._request_plugin('version', plugin_unique_name)
 
             if check_response.status_code == 200:
                 responder_name = check_response.json()[PLUGIN_UNIQUE_NAME]
@@ -174,30 +173,6 @@ class CoreService(PluginBase):
         except Exception as e:
             logger.fatal("Got unhandled exception {} while trying to contact {}".format(e, plugin_unique_name))
             return False
-
-    def _create_db_for_plugin(self, plugin_unique_name):
-        """ Creates a db for new plugin.
-        This function will create a new database for the new plugin and give it the correct credentials.
-
-        :param str plugin_unique_name: The unique name of the new plugin
-
-        :return db_user: The user name for this db
-        :return db_password: The password for this db
-        """
-        db_user = plugin_unique_name
-        db_password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-        db_connection = self._get_db_connection(False)
-        roles = [{'role': 'dbOwner', 'db': plugin_unique_name},
-                 {'role': 'dbOwner', 'db': AGGREGATOR_PLUGIN_NAME},
-                 {'role': 'insert_notification', 'db': 'core'},
-                 {'role': 'readWriteAnyDatabase', 'db': 'admin'}]  # Grant read/write permissions to all db's
-
-        # TODO: Consider a way of requesting roles other than read-only.
-        db_connection[plugin_unique_name].add_user(db_user,
-                                                   password=db_password,
-                                                   roles=roles)
-
-        return db_user, db_password
 
     @add_rule("register", methods=['POST', 'GET'], should_authenticate=False)
     def register(self):
@@ -290,7 +265,7 @@ class CoreService(PluginBase):
             if not relevant_doc:
                 # Create a new plugin line
                 # TODO: Ask the gui for permission to register this new plugin
-                plugin_user, plugin_password = self._create_db_for_plugin(plugin_unique_name)
+                plugin_user, plugin_password = self.db_user, self.db_password
                 doc = {
                     PLUGIN_UNIQUE_NAME: plugin_unique_name,
                     'plugin_name': plugin_name,
@@ -338,7 +313,7 @@ class CoreService(PluginBase):
                     del self.online_plugins[same_ip_plugin]
 
             # Setting a new doc with the wanted configuration
-            collection = self._get_collection('configs', limited_user=False)
+            collection = self._get_collection('configs')
             collection.replace_one(filter={PLUGIN_UNIQUE_NAME: doc[PLUGIN_UNIQUE_NAME]},
                                    replacement=doc,
                                    upsert=True)
@@ -453,34 +428,15 @@ class CoreService(PluginBase):
                 "plugin_port": str(relevant_doc["plugin_port"]),
                 "api_key": relevant_doc["api_key"]}
 
-    def _get_email_server(self):
-        """ Gets the saved email server config from the db.
+    def _on_config_update(self, config):
+        logger.info(f"Loading core config: {config}")
+        for plugin in self.online_plugins.keys():
+            self._request_plugin('update_config', plugin, method='post')
 
-        :return: the email server config.
-        """
-        return self._get_collection('email_configs', limited_user=False).find_one({'type': 'email_server'})
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return PluginBase.global_settings_schema()
 
-    @add_rule('email_server', ['POST', 'DELETE', 'GET'], should_authenticate=False)
-    def setup_mail_server(self):
-        """ Endpoint for getting, setting and deleting the mail_server.
-        """
-        if self.get_method() == 'GET':
-            email_server = self._get_email_server()
-            if not email_server:
-                return jsonify({})
-            del email_server['_id']
-            return jsonify(email_server)
-        elif self.get_method() == 'POST':
-            data = self.get_request_data_as_object()
-            data['type'] = 'email_server'
-            self._get_collection('email_configs', limited_user=False).replace_one(
-                {'type': 'email_server'}, data, upsert=True)
-            return '', 201
-        elif self.get_method() == 'DELETE':
-            data = self.get_request_data_as_object()
-            delete_response = self._get_collection(
-                'email_configs', limited_user=False).delete_one({'host': data['host']})
-            if delete_response['deletedCount'] == 1:
-                return '', 204
-            else:
-                return return_error("EMail Server Wasn't Found.", 404)
+    @classmethod
+    def _db_config_default(cls):
+        return PluginBase.global_settings_defaults()

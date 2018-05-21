@@ -2,6 +2,8 @@ import logging
 
 import pymongo
 
+from axonius.mixins.configurable import Configurable
+
 logger = logging.getLogger(f"axonius.{__name__}")
 import concurrent.futures
 from retrying import retry
@@ -19,7 +21,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts
 from axonius.plugin_base import PluginBase, add_rule, return_error
-from axonius.thread_stopper import stoppable, ThreadStopper
+from axonius.thread_stopper import stoppable
 from axonius.mixins.triggerable import Triggerable
 import axonius.plugin_exceptions
 from axonius.consts import plugin_consts
@@ -27,21 +29,18 @@ from axonius.utils.files import get_local_config_file
 from axonius.consts import scheduler_consts
 
 
-class SystemSchedulerService(PluginBase, Triggerable):
+class SystemSchedulerService(PluginBase, Triggerable, Configurable):
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=plugin_consts.SYSTEM_SCHEDULER_PLUGIN_NAME, *args, **kwargs)
         self.current_phase = scheduler_consts.Phases.Stable.name
 
         self.state = dict(scheduler_consts.SCHEDULER_INIT_STATE)
-        self.system_research_rate = int(self.config['DEFAULT']['system_research_rate_in_seconds'])
         self.research_phase_lock = threading.RLock()
-        self._research_phase_scheduler = None
-
         executors = {'default': ThreadPoolExecutorApscheduler(1)}
         self._research_phase_scheduler = LoggedBackgroundScheduler(executors=executors)
         self._research_phase_scheduler.add_job(func=self._restart_research,
-                                               trigger=IntervalTrigger(seconds=self.system_research_rate),
+                                               trigger=IntervalTrigger(hours=self.__system_research_rate),
                                                next_run_time=datetime.now(),
                                                name=scheduler_consts.RESEARCH_THREAD_ID,
                                                id=scheduler_consts.RESEARCH_THREAD_ID,
@@ -66,26 +65,39 @@ class SystemSchedulerService(PluginBase, Triggerable):
             scheduler_consts.RESEARCH_THREAD_ID).next_run_time
         return str(int(time.mktime(next_run_time.timetuple())))
 
-    @add_rule('research_rate', ['POST', 'GET'])
-    def system_research_rate(self):
-        """
-        Set the systems research rate (Originally taken from config).
-        """
-        if self.get_method() == 'POST':
-            data = self.get_request_data_as_object()
-            if 'system_research_rate' not in data or not isinstance(data['system_research_rate'], int):
-                return return_error('A new system_research_rate was not present in the request as a number', 400)
+    def _on_config_update(self, config):
+        logger.info(f"Loading SystemScheduler config: {config}")
+        self.__system_research_rate = float(config['system_research_rate'])
+        logger.info(f"Setting research rate to: {self.__system_research_rate}")
+        scheduler = getattr(self, '_research_phase_scheduler', None)
 
-            self.system_research_rate = data['system_research_rate']
+        # first config load, no reschedule
+        if not scheduler:
+            return
 
-            logger.info(f"Setting research rate to: {self.system_research_rate}")
+        # reschedule
+        scheduler.reschedule_job(
+            scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(hours=self.__system_research_rate))
 
-            self._research_phase_scheduler.reschedule_job(
-                scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(seconds=self.system_research_rate))
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            "items": [
+                {
+                    "name": "system_research_rate",
+                    "title": "Schedule Rate (hours)",
+                    "type": "number"
+                }
+            ],
+            "pretty_name": "Scheduler Configuration",
+            "type": "array"
+        }
 
-            return ''
-        else:
-            return str(self.system_research_rate)
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'system_research_rate': 12
+        }
 
     @add_rule('sub_phase_update', ['POST'])
     def set_sub_phase_state(self):

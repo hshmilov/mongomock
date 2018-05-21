@@ -13,6 +13,7 @@ export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
 export const REMOVE_SERVER = 'REMOVE_SERVER'
 export const GET_ADAPTER_BY_UNIQUE_NAME = 'GET_ADAPTER_BY_UNIQUE_NAME'
 
+
 export const adapter = {
 	state: {
 		/* All adapters */
@@ -31,7 +32,7 @@ export const adapter = {
 		/* Data about a specific adapter that is currently being configured */
 		currentAdapter: {
 			fetching: false, data: {}, error: ''
-		}
+		},
 	},
 	getters: {
 		[ GET_ADAPTER_BY_UNIQUE_NAME ] (state) {
@@ -108,7 +109,7 @@ export const adapter = {
 					return server.uuid !== serverId
 				})
 			}
-		}
+		},
 	},
 	actions: {
 		[ FETCH_ADAPTERS ] ({dispatch}, payload) {

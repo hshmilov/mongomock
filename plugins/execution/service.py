@@ -8,7 +8,7 @@ import json
 import threading
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
-from axonius.plugin_base import PluginBase, add_rule
+from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_stopper import stoppable
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.utils.files import get_local_config_file
@@ -78,7 +78,7 @@ class ExecutionService(PluginBase):
 
         .. note:: We should still need to implement this function
         """
-        with self._get_db_connection(True) as db_connection:
+        with self._get_db_connection() as db_connection:
             devices_db = db_connection[AGGREGATOR_PLUGIN_NAME]['devices_db']
 
             result = devices_db.find_one({"internal_axon_id": device_id})
@@ -399,6 +399,9 @@ class ExecutionService(PluginBase):
 
         :param str action_type: The type of the action we want to run. For example: "put_file"
         """
+        if not self._execution_enabled:
+            return return_error("Execution is disabled", 400)
+
         # Getting the wanted device axon_id
         device_id = self.get_url_param('axon_id')
 

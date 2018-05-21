@@ -163,7 +163,7 @@ class CorrelatorBase(PluginBase, Triggerable, Feature, ABC):
         :param devices_ids:
         :return:
         """
-        with self._get_db_connection(True) as db:
+        with self._get_db_connection() as db:
             aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             if devices_ids is None:
                 return list(aggregator_db['devices_db'].find(self._devices_filter))

@@ -6,66 +6,33 @@
                 <div class="grid grid-col-2">
                     <label for="schedule" class="label">Next Scheduled Time:</label>
                     <x-date-edit id="schedule" :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
-                    <label for="research_rate" class="label">Schedule Rate (hours)</label>
-                    <div class="grid-item">
-                        <input id="research_rate" type="number" min="0" v-model="lifecycle.researchRate">
-                        <a class="x-btn right" @click="setResearchRate">Set</a>
-                    </div>
+                    <template v-if="schedulerSettings && schedulerSettings.config">
+                        <label for="research_rate" class="label">Schedule Rate (hours)</label>
+                        <div class="grid-item">
+                            <input id="research_rate" type="number" min="0"
+                                   v-model="schedulerSettings.config.system_research_rate">
+                            <a class="x-btn right" @click="setResearchRate">Set</a>
+                        </div>
+                    </template>
+                    <template v-else>Loading</template>
                 </div>
-                <h3>Execution</h3>
-                <toggle-button id="toggle" :value="lifecycle.executionEnabled" color="#FF7D46" :sync="true"
-                               :labels="true" @change="toggleExecution"/>
             </tab>
-            <tab title="Email Settings" id="email-settings-tab">
-                <h3>Mail Server</h3>
+            <tab title="Global Settings" id="email-settings-tab" v-if="configurable.core">
                 <div class="grid grid-col-2">
-                    <x-schema-form :schema="schema" v-model="smtpSettings" @validate="updateValidity"
-                                   @submit="setEmailServer" api-upload="email_server"/>
-                    <div/><button class="x-btn" :class="{'disabled':!complete}" @click="setEmailServer">Save</button>
+                    <x-schema-form :schema="configurable.core.CoreService.schema"
+                                   v-model="configurable.core.CoreService.config" @validate="updateValidity"
+                                   :api-upload="`adapters/core`"/>
+
                 </div>
+                <button class="x-btn" :class="{'disabled':!complete}" @click="setEmailServer">Save</button>
             </tab>
-            <tab title="System Settings" id="system-settings-tab">
-                <h3>Data Tables</h3>
+            <tab title="GUI Settings" id="system-settings-tab" v-if="configurable.gui">
                 <div class="grid grid-col-2">
-                    <label for="refresh-rate">Auto-Refresh Rate (seconds)</label>
-                    <input id="refresh-rate" type="number" min="0" v-model="refreshRate">
-
-                    <label for="single-adapter">Use Single Adapter View</label>
-                    <x-checkbox id="single-adapter" v-model="singleAdapter"/>
-
-                    <label for="multi-line">Use Table Multi Line View</label>
-                    <x-checkbox id="multi-line" v-model="multiLine" />
-
-                    <label for="default-sort">Sort by Number of Adapters in Default View</label>
-                    <x-checkbox id="default-sort" v-model="defaultSort"/>
-                    <div/>
-                    <button class="x-btn" @click="saveSystemSettings">save</button>
-                </div>
-                <div>
-                </div>
-            </tab>
-            <tab title="Okta Settings" id="okta-settings-tab">
-                <h3>Okta enabled</h3>
-                    <toggle-button id="toggle" :value="okta.okta_enabled" color="#FF7D46" :sync="true" :labels="true"
-                    @change="okta.okta_enabled = !okta.okta_enabled"/>
-
-                <div class="grid grid-col-2" v-if="okta.okta_enabled">
-                    <label for="okta-client-id">Client ID</label>
-                    <input id="okta-client-id" type="text" min="0" v-model="okta.okta_client_id">
-
-                    <label for="okta-client-secret">Client Secret</label>
-                    <input id="okta-client-secret" type="text" min="0" v-model="okta.okta_client_secret">
-
-                    <label for="okta-url">Okta server URL</label>
-                    <input id="okta-url" type="text" min="0" v-model="okta.okta_url">
-
-                    <label for="app-url">GUI URL</label>
-                    <input id="app-url" type="text" min="0" v-model="okta.gui_url">
-                    <div/>
+                    <x-schema-form :schema="configurable.gui.GuiService.schema" v-model="configurable.gui.GuiService.config"/>
                 </div>
                 <div class="row">
                 </div>
-                <button class="btn confirm" @click="saveOktaSettings">save</button>
+                <a class="x-btn" @click="saveGuiSettings">Save</a>
             </tab>
         </tabs>
         <modal v-if="message">
@@ -81,241 +48,147 @@
 
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
-	import xPage from '../../components/layout/Page.vue'
-	import Tabs from '../../components/tabs/Tabs.vue'
-	import Tab from '../../components/tabs/Tab.vue'
-	import xDateEdit from '../../components/controls/string/DateEdit.vue'
-	import xCheckbox from '../../components/inputs/Checkbox.vue'
+    import xPage from '../../components/layout/Page.vue'
+    import Tabs from '../../components/tabs/Tabs.vue'
+    import Tab from '../../components/tabs/Tab.vue'
+    import xDateEdit from '../../components/controls/string/DateEdit.vue'
+    import xCheckbox from '../../components/inputs/Checkbox.vue'
     import Modal from '../../components/popover/Modal.vue'
 
-	import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
-	import {
-		UPDATE_REFRESH_RATE,
-		UPDATE_SINGLE_ADAPTER,
-		UPDATE_MULTI_LINE,
-        DEFAULT_SORT_SETTINGS,
-		SAVE_SETTINGS
-	} from '../../store/modules/settings'
-	import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
-	import { mapState, mapMutations, mapActions } from 'vuex'
-    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG} from "../../store/modules/plugin";
+    import {FETCH_LIFECYCLE} from '../../store/modules/dashboard'
+    import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
+    import {mapState, mapActions, mapMutations} from 'vuex'
+    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/configurable";
 
-	export default {
-		name: 'settings-container',
-		components: {xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, Modal},
-		computed: {
-			...mapState(['dashboard', 'settings']),
-			limit () {
-				return [{
-					type: 'fromto',
-					from: `${new Date().toDateString()} ${new Date().toTimeString()}`
-				}]
-			},
-            schema() {
-                return {
-                    type: 'array', items: [
-                        {name: 'smtpHost', title: 'Host', type: 'string'},
-                        {name: 'smtpPort', title: 'Port', type: 'string'},
-                        {name: 'smtpUser', title: 'User Name', type: 'string'},
-                        {name: 'smtpPassword', title: 'Password', type: 'string', format: 'password'},
-                        {name: 'smtpKey', title: 'TLS 1.2 Key File', description: 'The binary contents of the key file', type: 'file'},
-                        {name: 'smtpCert', title: 'TLS 1.2 Cert File', description: 'The binary contents of the cert file', type: 'file'}
-                    ], required: ['smtpHost', 'smtpPort']
+    export default {
+        name: 'settings-container',
+        components: {xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, Modal},
+        computed: {
+            ...mapState({
+                dashboard(state) {
+                    return state.dashboard
+                },
+                configurable(state) {
+                    return state.configurable
+                }
+            }),
+            limit() {
+                return [{
+                    type: 'fromto',
+                    from: `${new Date().toDateString()} ${new Date().toTimeString()}`
+                }]
+            },
+            nextResearchStart() {
+                let tempDate = new Date(parseInt(this.dashboard.lifecycle.data.nextRunTime) * 1000)
+                return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
+            },
+            schedulerSettings: {
+                get() {
+                    if (!this.configurable.system_scheduler) return null
+                    return this.configurable.system_scheduler.SystemSchedulerService
+                },
+                set(value) {
+                    this.changePluginConfig({
+                        pluginId: 'system_scheduler',
+                        configName: 'SystemSchedulerService',
+                        config: value.config
+                    })
                 }
             },
-			nextResearchStart () {
-				let tempDate = new Date(parseInt(this.dashboard.lifecycle.data.nextRunTime) * 1000)
-				return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
-			},
-			refreshRate: {
-				get () {
-					return this.settings.data.refreshRate
-				},
-				set (refreshRate) {
-					this.updateRefreshRate(parseInt(refreshRate))
-				}
-			},
-			singleAdapter: {
-				get () {
-					return this.settings.data.singleAdapter
-				},
-				set (singleAdapter) {
-					this.updateSingleAdapter(singleAdapter)
-				}
-			},
-			multiLine: {
-				get () {
-					return this.settings.data.multiLine
-				},
-				set (multiLine) {
-                    this.updateMultiLine(multiLine)
-				}
-			},
-			defaultSort: {
-				get () {
-					return this.settings.data.defaultSort
-				},
-				set (defaultSort) {
-                    this.updateDefaultSort(defaultSort)
-				}
-			}
-		},
-		data () {
-			return {
-			    smtpSettings: {
-                    smtpHost: '',
-                    smtpPort: '',
-                    smtpUser: '',
-                    smtpPassword: '',
-                    smtpCert: '',
-                    smtpKey: ''
+
+        },
+        data() {
+            return {
+                lifecycle: {
+                    researchRate: 0
                 },
-				lifecycle: {
-					executionEnabled: false,
-					researchRate: 0
-				},
-                okta: {
-			        okta_enabled: false,
-                    okta_client_id: null,
-                    okta_client_secret: null,
-                    okta_url: null,
-                    gui_url: null,
-                },
-                complete: false,
-                message: ''
-			}
-		},
-		methods: {
-			...mapMutations({
-				updateRefreshRate: UPDATE_REFRESH_RATE,
-				updateSingleAdapter: UPDATE_SINGLE_ADAPTER,
-                updateMultiLine: UPDATE_MULTI_LINE,
-                updateDefaultSort: DEFAULT_SORT_SETTINGS
-			}),
-			...mapActions({
-				fetchLifecycle: FETCH_LIFECYCLE,
-				fetchData: REQUEST_API,
-				saveSettings: SAVE_SETTINGS,
+                complete: true,
+                message: '',
+            }
+        },
+        methods: {
+            ...mapMutations({
+                changePluginConfig: CHANGE_PLUGIN_CONFIG
+            }),
+            ...mapActions({
+                fetchLifecycle: FETCH_LIFECYCLE,
+                fetchData: REQUEST_API,
                 startResearch: START_RESEARCH_PHASE,
                 stopResearch: STOP_RESEARCH_PHASE,
                 updatePluginConfig: SAVE_PLUGIN_CONFIG,
                 loadPluginConfig: LOAD_PLUGIN_CONFIG
-			}),
-			toggleExecution (executionEnabled) {
-				let param = `enable`
-				if (!executionEnabled.value) {
-					param = `disable`
-				}
-				this.fetchData({
-					rule: `execution/${param}`,
-					method: 'POST'
-				})
-				this.executionEnabled = executionEnabled.value
-			},
-			scheduleResearch (scheduleDate) {
-				this.fetchData({
-					rule: `research_phase`,
-					method: 'POST',
-					data: {timestamp: scheduleDate}
-				})
-			},
-			setResearchRate () {
-                if (!this.lifecycle.researchRate || this.lifecycle.researchRate <= 0) {
-                    this.message = 'The Inserted Auto-Refresh Rate is invalid, please insert a number larger than 0.'
-                    return
-                }
-
-				this.fetchData({
-					rule: `dashboard/lifecycle_rate`,
-					method: 'POST',
-					data: {system_research_rate: this.lifecycle.researchRate * 60 * 60}
-				}).then((response) => {
+            }),
+            scheduleResearch(scheduleDate) {
+                this.fetchData({
+                    rule: `research_phase`,
+                    method: 'POST',
+                    data: {timestamp: scheduleDate}
+                })
+            },
+            setEmailServer() {
+                if (!this.complete) return
+                this.updatePluginConfig({
+                    pluginId: 'core',
+                    configName: 'CoreService',
+                    config: this.configurable.core.CoreService.config
+                }).then(response => {
                     if (response.status === 200) {
                         this.message = 'Saved Successfully.'
                     }
-
                 })
-			},
-			setEmailServer () {
-                if (!this.complete) return
-				this.fetchData({
-					rule: `email_server`,
-					method: 'POST',
-					data: this.smtpSettings
-				}).then((response) => {
-                    if (response.status === 201) {
-                        this.message = 'Saved Successfully.'
-                    }
-
-                })
-			},
+            },
             updateValidity(valid) {
                 this.complete = valid
             },
-            saveSystemSettings() {
-			    if (!this.refreshRate || this.refreshRate <= 0) {
-			        this.message = 'The Inserted Auto-Refresh Rate is invalid, please insert a number larger than 0.'
-                    return
-                }
-
-			    this.saveSettings().then((response) => {
+            saveGuiSettings() {
+                this.updatePluginConfig({
+                    pluginId: 'gui',
+                    configName: 'GuiService',
+                    config: this.configurable.gui.GuiService.config
+                }).then(response => {
                     if (response.status === 200) {
                         this.message = 'Saved Successfully.'
                     }
                 })
             },
-            saveOktaSettings() {
+            setResearchRate() {
                 this.updatePluginConfig({
-                    pluginId: 'gui',
-                    config_name: 'GuiService',
-                    config: this.okta
-                }).then(response =>{
+                    pluginId: 'system_scheduler',
+                    configName: 'SystemSchedulerService',
+                    config: this.schedulerSettings.config
+                }).then(response => {
                     if (response.status === 200) {
                         this.message = 'Saved Successfully.'
                     }
-
                 })
             },
             closeModal() {
                 this.message = ''
             }
-		},
-		created () {
-			this.fetchLifecycle()
-			this.fetchData({
-				rule: 'execution'
-			}).then((response) => {
-				this.lifecycle.executionEnabled = (response.data === 'enabled')
-			})
-			this.fetchData({
-				rule: 'dashboard/lifecycle_rate'
-			}).then((response) => {
-				this.lifecycle.researchRate = response.data / 60 / 60
-			})
-			this.fetchData({
-				rule: 'email_server'
-			}).then((response) => {
-			    if (response.data) this.smtpSettings = response.data
-			})
+        },
+        created() {
+            this.fetchLifecycle()
             this.loadPluginConfig({
-                pluginId: 'gui',
-                configName: 'GuiService'
-            }).then((response) => {
-                this.okta = response.data.config
+                pluginId: 'system_scheduler',
+                configName: 'SystemSchedulerService'
             })
-		}
-	}
+            this.loadPluginConfig({
+                pluginId: 'core',
+                configName: 'CoreService'
+            })
+        }
+    }
 </script>
 
 <style lang="scss">
     .settings {
         .grid {
-            display: grid;
             grid-row-gap: 12px;
             width: 600px;
             align-items: center;
             grid-auto-rows: auto;
             margin-bottom: 24px;
+            margin-right: 15px;
             &.grid-col-2 {
                 grid-template-columns: 2fr 3fr;
             }

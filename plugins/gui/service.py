@@ -15,7 +15,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, CORE_UNIQUE_NAME
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
@@ -28,7 +28,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
 from passlib.hash import bcrypt
@@ -233,17 +233,15 @@ class GuiService(PluginBase, Configurable):
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
-        self.db_user = self.config['gui_specific']['db_user']
-        self.db_password = self.config['gui_specific']['db_password']
-        self._get_collection('users', limited_user=False).update({'user_name': 'admin'},
-                                                                 {'user_name': 'admin',
-                                                                  'first_name': 'administrator',
-                                                                  'last_name': '',
-                                                                  'pic_name': 'avatar.png',
-                                                                  'password': bcrypt.hash('cAll2SecureAll')},
-                                                                 upsert=True)
-        self.user_queries = self._get_collection("user_queries", limited_user=False)
-        self.device_queries = self._get_collection("device_queries", limited_user=False)
+        self._get_collection('users').update({'user_name': 'admin'},
+                                             {'user_name': 'admin',
+                                              'first_name': 'administrator',
+                                              'last_name': '',
+                                              'pic_name': 'avatar.png',
+                                              'password': bcrypt.hash('cAll2SecureAll')},
+                                             upsert=True)
+        self.user_queries = self._get_collection("user_queries")
+        self.device_queries = self._get_collection("device_queries")
         self._queries_db_map = {
             EntityType.Users: self.user_queries,
             EntityType.Devices: self.device_queries,
@@ -251,8 +249,8 @@ class GuiService(PluginBase, Configurable):
         self.add_default_queries(EntityType.Devices, 'default_queries_devices.ini')
         self.add_default_queries(EntityType.Users, 'default_queries_users.ini')
 
-        self.user_view = self._get_collection("user_views", limited_user=False)
-        self.device_view = self._get_collection("device_views", limited_user=False)
+        self.user_view = self._get_collection("user_views")
+        self.device_view = self._get_collection("device_views")
         self._views_db_map = {
             EntityType.Users: self.user_view,
             EntityType.Devices: self.device_view,
@@ -365,7 +363,8 @@ class GuiService(PluginBase, Configurable):
             return existed_query['_id']
         result = queries_collection.update_one({'name': name}, {'$set': {'name': name, 'filter': query_filter,
                                                                          'expressions': query_expressions,
-                                                                         'query_type': 'saved', 'timestamp': datetime.now(),
+                                                                         'query_type': 'saved',
+                                                                         'timestamp': datetime.now(),
                                                                          'archived': False}}, upsert=True)
         logger.info(f'Added query {name} id: {result.upserted_id or ""}')
         return result.upserted_id or ''
@@ -381,7 +380,7 @@ class GuiService(PluginBase, Configurable):
         return result.inserted_id
 
     def _insert_report(self, name, report):
-        reports_collection = self._get_collection("reports", limited_user=False)
+        reports_collection = self._get_collection("reports")
         existed_report = reports_collection.find_one({'name': name})
         if existed_report is not None and not existed_report.get('archived'):
             logger.info(f'Report {name} already exists under id: {existed_report["_id"]}')
@@ -391,7 +390,7 @@ class GuiService(PluginBase, Configurable):
         logger.info(f'Added report {name} id: {result.inserted_id}')
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_type, dashboard_queries):
-        dashboard_collection = self._get_collection("dashboard", limited_user=False)
+        dashboard_collection = self._get_collection("dashboard")
         existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
             logger.info(f'Report {dashboard_name} already exists under id: {existed_dashboard_chart["_id"]}')
@@ -413,42 +412,40 @@ class GuiService(PluginBase, Configurable):
         Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
         """
         logger.debug(f'Fetching data for entity {entity_type.name}')
-        with self._get_db_connection(False) as db_connection:
-            pipeline = [{'$match': query_filter}]
-            if projection:
-                projection['internal_axon_id'] = 1
-                projection['adapters'] = 1
-                projection['unique_adapter_names'] = 1
-                projection['labels'] = 1
-                projection[ADAPTERS_LIST_LENGTH] = 1
-                pipeline.append({'$project': projection})
-            if sort:
-                pipeline.append({'$sort': sort})
-            elif entity_type == EntityType.Devices:
-                settings = self._get_collection('settings', limited_user=False).find_one({}) or {}
-                if settings.get('defaultSort', False):
-                    # Default sort by adapters list size and then Mongo id (giving order of insertion)
-                    pipeline.append({'$sort': {ADAPTERS_LIST_LENGTH: pymongo.DESCENDING, '_id': pymongo.DESCENDING}})
+        pipeline = [{'$match': query_filter}]
+        if projection:
+            projection['internal_axon_id'] = 1
+            projection['adapters'] = 1
+            projection['unique_adapter_names'] = 1
+            projection['labels'] = 1
+            projection[ADAPTERS_LIST_LENGTH] = 1
+            pipeline.append({'$project': projection})
+        if sort:
+            pipeline.append({'$sort': sort})
+        elif entity_type == EntityType.Devices:
+            if self.__system_settings['defaultSort']:
+                # Default sort by adapters list size and then Mongo id (giving order of insertion)
+                pipeline.append({'$sort': {ADAPTERS_LIST_LENGTH: pymongo.DESCENDING, '_id': pymongo.DESCENDING}})
 
-            if skip:
-                pipeline.append({'$skip': skip})
-            if limit:
-                pipeline.append({'$limit': limit})
+        if skip:
+            pipeline.append({'$skip': skip})
+        if limit:
+            pipeline.append({'$limit': limit})
 
-            # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
-            # The reason is that sorting without the flag, causes exceeding of the memory limit.
-            data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
+        # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
+        # The reason is that sorting without the flag, causes exceeding of the memory limit.
+        data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
 
-            if query_filter and not skip and request and include_history:
-                # getting the original filter text on purpose.
-                query_filter = request.args.get('filter')
-                self._queries_db_map[entity_type].replace_one(
-                    {'name': {'$exists': False}, 'filter': query_filter},
-                    {'filter': query_filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
-                    upsert=True)
-            if not projection:
-                return [beautify_db_entry(entity) for entity in data_list]
-            return [self._parse_entity_fields(entity, projection.keys()) for entity in data_list]
+        if query_filter and not skip and request and include_history:
+            # getting the original filter text on purpose.
+            query_filter = request.args.get('filter')
+            self._queries_db_map[entity_type].replace_one(
+                {'name': {'$exists': False}, 'filter': query_filter},
+                {'filter': query_filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
+                upsert=True)
+        if not projection:
+            return [beautify_db_entry(entity) for entity in data_list]
+        return [self._parse_entity_fields(entity, projection.keys()) for entity in data_list]
 
     def _parse_entity_fields(self, entity_data, fields):
         """
@@ -725,7 +722,7 @@ class GuiService(PluginBase, Configurable):
             'specific': {}
         }
         plugins_available = requests.get(self.core_address + '/register').json()
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             plugins_from_db = list(db_connection['core']['configs'].find({}).
                                    sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
             for plugin in plugins_from_db:
@@ -776,7 +773,7 @@ class GuiService(PluginBase, Configurable):
         Find all entity from adapters that have a given feature, from a given set of entities
         :return: plugin_unique_names of entity with given features, dict of plugin_unique_name -> id of adapter entity
         """
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             entities = list(self._entity_db_map.get(entity_type).find(
                 {'internal_axon_id': {
                     "$in": entity_uuids
@@ -833,7 +830,7 @@ class GuiService(PluginBase, Configurable):
         :return:
         """
         all_labels = set()
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             if request.method == 'GET':
                 for current_device in db.find({'$or': [{'labels': {'$exists': False}}, {'labels': {'$ne': []}}]},
                                               projection={'labels': 1}):
@@ -993,7 +990,7 @@ class GuiService(PluginBase, Configurable):
         :return:
         """
         plugins_available = requests.get(self.core_address + '/register').json()
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
                                                                               {'plugin_type': 'ScannerAdapter'}]}).sort(
                 [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
@@ -1065,7 +1062,7 @@ class GuiService(PluginBase, Configurable):
         if not file or file.filename == '':
             return return_error("File must exist", 401)
         filename = file.filename
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             fs = gridfs.GridFS(db_connection[plugin_unique_name])
             written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
@@ -1080,7 +1077,7 @@ class GuiService(PluginBase, Configurable):
         :param skip: for pagination (only for GET)
         :return:
         """
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             if request.method == 'GET':
                 client_collection = db_connection[adapter_unique_name]['clients']
                 schema = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']
@@ -1152,7 +1149,7 @@ class GuiService(PluginBase, Configurable):
             if not sort:
                 sort.append(('report_creation_time', pymongo.DESCENDING))
             return jsonify([beautify_db_entry(report) for report in
-                            self._get_collection('reports', db_name=report_service, limited_user=False).find(
+                            self._get_collection('reports', db_name=report_service).find(
                                 mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)])
 
         if request.method == 'PUT':
@@ -1180,7 +1177,7 @@ class GuiService(PluginBase, Configurable):
     @filtered()
     @add_rule_unauthenticated("alert/count")
     def alert_count(self, mongo_filter):
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
             return jsonify(db_connection[report_service]['reports'].find(mongo_filter).count())
 
@@ -1218,7 +1215,7 @@ class GuiService(PluginBase, Configurable):
         :return: List of plugins with
         """
         plugins_available = requests.get(self.core_address + '/register').json()
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             plugins_from_db = db_connection['core']['configs'].find({'plugin_type': 'Plugin'}).sort(
                 [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             plugins_to_return = []
@@ -1259,7 +1256,7 @@ class GuiService(PluginBase, Configurable):
         """
         plugin_data = {}
         schemas = list(db_connection[plugin_unique_name]['config_schemas'].find())
-        configs = list(db_connection[plugin_unique_name]['configs'].find())
+        configs = list(db_connection[plugin_unique_name]['configurable_configs'].find())
         for schema in schemas:
             associated_config = [c for c in configs if c['config_name'] == schema['config_name']]
             if not associated_config:
@@ -1285,8 +1282,8 @@ class GuiService(PluginBase, Configurable):
             if config_to_set is None:
                 return return_error("Invalid config", 400)
 
-            with self._get_db_connection(False) as db_connection:
-                config_collection = db_connection[plugin_unique_name]['configs']
+            with self._get_db_connection() as db_connection:
+                config_collection = db_connection[plugin_unique_name]['configurable_configs']
 
                 config_collection.replace_one(filter={
                     'config_name': config_name
@@ -1299,9 +1296,11 @@ class GuiService(PluginBase, Configurable):
 
             return ""
         if request.method == 'GET':
-            with self._get_db_connection(False) as db_connection:
-                config_collection = db_connection[plugin_unique_name]['configs']
-                return jsonify(config_collection.find_one({'config_name': config_name}))
+            with self._get_db_connection() as db_connection:
+                config_collection = db_connection[plugin_unique_name]['configurable_configs']
+                schema_collection = db_connection[plugin_unique_name]['config_schemas']
+                return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
+                                'schema': schema_collection.find_one({'config_name': config_name})['schema']})
 
     @add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
@@ -1325,7 +1324,7 @@ class GuiService(PluginBase, Configurable):
         :param config_name: Config to fetch
         :return:
         """
-        configs_collection = self._get_collection('config', limited_user=False)
+        configs_collection = self._get_collection('config')
         if request.method == 'GET':
             return jsonify(
                 configs_collection.find_one({'name': config_name},
@@ -1350,7 +1349,7 @@ class GuiService(PluginBase, Configurable):
         :param skip: start index for pagination
         :return:
         """
-        with self._get_db_connection(False) as db:
+        with self._get_db_connection() as db:
             notification_collection = db['core']['notifications']
 
             # GET
@@ -1397,7 +1396,7 @@ class GuiService(PluginBase, Configurable):
         :param mongo_filter: Generated by the filtered() decorator, according to uri param "filter"
         :return: Number of notifications matching given filter
         """
-        with self._get_db_connection(False) as db:
+        with self._get_db_connection() as db:
             notification_collection = db['core']['notifications']
             return str(notification_collection.find(mongo_filter).count())
 
@@ -1408,7 +1407,7 @@ class GuiService(PluginBase, Configurable):
         :param notification_id: Notification ID
         :return:
         """
-        with self._get_db_connection(False) as db:
+        with self._get_db_connection() as db:
             notification_collection = db['core']['notifications']
             return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
@@ -1435,7 +1434,7 @@ class GuiService(PluginBase, Configurable):
                 del user['password']
             return jsonify(user), 200
 
-        users_collection = self._get_collection('users', limited_user=False)
+        users_collection = self._get_collection('users')
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
             return return_error("No login data provided", 400)
@@ -1478,7 +1477,7 @@ class GuiService(PluginBase, Configurable):
     #     :param skip: start index for pagination
     #     :return:
     #     """
-    #     users_collection = self._get_collection('users', limited_user=False)
+    #     users_collection = self._get_collection('users')
     #     if request.method == 'GET':
     #         return jsonify(beautify_db_entry(n) for n in
     #                        users_collection.find(projection={
@@ -1554,7 +1553,7 @@ class GuiService(PluginBase, Configurable):
             return return_error('Name required in order to save Dashboard Chart', 400)
         if not dashboard_data.get('queries'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
-        update_result = self._get_collection('dashboard', limited_user=False).replace_one(
+        update_result = self._get_collection('dashboard').replace_one(
             {'name': dashboard_data['name']}, dashboard_data, upsert=True)
         if not update_result.upserted_id and not update_result.modified_count:
             return return_error('Error saving dashboard chart', 400)
@@ -1571,7 +1570,7 @@ class GuiService(PluginBase, Configurable):
         :return:
         """
         dashboard_list = []
-        for dashboard in self._get_collection('dashboard', limited_user=False).find(filter_archived()):
+        for dashboard in self._get_collection('dashboard').find(filter_archived()):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
             elif not dashboard.get('queries'):
@@ -1671,7 +1670,7 @@ class GuiService(PluginBase, Configurable):
         :param dashboard_name: Name of the dashboard to fetch data for
         :return:
         """
-        update_result = self._get_collection('dashboard', limited_user=False).replace_one(
+        update_result = self._get_collection('dashboard').replace_one(
             {'_id': ObjectId(dashboard_id)}, {'archived': True})
         if not update_result.modified_count:
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
@@ -1739,7 +1738,7 @@ class GuiService(PluginBase, Configurable):
         """
         plugins_available = requests.get(self.core_address + '/register').json()
         adapter_devices = {'total_gross': 0, 'adapter_count': []}
-        with self._get_db_connection(False) as db_connection:
+        with self._get_db_connection() as db_connection:
             adapter_devices['total_net'] = self.devices_db.count()
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
             for adapter in adapters_from_db:
@@ -1829,77 +1828,9 @@ class GuiService(PluginBase, Configurable):
 
         return ''
 
-    #############
-    # SETTINGS #
-    #############
-
-    @add_rule_unauthenticated("settings", methods=['POST', 'GET'])
-    def settings(self):
-        """
-        Gets or saves current settings for the system
-
-        :return:
-        """
-        settings_collection = self._get_collection('settings', limited_user=False)
-        if (request.method == 'GET'):
-            settings_object = settings_collection.find_one({})
-            if not settings_object:
-                return jsonify({})
-            return jsonify(beautify_db_entry(settings_object))
-
-        # Handle POST request
-        settings_object = self.get_request_data_as_object()
-        update_result = settings_collection.replace_one({}, settings_object, upsert=True)
-        if not update_result.upserted_id and not update_result.modified_count:
-            return return_error('Error saving settings', 400)
-        return ''
-
-    @add_rule_unauthenticated("email_server", methods=['POST', 'GET', 'DELETE'])
-    def email_server(self):
-        """
-        Adds, Gets and Deletes currently saved mail servers
-
-        :return: Map between each adapter and the number of devices it has, unless no devices
-        """
-        response = self.request_remote_plugin('email_server', None, self.get_method(),
-                                              json=self.get_request_data_as_object())
-        if self.get_method() in ('POST', 'GET') and response.status_code == 200:
-            return jsonify(response.json())
-        else:
-            return response.content, response.status_code
-
-    @add_rule_unauthenticated("email_server/upload_file", methods=['POST'])
-    def email_server_upload_file(self):
-        return self._upload_file(CORE_UNIQUE_NAME)
-
-    @add_rule_unauthenticated("execution/<plugin_state>", methods=['POST'])
-    def toggle_execution(self, plugin_state):
-        services = ['execution', 'careful_execution_correlator', 'general_info']
-        statuses = []
-        for current_service in services:
-            response = self.request_remote_plugin('plugin_state', current_service, 'POST',
-                                                  params={'wanted': plugin_state})
-
-            if response.status_code != 200:
-                logger.error(f"Failed to {plugin_state} {current_service}.")
-                statuses.append(False)
-            else:
-                logger.info(f"Switched {current_service} to be {plugin_state}.")
-                statuses.append(True)
-
-        return '' if all(statuses) else return_error(f'Failed to {plugin_state} all plugins', 500)
-
-    @add_rule_unauthenticated("execution", methods=['GET'])
-    def get_execution(self):
-        services = ['execution', 'careful_execution_correlator', 'general_info']
-        enabled = False
-        for current_service in services:
-            response = self.request_remote_plugin('plugin_state', current_service)
-            if response.status_code == 200 and response.json()['state'] == 'enabled':
-                enabled = True
-                break
-
-        return 'enabled' if enabled else 'disabled'
+    ####################
+    # Executive Report #
+    ####################
 
     def _get_adapter_data(self, adapters):
         """
@@ -1929,7 +1860,7 @@ class GuiService(PluginBase, Configurable):
             try:
                 # Exception thrown if adapter is down or report missing, and section will appear with queries only
                 adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
-                adapter_reports_db = self._get_db_connection(False)[adapter_unique_name]
+                adapter_reports_db = self._get_db_connection()[adapter_unique_name]
                 adapter_clients_report = adapter_reports_db['report'].find_one({"name": "report"}).get('data', {})
             except Exception:
                 logger.exception("Error contacting the report db for adapter {adapter_unique_name}")
@@ -1979,8 +1910,6 @@ class GuiService(PluginBase, Configurable):
                     })
         return views_data
 
-    # Executive Report
-
     @add_rule_unauthenticated('export_report')
     def export_report(self):
         """
@@ -2006,7 +1935,7 @@ class GuiService(PluginBase, Configurable):
             'custom_charts': self._get_dashboard(),
             'views_data': self._get_saved_views_data()
         }
-        report = self._get_collection('reports', limited_user=False).find_one({'name': 'Main Report'})
+        report = self._get_collection('reports').find_one({'name': 'Main Report'})
         if report.get('adapters'):
             report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
@@ -2104,11 +2033,11 @@ class GuiService(PluginBase, Configurable):
 
     @property
     def system_collection(self):
-        return self._get_collection(SYSTEM_CONFIG_COLLECTION, limited_user=False)
+        return self._get_collection(SYSTEM_CONFIG_COLLECTION)
 
     @property
     def exec_report_collection(self):
-        return self._get_collection('exec_reports_settings', limited_user=False)
+        return self._get_collection('exec_reports_settings')
 
     @property
     def device_control_plugin(self):
@@ -2119,44 +2048,82 @@ class GuiService(PluginBase, Configurable):
 
     def _on_config_update(self, config):
         logger.info(f"Loading GuiService config: {config}")
-        self.__okta = config
+        self.__okta = config['login_settings']
+        self.__system_settings = config['system_settings']
 
     @classmethod
     def _db_config_schema(cls) -> dict:
         return {
             "items": [
                 {
-                    "name": "okta_enabled",
-                    "title": "Whether or not to allow Okta logins",
-                    "type": "bool"
+                    "items": [
+                        {
+                            "name": "refreshRate",
+                            "title": "Auto-Refresh Rate (seconds)",
+                            "type": "number",
+                            "required": True
+                        },
+                        {
+                            "name": "singleAdapter",
+                            "title": "Use Single Adapter View",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
+                            "name": "multiLine",
+                            "title": "Use Table Multi Line View",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
+                            "name": "defaultSort",
+                            "title": "Sort by Number of Adapters in Default View",
+                            "type": "bool",
+                            "required": True
+                        },
+
+                    ],
+                    "name": "system_settings",
+                    "title": "System Settings",
+                    "type": "array"
                 },
                 {
-                    "name": "okta_client_id",
-                    "title": "Okta application client id",
-                    "type": "string"
-                },
-                {
-                    "name": "okta_client_secret",
-                    "title": "Okta application client secret",
-                    "type": "string"
-                },
-                {
-                    "name": "okta_url",
-                    "title": "Okta application URL",
-                    "type": "string"
-                },
-                {
-                    "name": "gui_url",
-                    "title": "The URL of Axonius GUI",
-                    "type": "string"
+                    "items": [
+                        {
+                            "name": "okta_enabled",
+                            "title": "Whether or not to allow Okta logins",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
+                            "name": "okta_client_id",
+                            "title": "Okta application client id",
+                            "type": "string",
+                            "required": True
+                        },
+                        {
+                            "name": "okta_client_secret",
+                            "title": "Okta application client secret",
+                            "type": "string",
+                            "required": True
+                        },
+                        {
+                            "name": "okta_url",
+                            "title": "Okta application URL",
+                            "type": "string",
+                            "required": True
+                        },
+                        {
+                            "name": "gui_url",
+                            "title": "The URL of Axonius GUI",
+                            "type": "string",
+                            "required": True
+                        }
+                    ],
+                    "name": "login_settings",
+                    "title": "Login Settings",
+                    "type": "array"
                 }
-            ],
-            "required": [
-                "okta_enabled",
-                "okta_client_id",
-                "okta_client_secret",
-                "okta_url",
-                "gui_url"
             ],
             "pretty_name": "GUI Configuration",
             "type": "array"
@@ -2165,9 +2132,17 @@ class GuiService(PluginBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            "okta_enabled": False,
-            "okta_client_id": "",
-            "okta_client_secret": "",
-            "okta_url": "https://axonius.okta.com",
-            "gui_url": "https://127.0.0.1"
+            "login_settings": {
+                "okta_enabled": False,
+                "okta_client_id": "",
+                "okta_client_secret": "",
+                "okta_url": "https://axonius.okta.com",
+                "gui_url": "https://127.0.0.1"
+            },
+            "system_settings": {
+                "refreshRate": 30,
+                "singleAdapter": False,
+                "multiLine": False,
+                "defaultSort": False
+            }
         }

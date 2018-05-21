@@ -15,11 +15,11 @@
                 </div>
             </div>
             <tabs v-if="currentAdapter">
-                <tab v-for="config, config_name, i in currentAdapter.config_data" :key="i"
-                     :title="config.schema.pretty_name || config_name" :id="config_name" :selected="!i">
+                <tab v-for="config, configName, i in currentAdapter.config_data" :key="i"
+                     :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
                     <div class="configuration">
                         <x-schema-form :schema="config.schema" v-model="config.config" @validate="serverModal.valid = $event"/>
-                        <a class="x-btn great" @click="saveConfig(config_name, config.config)" tabindex="1">Save Config</a>
+                        <a class="x-btn great" @click="saveConfig(configName, config.config)" tabindex="1">Save Config</a>
                     </div>
                 </tab>
             </tabs>
@@ -60,10 +60,8 @@
 	import {
 		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
 	} from '../../store/modules/adapter'
-    import {
-	    SAVE_PLUGIN_CONFIG
-    } from '../../store/modules/plugin'
     import { pluginMeta } from '../../static.js'
+    import {SAVE_PLUGIN_CONFIG} from "../../store/modules/configurable";
 
 	export default {
 		name: 'adapter-config-container',
@@ -184,10 +182,10 @@
 			toggleServerModal () {
 				this.serverModal.open = !this.serverModal.open
 			},
-            saveConfig(config_name, config) {
+            saveConfig(configName, config) {
                 this.updatePluginConfig({
                     pluginId: this.adapterUniquePluginName,
-                    config_name: config_name,
+                    configName: configName,
                     config: config
                 }).then(() => this.message = 'Adapter Configuration Saved.')
             },

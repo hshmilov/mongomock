@@ -67,7 +67,7 @@ class Configurable(object):
         """
         Fetch all configs from the DB and update the classes
         """
-        configs = self._get_collection("configs")
+        configs = self._get_collection("configurable_configs")
 
         for inheritor in type(self).__recurse_tree(type(self)):
             if not does_method_belongs_to_class(inheritor._db_config_schema, inheritor):
@@ -103,7 +103,7 @@ class Configurable(object):
         Updates DB with the schema and default configs (if no other config exists)
         """
         schemas = self._get_collection("config_schemas")
-        configs = self._get_collection("configs")
+        configs = self._get_collection("configurable_configs")
         for config_class, config_schema, config_default in self.__get_all_configs_and_defaults():
             old_schema = schemas.find_one_and_replace(filter={
                 'config_name': config_class.__name__,

@@ -69,7 +69,7 @@ class AggregatorService(PluginBase, Triggerable):
         self.__device_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
 
         # Setting up db
-        self.aggregator_db_connection = self._get_db_connection(True)[self.plugin_unique_name]
+        self.aggregator_db_connection = self._get_db_connection()[self.plugin_unique_name]
         self.insert_views()
 
         # insertion and link/unlink lock

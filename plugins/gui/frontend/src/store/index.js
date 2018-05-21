@@ -42,16 +42,15 @@ import {
 	GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
 	GET_DATA_BY_ID, getDataByID
 } from './getters'
-import { settings } from '../store/modules/settings'
 import { devices } from './modules/devices'
 import { users } from './modules/users'
-import { plugin } from '../store/modules/plugin'
 import { adapter } from '../store/modules/adapter'
 import { alert } from '../store/modules/alert'
 import { notifications } from '../store/modules/notifications'
 import { auth } from './modules/auth'
 import { dashboard } from '../store/modules/dashboard'
 import { report } from '../store/modules/report'
+import { configurable } from '../store/modules/configurable'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -112,16 +111,15 @@ export default new Vuex.Store({
             System's controls resource, relevant for each component.
             Module stores controls and manages the way of obtaining it.
          */
-        settings,
         devices,
 		users,
-		plugin,
 		adapter,
 		alert,
         notifications,
         auth,
         dashboard,
-		report
+		report,
+		configurable
     }
 
 })

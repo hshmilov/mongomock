@@ -104,7 +104,7 @@ def after_request(response):
 ROUTED_FUNCTIONS = list()
 
 
-def add_rule(rule, methods=['GET'], should_authenticate: bool = True, allow_on_disabled: bool = False):
+def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
     """ Decorator for adding function to URL.
 
     This decorator will add a flask rule to a wanted method from a class derived
@@ -114,7 +114,6 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True, allow_on_d
             This function will be accessed when browsing '/device'
     :param methods: Methods that this function will handle
     :param should_authenticate: Whether to check api key or not. True by default
-    :param allow_on_disabled: Whether to allow this call on disabled plugins
 
     :type methods: list of str
     """
@@ -130,12 +129,6 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True, allow_on_d
             In case of exception, a detailed traceback will be sent to log
             """
             logger.debug(f"Rule={rule} request={request}")
-
-            if self.plugin_state == 'disabled':
-                request_url = str(request.url_rule)
-                if not allow_on_disabled:
-                    logger.warning(f"Tried to access disabled plugin {request_url}")
-                    return return_error(f"Plugin disabled for url {request_url}. ", 405)
 
             try:
                 if should_authenticate:
@@ -298,8 +291,6 @@ class PluginBase(Configurable, Feature):
             self.temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
             self.temp_config['registration']['api_key'] = self.api_key
 
-        self.plugin_state = self.temp_config['registration'].get('plugin_state', 'enabled')
-
         with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
             self.temp_config.write(self.temp_config_file)
 
@@ -364,7 +355,7 @@ class PluginBase(Configurable, Feature):
         logger.info(f"Running on ip {socket.gethostbyname(socket.gethostname())}")
 
         # DB's
-        self.aggregator_db_connection = self._get_db_connection(True)[AGGREGATOR_PLUGIN_NAME]
+        self.aggregator_db_connection = self._get_db_connection()[AGGREGATOR_PLUGIN_NAME]
         self.devices_db = self.aggregator_db_connection['devices_db']
         self.users_db = self.aggregator_db_connection['users_db']
         self.devices_db_view = self.aggregator_db_connection['devices_db_view']
@@ -424,6 +415,7 @@ class PluginBase(Configurable, Feature):
 
         self._update_schema()
         self.renew_config_from_db()
+        self.__renew_global_settings_from_db()
 
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -445,7 +437,7 @@ class PluginBase(Configurable, Feature):
             raw_fields = list(entity_fields['raw_fields_set'])  # copy
 
             # Upsert new fields
-            fields_collection = self._get_db_connection(True)[self.plugin_unique_name][collection_name]
+            fields_collection = self._get_db_connection()[self.plugin_unique_name][collection_name]
 
             fields_collection.update({'name': 'raw'}, {'$addToSet': {'raw': {'$each': raw_fields}}}, upsert=True)
             if entity_fields['first_fields_change']:
@@ -639,7 +631,7 @@ class PluginBase(Configurable, Feature):
             # this does not change the original dict given to this method
             del kwargs['headers']
 
-        if plugin_unique_name is None:
+        if plugin_unique_name is None or plugin_unique_name == CORE_UNIQUE_NAME:
             url = '{0}/{1}'.format(self.core_address, resource)
         else:
             url = '{0}/{1}/{2}'.format(self.core_address,
@@ -648,14 +640,14 @@ class PluginBase(Configurable, Feature):
         return requests.request(method, url, headers=headers, **kwargs)
 
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
-        with self._get_db_connection(True) as db:
-            return db['core']['notifications'].insert_one(dict(who=self.plugin_unique_name,
-                                                               plugin_name=self.plugin_name,
-                                                               severity=severity_type,
-                                                               type=notification_type,
-                                                               title=title,
-                                                               content=content,
-                                                               seen=False)).inserted_id
+        with self._get_db_connection() as db:
+            return db[CORE_UNIQUE_NAME]['notifications'].insert_one(dict(who=self.plugin_unique_name,
+                                                                         plugin_name=self.plugin_name,
+                                                                         severity=severity_type,
+                                                                         type=notification_type,
+                                                                         title=title,
+                                                                         content=content,
+                                                                         seen=False)).inserted_id
 
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
@@ -695,34 +687,11 @@ class PluginBase(Configurable, Feature):
             ThreadStopper.stopped.clear()
         return '', 204
 
-    @add_rule('supported_features', should_authenticate=False, allow_on_disabled=True)
+    @add_rule('supported_features', should_authenticate=False)
     def get_supported_features(self):
         return jsonify(self.supported_features)
 
-    @add_rule('plugin_state', should_authenticate=False, methods=['GET', 'POST'], allow_on_disabled=True)
-    def state(self):
-        if self.get_method() == 'GET':
-            return jsonify({"state": self.plugin_state})
-        # Else its POST
-        wanted_state = str(self.get_url_param('wanted'))
-        if wanted_state == 'disable':
-            logger.info("Changing plugin state to disabled")
-            self.plugin_state = 'disabled'
-        elif wanted_state == 'enable':
-            self.plugin_state = 'enabled'
-            logger.info("Changing plugin state to enabled")
-        else:
-            return return_error(f"Unrecognized state {wanted_state}", 400)
-
-        if 'registration' not in self.temp_config:
-            logger.info("Making new configuration")
-            self.temp_config['registration'] = {}
-        self.temp_config['registration']['plugin_state'] = self.plugin_state
-        with open(VOLATILE_CONFIG_PATH, 'w') as self.temp_config_file:
-            self.temp_config.write(self.temp_config_file)
-        return ''
-
-    @add_rule('version', methods=['GET'], should_authenticate=False, allow_on_disabled=True)
+    @add_rule('version', methods=['GET'], should_authenticate=False)
     def _get_version(self):
         """ /version - Get the version of the app.
 
@@ -833,6 +802,9 @@ class PluginBase(Configurable, Feature):
 
         :return Promise result: A promise of the action
         """
+        if action_type in ('execute_wmi_smb', 'execute_shell', 'execute_binary') and not self._execution_enabled:
+            logger.critical("Plugins decided to execute even though execution is disabled")
+            return None
         data = {}
         if data_for_action:
             data = data_for_action.copy()
@@ -874,28 +846,16 @@ class PluginBase(Configurable, Feature):
                     self.execution_promises.submit(action_promise.do_reject, Exception(err_msg))
                     self._open_actions.pop(action_id)
 
-    def _get_db_connection(self, limited_user=True):
+    def _get_db_connection(self):
         """
         Returns a new DB connection that can be queried.
         Currently, it uses mongodb
 
         :return: MongoClient
         """
-        if limited_user:
-            pure_addr = self.db_host.split("mongodb://")[1]
-            connection_line = "mongodb://{user}:{password}@{addr}/{db}".format(user=self.db_user,
-                                                                               password=self.db_password,
-                                                                               addr=pure_addr,
-                                                                               db=self.plugin_unique_name)
-            return MongoClient(connection_line)
-        else:
-            return MongoClient(self.db_host, username=self.db_user, password=self.db_password)
+        return MongoClient(self.db_host, username=self.db_user, password=self.db_password)
 
-    def _get_db_with_limit(self, db_name):
-        limited_user = False if self.plugin_name == GUI_NAME else True
-        return self._get_db_connection(limited_user)[db_name]
-
-    def _get_collection(self, collection_name, db_name=None, limited_user=True):
+    def _get_collection(self, collection_name, db_name=None):
         """
         Returns all configs for the current plugin.
 
@@ -906,7 +866,7 @@ class PluginBase(Configurable, Feature):
         """
         if not db_name:
             db_name = self.plugin_unique_name
-        return self._get_db_connection(limited_user)[db_name][collection_name]
+        return self._get_db_connection()[db_name][collection_name]
 
     def _grab_file(self, field_data, stored_locally=True):
         """
@@ -919,7 +879,7 @@ class PluginBase(Configurable, Feature):
         if field_data:
             import gridfs
             db_name = self.plugin_unique_name if stored_locally else CORE_UNIQUE_NAME
-            return gridfs.GridFS(self._get_db_with_limit(db_name)).get(ObjectId(field_data['uuid']))
+            return gridfs.GridFS(self._get_db_connection()[db_name]).get(ObjectId(field_data['uuid']))
 
     def _grab_file_contents(self, field_data, stored_locally=True):
         """
@@ -1316,17 +1276,107 @@ class PluginBase(Configurable, Feature):
         """ A shortcut to __tag with type "adapterdata" """
         return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity, action_if_exists)
 
-    @add_rule("update_config", methods=['POST'])
+    @add_rule("update_config", methods=['POST'], should_authenticate=False)
     def update_config(self):
         self.renew_config_from_db()
+        self.__renew_global_settings_from_db()
         return ""
 
     @property
     def mail_sender(self):
-        mail_server = self._get_db_with_limit('core')['email_configs'].find_one({'type': 'email_server'})
-        if not mail_server:
+        if not self._email_settings['smtpHost']:
             raise Exception('No Mail Server configured')
-        return EmailServer(mail_server['smtpHost'], mail_server['smtpPort'],
-                           mail_server.get('smtpUser'), mail_server.get('smtpPassword'),
-                           self._grab_file_contents(mail_server.get('smtpKey'), stored_locally=False),
-                           self._grab_file_contents(mail_server.get('smtpCert'), stored_locally=False))
+        return EmailServer(self._email_settings['smtpHost'], self._email_settings['smtpPort'],
+                           self._email_settings.get('smtpUser'), self._email_settings.get('smtpPassword'),
+                           self._grab_file_contents(self._email_settings.get('smtpKey'), stored_locally=False),
+                           self._grab_file_contents(self._email_settings.get('smtpCert'), stored_locally=False))
+
+    # Global settings
+    # These are settings which are shared between all plugins. For example, all plugins should use the same
+    # mail server when doing reports.
+    # Adding or changing a settings requires a full restart of the system
+    # and making sure you don't break a setting somebody else uses.
+
+    def __renew_global_settings_from_db(self):
+        config = self._get_db_connection()[CORE_UNIQUE_NAME]['configurable_configs'].find_one(
+            {'config_name': 'CoreService'})['config']
+        logger.info(f"Loading global config: {config}")
+        self._email_settings = config['email_settings']
+        self._execution_enabled = config['execution_settings']['enabled']
+
+    @staticmethod
+    def global_settings_schema():
+        return {
+            "items": [
+                {
+                    "items": [
+                        {
+                            "name": "smtpHost",
+                            "title": "Email Host",
+                            "type": "string",
+                            "required": True
+                        },
+                        {
+                            "name": "smtpPort",
+                            "title": "Port",
+                            "type": "number",
+                            "required": True
+                        },
+                        {
+                            "name": "smtpUser",
+                            "title": "User Name",
+                            "type": "string",
+                        },
+                        {
+                            "name": "smtpPassword",
+                            "title": "Password",
+                            "type": "string",
+                        },
+                        {
+                            "name": "smtpCert",
+                            "title": "TLS 1.2 Key File",
+                            "type": "file",
+                        },
+                        {
+                            "name": "smtpKey",
+                            "title": "TLS 1.2 Cert File",
+                            "type": "file",
+                        }
+                    ],
+                    "name": "email_settings",
+                    "title": "Email Settings",
+                    "type": "array"
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Execution Enabled",
+                            "type": "bool",
+                            "required": True
+                        }
+                    ],
+                    "name": "execution_settings",
+                    "title": "Execution Settings",
+                    "type": "array"
+                }
+            ],
+            "pretty_name": "Global Configuration",
+            "type": "array"
+        }
+
+    @staticmethod
+    def global_settings_defaults():
+        return {
+            "email_settings": {
+                "smtpHost": None,
+                "smtpPort": None,
+                "smtpUser": None,
+                "smtpPassword": None,
+                "smtpCert": None,
+                "smtpKey": None
+            },
+            "execution_settings": {
+                "enabled": True
+            }
+        }

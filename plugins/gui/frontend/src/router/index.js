@@ -7,7 +7,6 @@ import DeviceQueriesContainer from '../containers/device/DeviceQueriesContainer.
 import UsersContainer from '../containers/user/UsersContainer.vue'
 import UserConfigContainer from '../containers/user/UserConfigContainer.vue'
 import UserQueriesContainer from '../containers/user/UserQueriesContainer.vue'
-import PluginsContainer from '../containers/plugin/PluginsContainer.vue'
 import AdaptersContainer from '../containers/adapter/AdaptersContainer.vue'
 import AdapterConfigContainer from '../containers/adapter/AdapterConfigContainer.vue'
 import AlertsContainer from '../containers/alert/AlertsContainer.vue'
@@ -55,11 +54,6 @@ export default new Router({
 			name: 'User Queries',
 			component: UserQueriesContainer
 		},
-		{
-            path: '/plugin',
-            name: 'Plugins',
-            component: PluginsContainer
-        },
         {
             path: '/adapter',
             name: 'Adapters',

@@ -4,7 +4,6 @@ import { ADD_DATA_QUERY } from '../mutations'
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE'
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'
 
-export const FETCH_LIFECYCLE_RATE = 'FETCH_LIFECYCLE_RATE'
 export const UPDATE_LIFECYCLE_RATE = 'UPDATE_LIFECYCLE_RATE'
 
 export const FETCH_ADAPTER_DEVICES = 'FETCH_ADAPTER_DEVICES'
@@ -70,11 +69,6 @@ export const dashboard = {
 				type: UPDATE_LIFECYCLE
 			})
 		},
-        [ FETCH_LIFECYCLE_RATE ] ({dispatch}) {
-            return dispatch(REQUEST_API, {
-                rule: 'dashboard/lifecycle_rate',
-            })
-        },
         [ UPDATE_LIFECYCLE_RATE ] ({dispatch}) {
             return dispatch(REQUEST_API, {
                 rule: 'dashboard/lifecycle',

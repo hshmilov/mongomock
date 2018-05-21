@@ -22,9 +22,9 @@
     import LoginContainer from './auth/LoginContainer.vue'
     import {GET_OKTA_SETTINGS, GET_USER} from '../store/modules/auth'
     import { FETCH_ADAPTERS } from '../store/modules/adapter'
-    import { FETCH_SETTINGS } from '../store/modules/settings'
 	import { mapState, mapActions } from 'vuex'
 	import '../components/icons'
+    import {LOAD_PLUGIN_CONFIG} from "../store/modules/configurable";
 
 	export default {
         name: 'app',
@@ -48,13 +48,16 @@
             getUser: GET_USER,
             getOkta: GET_OKTA_SETTINGS,
             fetchAdapters: FETCH_ADAPTERS,
-            fetchSettings: FETCH_SETTINGS
+            loadPluginConfig: LOAD_PLUGIN_CONFIG
         }),
         created() {
         	this.getUser().then((response) => {
         		if (response.status === 200) {
                     this.fetchAdapters()
-                    this.fetchSettings()
+                    this.loadPluginConfig({
+                        pluginId: 'gui',
+                        configName: 'GuiService'
+                    })
                 }
             })
             this.getOkta().then(response =>{

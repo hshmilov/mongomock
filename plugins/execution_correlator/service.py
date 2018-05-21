@@ -23,4 +23,6 @@ class ExecutionCorrelatorService(CorrelatorBase):
         self.trigger_activate_if_needed()
 
     def _correlate(self, devices: list):
+        if not self._execution_enabled:
+            return []
         return self._correlation_engine.correlate(devices)

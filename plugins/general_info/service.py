@@ -120,7 +120,8 @@ class GeneralInfoService(PluginBase, Triggerable):
         Runs wmi queries on windows devices to understand important stuff.
         Afterwards, adds more information to users.
         """
-
+        if not self._execution_enabled:
+            return []
         logger.info("Gathering General info started.")
         acquired = False
         try:

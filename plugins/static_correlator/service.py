@@ -14,7 +14,7 @@ class StaticCorrelatorService(CorrelatorBase):
         self._activate('execute')
 
     def get_devices_from_ids(self, devices_ids=None):
-        with self._get_db_connection(True) as db:
+        with self._get_db_connection() as db:
             aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             if devices_ids is None:
                 match = {}

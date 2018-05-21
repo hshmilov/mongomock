@@ -58,12 +58,12 @@
                 	return state[this.module].view
                 },
                 refresh(state) {
-                	if (!state['settings'] || !state['settings'].data || !state['settings'].data.refreshRate) return 0
-                	return state['settings'].data.refreshRate
+                	if (!state.configurable || !state.configurable.gui) return 0
+                	return state.configurable.gui.GuiService.config.system_settings.refreshRate
                 },
                 multiline(state) {
-					if (!state['settings'] || !state['settings'].data || !state['settings'].data.multiLine) return false
-					return state['settings'].data.multiLine
+                	if (!state.configurable || !state.configurable.gui) return 0
+                	return state.configurable.gui.GuiService.config.system_settings.multiLine
                 }
 			}),
             ...mapGetters({

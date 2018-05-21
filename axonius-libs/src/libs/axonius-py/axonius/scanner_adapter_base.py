@@ -228,7 +228,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
         """
         Uses the DB and the `_get_scanner_correlator` logic to correlate the devices
         """
-        with self._get_db_connection(True) as db:
+        with self._get_db_connection() as db:
             aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             devices = aggregator_db['devices_db'].find()
         scanner = self._get_scanner_correlator(devices, self.plugin_name)

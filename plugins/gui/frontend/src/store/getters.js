@@ -28,7 +28,7 @@ export const getDataFieldListSpread =  (state) => (module) => {
 	}).concat(Object.keys(fields.specific || []).reduce((list, name) => {
 		if (!fields.specific[name]) return list
 		list = [...list, ...fields.specific[name].map((field) => {
-			if (state['settings'].data.singleAdapter) return field
+			if (state.configurable.gui && state.configurable.gui.GuiService.config.system_settings.singleAdapter) return field
 			return { ...field, logo: name}
 		})]
 		return list

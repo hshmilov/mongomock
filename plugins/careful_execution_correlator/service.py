@@ -29,7 +29,7 @@ class CarefulExecutionCorrelatorService(CorrelatorBase):
         :param devices_ids:
         :return:
         """
-        with self._get_db_connection(True) as db:
+        with self._get_db_connection() as db:
             aggregator_db = db[AGGREGATOR_PLUGIN_NAME]
             if devices_ids is None:
                 return list(aggregator_db['devices_db'].find(
@@ -46,4 +46,6 @@ class CarefulExecutionCorrelatorService(CorrelatorBase):
                 }))
 
     def _correlate(self, devices: list):
+        if not self._execution_enabled:
+            return []
         return self._correlation_engine.correlate(devices)
