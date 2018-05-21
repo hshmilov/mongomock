@@ -18,6 +18,13 @@ class ClientConnectionException(AdapterException):
     pass
 
 
+class ClientConnectionAlreadyConnected(ClientConnectionException):
+    """
+    Exception to be thrown from specific adapter when they are unable to connect to a client, according to given config.
+    """
+    pass
+
+
 class TagDeviceError(AdapterException):
     """
     Exception to be thrown if tagging a device failed.

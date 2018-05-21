@@ -1,0 +1,10 @@
+PASSWORD = 'password'
+USER = 'username'
+ALTIRIS_HOST = 'server'
+ALTIRIS_PORT = 'port'
+ALTIRIS_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_ALTIRIS_PORT = 1443
+DEFAULT_ALTIRIS_DATABASE = 'Symantec_CMDB'
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+ALTIRIS_QUERY = 'Select * from vComputer'

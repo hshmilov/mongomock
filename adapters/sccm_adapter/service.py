@@ -8,7 +8,7 @@ from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_organizational_units_from_dn, get_exception_string
-from sccm_adapter.connection import SccmConnection
+from axonius.clients.mssql.connection import MSSQLConnection
 import sccm_adapter.consts as consts
 
 
@@ -28,10 +28,10 @@ class SccmAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = SccmConnection(database=client_config[consts.SCCM_DATABASE],
-                                        server=client_config[consts.SCCM_HOST],
-                                        port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
-                                        devices_paging=self.devices_fetched_at_a_time)
+            connection = MSSQLConnection(database=client_config[consts.SCCM_DATABASE],
+                                         server=client_config[consts.SCCM_HOST],
+                                         port=client_config.get(consts.SCCM_PORT) or consts.DEFAULT_SCCM_PORT,
+                                         devices_paging=self.devices_fetched_at_a_time)
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:

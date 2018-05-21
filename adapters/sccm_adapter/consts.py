@@ -5,8 +5,6 @@ SCCM_PORT = 'port'
 SCCM_DATABASE = 'database'
 DRIVER = 'driver'
 DEFAULT_SCCM_PORT = 1433
-TDS_DRIVER = 'FreeTDS'
-TDS_VERSION = "8.0"
 DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
 SCCM_QUERY = """
 SELECT *,

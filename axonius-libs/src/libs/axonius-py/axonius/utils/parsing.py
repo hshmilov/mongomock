@@ -109,7 +109,7 @@ def figure_out_os(s):
     orig_s = s
     s = s.strip().lower()
 
-    makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64']
+    makes_64bit = ['amd64', '64-bit', 'x64', '64 bit', 'x86_64', 'Win64']
     makes_32bit = ['32-bit', 'x86']
 
     bitness = None

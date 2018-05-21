@@ -2,12 +2,14 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 import pyodbc
 
-from sccm_adapter.exceptions import SccmAlreadyConnected
-from sccm_adapter.consts import TDS_DRIVER, TDS_VERSION
+from axonius.adapter_exceptions import ClientConnectionAlreadyConnected
+
+TDS_DRIVER = 'FreeTDS'
+TDS_VERSION = "8.0"
 
 
-class SccmConnection(object):
-    def __init__(self, database, server, port, devices_paging):
+class MSSQLConnection(object):
+    def __init__(self, database, server, port, devices_paging, tds_version=TDS_VERSION):
         self.database = database
         assert type(port) == int, "the port {self.port} is not a valid int!"
         self.server = server + ',' + str(port)
@@ -15,6 +17,7 @@ class SccmConnection(object):
         self.username = None
         self.password = None
         self.db = None
+        self.tds_version = tds_version
 
     def set_credentials(self, username, password):
         """ Set the connection credentials
@@ -32,11 +35,11 @@ class SccmConnection(object):
     def connect(self):
         """ Connects to the service """
         if self.is_connected:
-            raise SccmAlreadyConnected()
+            raise ClientConnectionAlreadyConnected()
         try:
             self.db = pyodbc.connect(server=self.server, user=self.username, password=self.password, driver=TDS_DRIVER,
-                                     DATABASE=self.database, tds_version=TDS_VERSION)
-        except Exception:
+                                     DATABASE=self.database, tds_version=self.tds_version)
+        except Exception as err:
             logger.exception("Connection to database failed")
             raise
 

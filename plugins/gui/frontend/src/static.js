@@ -230,12 +230,16 @@ export const pluginMeta = {
 		    title: 'Test adapter for scanners',
 		    description: 'Adapter description'
         },
-        hyper_v_adapter: {
-            title: 'Hyper-V',
-            description: 'Hyper-V provides hardware virtualization. The Virtual Machine runs on virtual hardware, containing virtual hard drives, virtual switches, among other virtual devices.'
-        },
-        azure_adapter: {
+    hyper_v_adapter: {
+        title: 'Hyper-V',
+        description: 'Hyper-V provides hardware virtualization. The Virtual Machine runs on virtual hardware, containing virtual hard drives, virtual switches, among other virtual devices.'
+    },
+    symantec_altiris_adapter: {
+			title: 'Symantec Altiris',
+			description: 'Symantec Asset Management Suite enables organizations to take control, uncover savings, and ensure compliance of IT assets, by giving a picture of assets throughout their lifecycle.'
+		},
+    azure_adapter: {
             title: 'Azure',
             description: 'Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers.'
-        },
+    },
 }
