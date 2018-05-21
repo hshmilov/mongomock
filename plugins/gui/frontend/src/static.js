@@ -198,11 +198,16 @@ export const pluginMeta = {
 		    description: 'ObserveIT provides insider threat security solutions, including employee monitoring, ' +
 			'user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
         },
+	    blackberry_uem_adapter: {
+            title: 'Blackberry UEM',
+            description: 'BlackBerry Unified Endpoint Manager delivers endpoint management and policy' +
+            ' control for devices and apps on-premise or in the cloud'
+        },
 	    oracle_vm_adapter: {
 			title: 'OracleVM',
 			descriptions: ' Oracle\'s server virtualization products support x86 and SPARC architectures' +
 			' and a variety of workloads such as Linux, Windows and Oracle Solaris.'
-      },
+        },
 	    cisco_meraki_adapter: {
 			title: 'Cisco Meraki',
 			description: 'Cisco Meraki solutions include wireless, switching, security, EMM, communications, and' +

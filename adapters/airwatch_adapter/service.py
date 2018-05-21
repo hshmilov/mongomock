@@ -17,7 +17,6 @@ class AirwatchAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         imei = Field(str, 'IMEI')
         phone_number = Field(str, 'Phone Number')
-        serial_number = Field(str, 'Serial Number')
         udid = Field(str, 'UdId')
         friendly_name = Field(str, 'Device Friendly Name')
 
@@ -126,7 +125,7 @@ class AirwatchAdapter(AdapterBase):
                         device.add_nic(mac_address, ipaddresses)
                 except Exception:
                     logger.exception("Problem adding nic to Airwatch")
-                device.serial_number = device_raw.get("SerialNumber")
+                device.device_serial = device_raw.get("SerialNumber")
                 device.udid = device_raw.get("Udid")
 
                 device.friendly_name = device_raw.get("DeviceFriendlyName")

@@ -10,10 +10,6 @@ class TestCarbonblackDefenseAdapter(AdapterTestBase):
         return CarbonblackDefenseService()
 
     @property
-    def adapter_name(self):
-        return 'carbonblack_defense_adapter'
-
-    @property
     def some_client_id(self):
         return client_details['CarbonblackDefense_Domain']
 

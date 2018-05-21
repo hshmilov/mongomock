@@ -16,6 +16,7 @@ DOCKER_PORTS = {
     'qcore-mediator':                   5016,
     'careful-execution-correlator':     5039,
     'core':                             5050,
+    'blackberry-uem-adapter':           5090,
     'esx-adapter':                      5111,
     'aws-adapter':                      5112,
     'traiana-lab-machines-adapter':     5113,

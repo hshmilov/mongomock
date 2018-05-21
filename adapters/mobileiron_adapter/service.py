@@ -23,7 +23,6 @@ class MobileironAdapter(AdapterBase):
         imsi = Field(str, "Device IMSI")
         uuid = Field(str, "Device UUID")
         current_phone_number = Field(str, "Current phone number")
-        android_security_patch = Field(str, "Android Security Patch")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -123,7 +122,10 @@ class MobileironAdapter(AdapterBase):
                     logger.exception("Problem adding nic to a device")
                 device.agent_version = device_raw.get("common.client_version", "")
                 device.device_model = device_raw.get("common.model")
-                device.android_security_patch = device_raw.get("android.security_patch")
+                try:
+                    device.security_patch_level = parse_date(device_raw.get("android.security_patch"))
+                except Exception:
+                    logger.exception(f"Problem getting security patch levle for {device_raw}")
                 device.user_id = device_raw.get("user.user_id")
                 device.last_seen = parse_date(device_raw.get("common.miclient_last_connected_at", ""))
                 device.imei = device_raw.get("common.imei")
