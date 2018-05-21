@@ -5,7 +5,7 @@
                       v-model="selectedDevices" @click-row="configDevice" title="Devices">
             <template slot="actions">
                 <!-- Available actions for performing on currently selected group of devices --->
-                <devices-actions-container v-show="selectedDevices && selectedDevices.length" :devices="selectedDevices" />
+                <devices-actions-container v-show="anySelected" :devices="selectedDevices" />
                 <x-data-view-menu :module="module" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" class="link" />
@@ -35,6 +35,9 @@
         computed: {
 			module() {
 				return 'devices'
+            },
+            anySelected() {
+				return (this.selectedDevices && this.selectedDevices.length)
             }
         },
         data() {
@@ -47,7 +50,7 @@
                 fetchContentCSV: FETCH_DATA_CONTENT_CSV
 			}),
 			configDevice (deviceId) {
-				if (this.selectedDevices && this.selectedDevices.length) return
+				if (this.anySelected) return
 
 				this.$router.push({path: `${this.module}/${deviceId}`})
 			},

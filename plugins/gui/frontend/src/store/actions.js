@@ -208,11 +208,12 @@ export const saveDataQuery = ({state, dispatch, commit}, payload) => {
 
 export const REMOVE_DATA_QUERY = 'REMOVE_DATA_QUERY'
 export const removeDataQuery = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload) || !payload.id) return
+	if (!validModule(state, payload) || !payload.ids || !payload.ids.length) return
 
 	dispatch(REQUEST_API, {
-		rule: `${payload.module}/queries/${payload.id}`,
-		method: 'DELETE'
+		rule: `${payload.module}/queries`,
+		method: 'DELETE',
+		data: payload.ids
 	}).then((response) => {
 		if (response.data !== '') {
 			return
@@ -290,19 +291,6 @@ export const fetchDataByID = ({state, dispatch}, payload) => {
 		rule: `${payload.module}/${payload.id}`,
 		type: UPDATE_DATA_BY_ID,
 		payload
-	})
-}
-
-export const EXPORT_REPORT = 'EXPORT_REPORT'
-export const exportReport = ({dispatch}) => {
-	dispatch(REQUEST_API, {
-		rule: 'export_report'
-	}).then((response) => {
-		let blob = new Blob([response.data], { type: response.headers["content-type"]} )
-		let link = document.createElement('a')
-		link.href = window.URL.createObjectURL(blob)
-		link.download = 'axonius_report.pdf'
-		link.click()
 	})
 }
 

@@ -60,7 +60,7 @@
 	}
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
     .x-checkbox {
         cursor: pointer;
         .x-checkbox-container {
@@ -88,26 +88,10 @@
                 border-top: 0;
                 border-left: 0;
                 opacity: 0;
-                -webkit-transform: rotate(45deg) scale3D(.15,.15,1);
                 transform: rotate(45deg) scale3D(.15,.15,1);
                 position: absolute;
                 transition: .4s cubic-bezier(.55,0,.55,.2);
                 content: ' ';
-            }
-            &.x-checkbox-semi {
-                background-color: $grey-5;
-                border-color: $grey-5;
-                &:after {
-                    opacity: 1;
-                    width: 0px;
-                    height: 8px;
-                    top: 2px;
-                    left: 5px;
-                    -webkit-transform: rotate(90deg) scale3D(1,1,1);
-                    transform: rotate(90deg) scale3D(1,1,1);
-                    transition: .4s cubic-bezier(.25,.8,.25,1);
-                    border-color: $theme-white;
-                }
             }
         }
         &.x-checked .x-checkbox-container {
@@ -115,10 +99,23 @@
             border-color: $grey-5;
             &:after {
                 opacity: 1;
-                -webkit-transform: rotate(45deg) scale3D(1,1,1);
                 transform: rotate(45deg) scale3D(1,1,1);
                 transition: .4s cubic-bezier(.25,.8,.25,1);
                 border-color: $theme-white;
+            }
+            &.x-checkbox-semi {
+                background-color: $grey-5;
+                border-color: $grey-5;
+                &:after {
+                    opacity: 1;
+                    width: 8px;
+                    height: 0px;
+                    top: 5px;
+                    left: 1px;
+                    transform: rotate(0) scale3D(1,1,1);
+                    transition: .4s cubic-bezier(.25,.8,.25,1);
+                    border-color: $theme-white;
+                }
             }
         }
         .x-checkbox-label {

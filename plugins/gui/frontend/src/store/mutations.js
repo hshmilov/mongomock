@@ -100,7 +100,7 @@ export const updateRemovedDataQuery = (state, payload) => {
 	if (!validModule(state, payload)) return
 
 	state[payload.module].queries.saved.data =
-		state[payload.module].queries.saved.data.filter(query => query.uuid !== payload.id)
+		state[payload.module].queries.saved.data.filter(query => !payload.ids.includes(query.uuid))
 }
 
 export const UPDATE_DATA_LABELS = 'UPDATE_DATA_LABELS'

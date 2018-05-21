@@ -636,15 +636,10 @@ class GuiService(PluginBase, Configurable):
             inserted_id = self._insert_query(queries_collection, query_to_add.get('name'), query_to_add.get('filter'),
                                              query_to_add.get('expressions'))
             return str(inserted_id), 200
-
-    def _entity_queries_delete(self, entity_type: EntityType, query_id):
-        queries_collection = self._queries_db_map[entity_type]
-        queries_collection.update({'_id': ObjectId(query_id)},
-                                  {
-                                      '$set': {
-                                          'archived': True
-                                      }}
-                                  )
+        # Reached here only if request.method == 'DELETE', remove requested queries
+        query_ids = self.get_request_data_as_object()
+        queries_collection.update_many({'_id': {'$in': [ObjectId(id) for id in query_ids]}},
+                                       {'$set': {'archived': True}})
         return ""
 
     def _get_entities_count(self, filter, entity_type: EntityType):
@@ -891,13 +886,9 @@ class GuiService(PluginBase, Configurable):
 
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("devices/queries", methods=['POST', 'GET'])
+    @add_rule_unauthenticated("devices/queries", methods=['POST', 'GET', 'DELETE'])
     def device_queries_do(self, limit, skip, mongo_filter):
         return self._entity_queries(limit, skip, mongo_filter, EntityType.Devices)
-
-    @add_rule_unauthenticated("devices/queries/<query_id>", methods=['DELETE'])
-    def device_queries_delete(self, query_id):
-        return self._entity_queries_delete(EntityType.Devices, query_id)
 
     @filtered()
     @add_rule_unauthenticated("devices/count")
@@ -953,10 +944,6 @@ class GuiService(PluginBase, Configurable):
     @add_rule_unauthenticated("users/queries", methods=['POST', 'GET'])
     def user_queries(self, limit, skip, mongo_filter):
         return self._entity_queries(limit, skip, mongo_filter, EntityType.Users)
-
-    @add_rule_unauthenticated("users/queries/<query_id>", methods=['DELETE'])
-    def user_queries_delete(self, query_id):
-        return self._entity_queries_delete(EntityType.Users, query_id)
 
     @filtered()
     @add_rule_unauthenticated("users/count")

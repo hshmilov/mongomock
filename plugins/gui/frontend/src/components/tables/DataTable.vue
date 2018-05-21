@@ -1,84 +1,45 @@
 <template>
-    <div class="x-data-table">
-        <div class="x-table-header">
-            <div class="x-title">{{ title }} ({{count.data}})</div>
-            <div class="x-actions"><slot name="actions"/></div>
-        </div>
-        <div class="x-table-container" :tabindex="-1" ref="greatTable">
-            <div class="v-spinner-bg" v-if="loading"></div>
-            <pulse-loader :loading="loading" color="#FF7D46" />
-            <table class="x-striped-table">
-                <thead>
-                    <tr class="x-row clickable">
-                        <th v-if="value" class="w-14">
-                            <x-checkbox v-if="!loading" :data="value" :semi="value.length && value.length < ids.length"
-                                      :value="ids" @change="$emit('input', $event)" :tabindex="100"/>
-                        </th>
-                        <th v-for="field, i in viewFields" nowrap class="sortable" :tabindex="101 + i"
-                            @click="onClickSort(field.name)" @keyup.enter.stop="onClickSort(field.name)">
-                            <img v-if="field.logo" class="logo" :src="`/src/assets/images/logos/${field.logo}.png`"
-                                 height="20">{{ field.title }}<div :class="`x-sort ${sortClass(field.name)}`"></div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item, i in pageData" @click="onClickRow(item[idField])" class="x-row clickable">
-                        <td v-if="value" class="w-14">
-                            <x-checkbox :data="value" :value="item[idField]" @change="$emit('input', $event)"
-                                        :tabindex="200 + i" />
-                        </td>
-                        <td v-for="field in viewFields" nowrap>
-                            <component :is="`x-${field.type}-view`" :value="item[field.name]" :schema="field"
-                                       :limit="2" :multiline="multiline"/>
-                        </td>
-                    </tr>
-                <tr v-for="n in view.pageSize - pageData.length" class="x-row">
-                    <td v-if="value">&nbsp;</td>
-                    <td v-for="field in viewFields">&nbsp;</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="x-data-table" :class="{multiline: multiline}">
+        <x-actionable-table :title="title" :count="count.data" :loading="loading">
+            <slot name="actions" slot="actions"/>
+            <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
+                     :id-field="idField" :value="value" @input="$emit('input', $event)"
+                     :click-row-handler="onClickRow" :click-col-handler="onClickSort"/>
+        </x-actionable-table>
         <div class="x-pagination">
             <div class="x-sizes">
                 <div class="x-title">results per page:</div>
                 <div v-for="size, i in [20, 50, 100]" @click="onClickSize(size)" @keyup.enter="onClickSize(size)"
-                     class="x-link" :class="{active: size === view.pageSize}" :tabindex="300 + i">{{size}}</div>
+                     class="x-link" :class="{active: size === view.pageSize}">{{size}}</div>
             </div>
             <div class="x-pages">
                 <div @click="onClickPage(0)" @keyup.enter="onClickPage(0)"
-                     :class="{'x-link': view.page > 0}" :tabindex="400">&lt;&lt;</div>
+                     :class="{'x-link': view.page > 0}">&lt;&lt;</div>
                 <div @click="onClickPage(view.page - 1)" @keyup.enter="onClickPage(view.page - 1)"
-                     :class="{'x-link': view.page - 1 >= 0}" :tabindex="401">&lt;</div>
+                     :class="{'x-link': view.page - 1 >= 0}">&lt;</div>
                 <div v-for="number in pageLinkNumbers" @click="onClickPage(number)" @keyup.enter="onClickPage(number)"
-                     class="x-link" :class="{active: (number === view.page)}" :tabindex="402 + number">{{number + 1}}</div>
+                     class="x-link" :class="{active: (number === view.page)}">{{number + 1}}</div>
                 <div @click="onClickPage(view.page + 1)" @keyup.enter="onClickPage(view.page + 1)"
-                     :class="{'x-link': view.page + 1 <= pageCount}" :tabindex="450">&gt;</div>
+                     :class="{'x-link': view.page + 1 <= pageCount}">&gt;</div>
                 <div @click="onClickPage(pageCount)" @keyup.enter="onClickPage(pageCount)"
-                     :class="{'x-link': view.page < pageCount}" :tabindex="451">&gt;&gt;</div>
+                     :class="{'x-link': view.page < pageCount}">&gt;&gt;</div>
             </div>
         </div>
     </div>
 </template>
 
 <script>
+    import xActionableTable from './TableActions.vue'
+	import xTable from './Table.vue'
+
     import { GET_DATA_FIELD_LIST_SPREAD } from '../../store/getters'
 	import { UPDATE_DATA_VIEW} from '../../store/mutations'
 	import { FETCH_DATA_CONTENT } from '../../store/actions'
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
 
-	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
-	import xCheckbox from '../inputs/Checkbox.vue'
-	import xStringView from '../../components/controls/string/StringView.vue'
-	import xNumberView from '../../components/controls/numerical/NumberView.vue'
-	import xIntegerView from '../../components/controls/numerical/IntegerView.vue'
-	import xBoolView from '../../components/controls/boolean/BooleanView.vue'
-    import xFileView from '../../components/controls/array/FileView.vue'
-	import xArrayView from '../../components/controls/array/ArrayInlineView.vue'
-
 	export default {
 		name: 'x-data-table',
-        components: {PulseLoader, xCheckbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView},
+        components: { xActionableTable, xTable },
         props: {module: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
@@ -198,11 +159,6 @@
                 }
                 this.updateModuleView({ sort, page: 0 })
             },
-            sortClass(fieldName) {
-            	if (this.view.sort.field !== fieldName) return ''
-                if (this.view.sort.desc) return 'down'
-				return 'up'
-            },
             updateModuleView(view) {
             	this.updateView({module: this.module, view})
             }
@@ -220,9 +176,6 @@
 				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
             }
 		},
-        mounted() {
-			this.$refs.greatTable.focus()
-        },
         beforeDestroy() {
 			clearTimeout(this.timer)
         }
@@ -232,38 +185,9 @@
 <style lang="scss">
     .x-data-table {
         height: calc(100% - 40px);
-        .x-table-header {
-            display: flex;
-            padding: 8px;
-            line-height: 24px;
-            .x-title {
-                flex: 1 0 auto;
-            }
-            .x-actions {
-                display: grid;
-                grid-auto-flow: column;
-                grid-gap: 8px;
-            }
-        }
-        .x-table-container {
-            overflow: auto;
-            max-height: calc(100% - 80px);
-            position: relative;
-            .x-striped-table {
-                .x-row {
-                    height: 30px;
-                    &.clickable:hover {
-                        cursor: pointer;
-                        box-shadow: 0 2px 16px -4px $grey-4;
-                    }
-                }
-            }
-            .item > div {
-                display: inline;
-            }
-            .array.inline {
-                height: 24px;
-            }
+        &.multiline .array {
+            display: block;
+            height: auto;
         }
         .x-pagination {
             justify-content: space-between;

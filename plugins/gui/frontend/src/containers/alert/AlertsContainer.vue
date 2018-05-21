@@ -31,13 +31,6 @@
         methods: {
             ...mapMutations({ setAlert: SET_ALERT }),
 			...mapActions({ fetchAlerts: FETCH_ALERTS, archiveAlerts: ARCHIVE_ALERTS }),
-            executeFilter(filterData) {
-				/*
-				    Upon submission of the filter form, updating the controls of the filter that is passed as props to the
-				    paginated table, and so it is re-rendered after fetching the controls with consideration to the new filter
-				 */
-                this.alertFilter = filterData
-            },
             configAlert(alertId) {
 				/*
                     Fetch the requested alert configuration and navigate to configuration page with the id, to load it

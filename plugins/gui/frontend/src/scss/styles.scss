@@ -211,27 +211,6 @@ table {
 
 /* Common Components */
 
-.x-striped-table {
-  background: $theme-white;
-  border-collapse: collapse;
-  thead {
-    tr {
-      border-bottom: 2px dashed $grey-2;
-    }
-  }
-  tbody {
-    tr .svg-bg {
-      fill: $theme-white;
-    }
-    tr:nth-child(odd) {
-      background: rgba($grey-1, 0.6);
-      .svg-bg {
-        fill: rgba($grey-1, 0.6);
-      }
-    }
-  }
-}
-
 .x-grid {
   display: grid;
   grid-row-gap: 16px;
