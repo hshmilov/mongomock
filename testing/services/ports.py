@@ -62,6 +62,7 @@ DOCKER_PORTS = {
     'json-file-adapter':                6021,
     'hyper-v-adapter':                  6022,
     'stresstest-scanner-adapter':       6023,
+    'azure-adapter':                    6024,
     'mongo':                            27017,
 }
 

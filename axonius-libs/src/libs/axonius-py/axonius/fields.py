@@ -26,6 +26,7 @@ class JsonStringFormat(Enum):
     uri = auto()
     image = auto()
     associated_device = auto()
+    subnet = auto()
 
 
 class Field(object):

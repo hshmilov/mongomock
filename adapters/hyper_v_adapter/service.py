@@ -100,7 +100,9 @@ class HyperVAdapter(AdapterBase):
 
                 for current_network in raw_device['Networks']:
                     device.add_nic(ips=current_network['IPAddresses'], subnets=[
-                                   subnet for subnet in current_network['Subnets'] if len(subnet) > 3])
+                        f'{ip}/{subnet}'
+                        for ip, subnet in zip(current_network['IPAddresses'], current_network['Subnets'])
+                    ])
 
                 for current_cpu in raw_device['Cpus']:
                     device.add_cpu(name=current_cpu['UniqueID'], load_percentage=current_cpu['LoadPercentage'])

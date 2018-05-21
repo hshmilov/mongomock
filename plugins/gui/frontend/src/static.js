@@ -234,4 +234,8 @@ export const pluginMeta = {
             title: 'Hyper-V',
             description: 'Hyper-V provides hardware virtualization. The Virtual Machine runs on virtual hardware, containing virtual hard drives, virtual switches, among other virtual devices.'
         },
+        azure_adapter: {
+            title: 'Azure',
+            description: 'Microsoft Azure is a cloud computing service created by Microsoft for building, testing, deploying, and managing applications and services through a global network of Microsoft-managed data centers.'
+        },
 }

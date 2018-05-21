@@ -2,10 +2,8 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device_adapter import DeviceAdapter, Field, DeviceAdapterOS
 from axonius.utils.files import get_local_config_file
 from cisco_prime_adapter.client import CiscoPrimeClient
-from cisco_prime_adapter.snmp import CiscoSnmpClient
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils import json
 from axonius.clients.cisco import snmp
@@ -34,7 +32,6 @@ class CiscoPrimeAdapter(AdapterBase):
 
     def _get_snmp_creds(self, device, session):
         creds = session.get_credentials(device)
-        snmp_data = ['snmp_read_cs', 'MANAGEMENT_ADDRESS', 'snmp_port']
 
         # TODO: we aren't handling snmpv3
 
@@ -130,7 +127,7 @@ class CiscoPrimeAdapter(AdapterBase):
         for mac_name, iplist in CiscoPrimeClient.get_nics(raw_device).items():
             name, mac = mac_name
             device.add_nic(mac, ips=map(lambda ipsubnet: ipsubnet[0], iplist), subnets=map(
-                lambda ipsubnet: ipsubnet[1], iplist), name=name)
+                lambda ipsubnet: f'{ipsubnet[0]}/{ipsubnet[1]}', iplist), name=name)
 
             # save mac address to prevent neighbors from adding managed cisco
             self._macs.add(mac)

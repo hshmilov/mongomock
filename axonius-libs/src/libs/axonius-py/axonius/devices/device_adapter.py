@@ -4,7 +4,7 @@ import datetime
 import typing
 
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, get_manufacturer_from_mac
+from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, format_subnet, get_manufacturer_from_mac
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
 
@@ -33,7 +33,7 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     mac = Field(str, 'Mac', converter=format_mac)
     manufacturer = Field(str, 'Manufacturer')
     ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
-    subnets = ListField(str, 'Subnets', converter=format_ip, json_format=JsonStringFormat.ip,
+    subnets = ListField(str, 'Subnets', converter=format_subnet, json_format=JsonStringFormat.subnet,
                         description='A list of subnets in ip format, that correspond the IPs')
     ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
                         converter=format_ip_raw)
@@ -172,6 +172,10 @@ class DeviceAdapter(SmartJsonClass):
     def add_nic(self, mac=None, ips=None, subnets=None, name=None):
         """
         Add a new network interface card to this device.
+        :param mac: the mac
+        :param ips: an IP list
+        :param subnets: a Subnet list (format {ip}/{int/ipv4_subnet_mask})
+        :param name: the interface name
         """
         nic = DeviceAdapterNetworkInterface()
         if mac is not None:
@@ -208,7 +212,9 @@ class DeviceAdapter(SmartJsonClass):
             else:
                 for subnet in subnets_iter:
                     try:
-                        nic.subnets.append(subnet)
+                        subnet = format_subnet(subnet)  # formatting here just to make sure we don't add duplicates...
+                        if subnet not in nic.subnets:
+                            nic.subnets.append(subnet)
                     except (ValueError, TypeError):
                         if logger is None:
                             raise

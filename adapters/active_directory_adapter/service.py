@@ -928,8 +928,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                 device.ad_site_location = site_location
                                 device.ad_subnet = str(subnet)
 
-                                # convert subnet to ip format
-                                subnets_list.append(str(subnet.netmask))
+                                subnets_list.append(str(subnet))
                     except Exception:
                         logger.exception("Exception in ip to subnet parsing. Might be an ipv6 ip, continuing..")
 

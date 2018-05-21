@@ -21,7 +21,8 @@ import os
 osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
 osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
-ubuntu_full = re.compile(r'([Uu]buntu \d\d\.\d\d(?:\.\d+)?)')
+# match any of: (Ubuntu / ubuntu / UbuntuServer / ubuntuserver / Ubuntuserver) + version number
+ubuntu_full = re.compile(r'([Uu]buntu(?:[Ss]erver)? \d\d\.\d\d(?:\.\d+)?)')
 mobile_version = re.compile(r'(\d+\.\d+.\d+)')
 
 # Unfortunately there's no normalized way to return a hostname - currently many adapters return hostname.domain.
@@ -130,10 +131,11 @@ def figure_out_os(s):
         windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
                                 'Windows Server 2003', 'Win10', 'Win7', 'Win8', 'Windows 2016',
                                 'Windows 2008', 'Windows 2012',
-                                'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016', 'XP']
+                                'Windows Server 2008', 'Windows Server 2012', 'Windows Server 2016', 'XP',
+                                'WindowsServer 2003', 'WindowsServer 2008', 'WindowsServer 2012', 'WindowsServer 2016']
         for dist in windows_distribution:
             if dist.lower() in s:
-                distribution = dist.replace("Windows ", "").replace("Win", "")
+                distribution = dist.replace("Windows ", "").replace("Windows", "").replace("Win", "")
                 break
 
     elif any(x in s for x in linux_names):
@@ -281,6 +283,16 @@ def format_ip(value):
         return str(ipaddress.ip_address(value))
     except Exception:
         raise ValueError(f'Invalid IP address: {value}')
+
+
+def format_subnet(value):
+    # Must pass {ip}/{int/ipv4_subnet_mask} such that it will be possible to distinguish between two
+    # subnet masks (and two ips) on same interface
+    try:
+        assert '/' in value
+        return str(ipaddress.ip_network(value, False))
+    except Exception:
+        raise ValueError(f'Invalid subnet: {value}')
 
 
 def ad_integer8_to_timedelta(i8):
