@@ -136,6 +136,7 @@ class DeviceAdapter(SmartJsonClass):
     batteries = ListField(DeviceAdapterBattery, "Battery")
     current_logged_user = Field(str, "Currently Logged User")
     device_disabled = Field(bool, "Device Disabled")
+    power_state = Field(str, "Power State")
     device_managed_by = Field(str, "Managed By")    # Who is the entity managing the device
     organizational_unit = ListField(str, "Organizational Unit")
     security_patch_level = Field(datetime.datetime, "Security Patch Level")

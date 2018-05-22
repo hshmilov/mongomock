@@ -227,6 +227,10 @@ export const pluginMeta = {
 			title: 'WMI Info',
 			description: ''
 		},
+		softlayer_adapter: {
+			title: 'IBM Cloud',
+			description: 'IBM\'s innovative cloud computing platform combines platform as a service (PaaS) with infrastructure as a service (IaaS) and includes a rich catalog of cloud services that can be easily integrated with PaaS and IaaS to build business applications rapidly.'
+		},
 		json_file_adapter: {
 		    title: 'Adapter title',
 		    description: 'Adapter description'
