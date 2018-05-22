@@ -4,6 +4,7 @@ import time
 
 CONFIG_FILE_NAME = 'config.ini'
 UPLOADED_FILES_DIR = '/home/axonius/uploaded_files'
+SHARED_READONLY_DIR = '/home/axonius/shared_readonly_files'
 
 
 def get_local_config_file(current_import_file):

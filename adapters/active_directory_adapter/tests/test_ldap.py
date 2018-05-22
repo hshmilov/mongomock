@@ -5,7 +5,7 @@ import time
 import pytest
 import os
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState
-from testing.test_credentials.test_ad_credentials import ad_client1_details
+from testing.test_credentials.test_ad_credentials import ad_client1_details, PM_DEVICE_ADDRESS
 from axonius.utils.parsing import ad_integer8_to_timedelta
 from datetime import timedelta
 
@@ -21,6 +21,14 @@ WMI_SMB_RUNNER_LOCATION = os.path.abspath(
 
 TEST_BINARY_LOCATION = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "tests", "test_binary", "test_binary.exe"))
+
+AXPM_BINARY_LOCATION = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                 "shared_readonly_files", "AXPM", "AXPM.exe"))
+
+WSUSSCN2_BINARY_LOCATION = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..",
+                 "shared_readonly_files", "AXPM", "wsusscn2", "wsusscn2.cab"))
 
 
 @pytest.fixture(scope="module")
@@ -211,9 +219,37 @@ def pretty(d, indent=0):
     print('\t' * indent + "}")
 
 
-def get_basic_wmi_smb_command():
+def get_basic_wmi_smb_command(address=ADDRESS):
     domain, username = USERNAME.split("\\")
-    return ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, domain, username, PASSWORD, ADDRESS, '//./root/cimv2']
+    return ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, domain, username, PASSWORD, address, '//./root/cimv2']
+
+
+@pytest.mark.skip("python2 is not installed on the tests machine")
+def test_pm():
+    commands = [
+        {"type": "pm", "args": [AXPM_BINARY_LOCATION, WSUSSCN2_BINARY_LOCATION]}
+    ]
+
+    p = subprocess.Popen(get_basic_wmi_smb_command(address=PM_DEVICE_ADDRESS) + [json.dumps(commands)],
+                         stdout=subprocess.PIPE)
+
+    start = time.time()
+    stdout, stderr = p.communicate()
+    end = time.time()
+
+    assert (end - start) < 60 * 20    # 20 minutes
+    assert p.returncode == 0
+    response = json.loads(stdout)
+    assert len(response) == len(commands)
+
+    for r in response:
+        print(f"Status: {r['status']}")
+        print(f"Data: {r['data']}")
+        if r["status"] != "ok":
+            raise ValueError(f"Error, status is not ok. response: {r}")
+
+    # A very basic test to see that we have at least one update
+    assert "[Update Start]" in response[0]["data"]
 
 
 @pytest.mark.skip("python2 is not installed on the tests machine")

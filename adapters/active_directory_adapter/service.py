@@ -43,6 +43,7 @@ from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8
     is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip, \
     get_organizational_units_from_dn, get_member_of_list_from_memberof, get_first_object_from_dn
 
+
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
@@ -52,7 +53,7 @@ LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 # In case its the execution we might leave some files on the target machine which is a bad idea.
 # For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
 # This value should be for times we are really really sure there is a problem.
-MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60
+MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60 * 5
 
 
 # TODO ofir: Change the return values protocol

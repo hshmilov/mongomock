@@ -20,6 +20,7 @@ class DockerService(AxonService):
 
         self.log_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'logs', self.container_name))
         self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, "uploaded_files"))
+        self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, "shared_readonly_files"))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
         self.package_name = os.path.basename(self.service_dir)
         self._process_owner = False
@@ -48,7 +49,8 @@ class DockerService(AxonService):
         return [
             f'{self.container_name}_data:/home/axonius',
             f'{self.log_dir}:/home/axonius/logs',
-            f'{self.uploaded_files_dir}:/home/axonius/uploaded_files'
+            f'{self.uploaded_files_dir}:/home/axonius/uploaded_files',
+            f'{self.shared_readonly_dir}:/home/axonius/shared_readonly_files:ro'
         ]
 
     @property

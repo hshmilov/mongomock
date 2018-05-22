@@ -33,9 +33,9 @@ from contextlib import contextmanager
 MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
 MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
-SMB_CONNECTION_TIMEOUT = 60 * 1  # 1 min timeout. if there are large files which take more time to transfer change that.
+SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
 MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
-MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 50  # The amount of seconds we wait for the created shell process to finish
+MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 10  # The amount of seconds we wait for the created shell process to finish
 DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
 
 __global_counter = 0
@@ -146,14 +146,13 @@ class WmiSmbRunner(object):
             def write_to_contents(self, data):
                 self.contents = self.contents + data
 
-        fr = FileReceiver()
-
         with self.get_smb_connection() as smb_connection:
             sharing_violation_times = 0
             while True:
                 try:
+                    fr = FileReceiver()
                     smb_connection.getFile(share, filepath, fr.write_to_contents)
-                    break
+                    return fr.contents
                 except Exception as e:
                     if str(e).find('STATUS_SHARING_VIOLATION') >= 0:
                         sharing_violation_times = sharing_violation_times + 1
@@ -163,9 +162,6 @@ class WmiSmbRunner(object):
                         time.sleep(1)
                     else:
                         raise
-
-        # break was encountered, we got the full file.
-        return fr.contents
 
     def putfile(self, filepath, filecontents, share=DEFAULT_SHARE):
         """
@@ -194,15 +190,19 @@ class WmiSmbRunner(object):
             def read(self, size):
                 buf = self.contents[self.already_sent:self.already_sent + size]
                 self.already_sent += size
+                # This is a debug code that is very useful to us, so i'm leaving it here.
+                # sys.stderr.write("got size {0}, already sent {1} ({2} mb).\n".format(
+                #     size, self.already_sent, self.already_sent / 1024.0 / 1024.0))
+                # sys.stderr.flush()
                 return buf
 
-        fs = FileSender(filecontents)
         with self.get_smb_connection() as smb_connection:
             sharing_violation_times = 0
             while True:
                 try:
+                    fs = FileSender(filecontents)
                     smb_connection.putFile(share, filepath, fs.read)
-                    break
+                    return True
                 except Exception as e:
                     if str(e).find('STATUS_SHARING_VIOLATION') >= 0:
                         sharing_violation_times = sharing_violation_times + 1
@@ -212,7 +212,6 @@ class WmiSmbRunner(object):
                         time.sleep(1)
                     else:
                         raise
-        return True
 
     def deletefile(self, filepath, share=DEFAULT_SHARE):
         """
@@ -319,6 +318,8 @@ class WmiSmbRunner(object):
             return self.getfile(output_filename)
         finally:
             if is_process_created is True:
+                # If this raises exceptions, its probably because it can't delete the file, because we couldn't
+                # terminate the process...
                 self.deletefile(output_filename)
 
     def execshell(self, shell_command):
@@ -402,6 +403,50 @@ class WmiSmbRunner(object):
 
         iEnumWbemClassObject.RemRelease()
         return minimize(records)
+
+    def execpm(self, exe_filepath, wsusscn2_file_path):
+        """
+        A special function to deal with patch management. Since this flow is extremely
+        sensitive (involves sending a couple of files, some of them large) we prefer doing it
+        in a sepereate function until we have a generic flow to handle it.
+
+        :param exe_filepath: the filepath of the exe
+        :param wsusscn2_file_path: the filepath of the wsusscn2.cab file
+        :return:
+        """
+
+        with open(exe_filepath, "rb") as f:
+            exe_binary_file = f.read()
+            exe_binary_path = "axonius_pm_{0}_{1}.exe".format(get_global_counter(), str(time.time()), )
+
+        with open(wsusscn2_file_path, "rb") as f:
+            wsusscn2_binary_file = f.read()
+            wsusscn2_binary_path = "axonius_wsusscn2.cab".format(get_global_counter(), str(time.time()), )
+
+        did_put_exe_file = False
+        did_put_wsusscn2_file = False
+        try:
+            # We have to get the path of our default share, or else the exe will fail, since we can't
+            # open such files from a share. we have to use the physical path.
+            # If path isn't there, we need to raise an exception. It must be in the result.
+            shell_details = self.execshell("net share {0}".format(DEFAULT_SHARE)).splitlines()
+            try:
+                physical_path = [line[4:].strip() for line in shell_details if line.lower().startswith("path")][0]
+            except Exception:
+                raise ValueError(
+                    "Unexpected error occured: coludn't find the physical path of {0}".format(DEFAULT_SHARE))
+
+            # Transfer both files
+            did_put_wsusscn2_file = self.putfile(wsusscn2_binary_path, wsusscn2_binary_file)
+            did_put_exe_file = self.putfile(exe_binary_path, exe_binary_file)
+
+            return self.execshell(r"{0} {1}\{2}".format(exe_binary_path, physical_path, wsusscn2_binary_path))
+        finally:
+            if did_put_wsusscn2_file is True:
+                self.deletefile(wsusscn2_binary_path)
+
+            if did_put_exe_file is True:
+                self.deletefile(exe_binary_path)
 
     # TODO: This will attempt even on legitimate errors like access denied. fix that
     @retry(stop_max_attempt_number=MAX_NUM_OF_TRIES_PER_CONNECT, wait_fixed=TIME_TO_REST_BETWEEN_CONNECT_RETRY)
@@ -523,6 +568,9 @@ def run_command(w, command_type, command_args):
 
         elif command_type == "execbinary":
             result = w.execbinary(*command_args)
+
+        elif command_type == "pm":
+            result = w.execpm(*command_args)
 
         else:
             raise ValueError("command type {0} does not exist".format(command_type))

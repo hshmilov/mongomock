@@ -602,7 +602,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                                    data=json.dumps({"status": status, "output": output}))
         # TODO: Think of a better way to implement status
 
-    @stoppable
+    # This should never be stoppable!! Or else we might stop execution while it happens, which makes
+    # it possible for us to have files left on the diks
     def _run_action_thread(self, func, device_data, action_id, **kwargs):
         """ Function for running new action.
 
