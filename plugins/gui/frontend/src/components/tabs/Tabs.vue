@@ -2,7 +2,7 @@
     <div class="x-tabs">
         <ul class="header">
             <li v-for="tab in tabs" class="header-tab" :class="{active: tab.isActive, disabled: tab.outdated}"
-                @click="selectTab(tab)">
+                @click="selectTab(tab.id)">
                 <x-logo-name v-if="tab.logo" :name="tab.title" />
                 <div v-else>{{ tab.title }}</div>
             </li>
@@ -25,10 +25,15 @@
             }
         },
         methods: {
-			selectTab(selectedTab) {
+			selectTab(selectedId) {
+				let found = false
 				this.tabs.forEach((tab) => {
-					tab.isActive = (tab.id === selectedTab.id)
+					tab.isActive = (tab.id === selectedId)
+                    if (tab.isActive) found = true
                 })
+                if (!found) {
+					this.tabs[0].isActive = true
+                }
             }
         },
 		created() {
@@ -37,7 +42,7 @@
 	}
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
     .x-tabs {
         .header {
             list-style: none;

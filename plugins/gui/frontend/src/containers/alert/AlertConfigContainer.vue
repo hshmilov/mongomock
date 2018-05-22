@@ -60,8 +60,9 @@
                     <div class="header">Action</div>
                     <div class="content">
                         <x-checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
-                        <x-checkbox :class="{'grid-span2': !actions.syslog}" label="Notify Syslog" v-model="actions.syslog"/>
-                        <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email" v-model="actions.mail"/>
+                        <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog" @change="checkSyslogSettings"/>
+                        <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
+                                    v-model="actions.mail" @change="checkMailSettings"/>
                         <template v-if="actions.mail">
                             <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
                                    no-data-text="Type mail addresses..." :default-first-option="true"/>
@@ -76,7 +77,7 @@
                 </div>
                 <div class="row btn-container">
                     <a class="x-btn link" @click="returnToAlerts">Cancel</a>
-                    <a class="x-btn" @click="saveAlert">Save</a>
+                    <a class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</a>
                 </div>
             </form>
         </x-box>
@@ -96,7 +97,8 @@
     import Modal from '../../components/popover/Modal.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
-    import { FETCH_DATA_QUERIES } from '../../store/actions'
+    import { UPDATE_EMPTY_STATE } from '../../store/mutations'
+	import { FETCH_DATA_QUERIES } from '../../store/actions'
     import { SET_ALERT, UPDATE_ALERT, FETCH_ALERTS } from '../../store/modules/alert'
 
 	export default {
@@ -126,8 +128,15 @@
                         }
                     }
                     return queries
+                },
+                globalSettings(state) {
+					return state.configurable.core.CoreService.config
                 }
-			})
+			}),
+            complete() {
+            	return this.alert.name && this.currentQuery.name && (!this.actions.mail || !this.emptySettings['mail'])
+					&& (!this.actions.syslog || !this.emptySettings['syslog'])
+            }
         },
         data() {
 			return {
@@ -139,7 +148,11 @@
                 },
                 mailList: [],
                 tagName: '',
-                error: ''
+                error: '',
+				emptySettings: {
+                	'mail': false,
+                    'syslog': false
+                }
             }
 		},
         watch: {
@@ -148,8 +161,10 @@
             }
         },
         methods: {
-            ...mapMutations({ setAlert: SET_ALERT }),
-            ...mapActions({ fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS }),
+            ...mapMutations({ setAlert: SET_ALERT, updateEmptyState: UPDATE_EMPTY_STATE }),
+            ...mapActions({
+                fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
+            }),
             fillAlert(alert) {
 				alert.actions.forEach((action) => {
 					switch (action.type) {
@@ -175,8 +190,7 @@
             },
 			saveAlert() {
             	/* Validation */
-                if (!this.alert.name) return
-                if (!this.currentQuery.name) return
+                if (!this.complete) return
                 if ((this.alertData.id === "new" || this.alert.name !== this.alertData.name) && this.alerts.some(e => e.name === this.alert.name)) {
                     this.error = 'An Alert with that name already exists, please choose a different one.'
                     return
@@ -213,6 +227,24 @@
             },
             closeError() {
                 this.error = ''
+            },
+            checkMailSettings(on) {
+            	if (!on) {
+					this.updateEmptyState({name: 'emptyMailSettings', status: false})
+				} else if (!this.globalSettings.email_settings.smtpHost || !this.globalSettings.email_settings.smtpPort) {
+					this.updateEmptyState({name: 'emptyMailSettings', status: true})
+					this.updateEmptyState({name: 'emptySyslogSettings', status: false})
+					this.emptySettings['mail'] = true
+				}
+            },
+            checkSyslogSettings(on) {
+				if (!on) {
+					this.updateEmptyState({name: 'emptySyslogSettings', status: false})
+				} else if (!this.globalSettings.syslog_settings.syslogHost) {
+					this.updateEmptyState({name: 'emptySyslogSettings', status: true})
+					this.updateEmptyState({name: 'emptyMailSettings', status: false})
+					this.emptySettings['syslog'] = true
+				}
             }
         },
         created() {

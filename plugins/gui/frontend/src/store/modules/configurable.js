@@ -10,7 +10,8 @@ export const configurable = {
     mutations: {
         [CHANGE_PLUGIN_CONFIG](state, payload) {
             if (!state[payload.pluginId]) state[payload.pluginId] = {}
-            state[payload.pluginId][payload.configName] = {...state[payload.pluginId][payload.configName], config: payload.config}
+            state[payload.pluginId][payload.configName] = {...state[payload.pluginId][payload.configName],
+                config: payload.config}
             if (payload.schema) {
                 state[payload.pluginId][payload.configName].schema = payload.schema
             }
@@ -18,7 +19,7 @@ export const configurable = {
         }
     },
     actions: {
-        [SAVE_PLUGIN_CONFIG]({dispatch, commit}, payload) {
+        [SAVE_PLUGIN_CONFIG]({dispatch}, payload) {
             /*
                 Call API to save given config to adapter by the given adapter unique name
              */

@@ -1325,58 +1325,56 @@ class PluginBase(Configurable, Feature):
                         {
                             "name": "syslogHost",
                             "title": "Syslog Host",
-                            "type": "string",
-                            "required": True
+                            "type": "string"
                         },
                         {
                             "name": "syslogPort",
                             "title": "Port",
-                            "type": "number",
-                            "required": False,
+                            "type": "number"
                         }
                     ],
                     "name": "syslog_settings",
                     "title": "Syslog Settings",
-                    "type": "array"
+                    "type": "array",
+                    "required": ["syslogHost"]
                 },
                 {
                     "items": [
                         {
                             "name": "smtpHost",
                             "title": "Email Host",
-                            "type": "string",
-                            "required": True
+                            "type": "string"
                         },
                         {
                             "name": "smtpPort",
                             "title": "Port",
-                            "type": "number",
-                            "required": True
+                            "type": "number"
                         },
                         {
                             "name": "smtpUser",
                             "title": "User Name",
-                            "type": "string",
+                            "type": "string"
                         },
                         {
                             "name": "smtpPassword",
                             "title": "Password",
-                            "type": "string",
+                            "type": "string"
                         },
                         {
                             "name": "smtpCert",
                             "title": "TLS 1.2 Key File",
-                            "type": "file",
+                            "type": "file"
                         },
                         {
                             "name": "smtpKey",
                             "title": "TLS 1.2 Cert File",
-                            "type": "file",
+                            "type": "file"
                         }
                     ],
                     "name": "email_settings",
                     "title": "Email Settings",
-                    "type": "array"
+                    "type": "array",
+                    "required": ["smtpHost", "smtpPort"]
                 },
                 {
                     "items": [

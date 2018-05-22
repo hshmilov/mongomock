@@ -58,10 +58,14 @@
                         pluginId: 'gui',
                         configName: 'GuiService'
                     })
+					this.loadPluginConfig({
+						pluginId: 'core',
+						configName: 'CoreService'
+					})
                 }
             })
-            this.getOkta().then(response =>{
-                if (response.status == 200){
+            this.getOkta().then(response => {
+                if (response.status === 200) {
                     this.okta_config = response.data
                 }
             })
@@ -71,7 +75,6 @@
 
 <style lang="scss">
     @import '../assets/plugins/fonts/icons/style.css';
-    /*@import '../assets/plugins/css/bootstrap.min.css';*/
     @import '../scss/app';
     @import '../scss/styles';
 

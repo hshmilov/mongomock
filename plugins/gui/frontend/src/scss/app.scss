@@ -109,30 +109,6 @@ Formatting
   font-size: 12px;
 }
 
-.error-fill {
-  background-color: $indicator-red !important;
-}
-
-.warning-fill {
-  background-color: $color-warning !important;
-}
-
-.info-fill {
-  background-color: $color-info !important;
-}
-
-.success-fill {
-  background-color: $color-success !important;
-  border-color: $color-success !important;
-  &:hover {
-    box-shadow: 0 14px 26px -12px rgba($color-success, 0.42), 0 4px 23px 0 rgba(0, 0, 0, 0.12), 0 8px 10px -5px rgba($color-success, 0.2) !important;
-  }
-}
-
-.empty-fill {
-  background-color: $background-color-hover;
-}
-
 .place-right {
   width: 100%;
   text-align: right;

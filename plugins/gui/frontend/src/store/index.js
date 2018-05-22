@@ -23,6 +23,7 @@ import {
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
+	UPDATE_EMPTY_STATE, updateEmptyState,
 	UPDATE_DATA_CONTENT, updateDataContent,
 	UPDATE_DATA_COUNT, updateDataCount,
 	UPDATE_DATA_VIEW, updateDataView,
@@ -58,11 +59,14 @@ export default new Vuex.Store({
         /*
             General controls that the system uses throughout pages
          */
-        configuration: {
-            language: 'en'
-        },
         interaction: {
-            collapseSidebar: true
+            collapseSidebar: true,
+			onboarding: {
+				emptyStates: {
+					emptyMailSettings: false,
+					emptySyslogSettings: false
+				}
+			}
         }
     },
 	getters: {
@@ -72,6 +76,7 @@ export default new Vuex.Store({
 	},
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
+		[ UPDATE_EMPTY_STATE ]: updateEmptyState,
         [ UPDATE_DATA_CONTENT ]: updateDataContent,
 		[ UPDATE_DATA_COUNT ]: updateDataCount,
 		[ UPDATE_DATA_VIEW ]: updateDataView,

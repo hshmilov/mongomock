@@ -1,6 +1,6 @@
 <template>
     <x-page title="Settings" class="settings">
-        <tabs>
+        <tabs ref="tabs">
             <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
                 <h3>Discovery Phase</h3>
                 <div class="grid grid-col-2">
@@ -17,21 +17,13 @@
                     <template v-else>Loading</template>
                 </div>
             </tab>
-            <tab title="Global Settings" id="email-settings-tab" v-if="configurable.core">
-                <div class="grid grid-col-2">
-                    <x-schema-form :schema="configurable.core.CoreService.schema"
-                                   v-model="configurable.core.CoreService.config" @validate="updateValidity"
-                                   :api-upload="`adapters/core`"/>
-
-                </div>
+            <tab title="Global Settings" id="global-settings-tab" v-if="configurable.core">
+                <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateValidity"
+                               v-model="configurable.core.CoreService.config" :api-upload="`adapters/core`"/>
                 <button class="x-btn" :class="{'disabled':!complete}" @click="setEmailServer">Save</button>
             </tab>
             <tab title="GUI Settings" id="system-settings-tab" v-if="configurable.gui">
-                <div class="grid grid-col-2">
-                    <x-schema-form :schema="configurable.gui.GuiService.schema" v-model="configurable.gui.GuiService.config"/>
-                </div>
-                <div class="row">
-                </div>
+                <x-schema-form :schema="configurable.gui.GuiService.schema" v-model="configurable.gui.GuiService.config"/>
                 <a class="x-btn" @click="saveGuiSettings">Save</a>
             </tab>
         </tabs>
@@ -172,10 +164,11 @@
                 pluginId: 'system_scheduler',
                 configName: 'SystemSchedulerService'
             })
-            this.loadPluginConfig({
-                pluginId: 'core',
-                configName: 'CoreService'
-            })
+        },
+        mounted() {
+            if (this.$route.hash) {
+				this.$refs.tabs.selectTab(this.$route.hash.slice(1))
+            }
         }
     }
 </script>
@@ -183,6 +176,7 @@
 <style lang="scss">
     .settings {
         .grid {
+            display: grid;
             grid-row-gap: 12px;
             width: 600px;
             align-items: center;
@@ -199,6 +193,12 @@
             .grid-item {
                 text-align: right;
             }
+            .x-btn {
+                justify-self: end;
+            }
+        }
+        .schema-form {
+            width: 600px;
             .x-btn {
                 justify-self: end;
             }

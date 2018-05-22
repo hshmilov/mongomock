@@ -1,5 +1,5 @@
 <template>
-    <header class="x-top-bar" v-bind:class="{ 'minimize': interaction.collapseSidebar || ($resize && $mq.below(1200)) }">
+    <header class="x-top-bar" v-bind:class="{ 'minimize': collapseSidebar || ($resize && $mq.below(1200)) }">
         <div class="bar-toggle">
             <a class="toggle-link" v-on:click="toggleSidebar">
                 <svg-icon name="navigation/menu" :original="true" height="20"/>
@@ -29,9 +29,13 @@
                 </a>
             </li>
             <li class="nav-item">
-                <router-link :to="{ name: 'Settings' }" class="item-link" tag="a">
+                <a class="item-link" @click="navigateSettings">
                     <svg-icon name="navigation/settings" :original="true" height="20" />
-                </router-link>
+                </a>
+                <x-tooltip content="In order to send alerts through mail, define the server under settings"
+                           :dismissible="true" v-model="mailSettingsTooltip" />
+                <x-tooltip content="In order to send alerts through a syslog system, define the server under settings"
+                           :dismissible="true" v-model="syslogSettingsTooltip" />
             </li>
         </ul>
     </header>
@@ -39,22 +43,47 @@
 
 <script>
 	import NotificationPeekContainer from '../notification/NotificationPeekContainer.vue'
+    import xTooltip from '../../components/popover/Tooltip.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
-	import { TOGGLE_SIDEBAR } from '../../store/mutations'
+	import { TOGGLE_SIDEBAR, UPDATE_EMPTY_STATE } from '../../store/mutations'
     import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
 
 	export default {
-		components: { NotificationPeekContainer },
+		components: { NotificationPeekContainer, xTooltip },
 		name: 'top-bar-container',
 		computed: {
-            ...mapState(['interaction', 'dashboard']),
+            ...mapState({
+                collapseSidebar(state) {
+                	return state.interaction.collapseSidebar
+                },
+                emptyStates(state) {
+                	return state.interaction.onboarding.emptyStates
+                },
+
+            }),
             lifecycle () {
                 if (!this.dashboard.lifecycle.data.subPhases) return []
 
                 return this.dashboard.lifecycle.data.subPhases
-            }
+            },
+            mailSettingsTooltip: {
+            	get() {
+            		return this.emptyStates.emptyMailSettings
+                },
+                set(value) {
+					this.updateEmptyState({name:'emptyMailSettings', status: value})
+                }
+            },
+			syslogSettingsTooltip: {
+				get() {
+					return this.emptyStates.emptySyslogSettings
+				},
+				set(value) {
+					this.updateEmptyState({name:'emptySyslogSettings', status: value})
+				}
+			}
         },
         data() {
 			return {
@@ -63,7 +92,7 @@
 			}
         },
 		methods: {
-			...mapMutations({toggleSidebar: TOGGLE_SIDEBAR}),
+			...mapMutations({toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE }),
 			...mapActions({
                 fetchLifecycle: FETCH_LIFECYCLE,
                 startResearch: START_RESEARCH_PHASE,
@@ -77,6 +106,15 @@
             stopResearchNow() {
                 this.runningResearch = false
                 this.stopResearch()
+            },
+            navigateSettings() {
+				if (this.mailSettingsTooltip || this.syslogSettingsTooltip) {
+					this.$router.push({path: '/settings#global-settings-tab'})
+                    this.mailSettingsTooltip = false
+                    this.syslogSettingsTooltip = false
+                } else {
+				    this.$router.push({name: 'Settings'})
+                }
             }
 		},
 		created () {
@@ -139,6 +177,7 @@
             > .nav-item {
                 margin: 0 12px;
                 line-height: 60px;
+                position: relative;
                 .svg-stroke {
                     fill: $theme-orange;
                 }
