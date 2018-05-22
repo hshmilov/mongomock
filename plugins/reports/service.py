@@ -302,7 +302,9 @@ class ReportsService(PluginBase, Triggerable):
                                                               report_data['triggers'], triggered),
                                                           num_of_current_devices=current_num_of_devices,
                                                           old_results_num_of_devices=len(report_data['result']),
-                                                          query_link=self._generate_query_link(report_data['query_entity'], report_data['query']))
+                                                          query_link=self._generate_query_link(
+                                                              report_data['query_entity'],
+                                                              report_data['query'])).replace('\n', ' ')
         self.send_syslog_message(log_message, report_data['severity'])
 
     def _handle_action_send_emails(self, report_data, triggered, trigger_data, current_num_of_devices,
@@ -342,7 +344,7 @@ class ReportsService(PluginBase, Triggerable):
                                                                          report_data['result']),
                                                                      query_link=self._generate_query_link(
                                                                          report_data['query_entity'],
-                                                                         report_data['query'])).replace('\n', ' '),
+                                                                         report_data['query'])),
                                  report_data['severity'])
 
     def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
