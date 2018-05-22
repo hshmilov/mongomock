@@ -59,6 +59,10 @@ class CiscoConsoleClient(AbstractCiscoClient):
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
+    def _query_basic_info(self):
+        logger.warning('basic info isn\'t implemented yet - skipping')
+        return None
+
 
 class CiscoSshClient(CiscoConsoleClient):
     def get_device_type(self):
@@ -125,7 +129,7 @@ class ConsoleCdpCiscoData(CdpCiscoData):
         # (For example IP address) . I wasn't able to achive this state so for now
         # we'll throw anything that appear more then once.
         data = dict(sum(map(ConsoleCdpCiscoData.parse_entry_block, entry.split('\n\n')), []))
-        return SshCdpCiscoData.translate_entry(data)
+        return ConsoleCdpCiscoData.translate_entry(data)
 
     def _parse(self):
         try:

@@ -8,7 +8,8 @@ from collections import defaultdict
 
 
 class CiscoDevice(DeviceAdapter):
-    fetch_proto = Field(str, "Fetch Protocol", enum=['ARP', 'CDP', 'DHCP'])
+    # Fetch protocol refers to the way we discover new devices (by querying arp, cdp, dhcp tables, or by adding the client itself).
+    fetch_proto = Field(str, "Fetch Protocol", enum=['ARP', 'CDP', 'DHCP', 'CLIENT'])
     related_ips = ListField(str, 'Realated IPs', converter=format_ip, json_format=JsonStringFormat.ip,
                             description='A list of ips that routed through the device')
     reachability = Field(str, "Reachability")
@@ -54,10 +55,14 @@ class AbstractCiscoClient(object):
         assert self._in_context
         return self._query_cdp_table()
 
+    def query_basic_info(self):
+        assert self._in_context
+        return self._query_basic_info()
+
     def query_all(self):
         assert self._in_context
 
-        for callback in [self.query_arp_table, self.query_dhcp_leases, self.query_cdp_table]:
+        for callback in [self.query_arp_table, self.query_dhcp_leases, self.query_cdp_table, self.query_basic_info]:
             try:
                 data = callback()
                 if data:
@@ -70,7 +75,7 @@ class AbstractCiscoData(object):
     '''Abstract class for cisco data. 
         each cisco client query should return CiscoData class, 
         that will be yielded in _query_device_by_client.
-        then in _parse_raw_data we can call create_device'''
+        then in _parse_raw_data we can call get_devices '''
 
     def __init__(self, raw_data):
         self._raw_data = raw_data
@@ -88,6 +93,11 @@ class AbstractCiscoData(object):
         return instance.get('mac')
 
     def _get_devices(self, instance: dict, create_device_callback):
+        """ This function gets instances (dicts that hold the "raw data") from _parse implemenataion of each CiscoData class
+            and convert them to axonius devices.
+            Each instance might hold different fields, so we assume that some or all fields might be missing.
+            This function defines the instance structure.
+        """
 
         id_ = self._get_id(instance)
         if id_ is None:
@@ -98,9 +108,25 @@ class AbstractCiscoData(object):
 
         new_device.id = id_
 
-        if any(['ip' in instance, 'mac' in instance, 'iface)' in instance]):
+        # TODO: we don't need ifaces and iface, there is duplication in the structure
+        if any(['ip' in instance, 'mac' in instance, 'iface' in instance]):
             ips = [instance.get('ip')] if instance.get('ip') else []
             new_device.add_nic(mac=instance.get('mac'), name=instance.get('iface'), ips=ips)
+
+        if 'ifaces' in instance:
+            # TODO: add mtu, speed, state and etc to add_nic
+            # TODO: validate that the length of ip list is equal to net-mask
+            for iface in instance['ifaces'].values():
+                ip_list = []
+                netmask_list = []
+
+                if 'ips' in iface:
+                    ip_list = list(filter(bool, map(lambda x: x.get('address'), iface['ips'])))
+                    netmask_list = filter(bool, map(lambda x: x.get('net-mask'), iface['ips']))
+                    netmask_list = list(map(lambda x: '/'.join(x), zip(ip_list, netmask_list)))
+
+                new_device.add_nic(mac=iface.get('mac'), name=iface.get(
+                    'descritption'), ips=ip_list, subnets=netmask_list)
 
         new_device.hostname = instance.get('hostname')
         new_device.device_model = instance.get('device_model')
@@ -125,6 +151,20 @@ class AbstractCiscoData(object):
                     yield new_device
             except Exception:
                 logger.exception('Exception while getting devices')
+
+
+class BasicInfoData(AbstractCiscoData):
+    def _get_id(self, instance):
+        id_ = '_'.join(['basic_info', instance.get('hostname', '')])
+        if id_ == "basic_info":
+            return None
+        return id_
+
+    def _get_devices(self, instance, create_device_callback):
+        device = super()._get_devices(instance, create_device_callback)
+        if device:
+            device.fetch_proto = 'CLIENT'
+        return device
 
 
 class ArpCiscoData(AbstractCiscoData):
