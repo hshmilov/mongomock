@@ -60,6 +60,7 @@
                     <div class="header">Action</div>
                     <div class="content">
                         <x-checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
+                        <x-checkbox :class="{'grid-span2': !actions.syslog}" label="Notify Syslog" v-model="actions.syslog"/>
                         <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email" v-model="actions.mail"/>
                         <template v-if="actions.mail">
                             <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
@@ -134,7 +135,7 @@
                 alert: { triggers: {}, actions: [] },
                 currentQuery: {},
                 actions: {
-                	notification: false, mail: false, tag: false
+                	notification: false, mail: false, tag: false, syslog: false
                 },
                 mailList: [],
                 tagName: '',
@@ -162,6 +163,9 @@
                         case 'tag_entities':
                             this.actions.tag = true
                             this.tagName = action.data
+                            break
+                        case 'notify_syslog':
+                            this.actions.syslog = true
 					}
 				})
 				this.alert = { ...alert,
@@ -191,6 +195,11 @@
                 if (this.actions.tag) {
                     this.alert.actions.push({
                         type: 'tag_entities', data: this.tagName
+                    })
+                }
+                if (this.actions.syslog) {
+                    this.alert.actions.push({
+                        type: 'notify_syslog'
                     })
                 }
                 this.alert.query = this.currentQuery.name

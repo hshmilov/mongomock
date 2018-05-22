@@ -192,6 +192,10 @@
             &.grid-col-2 {
                 grid-template-columns: 2fr 3fr;
             }
+            &.grid-col-4 {
+                width: 300px;
+                grid-template-columns: 2fr 3fr;
+            }
             .grid-item {
                 text-align: right;
             }

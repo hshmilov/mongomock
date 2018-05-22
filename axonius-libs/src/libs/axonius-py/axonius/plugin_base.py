@@ -1,6 +1,7 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
 import logging
+import logging.handlers
 from concurrent.futures import ALL_COMPLETED
 from funcy import chunks
 
@@ -49,7 +50,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME
+    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
@@ -1282,10 +1283,20 @@ class PluginBase(Configurable, Feature):
         self.__renew_global_settings_from_db()
         return ""
 
+    def send_syslog_message(self, message, log_level):
+        temp_logger = logging.getLogger("axonius.syslog")
+        syslog_hdlr = logging.handlers.SysLogHandler(address=(
+            self._syslog_settings['syslogHost'], self._syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)),
+            facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+        syslog_hdlr.setLevel(logging.INFO)
+        temp_logger.addHandler(syslog_hdlr)
+
+        # Starting the messages with the tag Axonius
+        formatted_message = f"Axonius:{message}"
+        getattr(temp_logger, log_level)(formatted_message)
+
     @property
     def mail_sender(self):
-        if not self._email_settings['smtpHost']:
-            raise Exception('No Mail Server configured')
         return EmailServer(self._email_settings['smtpHost'], self._email_settings['smtpPort'],
                            self._email_settings.get('smtpUser'), self._email_settings.get('smtpPassword'),
                            self._grab_file_contents(self._email_settings.get('smtpKey'), stored_locally=False),
@@ -1303,11 +1314,31 @@ class PluginBase(Configurable, Feature):
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
         self._execution_enabled = config['execution_settings']['enabled']
+        self._syslog_settings = config['syslog_settings']
 
     @staticmethod
     def global_settings_schema():
         return {
             "items": [
+                {
+                    "items": [
+                        {
+                            "name": "syslogHost",
+                            "title": "Syslog Host",
+                            "type": "string",
+                            "required": True
+                        },
+                        {
+                            "name": "syslogPort",
+                            "title": "Port",
+                            "type": "number",
+                            "required": False,
+                        }
+                    ],
+                    "name": "syslog_settings",
+                    "title": "Syslog Settings",
+                    "type": "array"
+                },
                 {
                     "items": [
                         {
@@ -1378,5 +1409,9 @@ class PluginBase(Configurable, Feature):
             },
             "execution_settings": {
                 "enabled": True
+            },
+            "syslog_settings": {
+                "syslogHost": None,
+                "syslogPort": logging.handlers.SYSLOG_UDP_PORT
             }
         }

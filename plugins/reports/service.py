@@ -11,7 +11,7 @@ from bson.objectid import ObjectId
 from flask import jsonify, json
 
 from axonius.entities import EntityType
-from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
 from axonius.consts import report_consts
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -280,6 +280,31 @@ class ReportsService(PluginBase, Triggerable):
 
         return required_triggers
 
+    def _generate_query_link(self, entity_type, query_name):
+        # Getting system config from the gui.
+        system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION,
+                                             self.get_plugin_by_name(GUI_NAME)[PLUGIN_UNIQUE_NAME]).find_one(
+            {'type': 'server'}) or {}
+        return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?query={query_name}"
+
+    def _handle_action_notify_syslog(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                     action_data=None):
+        """ Sends an email to the list of e-mails
+
+        :param dict report_data: The report settings.
+        :param set triggered: triggered triggers set.
+        :param trigger_data: The results difference.
+        :param action_data: List of email addresses to send to.
+        """
+        log_message = report_consts.REPORT_CONTENT.format(query_name=report_data['name'],
+                                                          num_of_triggers=report_data['triggered'],
+                                                          trigger_message=self._parse_action_content(
+                                                              report_data['triggers'], triggered),
+                                                          num_of_current_devices=current_num_of_devices,
+                                                          old_results_num_of_devices=len(report_data['result']),
+                                                          query_link=self._generate_query_link(report_data['query_entity'], report_data['query']))
+        self.send_syslog_message(log_message, report_data['severity'])
+
     def _handle_action_send_emails(self, report_data, triggered, trigger_data, current_num_of_devices,
                                    action_data=None):
         """ Sends an email to the list of e-mails
@@ -294,7 +319,9 @@ class ReportsService(PluginBase, Triggerable):
             .send(report_consts.REPORT_CONTENT_HTML.format(
                 query_name=report_data['name'], num_of_triggers=report_data['triggered'],
                 trigger_message=self._parse_action_content(report_data['triggers'], triggered),
-                num_of_current_devices=current_num_of_devices, severity=report_data['severity']))
+                num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
+                old_results_num_of_devices=len(report_data['result']),
+                query_link=self._generate_query_link(report_data['query_entity'], report_data['query'])))
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):
@@ -310,7 +337,12 @@ class ReportsService(PluginBase, Triggerable):
                                                                      num_of_triggers=report_data['triggered'],
                                                                      trigger_message=self._parse_action_content(
                                                                          report_data['triggers'], triggered),
-                                                                     num_of_current_devices=current_num_of_devices),
+                                                                     num_of_current_devices=current_num_of_devices,
+                                                                     old_results_num_of_devices=len(
+                                                                         report_data['result']),
+                                                                     query_link=self._generate_query_link(
+                                                                         report_data['query_entity'],
+                                                                         report_data['query'])).replace('\n', ' '),
                                  report_data['severity'])
 
     def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
@@ -391,8 +423,10 @@ class ReportsService(PluginBase, Triggerable):
                 report_data['triggered'] += 1
                 for action in report_data['actions']:
                     try:
-                        getattr(self, f"_handle_action_{action['type']}")(
-                            report_data, triggers, result_difference, len(current_result), action.get('data'))
+                        # get the action function to run.
+                        current_action_handle = getattr(self, f"_handle_action_{action['type']}")
+                        current_action_handle(report_data, triggers, result_difference,
+                                              len(current_result), action.get('data'))
                     except Exception:
                         logger.exception(
                             f'Error performing action {action} with parameters '
@@ -415,7 +449,6 @@ class ReportsService(PluginBase, Triggerable):
                                                            {"$set": {"result": current_result}})
                 return
 
-            # DeepDiff(report_data['result'], current_result, ignore_order=True)
             result_difference = _diff(current_result, report_data['result'])
             # Checks to see what was triggered against the requested trigger list.
             intersection = self._check_triggers(result_difference,

@@ -18,19 +18,21 @@ class Actions(Enum):
     Tag_Devices = auto()
 
 
-REPORT_TITLE = "Axonius Report For Query: {query_name}"
+REPORT_TITLE = "Axonius Alert For Query: {query_name}"
 
 REPORT_CONTENT_HTML = """\
 <html>
   <head></head>
   <body>
-    <p><span style="text-transform: uppercase;">{severity}:</span> A Report For query: {query_name} has been triggered<br>
+    <p><span style="text-transform: uppercase;">{severity}:</span> An Alert For query: {query_name} has been triggered<br>
        This is the {num_of_triggers} time this has happened.<br>
        It was triggered because the number of devices has {trigger_message}.<br>
-       The number of devices returned by the query is {num_of_current_devices}.
+       The number of devices returned by the query is {num_of_current_devices}.<br>
+       The previous number of devices was {old_results_num_of_devices}.
+       You can watch the query and it's results here:<a href="{query_link}">Link</a>
     </p>
   </body>
 </html>
 """
 
-REPORT_CONTENT = "A Report For query: {query_name} has been triggered.\nThis is the {num_of_triggers} time this has happened.\n It was triggered because the number of devices has {trigger_message}.\nThe number of devices returned by the query is {num_of_current_devices}."
+REPORT_CONTENT = "An Alert For query: {query_name} has been triggered.\nThis is the {num_of_triggers} time this has happened.\n It was triggered because the number of devices has {trigger_message}.\nThe number of devices returned by the query is {num_of_current_devices}.\nThe previous number of devices was {old_results_num_of_devices}. You can watch the query and it's results here:{query_link}"

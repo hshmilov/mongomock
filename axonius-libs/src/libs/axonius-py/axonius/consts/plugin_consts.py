@@ -10,3 +10,5 @@ SYSTEM_SCHEDULER_PLUGIN_NAME = 'system_scheduler'
 DEVICE_CONTROL_PLUGIN_NAME = 'device_control'
 
 ADAPTERS_LIST_LENGTH = 'adapter_list_length'
+
+GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'

@@ -15,7 +15,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
@@ -44,8 +44,6 @@ from urllib3.util.url import parse_url
 
 # the maximal amount of data a pagination query will give
 PAGINATION_LIMIT_MAX = 2000
-
-SYSTEM_CONFIG_COLLECTION = 'system_config'
 
 
 def add_rule_unauthenticated(rule, require_connected=True, *args, **kwargs):
@@ -2033,7 +2031,7 @@ class GuiService(PluginBase, Configurable):
 
     @property
     def system_collection(self):
-        return self._get_collection(SYSTEM_CONFIG_COLLECTION)
+        return self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION)
 
     @property
     def exec_report_collection(self):
