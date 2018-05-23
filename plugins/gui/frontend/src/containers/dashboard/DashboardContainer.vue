@@ -41,8 +41,7 @@
     import DashboardWizardContainer from './DashboardWizardContainer.vue'
 
 	import {
-		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE,
-        FETCH_DASHBOARD, REMOVE_DASHBOARD
+		FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD
 	} from '../../store/modules/dashboard'
     import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
 
@@ -93,9 +92,8 @@
 		methods: {
 			...mapMutations({updateView: UPDATE_DATA_VIEW, clearDataContent: CLEAR_DATA_CONTENT }),
 			...mapActions({
-				fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
-				fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
-				fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE
+				fetchAdapterDevices: FETCH_ADAPTER_DEVICES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
+                fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD
 			}),
 			runAdapterFilter (index) {
 				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')

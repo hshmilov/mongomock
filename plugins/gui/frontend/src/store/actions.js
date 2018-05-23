@@ -59,7 +59,7 @@ export const requestApi = ({commit}, payload) => {
 				}
 			}
 			if (payload.type) {
-				commit(payload.type, {fetching: false, error: errorMessage})
+				commit(payload.type, {rule: payload.rule, fetching: false, error: errorMessage, ...payload.payload})
 			}
 			reject(error)
 		}))

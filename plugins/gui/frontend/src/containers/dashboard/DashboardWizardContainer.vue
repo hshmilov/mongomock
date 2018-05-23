@@ -45,11 +45,13 @@
 
             <!-- Last Row - select name -->
             <label for="chart-name">Chart Title</label>
-            <input id="chart-name" type="text" v-model="dashboard.name"/>
+            <input id="chart-name" type="text" v-model="dashboard.name" @input="message = ''">
             <div></div> <!-- Empty to align with query lines -->
+            <div v-if="message" class="grid-span2 error-text">{{message}}</div>
         </div>
     </feedback-modal>
 </template>
+
 
 <script>
     import FeedbackModal from '../../components/popover/FeedbackModal.vue'
@@ -77,7 +79,10 @@
                         })
 						return map
 					}, {})
-				}
+				},
+                dashboards (state) {
+                    return state['dashboard']
+                }
 			}),
             chartTypes() {
 				return [{ value: 'compare', name: 'histogram' },
@@ -103,6 +108,10 @@
                 return this.dashboard.queries[0]
             },
             saveDisabled() {
+                if (this.dashboards.charts.data.some(e => e.name === this.dashboard.name)) {
+                    this.message = 'A Chart With That Name Already Exists, Please Choose A Different Name.'
+                    return true
+                }
 				if (!this.dashboard.name || this.dashboard.queries.length < 2) return true
 				let complete = true
 				this.dashboard.queries.forEach((query) => {
@@ -116,13 +125,15 @@
                 isActive: false,
 				dashboard: {
 					type: 'compare', name: '', queries: [{ ...dashboardQuery }, { ...dashboardQuery }]
-				}
+				},
+                message: ''
 			}
         },
         methods: {
             ...mapActions({fetchQueries: FETCH_DATA_QUERIES, saveDashboard: SAVE_DASHBOARD}),
 			activate() {
 				this.isActive = true
+                this.message = ''
             },
             changeType(event) {
 				if (event.target.value === 'intersect') {

@@ -103,8 +103,8 @@
                     return true
 				}).sort((first, second) => {
 					// Adapters with no last_seen field go first
-          let firstSeen = first.data[lastSeenByModule[this.module]]
-          let secondSeen = second.data[lastSeenByModule[this.module]]
+                    let firstSeen = first.data[lastSeenByModule[this.module]]
+                    let secondSeen = second.data[lastSeenByModule[this.module]]
 					if (!secondSeen) return 1
 					if (!firstSeen) return -1
 					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
@@ -143,7 +143,7 @@
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId) {
 				this.fetchDataByID({ module: this.module, id: this.entityId }).then(() => this.loading = false)
 			} else {
-				this.loading = true
+				this.loading = false
             }
 		}
 	}

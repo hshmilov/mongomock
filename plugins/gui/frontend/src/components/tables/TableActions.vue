@@ -2,6 +2,7 @@
     <div>
         <div class="x-table-header">
             <div class="x-title">{{ title }} ({{count}})</div>
+            <div class="error">{{error}}</div>
             <div class="x-actions"><slot name="actions"/></div>
         </div>
         <div class="x-table-container" :tabindex="-1" ref="greatTable">
@@ -19,7 +20,7 @@
 		name: 'actionable-table',
         components: { PulseLoader },
 		props: {
-			title: { required: true }, loading: { default: false }, count: { default: 0 }
+			title: { required: true }, loading: { default: false }, count: { default: 0 }, error: {}
 		},
         mounted() {
 			this.$refs.greatTable.focus()
@@ -33,7 +34,14 @@
         padding: 8px;
         line-height: 24px;
         .x-title {
+            display: inline-block;
+        }
+        .error {
             flex: 1 0 auto;
+            color: $indicator-red;
+            display: inline-block;
+            margin-left: 24px;
+            font-size: 12px;
         }
         .x-actions {
             display: grid;

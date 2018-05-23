@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-table" :class="{multiline: multiline}">
-        <x-actionable-table :title="title" :count="count.data" :loading="loading">
+        <x-actionable-table :title="title" :count="count.data" :loading="loading" :error="content.error">
             <slot name="actions" slot="actions"/>
             <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
                      :id-field="idField" :value="value" @input="$emit('input', $event)"
