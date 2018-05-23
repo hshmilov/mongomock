@@ -10,7 +10,7 @@ client_details = {
     'tenant_id': 'a02ef90b-a415-4ff5-98ba-23d3600e084b',
 
     # see https://blogs.msdn.microsoft.com/mschray/2016/03/18/getting-your-azure-subscription-guid-new-portal/
-    # subscription_id is the id of the subscription (in our case, currently it is the "Free Trial"
+    # subscription_id is the id of the subscription (in our case, currently it is the "Axonius-Azure"
     'subscription_id': 'ba4aa321-c802-4de2-bb72-ca4c66b5b124',
 }
 
