@@ -35,7 +35,7 @@ MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
 MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
-MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 10  # The amount of seconds we wait for the created shell process to finish
+MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 2  # The amount of seconds we wait for the created shell process to finish
 DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
 
 __global_counter = 0
