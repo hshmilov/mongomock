@@ -2089,7 +2089,7 @@ class GuiService(PluginBase, Configurable):
                     "items": [
                         {
                             "name": "okta_enabled",
-                            "title": "Whether or not to allow Okta logins",
+                            "title": "Allow Okta logins",
                             "type": "bool",
                             "required": True
                         },
