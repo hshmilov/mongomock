@@ -936,7 +936,7 @@ class GuiService(PluginBase, Configurable):
 
     @paginated()
     @filtered()
-    @add_rule_unauthenticated("users/queries", methods=['POST', 'GET'])
+    @add_rule_unauthenticated("users/queries", methods=['POST', 'GET', 'DELETE'])
     def user_queries(self, limit, skip, mongo_filter):
         return self._entity_queries(limit, skip, mongo_filter, EntityType.Users)
 
