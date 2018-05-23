@@ -1,12 +1,11 @@
 import time
 from itertools import chain
-from pprint import pprint
 
 from benchmarks.generator import generate_correlated_by_ip_mac, generate_correlated_serial, \
     generate_correlated_hostname_ip
 from static_correlator.engine import StaticCorrelatorEngine
 
-pairs = 200000
+pairs = 100000
 
 
 def correlate(devices):
@@ -25,7 +24,20 @@ def test_benchmark(msg, generate_func):
     print(f'{msg} correlated in {time.time() - corr}, got {len(res)} correlation results')
 
 
+# Correlation test case semi-automation
+# (https://axonius.atlassian.net/wiki/spaces/AX/pages/655392769/Scaling+stress+tests , third case):
+
 if __name__ == '__main__':
+
+    now = time.time()
+
     test_benchmark("MAC:", generate_correlated_by_ip_mac)
     test_benchmark("SERIAL:", generate_correlated_serial)
     test_benchmark("HOSTNAME_IP:", generate_correlated_hostname_ip)
+
+    time_took = time.time() - now
+
+    if time_took > 5 * 60:
+        print('FAILED')
+    else:
+        print('PASSED')
