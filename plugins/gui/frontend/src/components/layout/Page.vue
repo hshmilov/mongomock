@@ -35,12 +35,13 @@
         background: $grey-1;
         padding: 12px 24px 24px 264px;
         position: relative;
-        width: calc(100vw - 108px);
+        width: calc(100vw - 288px);
         height: 100vh;
         &.collapse {
             display: flex;
             flex-direction: column;
             padding-left: 84px;
+            width: calc(100vw - 108px);
         }
         > .x-header {
             display: flex;
