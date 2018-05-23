@@ -44,7 +44,7 @@
 		FETCH_LIFECYCLE, FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE,
         FETCH_DASHBOARD, REMOVE_DASHBOARD
 	} from '../../store/modules/dashboard'
-    import { UPDATE_DATA_VIEW } from '../../store/mutations'
+    import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
@@ -91,7 +91,7 @@
 			}
 		},
 		methods: {
-			...mapMutations({updateView: UPDATE_DATA_VIEW}),
+			...mapMutations({updateView: UPDATE_DATA_VIEW, clearDataContent: CLEAR_DATA_CONTENT }),
 			...mapActions({
 				fetchLifecycle: FETCH_LIFECYCLE, fetchAdapterDevices: FETCH_ADAPTER_DEVICES,
 				fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
@@ -119,6 +119,7 @@
 				this.updateView({module, view: {
 						page: 0, query: { filter, expressions: [] }
 					}})
+                this.clearDataContent({module})
 				this.$router.push({path: module})
             },
             createNewDashboard() {

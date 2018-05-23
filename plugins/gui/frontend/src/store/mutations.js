@@ -43,6 +43,10 @@ export const updateDataView = (state, payload) => {
 	if (!validModule(state, payload)) return
 	state[payload.module].view = { ...state[payload.module].view, ...payload.view }
 }
+export const CLEAR_DATA_CONTENT = 'CLEAR_DATA_CONTENT'
+export const clearDataContent = (state, payload) => {
+	state[payload.module].content.data = []
+}
 
 export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
 export const updateDataViews = (state, payload) => {

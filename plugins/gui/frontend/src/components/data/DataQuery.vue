@@ -4,7 +4,7 @@
         <x-dropdown :arrow="false" class="flex-expand">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
             <search-input slot="trigger" v-model="searchValue" ref="greatInput" @input="searchQuery" :tabindex="1"
-                          @keyup.enter.stop="submitFilter" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex"
+                          @keyup.enter.native="submitFilter" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex"
                           placeholder="Insert your query or start typing to filter recent Queries" />
             <!--
             Content is a list composed of 3 sections:
