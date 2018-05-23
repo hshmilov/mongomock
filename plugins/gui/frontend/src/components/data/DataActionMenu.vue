@@ -9,8 +9,8 @@
         </triggerable-dropdown>
         <x-tag-modal title="Tag..." :module="module" :entities="selected" :tags="currentTags" ref="tag" />
         <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disable ${module}s`" ref="disable" >
-            <div>Out of {{selected.length}} {{module}}s, {{disableable.length}} are disableable.</div>
-            <div>These {{module}}s will not appear in further scans.</div>
+            <div>Out of {{selected.length}} {{module}}, {{disableable.length}} could be disabled.</div>
+            <div>These {{module}} will not appear in further scans.</div>
             <div>Are you sure you want to continue?</div>
         </x-data-action-item>
         <slot></slot>
