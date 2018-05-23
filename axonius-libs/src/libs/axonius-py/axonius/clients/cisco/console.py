@@ -7,6 +7,7 @@ from axonius.adapter_exceptions import AdapterException
 from axonius.utils.parsing import format_mac
 
 from axonius.clients.cisco.abstract import *
+from axonius.adapter_exceptions import ClientConnectionException
 
 
 class CiscoConsoleClient(AbstractCiscoClient):

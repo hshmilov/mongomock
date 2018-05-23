@@ -55,6 +55,7 @@ class CiscoAdapter(AdapterBase):
                     "title": 'Protocol to use',
                     "type": 'string',
                     "enum": list(PROTOCOLS.keys()),
+                    "default": 'snmp',
                 },
                 {
                     "name": 'username',
@@ -85,6 +86,7 @@ class CiscoAdapter(AdapterBase):
             ],
             "required": [
                 "host",
+                "protocol"
             ],
             "type": "array"
         }
@@ -94,8 +96,15 @@ class CiscoAdapter(AdapterBase):
 
     def _get_client_id(self, client_config):
         # TODO: is there a better place to set default values for client_config?
+        # XXX: require and default doesn't so we must hack the protocol here
+        if client_config.get('protocol') not in PROTOCOLS:
+            client_config['protocol'] = 'snmp'
+
         _, default_port = PROTOCOLS[client_config['protocol']]
-        client_config.setdefault('port', default_port)
+
+        # we use if not so '' and 0 and None will get default port
+        if not client_config.get('port'):
+            client_config['port'] = default_port
 
         return client_config['host']
 
