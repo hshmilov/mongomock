@@ -48,7 +48,7 @@ class CiscoPrimeAdapter(AdapterBase):
     def get_arp_table(self, raw_device, session):
         community, ip, port = self._get_snmp_creds(raw_device, session)
         if community is not None:
-            with snmp.CiscoSnmpClient(community, ip, port) as client:
+            with snmp.CiscoSnmpClient(community=community, host=ip, port=port) as client:
                 yield from client.query_all()
 
     def _query_devices_by_client(self, client_name, session):
