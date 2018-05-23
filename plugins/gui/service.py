@@ -499,10 +499,12 @@ class GuiService(PluginBase, Configurable):
                     :return: True, if value is new to the children list and False otherwise
                     """
 
-                    def same_string(raw_x, raw_y):
-                        x = re.escape(raw_x)
-                        y = re.escape(raw_y)
-                        return type(x) != str or (re.match(x, y, re.I) or re.match(y, x, re.I))
+                    def same_string(x, y):
+                        if type(x) != str:
+                            return False
+                        x = x.lower()
+                        y = y.lower()
+                        return x in y or y in x
 
                     if type(value) == str:
                         return len([child for child in children if same_string(child, value)]) == 0
