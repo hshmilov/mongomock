@@ -10,7 +10,7 @@
 
 export default {
 	props: {
-		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}
+		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}, validator: {}
 	},
 	computed: {
 		schemaItems () {
@@ -31,8 +31,9 @@ export default {
 					schema.type = 'file'
 				}
 				// Primitive children are required if appear in schema.required list
-				schema.required = (schema.type !== 'array' && this.schema.required
-					&& this.schema.required.includes(schema.name))
+				if (schema.type !== 'array') {
+					schema.required = (this.schema.required && this.schema.required.includes(schema.name))
+				}
 			})
 			return schemaItems
 		}
@@ -64,7 +65,7 @@ export default {
 			return data
 		},
 		isFile (schema) {
-			return (schema.type == 'file')
+			return (schema.type === 'file')
 		}
 	}
 }

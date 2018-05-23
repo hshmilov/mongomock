@@ -38,7 +38,6 @@
 <style lang="scss">
 
     .item {
-        margin-bottom: .5rem;
         .index {
             display: inline-block;
             vertical-align: top;

@@ -29,12 +29,9 @@
                 <div slot="body">
                     <!-- Container for configuration of a single selected / added server -->
                     <x-logo-name :name="adapterPluginName" />
-                    <div class="mt-3">
-                        <div class="mb-2">Basic system credentials</div>
-                        <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
-                                       :api-upload="`adapters/${adapterUniquePluginName}`"
-                                       @submit="saveServer" @validate="serverModal.valid = $event"/>
-                    </div>
+                    <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
+                                   :api-upload="`adapters/${adapterUniquePluginName}`"
+                                   @submit="saveServer" @validate="serverModal.valid = $event"/>
                 </div>
             </modal>
         <modal v-if="message">
@@ -221,8 +218,8 @@
             }
         }
         .server-config {
-            .form-group {
-                padding-left: 12px;
+            .schema-form {
+                margin-top: 24px;
             }
         }
     }

@@ -22,8 +22,5 @@
 <style lang="scss">
     .object {
         display: inline-block;
-        .label {
-            margin-bottom: 0;
-        }
     }
 </style>

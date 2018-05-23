@@ -53,13 +53,16 @@ export const adapter = {
 			if (payload.data) {
 				state.adapterList.data = []
 				payload.data.forEach((adapter) => {
+					let pluginTitle = adapter.plugin_name
 					let pluginDescription = ''
 					if (pluginMeta[adapter.plugin_name]) {
 						pluginDescription = pluginMeta[adapter.plugin_name].description
+						pluginTitle = pluginMeta[adapter.plugin_name].title
 					}
 					state.adapterList.data.push({
 						...adapter,
 						id: adapter.unique_plugin_name,
+						title: pluginTitle,
 						description: pluginDescription,
 						supported_features: adapter.supported_features
 					})

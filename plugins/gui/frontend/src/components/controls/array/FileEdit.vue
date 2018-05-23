@@ -1,12 +1,15 @@
 <template>
     <div class="upload-file">
         <template v-if="uploading">
-            <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
+            <div class="file-name">
+                <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
+                <div>Uploading...</div>
+            </div>
         </template>
         <template v-else>
-            <input type="file" @change="uploadFile" @focusout="updateValidity(fileUploaded)"
-                   class="file-data" :class="{'invalid': !valid}"/>
-            <div class="file-name">{{value ? value.filename : "No file chosen"}}</div>
+            <input type="file" @change="uploadFile" @focusout="updateValidity(fileUploaded)" ref="file"/>
+            <div class="file-name" :class="{'invalid': !valid}">{{value ? value.filename : "No file chosen"}}</div>
+            <div class="x-btn link" @click="selectFile">Choose file</div>
         </template>
     </div>
 </template>
@@ -25,6 +28,9 @@
             }
         },
         methods: {
+        	selectFile() {
+        		this.$refs.file.click()
+            },
             uploadFile(uploadEvent) {
                 const files = uploadEvent.target.files || uploadEvent.dataTransfer.files
                 if (!files.length) {
@@ -65,14 +71,14 @@
 <style lang="scss">
     .upload-file {
         display: flex;
-        .svg-stroke {
-            stroke: $grey-3;
-            stroke-width: 6px;
+        input[type=file] {
+            position: absolute;
+            left: -999em;
         }
-        .file-data {
-            width: 95px !important;
-            border: 0 !important;
-            height: 100%;
+        .x-btn.link {
+            color: $theme-black;
+            font-size: 12px;
+            font-weight: 200;
         }
         .file-name {
             border: 1px solid $grey-2;
@@ -81,6 +87,13 @@
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
+            .svg-icon {
+                margin-right: 8px;
+                .svg-stroke {
+                    stroke: $grey-3;
+                    stroke-width: 6px;
+                }
+            }
         }
     }
 </style>

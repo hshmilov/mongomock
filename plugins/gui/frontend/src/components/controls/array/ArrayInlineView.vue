@@ -47,9 +47,5 @@
 
     .array {
         display: flex;
-        .item {
-            margin-bottom: 0;
-            margin-right: .5rem;
-        }
     }
 </style>

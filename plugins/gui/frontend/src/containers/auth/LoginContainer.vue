@@ -97,11 +97,14 @@
                 padding: 48px;
                 border-radius: 4px;
                 .schema-form {
-                    .object {
-                        width: 100%;
-                    }
-                    .item {
-                        width: 100%;
+                    .array {
+                        display: block;
+                        .object {
+                            width: 100%;
+                        }
+                        .item {
+                            width: 100%;
+                        }
                     }
                 }
                 .x-btn {

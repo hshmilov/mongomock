@@ -18,13 +18,22 @@
                 </div>
             </tab>
             <tab title="Global Settings" id="global-settings-tab" v-if="configurable.core">
-                <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateValidity"
-                               v-model="configurable.core.CoreService.config" :api-upload="`adapters/core`"/>
-                <button class="x-btn" :class="{'disabled':!complete}" @click="setEmailServer">Save</button>
+                <div class="tab-settings">
+                    <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateValidity"
+                                   v-model="configurable.core.CoreService.config" :api-upload="`adapters/core`"/>
+                    <div class="place-right">
+                        <button class="x-btn" :class="{disabled:!complete}" @click="saveGlobalSettings">Save</button>
+                    </div>
+                </div>
             </tab>
             <tab title="GUI Settings" id="system-settings-tab" v-if="configurable.gui">
-                <x-schema-form :schema="configurable.gui.GuiService.schema" v-model="configurable.gui.GuiService.config"/>
-                <a class="x-btn" @click="saveGuiSettings">Save</a>
+                <div class="tab-settings">
+                    <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateValidity"
+                                   v-model="configurable.gui.GuiService.config"/>
+                    <div class="place-right">
+                        <button class="x-btn" :class="{disabled:!complete}" @click="saveGuiSettings">Save</button>
+                    </div>
+                </div>
             </tab>
         </tabs>
         <modal v-if="message">
@@ -117,7 +126,7 @@
                     data: {timestamp: scheduleDate}
                 })
             },
-            setEmailServer() {
+            saveGlobalSettings() {
                 if (!this.complete) return
                 this.updatePluginConfig({
                     pluginId: 'core',
@@ -178,7 +187,7 @@
         .grid {
             display: grid;
             grid-row-gap: 12px;
-            width: 600px;
+            width: 800px;
             align-items: center;
             grid-auto-rows: auto;
             margin-bottom: 24px;
@@ -197,10 +206,15 @@
                 justify-self: end;
             }
         }
-        .schema-form {
-            width: 600px;
-            .x-btn {
-                justify-self: end;
+        .tab-settings {
+            width: 800px;
+            .schema-form {
+                > .array {
+                    display: block;
+                }
+                .x-btn {
+                    justify-self: end;
+                }
             }
         }
         #research_rate {

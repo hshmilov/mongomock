@@ -23,7 +23,7 @@
     .schema-list > .array {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
-        grid-column-gap: 24px;
+        grid-gap: 12px 24px;
         .label, .index {
             font-weight: 500;
         }

@@ -2,7 +2,7 @@
     <form class="schema-form" @keyup.enter.stop="$emit('submit')">
         <x-array-edit v-model="data" :schema="schema" :api-upload="apiUpload"
                       @input="$emit('input', data)" @validate="updateValidity" />
-        <div class="error-text">
+        <div class="error">
             <template v-if="error">{{error}}</template>
             <template v-else-if="invalid.length">'{{invalid[0]}}' requires a value</template>
             <template v-else>&nbsp;</template>
@@ -61,11 +61,11 @@
     .schema-form {
         font-size: 14px;
         .array {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 12px 24px;
             .object {
-                width: 240px;
+                width: 100%;
                 input, select {
                     width: 100%;
                     border: 1px solid $grey-2;
@@ -74,6 +74,10 @@
                     }
                 }
             }
+        }
+        .error {
+            color: $indicator-red;
+            margin-top: 12px;
         }
     }
 </style>
