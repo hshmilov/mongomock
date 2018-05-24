@@ -1363,12 +1363,12 @@ class PluginBase(Configurable, Feature):
                             "type": "string"
                         },
                         {
-                            "name": "smtpCert",
+                            "name": "smtpKey",
                             "title": "TLS 1.2 Key File",
                             "type": "file"
                         },
                         {
-                            "name": "smtpKey",
+                            "name": "smtpCert",
                             "title": "TLS 1.2 Cert File",
                             "type": "file"
                         }

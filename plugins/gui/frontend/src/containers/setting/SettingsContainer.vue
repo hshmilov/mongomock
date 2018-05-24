@@ -19,7 +19,7 @@
             <tab title="Global Settings" id="global-settings-tab" v-if="configurable.core">
                 <div class="tab-settings">
                     <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateCoreValidity"
-                                   v-model="configurable.core.CoreService.config" :api-upload="`adapters/core`"/>
+                                   v-model="configurable.core.CoreService.config" api-upload="adapters/core"/>
                     <div class="place-right">
                         <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveGlobalSettings">Save</button>
                     </div>
@@ -138,6 +138,10 @@
                 }).then(response => {
                     if (response.status === 200) {
                         this.message = 'Saved Successfully.'
+                    }
+                }).catch(error => {
+                	if (error.response.status === 400) {
+                		this.message = error.response.data.message
                     }
                 })
             },

@@ -21,6 +21,7 @@ from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXE
     EXEC_REPORT_EMAIL_CONTENT
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.email_server import EmailServer
 
 import tarfile
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
@@ -1281,6 +1282,24 @@ class GuiService(PluginBase, Configurable):
             config_to_set = request.get_json(silent=True)
             if config_to_set is None:
                 return return_error("Invalid config", 400)
+            email_settings = config_to_set.get('email_settings')
+            if plugin_unique_name == 'core' and config_name == 'CoreService' and email_settings:
+
+                if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
+                    return return_error('Host and Port are required to connect to email server', 400)
+                email_server = EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
+                                           email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
+                                           self._grab_file_contents(email_settings.get(
+                                               'smtpKey'), stored_locally=False),
+                                           self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False))
+                try:
+                    with email_server:
+                        # Just to test connection
+                        logger.info(f'Connection to email server with host {email_settings["smtpHost"]}')
+                except Exception:
+                    message = f'Could not connect to mail server "{email_settings["smtpHost"]}"'
+                    logger.exception(message)
+                    return return_error(message, 400)
 
             with self._get_db_connection() as db_connection:
                 config_collection = db_connection[plugin_unique_name]['configurable_configs']
