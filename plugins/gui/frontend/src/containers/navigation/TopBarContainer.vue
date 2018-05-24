@@ -61,13 +61,10 @@
                 emptyStates(state) {
                 	return state.interaction.onboarding.emptyStates
                 },
-
+                lifecycle(state) {
+                    return state.dashboard.lifecycle.data.subPhases || []
+                }
             }),
-            lifecycle () {
-                if (!this.dashboard.lifecycle.data.subPhases) return []
-
-                return this.dashboard.lifecycle.data.subPhases
-            },
             mailSettingsTooltip: {
             	get() {
             		return this.emptyStates.emptyMailSettings

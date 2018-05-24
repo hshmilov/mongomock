@@ -56,7 +56,6 @@
     import xCheckbox from '../../components/inputs/Checkbox.vue'
     import Modal from '../../components/popover/Modal.vue'
 
-    import {FETCH_LIFECYCLE} from '../../store/modules/dashboard'
     import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
     import {mapState, mapActions, mapMutations} from 'vuex'
     import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/configurable";
@@ -112,7 +111,6 @@
                 changePluginConfig: CHANGE_PLUGIN_CONFIG
             }),
             ...mapActions({
-                fetchLifecycle: FETCH_LIFECYCLE,
                 fetchData: REQUEST_API,
                 startResearch: START_RESEARCH_PHASE,
                 stopResearch: STOP_RESEARCH_PHASE,
@@ -168,7 +166,6 @@
             }
         },
         created() {
-            this.fetchLifecycle()
             this.loadPluginConfig({
                 pluginId: 'system_scheduler',
                 configName: 'SystemSchedulerService'
