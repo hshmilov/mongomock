@@ -295,24 +295,27 @@ class GeneralInfoService(PluginBase, Triggerable):
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
             for linked_user, linked_device in linked_devices_and_users_list:
-                device_caption = linked_device.get_first_data("hostname") or \
-                    linked_device.get_first_data("name") or \
-                    linked_device.get_first_data("id")
-
-                logger.debug(f"Associating {device_caption} with user {username}")
                 try:
-                    adapterdata_user.last_seen_in_devices = \
-                        max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
-                except Exception:
-                    # Last seen does not exist
-                    adapterdata_user.last_seen_in_devices = linked_user['last_use_date']
+                    device_caption = linked_device.get_first_data("hostname") or \
+                        linked_device.get_first_data("name") or \
+                        linked_device.get_first_data("id")
 
-                adapterdata_user.add_associated_device(
-                    device_caption=device_caption,
-                    last_use_date=linked_user['last_use_date'],
-                    adapter_unique_name=linked_user['origin_unique_adapter_name'],
-                    adapter_data_id=linked_user['origin_unique_adapter_data_id']
-                )
+                    logger.debug(f"Associating {device_caption} with user {username}")
+                    try:
+                        adapterdata_user.last_seen_in_devices = \
+                            max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
+                    except Exception:
+                        # Last seen does not exist
+                        adapterdata_user.last_seen_in_devices = linked_user['last_use_date']
+
+                    adapterdata_user.add_associated_device(
+                        device_caption=device_caption,
+                        last_use_date=linked_user['last_use_date'],
+                        adapter_unique_name=linked_user['origin_unique_adapter_name'],
+                        adapter_data_id=linked_user['origin_unique_adapter_data_id']
+                    )
+                except Exception:
+                    logger.exception(f"Cant associate user {linked_user}")
 
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.
