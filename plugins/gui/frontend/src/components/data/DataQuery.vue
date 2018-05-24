@@ -35,7 +35,7 @@
             </div>
         </x-dropdown>
         <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery">Save Query</a>
-        <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false">
+        <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false" ref="wizard">
             <div slot="trigger" class="x-btn link" :tabindex="2">+ Build Query</div>
             <div slot="content">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
@@ -199,7 +199,7 @@
             },
 			rebuildFilter() {
                 this.rebuild = true
-				this.$refs.greatInput.$parent.close()
+				this.$refs.wizard.close()
             },
             submitFilter () {
             	if (!this.filterValid) return
