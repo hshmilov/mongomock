@@ -4,7 +4,7 @@
                       @input="$emit('input', data)" @validate="updateValidity" />
         <div class="error">
             <template v-if="error">{{error}}</template>
-            <template v-else-if="invalid.length">'{{invalid[0]}}' requires a value</template>
+            <template v-else-if="invalid.length">'{{invalid[0]}}' has an illegal value</template>
             <template v-else>&nbsp;</template>
         </div>
     </form>

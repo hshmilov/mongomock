@@ -9,9 +9,8 @@
                     <template v-if="schedulerSettings && schedulerSettings.config">
                         <label for="research_rate" class="label">Schedule Rate (hours)</label>
                         <div class="grid-item">
-                            <input id="research_rate" type="number" min="0"
-                                   v-model="schedulerSettings.config.system_research_rate">
-                            <a class="x-btn right" @click="setResearchRate">Set</a>
+                            <input id="research_rate" type="number" min="0" v-model="schedulerSettings.config.system_research_rate">
+                            <a class="x-btn right" :class="{disabled: !validResearchRate}" @click="setResearchRate">Set</a>
                         </div>
                     </template>
                     <template v-else>Loading</template>
@@ -19,19 +18,19 @@
             </tab>
             <tab title="Global Settings" id="global-settings-tab" v-if="configurable.core">
                 <div class="tab-settings">
-                    <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateValidity"
+                    <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateCoreValidity"
                                    v-model="configurable.core.CoreService.config" :api-upload="`adapters/core`"/>
                     <div class="place-right">
-                        <button class="x-btn" :class="{disabled:!complete}" @click="saveGlobalSettings">Save</button>
+                        <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveGlobalSettings">Save</button>
                     </div>
                 </div>
             </tab>
             <tab title="GUI Settings" id="system-settings-tab" v-if="configurable.gui">
                 <div class="tab-settings">
-                    <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateValidity"
+                    <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
                                    v-model="configurable.gui.GuiService.config"/>
                     <div class="place-right">
-                        <button class="x-btn" :class="{disabled:!complete}" @click="saveGuiSettings">Save</button>
+                        <button class="x-btn" :class="{disabled: !guiComplete}" @click="saveGuiSettings">Save</button>
                     </div>
                 </div>
             </tab>
@@ -95,14 +94,14 @@
                     })
                 }
             },
-
+			validResearchRate() {
+				return this.validNumber(this.schedulerSettings.config.system_research_rate)
+            }
         },
         data() {
             return {
-                lifecycle: {
-                    researchRate: 0
-                },
-                complete: true,
+                coreComplete: true,
+				guiComplete: true,
                 message: '',
             }
         },
@@ -117,6 +116,12 @@
                 updatePluginConfig: SAVE_PLUGIN_CONFIG,
                 loadPluginConfig: LOAD_PLUGIN_CONFIG
             }),
+            validNumber(value) {
+				if (value === undefined || isNaN(value) || value <= 0) {
+					return false
+				}
+				return true
+            },
             scheduleResearch(scheduleDate) {
                 this.fetchData({
                     rule: `research_phase`,
@@ -125,7 +130,7 @@
                 })
             },
             saveGlobalSettings() {
-                if (!this.complete) return
+                if (!this.coreComplete) return
                 this.updatePluginConfig({
                     pluginId: 'core',
                     configName: 'CoreService',
@@ -136,10 +141,14 @@
                     }
                 })
             },
-            updateValidity(valid) {
-                this.complete = valid
+            updateCoreValidity(valid) {
+                this.coreComplete = valid
             },
+			updateGuiValidity(valid) {
+				this.guiComplete = valid
+			},
             saveGuiSettings() {
+            	if (!this.guiComplete) return
                 this.updatePluginConfig({
                     pluginId: 'gui',
                     configName: 'GuiService',
@@ -151,6 +160,8 @@
                 })
             },
             setResearchRate() {
+            	if (!this.validResearchRate) return
+
                 this.updatePluginConfig({
                     pluginId: 'system_scheduler',
                     configName: 'SystemSchedulerService',

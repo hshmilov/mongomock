@@ -10,6 +10,11 @@
         methods: {
 			formatData() {
 				return parseInt(this.data)
+            },
+            checkData() {
+				if (isNaN(this.data) || this.data <= 0) return false
+
+                return true
             }
         }
 	}

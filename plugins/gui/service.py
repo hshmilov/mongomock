@@ -2060,29 +2060,26 @@ class GuiService(PluginBase, Configurable):
                         {
                             "name": "refreshRate",
                             "title": "Auto-Refresh Rate (seconds)",
-                            "type": "number",
-                            "required": True
+                            "type": "number"
                         },
                         {
                             "name": "singleAdapter",
                             "title": "Use Single Adapter View",
-                            "type": "bool",
-                            "required": True
+                            "type": "bool"
                         },
                         {
                             "name": "multiLine",
                             "title": "Use Table Multi Line View",
-                            "type": "bool",
-                            "required": True
+                            "type": "bool"
                         },
                         {
                             "name": "defaultSort",
                             "title": "Sort by Number of Adapters in Default View",
-                            "type": "bool",
-                            "required": True
+                            "type": "bool"
                         },
 
                     ],
+                    "required": ["refreshRate", "singleAdapter", "multiLine", "defaultSort"],
                     "name": "system_settings",
                     "title": "System Settings",
                     "type": "array"
@@ -2092,34 +2089,30 @@ class GuiService(PluginBase, Configurable):
                         {
                             "name": "okta_enabled",
                             "title": "Allow Okta logins",
-                            "type": "bool",
-                            "required": True
+                            "type": "bool"
                         },
                         {
                             "name": "okta_client_id",
                             "title": "Okta application client id",
-                            "type": "string",
-                            "required": True
+                            "type": "string"
                         },
                         {
                             "name": "okta_client_secret",
                             "title": "Okta application client secret",
-                            "type": "string",
-                            "required": True
+                            "type": "string"
                         },
                         {
                             "name": "okta_url",
                             "title": "Okta application URL",
-                            "type": "string",
-                            "required": True
+                            "type": "string"
                         },
                         {
                             "name": "gui_url",
                             "title": "The URL of Axonius GUI",
-                            "type": "string",
-                            "required": True
+                            "type": "string"
                         }
                     ],
+                    "required": ["okta_enabled", "okta_client_id", "okta_client_secret", "okta_url", "gui_url"],
                     "name": "login_settings",
                     "title": "Login Settings",
                     "type": "array"

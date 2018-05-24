@@ -10,7 +10,12 @@
         methods: {
 			formatData() {
 				return parseFloat(this.data)
-            }
+            },
+			checkData() {
+				if (isNaN(this.data) || this.data <= 0) return false
+                if (this.schema.format === 'port' && this.data > 65536) return false
+				return true
+			}
         }
 	}
 </script>

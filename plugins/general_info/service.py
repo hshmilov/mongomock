@@ -279,7 +279,10 @@ class GeneralInfoService(PluginBase, Triggerable):
                 logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
                 user_dict = self._new_user_adapter()
                 user_dict.id = username  # Should be the unique identifier of that user.
-                user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
+                try:
+                    user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
+                except ValueError:
+                    self.logger.exception(f"Bad user format! expected 'username@domain' format, got {username}")
                 user_dict.is_local = True
                 self._save_data_from_plugin(
                     self.plugin_unique_name,
