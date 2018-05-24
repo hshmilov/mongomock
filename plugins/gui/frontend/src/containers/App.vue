@@ -5,7 +5,7 @@
     -->
     <div id="app">
         <!-- Nested navigation linking to routes defined in router/index.js -->
-        <template v-if="auth.data.user_name || isDev">
+        <template v-if="userName || isDev">
             <top-bar-container class="print-exclude"/>
             <side-bar-container class="print-exclude"/>
             <router-view/>
@@ -32,7 +32,11 @@
 			LoginContainer,
 			TopBarContainer, SideBarContainer },
         computed: {
-            ...mapState(['auth']),
+            ...mapState({
+                userName(state) {
+                	return state.auth.data.user_name
+                }
+            }),
             isDev() {
 				return process.env.NODE_ENV === 'development'
             }
@@ -44,24 +48,34 @@
                 }
             }
         },
-        methods: mapActions({
-            getUser: GET_USER,
-            getOkta: GET_OKTA_SETTINGS,
-            fetchAdapters: FETCH_ADAPTERS,
-            loadPluginConfig: LOAD_PLUGIN_CONFIG
-        }),
+        watch: {
+        	userName(newUserName) {
+                if (newUserName) {
+                	this.fetchGlobalData()
+                }
+            }
+        },
+        methods: {
+            ...mapActions({
+                getUser: GET_USER, getOkta: GET_OKTA_SETTINGS, fetchAdapters: FETCH_ADAPTERS,
+                loadPluginConfig: LOAD_PLUGIN_CONFIG
+            }),
+            fetchGlobalData() {
+				this.fetchAdapters()
+				this.loadPluginConfig({
+					pluginId: 'gui',
+					configName: 'GuiService'
+				})
+				this.loadPluginConfig({
+					pluginId: 'core',
+					configName: 'CoreService'
+				})
+            }
+		},
         created() {
         	this.getUser().then((response) => {
         		if (response.status === 200) {
-                    this.fetchAdapters()
-                    this.loadPluginConfig({
-                        pluginId: 'gui',
-                        configName: 'GuiService'
-                    })
-					this.loadPluginConfig({
-						pluginId: 'core',
-						configName: 'CoreService'
-					})
+                    this.fetchGlobalData()
                 }
             })
             this.getOkta().then(response => {
