@@ -1,5 +1,5 @@
 <template>
-    <feedback-modal v-model="isActive" :handle-save="saveTags" :message="`Tagged ${entities.length} ${module}s!`"
+    <feedback-modal v-model="isActive" :handle-save="saveTags" :message="`Tagged ${entities.length} ${module}!`"
                     class="x-tag-modal">
         <search-input v-model="searchValue" ref="searchInput" tabindex="1"/>
         <x-checkbox-list :items="currentLabels" v-model="selected"/>
