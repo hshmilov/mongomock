@@ -14,7 +14,6 @@
     .x-box {
         padding: 24px;
         background-color: $theme-white;
-        max-height: 100%;
         overflow: auto;
     }
 </style>

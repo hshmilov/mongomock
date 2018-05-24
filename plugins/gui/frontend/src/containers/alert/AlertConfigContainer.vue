@@ -6,11 +6,11 @@
         <x-box class="alert-config">
             <form @keyup.enter="saveAlert">
                     <!-- Section for alert name and query to run by -->
-                <div class="x-grid x-grid-col-2">
-                    <label class="form-label" for="alertName">Alert Name:</label>
-                    <input class="form-control" id="alertName" v-model="alert.name">
-                    <label class="form-label" for="alertQuery">Select Saved Query:</label>
-                    <select class="form-control" id="alertQuery" v-model="currentQuery">
+                <div class="x-grid">
+                    <label for="alertName">Alert Name:</label>
+                    <input id="alertName" v-model="alert.name">
+                    <label for="alertQuery">Select Saved Query:</label>
+                    <select id="alertQuery" v-model="currentQuery">
                         <option v-for="query in currentQueryOptions" :value="query"
                                 :selected="query.name === alert.query">{{query.title || query.name}}</option>
                     </select>
@@ -282,7 +282,14 @@
 
 <style lang="scss">
     .alert-config {
-        width: 60vw;
+        .x-grid {
+            width: 600px;
+            grid-template-columns: 1fr 2fr;
+            grid-gap: 8px;
+            label {
+                white-space: nowrap;
+            }
+        }
         .checkbox.inline.checked {
             display: inline;
         }

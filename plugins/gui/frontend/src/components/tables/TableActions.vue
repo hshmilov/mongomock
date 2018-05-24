@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="x-table-actions">
         <div class="x-table-header">
             <div class="x-title">{{ title }} ({{count}})</div>
             <div class="error">{{error}}</div>
@@ -29,35 +29,40 @@
 </script>
 
 <style lang="scss">
-    .x-table-header {
-        display: flex;
-        padding: 8px;
-        line-height: 24px;
-        .x-title {
-            display: inline-block;
+    .x-table-actions {
+        height: calc(100% - 30px);
+        background: $theme-white;
+        .x-table-header {
+            display: flex;
+            padding: 8px;
+            line-height: 24px;
+            background: $grey-1;
+            .x-title {
+                display: inline-block;
+            }
+            .error {
+                flex: 1 0 auto;
+                color: $indicator-red;
+                display: inline-block;
+                margin-left: 24px;
+                font-size: 12px;
+            }
+            .x-actions {
+                display: grid;
+                grid-auto-flow: column;
+                grid-gap: 8px;
+            }
         }
-        .error {
-            flex: 1 0 auto;
-            color: $indicator-red;
-            display: inline-block;
-            margin-left: 24px;
-            font-size: 12px;
-        }
-        .x-actions {
-            display: grid;
-            grid-auto-flow: column;
-            grid-gap: 8px;
-        }
-    }
-    .x-table-container {
-        overflow: auto;
-        max-height: calc(100% - 80px);
-        position: relative;
-        .item > div {
-            display: inline;
-        }
-        .array {
-            height: 24px;
+        .x-table-container {
+            overflow: auto;
+            max-height: calc(100% - 40px);
+            position: relative;
+            .item > div {
+                display: inline;
+            }
+            .array {
+                height: 24px;
+            }
         }
     }
 </style>

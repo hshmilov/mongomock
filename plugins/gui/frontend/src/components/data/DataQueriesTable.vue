@@ -14,7 +14,7 @@
     import xTable from '../tables/Table.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
-	import { UPDATE_DATA_VIEW } from '../../store/mutations'
+	import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
 	import { FETCH_DATA_QUERIES, REMOVE_DATA_QUERY } from '../../store/actions'
 	import { UPDATE_ALERT_QUERY } from '../../store/modules/alert'
 
@@ -44,8 +44,9 @@
         },
         methods: {
 			...mapMutations({
-				updateDataView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_QUERY
-			}),
+				updateDataView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_QUERY,
+                clearDataContent: CLEAR_DATA_CONTENT
+	}),
             ...mapActions({
                 fetchDataQueries: FETCH_DATA_QUERIES, removeDataQuery: REMOVE_DATA_QUERY
             }),
@@ -54,6 +55,7 @@
 				this.updateDataView({module: this.module, view: {
 						query: {filter: query.filter, expressions: query.expressions}, page: 0
 					}})
+				this.clearDataContent({module: this.module})
 				this.$router.push({ path: `/${this.module}` })
 			},
 			createAlert() {

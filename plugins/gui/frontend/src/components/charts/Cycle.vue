@@ -25,7 +25,7 @@
             <template v-else>
                 <!-- Cycle is complete, namely status is stable -->
                 <text x="50%" y="50%" text-anchor="middle" class="title">STABLE</text>
-                <path d="M170 130 L140 160 L130 150" stroke-width="4" class="check"></path>
+                <path d="M160 150 L140 180 L130 170" stroke-width="4" class="check"></path>
             </template>
         </svg>
 </template>

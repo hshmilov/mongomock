@@ -36,7 +36,7 @@
         padding: 12px 24px 24px 264px;
         position: relative;
         width: calc(100vw - 288px);
-        height: 100vh;
+        height: calc(100vh - 84px);
         &.collapse {
             display: flex;
             flex-direction: column;
@@ -83,7 +83,7 @@
         }
         .x-body {
             padding: 0;
-            height: calc(100vh - 170px);
+            height: calc(100% - 80px);
             overflow: auto;
         }
     }
