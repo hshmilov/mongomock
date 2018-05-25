@@ -282,7 +282,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 try:
                     user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
                 except ValueError:
-                    self.logger.exception(f"Bad user format! expected 'username@domain' format, got {username}")
+                    logger.exception(f"Bad user format! expected 'username@domain' format, got {username}")
                 user_dict.is_local = True
                 self._save_data_from_plugin(
                     self.plugin_unique_name,
