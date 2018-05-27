@@ -15,6 +15,10 @@ RUN apt-get update && \
     ln -s /usr/bin/python3.6 /usr/local/bin/python3 && \
     apt-get install -y libpango1.0-0 && \
     apt-get install -y libcairo2 && \
+    apt-get install -y vim && \
+    apt-get install -y nano && \
+    apt-get install -y net-tools && \
+    apt-get install -y iputils-ping && \
     apt-get install -y libpq-dev
 
 RUN /bin/bash -c 'echo -e "[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsS.so" > /etc/odbcinst.ini'
