@@ -363,11 +363,14 @@ def is_date_real(datetime_to_parse):
 
 
 def parse_date(datetime_to_parse):
+    """
+    Parses date and returns it as UTC
+    """
     try:
         if type(datetime_to_parse) == datetime.datetime:
             # sometimes that happens too
             return datetime_to_parse
-        d = dateutil.parser.parse(datetime_to_parse, ignoretz=True)
+        d = dateutil.parser.parse(datetime_to_parse).astimezone(datetime.timezone.utc)
 
         # Sometimes, this would be a fake date (see is_date_real). in this case return None
         return d if is_date_real(d) else None
