@@ -886,7 +886,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         "dns_resolve_status": device_as_dict['dns_resolve_status']
                     }
 
-                    if self.__sync_resolving:
+                    if self.__sync_resolving and not self._is_adapter_old_by_last_seen(device_as_dict):
                         device.network_interfaces = []
                         for resolved_device in self._resolve_hosts_addresses([device_as_dict_for_resolving]):
                             if resolved_device[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:

@@ -1059,7 +1059,7 @@ class PluginBase(Configurable, Feature):
                     promises = [p for p in promises if p.is_pending or p.is_rejected]
 
                     if inserted_data_count % 1000 == 0:
-                        logger.info(f"Devices went through: {inserted_data_count}; " +
+                        logger.info(f"Entities went through: {inserted_data_count}; " +
                                     f"promises active: {len(promises)}; " +
                                     f"in DB: {inserted_data_count - len(promises)}")
 
