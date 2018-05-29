@@ -38,7 +38,6 @@ def main():
     parser.add_argument('--override', action='store_true', default=False, help='Override output file if already exists')
     parser.add_argument('--pull', action='store_true', default=False, help='Pull base image before rebuild')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild images')
-    parser.add_argument('--compress', action='store_true', default=False, help='Compress output file, takes time')
     parser.add_argument('--winpip', action='store_true', default=False,
                         help='Collect packages *also* for offline windows deployment')
     parser.add_argument('--exclude', metavar='N', type=str, nargs='*', help='Adapters and Services to exclude',
@@ -57,13 +56,11 @@ def main():
         if not args.override:
             raise Exception('Output path already exists, pass --override to override the file')
 
-    create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, args.compress, args.winpip)
+    create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, args.winpip)
 
 
-def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, compress=False, prod=True,
-                   winpip=False):
+def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, prod=True, winpip=False):
     start = time.time()
-    compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
     version = f'print("Version: {version}")' if version else version
     main_template = f"""
 import sys
@@ -86,7 +83,7 @@ with AutoOutputFlush():
     try:
         with open(output_path, 'wb') as output_file:
             output_file.write(b'#!/usr/bin/env python3\n')
-            with zipfile.ZipFile(output_file, 'w', compression=compression) as zip_file:
+            with zipfile.ZipFile(output_file, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
                 zip_file.writestr('__main__.py', main_template.encode('utf-8'))
                 zip_file.writestr(f'{SOURCES_FOLDER_NAME}/__build_metadata', metadata.encode('utf-8'))
                 add_source_folder(zip_file, exclude)

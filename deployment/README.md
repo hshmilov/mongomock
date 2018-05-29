@@ -13,7 +13,6 @@ make.py
 # --override should override the output file if already exists
 # --pull will pull the base image also if exists, and will trigger rebuild as well
 # --rebuild will just rebuild the images locally before packing them into the installer
-# --compress will compress the installer (will take a lot of time)
 # --winpip will include python packages for offline windows installer as well as the default linux ones
 # --exclude exclude a list of services and adapters from the installer (both images + source code)
 ```
@@ -40,7 +39,7 @@ FIY: venv_wrapper.sh is a simple wrapper around calling the python from current 
 example:
 ```bash
 # make
-make.py --pull --compress --version 1.2 --exclude qcore stresstest
+make.py --pull --version 1.2 --exclude qcore stresstest
 
 # and install:
 axonius_install.py --first-time
