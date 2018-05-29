@@ -52,9 +52,12 @@ class SymantecAdapter(AdapterBase):
             client_list = []
             last_page = False
             while not last_page:
-                current_clients_page = client_data.get_device_iterator(pageSize='1000', pageIndex=page_num)
-                client_list.extend(current_clients_page['content'])
-                last_page = current_clients_page['lastPage']
+                try:
+                    current_clients_page = client_data.get_device_iterator(pageSize='1000', pageIndex=page_num)
+                    client_list.extend(current_clients_page['content'])
+                    last_page = current_clients_page['lastPage']
+                except Exception:
+                    logger.exception(f"Got error on page {page_num}, skipping")
                 page_num += 1
                 logger.info(f"Got {page_num*1000} devices so far")
             return client_list
