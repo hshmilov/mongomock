@@ -1,10 +1,11 @@
 import logging
+from itertools import combinations
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, \
     ips_do_not_contradict, get_normalized_ip, compare_device_normalized_hostname, \
-    normalize_adapter_devices, get_serial, NORMALIZED_MACS, compare_macs
+    normalize_adapter_devices, get_serial, NORMALIZED_MACS, compare_macs, hostnames_do_not_contradict
 from axonius.correlator_base import has_mac, has_hostname, has_serial, CorrelationReason
 
 
@@ -70,8 +71,20 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             macs = adapter.get(NORMALIZED_MACS)
             if macs:
                 for mac in macs:
-                    if mac:
+                    if mac and mac != '000000000000':
                         mac_indexed.setdefault(mac, []).append(adapter)
+
+        # find contradicting hostnames with the same mac to eliminate macs
+        mac_blacklist = set()
+        for mac, matches in mac_indexed.items():
+            for x, y in combinations(matches, 2):
+                if not hostnames_do_not_contradict(x, y):
+                    mac_blacklist.add(mac)
+                    break
+
+        for mac in mac_blacklist:
+            del mac_indexed[mac]
+
         for matches in mac_indexed.values():
             if len(matches) >= 2:
                 yield from self._bucket_correlate(matches,

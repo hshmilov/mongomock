@@ -209,14 +209,12 @@ def test_rule_ip_mac_os_correlation():
     :return:
     """
     # hostname must be different otherwise we'll have 2 correlations for the same devices which is filtered
-    device1 = get_raw_device(hostname="ubuntsaduLolol",
-                             os={'bitness': 32,
+    device1 = get_raw_device(os={'bitness': 32,
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'AA-BB-CC-11-22-33',
                                                   IPS_FIELD: ['1.1.1.1']}])
-    device2 = get_raw_device(hostname="ubuntulolol",
-                             os={'bitness': 32,
+    device2 = get_raw_device(os={'bitness': 32,
                                  'distribution': 'Ubuntu',
                                  'type': 'Linux'},
                              network_interfaces=[{MAC_FIELD: 'AA:bb-CC-11-22-33',
@@ -489,6 +487,31 @@ def test_no_tag_self_correlation():
     assert_success(correlate([device1]), [device1], 'They have the same MAC', 0)
 
 
+def test_no_zero_mac():
+    """
+    Test that zero-macs aren't correlated
+    """
+    device1 = get_raw_device(network_interfaces=[{MAC_FIELD: '000000000000',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    device2 = get_raw_device(network_interfaces=[{MAC_FIELD: '000000000000',
+                                                  IPS_FIELD: ['1.1.1.1']}])
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC', 0)
+
+
+def test_no_mac_with_hostname_contradiction():
+    """
+    Test that macs aren't correlated if hostname contradicts
+    """
+    device1 = get_raw_device(network_interfaces=[{MAC_FIELD: '121212121212',
+                                                  IPS_FIELD: ['1.1.1.1']}],
+                             hostname="host1")
+    device2 = get_raw_device(network_interfaces=[{MAC_FIELD: '121212121212',
+                                                  IPS_FIELD: ['1.1.1.1']}],
+                             hostname="host2")
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC', 0)
+
+
 if __name__ == '__main__':
     import pytest
+
     pytest.main([__file__])

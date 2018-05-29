@@ -179,7 +179,7 @@ class DeviceAdapter(SmartJsonClass):
         :param name: the interface name
         """
         nic = DeviceAdapterNetworkInterface()
-        if mac is not None:
+        if mac is not None and mac != '000000000000':
             try:
                 nic.mac = mac
                 nic.manufacturer = get_manufacturer_from_mac(mac)
