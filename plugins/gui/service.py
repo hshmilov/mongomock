@@ -40,7 +40,6 @@ import pymongo
 from bson import ObjectId
 import json
 from axonius.utils.parsing import parse_filter
-import re
 from urllib3.util.url import parse_url
 
 # the maximal amount of data a pagination query will give
@@ -1283,7 +1282,8 @@ class GuiService(PluginBase, Configurable):
             if config_to_set is None:
                 return return_error("Invalid config", 400)
             email_settings = config_to_set.get('email_settings')
-            if plugin_unique_name == 'core' and config_name == 'CoreService' and email_settings:
+            if plugin_unique_name == 'core' and config_name == 'CoreService' and email_settings and email_settings.get(
+                    'enabled') is True:
 
                 if not email_settings.get('smtpHost') or not email_settings.get('smtpPort'):
                     return return_error('Host and Port are required to connect to email server', 400)
@@ -1291,7 +1291,8 @@ class GuiService(PluginBase, Configurable):
                                            email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
                                            self._grab_file_contents(email_settings.get(
                                                'smtpKey'), stored_locally=False),
-                                           self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False))
+                                           self._grab_file_contents(email_settings.get('smtpCert'),
+                                                                    stored_locally=False))
                 try:
                     with email_server:
                         # Just to test connection
@@ -2040,11 +2041,15 @@ class GuiService(PluginBase, Configurable):
                 if exec_report:
                     recipients = exec_report.get('recipients', [])
             report_path = self.generate_report()
-
-            email = self.mail_sender.new_email(EXEC_REPORT_TITLE, recipients)
-            with open(report_path, 'rb') as report_file:
-                email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
-            email.send(EXEC_REPORT_EMAIL_CONTENT)
+            mail_sender = self.mail_sender
+            if mail_sender:
+                email = mail_sender.new_email(EXEC_REPORT_TITLE, recipients)
+                with open(report_path, 'rb') as report_file:
+                    email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
+                email.send(EXEC_REPORT_EMAIL_CONTENT)
+            else:
+                logger.info("Email cannot be sent because no email server is configured")
+                raise RuntimeWarning("No email server configured")
 
     @property
     def plugin_subtype(self):

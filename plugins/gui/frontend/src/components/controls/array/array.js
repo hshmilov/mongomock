@@ -36,6 +36,15 @@ export default {
 				}
 			})
 			return schemaItems
+		},
+		isHidden() {
+                return this.data['enabled'] === false
+		},
+		shownSchemaItems() {
+			if (this.isHidden){
+				return this.schemaItems.filter(x => x.name == 'enabled')
+			}
+			return this.schemaItems
 		}
 	},
 	data () {

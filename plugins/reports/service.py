@@ -11,7 +11,8 @@ from bson.objectid import ObjectId
 from flask import jsonify, json
 
 from axonius.entities import EntityType
-from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, GUI_SYSTEM_CONFIG_COLLECTION, \
+    GUI_NAME
 from axonius.consts import report_consts
 from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
@@ -316,14 +317,17 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
-
-        self.mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data) \
-            .send(report_consts.REPORT_CONTENT_HTML.format(
-                query_name=report_data['name'], num_of_triggers=report_data['triggered'],
-                trigger_message=self._parse_action_content(report_data['triggers'], triggered),
-                num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
-                old_results_num_of_devices=len(report_data['result']),
-                query_link=self._generate_query_link(report_data['query_entity'], report_data['query'])))
+        mail_sender = self.mail_sender
+        if mail_sender:
+            mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data) \
+                .send(report_consts.REPORT_CONTENT_HTML.format(
+                    query_name=report_data['name'], num_of_triggers=report_data['triggered'],
+                    trigger_message=self._parse_action_content(report_data['triggers'], triggered),
+                    num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
+                    old_results_num_of_devices=len(report_data['result']),
+                    query_link=self._generate_query_link(report_data['query_entity'], report_data['query'])))
+        else:
+            logger.info("Email cannot be sent because no email server is configured")
 
     def _handle_action_create_notification(self, report_data, triggered, trigger_data, current_num_of_devices,
                                            action_data=None):

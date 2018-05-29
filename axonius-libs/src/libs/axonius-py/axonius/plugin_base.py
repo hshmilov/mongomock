@@ -1284,23 +1284,28 @@ class PluginBase(Configurable, Feature):
         return ""
 
     def send_syslog_message(self, message, log_level):
-        temp_logger = logging.getLogger("axonius.syslog")
-        syslog_hdlr = logging.handlers.SysLogHandler(address=(
-            self._syslog_settings['syslogHost'], self._syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)),
-            facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-        syslog_hdlr.setLevel(logging.INFO)
-        temp_logger.addHandler(syslog_hdlr)
+        syslog_settings = self._syslog_settings
+        if syslog_settings['enabled'] is True:
+            temp_logger = logging.getLogger("axonius.syslog")
+            syslog_hdlr = logging.handlers.SysLogHandler(address=(
+                syslog_settings['syslogHost'], syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)),
+                facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+            syslog_hdlr.setLevel(logging.INFO)
+            temp_logger.addHandler(syslog_hdlr)
 
-        # Starting the messages with the tag Axonius
-        formatted_message = f"Axonius:{message}"
-        getattr(temp_logger, log_level)(formatted_message)
+            # Starting the messages with the tag Axonius
+            formatted_message = f"Axonius:{message}"
+            getattr(temp_logger, log_level)(formatted_message)
 
     @property
     def mail_sender(self):
-        return EmailServer(self._email_settings['smtpHost'], self._email_settings['smtpPort'],
-                           self._email_settings.get('smtpUser'), self._email_settings.get('smtpPassword'),
-                           self._grab_file_contents(self._email_settings.get('smtpKey'), stored_locally=False),
-                           self._grab_file_contents(self._email_settings.get('smtpCert'), stored_locally=False))
+        email_settings = self._email_settings
+        if email_settings['enabled'] is True:
+            return EmailServer(email_settings['smtpHost'], email_settings['smtpPort'],
+                               email_settings.get('smtpUser'), email_settings.get('smtpPassword'),
+                               self._grab_file_contents(email_settings.get('smtpKey'), stored_locally=False),
+                               self._grab_file_contents(email_settings.get('smtpCert'), stored_locally=False))
+        return None
 
     # Global settings
     # These are settings which are shared between all plugins. For example, all plugins should use the same
@@ -1323,6 +1328,11 @@ class PluginBase(Configurable, Feature):
                 {
                     "items": [
                         {
+                            "name": "enabled",
+                            "title": "Use syslog",
+                            "type": "bool"
+                        },
+                        {
                             "name": "syslogHost",
                             "title": "Syslog Host",
                             "type": "string"
@@ -1341,6 +1351,11 @@ class PluginBase(Configurable, Feature):
                 },
                 {
                     "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Send emails",
+                            "type": "bool"
+                        },
                         {
                             "name": "smtpHost",
                             "title": "Email Host",
@@ -1400,6 +1415,7 @@ class PluginBase(Configurable, Feature):
     def global_settings_defaults():
         return {
             "email_settings": {
+                "enabled": False,
                 "smtpHost": None,
                 "smtpPort": None,
                 "smtpUser": None,
@@ -1411,6 +1427,7 @@ class PluginBase(Configurable, Feature):
                 "enabled": True
             },
             "syslog_settings": {
+                "enabled": False,
                 "syslogHost": None,
                 "syslogPort": logging.handlers.SYSLOG_UDP_PORT
             }

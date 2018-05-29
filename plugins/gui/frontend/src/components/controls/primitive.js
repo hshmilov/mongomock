@@ -76,5 +76,10 @@ export default {
 		if (this.value) {
 			this.data = this.value
 		}
+	},
+	destroyed() {
+		this.valid = true
+		if (!this.validator) { return }
+		this.validator.$emit('validate', { title: this.schema.title, valid: this.valid })
 	}
 }
