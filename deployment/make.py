@@ -29,6 +29,7 @@ else:
     import pip._internal.pep425tags as pip_pep425tags
     import pip._internal.utils.glibc as pip_glibc
     from pip._internal import main as pip_main
+from pip._vendor.packaging import markers as pip_markers
 
 
 def main():
@@ -65,7 +66,7 @@ def create_package(output_path, version='', pull=False, rebuild=False, exclude=N
     main_template = f"""
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), f'{SOURCES_FOLDER_NAME}', 'deployment'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '{SOURCES_FOLDER_NAME}', 'deployment'))
 
 from utils import AutoOutputFlush
 from install import main
@@ -193,7 +194,8 @@ def add_source_folder(zip_file, exclude=None):
             return False
         if os.path.basename(source_path) in ('.git', '.idea', '.cache', '__pycache__', 'tests'):
             return False
-        if source_path in ('venv', 'logs', 'devops/systemization', 'devops/CI', 'deploy_artifacts'):
+        if source_path in ('venv', 'logs', 'devops/systemization', 'devops/CI', 'deploy_artifacts',
+                           'plugins/gui/frontend/node_modules', 'plugins/gui/frontend/dist'):
             return False
         if source_path.startswith('testing/'):
             if source_path in ('testing/services', 'testing/test_helpers') or \
@@ -258,7 +260,7 @@ def download_packages(winpip=False):
     packages = os.path.join(CORTEX_PATH, 'deployment', 'packages')
     if not os.path.isdir(packages):
         os.makedirs(packages)
-    args = f'download -r {requirements} -d {packages}'.split(' ')
+    args = f'download -r {requirements} -d {packages} --no-cache'.split(' ')
 
     # pip workaround: override current OS settings with the OVA's: https://github.com/pypa/pip/issues/4289
 
@@ -266,10 +268,36 @@ def download_packages(winpip=False):
         print_state('  Windows requirements')
         # Download support for offline install also on windows
         pip_pep425tags.get_platform = lambda: 'win32'
+        pip_markers.default_environment = lambda: {
+            'implementation_name': 'cpython',
+            'implementation_version': '3.6.3',
+            'os_name': 'nt',
+            'platform_machine': 'AMD64',
+            'platform_python_implementation': 'CPython',
+            'platform_release': '10',
+            'platform_system': 'Windows',
+            'platform_version': '10.0.17134',
+            'python_full_version': '3.6.3',
+            'python_version': '3.6',
+            'sys_platform': 'win32'
+        }
         assert pip_main(args) == 0
         print_state('  Linux requirements')
 
     pip_pep425tags.get_platform = lambda: 'linux_x86_64'
+    pip_markers.default_environment = lambda: {
+        'implementation_name': 'cpython',
+        'implementation_version': '3.6.3',
+        'os_name': 'posix',
+        'platform_machine': 'x86_64',
+        'platform_release': '4.4.0-62-generic',
+        'platform_system': 'Linux',
+        'platform_version': '#83-Ubuntu SMP Wed Jan 18 14:10:15 UTC 2017',
+        'python_full_version': '3.6.3',
+        'platform_python_implementation': 'CPython',
+        'python_version': '3.6',
+        'sys_platform': 'linux'
+    }
     pip_pep425tags.is_manylinux1_compatible = lambda: True
     pip_pep425tags._is_running_32bit = lambda: False
     imp.get_suffixes = lambda: [('.cpython-36m-x86_64-linux-gnu.so', 'rb', 3),

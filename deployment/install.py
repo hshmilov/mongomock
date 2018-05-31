@@ -160,7 +160,7 @@ def load_new_source():
 
 def create_venv():
     print_state('Creating python venv')
-    args = f'python3 -m virtualenv --python=python3 --clear {VENV_PATH}'.split(' ')
+    args = f'python3 -m virtualenv --python=python3 --clear {VENV_PATH} --never-download'.split(' ')
     subprocess.check_call(args)
     create_pth = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops', 'create_pth.py')
     subprocess.check_call(['python3', create_pth])
@@ -180,7 +180,9 @@ def install_requirements():
             pip3_path = pip3_win_path
     requirements = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'requirements.txt')
     packages = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment', 'packages')
-    args = [pip3_path, 'install', '-r', requirements, '--find-links', packages]
+    args = [pip3_path, 'install', '-r', requirements, '--find-links', packages,
+            '--no-index',  # Don't use internet access
+            '--no-cache']  # Don't use local cache
     subprocess.check_call(args)
 
 
