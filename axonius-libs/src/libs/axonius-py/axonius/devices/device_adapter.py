@@ -4,7 +4,8 @@ import datetime
 import typing
 
 from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, format_subnet, get_manufacturer_from_mac
+from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, format_subnet, \
+    get_manufacturer_from_mac, normalize_mac
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
 
@@ -179,14 +180,15 @@ class DeviceAdapter(SmartJsonClass):
         :param name: the interface name
         """
         nic = DeviceAdapterNetworkInterface()
-        if mac is not None and mac != '000000000000':
-            try:
-                nic.mac = mac
-                nic.manufacturer = get_manufacturer_from_mac(mac)
-            except (ValueError, TypeError):
-                if logger is None:
-                    raise
-                logger.exception(f'Invalid mac: {repr(mac)}')
+        if mac is not None:
+            if normalize_mac(mac) != '000000000000':
+                try:
+                    nic.mac = mac
+                    nic.manufacturer = get_manufacturer_from_mac(mac)
+                except (ValueError, TypeError):
+                    if logger is None:
+                        raise
+                    logger.exception(f'Invalid mac: {repr(mac)}')
         if ips is not None:
             try:
                 ips_iter = iter(ips)

@@ -419,6 +419,11 @@ def extract_all_ips(network_ifs):
             yield ip
 
 
+def normalize_mac(mac):
+    if mac:
+        return mac.upper().replace('-', '').replace(':', '')
+
+
 def extract_all_macs(network_ifs):
     """
     :param network_ifs: the network_ifs as appear in the axonius device scheme
@@ -430,7 +435,7 @@ def extract_all_macs(network_ifs):
     for network_if in network_ifs:
         current_mac = network_if.get(MAC_FIELD, '')
         if current_mac != '' and current_mac is not None:
-            yield current_mac.upper().replace('-', '').replace(':', '')
+            yield normalize_mac(current_mac)
 
 
 def is_one_subset_of_the_other(first_set, second_set):
