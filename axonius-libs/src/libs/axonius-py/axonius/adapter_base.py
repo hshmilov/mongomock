@@ -41,36 +41,6 @@ def is_plugin_adapter(plugin_type: str) -> bool:
     return plugin_type == adapter_consts.ADAPTER_PLUGIN_TYPE
 
 
-class DeviceRunningState(Enum):
-    """
-    Defines the state of device. i.e. if it is turned on or not
-    """
-
-    def _generate_next_value_(name, *args):
-        return name
-
-    """
-    Device is on
-    """
-    TurnedOn = auto()
-    """
-    Device is off
-    """
-    TurnedOff = auto()
-    """
-    Device is suspended, i.e. hibenate
-    """
-    Suspended = auto()
-    """
-    Device is in the process of shutting down
-    """
-    ShuttingDown = auto()
-    """
-    State is unknown
-    """
-    Unknown = auto()
-
-
 class AdapterProperty(Enum):
     """
     Possible properties of the adapter

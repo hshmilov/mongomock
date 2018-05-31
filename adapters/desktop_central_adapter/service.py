@@ -8,6 +8,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from desktop_central_adapter.connection import DesktopCentralConnection
 from desktop_central_adapter.exceptions import DesktopCentralException
+import datetime
 
 
 class DesktopCentralAdapter(AdapterBase):
@@ -96,7 +97,13 @@ class DesktopCentralAdapter(AdapterBase):
                 # In case there is no such field we don't want to miss the device
                 device = self._new_device_adapter()
                 device.domain = device_raw.get("domain_netbios_name", "")
-                device.hostname = device_raw.get("full_name", "")
+                device.hostname = device_raw.get("fqdn_name", device_raw.get("full_name"))
+                try:
+                    last_seen = device_raw.get("agent_last_contact_time")
+                    if last_seen is not None:
+                        device.last_seen = datetime.datetime.fromtimestamp(last_seen / 1000)
+                except Exception:
+                    logger.exception(f"Problem getting last seen for {device_raw}")
                 device.figure_os(' '.join([device_raw.get("os_name", ""),
                                            device_raw.get("service_pack", "")]))
                 try:

@@ -3,9 +3,9 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from enum import Enum, auto
 from pyVmomi import vim
 
-from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterProperty
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field
 from axonius.utils.parsing import parse_date
 from axonius.utils.files import get_local_config_file
@@ -33,7 +33,6 @@ class EsxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         vm_tools_status = Field(str, 'VM Tools Status')
         vm_physical_path = Field(str, 'VM physical path')
-        power_state = Field(DeviceRunningState, 'VM Power state')
         device_type = Field(ESXDeviceType, 'VM type')
         esx_host = Field(str, 'VM ESX Host')
 

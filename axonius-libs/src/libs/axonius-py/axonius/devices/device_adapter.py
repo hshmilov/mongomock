@@ -8,10 +8,40 @@ from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_i
     get_manufacturer_from_mac, normalize_mac
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
-
+from enum import Enum, auto
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
 """
+
+
+class DeviceRunningState(Enum):
+    """
+    Defines the state of device. i.e. if it is turned on or not
+    """
+
+    def _generate_next_value_(name, *args):
+        return name
+
+    """
+    Device is on
+    """
+    TurnedOn = auto()
+    """
+    Device is off
+    """
+    TurnedOff = auto()
+    """
+    Device is suspended, i.e. hibenate
+    """
+    Suspended = auto()
+    """
+    Device is in the process of shutting down
+    """
+    ShuttingDown = auto()
+    """
+    State is unknown
+    """
+    Unknown = auto()
 
 
 class DeviceAdapterOS(SmartJsonClass):
@@ -137,7 +167,7 @@ class DeviceAdapter(SmartJsonClass):
     batteries = ListField(DeviceAdapterBattery, "Battery")
     current_logged_user = Field(str, "Currently Logged User")
     device_disabled = Field(bool, "Device Disabled")
-    power_state = Field(str, "Power State")
+    power_state = Field(DeviceRunningState, "Power State")
     device_managed_by = Field(str, "Managed By")    # Who is the entity managing the device
     organizational_unit = ListField(str, "Organizational Unit")
     security_patch_level = Field(datetime.datetime, "Security Patch Level")

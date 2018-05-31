@@ -140,7 +140,7 @@ class SoftlayerAdapter(AdapterBase, Configurable):
             device.name = device_raw.get('fullyQualifiedDomainName')
             device.hostname = device_raw.get('fullyQualifiedDomainName')
             operating_system = (((device_raw.get('operatingSystem') or {}).get('softwareLicense') or {}).get(
-                'softwareLicense') or {})
+                'softwareDescription') or {})
             device.figure_os(' '.join([(operating_system.get('manufacturer') or ''),
                                        (operating_system.get('name') or ''),
                                        (operating_system.get('referenceCode') or ''),
@@ -172,7 +172,6 @@ class SoftlayerAdapter(AdapterBase, Configurable):
             device.datacenter = (device_raw.get('datacenter') or {}).get('longName')
             device.status = (device_raw.get('hardwareStatus') or {}).get('status') or \
                             (device_raw.get('status') or {}).get('name')
-            device.power_state = (device_raw.get('powerState') or {}).get('name')
             try:
                 for vlan in (device_raw.get('networkVlans') or []):
                     device.vlans.append(SoftlayerVlan(id=vlan.get('id'),

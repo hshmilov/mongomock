@@ -93,8 +93,10 @@ class SecdoAdapter(AdapterBase):
                 device.id = device_raw.get("agentId")
                 if device.id is None:
                     continue
-                device.hostname = device_raw.get("hostName")
                 device.domain = device_raw.get("domain")
+                device.hostname = device_raw.get("hostName")
+                if device.domain is not None and device.domain != "" and device.domain.upper() != "N/A":
+                    device.hostname = f"{device.hostname}.{device.domain}"
                 device.figure_os(device_raw.get("osName", ""))
                 try:
                     device.add_nic(None, device_raw.get("interfaces", "").split(","))

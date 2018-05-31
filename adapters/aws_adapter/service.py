@@ -5,9 +5,9 @@ import botocore.exceptions
 from botocore.config import Config
 import re
 
-from axonius.adapter_base import AdapterBase, DeviceRunningState, AdapterProperty
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException, CredentialErrorException, AdapterException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
@@ -72,7 +72,6 @@ class AWSTagKeyValue(SmartJsonClass):
 
 class AwsAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        power_state = Field(DeviceRunningState, 'Power state')
         aws_tags = ListField(AWSTagKeyValue, "AWS EC2 Tags")
         instance_type = Field(str, "AWS EC2 Instance Type")
         key_name = Field(str, "AWS EC2 Key Name")
