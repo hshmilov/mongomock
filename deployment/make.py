@@ -61,6 +61,17 @@ def main():
 
 
 def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, prod=True, winpip=False):
+    """
+    The file created (axonius_install{version}.py) is a zip file with the following structure:
+    axonius_install{version}.py (zip file):
+        sources/
+            #cortex sources dir without the filtered content and packages
+            ...
+            deployment/
+                packages/ #python pip packages
+        images.tar # docker images collection
+        __main__.py
+    """
     start = time.time()
     version = f'print("Version: {version}")' if version else version
     main_template = f"""
