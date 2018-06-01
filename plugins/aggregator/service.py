@@ -479,6 +479,7 @@ class AggregatorService(PluginBase, Triggerable):
                                             'adapters': {
                                                 PLUGIN_UNIQUE_NAME: adapter_to_remove_from_old[
                                                     PLUGIN_UNIQUE_NAME],
+                                                'data.id': adapter_to_remove_from_old['data']['id']
                                             }
                                         },
                                         "$inc": {
