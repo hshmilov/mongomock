@@ -56,7 +56,10 @@ class UserAdapter(SmartJsonClass):
     user_telephone_number = Field(str, "User Telephone Number")
     user_country = Field(str, "User Country")
 
-    required = ['id', 'username', 'domain']
+    first_name = Field(str, "User first name")
+    last_name = Field(str, "User last name")
+
+    required = ['id', 'username']
 
     def __init__(self, user_fields: typing.MutableSet[str], user_raw_fields: typing.MutableSet[str]):
         """ The user_fields and user_raw_fields will be auto-populated when new fields are set. """

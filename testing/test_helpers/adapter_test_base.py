@@ -92,7 +92,7 @@ class AdapterTestBase(object):
     def test_devices_cleaning(self):
         return self.do_test_entity_cleaning(EntityType.Devices)
 
-    def test_devices_cleaning(self):
+    def test_users_cleaning(self):
         return self.do_test_entity_cleaning(EntityType.Users)
 
     def do_test_entity_cleaning(self, entity_type: EntityType):

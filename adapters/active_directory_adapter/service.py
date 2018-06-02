@@ -23,7 +23,6 @@ import subprocess
 import ipaddress
 
 from collections import defaultdict
-from flask import jsonify
 from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
     LDAP_PASSWORD_NOT_REQUIRED, LDAP_DONT_EXPIRE_PASSWORD
 from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
@@ -1266,4 +1265,4 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets, AdapterProperty.Manager]
+        return [AdapterProperty.Assets, AdapterProperty.Manager, AdapterProperty.UserManagement]

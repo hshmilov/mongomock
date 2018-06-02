@@ -60,6 +60,7 @@ class AdapterProperty(Enum):
     Manager = auto()
     Vulnerability_Assessment = auto()
     Assets = auto()
+    UserManagement = auto()
 
 
 class AdapterBase(PluginBase, Configurable, Feature, ABC):
@@ -654,7 +655,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     @abstractmethod
     def _get_client_id(self, client_config):
         """
-        Given all details of a client belonging to the adapter, return consistent key representing it
+        Given all details of a client belonging to the adapter, return consistent key representing it.
+        This key must be "unclassified" - not contain any sensitive information as it is disclosed to the user.
 
         :param client_config: A dictionary with connection credentials for adapter's client, according to stated in
         the appropriate schema (all required and any of optional)
@@ -682,10 +684,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         """
         pass
 
-    @abstractmethod
     def _query_devices_by_client(self, client_name, client_data):
         """
-        To be implemented by inheritors.
         Returns all devices from a specific client.
         Refer to devices(client) docs for the return type.
 
@@ -693,7 +693,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :param client_data: The data of the client, as returned from the _parse_clients_data function
         :return: adapter dependant
         """
-        pass
+        return []
 
     def __is_old_entity(self, parsed_entity, cutoff: Tuple[date, date]) -> bool:
         """ Check if the entity is considered "old".
@@ -915,7 +915,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         """
         pass
 
-    @abstractmethod
     def _parse_raw_data(self, devices_raw_data) -> Iterable[DeviceAdapter]:
         """
         To be implemented by inheritors
@@ -924,7 +923,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :param devices_raw_data: raw data as received by /devices/client, i.e. without the client->data association
         :return: parsed data as iterable Device collection
         """
-        pass
+        return []
 
     def _correlation_cmds(self):
         """
