@@ -31,7 +31,6 @@ class DiagnosticsService(DockerService):
             for k, v in env.items():
                 env_file.write(f'export {k}={v}\n'.encode())
                 yield f'{k}={v}'
-            env_file.write('export STUNNEL_LISTEN_PORT=0\n'.encode())
 
     @property
     def volumes(self):
