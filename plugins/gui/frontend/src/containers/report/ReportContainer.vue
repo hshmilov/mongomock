@@ -31,27 +31,22 @@
                 </div>
             </div>
         </x-box>
-        <modal v-if="message">
-            <div slot="body">
-                <div class="show-space">{{message}}</div>
-            </div>
-            <button class="x-btn" slot="footer" @click="closeModal">OK</button>
-        </modal>
+        <x-toast v-if="message" :message="message" @done="removeToast" />
     </x-page>
 </template>
 
 <script>
     import xPage from '../../components/layout/Page.vue'
     import xBox from '../../components/layout/Box.vue'
-    import Modal from '../../components/popover/Modal.vue'
+    import xToast from '../../components/popover/Toast.vue'
 
-    import {mapActions} from 'vuex'
-    import {DOWNLOAD_REPORT} from '../../store/modules/report'
-    import {REQUEST_API} from '../../store/actions'
+    import { mapActions } from 'vuex'
+    import { DOWNLOAD_REPORT } from '../../store/modules/report'
+    import { REQUEST_API } from '../../store/actions'
 
     export default {
         name: 'report-container',
-        components: {xPage, xBox, Modal},
+        components: { xPage, xBox, xToast },
         computed: {
         	valid() {
         		return this.execReportSettings.recipients.length > 0 && this.execReportSettings.period
@@ -111,7 +106,7 @@
                     }
                 })
             },
-            closeModal() {
+            removeToast() {
             	this.message = ''
             }
         },

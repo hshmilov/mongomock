@@ -35,14 +35,7 @@
                 </div>
             </tab>
         </tabs>
-        <modal v-if="message">
-            <div slot="body">
-                <div class="show-space">{{message}}</div>
-            </div>
-            <div slot="footer">
-                <button class="x-btn" @click="closeModal">OK</button>
-            </div>
-        </modal>
+        <x-toast v-if="message" :message="message" @done="removeToast" />
     </x-page>
 </template>
 
@@ -53,15 +46,15 @@
     import Tab from '../../components/tabs/Tab.vue'
     import xDateEdit from '../../components/controls/string/DateEdit.vue'
     import xCheckbox from '../../components/inputs/Checkbox.vue'
-    import Modal from '../../components/popover/Modal.vue'
+    import xToast from '../../components/popover/Toast.vue'
 
-    import {REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE} from '../../store/actions'
-    import {mapState, mapActions, mapMutations} from 'vuex'
-    import {SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG} from "../../store/modules/configurable";
+    import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
+    import { mapState, mapActions, mapMutations } from 'vuex'
+    import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from "../../store/modules/configurable";
 
     export default {
         name: 'settings-container',
-        components: {xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, Modal},
+        components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast },
         computed: {
             ...mapState({
                 dashboard(state) {
@@ -176,7 +169,7 @@
                     }
                 })
             },
-            closeModal() {
+            removeToast() {
                 this.message = ''
             }
         },

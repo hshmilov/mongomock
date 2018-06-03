@@ -47,7 +47,7 @@
             <label for="chart-name">Chart Title</label>
             <input id="chart-name" type="text" v-model="dashboard.name" @input="message = ''">
             <div></div> <!-- Empty to align with query lines -->
-            <div v-if="message" class="grid-span2 error-text">{{message}}</div>
+            <div v-if="message" class="grid-span2 error-text">{{ message }}</div>
         </div>
     </feedback-modal>
 </template>

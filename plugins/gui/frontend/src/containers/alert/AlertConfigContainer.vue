@@ -75,18 +75,15 @@
                         </template>
                     </div>
                 </div>
-                <div class="row btn-container">
-                    <a class="x-btn link" @click="returnToAlerts">Cancel</a>
-                    <a class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</a>
+                <div class="footer">
+                    <div class="error-text">{{ error || '&nbsp;' }}</div>
+                    <div class="actions">
+                        <a class="x-btn link" @click="returnToAlerts">Cancel</a>
+                        <a class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</a>
+                    </div>
                 </div>
             </form>
         </x-box>
-        <modal v-if="error">
-            <div slot="body">
-                <div class="show-space">{{error}}</div>
-            </div>
-            <button class="x-btn" slot="footer" @click="closeError">OK</button>
-        </modal>
     </x-page>
 </template>
 
@@ -134,8 +131,18 @@
                 }
 			}),
             complete() {
-            	return this.alert.name && this.currentQuery.name && (!this.actions.mail || !this.emptySettings['mail'])
-					&& (!this.actions.syslog || !this.emptySettings['syslog'])
+            	if (!this.alert.name || !this.currentQuery.name) return false
+
+            	if ((this.actions.mail && this.emptySettings['mail'])
+                    || (this.actions.syslog && this.emptySettings['syslog'])) return false
+
+                if ((this.alertData.id === "new" || this.alert.name !== this.alertData.name)
+					&& this.alerts.some(e => e.name === this.alert.name)) {
+					this.error = 'An Alert with that name already exists, please choose a different one.'
+					return false
+                }
+                this.error = ''
+                return true
             }
         },
         data() {
@@ -191,10 +198,6 @@
 			saveAlert() {
             	/* Validation */
                 if (!this.complete) return
-                if ((this.alertData.id === "new" || this.alert.name !== this.alertData.name) && this.alerts.some(e => e.name === this.alert.name)) {
-                    this.error = 'An Alert with that name already exists, please choose a different one.'
-                    return
-                }
 
                 if (this.actions.notification) {
                 	this.alert.actions.push({
@@ -225,9 +228,6 @@
             returnToAlerts() {
 				this.$router.push({name: 'Alerts'})
             },
-            closeError() {
-                this.error = ''
-            },
             checkMailSettings(on) {
             	if (!on) {
 					this.updateEmptyState({name: 'emptyMailSettings', status: false})
@@ -252,7 +252,7 @@
 			    If no alert from controls source, try and fetch it.
 			    Otherwise, if alert from controls source has correct id, update local alert controls with its values
 			 */
-            if (!this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
+            if (!this.alerts.length || !this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
                 this.fetchAlerts({}).then(() => {
                     this.setAlert(this.$route.params.id)
                 })
@@ -293,8 +293,11 @@
         .checkbox.inline.checked {
             display: inline;
         }
-        .btn-container {
-            text-align: right;
+        .footer {
+            display: flex;
+            .error-text {
+                flex: 1 0 auto;
+            }
         }
         .configuration {
             margin: 24px 0;
