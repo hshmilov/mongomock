@@ -28,7 +28,7 @@
             <tab title="GUI Settings" id="system-settings-tab" v-if="configurable.gui">
                 <div class="tab-settings">
                     <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
-                                   v-model="configurable.gui.GuiService.config"/>
+                                   v-model="configurable.gui.GuiService.config" api-upload="adapters/core"/>
                     <div class="place-right">
                         <button class="x-btn" :class="{disabled: !guiComplete}" @click="saveGuiSettings">Save</button>
                     </div>
@@ -154,6 +154,9 @@
                     if (response.status === 200) {
                         this.message = 'Saved Successfully.'
                     }
+                    else {
+                        this.message = 'Error when saving'
+                    }
                 })
             },
             setResearchRate() {
@@ -166,6 +169,9 @@
                 }).then(response => {
                     if (response.status === 200) {
                         this.message = 'Saved Successfully.'
+                    }
+                    else {
+                        this.message = 'Error when saving'
                     }
                 })
             },

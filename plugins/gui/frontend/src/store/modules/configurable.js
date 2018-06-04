@@ -19,7 +19,7 @@ export const configurable = {
         }
     },
     actions: {
-        [SAVE_PLUGIN_CONFIG]({dispatch}, payload) {
+        [SAVE_PLUGIN_CONFIG]({dispatch, commit}, payload) {
             /*
                 Call API to save given config to adapter by the given adapter unique name
              */
@@ -32,6 +32,15 @@ export const configurable = {
                 rule: rule,
                 method: 'POST',
                 data: payload.config
+            }).then(response => {
+                if (response.status === 200) {
+                    commit(CHANGE_PLUGIN_CONFIG, {
+                        pluginId: payload.pluginId,
+                        configName: payload.configName,
+                        config: payload.config,
+                    })
+                }
+                return response
             })
         },
         [LOAD_PLUGIN_CONFIG]({dispatch, commit}, payload) {

@@ -1,15 +1,19 @@
-import calendar
 import csv
 import logging
 import threading
 
+import ldap3
+
+from axonius.clients.ldap.exceptions import LdapException
+from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.mixins.configurable import Configurable
+from axonius.types.ssl_state import SSLState
 from gui.okta_login import try_connecting_using_okta
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
 
-from axonius.utils.files import get_local_config_file
+from axonius.utils.files import get_local_config_file, create_temp_file
 from axonius.utils.datetime import next_weekday
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
@@ -39,7 +43,7 @@ import configparser
 import pymongo
 from bson import ObjectId
 import json
-from axonius.utils.parsing import parse_filter
+from axonius.utils.parsing import parse_filter, bytes_image_to_base64
 from urllib3.util.url import parse_url
 
 # the maximal amount of data a pagination query will give
@@ -1431,13 +1435,19 @@ class GuiService(PluginBase, Configurable):
             notification_collection = db['core']['notifications']
             return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
-    @add_rule("get_okta_status", should_authenticate=False)
+    @add_rule("get_login_options", should_authenticate=False)
     def get_okta_status(self):
         return jsonify({
-            'okta_enabled': self.__okta['okta_enabled'],
-            "okta_client_id": self.__okta['okta_client_id'],
-            "okta_url": self.__okta['okta_url'],
-            "gui_url": self.__okta['gui_url']
+            "okta": {
+                'enabled': self.__okta['enabled'],
+                "client_id": self.__okta['client_id'],
+                "url": self.__okta['url'],
+                "gui_url": self.__okta['gui_url']
+            },
+            "ldap": {
+                'enabled': self.__ldap_login['enabled'],
+                'default_domain': self.__ldap_login['default_domain']
+            }
         })
 
     @add_rule("login", methods=['GET', 'POST'], should_authenticate=False)
@@ -1478,6 +1488,64 @@ class GuiService(PluginBase, Configurable):
     def okta_redirect(self):
         try_connecting_using_okta(self.__okta)
         return redirect("/", code=302)
+
+    @add_rule("ldap-login", methods=['POST'], should_authenticate=False)
+    def ldap_login(self):
+        try:
+            log_in_data = self.get_request_data_as_object()
+            if log_in_data is None:
+                return return_error("No login data provided", 400)
+            user_name = log_in_data.get('user_name')
+            password = log_in_data.get('password')
+            domain = log_in_data.get('domain')
+            ldap_login = self.__ldap_login
+
+            try:
+                conn = LdapConnection(ldap_login['dc_address'], f'{domain}\\{user_name}', password,
+                                      use_ssl=SSLState[ldap_login['use_ssl']],
+                                      ca_file_data=create_temp_file(self._grab_file_contents(
+                                          ldap_login['private_key'])) if ldap_login['private_key'] else None,
+                                      cert_file=create_temp_file(self._grab_file_contents(
+                                          ldap_login['cert_file'])) if ldap_login['cert_file'] else None,
+                                      private_key=create_temp_file(self._grab_file_contents(
+                                          ldap_login['ca_file'])) if ldap_login['ca_file'] else None)
+            except LdapException:
+                logger.exception("Failed login")
+                return return_error("Failed logging into AD")
+            except Exception:
+                logger.exception("Unexpected exception")
+                return return_error("Failed logging into AD")
+
+            needed_group = ldap_login["group_cn"]
+            if needed_group:
+                groups, user = conn.get_groups_of_user(user_name)
+                if not any((f'CN={needed_group}' in group) for group in groups):
+                    return return_error(f"The provided user is not in the group {needed_group}")
+            image = None
+            try:
+                thumbnail_photo = user.get("thumbnailPhoto") or \
+                    user.get("exchangePhoto") or \
+                    user.get("jpegPhoto") or \
+                    user.get("photo") or \
+                    user.get("thumbnailLogo")
+                if thumbnail_photo is not None:
+                    if type(thumbnail_photo) == list:
+                        thumbnail_photo = thumbnail_photo[0]  # I think this can happen from some reason..
+                    image = bytes_image_to_base64(thumbnail_photo)
+            except Exception:
+                logger.exception(f"Exception while setting thumbnailPhoto for user {user_name}")
+
+            session['user'] = {'user_name': user.get('displayName') or user_name,
+                               'first_name': user.get('givenName') or '',
+                               'last_name': user.get('sn') or '',
+                               'pic_name': image or 'avatar.png',
+                               }
+            return ""
+        except ldap3.core.exceptions.LDAPException:
+            return return_error("LDAP verification has failed, please try again")
+        except Exception:
+            logger.exception("LDAP Verification error")
+            return return_error("An error has occurred while verifying your account")
 
     @add_rule_unauthenticated("logout", methods=['GET'])
     def logout(self):
@@ -2072,7 +2140,8 @@ class GuiService(PluginBase, Configurable):
 
     def _on_config_update(self, config):
         logger.info(f"Loading GuiService config: {config}")
-        self.__okta = config['login_settings']
+        self.__okta = config['okta_login_settings']
+        self.__ldap_login = config['ldap_login_settings']
         self.__system_settings = config['system_settings']
 
     @classmethod
@@ -2111,22 +2180,22 @@ class GuiService(PluginBase, Configurable):
                 {
                     "items": [
                         {
-                            "name": "okta_enabled",
+                            "name": "enabled",
                             "title": "Allow Okta logins",
                             "type": "bool"
                         },
                         {
-                            "name": "okta_client_id",
+                            "name": "client_id",
                             "title": "Okta application client id",
                             "type": "string"
                         },
                         {
-                            "name": "okta_client_secret",
+                            "name": "client_secret",
                             "title": "Okta application client secret",
                             "type": "string"
                         },
                         {
-                            "name": "okta_url",
+                            "name": "url",
                             "title": "Okta application URL",
                             "type": "string"
                         },
@@ -2136,9 +2205,62 @@ class GuiService(PluginBase, Configurable):
                             "type": "string"
                         }
                     ],
-                    "required": ["okta_enabled", "okta_client_id", "okta_client_secret", "okta_url", "gui_url"],
-                    "name": "login_settings",
-                    "title": "Login Settings",
+                    "required": ["enabled", "client_id", "client_secret", "url", "gui_url"],
+                    "name": "okta_login_settings",
+                    "title": "Okta Login Settings",
+                    "type": "array"
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Allow LDAP logins",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "dc_address",
+                            "title": "The host domain controller IP or DNS",
+                            "type": "string"
+                        },
+                        {
+                            "name": "group_cn",
+                            "title": "A group the user must be a part of",
+                            "type": "string"
+                        },
+                        {
+                            "name": "default_domain",
+                            "title": "Default domain to present to the user",
+                            "type": "string"
+                        },
+                        {
+                            "name": "use_ssl",
+                            "title": "Use SSL for connection",
+                            "type": "string",
+                            "enum": [SSLState.Unencrypted.name, SSLState.Verified.name, SSLState.Unverified.name],
+                            "default": SSLState.Unverified.name,
+                        },
+                        {
+                            "name": "ca_file",
+                            "title": "CA File",
+                            "description": "The binary contents of the ca_file",
+                            "type": "file",
+                        },
+                        {
+                            "name": "cert_file",
+                            "title": "Certificate File",
+                            "description": "The binary contents of the cert_file",
+                            "type": "file",
+                        },
+                        {
+                            "name": "private_key",
+                            "title": "Private Key File",
+                            "description": "The binary contents of the private_key",
+                            "type": "file",
+                        },
+                    ],
+                    "required": ["enabled", "dc_address"],
+                    "name": "ldap_login_settings",
+                    "title": "Ldap Login Settings",
                     "type": "array"
                 }
             ],
@@ -2149,12 +2271,21 @@ class GuiService(PluginBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            "login_settings": {
-                "okta_enabled": False,
-                "okta_client_id": "",
-                "okta_client_secret": "",
-                "okta_url": "https://axonius.okta.com",
+            "okta_login_settings": {
+                "enabled": False,
+                "client_id": "",
+                "client_secret": "",
+                "url": "https://yourname.okta.com",
                 "gui_url": "https://127.0.0.1"
+            },
+            "ldap_login_settings": {
+                "enabled": False,
+                "dc_address": "",
+                "default_domain": "",
+                "use_ssl": SSLState.Unencrypted.name,
+                "ca_file": None,
+                "cert_file": None,
+                "private_key": None
             },
             "system_settings": {
                 "refreshRate": 30,

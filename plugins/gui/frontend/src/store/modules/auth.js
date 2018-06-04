@@ -2,11 +2,12 @@ import { REQUEST_API } from '../actions'
 
 export const GET_USER = 'GET_USER'
 export const LOGIN = 'LOGIN'
+export const LDAP_LOGIN = 'LDAP_LOGIN'
 export const SET_USER = 'SET_USER'
 export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
-export const GET_OKTA_SETTINGS = 'GET_OKTA_SETTINGS'
+export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS'
 
 const USER_IMAGE_PATH = '/src/assets/images/users/'
 
@@ -44,9 +45,9 @@ export const auth = {
 				type: SET_USER
 			})
 		} ,
-		[ GET_OKTA_SETTINGS ] ({dispatch}) {
+		[ GET_LOGIN_OPTIONS ] ({dispatch}) {
 			return dispatch(REQUEST_API, {
-				rule: 'get_okta_status',
+				rule: 'get_login_options',
 			})
 		} ,
 		[ LOGIN ] ({dispatch, commit}, payload) {
@@ -59,6 +60,31 @@ export const auth = {
 			}
 			dispatch(REQUEST_API, {
 				rule: 'login',
+				method: 'POST',
+				data: payload
+			}).then((response) => {
+				if (!response || !response.status) {
+					commit(SET_USER, { error: 'Login failed.'})
+
+				} else if (response.status === 200) {
+					dispatch(GET_USER)
+				} else {
+					commit(SET_USER, { error: response.data.message, fetching: false })
+				}
+			}).catch((error) => {
+				commit(SET_USER, { error: error.response.data.message})
+			})
+		},
+		[ LDAP_LOGIN ] ({dispatch, commit}, payload) {
+			/*
+				Request from server to login a user according to given credentials.
+				A valid user name and its password is required.
+			 */
+			if (!payload || !payload.user_name || !payload.password || !payload.domain) {
+				return
+			}
+			dispatch(REQUEST_API, {
+				rule: 'ldap-login',
 				method: 'POST',
 				data: payload
 			}).then((response) => {

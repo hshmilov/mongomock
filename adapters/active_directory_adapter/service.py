@@ -1,12 +1,15 @@
 import logging
 from typing import Tuple, List
 
+from axonius.clients.ldap.exceptions import LdapException, IpResolveError, NoClientError
+from axonius.clients.ldap.ldap_connection import LdapConnection, LDAP_ACCOUNTDISABLE
 from axonius.devices import ad_entity
 from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 
 from axonius.mixins.devicedisabelable import Devicedisabelable
 from axonius.mixins.userdisabelable import Userdisabelable
+from axonius.types.ssl_state import SSLState
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from apscheduler.triggers.interval import IntervalTrigger
@@ -23,9 +26,6 @@ import subprocess
 import ipaddress
 
 from collections import defaultdict
-from active_directory_adapter.ldap_connection import LdapConnection, SSLState, LDAP_ACCOUNTDISABLE, \
-    LDAP_PASSWORD_NOT_REQUIRED, LDAP_DONT_EXPIRE_PASSWORD
-from active_directory_adapter.exceptions import LdapException, IpResolveError, NoClientError
 from axonius.adapter_exceptions import ClientConnectionException, TagDeviceError
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -212,11 +212,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
     def _connect_client(self, dc_details):
         try:
-            return LdapConnection(self._ldap_page_size,
-                                  dc_details['dc_name'],
+            return LdapConnection(dc_details['dc_name'],
                                   dc_details['user'],
                                   dc_details['password'],
                                   dc_details.get('dns_server_address'),
+                                  self._ldap_page_size,
                                   SSLState[dc_details.get('use_ssl', SSLState.Unencrypted.name)],
                                   self._grab_file_contents(dc_details.get('ca_file')),
                                   self._grab_file_contents(dc_details.get('cert_file')),

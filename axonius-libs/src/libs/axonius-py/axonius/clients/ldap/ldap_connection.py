@@ -1,35 +1,63 @@
 """LdapConnection.py: Implementation of LDAP protocol connection."""
+
 import logging
 
+from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
+
 logger = logging.getLogger(f"axonius.{__name__}")
-import ssl
 import ipaddress
 import struct
 import itertools
-import ldap3
-
-from enum import Enum, auto
 from collections import defaultdict
-from active_directory_adapter.exceptions import LdapException
 from axonius.utils.parsing import get_exception_string, convert_ldap_searchpath_to_domain_name, \
     ad_integer8_to_timedelta, parse_date
-from axonius.utils.ldap import ldap_get, ldap_must_get, ldap_must_get_str
 from axonius.utils.files import create_temp_file
+import ssl
+from typing import TextIO, List, Tuple
+import ldap3
+from axonius.types.ssl_state import SSLState
 
 
-class SSLState(Enum):
-    Unencrypted = auto()
-    Verified = auto()
-    Unverified = auto()
+def connect_to_server(server_address: str, user_name: str, user_password: str, use_ssl: SSLState = SSLState.Unencrypted,
+                      private_key_file: TextIO = None, cert_file: TextIO = None,
+                      ca_file: TextIO = None) -> ldap3.Connection:
+    """
+    This function will connect to an LDAP server.
+
+    :param server_address: the ip or hostname of the AD to connect to
+    :param user_name: the username to use, including domain, e.g. "SomeDomain\Administrator"
+    :param user_password: the user's password
+    :param use_ssl: Whether or not to use SSL, and whether checking verification is needed
+    :param private_key_file: if using verified SSL, the SSL files are needed
+    :param cert_file:
+    :param ca_file:
+    :return: The successfully binded connection
+    :raises: ldap3.core.exceptions.LDAPException
+    """
+    if use_ssl != SSLState.Unencrypted:
+        validation = ssl.CERT_REQUIRED if use_ssl == SSLState.Verified else ssl.CERT_NONE
+        tls = ldap3.Tls(
+            local_private_key_file=private_key_file.name if private_key_file else None,
+            local_certificate_file=cert_file.name if cert_file else None,
+            ca_certs_file=ca_file.name if ca_file else None,
+            validate=validation)
+        ldap_server = ldap3.Server(server_address, connect_timeout=10, use_ssl=True, tls=tls)
+    else:
+        ldap_server = ldap3.Server(server_address, connect_timeout=10)
+    ldap_connection = ldap3.Connection(
+        ldap_server, user=user_name, password=user_password,
+        raise_exceptions=True, receive_timeout=20)
+    ldap_connection.bind()
+    return ldap_connection
 
 
 EXCHANGE_VERSIONS = {
-    "Version 15.":    "2016",
-    "Version 14.":    "2010",
-    "Version 08.":    "2007",
-    "Version 8.":     "2007",
-    "Version 6.5":   "2003",
-    "Version 6.0":   "2000"
+    "Version 15.": "2016",
+    "Version 14.": "2010",
+    "Version 08.": "2007",
+    "Version 8.": "2007",
+    "Version 6.5": "2003",
+    "Version 6.0": "2000"
 }
 
 FUNCTIONALITY_WINDOWS_VERSIONS = {
@@ -69,7 +97,7 @@ LDAP_ACCOUNTDISABLE = 0x2
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
 LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 
-DNS_TYPE_A = 0x0001     # ivp4
+DNS_TYPE_A = 0x0001  # ivp4
 SIZE_OF_IPV4_ENTRY_IN_BYTES = 4
 DNS_TYPE_AAAA = 0x001c  # ipv6
 SIZE_OF_IPV6_ENTRY_IN_BYTES = 16
@@ -90,10 +118,11 @@ class LdapConnection(object):
     Data from the wanted ActiveDirectory.
     """
 
-    def __init__(self, ldap_page_size, server_addr,
-                 user_name, user_password, dns_server,
-                 use_ssl: SSLState, ca_file_data: bytes, cert_file: bytes,
-                 private_key: bytes, should_fetch_disabled_devices, should_fetch_disabled_users):
+    def __init__(self, server_addr,
+                 user_name, user_password, dns_server=None,
+                 ldap_page_size=100,
+                 use_ssl: SSLState = SSLState.Unencrypted, ca_file_data: bytes=None, cert_file: bytes=None,
+                 private_key: bytes=None, should_fetch_disabled_devices=False, should_fetch_disabled_users=False):
         """Class initialization.
 
         :param int ldap_page_size: Amount of devices to fetch on each request
@@ -116,10 +145,9 @@ class LdapConnection(object):
         self.cert_file_param = cert_file
         self.private_key_param = private_key
 
-        if self.__use_ssl != SSLState.Unencrypted:
-            self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
-            self.__cert_file = create_temp_file(cert_file) if cert_file else None
-            self.__private_key_file = create_temp_file(private_key) if private_key else None
+        self.__ca_file = create_temp_file(ca_file_data) if ca_file_data else None
+        self.__cert_file = create_temp_file(cert_file) if cert_file else None
+        self.__private_key_file = create_temp_file(private_key) if private_key else None
 
         self._connect_to_server()
 
@@ -135,8 +163,8 @@ class LdapConnection(object):
         if name not in self.extra_sessions:
             logger.info(f"{self.server_addr}: Created new LdapConnection for name '{name}'")
             self.extra_sessions[name] = LdapConnection(
-                self.ldap_page_size, self.server_addr, self.user_name, self.user_password,
-                self.dns_server, self.__use_ssl, self.ca_file_data_param, self.cert_file_param,
+                self.server_addr, self.user_name, self.user_password,
+                self.dns_server, self.ldap_page_size, self.__use_ssl, self.ca_file_data_param, self.cert_file_param,
                 self.private_key_param, self.should_fetch_disabled_devices,
                 self.should_fetch_disabled_users)
 
@@ -169,20 +197,9 @@ class LdapConnection(object):
         :raises exceptions.LdapException: In case of error in the LDAP protocol
         """
         try:
-            if self.__use_ssl != SSLState.Unencrypted:
-                validation = ssl.CERT_REQUIRED if self.__use_ssl == SSLState.Verified else ssl.CERT_NONE
-                tls = ldap3.Tls(
-                    local_private_key_file=self.__private_key_file.name if self.__private_key_file else None,
-                    local_certificate_file=self.__cert_file.name if self.__cert_file else None,
-                    ca_certs_file=self.__ca_file.name if self.__ca_file else None,
-                    validate=validation)
-                ldap_server = ldap3.Server(self.server_addr, connect_timeout=10, use_ssl=True, tls=tls)
-            else:
-                ldap_server = ldap3.Server(self.server_addr, connect_timeout=10)
-            self.ldap_connection = ldap3.Connection(
-                ldap_server, user=self.user_name, password=self.user_password,
-                raise_exceptions=True, receive_timeout=20)
-            self.ldap_connection.bind()
+            self.ldap_connection = connect_to_server(self.server_addr, self.user_name, self.user_password,
+                                                     self.__use_ssl, self.__private_key_file, self.__cert_file,
+                                                     self.__ca_file)
 
             # Get domain configurations. The following have to be, they are critical values
             # like 'distinguishedName'.
@@ -483,12 +500,13 @@ class LdapConnection(object):
         # Get the whole subtree. We then organize it the way we want.
         dfsr_shares = dict()
         try:
-            dfsr_configurations_subtree = self._ldap_search("(|(objectClass=msDFSR-ReplicationGroup)(objectClass=msDFSR-ContentSet)(objectClass=msDFSR-Member))",
-                                                            attributes=['objectClass',
-                                                                        'distinguishedName',
-                                                                        'cn',
-                                                                        'msDFSR-ComputerReference'],
-                                                            search_base=search_base)
+            dfsr_configurations_subtree = self._ldap_search(
+                "(|(objectClass=msDFSR-ReplicationGroup)(objectClass=msDFSR-ContentSet)(objectClass=msDFSR-Member))",
+                attributes=['objectClass',
+                            'distinguishedName',
+                            'cn',
+                            'msDFSR-ComputerReference'],
+                search_base=search_base)
 
             # Since we get a lot of records of the same subtree, we need to build a tree here.
             # First, organize all records by the classes we need.
@@ -583,7 +601,7 @@ class LdapConnection(object):
             devices_count += 1
 
             if devices_count % 1000 == 0:
-                logger.debug(f"Got {devices_count} devices so far")     # this is also printer in pluginbase
+                logger.debug(f"Got {devices_count} devices so far")  # this is also printer in pluginbase
             yield device_dict
 
         if one_device is None:
@@ -703,7 +721,7 @@ class LdapConnection(object):
         d['devices'] = self.get_device_list()
         d['printers'] = self.get_printers_list()
         d['dfsr_shares'] = self.get_dfsr_shares()
-        d['sites'] = self.get_sites()   # subnets are part of sites so no need for extended subnets config
+        d['sites'] = self.get_sites()  # subnets are part of sites so no need for extended subnets config
         d['dhcp_servers'] = self.get_dhcp_servers()
         d['fsmo_roles'] = self.get_fsmo_roles()
         d['global_catalogs'] = self.get_global_catalogs()
@@ -758,6 +776,22 @@ class LdapConnection(object):
             f"Changing entity {distinguished_name} state from {user_account_control} to {new_user_account_control}")
 
         return self._ldap_modify(distinguished_name, {"userAccountControl": new_user_account_control})
+
+    def get_groups_of_user(self, username: str) -> Tuple[List[str], dict]:
+        """
+        Get all groups a user is in and also all user attributes
+        :param username: Name of user to find groups for
+        :return: List of strings (DNs of groups) or empty list if no result is found
+        """
+        search_filter = f'(&(objectCategory=person)(|(objectClass=user)(objectClass=inetOrgPerson))(cn={username}))'
+        result = list(self._ldap_search(search_filter, attributes=['memberOf']))
+        try:
+            if result:
+                return result[0]['memberOf'], result[0]
+        except Exception:
+            logger.exception(f"Can't fetch group of user {username}")
+            pass
+        return [], {}
 
     # Statistics
     def get_report_statistics(self):
@@ -946,7 +980,8 @@ class LdapConnection(object):
                 site_link_type = ldap_must_get_str(site_link, "distinguishedName").split(",")[1][3:]
                 site_link_sitelist = [sl.split(",")[0][3:] for sl in ldap_get(site_link, 'siteList', list, [])]
                 site_link_change_notification_enabled = (
-                    ldap_get(site_link, "options", int, 0) & SITE_LINK_OPTIONS_USE_NOTIFICATION) > 0
+                    ldap_get(site_link, "options", int,
+                             0) & SITE_LINK_OPTIONS_USE_NOTIFICATION) > 0
 
                 site_links.append({
                     "name": site_link_name,
@@ -1010,7 +1045,8 @@ class LdapConnection(object):
                 site_servers_count = 0
                 for server in self._ldap_search("(objectClass=server)",
                                                 attributes=["cn", "isDeleted", "isRecycled",
-                                                            "dNSHostName", "serverReference", "bridgeheadTransportList"],
+                                                            "dNSHostName", "serverReference",
+                                                            "bridgeheadTransportList"],
                                                 search_base=f"CN=Servers,CN={site_cn},CN=Sites,"
                                                             f"{self.configuration_naming_context}"):
                     if server.get("isDeleted") is True or server.get("isRecycled") is True:
@@ -1356,20 +1392,20 @@ class LdapConnection(object):
             logger.exception("error parsing domain trusts")
 
         return [{
-                "name": "Groups",
-                "fields": [{"Group": "group_name"}, {"Count": "count"}],
-                "data": [
-                    {"group_name": "Total Groups", "count": total_groups},
-                    {"group_name": "Builtin", "count": builtin},
-                    {"group_name": "Universal Security", "count": universal_security},
-                    {"group_name": "Universal Distribution", "count": universal_distribution},
-                    {"group_name": "Global Security", "count": global_security},
-                    {"group_name": "Global Distribution", "count": global_distribution},
-                    {"group_name": "Domain Local Security", "count": domain_local_security},
-                    {"group_name": "Domain Local Distribution", "count": domain_local_distribution},
-                ]
-                },
-                {
+            "name": "Groups",
+            "fields": [{"Group": "group_name"}, {"Count": "count"}],
+            "data": [
+                {"group_name": "Total Groups", "count": total_groups},
+                {"group_name": "Builtin", "count": builtin},
+                {"group_name": "Universal Security", "count": universal_security},
+                {"group_name": "Universal Distribution", "count": universal_distribution},
+                {"group_name": "Global Security", "count": global_security},
+                {"group_name": "Global Distribution", "count": global_distribution},
+                {"group_name": "Domain Local Security", "count": domain_local_security},
+                {"group_name": "Domain Local Distribution", "count": domain_local_distribution},
+            ]
+        },
+            {
                 "name": "Forest Summary",
                 "fields": [{"Name": "name"}, {"Value": "value"}],
                 "data": [
@@ -1383,8 +1419,8 @@ class LdapConnection(object):
                     {"name": "GC Server Count", "value": global_catalogs_count},
                     {"name": "Exchange Server Count", "value": exchange_servers_count},
                 ]
-                },
-                {
+        },
+            {
                 "name": "Forest Features",
                 "fields": [{"Name": "name"}, {"Value": "value"}],
                 "data": [
@@ -1392,8 +1428,8 @@ class LdapConnection(object):
                     {"name": "Tombstone Lifetime", "value": tombstone_lifetime},
                     {"name": "Exchange Version", "value": exchange_version},
                 ]
-                },
-                {
+        },
+            {
                 "name": "Site Summary",
                 "fields": [{"Name": "name"}, {"Value": "value"}],
                 "data": [
@@ -1406,8 +1442,8 @@ class LdapConnection(object):
                     {"name": "Sites Without Subnets", "value": forest_site_without_subnets},
                     {"name": "Sites Without Servers", "value": forest_site_without_servers},
                 ]
-                },
-                {
+        },
+            {
                 "name": "Forest Site Summary",
                 "fields": [
                     {"Name": "name"},
@@ -1417,8 +1453,8 @@ class LdapConnection(object):
                     {"Subnets": "subnets"}
                 ],
                 "data": forest_sites_summary
-                },
-                {
+        },
+            {
                 "name": "Forest Site Details",
                 "fields": [
                     {"Name": "name"},
@@ -1429,8 +1465,8 @@ class LdapConnection(object):
                     {"Adjacent Sites": "adjacent_sites"}
                 ],
                 "data": forest_site_details
-                },
-                {
+        },
+            {
                 "name": "Site Subnets",
                 "fields": [
                     {"Name": "name"},
@@ -1438,8 +1474,8 @@ class LdapConnection(object):
                     {"Location": "location"}
                 ],
                 "data": forest_subnets
-                },
-                {
+        },
+            {
                 "name": "Site Connections",
                 "fields": [
                     {"Enabled": "connection_enabled"},
@@ -1448,8 +1484,8 @@ class LdapConnection(object):
                     {"To": "sc_to"}
                 ],
                 "data": site_connections
-                },
-                {
+        },
+            {
                 "name": "Site Links",
                 "fields": [
                     {"Name": "name"},
@@ -1460,8 +1496,8 @@ class LdapConnection(object):
                     {"Change Notification Enabled": "change_notification_enabled"}
                 ],
                 "data": site_links
-                },
-                {
+        },
+            {
                 "name": "Domains",
                 "fields": [
                     {"Name": "name"},
@@ -1472,8 +1508,8 @@ class LdapConnection(object):
                     {"RIDs Remaining": "rids_remaining"}
                 ],
                 "data": domains_desc
-                },
-                {
+        },
+            {
                 "name": "Domain Password Policies",
                 "fields": [
                     {"Domain Name": "domain_name"},
@@ -1485,8 +1521,8 @@ class LdapConnection(object):
                     {"Min Password Length": "min_password_length"}
                 ],
                 "data": password_policies
-                },
-                {
+        },
+            {
                 "name": "Domain Trusts",
                 "fields": [
                     {"Domain Name": "domain"},
@@ -1498,8 +1534,8 @@ class LdapConnection(object):
                     {"When Changed": "changed"}
                 ],
                 "data": domain_trusts
-                },
-                {
+        },
+            {
                 "name": "Domain Integrated DNS Zones",
                 "fields": [
                     {"Domain": "domain"},
@@ -1510,8 +1546,8 @@ class LdapConnection(object):
                     {"When Changed": "zone_record_changed"}
                 ],
                 "data": dns_zones
-                },
-                {
+        },
+            {
                 "name": "Domain GPOs",
                 "fields": [
                     {"Name": "name"},
@@ -1519,5 +1555,5 @@ class LdapConnection(object):
                     {"When Changed": "when_changed"}
                 ],
                 "data": gpo_table
-                }
-                ]
+        }
+        ]

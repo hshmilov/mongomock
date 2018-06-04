@@ -4,7 +4,9 @@ import subprocess
 import time
 import pytest
 import os
-from active_directory_adapter.ldap_connection import LdapConnection, SSLState
+
+from axonius.clients.ldap.ldap_connection import LdapConnection
+from axonius.types.ssl_state import SSLState
 from testing.test_credentials.test_ad_credentials import ad_client1_details, PM_DEVICE_ADDRESS
 from axonius.utils.parsing import ad_integer8_to_timedelta
 from datetime import timedelta
@@ -33,8 +35,8 @@ WSUSSCN2_BINARY_LOCATION = os.path.abspath(
 
 @pytest.fixture(scope="module")
 def ldap_connection():
-    return LdapConnection(900, ADDRESS, USERNAME,
-                          PASSWORD, None, SSLState[SSLState.Unencrypted.name], bytes([]), bytes([]),
+    return LdapConnection(ADDRESS, USERNAME,
+                          PASSWORD, None, 900, SSLState[SSLState.Unencrypted.name], bytes([]), bytes([]),
                           bytes([]), True, True)
 
 

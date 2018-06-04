@@ -20,7 +20,7 @@ def fetch_jwk_for(okta_config, id_token=None):
     if id_token is None:
         raise NameError('id_token is required')
 
-    jwks_uri = f"{okta_config['okta_url']}/oauth2/v1/keys"
+    jwks_uri = f"{okta_config['url']}/oauth2/v1/keys"
 
     unverified_header = jws.get_unverified_header(id_token)
     if 'kid' in unverified_header:
@@ -49,7 +49,7 @@ def try_connecting_using_okta(okta_config) -> bool:
     >>this is code from Okta's example on how to implement Okta in flask<<
     :return: whether or not the request is legit
     """
-    if not okta_config.get('okta_enabled') is True:
+    if not okta_config.get('enabled') is True:
         return
     cookies = request.cookies
     if 'okta-oauth-nonce' in cookies and 'okta-oauth-state' in cookies:
@@ -67,11 +67,11 @@ def try_connecting_using_okta(okta_config) -> bool:
         'grant_type': 'authorization_code',
         'code': request.args.get('code'),
         'redirect_uri': f'{okta_config["gui_url"]}/api/okta-redirect',
-        'client_secret': okta_config['okta_client_secret'],
-        'client_id': okta_config['okta_client_id'],
+        'client_secret': okta_config['client_secret'],
+        'client_id': okta_config['client_id'],
     }
 
-    url = f"{okta_config['okta_url']}/oauth2/v1/token"
+    url = f"{okta_config['url']}/oauth2/v1/token"
 
     headers = {
         'Accept': 'application/json',
@@ -96,7 +96,7 @@ def try_connecting_using_okta(okta_config) -> bool:
             # Used for leeway on the "exp" claim
             'leeway': leeway
         },
-        'issuer': okta_config["okta_url "],
+        'issuer': okta_config["url"],
         'audience': '0oa15qw57jfeRloxd2p7'
     }
     if 'access_token' in return_value:

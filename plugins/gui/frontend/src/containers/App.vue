@@ -11,7 +11,7 @@
             <router-view/>
         </template>
         <template v-else>
-            <login-container :okta="okta_config"/>
+            <login-container :okta="okta_config" :ldap="ldap_config"/>
         </template>
     </div>
 </template>
@@ -20,7 +20,7 @@
     import TopBarContainer from './navigation/TopBarContainer.vue'
     import SideBarContainer from './navigation/SideBarContainer.vue'
     import LoginContainer from './auth/LoginContainer.vue'
-    import {GET_OKTA_SETTINGS, GET_USER} from '../store/modules/auth'
+    import {GET_LOGIN_OPTIONS, GET_USER} from '../store/modules/auth'
     import { FETCH_ADAPTERS } from '../store/modules/adapter'
 	import { mapState, mapActions } from 'vuex'
 	import '../components/icons'
@@ -44,7 +44,10 @@
         data() {
             return {
                 okta_config: {
-                    okta_enabled: false
+                    enabled: false
+                },
+                ldap_config: {
+                    enabled: false
                 }
             }
         },
@@ -57,7 +60,7 @@
         },
         methods: {
             ...mapActions({
-                getUser: GET_USER, getOkta: GET_OKTA_SETTINGS, fetchAdapters: FETCH_ADAPTERS,
+                getUser: GET_USER, getLoginSettings: GET_LOGIN_OPTIONS, fetchAdapters: FETCH_ADAPTERS,
                 loadPluginConfig: LOAD_PLUGIN_CONFIG
             }),
             fetchGlobalData() {
@@ -78,9 +81,10 @@
                     this.fetchGlobalData()
                 }
             })
-            this.getOkta().then(response => {
+            this.getLoginSettings().then(response => {
                 if (response.status === 200) {
-                    this.okta_config = response.data
+                    this.okta_config = response.data.okta
+                    this.ldap_config = response.data.ldap
                 }
             })
         }
