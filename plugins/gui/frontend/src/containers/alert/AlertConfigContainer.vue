@@ -60,6 +60,7 @@
                     <div class="header">Action</div>
                     <div class="content">
                         <x-checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
+                        <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenow"/>
                         <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog" @change="checkSyslogSettings"/>
                         <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
                                     v-model="actions.mail" @change="checkMailSettings"/>
@@ -151,7 +152,7 @@
                 alert: { triggers: {}, actions: [] },
                 currentQuery: {},
                 actions: {
-                	notification: false, mail: false, tag: false, syslog: false
+                	notification: false, mail: false, tag: false, syslog: false, servicenow: false
                 },
                 mailList: [],
                 tagName: '',
@@ -188,6 +189,9 @@
                             break
                         case 'notify_syslog':
                             this.actions.syslog = true
+                            break
+                        case 'create_service_now_incident':
+                            this.actions.servicenow = true
 					}
 				})
 				this.alert = { ...alert,
@@ -217,6 +221,11 @@
                 if (this.actions.syslog) {
                     this.alert.actions.push({
                         type: 'notify_syslog'
+                    })
+                }
+                if (this.actions.servicenow) {
+                    this.alert.actions.push({
+                        type: 'create_service_now_incident'
                     })
                 }
                 this.alert.query = this.currentQuery.name

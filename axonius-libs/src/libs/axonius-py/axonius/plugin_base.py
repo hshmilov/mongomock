@@ -1283,6 +1283,10 @@ class PluginBase(Configurable, Feature):
         self.__renew_global_settings_from_db()
         return ""
 
+    def create_service_now_incident(self, short_description, description, impact):
+        service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
+        self.request_remote_plugin('create_incident', 'service_now_adapter', 'post', json=service_now_dict)
+
     def send_syslog_message(self, message, log_level):
         syslog_settings = self._syslog_settings
         if syslog_settings['enabled'] is True:

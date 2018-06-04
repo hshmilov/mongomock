@@ -9,6 +9,7 @@ from service_now_adapter.consts import *
 from service_now_adapter.connection import ServiceNowConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import parse_date
+from axonius.plugin_base import add_rule, return_error
 
 
 class ServiceNowAdapter(AdapterBase):
@@ -97,6 +98,18 @@ class ServiceNowAdapter(AdapterBase):
             ],
             "type": "array"
         }
+
+    @add_rule('create_incident', methods=["POST"])
+    def create_service_now_incident(self):
+        if self.get_method() != 'POST':
+            return return_error("Medhod not supported", 405)
+        service_now_dict = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            success = success or self._clients[client_id].create_service_now_incident(service_now_dict)
+            if success is True:
+                return '', 200
+        return 'Failure', 400
 
     def _parse_raw_data(self, devices_raw_data):
         for table_devices_data in devices_raw_data:

@@ -288,6 +288,28 @@ class ReportsService(PluginBase, Triggerable):
             {'type': 'server'}) or {}
         return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?query={query_name}"
 
+    def _handle_action_create_service_now_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                                   action_data=None):
+        """ Create an incident in our ServiceNow acount
+        :param dict report_data: The report settings.
+        :param set triggered: triggered triggers set.
+        :param trigger_data: The results difference.
+        :param action_data: List of email addresses to send to.
+        """
+        log_message = report_consts.REPORT_CONTENT.format(name=report_data['name'],
+                                                          query=report_data['query'],
+                                                          num_of_triggers=report_data['triggered'],
+                                                          trigger_message=self._parse_action_content(
+                                                              report_data['triggers'], triggered),
+                                                          num_of_current_devices=current_num_of_devices,
+                                                          old_results_num_of_devices=len(report_data['result']),
+                                                          query_link=self._generate_query_link(
+                                                              report_data['query_entity'],
+                                                              report_data['query']))
+        alert_title = report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['query'])
+        self.create_service_now_incident(alert_title, log_message,
+                                         report_consts.SERVICE_NOW_SEVERITY.get(report_data['severity'], report_consts.SERVICE_NOW_SEVERITY['error']))
+
     def _handle_action_notify_syslog(self, report_data, triggered, trigger_data, current_num_of_devices,
                                      action_data=None):
         """ Sends an email to the list of e-mails
@@ -297,7 +319,8 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
-        log_message = report_consts.REPORT_CONTENT.format(query_name=report_data['name'],
+        log_message = report_consts.REPORT_CONTENT.format(name=report_data['name'],
+                                                          query=report_data['query'],
                                                           num_of_triggers=report_data['triggered'],
                                                           trigger_message=self._parse_action_content(
                                                               report_data['triggers'], triggered),
@@ -319,9 +342,9 @@ class ReportsService(PluginBase, Triggerable):
         """
         mail_sender = self.mail_sender
         if mail_sender:
-            mail_sender.new_email(report_consts.REPORT_TITLE.format(query_name=report_data['name']), action_data) \
+            mail_sender.new_email(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['query']), action_data) \
                 .send(report_consts.REPORT_CONTENT_HTML.format(
-                    query_name=report_data['name'], num_of_triggers=report_data['triggered'],
+                    name=report_data['name'], query=report_data['query'], num_of_triggers=report_data['triggered'],
                     trigger_message=self._parse_action_content(report_data['triggers'], triggered),
                     num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
                     old_results_num_of_devices=len(report_data['result']),
@@ -338,8 +361,9 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: None.
         """
-        self.create_notification(report_consts.REPORT_TITLE.format(query_name=report_data['name']),
-                                 report_consts.REPORT_CONTENT.format(query_name=report_data['name'],
+        self.create_notification(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['query']),
+                                 report_consts.REPORT_CONTENT.format(name=report_data['name'],
+                                                                     query=report_data['query'],
                                                                      num_of_triggers=report_data['triggered'],
                                                                      trigger_message=self._parse_action_content(
                                                                          report_data['triggers'], triggered),

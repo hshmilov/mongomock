@@ -18,13 +18,19 @@ class Actions(Enum):
     Tag_Devices = auto()
 
 
-REPORT_TITLE = "Axonius Alert for Query: {query_name}"
+SERVICE_NOW_SEVERITY = {
+    'info': 3,
+    'warning': 2,
+    'error': 1
+}
+
+REPORT_TITLE = 'Axonius Alert - "{name}" for Query: {query}'
 
 REPORT_CONTENT_HTML = """\
 <html>
   <head></head>
   <body>
-    <p>An alert for the following query has been triggered: {query_name}<br><br>
+    <p>Alert - \"{name}\" for the following query has been triggered: {query}<br><br>
        <b>Alert Details</b><br>
        Number of times this alert has been triggered:{num_of_triggers}<br>
        The alert was triggered because:the number of devices has {trigger_message}<br>
@@ -36,4 +42,4 @@ REPORT_CONTENT_HTML = """\
 </html>
 """
 
-REPORT_CONTENT = "An alert for the following query has been triggered: {query_name}\n\nAlert Details\nNumber of times this alert has been triggered:{num_of_triggers}\nThe alert was triggered because:the number of devices has {trigger_message}\nThe number of devices returned by the query:{num_of_current_devices}\nThe previous number of devices was:{old_results_num_of_devices}\n\nYou can view the query and its results here:{query_link}"
+REPORT_CONTENT = "Alert - \"{name}\" for the following query has been triggered: {query}\n\nAlert Details\nNumber of times this alert has been triggered:{num_of_triggers}\nThe alert was triggered because:the number of devices has {trigger_message}\nThe number of devices returned by the query:{num_of_current_devices}\nThe previous number of devices was:{old_results_num_of_devices}\n\nYou can view the query and its results here:{query_link}"

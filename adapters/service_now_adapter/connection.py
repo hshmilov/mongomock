@@ -3,6 +3,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from service_now_adapter.consts import *
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.consts import report_consts
 
 
 class ServiceNowConnection(RESTConnection):
@@ -45,5 +46,13 @@ class ServiceNowConnection(RESTConnection):
     def __add_dict_to_table(self, table_name, dict_data):
         self._post(f"table/{str(table_name)}", body_params=dict_data)
 
-    def create_incident(self):
-        self.__add_dict_to_table("incident", {})
+    def create_service_now_incident(self, service_now_dict):
+        impact = service_now_dict.get('impact', report_consts.SERVICE_NOW_SEVERITY['error'])
+        short_description = service_now_dict.get('short_description', "")
+        description = service_now_dict.get('description', "")
+        try:
+            self.add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
+                                                'short_description ': short_description, 'description': description})
+            return True
+        except Exception:
+            return False
