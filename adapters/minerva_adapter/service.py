@@ -5,9 +5,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
+from axonius.clients.rest.exception import RESTException
 from minerva_adapter.connection import MinervaConnection
-from minerva_adapter.exceptions import MinervaException
 from axonius.utils.parsing import parse_date
 
 
@@ -20,33 +19,36 @@ class MinervaAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['Minerva_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = MinervaConnection(domain=client_config["Minerva_Domain"],
-                                           is_ssl=client_config["is_ssl"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = MinervaConnection(domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
+                                           username=client_config["username"], password=client_config["password"],
+                                           url_base_prefix="owl/api/", headers={'Content-Type': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except MinervaException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Minerva_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """
-        Get all devices from a specific Minerva domain
+        Get all devices from a specific  domain
 
         :param str client_name: The name of the client
-        :param obj client_data: The data that represent a Minerva connection
+        :param obj client_data: The data that represent a connection
 
-        :return: A json with all the attributes returned from the Minerva Server
+        :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -73,21 +75,15 @@ class MinervaAdapter(AdapterBase):
                     "format": "password"
                 },
                 {
-                    "name": "is_ssl",
-                    "title": "Is SSL",
-                    "type": "bool"
-                },
-                {
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
                 }
             ],
             "required": [
-                "Minerva_Domain",
+                "domain",
                 "username",
                 "password",
-                "is_ssl",
                 "verify_ssl"
             ],
             "type": "array"

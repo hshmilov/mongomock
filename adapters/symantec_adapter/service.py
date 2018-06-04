@@ -6,8 +6,9 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from symantec_adapter.connection import SymantecConnection
-from symantec_adapter.exceptions import SymantecException
+from axonius.clients.rest.exception import RESTException
 import datetime
+from symantec_adapter import consts
 
 
 class SymantecAdapter(AdapterBase):
@@ -20,21 +21,24 @@ class SymantecAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['SEPM_Address']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = SymantecConnection(domain=client_config["SEPM_Address"],
-                                            port=(client_config["SEPM_Port"] if "SEPM_Port" in client_config else None),
-                                            verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"],
-                                       domain=client_config.get("domain") or "")
+            connection = SymantecConnection(domain=client_config["domain"],
+                                            port=client_config.get("port", consts.DEFAULT_SYMANTEC_PORT),
+                                            verify_ssl=client_config["verify_ssl"],
+                                            username=client_config["username"], password=client_config["password"],
+                                            username_domain=(client_config.get("username_domain") or ""),
+                                            https_proxy=client_config.get("https_proxy"),
+                                            url_base_prefix="sepm/api/v1/",
+                                            headers={'Content-Type': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except SymantecException as e:
+        except RESTException as e:
             message = "Error connecting to client with address {0} and port {1}, reason: {2}".format(
-                client_config['SEPM_Address'], client_config['SEPM_Port'], str(e))
+                client_config['domain'], str(client_config.get("port", consts.DEFAULT_SYMANTEC_PORT)), str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -47,20 +51,11 @@ class SymantecAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Symantec Server
         """
-        with client_data:
-            page_num = 1
-            client_list = []
-            last_page = False
-            while not last_page:
-                try:
-                    current_clients_page = client_data.get_device_iterator(pageSize='1000', pageIndex=page_num)
-                    client_list.extend(current_clients_page['content'])
-                    last_page = current_clients_page['lastPage']
-                except Exception:
-                    logger.exception(f"Got error on page {page_num}, skipping")
-                page_num += 1
-                logger.info(f"Got {page_num*1000} devices so far")
-            return client_list
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -71,12 +66,12 @@ class SymantecAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "SEPM_Address",
+                    "name": "domain",
                     "title": "Symantec Endpoint Management Address",
                     "type": "string"
                 },
                 {
-                    "name": "SEPM_Port",
+                    "name": "port",
                     "title": "Port",
                     "description": "Symantec Endpoint Management Port (Default is 8446)",
                     "type": "number"
@@ -93,7 +88,7 @@ class SymantecAdapter(AdapterBase):
                     "format": "password"
                 },
                 {
-                    "name": "domain",
+                    "name": "username_domain",
                     "title": "Domain",
                     "type": "string"
                 },
@@ -101,10 +96,15 @@ class SymantecAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS proxy",
+                    "type": "string"
                 }
             ],
             "required": [
-                "SEPM_Address",
+                "domain",
                 "username",
                 "password",
                 "verify_ssl"
@@ -144,26 +144,6 @@ class SymantecAdapter(AdapterBase):
             device.id = device_raw['agentId']
             device.set_raw(device_raw)
             yield device
-
-    def _correlation_cmds(self):
-        """
-        Correlation commands for Symantec
-        :return: shell commands that help correlations
-        """
-        logger.error("correlation_cmds is not implemented for symantec adapter")
-        raise NotImplementedError("correlation_cmds is not implemented for symantec adapter")
-
-    def _parse_correlation_results(self, correlation_cmd_result, os_type):
-        """
-        Parses (very easily) the correlation cmd result, or None if failed
-        :type correlation_cmd_result: str
-        :param correlation_cmd_result: result of running cmd on a machine
-        :type os_type: str
-        :param os_type: the type of machine ran upon
-        :return:
-        """
-        logger.error("_parse_correlation_results is not implemented for symantec adapter")
-        raise NotImplementedError("_parse_correlation_results is not implemented for symantec adapter")
 
     @classmethod
     def adapter_properties(cls):

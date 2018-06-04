@@ -90,8 +90,9 @@ class KaseyaConnection(object):
         session = requests.Session()
         if self.username is not None and self.password is not None:
             self.headers['Authorization'] = "Basic " + self.generate_auth()
-            response = session.get(self._get_url_request('auth'), headers=self.headers, verify=self.verify_ssl)
             try:
+                response = session.get(self._get_url_request('auth'), headers=self.headers,
+                                       verify=self.verify_ssl, timeout=(5, 30))
                 response.raise_for_status()
                 self.headers['Authorization'] = "Bearer " + response.json()["Result"]["Token"]
                 logger.debug(f"Got this auth response {response.text}")
@@ -121,9 +122,9 @@ class KaseyaConnection(object):
         if not self.is_connected:
             raise KaseyaNotConnected()
         params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params,
-                                     headers=self.headers, verify=self.verify_ssl)
         try:
+            response = self.session.post(self._get_url_request(name), json=params,
+                                         headers=self.headers, verify=self.verify_ssl, timeout=(5, 30))
             response.raise_for_status()
         except requests.HTTPError as e:
             raise KaseyaRequestException(str(e))
@@ -140,9 +141,9 @@ class KaseyaConnection(object):
         if not self.is_connected:
             raise KaseyaNotConnected()
         params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, verify=self.verify_ssl)
         try:
+            response = self.session.get(self._get_url_request(name), params=params,
+                                        headers=self.headers, verify=self.verify_ssl, timeout=(5, 30))
             response.raise_for_status()
         except requests.HTTPError as e:
             raise KaseyaRequestException(str(e))

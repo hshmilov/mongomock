@@ -5,11 +5,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
+from axonius.clients.rest.exception import RESTException
 from carbonblack_defense_adapter.connection import CarbonblackDefenseConnection
-from carbonblack_defense_adapter.exceptions import CarbonblackDefenseException
-import json
-from axonius.utils.parsing import parse_date
 import datetime
 
 
@@ -26,20 +23,24 @@ class CarbonblackDefenseAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config['CarbonblackDefense_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = CarbonblackDefenseConnection(
-                domain=client_config["CarbonblackDefense_Domain"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(apikey=client_config["apikey"],
-                                       connector_id=client_config["connector_id"])
+            connection = CarbonblackDefenseConnection(domain=client_config["domain"],
+                                                      verify_ssl=client_config["verify_ssl"],
+                                                      https_proxy=client_config.get("https_proxy"),
+                                                      headers={'Content-Type': 'application/json',
+                                                               'Accept': 'application/json',
+                                                               'X-Auth-Token': f"{client_config['apikey']}/"
+                                                               f"{client_config['connector_id']}"},
+                                                      url_base_prefix="integrationServices/v3/")
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except CarbonblackDefenseException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['CarbonblackDefense_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -52,8 +53,11 @@ class CarbonblackDefenseAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Carbonblack Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -64,7 +68,7 @@ class CarbonblackDefenseAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "CarbonblackDefense_Domain",
+                    "name": "domain",
                     "title": "Carbonblack Defense Domain",
                     "type": "string"
                 },
@@ -83,10 +87,15 @@ class CarbonblackDefenseAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "Https Proxy",
+                    "type": "string"
                 }
             ],
             "required": [
-                "CarbonblackDefense_Domain",
+                "domain",
                 "apikey",
                 "connector_id",
                 "verify_ssl"

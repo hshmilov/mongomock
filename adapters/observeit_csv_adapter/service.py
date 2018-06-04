@@ -7,6 +7,7 @@ from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
 from axonius.utils.parsing import make_dict_from_csv
+from axonius.adapter_exceptions import GetDevicesError
 
 
 class ObserveitCsvAdapter(AdapterBase):
@@ -60,10 +61,10 @@ class ObserveitCsvAdapter(AdapterBase):
         # We need the domain in the adapter to get correlations
         if domain is None or domain == "":
             logger.error("No domain")
-            return
+            raise GetDevicesError("No domain")
         if "Endpoint Name" not in raw_data['csv'].fieldnames:
             logger.error(f"Bad fields names{str(raw_data['csv'].fieldnames)}")
-            return
+            raise GetDevicesError(f"Bad fields names{str(raw_data['csv'].fieldnames)}")
         for device_raw in raw_data['csv']:
             try:
                 device = self._new_device_adapter()

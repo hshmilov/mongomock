@@ -40,7 +40,8 @@ class PuppetConnection(object):
              :raises a PuppetException if a problems occurs in the response from the server or if ssh problems.
         """
         try:
-            query_response = self._session.get(f"{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes")
+            query_response = self._session.get(
+                f"{self._base_puppet_url}{consts.PUPPET_API_PREFIX}/nodes", timeout=(5, 30))
         except requests.RequestException as err:
             logger.exception("Error in querying the nodes from the puppet server." +
                              " Error information:{0}".format(str(err)))
@@ -69,7 +70,7 @@ class PuppetConnection(object):
 
         try:
             url = f"{self._base_puppet_url }{consts.PUPPET_API_PREFIX}/nodes/{basic_json_node['certname']}/facts"
-            query_response = self._session.get(url)
+            query_response = self._session.get(url, timeout=(5, 30))
         except requests.RequestException as err:
             raise PuppetException(str(err))
 

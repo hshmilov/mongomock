@@ -11,7 +11,7 @@ class TestDesktopCentralAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['DesktopCentral_Domain']
+        return client_details['domain']
 
     @property
     def some_client_details(self):
@@ -20,7 +20,3 @@ class TestDesktopCentralAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Desktop central is down")
-    def test_fetch_devices(self):
-        pass

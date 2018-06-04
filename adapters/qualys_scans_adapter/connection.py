@@ -90,7 +90,7 @@ class QualysScansConnection(object):
                                                        response.text, str(kwargs))
                 else:
                     logger.exception('Qualys request exception. {0}'.format(str(e)), response.text)
-                raise e
+                raise QualysScansConnectionError(f"Got error in Qualys {str(e)}")
 
     def get(self, name, headers=None, auth=None, params=None):
         """ Serves a POST request to QualysScans API
@@ -102,7 +102,7 @@ class QualysScansConnection(object):
         :return: the service response or raises an exception if it's not 200
         """
         return self._qualys_api_request(requests.get, self._get_url_request(name), retries=3, max_seconds=30,
-                                        headers=headers, auth=auth, params=params)
+                                        headers=headers, auth=auth, params=params, timeout=(5, 30))
 
     def __enter__(self):
         self.connect()

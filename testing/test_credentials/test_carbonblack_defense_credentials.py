@@ -1,5 +1,5 @@
 client_details = {
-    "CarbonblackDefense_Domain": "https://api5.conferdeploy.net/",
+    "domain": "https://api5.conferdeploy.net/",
     "apikey": "QRCFVY4YJU3ZQA3RLMN7JEJG",
     "connector_id": "MSZSPH1VSB",
     "verify_ssl": True

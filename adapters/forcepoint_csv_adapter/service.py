@@ -6,6 +6,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
+from axonius.adapter_exceptions import GetDevicesError
 
 
 class ForcepointCsvAdapter(AdapterBase):
@@ -54,7 +55,7 @@ class ForcepointCsvAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         if "Hostname" not in raw_data.fieldnames:
             logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
-            return
+            raise GetDevicesError(f"Bad fields names{str(raw_data.fieldnames)}")
         for device_raw in raw_data:
             try:
                 device = self._new_device_adapter()

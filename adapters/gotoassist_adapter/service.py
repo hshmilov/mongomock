@@ -64,7 +64,8 @@ class GotoassistAdapter(AdapterBase):
                 {
                     "name": "client_secret",
                     "title": "Client Secret",
-                    "type": "string"
+                    "type": "string",
+                    "format": "password"
                 },
                 {
                     "name": "user_name",

@@ -184,7 +184,7 @@ class SentineloneAdapter(AdapterBase):
         if os_type in sentinelone_ID_Matcher:
             return next(sentinelone_ID_Matcher[os_type].findall(correlation_cmd_result.strip()), None)
         else:
-            logger.warn("The OS type {0} doesn't have a sentinelone matcher", os_type)
+            logger.warning("The OS type {0} doesn't have a sentinelone matcher", os_type)
             return None
 
     @classmethod

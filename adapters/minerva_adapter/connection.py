@@ -1,131 +1,38 @@
-import requests
+from axonius.clients.rest.connection import RESTConnection
+from minerva_adapter import consts
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
+from axonius.clients.rest.exception import RESTException
 
-from minerva_adapter.exceptions import MinervaAlreadyConnected, MinervaConnectionError, MinervaNotConnected, \
-    MinervaRequestException
 
+class MinervaConnection(RESTConnection):
 
-class MinervaConnection(object):
-    def __init__(self, domain, is_ssl, verify_ssl):
-        """ Initializes a connection to Minerva using its rest API
-
-        :param str domain: domain address for Minerva
-        :param bool verify_ssl Verify the ssl
-        """
-        self.domain = domain
-        self._is_ssl = is_ssl
-        url = domain
-        if self._is_ssl and (not url.lower().startswith('https://')):
-            url = 'https://' + url
-
-        if not self._is_ssl and (not url.lower().startswith('http://')):
-            url = 'http://' + url
-        if not url.endswith('/'):
-            url += '/'
-        url += 'owl/api/'
-        self.url = url
-        self.session = None
-        self.username = None
-        self.password = None
-        self.verify_ssl = verify_ssl
-        self.headers = {'Content-Type': 'application/json'}
-
-    def set_credentials(self, username, password):
-        """ Set the connection credentials
-
-        :param str username: The username
-        :param str password: The password
-        """
-        self.username = username
-        self.password = password
-
-    def _get_url_request(self, request_name):
-        """ Builds and returns the full url for the request
-
-        :param request_name: the request name
-        :return: the full request url
-        """
-        return self.url + request_name
-
-    @property
-    def is_connected(self):
-        return self.session is not None
-
-    def connect(self):
-        """ Connects to the service """
-        if self.is_connected:
-            raise MinervaAlreadyConnected()
-        session = requests.Session()
-        if self.username is not None and self.password is not None:
-            connection_dict = {'username': self.username,
-                               'password': self.password}
-            response = session.post(self._get_url_request('login'), json=connection_dict, verify=self.verify_ssl)
-            try:
-                response.raise_for_status()
-            except requests.HTTPError as e:
-                raise MinervaConnectionError(str(e))
+    def _connect(self):
+        if self._username is not None and self._password is not None:
+            connection_dict = {'username': self._username,
+                               'password': self._password}
+            self._post("login", body_params=connection_dict)
         else:
-            raise MinervaConnectionError("No user name or password")
-        self.session = session
+            raise RESTException("No user name or password")
 
-    def __del__(self):
-        if hasattr(self, 'session') and self.is_connected:
-            self.close()
-
-    def close(self):
-        """ Closes the connection """
-        self.session.close()
-        self.session = None
-
-    def _post(self, name, params=None):
-        """ Serves a POST request to Minerva API
-
-        :param str name: the name of the request
-        :param dict params: Additional parameters
-        :return: the response
-        :rtype: dict
-        """
-        if not self.is_connected:
-            raise MinervaNotConnected()
-        params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params,
-                                     headers=self.headers, verify=self.verify_ssl)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            raise MinervaRequestException(str(e))
-        return response.json()
-
-    def _get(self, name, params=None):
-        """ Serves a GET request to Minerva API
-
-        :param str name: the name of the request
-        :param dict params: Additional parameters
-        :return: the response
-        :rtype: dict
-        """
-        if not self.is_connected:
-            raise MinervaNotConnected()
-        params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, verify=self.verify_ssl)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            raise MinervaRequestException(str(e))
-        return response.json()
-
-    def get_device_list(self, **kwargs):
-        """ Returns a list of all agents
-
-        :param dict kwargs: api query *string* parameters (ses Minerva's API documentation for more info)
-        :return: the response
-        :rtype: dict
-        """
-        return self._post('endpoints', params={'page': {'index': 1, 'length': 100000}})
-
-    def __enter__(self):
-        self.connect()
-        return self
-
-    def __exit__(self, type, value, tb):
-        self.close()
+    def get_device_list(self):
+        devices_list = self._post('endpoints', body_params={
+            'page': {'index': '1', 'length': str(consts.DEVICES_PER_PAGE)}})
+        if devices_list == []:
+            return
+        exception_in_fetch = 0
+        yield from devices_list
+        for page in range(1, consts.PAGES_MAX):
+            try:
+                devices_list = self._post('endpoints', body_params={'page': {'index': str(
+                    page * consts.DEVICES_PER_PAGE), 'length': str(consts.DEVICES_PER_PAGE)}})
+                if devices_list == []:
+                    break
+                exception_in_fetch = 0
+                yield from devices_list
+            except Exception:
+                # stop after three bad pages
+                if exception_in_fetch == 3:
+                    break
+                exception_in_fetch += 1
+                logger.exception(f"Problem getting page {str(page)}")

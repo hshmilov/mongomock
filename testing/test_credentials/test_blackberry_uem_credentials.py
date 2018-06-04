@@ -1,6 +1,6 @@
 
 client_details = {
-    "BlackberryUem_Domain": "https://win-d14vsgs3c0g.testdomain.test",
+    "domain": "https://win-d14vsgs3c0g.testdomain.test",
     "username": "admin",
     "password": "Axonius1",
     "tenant_guid": "S64093102",

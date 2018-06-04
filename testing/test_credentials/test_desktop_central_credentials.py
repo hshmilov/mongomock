@@ -1,9 +1,9 @@
 
 client_details = {
-    "DesktopCentral_Domain": "http://10.0.229.30:8020",
+    "domain": "http://10.0.2.178",
     "username": "admin",
     "password": "admin",
     "verify_ssl": False
 }
 
-SOME_DEVICE_ID = '303'
+SOME_DEVICE_ID = '342'

@@ -54,9 +54,9 @@ class CarbonblackResponseConnection(object):
             raise CarbonblackResponseAlreadyConnected()
         session = requests.Session()
         if self.username is not None and self.password is not None:
-            response = session.get(self._get_url_request('auth'), verify=self.verify_ssl, headers=self.headers,
-                                   auth=requests.auth.HTTPDigestAuth(self.username, self.password))
             try:
+                response = session.get(self._get_url_request('auth'), verify=self.verify_ssl, headers=self.headers,
+                                       auth=requests.auth.HTTPDigestAuth(self.username, self.password), timeout=(5, 30))
                 response.raise_for_status()
                 logger.debug(f"Got auth response {response.text}")
             except requests.HTTPError as e:
@@ -86,7 +86,7 @@ class CarbonblackResponseConnection(object):
             raise CarbonblackResponseNotConnected()
         params = params or {}
         response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, verify=self.verify_ssl)
+                                    headers=self.headers, verify=self.verify_ssl, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

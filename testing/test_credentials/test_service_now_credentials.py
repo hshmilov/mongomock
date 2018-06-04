@@ -1,6 +1,6 @@
 
 client_details = {
-    "ServiceNow_Domain": "https://dev49656.service-now.com",
+    "domain": "https://dev49656.service-now.com",
     "username": "admin",
     "password": "Zl35RnMaYVgw",
     "verify_ssl": True

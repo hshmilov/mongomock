@@ -1,6 +1,6 @@
 
 client_details = {
-    "Infoblox_Domain": "",
+    "domain": "",
     "username": "",
     "password": "",
     "verify_ssl": False

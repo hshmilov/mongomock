@@ -29,7 +29,8 @@ class CarbonblackProtectionAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = CarbonblackProtectionConnection(
-                domain=client_config["CarbonblackProtection_Domain"], verify_ssl=client_config["verify_ssl"])
+                domain=client_config["CarbonblackProtection_Domain"],
+                verify_ssl=client_config["verify_ssl"], https_proxy=client_config.get("https_proxy"))
             connection.set_credentials(apikey=client_config["apikey"])
             with connection:
                 pass  # check that the connection credentials are valid
@@ -75,7 +76,13 @@ class CarbonblackProtectionAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "Https Proxy",
+                    "type": "string"
                 }
+
             ],
             "required": [
                 "CarbonblackProtection_Domain",

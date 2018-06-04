@@ -5,6 +5,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.adapter_exceptions import GetDevicesError
 
 
 class CsvAdapter(AdapterBase):
@@ -49,7 +50,7 @@ class CsvAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         if "Serial" not in raw_data.fieldnames:
             logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
-            return
+            raise GetDevicesError(f"Bad fields names{str(raw_data.fieldnames)}")
         for device_raw in raw_data:
             try:
                 device = self._new_device_adapter()

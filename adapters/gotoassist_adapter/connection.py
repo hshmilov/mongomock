@@ -72,10 +72,10 @@ class GotoassistConnection(object):
         else:
             raise GotoassistConnectionError("Missing arguement")
         if self.gotoassist_code is not None:
-            response = session.post(self._get_url_request('/oauth/v2/token'), auth=(self.client_id, self.client_secret),
-                                    data={'grant_type': 'authorization_code', 'code': self.gotoassist_code},
-                                    headers=self.headers)
             try:
+                response = session.post(self._get_url_request('/oauth/v2/token'), auth=(self.client_id, self.client_secret),
+                                        data={'grant_type': 'authorization_code', 'code': self.gotoassist_code},
+                                        headers=self.headers, timeout=(5, 30))
                 response.raise_for_status()
                 self.headers['Authorization'] = "OAuth oauth_token=" + str(response.json()["access_token"])
             except requests.HTTPError as e:
@@ -104,7 +104,7 @@ class GotoassistConnection(object):
         if not self.is_connected:
             raise GotoassistNotConnected()
         params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers)
+        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -122,7 +122,7 @@ class GotoassistConnection(object):
         if not self.is_connected:
             raise GotoassistNotConnected()
         params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params, headers=self.headers)
+        response = self.session.get(self._get_url_request(name), params=params, headers=self.headers, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

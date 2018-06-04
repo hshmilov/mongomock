@@ -62,8 +62,8 @@ class SentinelOneConnection(object):
         if self.username is not None and self.password is not None:
             connection_dict = {'username': self.username,
                                'password': self.password}
-            response = session.post(self._get_url_request('users/login'), json=connection_dict)
             try:
+                response = session.post(self._get_url_request('users/login'), json=connection_dict, timeout=(5, 30))
                 response.raise_for_status()
             except requests.HTTPError as e:
                 raise SentinelOneConnectionError(str(e))
@@ -111,7 +111,7 @@ class SentinelOneConnection(object):
         if not self.is_connected:
             raise SentinelOneNotConnected()
         params = params or {}
-        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers)
+        response = self.session.post(self._get_url_request(name), json=params, headers=self.headers, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -129,7 +129,7 @@ class SentinelOneConnection(object):
         if not self.is_connected:
             raise SentinelOneNotConnected()
         params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params, headers=self.headers)
+        response = self.session.get(self._get_url_request(name), params=params, headers=self.headers, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

@@ -10,6 +10,7 @@ from axonius.utils.parsing import make_dict_from_csv
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
+from axonius.adapter_exceptions import GetDevicesError
 
 
 class NessusCsvScan(SmartJsonClass):
@@ -65,7 +66,7 @@ class NessusCsvAdapter(ScannerAdapterBase):
     def _parse_raw_data(self, raw_data):
         if "Host" not in raw_data.fieldnames:
             logger.error(f"Bad fields names{str(raw_data.fieldnames)}")
-            return
+            raise GetDevicesError(f"Bad fields names{str(raw_data.fieldnames)}")
         raw_data = list(raw_data)
         ip_addresses = list(set([host_scan_raw.get("Host") or "" for host_scan_raw in raw_data]))
         ip_addresses_data_dict = {}

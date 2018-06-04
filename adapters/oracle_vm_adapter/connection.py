@@ -53,9 +53,9 @@ class OracleVmConnection(object):
             raise OracleVmAlreadyConnected()
         session = requests.Session()
         if self.username is not None and self.password is not None:
-            response = session.get(self._get_url_request('Manager'), auth=(
-                self.username, self.password), verify=self.verify_ssl)
             try:
+                response = session.get(self._get_url_request('Manager'), auth=(
+                    self.username, self.password), verify=self.verify_ssl, timeout=(5, 30))
                 response.raise_for_status()
                 if response.json()[0].upper() != 'RUNNING':
                     raise OracleVmConnectionError(f"Server not in Running mode. Response was {response.text}")
@@ -86,7 +86,7 @@ class OracleVmConnection(object):
             raise OracleVmNotConnected()
         params = params or {}
         response = self.session.post(self._get_url_request(name), json=params,
-                                     headers=self.headers, verify=self.verify_ssl)
+                                     headers=self.headers, verify=self.verify_ssl, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -105,7 +105,7 @@ class OracleVmConnection(object):
             raise OracleVmNotConnected()
         params = params or {}
         response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, verify=self.verify_ssl)
+                                    headers=self.headers, verify=self.verify_ssl, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

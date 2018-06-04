@@ -64,7 +64,7 @@ class BomgarConnection(object):
             raise BomgarAlreadyConnected()
         session = requests.Session()
         response = session.post(self.oauth2_url, data={'grant_type': 'client_credentials'}, auth=(self.client_id,
-                                                                                                  self.client_secret))
+                                                                                                  self.client_secret), timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
@@ -84,7 +84,7 @@ class BomgarConnection(object):
             raise BomgarNotConnected()
         params = params or {}
         url = self._get_url_command(action) if command else self.report_url
-        response = self.session.get(url, params=params, headers=self.headers, stream=True)
+        response = self.session.get(url, params=params, headers=self.headers, stream=True, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

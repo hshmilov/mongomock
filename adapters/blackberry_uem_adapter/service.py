@@ -5,9 +5,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
+from axonius.clients.rest.exception import RESTException
 from blackberry_uem_adapter.connection import BlackberryUemConnection
-from blackberry_uem_adapter.exceptions import BlackberryUemException
 from axonius.utils.parsing import parse_date
 
 
@@ -25,21 +24,23 @@ class BlackberryUemAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['BlackberryUem_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = BlackberryUemConnection(domain=client_config["BlackberryUem_Domain"],
+
+            connection = BlackberryUemConnection(domain=client_config["domain"],
                                                  verify_ssl=client_config["verify_ssl"],
-                                                 tenant_guid=client_config["tenant_guid"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"],
-                                       username_domain=client_config.get("username_domain"))
+                                                 https_proxy=client_config.get("https_proxy"),
+                                                 username=client_config["username"], password=client_config["password"],
+                                                 username_domain=client_config.get("username_domain"), port=18084,
+                                                 url_base_prefix=f"{client_config['tenant_guid']}/api/v1/")
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except BlackberryUemException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['BlackberryUem_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -52,8 +53,12 @@ class BlackberryUemAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the BlackberryUem Server
         """
-        with client_data:
-            return client_data.get_device_list()
+
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -64,7 +69,7 @@ class BlackberryUemAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "BlackberryUem_Domain",
+                    "name": "domain",
                     "title": "BlackberryUem Domain",
                     "type": "string"
                 },
@@ -93,10 +98,15 @@ class BlackberryUemAdapter(AdapterBase):
                     "name": "username_domain",
                     "title": "Username Domain",
                     "type": "string"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "Https Proxy",
+                    "type": "string"
                 }
             ],
             "required": [
-                "BlackberryUem_Domain",
+                "domain",
                 "username",
                 "password",
                 "tenant_guid",

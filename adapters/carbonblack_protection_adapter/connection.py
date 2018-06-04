@@ -8,7 +8,7 @@ from carbonblack_protection_adapter.exceptions import CarbonblackProtectionAlrea
 
 
 class CarbonblackProtectionConnection(object):
-    def __init__(self, domain, verify_ssl):
+    def __init__(self, domain, verify_ssl, https_proxy):
         """ Initializes a connection to CarbonblackProtection using its rest API
 
         :param str domain: domain address for CarbonblackProtection
@@ -25,6 +25,11 @@ class CarbonblackProtectionConnection(object):
         self.session = None
         self.verify_ssl = verify_ssl
         self.headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+        self.proxies = {}
+        self.proxies['http'] = None
+        if https_proxy is not None:
+            self.proxies['https'] = https_proxy
+        logger.info(f"Proxies: {self.proxies}")
 
     def set_credentials(self, apikey):
         """ Set the connection credentials
@@ -52,9 +57,10 @@ class CarbonblackProtectionConnection(object):
         session = requests.Session()
         if self.apikey is not None:
             self.headers['X-Auth-Token'] = self.apikey
-            response = session.get(self._get_url_request('computer'), params={
-                                   "offset": str(0), "limit": str(1)}, verify=self.verify_ssl, headers=self.headers)
             try:
+                response = session.get(self._get_url_request('computer'), params={
+                                       "offset": str(0), "limit": str(1)}, verify=self.verify_ssl,
+                                       headers=self.headers, timeout=(5, 30), proxies=self.proxies)
                 response.raise_for_status()
             except requests.HTTPError as e:
                 raise CarbonblackProtectionConnectionError(str(e))
@@ -82,9 +88,9 @@ class CarbonblackProtectionConnection(object):
         if not self.is_connected:
             raise CarbonblackProtectionNotConnected()
         params = params or {}
-        response = self.session.get(self._get_url_request(name), params=params,
-                                    headers=self.headers, verify=self.verify_ssl)
         try:
+            response = self.session.get(self._get_url_request(name), params=params,
+                                        headers=self.headers, verify=self.verify_ssl, timeout=(5, 30), proxies=self.proxies)
             response.raise_for_status()
         except requests.HTTPError as e:
             raise CarbonblackProtectionRequestException(str(e))

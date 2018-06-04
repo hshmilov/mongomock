@@ -2,7 +2,8 @@
 client_details = {
     "host": "10.0.2.188",
     "username": "Nessus",
-    "password": "NessusRocks"
+    "password": "NessusRocks",
+    "verify_ssl": False
 }
 
 SOME_DEVICE_ID = "192.168.20.3"  # our storage server

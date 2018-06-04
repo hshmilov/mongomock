@@ -7,7 +7,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from service_now_adapter.consts import *
 from service_now_adapter.connection import ServiceNowConnection
-from service_now_adapter.exceptions import ServiceNowException
+from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import parse_date
 
 
@@ -20,20 +20,22 @@ class ServiceNowAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['ServiceNow_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
             connection = ServiceNowConnection(
-                domain=client_config["ServiceNow_Domain"], verify_ssl=client_config["verify_ssl"],
-                number_of_offsets=int(self.config["DEFAULT"]["number_of_offsets"]), offset_size=int(self.config["DEFAULT"]["offset_size"]))
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+                domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
+                url_base_prefix="api/now/", number_of_offsets=int(self.config["DEFAULT"]["number_of_offsets"]),
+                offset_size=int(self.config["DEFAULT"]["offset_size"]), username=client_config["username"],
+                password=client_config["password"], https_proxy=client_config.get("https_proxy"),
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except ServiceNowException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['ServiceNow_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -46,8 +48,11 @@ class ServiceNowAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the ServiceNow Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -58,7 +63,7 @@ class ServiceNowAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "ServiceNow_Domain",
+                    "name": "domain",
                     "title": "ServiceNow Domain",
                     "type": "string"
                 },
@@ -77,10 +82,15 @@ class ServiceNowAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS Proxy",
+                    "type": "string"
                 }
             ],
             "required": [
-                "ServiceNow_Domain",
+                "domain",
                 "username",
                 "password",
                 "verify_ssl"

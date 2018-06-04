@@ -95,7 +95,8 @@ class JamfConnection(object):
         :return: the service response or raises an exception if it's not 200
         """
         try:
-            response = requests.post(self.get_url_request(name), headers=headers, data=data, proxies=self.proxies)
+            response = requests.post(self.get_url_request(name), headers=headers,
+                                     data=data, proxies=self.proxies, timeout=(5, 30))
             response.raise_for_status()
         except Exception as e:
             raise JamfRequestException(str(e))
@@ -110,7 +111,7 @@ class JamfConnection(object):
         """
         headers = headers or self.headers
         try:
-            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies)
+            response = requests.get(self.get_url_request(name), headers=headers, proxies=self.proxies, timeout=(5, 30))
             response.raise_for_status()
             return Xml2Json(response.text).result
         except Exception as e:

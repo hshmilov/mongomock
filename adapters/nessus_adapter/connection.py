@@ -19,7 +19,7 @@ HOST_DETAILS_ENDPOINT = "scans/{0}/hosts/{1}"
 
 
 class NessusConnection(object):
-    def __init__(self, host, port):
+    def __init__(self, host, port, verify_ssl):
         self.host = host
         self.port = port if port is not None else DEFAULT_NESSUS_PORT
         self.url = host + ':' + str(self.port)
@@ -28,6 +28,7 @@ class NessusConnection(object):
         if not self.url.endswith('/'):
             self.url += '/'
         self.session = None
+        self.verify_ssl = verify_ssl
         self.headers = {'Content-Type': 'application/json'}
 
     def __enter__(self):
@@ -73,10 +74,10 @@ class NessusConnection(object):
         elif self.username is None or self.password is None:
             return
 
-        response = session.post(self._get_url_request(SESSION), headers=self.headers,
-                                json={USERNAME: self.username, PASSWORD: self.password},
-                                verify=False)
         try:
+            response = session.post(self._get_url_request(SESSION), headers=self.headers,
+                                    json={USERNAME: self.username, PASSWORD: self.password},
+                                    verify=self.verify_ssl, timeout=(5, 30))
             response.raise_for_status()
         except requests.HTTPError as e:
             raise NessusConnectionError(
@@ -185,7 +186,8 @@ class NessusConnection(object):
             raise NessusNotConnected()
         headers = headers if headers is not None else self.headers
         params = params if params is not None else {}
-        response = self.session.get(self._get_url_request(name), params=params, headers=headers, verify=False)
+        response = self.session.get(self._get_url_request(name), params=params,
+                                    headers=headers, verify=self.verify_ssl, timeout=(5, 30))
         try:
             response.raise_for_status()
         except requests.HTTPError as e:

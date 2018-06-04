@@ -7,8 +7,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 
 from airwatch_adapter.connection import AirwatchConnection
-from airwatch_adapter.exceptions import AirwatchException
-
+from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import parse_date
 
 
@@ -24,20 +23,22 @@ class AirwatchAdapter(AdapterBase):
         super().__init__(get_local_config_file(__file__))
 
     def _get_client_id(self, client_config):
-        return client_config['Airwatch_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = AirwatchConnection(domain=client_config["Airwatch_Domain"],
-                                            apikey=client_config["apikey"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"],
-                                       apikey=client_config["apikey"])
+            connection = AirwatchConnection(domain=client_config["domain"],
+                                            apikey=client_config["apikey"], verify_ssl=client_config["verify_ssl"],
+                                            https_proxy=client_config.get("https_proxy"), username=client_config["username"],
+                                            password=client_config["password"], url_base_prefix="/api/",
+                                            headers={"User-Agent": "Fiddler",
+                                                     "aw-tenant-code": client_config["apikey"], "Accept": "application/xml"})
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except AirwatchException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Airwatch_Domain'], str(e))
+                client_config['domain'], str(e))
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -49,8 +50,11 @@ class AirwatchAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Airwatch Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -61,7 +65,7 @@ class AirwatchAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Airwatch_Domain",
+                    "name": "domain",
                     "title": "Airwatch Domain",
                     "type": "string"
                 },
@@ -79,16 +83,22 @@ class AirwatchAdapter(AdapterBase):
                 {
                     "name": "apikey",
                     "title": "API Key",
-                    "type": "string"
+                    "type": "string",
+                    "format": "password"
                 },
                 {
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "Https Proxy",
+                    "type": "string"
                 }
             ],
             "required": [
-                "Airwatch_Domain",
+                "domain",
                 "username",
                 "password",
                 "apikey",

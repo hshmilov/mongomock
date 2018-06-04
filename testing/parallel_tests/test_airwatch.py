@@ -12,7 +12,7 @@ class TestAirwatchAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['Airwatch_Domain']
+        return client_details['domain']
 
     @property
     def some_client_details(self):
@@ -21,7 +21,3 @@ class TestAirwatchAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Airwatch is dead.")
-    def test_fetch_devices(self):
-        pass

@@ -5,10 +5,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
+from axonius.clients.rest.exception import RESTException
 from infoblox_adapter.connection import InfobloxConnection
-from infoblox_adapter.exceptions import InfobloxException
-from axonius.utils.parsing import parse_date
 
 
 class InfobloxAdapter(AdapterBase):
@@ -19,19 +17,21 @@ class InfobloxAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['Infoblox_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
             connection = InfobloxConnection(
-                domain=client_config["Infoblox_Domain"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+                domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
+                username=client_config["username"], password=client_config["password"],
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                url_base_prefix="/wapi/v2.7/")
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except InfobloxException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Infoblox_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -57,7 +57,7 @@ class InfobloxAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Infoblox_Domain",
+                    "name": "domain",
                     "title": "Infoblox Domain",
                     "type": "string"
                 },
@@ -79,7 +79,7 @@ class InfobloxAdapter(AdapterBase):
                 }
             ],
             "required": [
-                "Infoblox_Domain",
+                "domain",
                 "username",
                 "password",
                 "verify_ssl"

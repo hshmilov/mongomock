@@ -5,12 +5,11 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
 from bigfix_adapter.connection import BigfixConnection
-from bigfix_adapter.exceptions import BigfixException
+from axonius.clients.rest.exception import RESTException
 import xml.etree.ElementTree as ET
-
 from axonius.utils.parsing import parse_date
+from bigfix_adapter import consts
 
 
 class BigfixAdapter(AdapterBase):
@@ -18,25 +17,28 @@ class BigfixAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         bigfix_device_type = Field(str, "Device type")
-        bigfix_computre_type = Field(str, "Computer type")
+        bigfix_computer_type = Field(str, "Computer type")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['Bigfix_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = BigfixConnection(domain=client_config["Bigfix_Domain"],
-                                          verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = BigfixConnection(domain=client_config["domain"],
+                                          verify_ssl=client_config["verify_ssl"],
+                                          username=client_config["username"],
+                                          password=client_config["password"],
+                                          url_base_prefix="/api/",
+                                          port=client_config.get("port", consts.DEFAULT_PORT))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except BigfixException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Bigfix_Domain'], str(e))
+                client_config['domain'], str(e))
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
@@ -48,8 +50,11 @@ class BigfixAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Bigfix Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
@@ -60,9 +65,14 @@ class BigfixAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Bigfix_Domain",
+                    "name": "domain",
                     "title": "Bigfix Domain",
                     "type": "string"
+                },
+                {
+                    "name": "port",
+                    "title": "Port",
+                    "type": "number"
                 },
                 {
                     "name": "username",
@@ -82,7 +92,7 @@ class BigfixAdapter(AdapterBase):
                 }
             ],
             "required": [
-                "Bigfix_Domain",
+                "domain",
                 "username",
                 "password",
                 "verify_ssl"
@@ -105,7 +115,15 @@ class BigfixAdapter(AdapterBase):
                     continue
                 else:
                     device.id = str(device_raw.get("ID"))
-                device.hostname = device_raw.get("Computer Name", "")
+                dns_name = device_raw.get("DNS Name")
+                computer_name = device_raw.get("Computer Name")
+                if computer_name is not None and dns_name is not None:
+                    if dns_name.lower().startswith(computer_name.lower()):
+                        device.hostname = dns_name
+                    else:
+                        device.hostname = computer_name
+                else:
+                    device.hostname = computer_name or dns_name
                 device.figure_os(device_raw.get("OS", ""))
                 try:
                     device.add_nic(None, device_raw.get("IP Address", "").split(",") +
@@ -116,7 +134,7 @@ class BigfixAdapter(AdapterBase):
                 device.last_used_users = device_raw.get("User Name", "").split(",")
                 device.last_seen = parse_date(device_raw.get("Last Report Time", ""))
                 device.bigfix_device_type = device_raw.get("Device Type", "")
-                device.bigfix_computre_type = device_raw.get("Computer Type", "")
+                device.bigfix_computer_type = device_raw.get("Computer Type", "")
                 device.set_raw(device_raw)
                 yield device
             except Exception:

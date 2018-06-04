@@ -7,7 +7,8 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
 from desktop_central_adapter.connection import DesktopCentralConnection
-from desktop_central_adapter.exceptions import DesktopCentralException
+from axonius.clients.rest.exception import RESTException
+from desktop_central_adapter import consts
 import datetime
 
 
@@ -21,49 +22,63 @@ class DesktopCentralAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['DesktopCentral_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = DesktopCentralConnection(domain=client_config["DesktopCentral_Domain"],
-                                                  verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = DesktopCentralConnection(domain=client_config["domain"],
+                                                  verify_ssl=client_config["verify_ssl"],
+                                                  username=client_config["username"], password=client_config["password"],
+                                                  url_base_prefix="api/1.0", headers={'Content-Type': 'application/json'},
+                                                  https_proxy=client_config.get("https_proxy"),
+                                                  http_proxy=client_config.get("http_proxy"),
+                                                  port=client_config.get("port", consts.DEFAULT_PORT),
+                                                  username_domain=client_config.get("username_domain"))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except DesktopCentralException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['DesktopCentral_Domain'], str(e))
+                client_config['domain'], str(e))
+            logger.exception(message)
             raise ClientConnectionException(message)
 
     def _query_devices_by_client(self, client_name, client_data):
         """
-        Get all devices from a specific DesktopCentral domain
+        Get all devices from a specific  domain
 
         :param str client_name: The name of the client
-        :param obj client_data: The data that represent a DesktopCentral connection
+        :param obj client_data: The data that represent a connection
 
-        :return: A json with all the attributes returned from the DesktopCentral Server
+        :return: A json with all the attributes returned from the Server
         """
-        with client_data:
-            return client_data.get_device_list()
+        try:
+            client_data.connect()
+            yield from client_data.get_device_list()
+        finally:
+            client_data.close()
 
     def _clients_schema(self):
         """
-        The schema DesktopCentralAdapter expects from configs
+        The schema the adapter expects from configs
 
         :return: JSON scheme
         """
         return {
             "items": [
                 {
-                    "name": "DesktopCentral_Domain",
+                    "name": "domain",
                     "title": "Desktop Central Domain",
                     "type": "string"
                 },
                 {
                     "name": "username",
                     "title": "User Name",
+                    "type": "string"
+                },
+                {
+                    "name": "username_domain",
+                    "title": "Username Domain",
                     "type": "string"
                 },
                 {
@@ -76,10 +91,20 @@ class DesktopCentralAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "http_proxy",
+                    "title": "HTTP Proxy",
+                    "type": "string"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS Proxy",
+                    "type": "string"
                 }
             ],
             "required": [
-                "DesktopCentral_Domain",
+                "domain",
                 "username",
                 "password",
                 "veirfy_ssl"
@@ -90,12 +115,20 @@ class DesktopCentralAdapter(AdapterBase):
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
-                # 2 represents live_status is down
-                if device_raw.get("computer_live_status", device_raw.get("live_status")) == 2:
-                    continue
                 # 22 Means installed
                 # In case there is no such field we don't want to miss the device
+
                 device = self._new_device_adapter()
+                property_none_list = []
+                for property in device_raw:
+                    if device_raw[property] == "--":
+                        property_none_list.append(property)
+                for property in property_none_list:
+                    del device_raw[property]
+                if "resource_id" not in device_raw:
+                    logger.info(f"No Desktop Central device Id for {str(device_raw)}")
+                    continue
+                device.id = str(device_raw.get("resource_id"))
                 device.domain = device_raw.get("domain_netbios_name", "")
                 device.hostname = device_raw.get("fqdn_name", device_raw.get("full_name"))
                 try:
@@ -113,14 +146,16 @@ class DesktopCentralAdapter(AdapterBase):
                 except Exception:
                     logger.exception("Problem with adding nic to desktop central device")
                 device.agent_version = device_raw.get("agent_version", "")
-                if "resource_id" not in device_raw:
-                    logger.info(f"No Desktop Central device Id for {str(device_raw)}")
-                    continue
-                device.id = str(device_raw.get("resource_id"))
-                os_version_list = device_raw.get("os_version", "").split(".")
-                device.os.major = int(os_version_list[0])
-                if len(os_version_list) > 1:
-                    device.os.minor = int(os_version_list[1])
+                try:
+                    os_version_list = device_raw.get("os_version", "").split(".")
+                    device.os.major = int(os_version_list[0])
+                except Exception:
+                    logger.exception(f"Problem getting major os for {os_version_list}")
+                try:
+                    if len(os_version_list) > 1 and "(" not in os_version_list[1]:
+                        device.os.minor = int(os_version_list[1])
+                except Exception:
+                    logger.exception(f"Problem getting minor os for {os_version_list}")
                 device.installation_status = device_raw.get("installation_status")
                 installation_status = device_raw.get("installation_status")
                 if installation_status is not None:

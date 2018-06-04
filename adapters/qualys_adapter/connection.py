@@ -75,8 +75,9 @@ class QualysConnection(object):
         :param str data: the body of the request
         :return: the service response or raises an exception if it's not 200
         """
-        response = requests.post(self._get_url_request(name), headers=headers, cookies=cookies, auth=auth, data=data)
         try:
+            response = requests.post(self._get_url_request(name), headers=headers,
+                                     cookies=cookies, auth=auth, data=data, timeout=(5, 30))
             response.raise_for_status()
         except requests.HTTPError as e:
             logger.exception('Post request failed. {0}'.format(str(e)), name, headers, cookies, auth, data)
