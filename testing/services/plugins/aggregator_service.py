@@ -8,8 +8,7 @@ class AggregatorService(PluginService):
     def __init__(self):
         super().__init__('aggregator')
 
-    @retry(wait_fixed=3000,
-           stop_max_delay=60 * 3 * 1000)
+    @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
         response = requests.post(self.req_url + f"/trigger/{adapter_id}", headers={API_KEY_HEADER: self.api_key})
 

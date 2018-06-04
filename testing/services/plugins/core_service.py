@@ -25,3 +25,10 @@ class CoreService(PluginService):
 
     def get_registered_plugins(self):
         return self.register()
+
+    def set_execution_config(self, enabled):
+        self.db.get_collection('core', 'configurable_configs').update_one(
+            {'config_name': 'CoreService'},
+            {'$set': {'config.execution_settings.enabled': enabled}}
+        )
+        self.post('update_config')

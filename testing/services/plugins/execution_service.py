@@ -19,7 +19,6 @@ class ExecutionService(PluginService):
                 e.g., ["active_directory_adapter"].
         :return: action_id.
         """
-
         action_url = f"action/{action_type}?axon_id={axon_id}"
         if adapters_to_whitelist is not None:
             data["adapters_to_whitelist"] = adapters_to_whitelist

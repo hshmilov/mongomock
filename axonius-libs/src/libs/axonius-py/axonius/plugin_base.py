@@ -1424,7 +1424,7 @@ class PluginBase(Configurable, Feature):
                 "smtpKey": None
             },
             "execution_settings": {
-                "enabled": True
+                "enabled": False
             },
             "syslog_settings": {
                 "enabled": False,

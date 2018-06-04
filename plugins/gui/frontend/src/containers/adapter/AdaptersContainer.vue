@@ -45,7 +45,7 @@
             	    configuration page, so it will return meanwhile
             	 */
             	this.fetchAdapter(adapter['id'])
-                this.$router.push({path: `adapter/${adapter['id']}`})
+                this.$router.push({ path: `adapter/${adapter['id']}` })
             }
         },
         created() {

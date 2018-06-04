@@ -22,6 +22,12 @@ def main():
     try:
         axonius_system.take_process_ownership()
         axonius_system.start_and_wait()
+
+        # Set up testing configurations
+        axonius_system.core.set_execution_config(True)
+        axonius_system.execution.post('update_config')
+
+        # Run all parallel tests
         runner = ParallelTestsRunner()
         pattern = sys.argv[1]
         print(f"Running in parallel for pattern {pattern}")

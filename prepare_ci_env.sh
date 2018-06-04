@@ -18,7 +18,7 @@ docker network create axonius
 echo "Building all images"
 python3.6 devops/prepare_setup.py
 
-echo "Downloading wsusscn2.cab file.."
-(
-wget http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab -O shared_readonly_files/AXPM/wsusscn2/wsusscn2.cab
-)
+# echo "Downloading wsusscn2.cab file.."
+# (
+# wget http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab -O shared_readonly_files/AXPM/wsusscn2/wsusscn2.cab
+# )
