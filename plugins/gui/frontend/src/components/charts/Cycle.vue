@@ -107,7 +107,7 @@
             fill: none;
             stroke: none;
             &.check {
-                stroke: $indicator-green;
+                stroke: $indicator-success;
                 stroke-dasharray: 60;
                 stroke-dashoffset: -60;
                 animation: check-stroke ease-in-out .8s forwards;

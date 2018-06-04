@@ -1,7 +1,7 @@
 /* eslint-disable */
 var icon = require('vue-svgicon')
 icon.register({
-  'symbols/pie': {
+  'symbol/pie': {
     width: 283,
     height: 276,
     viewBox: '0 0 283 276',

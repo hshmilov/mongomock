@@ -4,7 +4,7 @@
             <div class="item-bar">
                 <img v-if="type === 'logo'" :src="`/src/assets/images/logos/${item.name}.png`" width="16">
                 <div :style="{width: calculateBarHeight(item.count) + 'px'}">
-                    <div class="bar rising" :title="item.name"></div>
+                    <div class="bar growing-x" :title="item.name"></div>
                 </div>
                 <div class="quantity">{{item.count}}</div>
             </div>
@@ -90,7 +90,7 @@
             position: absolute;
             bottom: 0;
             font-size: 14px;
-            color: $indicator-blue;
+            color: $indicator-info;
         }
     }
 

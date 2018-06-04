@@ -236,12 +236,9 @@ class GuiService(PluginBase, Configurable):
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
         self._get_collection('users').update({'user_name': 'admin'},
-                                             {'user_name': 'admin',
-                                              'first_name': 'administrator',
-                                              'last_name': '',
-                                              'pic_name': 'avatar.png',
-                                              'password': bcrypt.hash('cAll2SecureAll')},
-                                             upsert=True)
+                                             {'user_name': 'admin', 'password': bcrypt.hash('cAll2SecureAll'),
+                                              'first_name': 'administrator', 'last_name': '',
+                                              'pic_name': 'avatar.png'}, upsert=True)
         self.user_queries = self._get_collection("user_queries")
         self.device_queries = self._get_collection("device_queries")
         self._queries_db_map = {
@@ -995,9 +992,8 @@ class GuiService(PluginBase, Configurable):
         """
         plugins_available = requests.get(self.core_address + '/register').json()
         with self._get_db_connection() as db_connection:
-            adapters_from_db = db_connection['core']['configs'].find({'$or': [{'plugin_type': 'Adapter'},
-                                                                              {'plugin_type': 'ScannerAdapter'}]}).sort(
-                [(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
+            adapters_from_db = db_connection['core']['configs'].find({
+                'plugin_type': {'$in': ['Adapter', 'ScannerAdapter']}}).sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)])
             adapters_to_return = []
             for adapter in adapters_from_db:
                 adapter_name = adapter[PLUGIN_UNIQUE_NAME]
@@ -1005,21 +1001,22 @@ class GuiService(PluginBase, Configurable):
                     # Plugin not registered - unwanted in UI
                     continue
 
-                plugin_db = db_connection[adapter_name]
-                clients_configured = plugin_db['clients'].find(
-                    projection={'_id': 1}).count()
+                clients_collection = db_connection[adapter_name]['clients']
+                schema = self._get_plugin_schemas(db_connection, adapter_name)['clients']
+                clients = [beautify_db_entry(client) for client in clients_collection.find()
+                           .sort([('_id', pymongo.DESCENDING)])]
                 status = ''
-                if clients_configured:
-                    clients_connected = plugin_db['clients'].find(
-                        {'status': 'success'}, projection={'_id': 1}).count()
-                    status = 'success' if clients_configured == clients_connected else 'warning'
+                if len(clients):
+                    clients_connected = clients_collection.find({'status': 'success'}, projection={'_id': 1}).count()
+                    status = 'success' if len(clients) == clients_connected else 'warning'
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
                                            'unique_plugin_name': adapter_name,
                                            'status': status,
                                            'supported_features': adapter['supported_features'],
-                                           'config_data': self.__extract_configs_and_schemas(db_connection,
-                                                                                             adapter_name)
+                                           'schema': schema, 'clients': clients,
+                                           'config': self.__extract_configs_and_schemas(db_connection,
+                                                                                        adapter_name)
                                            })
 
             return jsonify(adapters_to_return)
@@ -1071,9 +1068,8 @@ class GuiService(PluginBase, Configurable):
             written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @paginated()
-    @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT', 'GET'])
-    def adapters_clients(self, adapter_unique_name, limit, skip):
+    @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT'])
+    def adapters_clients(self, adapter_unique_name):
         """
         Gets or creates clients in the adapter
         :param adapter_unique_name: the adapter to refer to
@@ -1082,16 +1078,7 @@ class GuiService(PluginBase, Configurable):
         :return:
         """
         with self._get_db_connection() as db_connection:
-            if request.method == 'GET':
-                client_collection = db_connection[adapter_unique_name]['clients']
-                schema = self._get_plugin_schemas(db_connection, adapter_unique_name)['clients']
-                return jsonify({
-                    'schema': schema,
-                    'clients': [beautify_db_entry(client) for client in
-                                client_collection.find().skip(skip).limit(limit)]
-                })
-            if request.method == 'PUT':
-                return self._query_client_for_devices(request, adapter_unique_name)
+            return self._query_client_for_devices(request, adapter_unique_name)
 
     @add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id):

@@ -48,17 +48,18 @@
     import xCheckbox from '../../components/inputs/Checkbox.vue'
     import xToast from '../../components/popover/Toast.vue'
 
-    import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
     import { mapState, mapActions, mapMutations } from 'vuex'
     import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from "../../store/modules/configurable";
+    import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
 
     export default {
         name: 'settings-container',
         components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast },
         computed: {
             ...mapState({
-                dashboard(state) {
-                    return state.dashboard
+                nextResearchStart(state) {
+					let tempDate = new Date(parseInt(state.dashboard.lifecycle.data.nextRunTime) * 1000)
+					return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
                 },
                 configurable(state) {
                     return state.configurable
@@ -69,10 +70,6 @@
                     type: 'fromto',
                     from: `${new Date().toDateString()} ${new Date().toTimeString()}`
                 }]
-            },
-            nextResearchStart() {
-                let tempDate = new Date(parseInt(this.dashboard.lifecycle.data.nextRunTime) * 1000)
-                return `${tempDate.toLocaleDateString()} ${tempDate.toLocaleTimeString()}`
             },
             schedulerSettings: {
                 get() {

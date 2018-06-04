@@ -41,17 +41,17 @@
                         <div class="grid-span2">
                             <input id="SeverityInfo" type="radio" value="info" v-model="alert.severity">
                             <label for="SeverityInfo" class="ml-2">
-                                <svg-icon name="symbols/info" :original="true" height="16"></svg-icon>Info</label>
+                                <svg-icon name="symbol/info" :original="true" height="16"></svg-icon>Info</label>
                         </div>
                         <div class="grid-span2">
                             <input id="SeverityWarning" type="radio" value="warning" v-model="alert.severity">
                             <label for="SeverityWarning" class="ml-2">
-                                <svg-icon name="symbols/warning" :original="true" height="16"></svg-icon>Warning</label>
+                                <svg-icon name="symbol/warning" :original="true" height="16"></svg-icon>Warning</label>
                         </div>
                         <div class="grid-span2">
                             <input id="SeverityError" type="radio" value="error" v-model="alert.severity">
                             <label for="SeverityError" class="ml-2">
-                                <svg-icon name="symbols/error" :original="true" height="16"></svg-icon>Error</label>
+                                <svg-icon name="symbol/error" :original="true" height="16"></svg-icon>Error</label>
                         </div>
                     </div>
                 </div>
@@ -94,8 +94,8 @@
     import Modal from '../../components/popover/Modal.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
-    import { UPDATE_EMPTY_STATE } from '../../store/mutations'
 	import { FETCH_DATA_QUERIES } from '../../store/actions'
+    import { UPDATE_EMPTY_STATE } from '../../store/modules/onboarding'
     import { SET_ALERT, UPDATE_ALERT, FETCH_ALERTS } from '../../store/modules/alert'
 
 	export default {
@@ -230,19 +230,19 @@
             },
             checkMailSettings(on) {
             	if (!on) {
-					this.updateEmptyState({name: 'emptyMailSettings', status: false})
+					this.updateEmptyState({ mailSettings: false})
 				} else if (!this.globalSettings.email_settings.smtpHost || !this.globalSettings.email_settings.smtpPort) {
-					this.updateEmptyState({name: 'emptyMailSettings', status: true})
-					this.updateEmptyState({name: 'emptySyslogSettings', status: false})
+					this.updateEmptyState({ mailSettings: true})
+					this.updateEmptyState({ syslogSettings: false})
 					this.emptySettings['mail'] = true
 				}
             },
             checkSyslogSettings(on) {
 				if (!on) {
-					this.updateEmptyState({name: 'emptySyslogSettings', status: false})
+					this.updateEmptyState({ syslogSettings: false})
 				} else if (!this.globalSettings.syslog_settings.syslogHost) {
-					this.updateEmptyState({name: 'emptySyslogSettings', status: true})
-					this.updateEmptyState({name: 'emptyMailSettings', status: false})
+					this.updateEmptyState({ syslogSettings: true})
+					this.updateEmptyState({ mailSettings: false})
 					this.emptySettings['syslog'] = true
 				}
             }

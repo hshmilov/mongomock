@@ -4,8 +4,8 @@
         <div v-for="item in shownSchemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
-                <component :is="`x-${item.type}-edit`" :schema="item" v-model="data[item.name]"
-                           @input="onInput" :validator="validate" @focusout="onFocusout" :api-upload="apiUpload"/>
+                <component :is="item.type" :schema="item" v-model="data[item.name]" :validator="validate"
+                           @input="onInput" @focusout="onFocusout" :api-upload="apiUpload"/>
             </x-type-wrap>
         </div>
     </div>
@@ -15,24 +15,24 @@
     import Vue from 'vue'
 
     import xTypeWrap from './TypeWrap.vue'
-    import xStringEdit from '../string/StringEdit.vue'
-    import xNumberEdit from '../numerical/NumberEdit.vue'
-    import xIntegerEdit from '../numerical/IntegerEdit.vue'
-    import xBoolEdit from '../boolean/BooleanEdit.vue'
-    import xFileEdit from './FileEdit.vue'
+    import string from '../string/StringEdit.vue'
+    import number from '../numerical/NumberEdit.vue'
+    import integer from '../numerical/IntegerEdit.vue'
+    import bool from '../boolean/BooleanEdit.vue'
+    import file from './FileEdit.vue'
 
     import ArrayMixin from './array'
 
     export default {
-        name: 'x-array-edit',
+        name: 'array',
         mixins: [ArrayMixin],
         components: {
             xTypeWrap,
-            xStringEdit,
-            xNumberEdit,
-            xIntegerEdit,
-            xBoolEdit,
-            xFileEdit
+            string,
+            number,
+            integer,
+            bool,
+            file
         },
         computed: {
             validate() {

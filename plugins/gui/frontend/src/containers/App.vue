@@ -6,12 +6,13 @@
     <div id="app">
         <!-- Nested navigation linking to routes defined in router/index.js -->
         <template v-if="userName || isDev">
-            <top-bar-container class="print-exclude"/>
             <side-bar-container class="print-exclude"/>
             <router-view/>
+            <top-bar-container class="print-exclude"/>
+            <x-tour-state />
         </template>
         <template v-else>
-            <login-container :okta="okta_config" :ldap="ldap_config"/>
+            <login-container />
         </template>
     </div>
 </template>
@@ -20,17 +21,17 @@
     import TopBarContainer from './navigation/TopBarContainer.vue'
     import SideBarContainer from './navigation/SideBarContainer.vue'
     import LoginContainer from './auth/LoginContainer.vue'
-    import {GET_LOGIN_OPTIONS, GET_USER} from '../store/modules/auth'
-    import { FETCH_ADAPTERS } from '../store/modules/adapter'
+	import xTourState from '../components/onboard/TourState.vue'
+
+    import { GET_USER} from '../store/modules/auth'
+    import { LOAD_PLUGIN_CONFIG } from "../store/modules/configurable";
 	import { mapState, mapActions } from 'vuex'
 	import '../components/icons'
-    import {LOAD_PLUGIN_CONFIG} from "../store/modules/configurable";
+
 
 	export default {
         name: 'app',
-        components: {
-			LoginContainer,
-			TopBarContainer, SideBarContainer },
+        components: { LoginContainer, TopBarContainer, SideBarContainer, xTourState },
         computed: {
             ...mapState({
                 userName(state) {
@@ -41,16 +42,6 @@
 				return process.env.NODE_ENV === 'development'
             }
 		},
-        data() {
-            return {
-                okta_config: {
-                    enabled: false
-                },
-                ldap_config: {
-                    enabled: false
-                }
-            }
-        },
         watch: {
         	userName(newUserName) {
                 if (newUserName) {
@@ -60,11 +51,9 @@
         },
         methods: {
             ...mapActions({
-                getUser: GET_USER, getLoginSettings: GET_LOGIN_OPTIONS, fetchAdapters: FETCH_ADAPTERS,
-                loadPluginConfig: LOAD_PLUGIN_CONFIG
+                getUser: GET_USER, loadPluginConfig: LOAD_PLUGIN_CONFIG
             }),
             fetchGlobalData() {
-				this.fetchAdapters()
 				this.loadPluginConfig({
 					pluginId: 'gui',
 					configName: 'GuiService'
@@ -76,17 +65,7 @@
             }
 		},
         created() {
-        	this.getUser().then((response) => {
-        		if (response.status === 200) {
-                    this.fetchGlobalData()
-                }
-            })
-            this.getLoginSettings().then(response => {
-                if (response.status === 200) {
-                    this.okta_config = response.data.okta
-                    this.ldap_config = response.data.ldap
-                }
-            })
+        	this.getUser()
         }
     }
 </script>

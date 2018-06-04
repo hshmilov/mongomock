@@ -1,5 +1,5 @@
 <template>
-    <transition name="modal">
+    <transition name="modal" @after-enter="$emit('enter')" @after-leave="$emit('leave')">
         <div class="modal-mask" @click.stop="$emit('close')" @keyup.esc="$emit('close')">
             <div class="modal-wrapper">
                 <div :class="`modal-container w-${size}`" @click.stop="">
@@ -35,7 +35,7 @@
 			if (this.$el.querySelector("input")) {
 				this.$el.querySelector("input").focus()
             }
-        },
+        }
 	}
 </script>
 
@@ -54,15 +54,15 @@
             display: table-cell;
             vertical-align: middle;
             .modal-container {
-                margin: 0px auto;
-                padding: 20px 30px;
+                margin: 0 auto;
+                padding: 24px;
                 background-color: $theme-white;
                 border-radius: 2px;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
                 transition: all .3s ease;
                 .modal-body {
-                    margin: 20px 0;
                     padding: 0;
+                    margin-bottom: 24px;
                     .form-group:last-of-type {
                         margin-bottom: 0;
                     }

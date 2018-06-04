@@ -1,26 +1,59 @@
 <template>
     <x-page title="adapters" class="adapters">
-        <scrollable-table :data="sortedSpecificData" :fields="adapter.adapterFields" @click-row="configAdapter"/>
+        <div class="table-adapters">
+            <table class="table">
+                <thead>
+                    <tr class="table-row">
+                        <th class="status">&nbsp;</th>
+                        <th class="row-data">Name</th>
+                        <th class="row-data">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in adapters.data" @click="configAdapter(item['id'])" class="table-row">
+                        <td class="status">
+                            <div class="symbol">
+                                <svg-icon :name="`symbol/${item['status']}`" :original="true" height="20px"></svg-icon>
+                            </div>
+                            <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
+                        </td>
+                        <td class="row-data" :id="item['plugin_name']">
+                            <x-logo-name :name="item['plugin_name']"/>
+                        </td>
+                        <td class="row-data">
+                            <div class="content">{{item['description']}}</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </x-page>
 </template>
 
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-	import ScrollableTable from '../../components/tables/ScrollableTable.vue'
-	import SearchInput from '../../components/inputs/SearchInput.vue'
+    import xLogoName from '../../components/titles/LogoName.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
-    import { FETCH_ADAPTERS, FETCH_ADAPTER_SERVERS } from '../../store/modules/adapter'
+    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
+    import { UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
 
     export default {
         name: 'adapters-container',
-        components: { xPage, ScrollableTable, SearchInput },
+        components: { xPage, xLogoName },
         computed: {
-            ...mapState(['adapter']),
+            ...mapState({
+                adapters(state) {
+                	return state.adapter.adapterList
+                },
+                tourAdapters(state) {
+                	return state.onboarding.tourStates.queues.adapters
+                }
+            }),
             sortedSpecificData () {
-                if (!this.adapter.adapterList || !this.adapter.adapterList.data) return []
-                return [...this.adapter.adapterList.data].sort((first, second) => {
+                if (!this.adapters || !this.adapters.data) return []
+                return [...this.adapters.data].sort((first, second) => {
                     // Sort by adapter plugin name (the one that is shown in the gui).
                     let firstText = first.title.toLowerCase()
                     let secondText = second.title.toLowerCase()
@@ -30,26 +63,21 @@
                 })
             }
         },
-        data() {
-        	return {
-        		filter: {
-        			name: ''
-                }
-            }
-        },
         methods: {
-            ...mapActions({ fetchAdapters: FETCH_ADAPTERS, fetchAdapter: FETCH_ADAPTER_SERVERS }),
-        	configAdapter(adapter) {
+            ...mapMutations({ updateState: UPDATE_TOUR_STATE }),
+            ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),
+        	configAdapter(adapterId) {
             	/*
             	    Fetch adapter requested to be configured asynchronously, before navigating to the
             	    configuration page, so it will return meanwhile
             	 */
-            	this.fetchAdapter(adapter['id'])
-                this.$router.push({ path: `adapter/${adapter['id']}` })
+                this.$router.push({path: `adapter/${adapterId}`})
             }
         },
         created() {
-        	this.fetchAdapters()
+        	this.fetchAdapters().then(() => {
+                this.updateState(this.tourAdapters[0])
+            })
         }
     }
 </script>
@@ -57,19 +85,61 @@
 
 <style lang="scss">
     .adapters {
-        .row {
-            .form-group {
-                margin-bottom: 0;
-                &.filter-status {
-                    text-align: right;
+        .table-adapters {
+            height: calc(100vh - 170px);
+            overflow: auto;
+            .table {
+                border-collapse: separate;
+                border-spacing: 0 8px;
+                font-size: 14px;
+                .table-row {
+                    .row-data {
+                        background: $theme-white;
+                        vertical-align: middle;
+                        padding: 12px;
+                        position: relative;
+                        &:last-child {
+                            border-bottom-right-radius: 4px;
+                            border-top-right-radius: 4px;
+                        }
+                        .content {
+                            height: 3.6em;
+                            line-height: 1.2em;
+                            overflow: hidden;
+                            display: -webkit-box;
+                            -webkit-line-clamp: 3;
+                            -webkit-box-orient: vertical;
+                        }
+                    }
+                    .status {
+                        display: flex;
+                        box-shadow: none;
+                        .symbol {
+                            flex: 1 0 auto;
+                            text-align: center;
+                            line-height: calc(3.6em + 24px);
+                            margin: 0 12px;
+                        }
+                        .marker {
+                            width: 10px;
+                            height: calc(4px + 3.6em + 24px);
+                            margin: -2px -8px;
+                            border-bottom-left-radius: 4px;
+                            border-top-left-radius: 4px;
+
+                        }
+                    }
+                }
+                thead .table-row .row-data:nth-child(2) {
+                    border-bottom-left-radius: 4px;
+                    border-top-left-radius: 4px;
+                }
+                tbody .table-row:hover {
+                    cursor: pointer;
+                    transform: scale(1.02);
                 }
             }
-            .search-input {
-                width: auto;
-                .input-group-addon {
-                    right: 12px;
-                }
-            }
+
         }
     }
 </style>

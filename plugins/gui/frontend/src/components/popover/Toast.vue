@@ -1,5 +1,5 @@
 <template>
-    <div class="x-toast">
+    <div class="x-toast" :style="{ left }">
         <div class="content">{{ message }}</div>
         <div class="actions">
             <slot />
@@ -11,9 +11,30 @@
 	export default {
 		name: 'x-toast',
         props: { message: { required: true }, timed: { default: true } },
+        data() {
+			return {
+				left: ''
+            }
+        },
+        watch: {
+			message() {
+				this.left = ''
+            }
+        },
+        methods: {
+			getLeftPos() {
+				return `calc(50vw - ${this.$el.offsetWidth / 2}px)`
+            }
+        },
         mounted() {
 			if (this.timed) {
 			    setTimeout(() => this.$emit('done'), 4000)
+            }
+            this.left = this.getLeftPos()
+        },
+        updated() {
+			if (!this.left) {
+                this.left = this.getLeftPos()
             }
         }
 	}
@@ -24,7 +45,6 @@
         position: fixed;
         z-index: 500;
         top: 24px;
-        left: 50vw;
         padding: 0 12px;
         background: $theme-black;
         color: $theme-white;

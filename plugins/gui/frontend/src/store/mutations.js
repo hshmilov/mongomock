@@ -6,11 +6,6 @@ export const toggleSidebar = (state) => {
     state.interaction.collapseSidebar = !state.interaction.collapseSidebar
 }
 
-export const UPDATE_EMPTY_STATE = 'TOGGLE_EMPTY_STATE'
-export const updateEmptyState = (state, payload) => {
-	state.interaction.onboarding.emptyStates[payload.name] = payload.status
-}
-
 export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateDataCount = (state, payload) => {
 	if (!validModule(state, payload)) return

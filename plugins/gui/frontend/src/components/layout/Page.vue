@@ -35,6 +35,7 @@
         background: $grey-1;
         padding: 12px 24px 24px 264px;
         position: relative;
+        margin-top: 60px;
         width: calc(100vw - 288px);
         height: calc(100vh - 84px);
         &.collapse {

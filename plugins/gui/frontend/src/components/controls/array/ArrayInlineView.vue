@@ -1,7 +1,7 @@
 <template>
     <div class="array" :class="{inline: !multiline}" :title="allItems">
         <div class="item" :class="{inline: !multiline}" v-for="item in limitedItems" v-if="!empty(data[item.name])">
-            <component :is="`x-${item.type}-view`" :schema="item" :value="data[item.name]"/>
+            <component :is="item.type" :schema="item" :value="data[item.name]"/>
         </div>
         <div class="item" v-if="limit && schemaItems.length > limit"
         >+{{schemaItems.length - limit}}</div>
@@ -9,24 +9,18 @@
 </template>
 
 <script>
-	import xStringView from '../string/StringView.vue'
-	import xNumberView from '../numerical/NumberView.vue'
-	import xIntegerView from '../numerical/IntegerView.vue'
-	import xBoolView from '../boolean/BooleanView.vue'
-	import xFileView from './FileView.vue'
+	import string from '../string/StringView.vue'
+	import number from '../numerical/NumberView.vue'
+	import integer from '../numerical/IntegerView.vue'
+	import bool from '../boolean/BooleanView.vue'
+	import file from './FileView.vue'
 
 	import ArrayMixin from './array'
 
 	export default {
-		name: 'x-array-view',
+		name: 'array',
 		mixins: [ArrayMixin],
-		components: {
-			xStringView,
-			xNumberView,
-			xIntegerView,
-			xBoolView,
-			xFileView
-		},
+		components: { string, number, integer, bool, file },
 		props: {limit: {}, multiline: {default: false}},
         computed: {
 			limitedItems() {
@@ -47,5 +41,8 @@
 
     .array {
         display: flex;
+        .item.inline {
+            margin-right: 8px;
+        }
     }
 </style>

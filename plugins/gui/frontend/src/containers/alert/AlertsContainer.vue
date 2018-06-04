@@ -3,7 +3,7 @@
         <x-data-table module="alert" title="Alerts" @click-row="configAlert" id-field="uuid" v-model="selected">
             <template slot="actions">
                 <div v-if="selected && selected.length" @click="removeAlerts" class="link">Remove</div>
-                <div @click="createAlert" class="link">+ New Alert</div>
+                <div @click="createAlert" class="x-btn">+ New Alert</div>
             </template>
         </x-data-table>
     </x-page>

@@ -1,7 +1,7 @@
 /* eslint-disable */
 var icon = require('vue-svgicon')
 icon.register({
-  'action/lifecycle/running': {
+  'symbol/running': {
     width: 100,
     height: 100,
     viewBox: '-4 -4 100 100',

@@ -10,21 +10,21 @@
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="updateValidity"
                                @submit="onLogin" :error="auth.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
-                <a @click="oktaclick" v-if="okta.enabled">Login with Okta</a> <br/>
-                <a @click="ldapclick" v-if="ldap.enabled">Login with LDAP</a>
+                <a @click="onOktaLogin" v-if="oktaConfig.enabled" class="link">Login with Okta</a>
+                <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" class="link">Login with LDAP</a>
             </div>
         </div>
-        <modal v-if="ldap_data.show_modal">
+        <modal v-if="ldapData.active" @close="toggleLdapLogin">
             <div slot="body">
                 <div class="show-space">
                     <h2>Login with LDAP</h2>
-                    <x-schema-form :schema="ldap_scheme" v-model="ldap_data.credentials" @input="initError" @validate="ldapUpdateValidity"
-                               @submit="onLogin" :error="auth.error"/>
-                    <button class="x-btn" :class="{disabled: !ldap_data.complete}" @click="onLdapLogin">Login</button>
+                    <x-schema-form :schema="ldapSchema" v-model="ldapData.credentials" @input="initError"
+                                   @validate="ldapUpdateValidity" @submit="onLdapLogin" :error="auth.error"/>
                 </div>
             </div>
             <div slot="footer">
-                <button class="x-btn" @click="closeldap">Cancel</button>
+                <button class="x-btn link" @click="toggleLdapLogin">Cancel</button>
+                <button class="x-btn" :class="{disabled: !ldapData.complete}" @click="onLdapLogin">Login</button>
             </div>
         </modal>
     </div>
@@ -32,15 +32,15 @@
 
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
-    import {LOGIN, INIT_ERROR, LDAP_LOGIN} from '../../store/modules/auth'
-    import '../../components/icons/logo'
-    import {mapState, mapMutations, mapActions} from 'vuex'
-    import * as OktaAuth from '@okta/okta-auth-js';
     import Modal from '../../components/popover/Modal.vue'
+
+    import { mapState, mapMutations, mapActions } from 'vuex'
+    import { LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS } from '../../store/modules/auth'
+    import * as OktaAuth from '@okta/okta-auth-js';
 
     export default {
         name: 'login-container',
-        components: {xSchemaForm, Modal},
+        components: { xSchemaForm, Modal },
         computed: {
             schema() {
                 return {
@@ -50,25 +50,24 @@
                     ], required: ['user_name', 'password']
                 }
             },
-            ldap_scheme() {
+            ldapSchema() {
                 return {
-                        type: 'array',
-                        items: [
-                            {
-                                name: 'user_name', title: 'User Name', type: 'string'
-                            },
-                            {
-                                name: 'domain', title: 'Domain', type: 'string', default: this.ldap.default_domain
-                            },
-                            {
-                                name: 'password', title: 'Password', type: 'string', format: 'password'
-                            }
-                        ], required: ['user_name', 'domain', 'password']
+                    type: 'array',
+                    items: [
+                        {
+                            name: 'user_name', title: 'User Name', type: 'string'
+                        },
+                        {
+                            name: 'domain', title: 'Domain', type: 'string', default: this.ldapConfig.default_domain
+                        },
+                        {
+                            name: 'password', title: 'Password', type: 'string', format: 'password'
+                        }
+                    ], required: ['user_name', 'domain', 'password']
                     }
             },
             ...mapState(['auth'])
         },
-        props: ['okta', 'ldap'],
         data() {
             return {
                 credentials: {
@@ -76,8 +75,8 @@
                     password: ''
                 },
                 complete: false,
-                ldap_data: {
-                    show_modal: false,
+                ldapData: {
+                    active: false,
                     credentials: {
                         'user_name': '',
                         'domain': '',
@@ -85,46 +84,57 @@
                     },
                     complete: false,
                 },
+                oktaConfig: {
+                    enabled: false
+                },
+                ldapConfig: {
+					enabled: false
+                }
             }
         },
         methods: {
-            ...mapMutations({initError: INIT_ERROR}),
-            ...mapActions({login: LOGIN, ldap_login: LDAP_LOGIN}),
+            ...mapMutations({ initError: INIT_ERROR }),
+            ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, login: LOGIN, ldapLogin: LDAP_LOGIN}),
             updateValidity(valid) {
                 this.complete = valid
             },
             ldapUpdateValidity(valid) {
-                this.ldap_data.complete = valid
+                this.ldapData.complete = valid
             },
             onLdapLogin(){
-                if (!this.ldap_data.complete) return
-                if (!this.ldap_data.credentials.domain)
+                if (!this.ldapData.complete) return
+                if (!this.ldapData.credentials.domain)
                 {
                     // workaround for default values not showing up
-                    this.ldap_data.credentials.domain = this.ldap.default_domain
+                    this.ldapData.credentials.domain = this.ldapConfig.default_domain
                 }
-                this.ldap_login(this.ldap_data.credentials)
+                this.ldapLogin(this.ldapData.credentials)
             },
             onLogin() {
                 if (!this.complete) return
                 this.login(this.credentials)
             },
-            oktaclick() {
+            onOktaLogin() {
                 var x = new OktaAuth({
-                    url: this.okta.url,
-                    issuer: this.okta.url,
-                    clientId: this.okta.client_id,
-                    redirectUri: `${this.okta.gui_url}/api/okta-redirect`,
-                    scope: 'openid'
-                });
-                x.token.getWithRedirect({ responseType: 'code' });
-            },
-            ldapclick() {
-                this.ldap_data.show_modal = true
-            },
-            closeldap() {
-                this.ldap_data.show_modal = false
-            },
+					url: this.oktaConfig.url,
+					issuer: this.oktaConfig.url,
+					clientId: this.oktaConfig.client_id,
+					redirectUri: `${this.oktaConfig.gui_url}/api/okta-redirect`,
+					scope: 'openid'
+				});
+				x.token.getWithRedirect({ responseType: 'code' })
+			},
+			toggleLdapLogin() {
+				this.ldapData.active = !this.ldapData.active
+			}
+        },
+        created() {
+            this.getLoginSettings().then(response => {
+                if (response.status === 200) {
+                    this.oktaConfig = response.data.okta
+                    this.ldapConfig = response.data.ldap
+                }
+            })
         }
     }
 </script>

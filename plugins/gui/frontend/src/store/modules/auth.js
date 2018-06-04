@@ -65,7 +65,6 @@ export const auth = {
 			}).then((response) => {
 				if (!response || !response.status) {
 					commit(SET_USER, { error: 'Login failed.'})
-
 				} else if (response.status === 200) {
 					dispatch(GET_USER)
 				} else {

@@ -1,7 +1,10 @@
 <template>
-    <div class="x-table-actions">
+    <div class="x-table-actionable">
         <div class="x-table-header">
-            <div class="x-title">{{ title }} ({{count}})</div>
+            <div class="x-title">
+                <div>{{ title }}</div>
+                <div v-if="count !== undefined" class="count">({{ count }})</div>
+            </div>
             <div class="error">{{error}}</div>
             <div class="x-actions"><slot name="actions"/></div>
         </div>
@@ -17,10 +20,10 @@
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
 	export default {
-		name: 'actionable-table',
+		name: 'x-actionable-table',
         components: { PulseLoader },
 		props: {
-			title: { required: true }, loading: { default: false }, count: { default: 0 }, error: {}
+			title: { required: true }, loading: { default: false }, count: { }, error: {}
 		},
         mounted() {
 			this.$refs.greatTable.focus()
@@ -29,7 +32,7 @@
 </script>
 
 <style lang="scss">
-    .x-table-actions {
+    .x-table-actionable {
         height: calc(100% - 30px);
         background: $theme-white;
         .x-table-header {
@@ -38,11 +41,14 @@
             line-height: 24px;
             background: $grey-1;
             .x-title {
-                display: inline-block;
+                display: flex;
+                .count {
+                    margin-left: 8px;
+                }
             }
             .error {
                 flex: 1 0 auto;
-                color: $indicator-red;
+                color: $indicator-error;
                 display: inline-block;
                 margin-left: 24px;
                 font-size: 12px;

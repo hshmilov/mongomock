@@ -29,7 +29,7 @@
 </template>
 
 <script>
-    import xActionableTable from './TableActions.vue'
+    import xActionableTable from './TableActionable.vue'
 	import xTable from './Table.vue'
 
     import { GET_DATA_FIELD_LIST_SPREAD } from '../../store/getters'

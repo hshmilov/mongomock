@@ -1,7 +1,7 @@
 /* eslint-disable */
 var icon = require('vue-svgicon')
 icon.register({
-  'symbols/histogram': {
+  'symbol/histogram': {
     width: 260,
     height: 240,
     viewBox: '0 0 260 240',

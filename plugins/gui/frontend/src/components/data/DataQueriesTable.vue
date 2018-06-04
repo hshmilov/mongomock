@@ -10,7 +10,7 @@
 </template>
 
 <script>
-    import xActionableTable from '../tables/TableActions.vue'
+    import xActionableTable from '../tables/TableActionable.vue'
     import xTable from '../tables/Table.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'

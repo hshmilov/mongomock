@@ -489,13 +489,13 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         else:
             return None
 
-    def _add_client(self, client_config: dict, id=None):
+    def _add_client(self, client_config: dict, object_id=None):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
 
         :param client_config: Credential values representing a client of the adapter
-        :param id: The mongo object id
+        :param object_id: The mongo object id
         :return: Mongo id of created \ updated document (updated should be the given client_unique_id)
 
         assumes self._clients_lock is locked by the current thread
@@ -513,24 +513,26 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             status = "success"
         except (adapter_exceptions.ClientConnectionException, KeyError, Exception) as e:
             error_msg = str(e.args[0] if e.args else '')
-            id_for_log = client_id if client_id else (id if id else '')
+            id_for_log = client_id if client_id else (object_id if object_id else '')
             logger.exception(f"Got error while handling client {id_for_log} - possibly compliance problem with schema.")
             if client_id in self._clients:
                 del self._clients[client_id]
 
         result = self._write_client_to_db(client_id, client_config, status, error_msg)
-        if result is None and id is not None:
+        if result is None and object_id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
-            result = self._get_collection('clients').update_one({'_id': ObjectId(id)}, {'$set': {'status': status}})
+            result = self._get_collection('clients').update_one(
+                {'_id': ObjectId(object_id)}, {'$set': {'status': status}})
         elif result is None:
             # No way of updating other than logs and no return value
             logger.error("Not updating client since no DB id and no client id exist")
             return {}
 
         # Verifying update succeeded and returning the matched id and final status
-        if result.modified_count or result.upserted_id:
-            return {"id": str(result.upserted_id or ''), "client_id": client_id, "status": status, "error": error_msg}
+        if result.modified_count:
+            object_id = self._get_collection('clients').find_one({'client_id': client_id}, projection={'_id': 1})['_id']
+            return {"id": str(object_id), "client_id": client_id, "status": status, "error": error_msg}
 
         return {}
 

@@ -1,6 +1,6 @@
 <template>
     <div class="x-logo-name">
-        <img :src="`/src/assets/images/logos/${name}.png`" height="24">
+        <img :src="`/src/assets/images/logos/${name}.png`" height="24" :id="name" class="pulse">
         <div class="title">{{prettyName}}</div>
     </div>
 </template>
@@ -27,6 +27,7 @@
         display: flex;
         .title {
             margin-left: 8px;
+            white-space: nowrap;
         }
     }
 </style>

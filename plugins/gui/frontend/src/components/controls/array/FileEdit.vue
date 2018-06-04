@@ -2,7 +2,7 @@
     <div class="upload-file">
         <template v-if="uploading">
             <div class="file-name">
-                <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
+                <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
                 <div>Uploading...</div>
             </div>
         </template>
@@ -15,7 +15,6 @@
 </template>
 
 <script>
-	import '../../icons'
     export default {
         name: 'x-array-edit',
         props: ['schema', 'value', 'validator', 'apiUpload'],

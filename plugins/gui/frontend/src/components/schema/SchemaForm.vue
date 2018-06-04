@@ -70,13 +70,13 @@
                     width: 100%;
                     border: 1px solid $grey-2;
                     &.invalid {
-                        border-color: $indicator-red;
+                        border-color: $indicator-error;
                     }
                 }
             }
         }
         .error {
-            color: $indicator-red;
+            color: $indicator-error;
             margin-top: 12px;
         }
     }

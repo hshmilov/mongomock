@@ -225,13 +225,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                   dc_details.get('fetch_disabled_users', False)
                                   )
         except LdapException as e:
-            message = "Error in ldap process for dc {0}. reason: {1}".format(
-                dc_details["dc_name"], str(e))
+            message = f'Error in ldap process for dc {dc_details["dc_name"]}.'
             logger.exception(message)
         except KeyError as e:
             if "dc_name" in dc_details:
-                message = "Key error for dc {0}. details: {1}".format(
-                    dc_details["dc_name"], str(e))
+                message = f'Key error for dc {dc_details["dc_name"]}.'
             else:
                 message = "Missing dc name for configuration line"
             logger.exception(message)

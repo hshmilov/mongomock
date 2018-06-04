@@ -55,11 +55,11 @@ $grey-dient: linear-gradient($grey-1, $theme-white);
 
 
 /* Indicator Colours */
-$indicator-red: #D0011B;
-$indicator-orange: #F6A623;
-$indicator-blue: #4796E4;
-$indicator-green: #0FBC18;
-$indicator-colours: $indicator-red, $indicator-orange, $indicator-blue, $indicator-green;
+$indicator-error: #D0011B;
+$indicator-warning: #F6A623;
+$indicator-info: #4796E4;
+$indicator-success: #0FBC18;
+$indicator-colours: $indicator-error, $indicator-warning, $indicator-info, $indicator-success;
 
 
 /* Extra Colours */
@@ -142,7 +142,7 @@ $popup-shadow: 0 2px 4px 0 rgba(0, 0, 0, .4), 0 2px 42px 0 rgba(0, 0, 0, .2);
   }
 }
 
-@keyframes rise {
+@keyframes growX {
   from {
     width: 0;
   }
@@ -151,19 +151,61 @@ $popup-shadow: 0 2px 4px 0 rgba(0, 0, 0, .4), 0 2px 42px 0 rgba(0, 0, 0, .2);
   }
 }
 
-@keyframes bounce {
+@keyframes growY {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes shrinkY {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+@mixin bounce($direction) {
+  @keyframes bounce#{$direction} {
+    0% {
+      transform: translate#{$direction}#{'(-100%)'};
+      opacity: 0;
+    }
+    50% {
+      transform: translate#{$direction}#{'(30%)'};
+    }
+    75% {
+      transform: translate#{$direction}#{'(-15)'};
+    }
+    100% {
+      transform: translate#{$direction}#{'(0)'};
+      opacity: 1;
+    }
+  }
+}
+
+@include bounce('Y')
+@include bounce('X')
+
+@keyframes pulse {
   0% {
-    transform:translateY(-100%);
-    opacity: 0;
+    transform: scale(0.96);
+    opacity: 0.4;
   }
-  50% {
-    transform:translateY(30%);
+  30% {
+    transform: scale(1);
+    opacity: 0.7;
   }
-  75% {
-    transform:translateY(-15);
+  80% {
+    transform: scale(1.04);
+    opacity: 1;
   }
   100% {
-    transform:translateY(0);
-    opacity: 1;
+    transform: scale(1);
+    opacity: 0.7;
   }
 }

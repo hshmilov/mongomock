@@ -1,30 +1,38 @@
 <template>
-    <x-page title="axonius dashboard" class="dashboard">
-        <div class="dashboard-charts">
-            <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
-                             :portion="item.portion" :title="item.title" :description="item.description"
-                             @click-one="runCoverageFilter(item.properties, $event)" />
-            <x-card title="Data Discovery">
-                <x-counter-chart :data="adapterDevicesCounterData"/>
-            </x-card>
-            <x-card title="Devices per Adapter">
-                <x-histogram-chart :data="adapterDevicesCount" @click-one="runAdapterFilter" :sort="true" type="logo"/>
-            </x-card>
-            <x-card v-for="chart, chartInd in dashboard.charts.data" v-if="chart.data" :key="chart.name"
-                    :title="chart.name" :removable="true" @remove="removeDashboard(chart.uuid)">
-                <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" />
-            </x-card>
-            <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
-                <x-cycle-chart :data="lifecycle.subPhases"/>
-                <div class="cycle-time">Next cycle starts in
-                    <div class="blue">{{ nextRunTime }}</div>
-                </div>
-            </x-card>
-            <x-card title="New Chart" class="chart-new print-exclude">
-                <div class="link" @click="createNewDashboard">+</div>
-            </x-card>
-        </div>
-        <dashboard-wizard-container ref="wizard" />
+    <x-page title="axonius dashboard">
+        <template v-if="isEmptySystem === null">
+
+        </template>
+        <template v-else-if="isEmptySystem">
+            <x-empty-system />
+        </template>
+        <template v-else>
+            <div class="dashboard-charts">
+                <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
+                                 :portion="item.portion" :title="item.title" :description="item.description"
+                                 @click-one="runCoverageFilter(item.properties, $event)" />
+                <x-card title="Data Discovery">
+                    <x-counter-chart :data="adapterDevicesCounterData"/>
+                </x-card>
+                <x-card title="Devices per Adapter">
+                    <x-histogram-chart :data="adapterDevicesCount" @click-one="runAdapterFilter" :sort="true" type="logo"/>
+                </x-card>
+                <x-card v-for="chart, chartInd in dashboard.charts.data" v-if="chart.data" :key="chart.name"
+                        :title="chart.name" :removable="true" @remove="removeDashboard(chart.uuid)">
+                    <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" />
+                </x-card>
+                <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
+                    <x-cycle-chart :data="lifecycle.subPhases"/>
+                    <div class="cycle-time">Next cycle starts in
+                        <div class="blue">{{ nextRunTime }}</div>
+                    </div>
+                </x-card>
+                <x-card title="New Chart" class="chart-new print-exclude">
+                    <div class="link" @click="createNewDashboard">+</div>
+                </x-card>
+            </div>
+            <dashboard-wizard-container ref="wizard" />
+        </template>
     </x-page>
 </template>
 
@@ -39,11 +47,13 @@
     import intersect from '../../components/charts/customized/Intersect.vue'
 	import xCycleChart from '../../components/charts/Cycle.vue'
     import DashboardWizardContainer from './DashboardWizardContainer.vue'
+    import xEmptySystem from '../../components/onboard/empty_states/EmptySystem.vue'
 
 	import {
 		FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD
 	} from '../../store/modules/dashboard'
-    import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
+    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
+	import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
@@ -51,13 +61,16 @@
 		name: 'x-dashboard',
 		components: {
 			xPage, xCard, xCoverageCard, xCounterChart, xHistogramChart,
-            compare, intersect, xCycleChart, DashboardWizardContainer
+            compare, intersect, xCycleChart, DashboardWizardContainer, xEmptySystem
 		},
 		computed: {
 			...mapState({
 				dashboard (state) {
-					return state['dashboard']
-				}
+					return state.dashboard
+				},
+                adapterList(state) {
+					return state.adapter.adapterList.data
+                }
 			}),
 			lifecycle () {
 				if (!this.dashboard.lifecycle.data) return {}
@@ -87,13 +100,22 @@
 					}
 				}
 				return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
-			}
+			},
+            isEmptySystem() {
+				if (!this.adapterDevicesCount || !this.adapterList.length) return null
+
+				if (this.adapterDevicesCount.length || this.adapterList.some(item => item.status !== '')) {
+					return false
+				}
+
+                return true
+            }
 		},
 		methods: {
 			...mapMutations({updateView: UPDATE_DATA_VIEW, clearDataContent: CLEAR_DATA_CONTENT }),
 			...mapActions({
 				fetchAdapterDevices: FETCH_ADAPTER_DEVICES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
-                fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD
+                fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD, fetchAdapters: FETCH_ADAPTERS,
 			}),
 			runAdapterFilter (index) {
 				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')
@@ -126,6 +148,7 @@
             }
 		},
 		created () {
+			this.fetchAdapters()
 			const getDashboardData = () => {
             	Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
                     .then(() => this.timer = setTimeout(getDashboardData, 10000))

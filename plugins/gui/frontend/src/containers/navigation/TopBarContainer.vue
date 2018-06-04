@@ -1,7 +1,7 @@
 <template>
-    <header class="x-top-bar" v-bind:class="{ 'minimize': collapseSidebar || ($resize && $mq.below(1200)) }">
+    <header class="x-top-bar" :class="{ 'minimize': collapseSidebar || ($resize && $mq.below(1200)) }">
         <div class="bar-toggle">
-            <a class="toggle-link" v-on:click="toggleSidebar">
+            <a class="toggle-link" @click="toggleSidebar">
                 <svg-icon name="navigation/menu" :original="true" height="20"/>
             </a>
         </div>
@@ -10,17 +10,15 @@
             <svg-icon name="logo/axonius" height="16" :original="true" class="logo-text"/>
         </div>
         <ul class="bar-nav">
-            <li class="nav-item">
-                <template v-if="runningResearch">
-                    <svg-icon name="action/lifecycle/running" :original="true" height="20" class="rotating"/>
-                </template>
+            <li class="nav-item" v-if="runningResearch">
+                <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
             </li>
             <li class="nav-item">
                 <a v-if="!runningResearch" v-tooltip.bottom="'Discover Now'" @click="startResearchNow" class="item-link">
-                    <svg-icon name="action/lifecycle/run" :original="true" height="20"/>
+                    <svg-icon name="action/run" :original="true" height="20"/>
                 </a>
                 <a v-if="runningResearch" v-tooltip.bottom="'Stop Discovery'" @click="stopResearchNow" class="item-link">
-                    <svg-icon name="action/lifecycle/stop" :original="true" height="20"/>
+                    <svg-icon name="action/stop" :original="true" height="20"/>
                 </a>
             </li>
             <li class="nav-item">
@@ -32,10 +30,17 @@
                 <a class="item-link" @click="navigateSettings">
                     <svg-icon name="navigation/settings" :original="true" height="20" />
                 </a>
-                <x-tooltip content="In order to send alerts through mail, define the server under settings"
-                           :dismissible="true" v-model="mailSettingsTooltip" />
-                <x-tooltip content="In order to send alerts through a syslog system, define the server under settings"
-                           :dismissible="true" v-model="syslogSettingsTooltip" />
+                <x-tip-info content="In order to send alerts through mail, define the server under settings"
+                           v-if="mailSettingsTip" @dismiss="mailSettingsTip = false" />
+                <x-tip-info content="In order to send alerts through a syslog system, define the server under settings"
+                           v-if="syslogSettingsTip" @dismiss="syslogSettingsTip = false" />
+            </li>
+            <li class="nav-item">
+                <a @click="startTour" class="item-link">
+                    <svg-icon name="action/help" :original="true" height="20" />
+                </a>
+                <x-tip-info content="You can always start the tour again here"
+                            v-if="activateTourTip" @dismiss="activateTourTip = false" />
             </li>
         </ul>
     </header>
@@ -43,15 +48,16 @@
 
 <script>
 	import NotificationPeekContainer from '../notification/NotificationPeekContainer.vue'
-    import xTooltip from '../../components/popover/Tooltip.vue'
+    import xTipInfo from '../../components/onboard/TipInfo.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_LIFECYCLE } from '../../store/modules/dashboard'
-	import { TOGGLE_SIDEBAR, UPDATE_EMPTY_STATE } from '../../store/mutations'
+    import { UPDATE_EMPTY_STATE, START_TOUR } from '../../store/modules/onboarding'
+	import { TOGGLE_SIDEBAR } from '../../store/mutations'
     import { START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
 
 	export default {
-		components: { NotificationPeekContainer, xTooltip },
+		components: { NotificationPeekContainer, xTipInfo },
 		name: 'top-bar-container',
 		computed: {
             ...mapState({
@@ -59,37 +65,52 @@
                 	return state.interaction.collapseSidebar
                 },
                 emptyStates(state) {
-                	return state.interaction.onboarding.emptyStates
+                	return state.onboarding.emptyStates
                 },
                 lifecycle(state) {
                     return state.dashboard.lifecycle.data.subPhases || []
-                }
+                },
+				emptyStates(state) {
+					return state.onboarding.emptyStates
+				},
+				tourActive(state) {
+                	return state.onboarding.tourStates.active
+				}
             }),
-            mailSettingsTooltip: {
+            mailSettingsTip: {
             	get() {
-            		return this.emptyStates.emptyMailSettings
+            		return this.emptyStates.mailSettings
                 },
                 set(value) {
-					this.updateEmptyState({name:'emptyMailSettings', status: value})
+					this.updateEmptyState({ mailSettings: value })
                 }
             },
-			syslogSettingsTooltip: {
+			syslogSettingsTip: {
 				get() {
-					return this.emptyStates.emptySyslogSettings
+					return this.emptyStates.syslogSettings
 				},
 				set(value) {
-					this.updateEmptyState({name:'emptySyslogSettings', status: value})
+					this.updateEmptyState({ syslogSettings: value })
 				}
 			}
         },
         data() {
 			return {
                 isDown: false,
-                runningResearch: false
+                runningResearch: false,
+                activateTourTip: false
 			}
         },
+        watch: {
+			tourActive(isActiveNow) {
+				if (!isActiveNow) {
+					this.activateTourTip = true
+                }
+            }
+        },
 		methods: {
-			...mapMutations({toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE }),
+			...mapMutations({
+                toggleSidebar: TOGGLE_SIDEBAR, updateEmptyState: UPDATE_EMPTY_STATE, startTour: START_TOUR }),
 			...mapActions({
                 fetchLifecycle: FETCH_LIFECYCLE,
                 startResearch: START_RESEARCH_PHASE,
@@ -105,10 +126,10 @@
                 this.stopResearch()
             },
             navigateSettings() {
-				if (this.mailSettingsTooltip || this.syslogSettingsTooltip) {
+				if (this.mailSettingsTip || this.syslogSettingsTip) {
 					this.$router.push({path: '/settings#global-settings-tab'})
-                    this.mailSettingsTooltip = false
-                    this.syslogSettingsTooltip = false
+                    this.mailSettingsTip = false
+                    this.syslogSettingsTip = false
                 } else {
 				    this.$router.push({name: 'Settings'})
                 }
@@ -133,7 +154,9 @@
 <style lang="scss">
     .x-top-bar {
         background: $grey-1;
-        position: relative;
+        position: fixed;
+        top: 0;
+        width: 100%;
         z-index: 101;
         display: flex;
         height: 60px;
@@ -175,10 +198,10 @@
                 margin: 0 12px;
                 line-height: 60px;
                 position: relative;
-                .svg-stroke {
-                    fill: $theme-orange;
+                > .svg-stroke {
+                    stroke: $theme-orange;
                 }
-                .svg-fill {
+                > .svg-fill {
                     fill: $theme-orange;
                 }
                 .item-link {

@@ -1,43 +1,36 @@
 <template>
-    <div class="x-tooltip" v-show="isActive">
+    <div class="x-tip-info">
         <div class="content">{{content}}</div>
-        <div v-if="dismissible" @click="$emit('input', false)" class="link">GOT IT</div>
+        <x-button-dismiss @click.native="$emit('dismiss')" />
     </div>
 </template>
 
 <script>
+	import xButtonDismiss from './ButtonDismiss.vue'
+
 	export default {
-		name: 'x-tooltip',
-        props: {content: {required: true}, dismissible: {default: false}, value: {}},
-        data() {
-			return {
-				isActive: this.value
-            }
-        },
-        watch: {
-			value(newValue) {
-                this.isActive = newValue
-            }
-        }
+		name: 'x-tip-info',
+        components: { xButtonDismiss },
+        props: {content: {required: true}},
 	}
 </script>
 
 <style lang="scss">
-    .x-tooltip {
+    .x-tip-info {
         position: absolute;
         background-color: $theme-white;
         box-shadow: 1px 0 6px 0 rgba(0, 0, 0, 0.2);
         padding: 12px;
         border-radius: 4px;
-        right: -4px;
-        animation: bounce 1s ease;
+        right: -6px;
+        animation: bounceY 1s ease;
         line-height: 24px;
         &:before {
             content: '';
             position: absolute;
-            height: 6px;
-            width: 6px;
-            top: -3px;
+            height: 8px;
+            width: 8px;
+            top: -4px;
             right: 12px;
             box-shadow: 1px 0 6px 0 rgba(0, 0, 0, 0.2);
             transform: rotate(45deg);
@@ -47,9 +40,9 @@
             content: '';
             position: absolute;
             height: 8px;
-            width: 12px;
+            width: 16px;
             top: 0;
-            right: 10px;
+            right: 8px;
             background-color: $theme-white;
         }
         .content {

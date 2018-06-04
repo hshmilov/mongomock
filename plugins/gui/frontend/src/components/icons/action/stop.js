@@ -1,7 +1,7 @@
 /* eslint-disable */
 var icon = require('vue-svgicon')
 icon.register({
-  'action/lifecycle/stop': {
+  'action/stop': {
     width: 128,
     height: 128,
     viewBox: '0 0 128 128',

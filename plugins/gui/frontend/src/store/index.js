@@ -23,7 +23,6 @@ import {
 } from './actions'
 import {
 	TOGGLE_SIDEBAR, toggleSidebar,
-	UPDATE_EMPTY_STATE, updateEmptyState,
 	UPDATE_DATA_CONTENT, updateDataContent,
 	UPDATE_DATA_COUNT, updateDataCount,
 	UPDATE_DATA_VIEW, updateDataView,
@@ -46,13 +45,14 @@ import {
 } from './getters'
 import { devices } from './modules/devices'
 import { users } from './modules/users'
-import { adapter } from '../store/modules/adapter'
-import { alert } from '../store/modules/alert'
-import { notifications } from '../store/modules/notifications'
+import { adapter } from './modules/adapter'
+import { alert } from './modules/alert'
+import { notifications } from './modules/notifications'
 import { auth } from './modules/auth'
-import { dashboard } from '../store/modules/dashboard'
-import { report } from '../store/modules/report'
-import { configurable } from '../store/modules/configurable'
+import { dashboard } from './modules/dashboard'
+import { report } from './modules/report'
+import { configurable } from './modules/configurable'
+import { onboarding } from './modules/onboarding'
 
 Vue.use(Vuex)
 export default new Vuex.Store({
@@ -61,13 +61,7 @@ export default new Vuex.Store({
             General controls that the system uses throughout pages
          */
         interaction: {
-            collapseSidebar: true,
-			onboarding: {
-				emptyStates: {
-					emptyMailSettings: false,
-					emptySyslogSettings: false
-				}
-			}
+            collapseSidebar: true
         }
     },
 	getters: {
@@ -77,7 +71,6 @@ export default new Vuex.Store({
 	},
     mutations: {
         [ TOGGLE_SIDEBAR ]: toggleSidebar,
-		[ UPDATE_EMPTY_STATE ]: updateEmptyState,
         [ UPDATE_DATA_CONTENT ]: updateDataContent,
 		[ UPDATE_DATA_COUNT ]: updateDataCount,
 		[ UPDATE_DATA_VIEW ]: updateDataView,
@@ -126,7 +119,8 @@ export default new Vuex.Store({
         auth,
         dashboard,
 		report,
-		configurable
+		configurable,
+		onboarding
     }
 
 })

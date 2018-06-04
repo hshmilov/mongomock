@@ -1,9 +1,9 @@
 <template>
-    <router-link tag="li" :to="disabled? {}: link" class="x-nested-nav-item"
-                 :active-class="(!disabled && !exact)? 'active': ''"
-                 :exact-active-class="(!disabled && exact)? 'active': ''">
+    <router-link tag="li" :to="disabled? {}: link" :id="id"
+                 class="x-nested-nav-item" :active-class="(!disabled && !exact)? 'active': ''"
+                 :exact-active-class="(!disabled && exact)? 'active': ''" @click.native="$emit('click')">
         <a class="item-link" :title="routeName">
-            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" height="24" width="24" :original="true" />
+            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" width="24" :original="true" class="pulse" />
             <span>{{ routeName }}</span>
         </a>
         <slot/>
@@ -13,7 +13,7 @@
 <script>
     export default {
 		name: 'x-nested-nav-item',
-		props: ['routeName', 'routerPath', 'iconName', 'exact', 'disabled'],
+		props: ['routeName', 'routerPath', 'iconName', 'exact', 'disabled', 'id'],
         computed: {
             link() {
             	if (this.routerPath) return { path: this.routerPath }
@@ -28,6 +28,7 @@
         transition: all ease-in 0.2s;
         text-transform: capitalize;
         list-style: none;
+        position: relative;
         .item-link {
             transition: all ease-in 0.2s;
             color: $grey-4;

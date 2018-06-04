@@ -3,88 +3,95 @@
     	{ title: 'adapters', path: { name: 'Adapters'}},
     	{ title: adapterName }
     ]" class="adapter-config">
-            <div class="server-list-container">
-                <div class="form-group">
-                    <!-- Container for list of configured servers - both enabled and disabled -->
-                    <div class="form-group-header">
-                        <span class="form-group-title">Servers</span>
-                    </div>
-                    <dynamic-table v-if="schemaFields" :data="adapterClients" :fields="tableFields"
-                                   add-new-data-label="Add a server" @select="configServer" @delete="deleteServer">
-                    </dynamic-table>
-                </div>
-            </div>
-            <tabs v-if="currentAdapter">
-                <tab v-for="config, configName, i in currentAdapter.config_data" :key="i"
-                     :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
-                    <div class="configuration">
-                        <x-schema-form :schema="config.schema" v-model="config.config" @validate="serverModal.valid = $event"/>
-                        <a class="x-btn great" @click="saveConfig(configName, config.config)" tabindex="1">Save Config</a>
-                    </div>
-                </tab>
-            </tabs>
+        <x-table-actions title="Add or Edit Servers">
+            <template slot="actions">
+                <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="link">Remove</div>
+                <div @click="configServer('new')" id="new_server" class="x-btn pulse">+ New Server</div>
+            </template>
+            <x-table slot="table" :fields="tableFields" :data="adapterClients" :click-row-handler="configServer"
+                     id-field="uuid" v-model="selectedServers" />
+        </x-table-actions>
 
-            <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open"
-                   class="server-config" @close="toggleServerModal" approve-text="save" @confirm="saveServer">
-                <div slot="body">
-                    <!-- Container for configuration of a single selected / added server -->
-                    <x-logo-name :name="adapterPluginName" />
-                    <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData"
-                                   :api-upload="`adapters/${adapterUniquePluginName}`"
-                                   @submit="saveServer" @validate="serverModal.valid = $event"/>
-                </div>
-            </modal>
-        <modal v-if="message">
-            <div slot="body">
-                <div class="show-space">{{message}}</div>
+        <div class="config-settings">
+            <div class="header x-btn link" @click="toggleSettings">
+                <svg-icon name="navigation/settings" :original="true" height="20"/>Advanced Settings</div>
+            <div class="content">
+                <tabs v-if="currentAdapter && advancedSettings" class="growing-y" ref="tabs">
+                    <tab v-for="config, configName, i in currentAdapter.config" :key="i"
+                         :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
+                        <div class="configuration">
+                            <x-schema-form :schema="config.schema" v-model="config.config" @validate="serverModal.valid = $event"/>
+                            <a class="x-btn" @click="saveConfig(configName, config.config)" tabindex="1">Save Config</a>
+                        </div>
+                    </tab>
+                </tabs>
             </div>
-            <button class="x-btn" slot="footer" @click="closeModal">OK</button>
+        </div>
+
+        <modal v-if="serverModal.serverData && serverModal.uuid && serverModal.open" size="lg" class="config-server"
+               @close="toggleServerModal" @confirm="saveServer" @enter="promptSaveServer">
+            <div slot="body">
+                <!-- Container for configuration of a single selected / added server -->
+                <x-logo-name :name="adapterPluginName" />
+                <div class="server-error" v-if="serverModal.error">
+                    <svg-icon name="symbol/error" :original="true" height="12"></svg-icon>
+                    <div class="error-text">{{serverModal.error}}</div>
+                </div>
+                <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" @submit="saveServer"
+                               @validate="serverModal.valid = $event" :api-upload="`adapters/${adapterId}`" />
+            </div>
+            <template slot="footer">
+                <button @click="toggleServerModal" class="x-btn link">Cancel</button>
+                <button id="save_server" @click="saveServer" class="x-btn">Save</button>
+            </template>
         </modal>
+        <x-toast v-if="message" :message="message" @done="removeToast" :timed="false" />
     </x-page>
 </template>
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-	import DynamicTable from '../../components/tables/DynamicTable.vue'
+    import xTableActions from '../../components/tables/TableActionable.vue'
+    import xTable from '../../components/tables/Table.vue'
 	import Modal from '../../components/popover/Modal.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
     import xLogoName from '../../components/titles/LogoName.vue'
-    import '../../components/icons/navigation'
+    import xToast from '../../components/popover/Toast.vue'
 
-	import { mapState, mapActions } from 'vuex'
+	import { mapState, mapMutations, mapActions } from 'vuex'
 	import {
-		FETCH_ADAPTER_SERVERS, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
+		FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
 	} from '../../store/modules/adapter'
     import { pluginMeta } from '../../static.js'
-    import {SAVE_PLUGIN_CONFIG} from "../../store/modules/configurable";
+    import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable";
+	import { UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
 
 	export default {
 		name: 'adapter-config-container',
-		components: {Modal, xLogoName, Tabs, Tab, xPage, DynamicTable, xSchemaForm},
+		components: { xPage, xTableActions, xTable, Tabs, Tab, Modal, xLogoName, xSchemaForm, xToast },
 		computed: {
-			...mapState(['adapter']),
-			adapterUniquePluginName () {
+			...mapState({
+                currentAdapter(state) {
+					return state.adapter.currentAdapter
+                }
+			}),
+			adapterId () {
 				return this.$route.params.id
 			},
-            currentAdapter() {
-			    return this.adapter.adapterList.data.find(x => x.unique_plugin_name == this.adapterUniquePluginName)
-            },
 			adapterPluginName () {
-				return this.adapterUniquePluginName.match(/(.*_adapter)_\d*/)[1]
+				return this.adapterId.match(/(.*_adapter)_\d*/)[1]
 			},
 			adapterName () {
 				if (!pluginMeta[this.adapterPluginName]) { return this.adapterPluginName }
 				return pluginMeta[this.adapterPluginName].title
 			},
-			adapterData () {
-				return this.adapter.currentAdapter.data
-			},
             adapterClients () {
-				return this.adapterData.clients.map((client) => {
+				if (!this.currentAdapter || !this.currentAdapter.clients) return []
+				return this.currentAdapter.clients.map((client) => {
 					return {
-						id: client.uuid,
+						uuid: client.uuid,
 						status: client.status,
                         ...client.client_config,
                         error: client.error
@@ -92,31 +99,14 @@
                 })
             },
             adapterSchema () {
-				return this.adapterData.schema
+				if (!this.currentAdapter) return null
+				return this.currentAdapter.schema
             },
-			schemaFields () {
-				if (!this.adapterSchema) { return }
-				return this.adapterSchema.items.map((schemaField) => {
-					let field = {
-						path: schemaField.name, name: schemaField.title || schemaField.name, control: schemaField.type,
-						type: schemaField.type
-					}
-					if (schemaField.format && schemaField.format === 'password') {
-						field.hidden = true
-					} else if (field.control === 'string') {
-						field.control = 'text'
-                        field.type = 'text'
-					} else if (field.control === 'array') {
-						field.type = 'file'
-                    }
-                    return field
-				})
-			},
             tableFields () {
+				if (!this.adapterSchema || !this.adapterSchema.items) return []
 				return [
-					{path: 'status', name: '', type: 'status'},
-                    ...this.schemaFields,
-                    {path: 'error', name: 'Error', control: 'text', type: 'error'}
+					{ name: 'status', title: '', type: 'string', format: 'icon' },
+                    ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password'))
                 ]
             }
 		},
@@ -125,54 +115,66 @@
 				serverModal: {
 					open: false,
 					serverData: {},
+                    error: '',
                     serverName: 'New Server',
                     uuid: null,
                     valid: true
 				},
-                message: ''
+                selectedServers: [],
+                message: '',
+                advancedSettings: false
 			}
 		},
 		methods: {
+            ...mapMutations({ updateAdapter: UPDATE_CURRENT_ADAPTER, updateState: UPDATE_TOUR_STATE }),
 			...mapActions({
-				fetchAdapter: FETCH_ADAPTER_SERVERS,
-				updateAdapterServer: SAVE_ADAPTER_SERVER,
-                archiveServer: ARCHIVE_SERVER,
-                updatePluginConfig: SAVE_PLUGIN_CONFIG
+                fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER,
+                archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
 			}),
-			returnToAdapters () {
-				this.$router.push({name: 'Adapters'})
-			},
 			configServer (serverId) {
+            	this.message = ''
 				this.serverModal.valid = true
 				if (serverId === 'new') {
-					this.serverModal.serverData = {}
-					this.serverModal.serverName = 'New Server'
-					this.serverModal.uuid = serverId
+					this.serverModal = { ...this.serverModal,
+                        serverData: {}, serverName: 'New Server', uuid: serverId, error: '' }
 				} else {
-					this.adapterData.clients.forEach((server, index) => {
-						if (server.uuid === serverId) {
-							this.serverModal.serverData = { ...server['client_config'] }
-							this.serverModal.serverName = server['client_id']
-                            this.serverModal.uuid = server.uuid
-						}
-					})
+					let server = this.currentAdapter.clients.find(server => (server.uuid === serverId))
+                    this.serverModal = { ...this.serverModal,
+                        serverData: { ...server.client_config }, serverName: server.client_id,
+                        uuid: server.uuid, error: server.error
+                    }
 				}
 				this.toggleServerModal()
 			},
-			deleteServer (serverId) {
-                this.archiveServer({
-                    adapterId: this.adapterUniquePluginName,
-                    serverId: serverId
-                })
+            promptSaveServer() {
+				this.updateState('saveServer')
+            },
+			removeServers () {
+            	this.selectedServers.forEach(serverId => this.archiveServer({
+					adapterId: this.adapterId,
+					serverId: serverId
+				}))
+                this.selectedServers = []
 			},
 			saveServer () {
 				if (!this.serverModal.valid) {
 					return
                 }
-				this.updateAdapterServer({
-					adapterId: this.adapterUniquePluginName,
+                this.message = 'Connecting to Server...'
+				this.updateServer({
+					adapterId: this.adapterId,
 					serverData: this.serverModal.serverData,
                     uuid: this.serverModal.uuid
+				}).then((updateRes) => {
+					this.fetchAdapters().then(() => {
+                        document.getElementById(updateRes.data.id).children[2].id = 'status_server'
+						this.updateState(`${updateRes.data.status}Server`)
+                        if (updateRes.data.status === 'error') {
+                        	this.message = 'Problem connecting. Review error and try again.'
+						} else {
+                        	this.message = 'Connection established. Data collection initiated...'
+						}
+					})
 				})
 				this.toggleServerModal()
 			},
@@ -181,13 +183,21 @@
 			},
             saveConfig(configName, config) {
                 this.updatePluginConfig({
-                    pluginId: this.adapterUniquePluginName,
+                    pluginId: this.adapterId,
                     configName: configName,
                     config: config
-                }).then(() => this.message = 'Adapter Configuration Saved.')
+                }).then(() => this.message = 'Adapter configuration saved.')
             },
-            closeModal() {
+            removeToast() {
                 this.message = ''
+            },
+            toggleSettings() {
+                if (this.advancedSettings) {
+            		this.$refs.tabs.$el.classList.add('shrinking-y')
+                    setTimeout(() => this.advancedSettings = false, 1000)
+                } else {
+            	    this.advancedSettings = true
+                }
             }
 		},
 		created () {
@@ -195,31 +205,61 @@
                 If no adapter mapped controls source, or has wrong id for current adapter selection,
                 try and fetch it (happens after refresh) and update local adapter
              */
-			if (!this.adapterData || !this.adapterData.schema) {
-				this.fetchAdapter(this.$route.params.id)
-			}
+			this.fetchAdapters().then(() => {
+                this.updateAdapter(this.adapterId)
+            })
+			this.updateState('addServer')
 		}
 	}
 </script>
 
 <style lang="scss">
     .adapter-config {
-        .server-list-container {
-            .form-group-header {
-                font-size: 20px;
-                color: $theme-orange;
+        .x-table-actionable {
+            height: auto;
+            .x-title {
+                font-weight: 300;
+            }
+            thead th {
+                font-weight: 200;
             }
         }
-        .x-tabs {
-            margin-top: 36px;
-            .configuration {
-                width: 600px;
-                padding: 24px;
+        .config-settings {
+            margin-top: 64px;
+            > .header {
+                font-weight: 300;
+                text-align: left;
+                margin-bottom: 8px;
+                .svg-icon {
+                    margin-right: 8px;
+                }
+            }
+            > .content {
+                overflow: hidden;
+                .x-tabs {
+                    overflow: hidden;
+                    width: 60vw;
+                    &.shrinking-y {
+                        transform: translateY(-100%);
+                    }
+                    .configuration {
+                        width: calc(60vw - 48px);
+                        padding: 24px;
+                    }
+                }
             }
         }
-        .server-config {
-            .schema-form {
-                margin-top: 24px;
+        .config-server {
+            .x-logo-name {
+                margin-bottom: 24px;
+            }
+            .server-error {
+                display: flex;
+                align-items: baseline;
+                margin-bottom: 12px;
+                .error-text {
+                    margin-left: 8px;
+                }
             }
         }
     }

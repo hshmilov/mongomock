@@ -15,12 +15,13 @@
             </tr>
         </thead>
         <tbody>
-            <tr v-for="item in data" @click="clickRow(item[idField])" class="x-row" :class="{clickable: clickRowHandler}">
+            <tr v-for="item in data" @click="clickRow(item[idField])" :id="item[idField]"
+                class="x-row" :class="{ clickable: clickRowHandler }">
                 <td v-if="value" class="w-14">
-                    <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected"/>
+                    <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected" />
                 </td>
                 <td v-for="field in fields" nowrap>
-                    <component :is="`x-${field.type}-view`" :value="item[field.name]" :schema="field" :limit="2"/>
+                    <component :is="field.type" :value="item[field.name]" :schema="field" :limit="2" />
                 </td>
             </tr>
             <template v-if="pageSize">
@@ -35,18 +36,18 @@
 
 <script>
     import xCheckbox from '../inputs/Checkbox.vue'
-	import xStringView from '../../components/controls/string/StringView.vue'
-	import xNumberView from '../../components/controls/numerical/NumberView.vue'
-	import xIntegerView from '../../components/controls/numerical/IntegerView.vue'
-	import xBoolView from '../../components/controls/boolean/BooleanView.vue'
-	import xFileView from '../../components/controls/array/FileView.vue'
-	import xArrayView from '../../components/controls/array/ArrayInlineView.vue'
+	import string from '../../components/controls/string/StringView.vue'
+	import number from '../../components/controls/numerical/NumberView.vue'
+	import integer from '../../components/controls/numerical/IntegerView.vue'
+	import bool from '../../components/controls/boolean/BooleanView.vue'
+	import file from '../../components/controls/array/FileView.vue'
+	import array from '../../components/controls/array/ArrayInlineView.vue'
 
 	export default {
 		name: 'x-table',
-        components: { xCheckbox, xStringView, xIntegerView, xNumberView, xBoolView, xFileView, xArrayView },
+        components: { xCheckbox, string, integer, number, bool, file, array },
         props: {
-			fields: {}, data: {}, pageSize: {}, sort: {}, idField: {}, value: {},
+			fields: {}, data: {}, pageSize: {}, sort: {}, idField: { default: 'id' }, value: {},
             clickRowHandler: {}, clickColHandler: {}
         },
         computed: {
@@ -63,6 +64,9 @@
         watch: {
 			value(newValue) {
 				this.selected = [ ...newValue ]
+                if (!this.selected.length) {
+					this.allSelected = false
+                }
             }
         },
         methods: {

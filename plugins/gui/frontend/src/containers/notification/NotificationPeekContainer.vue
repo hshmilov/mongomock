@@ -10,7 +10,7 @@
                  @click="navigateNotification(notification.uuid)"
                  class="notification" v-bind:class="{ bold: !notification.seen }">
                 <div class="status">
-                    <svg-icon :name="`symbols/${notification.severity}`" :original="true" height="16"/>
+                    <svg-icon :name="`symbol/${notification.severity}`" :original="true" height="16"/>
                 </div>
                 <div class="content">
                     <div class="d-flex">

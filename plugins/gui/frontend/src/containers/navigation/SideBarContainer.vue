@@ -13,7 +13,7 @@
         </div>
         <x-nested-nav>
             <x-nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
-            <x-nested-nav-item route-name="Devices" icon-name="devices">
+            <x-nested-nav-item route-name="Devices" icon-name="devices" id="devices">
                 <x-nested-nav nest-level="1" class="collapse">
                     <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved"/>
                 </x-nested-nav>
@@ -24,17 +24,16 @@
                 </x-nested-nav>
             </x-nested-nav-item>
             <x-nested-nav-item route-name="Alerts" icon-name="alert"/>
-            <x-nested-nav-item route-name="Adapters" icon-name="adapter"/>
+            <x-nested-nav-item route-name="Adapters" icon-name="adapter" id="adapters" />
             <x-nested-nav-item route-name="Reporting" icon-name="report"/>
         </x-nested-nav>
     </aside>
 </template>
 
 <script>
-    import '../../components/icons/navigation'
-
     import xNestedNav from '../../components/menus/NestedNav.vue'
     import xNestedNavItem from '../../components/menus/NestedNavItem.vue'
+
     import { LOGOUT } from '../../store/modules/auth'
     import { mapState, mapActions } from 'vuex'
 
@@ -49,12 +48,13 @@
 <style lang="scss">
     .x-side-bar {
         position: fixed;
+        top: 0;
         width: 240px;
         transition: all ease-in 0.2s;
         height: 100%;
-        z-index: 200;
+        z-index: 100;
         background: $theme-black;
-        padding-bottom: 60px;
+        padding: 60px 0;
         display: flex;
         flex-flow: column;
         .x-user {
@@ -118,7 +118,6 @@
         display: block;
         width: 60px;
         padding-bottom: 0;
-        position: absolute;
         .x-user {
             .x-user-profile {
                 text-align: left;

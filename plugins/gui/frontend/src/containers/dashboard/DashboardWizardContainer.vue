@@ -8,7 +8,7 @@
                 <template v-for="type in chartTypes">
                     <input :id="type.value" type="radio" :value="type.value" v-model="dashboard.type" @change="changeType"/>
                     <label :for="type.value" class="type-label">
-                        <svg-icon :name="`symbols/${type.name}`" :original="true" height="24"></svg-icon>
+                        <svg-icon :name="`symbol/${type.name}`" :original="true" height="24"></svg-icon>
                     </label>
                 </template>
             </div>
@@ -57,7 +57,6 @@
     import FeedbackModal from '../../components/popover/FeedbackModal.vue'
     import xSelectSymbol from '../../components/inputs/SelectSymbol.vue'
     import xSelect from '../../components/inputs/Select.vue'
-	import '../../components/icons'
 
 	import { mapState, mapActions } from 'vuex'
     import { FETCH_DATA_QUERIES } from '../../store/actions'

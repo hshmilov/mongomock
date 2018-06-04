@@ -232,8 +232,8 @@ export const pluginMeta = {
         description: 'IBM\'s innovative cloud computing platform combines platform as a service (PaaS) with infrastructure as a service (IaaS) and includes a rich catalog of cloud services that can be easily integrated with PaaS and IaaS to build business applications rapidly.'
     },
     json_file_adapter: {
-        title: 'Adapter title',
-        description: 'Adapter description'
+        title: 'JSON File',
+        description: 'JSON File Adapter processes files containing JSON formatted devices.'
     },
     stresstest_scanner_adapter: {
         title: 'Test adapter for scanners',

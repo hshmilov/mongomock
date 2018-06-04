@@ -40,19 +40,19 @@
 }
 
 .success {
-  color: $indicator-green;
+  color: $indicator-success;
 }
 
 .info {
-  color: $indicator-blue;
+  color: $indicator-info;
 }
 
 .warning {
-  color: $indicator-orange;
+  color: $indicator-warning;
 }
 
 .error {
-  color: $indicator-red;
+  color: $indicator-error;
 }
 
 .c-grey-3 {
@@ -134,6 +134,22 @@ ul {
   .indicator-border-#{$i} {
     border-color: nth($indicator-colours, $i);
   }
+}
+
+.indicator-bg-error {
+  background-color: $indicator-error;
+}
+.indicator-bg-warning {
+  background-color: $indicator-warning;
+}
+.indicator-bg-info {
+  background-color: $indicator-info;
+}
+.indicator-bg-success {
+  background-color: $indicator-success;
+}
+.indicator-bg-void {
+  background-color: $grey-2;
 }
 
 @for $i from 1 through length($extra-colours) {
@@ -222,6 +238,7 @@ table {
 }
 
 .x-btn {
+  border: 0;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s ease-in;
@@ -276,8 +293,8 @@ table {
     background-color: transparent;
     color: $theme-blue;
     border: 0;
-    .svg-fill { fill: $theme-black; }
-    .svg-stroke { stroke: $theme-black; }
+    .svg-fill { fill: $theme-blue; }
+    .svg-stroke { stroke: $theme-blue; }
     &:hover {
       box-shadow: none;
       &:not(.disabled) {
@@ -361,8 +378,22 @@ table {
   animation: scaling 1s ease-in-out forwards;
 }
 
-.rising {
-  animation: rise 1s ease-out;
+.growing-x {
+  animation: growX 1s ease-out;
+}
+
+.growing-y {
+  animation: growY 1s ease-in-out;
+}
+
+.shrinking-y {
+  animation: shrinkY 1s ease-in-out;
+}
+
+.pulsing {
+  &.pulse, .pulse {
+    animation: pulse 1.4s linear infinite;
+  }
 }
 
 
