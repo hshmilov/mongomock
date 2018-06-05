@@ -54,12 +54,12 @@ export const pluginMeta = {
         description: 'Puppet is an open-source software configuration management tool.'
     },
     qualys_adapter: {
-        title: 'Qualys Cloud Platform',
+        title: 'Qualys Cloud Platform - Agents',
         description: 'The Qualys Cloud Platform monitors customers\' global security and compliance ' +
         'posture using sensors.'
     },
     qualys_scans_adapter: {
-        title: 'Qualys Cloud Platform - Scanner',
+        title: 'Qualys Cloud Platform',
         description: 'The Qualys Cloud Platform monitors customers\' global security and compliance ' +
         'posture using sensors.'
     },
