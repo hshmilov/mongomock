@@ -45,14 +45,15 @@ class CiscoPrimeAdapter(AdapterBase):
 
         return community, ip, port
 
-    def get_arp_table(self, raw_device, session):
+    def get_cisco_tasks(self, raw_device, session):
         community, ip, port = self._get_snmp_creds(raw_device, session)
         if community is not None:
-            with snmp.CiscoSnmpClient(community=community, host=ip, port=port) as client:
-                yield from client.query_all()
+            return snmp.CiscoSnmpClient(community=community, host=ip, port=port).get_tasks()
 
     def _query_devices_by_client(self, client_name, session):
         raw_devices = []
+        arp_table = []
+        tasks = []
         for device in session.get_devices():
             type_, raw_device = ('cisco', device)
             yield (type_, raw_device)
@@ -60,11 +61,15 @@ class CiscoPrimeAdapter(AdapterBase):
 
         for raw_device in raw_devices:
             try:
-                arp_table = self.get_arp_table(raw_device, session)
-                for arp_entry in arp_table:
-                    yield ('neighbor', arp_entry)
+                tasks.append(self.get_cisco_tasks(raw_device, session))
             except Exception as e:
                 logger.exception(f'Got exception while getting arp_table: {raw_device}')
+
+        try:
+            for entry in snmp.run_event_loop(tasks):
+                yield ('neighbor', entry)
+        except Exception as e:
+            logger.exception(f'Got exception while getting arp_table: {raw_device}')
 
     def _clients_schema(self):
         return {

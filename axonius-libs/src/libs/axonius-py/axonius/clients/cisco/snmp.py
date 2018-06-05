@@ -4,7 +4,14 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.clients.cisco.abstract import *
 from axonius.clients.cisco import snmp_parser
 
+import asyncio
 from pysnmp.hlapi import *
+from pysnmp.hlapi.asyncio import *
+from pysnmp.hlapi.varbinds import *
+from pyasn1.type.univ import Null
+
+import itertools
+
 from collections import defaultdict
 from axonius.adapter_exceptions import ClientConnectionException
 
@@ -17,6 +24,61 @@ CDP_OID = '1.3.6.1.4.1.9.9.23.1.2'
 SYSTEM_DESCRIPTION_OID = '1.3.6.1.2.1.1'
 INETFACE_OID = '1.3.6.1.2.1.2.2.1'
 IP_OID = '1.3.6.1.2.1.4.20'
+
+
+def run_event_loop(tasks):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # If we are in thread and we don't have any event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    tasks, _ = loop.run_until_complete(asyncio.wait(tasks))
+    loop.close()
+    yield from map(lambda x: x.result(), tasks)
+
+
+async def asyncio_next(engine, community, ip, port, oid):
+    # based on hlapi/asyncore/sync/cmdgen.py NextCmd
+
+    varBinds = [ObjectType(ObjectIdentity(oid))]
+    results = []
+    initialVars = CommandGeneratorVarBinds().makeVarBinds(engine, [ObjectType(ObjectIdentity(oid))])[0]
+
+    while True:
+        (errorIndication,
+         errorStatus,
+         errorIndex,
+         varBindTable) = await nextCmd(
+            engine,
+            CommunityData(community),
+            UdpTransportTarget((ip, port)),
+            ContextData(),
+            *varBinds)
+
+        if errorIndication:
+            results.append((errorIndication, errorStatus, errorIndex, varBindTable))
+            return results
+
+        if errorStatus:
+            if errorStatus == 2:
+                # Hide SNMPv1 noSuchName error which leaks in here
+                # from SNMPv1 Agent through internal pysnmp proxy.
+                errorStatus = errorStatus.clone(0)
+                errorIndex = errorIndex.clone(0)
+            results.append((errorIndication, errorStatus, errorIndex, varBindTable))
+            return results
+
+        varBinds = varBindTable and varBindTable[0]
+        for idx, varBind in enumerate(varBinds):
+            name, val = varBind
+            if not isinstance(val, Null):
+                if not initialVars[idx].isPrefixOf(name):
+                    return results
+                results.append((errorIndication, errorStatus, errorIndex, varBinds))
+                break
+        else:
+            return results
 
 
 class CiscoSnmpClient(AbstractCiscoClient):
@@ -39,6 +101,12 @@ class CiscoSnmpClient(AbstractCiscoClient):
                        ObjectType(ObjectIdentity(oid)),
                        lexicographicMode=False)
 
+    async def _async_next_cmd(self, oid):
+        return await asyncio_next(self._engine,
+                                  self._community,
+                                  self._ip, self._port,
+                                  oid)
+
     def __enter__(self):
         """ Snmp is a connection-less protocol.
             So in order to simulate connection - we are going to get one mib and check for errors"""
@@ -50,15 +118,14 @@ class CiscoSnmpClient(AbstractCiscoClient):
             raise ClientConnectionException(f'Unable to query system description errors: {errors}')
         return self
 
-    def _query_dhcp_leases(self):
+    async def _query_dhcp_leases(self):
         logger.warning('dhcp isn\'t implemented yet - skipping')
         return None
 
-    def _query_arp_table(self):
+    async def _query_arp_table(self):
         results = []
-        for query_result in self._next_cmd(ARP_OID):
+        for query_result in await self._async_next_cmd(ARP_OID):
             try:
-                logger.info(f'my_result= {query_result}')
                 error, _, _, result = query_result
                 if error:
                     logger.error(f'Unable to query arp table for {self._ip} error: {error}')
@@ -68,17 +135,17 @@ class CiscoSnmpClient(AbstractCiscoClient):
                 logger.exception('Exception while quering arp table')
         return SnmpArpCiscoData(results)
 
-    def _query_basic_info(self):
+    async def _query_basic_info(self):
         ''' query basic information about the device itself '''
-        data = list(self._next_cmd(SYSTEM_DESCRIPTION_OID))
+        data = await self._async_next_cmd(SYSTEM_DESCRIPTION_OID)
         errors = list(map(lambda x: x[0], data))
         results = [('info', list(map(lambda x: x[3], data)))]
 
-        data = list(self._next_cmd(INETFACE_OID))
+        data = await self._async_next_cmd(INETFACE_OID)
         errors += list(map(lambda x: x[0], data))
         results += [('iface', list(map(lambda x: x[3], data)))]
 
-        data = list(self._next_cmd(IP_OID))
+        data = await self._async_next_cmd(IP_OID)
         errors += list(map(lambda x: x[0], data))
         results += [('ip', list(map(lambda x: x[3], data)))]
 
@@ -97,8 +164,8 @@ class CiscoSnmpClient(AbstractCiscoClient):
             groups[(oid[-1], oid[-2])].append(result)
         return groups.values()
 
-    def _query_cdp_table(self):
-        data = list(self._next_cmd(CDP_OID))
+    async def _query_cdp_table(self):
+        data = await self._async_next_cmd(CDP_OID)
         errors = list(map(lambda x: x[0], data))
         results = list(map(lambda x: x[3], data))
         if any(errors):
@@ -107,6 +174,20 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
         results = self._group_cdp(results)
         return SnmpCdpCiscoData(results)
+
+    def get_tasks(self):
+        """ return all tasks """
+        return [
+            self._query_basic_info(),
+            self._query_cdp_table(),
+            self._query_arp_table(),
+            self._query_dhcp_leases()
+        ]
+
+    def query_all(self):
+        """ since snmp queries are async, we must handle them differently """
+        tasks = self.get_tasks()
+        yield from run_event_loop(tasks)
 
 
 class SnmpBasicInfoCiscoData(BasicInfoData):
@@ -254,6 +335,4 @@ if __name__ == "__main__":
     from logging import info, warning, debug, error
 
     logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
-    a = CiscoSnmpClient(host='xxx', community='xxx', port=161)._query_basic_info()
-    b = a.get_parsed_data()
-    pprint.pprint(b)
+    a = CiscoSnmpClient(host='xxx', community='xxx', port=161).query_all()
