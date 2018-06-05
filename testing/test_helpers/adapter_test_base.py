@@ -102,11 +102,9 @@ class AdapterTestBase(object):
 
         now = datetime.now(tz=timezone.utc)
         last_seen, last_fetched = self.get_last_threshold(entity_type)
-        using_last_seen = last_seen > 0
-        if using_last_seen:
+        if last_seen:
             last_seen_long_time_ago = now - timedelta(hours=last_seen * 5)
-        using_last_fetched = last_fetched > 0
-        if using_last_fetched:
+        if last_fetched:
             last_fetched_long_time_ago = now - timedelta(hours=last_fetched * 5)
 
         entity_db = self.axonius_system.db.get_entity_db(entity_type)
@@ -134,7 +132,7 @@ class AdapterTestBase(object):
         cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
         assert cleaned_count == 0  # the entity added shouldn't be removed
 
-        if using_last_fetched:
+        if last_fetched:
             # this is a fake entity from a "long time ago" by last_fetched
             deleted_entity_id = "3-" + uuid.uuid4().hex
             entity_db.insert_one({
@@ -202,7 +200,7 @@ class AdapterTestBase(object):
             # verify our entity is deleted
             assert entity_db.count({'adapters.data.id': deleted_adapter_entity_id}) == 0
 
-        if using_last_seen:
+        if last_seen:
             # this is a fake entity from a "long time ago" according to `last_seen`
             deleted_entity_id = "8-" + uuid.uuid4().hex
             entity_db.insert_one({

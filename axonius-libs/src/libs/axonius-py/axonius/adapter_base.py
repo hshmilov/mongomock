@@ -3,6 +3,7 @@ AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 
 from axonius.thread_stopper import stoppable
@@ -73,8 +74,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     """
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 30
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24 * 2
-    DEFAULT_USER_LAST_SEEN = -1
-    DEFAULT_USER_LAST_FETCHED = -1
+    DEFAULT_USER_LAST_SEEN = None
+    DEFAULT_USER_LAST_FETCHED = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -98,15 +99,19 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
         # Devices older then the given deltas will be deleted:
         # Either by:
-        self._last_seen_timedelta = timedelta(hours=config['last_seen_threshold_hours'])
+        self._last_seen_timedelta = timedelta(hours=config['last_seen_threshold_hours']) if \
+            config['last_seen_threshold_hours'] else None
         # this is the delta used for "last_seen" field from the adapter (if provided)
 
         # Or by:
-        self._last_fetched_timedelta = timedelta(hours=config['last_fetched_threshold_hours'])
+        self._last_fetched_timedelta = timedelta(hours=config['last_fetched_threshold_hours']) if \
+            config['last_fetched_threshold_hours'] else None
         # this is the delta used for comparing "accurate_for_datetime" - i.e. the last time the devices was fetched
 
-        self.__user_last_seen_timedelta = timedelta(hours=config['user_last_seen_threshold_hours'])
-        self.__user_last_fetched_timedelta = timedelta(hours=config['user_last_fetched_threshold_hours'])
+        self.__user_last_seen_timedelta = timedelta(hours=config['user_last_seen_threshold_hours']) if \
+            config['user_last_seen_threshold_hours'] else None
+        self.__user_last_fetched_timedelta = timedelta(hours=config['user_last_fetched_threshold_hours']) if \
+            config['user_last_fetched_threshold_hours'] else None
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -251,8 +256,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         Unlinks devices first if necessary.
         :return: Amount of deleted devices
         """
-        if self._last_seen_timedelta < timedelta(0) and self._last_fetched_timedelta < timedelta(0) and \
-                self.__user_last_fetched_timedelta < timedelta(0) and self.__user_last_seen_timedelta < timedelta(0):
+        if not(self._last_seen_timedelta or self._last_fetched_timedelta or
+                self.__user_last_fetched_timedelta or self.__user_last_seen_timedelta):
             return 0
 
         device_age_cutoff = self.__device_time_cutoff()
@@ -994,8 +999,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         until it is considered "old"
         """
         now = datetime.now(timezone.utc)
-        return (now - self._last_seen_timedelta if self._last_seen_timedelta > timedelta(0) else None,
-                now - self._last_fetched_timedelta if self._last_fetched_timedelta > timedelta(0) else None)
+        return (now - self._last_seen_timedelta if self._last_seen_timedelta else None,
+                now - self._last_fetched_timedelta if self._last_fetched_timedelta else None)
 
     def __user_time_cutoff(self) -> Tuple[date, date]:
         """
@@ -1003,8 +1008,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         until it is considered "old"
         """
         now = datetime.now(timezone.utc)
-        return (now - self.__user_last_seen_timedelta if self.__user_last_seen_timedelta > timedelta(0) else None,
-                now - self.__user_last_fetched_timedelta if self.__user_last_fetched_timedelta > timedelta(0) else None)
+        return (now - self.__user_last_seen_timedelta if self.__user_last_seen_timedelta else None,
+                now - self.__user_last_fetched_timedelta if self.__user_last_fetched_timedelta else None)
 
     def populate_register_doc(self, register_doc, config_file_path):
         config = AdapterConfig(config_file_path)
@@ -1039,14 +1044,10 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 {
                     "name": "user_last_fetched_threshold_hours",
                     "title": "Old user last fetched threshold hours",
-                    "type": "number"
+                    "type": "number",
                 }
             ],
             "required": [
-                "last_seen_threshold_hours",
-                "last_fetched_threshold_hours",
-                "user_last_seen_threshold_hours",
-                "user_last_fetched_threshold_hours"
             ],
             "pretty_name": "Adapter Configuration",
             "type": "array"

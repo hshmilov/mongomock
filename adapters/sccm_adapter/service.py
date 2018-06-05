@@ -46,7 +46,7 @@ class SccmAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         try:
             client_data.connect()
-            if self._last_seen_timedelta < timedelta(0):
+            if not self._last_seen_timedelta:
                 yield from client_data.query(consts.SCCM_QUERY.format(''))
             else:
                 yield from client_data.query(consts.SCCM_QUERY.format(consts.LIMIT_SCCM_QUERY.format(self._last_seen_timedelta.total_seconds() / 3600)))
