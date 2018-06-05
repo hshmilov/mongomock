@@ -1503,9 +1503,13 @@ class GuiService(PluginBase, Configurable):
                 logger.exception("Unexpected exception")
                 return return_error("Failed logging into AD")
 
+            user = conn.get_user(user_name)
+            if not user:
+                return return_error("Failed login")
+
             needed_group = ldap_login["group_cn"]
             if needed_group:
-                groups, user = conn.get_groups_of_user(user_name)
+                groups = user.get('memberOf', [])
                 if not any((f'CN={needed_group}' in group) for group in groups):
                     return return_error(f"The provided user is not in the group {needed_group}")
             image = None
@@ -2269,6 +2273,7 @@ class GuiService(PluginBase, Configurable):
                 "enabled": False,
                 "dc_address": "",
                 "default_domain": "",
+                "group_cn": "",
                 "use_ssl": SSLState.Unencrypted.name,
                 "ca_file": None,
                 "cert_file": None,

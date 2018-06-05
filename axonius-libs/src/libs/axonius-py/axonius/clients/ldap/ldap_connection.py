@@ -2,6 +2,7 @@
 
 import logging
 
+from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap import ldap_must_get_str, ldap_must_get, ldap_get
 
 logger = logging.getLogger(f"axonius.{__name__}")
@@ -13,7 +14,7 @@ from axonius.utils.parsing import get_exception_string, convert_ldap_searchpath_
     ad_integer8_to_timedelta, parse_date
 from axonius.utils.files import create_temp_file
 import ssl
-from typing import TextIO, List, Tuple
+from typing import TextIO
 import ldap3
 from axonius.types.ssl_state import SSLState
 
@@ -777,21 +778,21 @@ class LdapConnection(object):
 
         return self._ldap_modify(distinguished_name, {"userAccountControl": new_user_account_control})
 
-    def get_groups_of_user(self, username: str) -> Tuple[List[str], dict]:
+    def get_user(self, username: str) -> dict:
         """
-        Get all groups a user is in and also all user attributes
-        :param username: Name of user to find groups for
-        :return: List of strings (DNs of groups) or empty list if no result is found
+        Get a user from AD
+        :param username: Name of user
+        :return: User's attributes
         """
         search_filter = f'(&(objectCategory=person)(|(objectClass=user)(objectClass=inetOrgPerson))(cn={username}))'
-        result = list(self._ldap_search(search_filter, attributes=['memberOf']))
+        result = list(self._ldap_search(search_filter, attributes=['*']))
         try:
             if result:
-                return result[0]['memberOf'], result[0]
+                return result[0]
         except Exception:
-            logger.exception(f"Can't fetch group of user {username}")
+            logger.exception(f"Can't fetch user of user {username}")
             pass
-        return [], {}
+        return None
 
     # Statistics
     def get_report_statistics(self):
