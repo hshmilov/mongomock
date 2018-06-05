@@ -10,7 +10,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in adapters.data" @click="configAdapter(item['id'])" class="table-row">
+                    <tr v-for="item in sortedSpecificData" @click="configAdapter(item['id'])" class="table-row">
                         <td class="status">
                             <div class="symbol">
                                 <svg-icon :name="`symbol/${item['status']}`" :original="true" height="20px"></svg-icon>

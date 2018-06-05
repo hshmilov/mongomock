@@ -198,10 +198,10 @@
                 margin: 0 12px;
                 line-height: 60px;
                 position: relative;
-                > .svg-stroke {
+                .svg-stroke {
                     stroke: $theme-orange;
                 }
-                > .svg-fill {
+                .svg-fill {
                     fill: $theme-orange;
                 }
                 .item-link {

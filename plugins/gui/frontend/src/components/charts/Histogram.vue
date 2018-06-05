@@ -40,7 +40,7 @@
 		},
 		methods: {
 			calculateBarHeight (quantity) {
-				return ((180 * quantity) / this.maxQuantity)
+				return ((240 * quantity) / this.maxQuantity)
 			}
 		}
 	}

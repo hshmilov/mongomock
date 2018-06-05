@@ -2,7 +2,7 @@
     <modal v-show="launch" @confirm="handleConfirm" @close="handleClose" :disabled="disabled" >
         <div slot="body" class="feedback-modal-body" @keyup.esc="handleClose">
             <template v-if="status.processing">
-                <pulse-loader :loading="true" color="#26dad2"></pulse-loader>
+                <pulse-loader :loading="true" color="#FF7D46"></pulse-loader>
             </template>
             <template v-else-if="status.success">
                 <div class="text-center">
