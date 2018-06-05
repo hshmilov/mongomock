@@ -69,7 +69,8 @@ class NexposeAdapter(ScannerAdapterBase):
                 {
                     "name": NEXPOSE_PORT,
                     "title": "Port",
-                    "type": "number"
+                    "type": "integer",
+                    "format": "port"
                 },
                 {
                     "name": USER,

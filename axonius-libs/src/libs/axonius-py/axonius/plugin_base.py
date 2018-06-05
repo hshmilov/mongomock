@@ -1344,7 +1344,7 @@ class PluginBase(Configurable, Feature):
                         {
                             "name": "syslogPort",
                             "title": "Port",
-                            "type": "number",
+                            "type": "integer",
                             "format": "port"
                         }
                     ],
@@ -1368,7 +1368,7 @@ class PluginBase(Configurable, Feature):
                         {
                             "name": "smtpPort",
                             "title": "Port",
-                            "type": "number",
+                            "type": "integer",
                             "format": "port"
                         },
                         {

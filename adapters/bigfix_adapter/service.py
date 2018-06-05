@@ -72,7 +72,8 @@ class BigfixAdapter(AdapterBase):
                 {
                     "name": "port",
                     "title": "Port",
-                    "type": "number"
+                    "type": "integer",
+                    "format": "port"
                 },
                 {
                     "name": "username",

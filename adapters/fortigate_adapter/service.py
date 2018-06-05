@@ -34,7 +34,8 @@ class FortigateAdapter(AdapterBase):
                 {
                     "name": consts.FORTIGATE_PORT,
                     "title": "Port",
-                    "type": "integer"
+                    "type": "integer",
+                    "format": "port"
                 },
                 {
                     "name": consts.USER,  # The user needs System Configuration Read Privileges.

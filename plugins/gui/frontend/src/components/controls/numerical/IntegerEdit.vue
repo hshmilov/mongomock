@@ -9,12 +9,16 @@
         components: { xSelect },
         methods: {
 			formatData() {
+				if (this.data === '-' || this.data === '') {
+					return this.data
+				}
 				return parseInt(this.data)
             },
             checkData() {
-				if (isNaN(this.data) || this.data <= 0) return false
-
-                return true
+				if (isNaN(this.data)) return false
+				if (!this.schema.allow_negatives && this.data < 0) return false
+				if (this.schema.format === 'port' && this.data > 65536) return false
+				return true
             }
         }
 	}

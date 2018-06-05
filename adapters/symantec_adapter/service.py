@@ -74,7 +74,8 @@ class SymantecAdapter(AdapterBase):
                     "name": "port",
                     "title": "Port",
                     "description": "Symantec Endpoint Management Port (Default is 8446)",
-                    "type": "number"
+                    "type": "integer",
+                    "format": "port"
                 },
                 {
                     "name": "username",

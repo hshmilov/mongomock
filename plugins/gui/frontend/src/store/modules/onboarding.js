@@ -363,13 +363,15 @@ export const onboarding = {
 			}
 		},
 		[ UPDATE_TOUR_STATE ] (state, stateName) {
-			let queueName = state.tourStates.defs[stateName].queue
-			if (queueName && state.tourStates.queues[queueName]) {
-				if (state.tourStates.queues[queueName].includes(stateName)) {
-					state.tourStates.queues[queueName] = state.tourStates.queues[queueName].filter(item => item !== stateName)
-				} else {
-					stateName = state.tourStates.queues[queueName][0]
-					state.tourStates.queues[queueName] = state.tourStates.queues[queueName].slice(1)
+			if (stateName) {
+				let queueName = state.tourStates.defs[stateName].queue
+				if (queueName && state.tourStates.queues[queueName]) {
+					if (state.tourStates.queues[queueName].includes(stateName)) {
+						state.tourStates.queues[queueName] = state.tourStates.queues[queueName].filter(item => item !== stateName)
+					} else {
+						stateName = state.tourStates.queues[queueName][0]
+						state.tourStates.queues[queueName] = state.tourStates.queues[queueName].slice(1)
+					}
 				}
 			}
 			state.tourStates.current = stateName

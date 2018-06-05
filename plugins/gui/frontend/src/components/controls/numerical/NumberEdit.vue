@@ -9,7 +9,7 @@
         mixins: [PrimitiveMixin, NumericalMixin],
         methods: {
 			formatData() {
-                if (this.data == '-' || this.data == '') {
+                if (this.data === '-' || this.data === '') {
 			        return this.data
                 }
 				return parseFloat(this.data)

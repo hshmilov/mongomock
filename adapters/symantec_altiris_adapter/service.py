@@ -63,7 +63,8 @@ class SymantecAltirisAdapter(AdapterBase):
                     "name": consts.ALTIRIS_PORT,
                     "title": "Port",
                     "type": "integer",
-                    "default": consts.DEFAULT_ALTIRIS_PORT
+                    "default": consts.DEFAULT_ALTIRIS_PORT,
+                    "format": "port"
                 },
                 {
                     "name": consts.ALTIRIS_DATABASE,

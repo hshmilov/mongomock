@@ -121,7 +121,8 @@ class SplunkSymantecAdapter(AdapterBase):
                 {
                     "name": SPLUNK_PORT,
                     "title": "Port",
-                    "type": "number"
+                    "type": "integer",
+                    "format": "port"
                 },
                 {
                     "name": SPLUNK_USER,
