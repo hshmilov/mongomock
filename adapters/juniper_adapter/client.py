@@ -29,12 +29,11 @@ class JuniperClient(object):
             filter_={'deviceFamily': 'junos', 'connectionStatus': 'up'})
 
         tm = async.TaskMonitor(self.space_rest_client, 'get_arp_q')
-        raw_data = []
 
         try:
             task_ids = []
             for current_device in devices:
-                raw_data.append(('juniper_device', current_device))
+                yield ('juniper_device', current_device)
                 logger.info(
                     f"Getting arp from {current_device.name}, {current_device.ipAddr}, {current_device.platform}")
                 result = current_device.exec_rpc_async.post(
@@ -57,8 +56,6 @@ class JuniperClient(object):
                         f"Async RPC execution Failed. Failed to get arp table from device. The process state was {pu.state}")
 
                 # Print the RPC result for each
-                raw_data.append(('arp_device', pu.data))
+                yield ('arp_device', pu.data)
         finally:
             tm.delete()
-
-        return raw_data
