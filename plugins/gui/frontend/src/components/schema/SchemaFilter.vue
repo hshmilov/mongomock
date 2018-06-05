@@ -17,7 +17,7 @@
 
 	export default {
 		name: 'x-schema-filter',
-		components: {xSchemaExpression},
+		components: { xSchemaExpression },
 		props: {schema: {required: true}, value: {}, rebuild: {default: false}},
 		data () {
 			return {

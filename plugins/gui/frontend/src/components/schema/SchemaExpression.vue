@@ -233,7 +233,9 @@
 				let fieldSpaceMatch = /adapters_data\.(\w+_adapter)\./.exec(this.expression.field)
 				if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
 					this.fieldSpace = fieldSpaceMatch[1]
-				}
+				} else {
+					this.fieldSpace = 'axonius'
+                }
             }
 		},
 		updated () {
