@@ -66,7 +66,8 @@ DOCKER_PORTS = {
     'hyper-v-adapter':                  6022,
     'stresstest-scanner-adapter':       6023,
     'azure-adapter':                    6024,
-    'okta-adapter':                     6025,
+    'junos-adapter':                    6025,
+    'okta-adapter':                     6026,
     'mongo':                            27017,
 }
 

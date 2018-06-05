@@ -1,4 +1,8 @@
 export const pluginMeta = {
+		junos_adapter: {
+			title: 'Juiper Junos',
+			description: 'junos OS is the FreeBSD-based operating system used in Juniper Networks hardware devices.'
+		},
     active_directory_adapter: {
         title: 'Active Directory',
         description: 'Active Directory (AD) is a directory service for Windows domain networks that ' +
