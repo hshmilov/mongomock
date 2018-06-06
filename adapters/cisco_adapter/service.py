@@ -92,7 +92,7 @@ class CiscoAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, instances):
-        return InstanceParser(instances).get_devices(self._new_device_adapter)
+        yield from InstanceParser(instances).get_devices(self._new_device_adapter)
 
     def _get_client_id(self, client_config):
         # TODO: is there a better place to set default values for client_config?

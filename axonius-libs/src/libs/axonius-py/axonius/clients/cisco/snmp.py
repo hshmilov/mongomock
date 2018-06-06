@@ -5,9 +5,10 @@ from axonius.clients.cisco.abstract import *
 from axonius.clients.cisco import snmp_parser
 
 import asyncio
-from pysnmp.hlapi import *
-from pysnmp.hlapi.asyncio import *
-from pysnmp.hlapi.varbinds import *
+from pysnmp.hlapi.asyncio import nextCmd as asyncNextCmd
+from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
+from pysnmp.hlapi.asyncio import ObjectType, ObjectIdentity, CommunityData, ContextData, SnmpEngine, UdpTransportTarget
+from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
 from pyasn1.type.univ import Null
 
 import itertools
@@ -25,17 +26,16 @@ SYSTEM_DESCRIPTION_OID = '1.3.6.1.2.1.1'
 INETFACE_OID = '1.3.6.1.2.1.2.2.1'
 IP_OID = '1.3.6.1.2.1.4.20'
 
+loop = None
+
 
 def run_event_loop(tasks):
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        # If we are in thread and we don't have any event loop
+    global loop
+    if loop is None:
         loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    asyncio.set_event_loop(loop)
     tasks, _ = loop.run_until_complete(asyncio.wait(tasks))
-    loop.close()
-    yield from map(lambda x: x.result(), tasks)
+    return map(lambda x: x.result(), tasks)
 
 
 async def asyncio_next(engine, community, ip, port, oid):
@@ -49,12 +49,13 @@ async def asyncio_next(engine, community, ip, port, oid):
         (errorIndication,
          errorStatus,
          errorIndex,
-         varBindTable) = await nextCmd(
+         varBindTable) = await asyncNextCmd(
             engine,
             CommunityData(community),
-            UdpTransportTarget((ip, port)),
+            AsyncUdpTransportTarget((ip, port)),
             ContextData(),
-            *varBinds)
+            *varBinds,
+            lookupMib=False)
 
         if errorIndication:
             results.append((errorIndication, errorStatus, errorIndex, varBindTable))
@@ -79,6 +80,7 @@ async def asyncio_next(engine, community, ip, port, oid):
                 break
         else:
             return results
+        varBinds = [ObjectType(ObjectIdentity(varBinds[0][0]))]
 
 
 class CiscoSnmpClient(AbstractCiscoClient):
@@ -94,12 +96,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         self._engine = SnmpEngine()
 
     def _next_cmd(self, oid):
-        return nextCmd(self._engine,
-                       CommunityData(self._community),
-                       UdpTransportTarget((self._ip, self._port)),
-                       ContextData(),
-                       ObjectType(ObjectIdentity(oid)),
-                       lexicographicMode=False)
+        return run_event_loop([self._async_next_cmd(oid)])
 
     async def _async_next_cmd(self, oid):
         return await asyncio_next(self._engine,
@@ -111,8 +108,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         """ Snmp is a connection-less protocol.
             So in order to simulate connection - we are going to get one mib and check for errors"""
         super().__enter__()
-        self._next_cmd(SYSTEM_DESCRIPTION_OID + '.1.1.0')
-        data = list(self._next_cmd(CDP_OID))
+        data = list(self._next_cmd(SYSTEM_DESCRIPTION_OID + '.1'))[0]
         errors = list(map(lambda x: x[0], data))
         if any(errors):
             raise ClientConnectionException(f'Unable to query system description errors: {errors}')
@@ -335,4 +331,10 @@ if __name__ == "__main__":
     from logging import info, warning, debug, error
 
     logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
-    a = CiscoSnmpClient(host='xxx', community='xxx', port=161).query_all()
+    a = CiscoSnmpClient(host='xxx', community='public', port=161)
+    with a:
+        pass
+    with a:
+        pass
+    c = list(a.query_all())
+    print(c)
