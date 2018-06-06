@@ -63,12 +63,6 @@
             overflow: auto;
             max-height: calc(100% - 40px);
             position: relative;
-            .item > div {
-                display: inline;
-            }
-            .array {
-                height: 24px;
-            }
         }
     }
 </style>

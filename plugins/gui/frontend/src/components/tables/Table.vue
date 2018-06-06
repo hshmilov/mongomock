@@ -137,6 +137,12 @@
                 cursor: pointer;
                 box-shadow: 0 2px 16px -4px $grey-4;
             }
+            .item > div {
+                display: inline;
+            }
+            .array {
+                height: 24px;
+            }
         }
     }
 </style>

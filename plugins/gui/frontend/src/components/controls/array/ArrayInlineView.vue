@@ -1,6 +1,6 @@
 <template>
-    <div class="array" :class="{inline: !multiline}" :title="allItems">
-        <div class="item" :class="{inline: !multiline}" v-for="item in limitedItems" v-if="!empty(data[item.name])">
+    <div class="array inline" :title="allItems">
+        <div class="item" v-for="item in limitedItems" v-if="!empty(data[item.name])">
             <component :is="item.type" :schema="item" :value="data[item.name]"/>
         </div>
         <div class="item" v-if="limit && schemaItems.length > limit"
@@ -21,7 +21,7 @@
 		name: 'array',
 		mixins: [ArrayMixin],
 		components: { string, number, integer, bool, file },
-		props: {limit: {}, multiline: {default: false}},
+		props: { limit: {} },
         computed: {
 			limitedItems() {
 				if (!this.schemaItems || !this.limit || (this.schemaItems.length <= this.limit)) {
@@ -37,12 +37,12 @@
 	}
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
 
-    .array {
+    .array.inline {
         display: flex;
-        .item.inline {
-            margin-right: 8px;
+       .item {
+           margin-right: 8px;
         }
     }
 </style>

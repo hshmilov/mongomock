@@ -1,5 +1,5 @@
 <template>
-    <div class="x-data-table" :class="{multiline: multiline}">
+    <div class="x-data-table" :class="{ multiline }">
         <x-actionable-table :title="title" :count="count.data" :loading="loading" :error="content.error">
             <slot name="actions" slot="actions"/>
             <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
@@ -185,9 +185,12 @@
 <style lang="scss">
     .x-data-table {
         height: calc(100% - 40px);
-        &.multiline .array {
+        &.multiline .x-row .array {
             display: block;
             height: auto;
+            .item {
+                margin-right: 0;
+            }
         }
         .x-pagination {
             justify-content: space-between;
