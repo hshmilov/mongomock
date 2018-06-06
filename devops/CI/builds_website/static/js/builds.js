@@ -441,7 +441,7 @@
             ["Status", exp['status']],
             ["Last Modified", exp['date']],
             ["Download Link", exp['download_link']],
-            ["Log", wrap_modal_with_td("Are you sure you wanna see the log?", function() {}, [], exp['log'])],
+            ["Log", wrap_modal_with_td("Log File", function() {}, [], "<textarea style='width: 100%; height: 60vh;'>" + exp['log'] + "</textarea>")],
             ["Delete", wrap_modal_with_td("Are you sure you want to delete this export?", delete_export)]
         ];
 
