@@ -51,8 +51,8 @@ class ServiceNowConnection(RESTConnection):
         short_description = service_now_dict.get('short_description', "")
         description = service_now_dict.get('description', "")
         try:
-            self.add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
-                                                'short_description ': short_description, 'description': description})
+            self.__add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
+                                                  'short_description': short_description, 'description': description})
             return True
         except Exception:
             return False

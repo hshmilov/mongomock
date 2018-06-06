@@ -106,9 +106,13 @@ class ServiceNowAdapter(AdapterBase):
         service_now_dict = self.get_request_data_as_object()
         success = False
         for client_id in self._clients:
-            success = success or self._clients[client_id].create_service_now_incident(service_now_dict)
-            if success is True:
-                return '', 200
+            # Note that we are assuming this connection is not open since this function will run in a post correlator
+            # stage. If this function will be called while in a cycle, the cycle will stop (socket will be closed..)
+            # TODO: Change that to use a get_session (a copy of the connection)
+            with self._clients[client_id]:
+                success = success or self._clients[client_id].create_service_now_incident(service_now_dict)
+                if success is True:
+                    return '', 200
         return 'Failure', 400
 
     def _parse_raw_data(self, devices_raw_data):

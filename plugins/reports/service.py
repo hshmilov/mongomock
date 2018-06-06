@@ -306,8 +306,7 @@ class ReportsService(PluginBase, Triggerable):
                                                           query_link=self._generate_query_link(
                                                               report_data['query_entity'],
                                                               report_data['query']))
-        alert_title = report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['query'])
-        self.create_service_now_incident(alert_title, log_message,
+        self.create_service_now_incident(report_data['name'], log_message,
                                          report_consts.SERVICE_NOW_SEVERITY.get(report_data['severity'], report_consts.SERVICE_NOW_SEVERITY['error']))
 
     def _handle_action_notify_syslog(self, report_data, triggered, trigger_data, current_num_of_devices,
