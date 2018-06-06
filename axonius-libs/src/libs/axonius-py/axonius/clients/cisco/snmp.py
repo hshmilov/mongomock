@@ -5,9 +5,9 @@ from axonius.clients.cisco.abstract import *
 from axonius.clients.cisco import snmp_parser
 
 import asyncio
-from pysnmp.hlapi.asyncio import nextCmd as asyncNextCmd
+from pysnmp.hlapi.asyncio import bulkCmd
 from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
-from pysnmp.hlapi.asyncio import ObjectType, ObjectIdentity, CommunityData, ContextData, SnmpEngine, UdpTransportTarget
+from pysnmp.hlapi.asyncio import ObjectType, ObjectIdentity, CommunityData, ContextData, SnmpEngine
 from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
 from pyasn1.type.univ import Null
 
@@ -26,14 +26,13 @@ SYSTEM_DESCRIPTION_OID = '1.3.6.1.2.1.1'
 INETFACE_OID = '1.3.6.1.2.1.2.2.1'
 IP_OID = '1.3.6.1.2.1.4.20'
 
-loop = None
-
 
 def run_event_loop(tasks):
-    global loop
-    if loop is None:
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
         loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+        asyncio.set_event_loop(loop)
     tasks, _ = loop.run_until_complete(asyncio.wait(tasks))
     return map(lambda x: x.result(), tasks)
 
@@ -46,14 +45,16 @@ async def asyncio_next(engine, community, ip, port, oid):
     initialVars = CommandGeneratorVarBinds().makeVarBinds(engine, [ObjectType(ObjectIdentity(oid))])[0]
 
     while True:
+        # TODO: fallback to nextCmd
         (errorIndication,
          errorStatus,
          errorIndex,
-         varBindTable) = await asyncNextCmd(
+         varBindTable) = await bulkCmd(
             engine,
             CommunityData(community),
             AsyncUdpTransportTarget((ip, port)),
             ContextData(),
+            0, 500,
             *varBinds,
             lookupMib=False)
 
@@ -70,16 +71,16 @@ async def asyncio_next(engine, community, ip, port, oid):
             results.append((errorIndication, errorStatus, errorIndex, varBindTable))
             return results
 
-        varBinds = varBindTable and varBindTable[0]
-        for idx, varBind in enumerate(varBinds):
-            name, val = varBind
-            if not isinstance(val, Null):
-                if not initialVars[idx].isPrefixOf(name):
-                    return results
-                results.append((errorIndication, errorStatus, errorIndex, varBinds))
-                break
-        else:
-            return results
+        for varBinds in varBindTable:
+            for idx, varBind in enumerate(varBinds):
+                name, val = varBind
+                if not isinstance(val, Null):
+                    if not initialVars[idx].isPrefixOf(name):
+                        return results
+                    results.append((errorIndication, errorStatus, errorIndex, varBinds))
+                    break
+            else:
+                return results
         varBinds = [ObjectType(ObjectIdentity(varBinds[0][0]))]
 
 
@@ -93,16 +94,18 @@ class CiscoSnmpClient(AbstractCiscoClient):
         self._community = kwargs['community']
         self._ip = kwargs['host']
         self._port = kwargs['port']
-        self._engine = SnmpEngine()
+        self._engine = None
 
     def _next_cmd(self, oid):
         return run_event_loop([self._async_next_cmd(oid)])
 
     async def _async_next_cmd(self, oid):
+        self._engine = SnmpEngine()
         return await asyncio_next(self._engine,
                                   self._community,
                                   self._ip, self._port,
                                   oid)
+        self._engine.transportDispatcher.closeDispatcher()
 
     def __enter__(self):
         """ Snmp is a connection-less protocol.
