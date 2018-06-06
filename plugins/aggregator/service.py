@@ -12,6 +12,7 @@ import pymongo
 import requests
 import threading
 import uuid
+import time
 
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from axonius.adapter_base import is_plugin_adapter
@@ -544,6 +545,7 @@ class AggregatorService(PluginBase, Triggerable):
         :param str adapter_unique_name: The unique name of the adapter
         """
 
+        start_time = time.time()
         logger.info(f"Starting to fetch device for {adapter_unique_name}")
         try:
             data = self._request_insertion_from_adapters(adapter_unique_name)
@@ -558,7 +560,7 @@ class AggregatorService(PluginBase, Triggerable):
             logger.exception("Thread {0} encountered error: {1}".format(threading.current_thread(), str(e)))
             raise
 
-        logger.info(f"Finished for {adapter_unique_name}")
+        logger.info(f"Finished for {adapter_unique_name} took {time.time() - start_time} seconds")
 
     def _update_entity_with_tag(self, tag, axonius_entity, entities_db):
         """
