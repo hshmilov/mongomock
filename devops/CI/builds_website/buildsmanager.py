@@ -6,10 +6,13 @@ This project assumes the aws settings & credentials are already configured in th
 import boto3
 import datetime
 import json
+import paramiko
 import redis
 import random
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+
+AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
 IMAGE_ID = "ami-a93811cc"  # Our own imported ubuntu 16.04 Server.
@@ -18,6 +21,7 @@ SUBNET_ID = "subnet-4154273a"   # Our builds subnet.
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
+S3_BUCKET_NAME_FOR_OVA = "axonius-releases"
 S3_ACCELERATED_ENDPOINT = "http://s3-accelerate.amazonaws.com"
 S3_EXPORT_URL_TIMEOUT = 604700  # a week to use it before we generate a new one.
 
@@ -128,45 +132,30 @@ class BuildsManager(object):
         s3_accelerated_client = boto3.client("s3", endpoint_url=S3_ACCELERATED_ENDPOINT)
         url = s3_accelerated_client.generate_presigned_url(
             "get_object",
-            Params={"Bucket": S3_BUCKET_NAME_FOR_VM_EXPORTS, "Key": key_name},
+            Params={"Bucket": S3_BUCKET_NAME_FOR_OVA, "Key": key_name},
             ExpiresIn=S3_EXPORT_URL_TIMEOUT)
 
         return {"url": url, "timeout": S3_EXPORT_URL_TIMEOUT}
 
-    def deleteExport(self, key):
+    def deleteExport(self, version):
         """Deletes an export. """
-        self.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_VM_EXPORTS, Key=key)
 
-        return True
+        exports = self.s3_client.list_objects(Bucket=S3_BUCKET_NAME_FOR_OVA)['contents']
+        to_delete = []
+        for export in exports:
+            if version == export['Key'].split('/')[0]:
+                to_delete.append(export)
+
+        for current_deletion in to_delete:
+            self.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_OVA, Key=current_deletion['Key'])
+
+        return list(to_delete) > 0
 
     def getExports(self, key=None):
         """Return all vm exports we have on our s3 bucket."""
-        try:
-            object_list = self.s3_client.list_objects(Bucket=S3_BUCKET_NAME_FOR_VM_EXPORTS,
-                                                      Prefix=S3_EXPORT_PREFIX)["Contents"]
-        except KeyError:
-            return {}
+        completed_exports = self.db.exports.find({'status': {"$ne": "InProgress"}}, {"_id": 0})
 
-        exports_in_db_list = []
-        for i in self.db.exports.find({}):
-            i["_id"] = str(i["_id"])
-            exports_in_db_list.append(i)
-
-        exports_list = []
-        for o in object_list:
-            s3 = {"ETag": o["ETag"], "Key": o["Key"], "LastModified": o["LastModified"], "Size": sizeof_fmt(o["Size"])}
-            db = {}
-
-            for d in exports_in_db_list:
-
-                if d["bucket_key"] == o["Key"]:
-                    db = d
-            exports_list.append({"s3": s3, "db": db})
-
-        # Sort by time of creation
-        exports_list.sort(key=lambda x: x['db']['date'], reverse=True)
-
-        return exports_list
+        return list(completed_exports)
 
     def getExportManifest(self, key):
         """ Returns the stored manifest of a specific key. """
@@ -180,8 +169,9 @@ class BuildsManager(object):
 
     def getExportsInProgress(self):
         """Gets all the current exports in progress."""
-        export_tasks = self.ec2_client.describe_export_tasks()['ExportTasks']
-        return export_tasks
+        export_tasks = self.db.exports.find({'status': 'InProgress'}, projection={"_id": 0})
+
+        return list(export_tasks)
 
     def getInstances(self, ec2_id=None):
         """Return the different aws instances & our internal db."""
@@ -354,37 +344,47 @@ class BuildsManager(object):
         self.ec2.instances.filter(InstanceIds=[ec2_id]).start()
         return True
 
-    def exportInstance(self, ec2_id, owner, client_name, comments):
+    def export_ova(self, version, owner, fork, branch, client_name, comments):
         """Exports an instance by its id."""
-        instance_db = self.getInstances(ec2_id=ec2_id)[0]
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
+        transport = ssh.get_transport()
+        channel = transport.open_session()
+        export_id = ObjectId()
+        commands = [
+            "cd /home/ubuntu/packer_image_creator/",
+            "./packer build -force -var build_id={0} -var build_name={1} -var fork={2} -var branch={3} axonius_prod.json > build_{1}.log 2>&1".format(
+                export_id, version, fork, branch),
+            "curl -k -v -F \"status=$?\" -F \"log=@./build_{1}.log\" https://builds.axonius.lan/exports/{0}/status".format(
+                export_id, version),
+            "rm -f ./build_{0}.log".format(version)
+        ]
 
-        result = self.ec2_client.create_instance_export_task(
-            Description="Export task of instance %s (%s)." % (ec2_id, instance_db['db']['name']),
-            InstanceId=ec2_id,
-            TargetEnvironment='vmware',
-            ExportToS3Task={
-                'ContainerFormat': 'ova',
-                'DiskImageFormat': 'vmdk',
-                'S3Bucket': 'axonius-vms',
-                'S3Prefix': 'vm-'
-            }
-        )
+        channel.exec_command(' ; '.join(commands))
 
         db_json = dict()
-        db_json['name'] = instance_db['db']['name']
-        db_json['ec2_id'] = ec2_id
+        db_json['_id'] = export_id
+        db_json['version'] = version
         db_json['owner'] = owner
+        db_json['fork'] = fork
+        db_json['branch'] = branch
         db_json['client_name'] = client_name
         db_json['comments'] = comments
-        db_json['bucket_key'] = result['ExportTask']['ExportToS3Task']['S3Key']
-        db_json['export_result'] = result['ExportTask']
+        db_json['status'] = 'InProgress'
+        # db_json['export_result'] = result['ExportTask']
         db_json['date'] = datetime.datetime.utcnow()
-        db_json['configuration_name'] = instance_db['db']['configuration_name']
-        db_json['configuration_code'] = instance_db['db']['configuration_code']
-        db_json['manifest'] = self.getManifest(ec2_id)
 
         self.db.exports.insert_one(db_json)
         return True
+
+    def update_export_status(self, export_id, status, log):
+        export = self.db.exports.find_one({"_id": ObjectId(export_id)})
+        self.db.exports.update_one({"_id": ObjectId(export_id)}, {"$set": {"status": status, "log": log,
+                                                                           "download_link": "<a href='http://{0}.s3-accelerate.amazonaws.com/{1}/{1}_export.ova'>Click here</a>".format(
+                                                                               S3_BUCKET_NAME_FOR_OVA,
+                                                                               export['version'])}})
+        return export is not None
 
     def deleteConfiguration(self, object_id):
         self.db.configurations.update_one({"_id": ObjectId(object_id)}, {"$set": {"deleted": True}})

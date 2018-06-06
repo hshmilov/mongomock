@@ -229,12 +229,7 @@
         var ec2_state = inst['ec2']['state'];
         if (ec2_state != 'terminated' && ec2_state != 'shutting-down') {
              var actions_data = [
-                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate the instance?", terminate_instance)],
-                ["Export", wrap_modal_with_td("Are you sure you want to export the instance?", export_instance, [
-                    {"name": "Owner"},
-                    {"name": "Client Name"},
-                    {"name": "Comments"}
-                ], "<b>Notice! This will make your machine temporairly unaccessable.</b>")]
+                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate the instance?", terminate_instance)]
             ];
 
              if (ec2_state == "running") {
@@ -304,14 +299,16 @@
             .always(always_function);
     }
     function export_instance(always_function, fields) {
-        var id = current_instances[current_instance_details_i]['ec2']['id'];
         var data = {}
         data["action"] = "export";
-        data["owner"] = fields[0].value;
-        data["client_name"] = fields[1].value;
-        data["comments"] = fields[2].value;
+        data["version"] = fields[0].value;
+        data["owner"] = fields[1].value;
+        data["fork"] = fields[2].value;
+        data["branch"] = fields[3].value;
+        data["client_name"] = fields[4].value;
+        data["comments"] = fields[5].value;
 
-        $.ajax({url: "/instances/" + id, type: "POST", data: data})
+        $.ajax({url: "/exports", type: "POST", data: data})
             .done(function(data) {
                 flush_url("/exportsinprogress", function(data) {
                     current_exports_in_progress = data["current"];
@@ -324,6 +321,16 @@
     }
     function add_instance_modal() {
         $('#new_instance_modal').modal();
+    }
+    function add_export_modal() {
+        new_modal("Export", export_instance, [
+                {"name": "Version Name/Number"},
+                {"name": "Owner"},
+                {"name": "Fork", "value": "axonius"},
+                {"name": "Branch", "value": "develop"},
+                {"name": "Client Name"},
+                {"name": "Comments"}
+            ], true, "Please fill in the following details:")
     }
     function new_instance_modal_change_configuration_code(index) {
         var ta = $("#new_instance_configuration_code"); // the textarea.
@@ -398,28 +405,19 @@
     function rewrite_exports_table() {
         dataSet = []
         for (i in current_exports) {
-            var ce = current_exports[i]["s3"];
-            var db = current_exports[i]["db"]
+            var export_i = current_exports[i];
+            var data = [];
 
-            // handle undefined values.
-            if (db["owner"] == undefined) {
-                // This means everything is unknown basically.
-                db["owner"] = "Unknown";
-                db["name"] = "Unknown";
-                db["client_name"] = "Unknown";
-            }
-            data = [];
-
-            link = "<a href='#' onclick='javascript: get_export_url(\"" + ce['Key'] + "\", this);return false;'>Ask</a>";
-
+            // Push all of the data
             data.push(parseInt(i) + 1);
-            data.push(db["name"]);
-            data.push(db["client_name"]);
-            data.push(ce["Key"]);
-            data.push(db["owner"]) // owner
-            data.push(ce["LastModified"]);
-            data.push($("<div>").append(link).html());
-            data.push(ce["Size"]);
+            data.push(export_i["version"]);
+            data.push(export_i["owner"]);
+            data.push(export_i["fork"]);
+            data.push(export_i["branch"]);
+            data.push(export_i["client_name"]);
+            data.push(export_i["comments"]);
+            data.push(export_i["status"]);
+            data.push(export_i["date"]);
             dataSet.push(data);
         }
 
@@ -433,25 +431,17 @@
             return false;
         }
 
-        if (exp['db']['export_result'] == undefined) {
-            exp['db']['export_result'] = {}
-            exp['db']['export_result']['ExportToS3Task'] = {}
-            exp['db']['export_result']['ExportToS3Task']['S3Bucket'] = "Unknown";
-            exp['db']['export_result']['ExportToS3Task']['ContainerFormat'] = "Unknown";
-            exp['db']['export_result']['ExportToS3Task']['DiskImageFormat'] = "Unknown";
-        }
-
         var export_info_data = [
-            ["Name", exp['db']['name']],
-            ["Client Name", exp['db']['client_name']],
-            ["EC2 ID", exp['db']['ec2_id']],
-            ["Date", exp['db']['date']],
-            ["Bucket", exp['db']['export_result']['ExportToS3Task']['S3Bucket']],
-            ["Key", exp['s3']['Key']],
-            ["Size", exp['s3']['Size']],
-            ["Format", exp['db']['export_result']['ExportToS3Task']['ContainerFormat']],
-            ["Disk Format", exp['db']['export_result']['ExportToS3Task']['DiskImageFormat']],
-            ["Comments", exp['db']['comments']],
+            ["Version", exp['version']],
+            ["Owner", exp['owner']],
+            ["Fork", exp['fork']],
+            ["Branch", exp['branch']],
+            ["Client Name", exp['client_name']],
+            ["Comments", exp['comments']],
+            ["Status", exp['status']],
+            ["Last Modified", exp['date']],
+            ["Download Link", exp['download_link']],
+            ["Log", wrap_modal_with_td("Are you sure you wanna see the log?", function() {}, [], exp['log'])],
             ["Delete", wrap_modal_with_td("Are you sure you want to delete this export?", delete_export)]
         ];
 
@@ -459,9 +449,9 @@
 
         // update the configuration info because its a little bit different (needs colspan)
         var tci = $("#tbody_export_configuration").html("");
-        $("<tr>").append($("<td>").text("Manifest File")).append($("<td>").append($("<a>").attr("target", "_blank").attr("href", "/exports/" + exp['s3']['Key'] + "/manifest").text("Click here"))).appendTo(tci);
-        $("<tr>").append($("<td>").text("Configuration Name")).append($("<td>").text(exp['db']['configuration_name'])).appendTo(tci);
-        $("<tr>").append($("<td>").attr("colspan", "2").append($("<pre>").append($("<code>").html(exp['db']['configuration_code'].replace("\n", "<br>"))))).appendTo(tci);
+        // $("<tr>").append($("<td>").text("Manifest File")).append($("<td>").append($("<a>").attr("target", "_blank").attr("href", "/exports/" + exp['s3']['Key'] + "/manifest").text("Click here"))).appendTo(tci);
+        // $("<tr>").append($("<td>").text("Configuration Name")).append($("<td>").text(exp['db']['configuration_name'])).appendTo(tci);
+        // $("<tr>").append($("<td>").attr("colspan", "2").append($("<pre>").append($("<code>").html(exp['db']['configuration_code'].replace("\n", "<br>"))))).appendTo(tci);
 
         // highlight it
         $('pre code').each(function(i, block) {
@@ -473,16 +463,18 @@
         dataSet = [];
         for (var i in current_exports_in_progress) {
             var export_i = current_exports_in_progress[i];
-            if (show_completed_exports == true || export_i['State'] != 'completed') {
+            if (show_completed_exports == true || export_i['status'] != 'completed') {
                 var data = [];
                 // Push all of the data
                 data.push(parseInt(i) + 1);
-                data.push(export_i["Description"]);
-                data.push(export_i["ExportToS3Task"]['S3Bucket']);
-                data.push(export_i["ExportToS3Task"]['S3Key']);
-                data.push(export_i["ExportToS3Task"]['ContainerFormat']);
-                data.push(export_i["InstanceExportDetails"]['TargetEnvironment']);
-                data.push(export_i["State"]);
+                data.push(export_i["version"]);
+                data.push(export_i["owner"]);
+                data.push(export_i["fork"]);
+                data.push(export_i["branch"]);
+                data.push(export_i["client_name"]);
+                data.push(export_i["comments"]);
+                data.push(export_i["status"]);
+                data.push(export_i["date"]);
                 dataSet.push(data);
             }
         }
@@ -498,8 +490,11 @@
             })
             .fail(exception_modal)
     }
+    function open_log(log) {
+        new_modal("log", null, null, true, log)
+    }
     function delete_export(always_function) {
-        var id = current_exports[current_export_details_i]['s3']['Key'];
+        var id = current_exports[current_export_details_i]['version'];
         var data = {}
 
         $.ajax({url: "/exports/" + id, type: "DELETE", data: data})
@@ -736,25 +731,28 @@
         $("#exports_table").DataTable({
             columns: [
                 { title: "#" },
-                { title: "VM Name" },
-                { title: "Client Name" },
-                { title: "Key" },
+                { title: "Version" },
                 { title: "Owner" },
-                { title: "Last Modified" },
-                { title: "Link" },
-                { title: "Size" }
+                { title: "Fork" },
+                { title: "Branch" },
+                { title: "Client Name" },
+                { title: "Comments" },
+                { title: "Status" },
+                { title: "Last Modified" }
             ]
         });
 
         $("#exports_in_progress_table").DataTable({
             columns: [
                 { title: "#" },
-                { title: "Description" },
-                { title: "S3 Bucket"},
-                { title: "S3 Key" },
-                { title: "Format" },
-                { title: "Target Environment" },
-                { title: "State" }
+                { title: "Version" },
+                { title: "Owner" },
+                { title: "Fork" },
+                { title: "Branch" },
+                { title: "Client Name" },
+                { title: "Comments" },
+                { title: "Status" },
+                { title: "Last Modified" }
             ]
         });
 
@@ -780,8 +778,8 @@
         });
 
         update_datatable("instances_table", [["1", "Loading...", "", "", "", ""]]);
-        update_datatable("exports_table", [["1", "Loading...", "", "", "", "", "", ""]]);
-        update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", ""]]);
+        update_datatable("exports_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
+        update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
         update_datatable("images_table", [["1", "Loading...", "", "", "", ""]]);
         update_datatable("configurations_table", [["1", "Loading...", "", "", ""]]);
 

@@ -1,0 +1,73 @@
+{
+  "variables": {
+    "build_id": "none",
+    "build_name": "test",
+    "password": "bringorder",
+    "branch": "develop",
+    "fork": "axonius"
+  },
+  "builders": [
+    {
+      "name": "axonius-{{user `build_name` }}-build",
+      "type": "vmware-vmx",
+      "source_path": "/home/ubuntu/Axonius-operational-export/Axonius-operational-export.vmx",
+      "ssh_username": "ubuntu",
+      "ssh_password": "{{user `password` }}",
+      "shutdown_command": "echo {{user `password`}} | sudo -S shutdown -P now",
+      "headless": true,
+      "vmx_data_post": {
+        "ethernet0.connectiontype": "bridged"
+      }
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "./axonius_deploy.sh",
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}}"
+    },
+    {
+      "type": "shell",
+      "script": "./install_chef_client.sh",
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "./fetch_chef_secret_and_mark.sh"
+    },
+    {
+      "type": "file",
+      "source": "./chef_scheduled_provision.sh",
+      "destination": "/home/ubuntu/chef_scheduled_provision.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "mv /home/ubuntu/chef_scheduled_provision.sh /etc/cron.d/",
+        "chown root:root /etc/cron.d/chef_scheduled_provision.sh",
+        "chmod  0500 /etc/cron.d/chef_scheduled_provision.sh",
+        "crontab -l | { cat; echo \"*/5 * * * * /etc/cron.d/chef_scheduled_provision.sh\"; } | crontab -"
+        ],
+      "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "file",
+      "source": "/home/ubuntu/axonius_{{user `build_name`}}.py",
+      "direction": "download",
+      "destination": "./axonius_{{user `build_name`}}.py"
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "shell-local",
+      "inline": [
+        "mkdir ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}",
+        "mv ./axonius_{{user `build_name`}}.py ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/",
+        "ovftool ./output-axonius-{{user `build_name` }}-build/*.vmx ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova",
+        "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/Releases/",
+        "aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} s3://axonius-releases/{{user `build_name`}}/ --acl public-read",
+        "rm -rf ./output-axonius-{{user `build_name` }}-build"
+      ]
+    }
+  ]
+}

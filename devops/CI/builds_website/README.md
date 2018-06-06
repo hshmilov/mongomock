@@ -18,4 +18,5 @@ In our local network, just go to https://builds.axonius.local .
 	* Flask
 	* boto3 (aws client)
 	* pymongo (mongodb python client)
+	* paramiko
 * run main.py.

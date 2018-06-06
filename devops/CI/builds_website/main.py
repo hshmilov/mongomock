@@ -30,10 +30,20 @@ def images():
     return jsonify({"result": json_result, "current": bm.getImages()})
 
 
-@app.route('/exports', methods=['GET'])
+@app.route('/exports', methods=['GET', 'POST'])
 def exports():
     """Return info about our exported vms."""
-    json_result = (bm.getExports())
+    if request.method == "GET":
+        json_result = bm.getExports()
+    elif request.method == "POST":
+        json_result = (bm.export_ova(
+            version=request.form["version"],
+            owner=request.form["owner"],
+            fork=request.form["fork"],
+            branch=request.form["branch"],
+            client_name=request.form["client_name"],
+            comments=request.form["comments"]))
+
     return jsonify({"result": json_result, "current": json_result})
 
 
@@ -44,10 +54,21 @@ def export_url(key):
     return jsonify({"result": json_result, "current": {}})
 
 
+@app.route('/exports/<export_id>/status', methods=['POST'])
+def set_export_status(export_id):
+    """Returns a link for a exported ova. Expects to get the key name in the post request."""
+    status = request.form["status"]
+    log = request.files["log"].read().decode("utf-8")
+
+    json_result = (bm.update_export_status(export_id, "completed" if int(status) == 0 else "failed", log))
+
+    return jsonify({"result": json_result, "current": {}})
+
+
 @app.route('/exports/<key>/manifest', methods=['GET'])
 def get_export_manifest(key):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
-    if(request.method == "GET"):
+    if request.method == "GET":
         json_result = (bm.getExportManifest(key))
 
     return jsonify({"result": json_result, "current": {}})
@@ -59,7 +80,7 @@ def export(key):
     if (request.method == "GET"):
         json_result = (bm.getExports(key=key))
     elif (request.method == "DELETE"):
-        json_result = (bm.deleteExport(key=key))
+        json_result = (bm.deleteExport(version=key))
 
     return jsonify({"result": json_result, "current": bm.getExports()})
 
@@ -112,12 +133,6 @@ def instance(instance_id):
             json_result = (bm.startInstance(ec2_id=instance_id))
         elif (action == "stop"):
             json_result = (bm.stopInstance(ec2_id=instance_id))
-        elif (action == "export"):
-            json_result = (bm.exportInstance(
-                ec2_id=instance_id,
-                owner=request.form["owner"],
-                client_name=request.form["client_name"],
-                comments=request.form["comments"]))
 
     return jsonify({"result": json_result, "current": bm.getInstances()})
 
