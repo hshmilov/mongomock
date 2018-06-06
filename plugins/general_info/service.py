@@ -135,6 +135,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                 # Second, go over all devices we have, and try to associate them with users.
                 self._associate_users_with_devices()
 
+                logger.info("Finished gathering info & associating users for all devices")
+
             else:
                 msg = "General info was called and is already taking place, try again later"
                 logger.error(msg)
@@ -170,6 +172,14 @@ class GeneralInfoService(PluginBase, Triggerable):
         windows_devices_count = windows_devices.count()
         logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
+        # Lets make some better logging
+        if windows_devices_count > 10000:
+            log_message_device_count_threshold = 1000
+        elif windows_devices_count > 1000:
+            log_message_device_count_threshold = 100
+        else:
+            log_message_device_count_threshold = 50
+
         # We don't wanna burst thousands of queries here, so we are going to have a thread that always
         # keeps count of the number of requests, and shoot new ones in case needed.
         self.number_of_active_execution_requests = 0
@@ -195,7 +205,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                                  f"threads active")
                     return False
 
-            if device_i % 1000 == 0:
+            if device_i % log_message_device_count_threshold == 0:
                 logger.info(f"Execution progress: {device_i} out of {windows_devices_count} devices executed")
 
             # shoot another one!
