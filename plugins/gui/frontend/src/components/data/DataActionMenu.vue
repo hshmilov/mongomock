@@ -8,7 +8,7 @@
             </nested-menu>
         </triggerable-dropdown>
         <x-tag-modal title="Tag..." :module="module" :entities="selected" :tags="currentTags" ref="tag" />
-        <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disable ${module}s`" ref="disable" >
+        <x-data-action-item title="Disable..." :handle-save="disableEntities" :message="`Disabled ${module}`" ref="disable" >
             <div>Out of {{selected.length}} {{module}}, {{disableable.length}} could be disabled.</div>
             <div>These {{module}} will not appear in further scans.</div>
             <div>Are you sure you want to continue?</div>
@@ -24,8 +24,8 @@
     import xDataActionItem from '../../components/data/DataActionItem.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
 
-	import { mapGetters, mapActions } from 'vuex'
-    import { GET_ADAPTER_BY_UNIQUE_NAME } from '../../store/modules/adapter'
+	import { mapState, mapGetters, mapActions } from 'vuex'
+    import { FETCH_ADAPTERS } from '../../store/modules/adapter'
 	import { GET_DATA_BY_ID } from '../../store/getters'
     import { DISABLE_DATA } from '../../store/actions'
 
@@ -39,9 +39,19 @@
 			TriggerableDropdown, 'nested-menu': NestedMenu, 'nested-menu-item': NestedMenuItem,
             xDataActionItem, xTagModal
         },
-        props: {module: {required: true}, selected: {required: true}},
+        props: { module: {required: true}, selected: {required: true} },
         computed: {
-			...mapGetters({getDataByID: GET_DATA_BY_ID, getAdapterByUniqueName: GET_ADAPTER_BY_UNIQUE_NAME }),
+            ...mapState({
+                adapterByUniqueName(state) {
+                	let adapterData = state.adapter.adapterList.data
+					if (!adapterData || !adapterData.length) return {}
+					return adapterData.reduce((map, input) => {
+						map[input.unique_plugin_name] = input
+						return map
+					}, {})
+                }
+            }),
+			...mapGetters({getDataByID: GET_DATA_BY_ID }),
 			dataByID() {
                 return this.getDataByID(this.module)
             },
@@ -64,21 +74,18 @@
 				return labels
             },
             disableable() {
-				return this.module.charAt(0).toUpperCase() + this.module.substr(1)
-            },
-            disableable() {
 				return this.selected.filter(entityID => {
 					let entity = this.dataByID[entityID]
 					if (!entity) return false
 					return entity.unique_adapter_names.some((uniqueName) => {
-                        let adapter = this.getAdapterByUniqueName[uniqueName]
+                        let adapter = this.adapterByUniqueName[uniqueName]
                         return adapter && adapter.supported_features.includes(disableableByModule[this.module])
                     })
 				})
             }
         },
         methods: {
-            ...mapActions({disableData: DISABLE_DATA}),
+            ...mapActions({ disableData: DISABLE_DATA, fetchAdapters: FETCH_ADAPTERS }),
             activate(item) {
             	if (!item || !item.activate) return
                 item.activate()
@@ -87,6 +94,9 @@
 			disableEntities() {
 				return this.disableData({ module: this.module, data: this.disableable })
 			}
+        },
+        created() {
+			this.fetchAdapters()
         }
 	}
 </script>

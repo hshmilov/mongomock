@@ -14,7 +14,7 @@
                 </div>
                 <div class="content">
                     <div class="d-flex">
-                        <div>{{ notification.title }}</div>
+                        <div class="notification-title">{{ notification.title }}</div>
                         <div v-if="notification.count" class="c-grey-3">({{notification.count}})</div>
                     </div>
                     <div class="c-grey-4">{{ relativeDate(notification.date_fetched) }}</div>
@@ -137,6 +137,11 @@
                 overflow: hidden;
                 font-size: 12px;
                 line-height: 14px;
+                .notification-title {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
             }
             &:hover {
                 box-shadow: 0 0 12px rgba(0, 0, 0, 0.1)

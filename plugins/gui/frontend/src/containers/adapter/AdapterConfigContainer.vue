@@ -243,7 +243,7 @@
                         transform: translateY(-100%);
                     }
                     .configuration {
-                        width: calc(60vw - 48px);
+                        width: calc(60vw - 72px);
                         padding: 24px;
                     }
                 }

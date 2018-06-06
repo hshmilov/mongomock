@@ -164,6 +164,9 @@
                 flex: 1 0 auto;
                 padding: 48px;
                 border-radius: 4px;
+                .title {
+                    margin-top: 0;
+                }
                 .schema-form {
                     .array {
                         display: block;
@@ -172,6 +175,7 @@
                         }
                         .item {
                             width: 100%;
+                            margin-bottom: 12px;
                         }
                     }
                 }

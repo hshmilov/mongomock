@@ -10,7 +10,6 @@ export const UPDATE_ADAPTER_SERVER = 'UPDATE_ADAPTER_SERVER'
 export const ARCHIVE_SERVER = 'ARCHIVE_SERVER'
 export const REMOVE_SERVER = 'REMOVE_SERVER'
 
-export const GET_ADAPTER_BY_UNIQUE_NAME = 'GET_ADAPTER_BY_UNIQUE_NAME'
 export const UPDATE_ADAPTER_STATUS = 'UPDATE_ADAPTER_STATUS'
 
 
@@ -22,15 +21,6 @@ export const adapter = {
 		},
 
 		currentAdapter: null
-	},
-	getters: {
-		[ GET_ADAPTER_BY_UNIQUE_NAME ] (state) {
-			if (!state.adapterList.data || !state.adapterList.data.length) return {}
-			return state.adapterList.data.reduce((map, input) => {
-				map[input.unique_plugin_name] = input
-				return map
-			}, {})
-		},
 	},
 	mutations: {
 		[ UPDATE_ADAPTERS ] (state, payload) {

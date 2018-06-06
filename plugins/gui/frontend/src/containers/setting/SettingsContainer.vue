@@ -68,7 +68,7 @@
             limit() {
                 return [{
                     type: 'fromto',
-                    from: `${new Date().toDateString()} ${new Date().toTimeString()}`
+                    from: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`
                 }]
             },
             schedulerSettings: {
