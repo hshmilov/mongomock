@@ -61,7 +61,9 @@ class CiscoPrimeAdapter(AdapterBase):
 
         for raw_device in raw_devices:
             try:
-                tasks.append(self.get_cisco_tasks(raw_device, session))
+                new_tasks = self.get_cisco_tasks(raw_device, session)
+                if new_tasks:
+                    tasks += new_tasks
             except Exception as e:
                 logger.exception(f'Got exception while getting arp_table: {raw_device}')
 

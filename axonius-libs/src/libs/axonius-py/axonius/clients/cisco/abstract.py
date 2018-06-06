@@ -239,7 +239,7 @@ class InstanceParser(object):
         and cdp table '''
 
     def __init__(self, instances):
-        self._instances = list(instances)
+        self._instances = list(filter(lambda x: x is not None, instances))
 
     def get_devices(self, create_device_callback):
         cdp_instance = list(filter(lambda x: isinstance(x, CdpCiscoData), self._instances))
