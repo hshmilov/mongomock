@@ -25,8 +25,8 @@ export const onboarding = {
 			current: '',
 			defs: {
 				'adapters': {
-					id: 'adapters', title: 'PLUG IN YOUR NETWORK', align: 'right',
-					content: 'Adapters are the way Axonius pulls device and user information from you systems.\nClick here to see all available adapters.'
+					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right',
+					content: 'Axonius uses Adapters to collect and correlate device and user information from your systems.\nClick here to see all available adapters.'
 				},
 				'activeDirectory': {
 					id: 'active_directory_adapter', title: 'ActiveDirectory ADAPTER', queue: 'adapters', align: 'right',
@@ -38,7 +38,7 @@ export const onboarding = {
 				},
 				'saveServer': {
 					id: 'save_server', title: 'SAVE CREDENTIALS', align: 'right',
-					content: 'After inserting all required fields correctly, click here to connect to the server.',
+					content: 'Fill in all required fields, then click here to connect the server.',
 				},
 				'successServer': {
 					id: 'status_server', title: 'YOUR SERVER CONNECTED', align: 'bottom',
@@ -52,12 +52,12 @@ export const onboarding = {
 					content: 'The red exclamation mark indicates that connection to the server could not be established.\nClick here to view the error and try again.',
 				},
 				'backAdapters': {
-					id: 'adapters', title: 'PLUG IN YOUR NETWORK', align: 'right',
+					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right',
 					content: 'Let\'s return to our Adapters'
 				},
 				'network': {
 					title: 'NETWORK ADAPTERS', align: 'center', queue: 'adapters',
-					content: 'Which major Switch/Router is in your environment or next the Axonius instance?',
+					content: 'Which of the following switches/routers do you use most?',
 					actions: [
 						{ title: 'Cisco', state: 'cisco' },
 						{ title: 'Juniper', state: 'juniper' },
@@ -66,11 +66,11 @@ export const onboarding = {
 					]
 				},
 				'cisco': {
-					title: 'Cisco ADAPTERS', align: 'center',
-					content: 'Which Cisco do you use?',
+					title: 'CISCO ADAPTERS', align: 'center',
+					content: 'Which Cisco management solution do you use?',
 					actions: [
 						{ title: 'Cisco Prime', state: 'ciscoPrime' },
-						{ title: 'Cisco Switch/Router', state: 'ciscoRegular' },
+						{ title: 'Cisco Switch/Router (no management solution)', state: 'ciscoRegular' },
 						{ title: 'Other', state: 'networkNoCisco'}
 					]
 				},
@@ -84,7 +84,7 @@ export const onboarding = {
 				},
 				'networkNoCisco': {
 					title: 'NETWORK ADAPTERS', align: 'center',
-					content: 'Which other major Switch/Router is in your environment?',
+					content: 'Which other major switch/router do you use?',
 					actions: [
 						{ title: 'Juniper', state: 'juniper' },
 						{ title: 'Fortinet', state: 'fortinet' },
@@ -139,10 +139,10 @@ export const onboarding = {
 					title: 'VIRTUALIZATION SOLUTIONS', align: 'center', queue: 'adapters',
 					content: 'Which virtualization solution do you use most?',
 					actions: [
-						{ title: 'VMWare ESXi', state: 'esx' },
-						{ title: 'Hyper-V', state: 'hyperV' },
+						{ title: 'Microsoft Hyper-V', state: 'hyperV' },
 						{ title: 'OpenStack', state: 'openStack' },
 						{ title: 'Oracle VM', state: 'oracleVM' },
+						{ title: 'VMWare ESXi', state: 'esx' },
 						{ title: 'Other', state: 'virualizationLocalNone' }
 					]
 				},
@@ -151,7 +151,7 @@ export const onboarding = {
 					content: 'Click here to configure it.'
 				},
 				'hyperV': {
-					id: 'hyper_v_adapter', title: 'Hyper-V ADAPTER', align: 'right',
+					id: 'hyper_v_adapter', title: 'Microsoft Hyper-V ADAPTER', align: 'right',
 					content: 'Click here to configure it.'
 				},
 				'openStack': {
@@ -173,13 +173,13 @@ export const onboarding = {
 					title: 'ENDPOINT PROTECTION', align: 'center', queue: 'adapters',
 					content: 'Which is the most common Endpoint Protection or EDR Agent you use?',
 					actions: [
-						{ title: 'McAfee ePO', state: 'epo' },
-						{ title: 'Symantec', state: 'symantec' },
 						{ title: 'CarbonBlack', state: 'carbonBlack' },
-						{ title: 'Minerva', state: 'minerva'},
 						{ title: 'enSilo', state: 'enSilo' },
+						{ title: 'McAfee ePO', state: 'epo' },
+						{ title: 'Minerva Labs', state: 'minerva'},
 						{ title: 'Secdo', state: 'secdo' },
 						{ title: 'SentinelOne', state: 'sentinelOne' },
+						{ title: 'Symantec', state: 'symantec' },
 						{ title: 'Other', state: 'agentIT' },
 					]
 				},
@@ -193,11 +193,11 @@ export const onboarding = {
 				},
 				'carbonBlack': {
 					title: 'CarbonBlack', align: 'center',
-					content: 'Which CarbonBlack product do you use most?',
+					content: 'Which Carbon Black product do you use most?',
 					actions: [
-						{ title: 'Response', state: 'carbonBlackResponse' },
-						{ title: 'Protection', state: 'carbonBlackProtection' },
-						{ title: 'Defense', state: 'carbonBlackDefense' }
+						{ title: 'Cb Response', state: 'carbonBlackResponse' },
+						{ title: 'Cb Protection', state: 'carbonBlackProtection' },
+						{ title: 'Cb Defense', state: 'carbonBlackDefense' }
 					]
 				},
 				'carbonBlackResponse': {
@@ -230,16 +230,16 @@ export const onboarding = {
 				},
 				'agentIT': {
 					title: 'IT AGENT', align: 'center', queue: 'adapters',
-					content: 'Which is the most common IT Agent you use?',
+					content: 'Which IT agent do you use?',
 					actions: [
-						{ title: 'SCCM', state: 'sccm'},
-						{ title: 'BigFix', state: 'bigFix'},
-						{ title: 'Puppet', state: 'puppet'},
-						{ title: 'Chef', state: 'chef'},
 						{ title: 'Bomgar', state: 'bomgar'},
-						{ title: 'ManageEngine', state: 'manageEngine'},
+						{ title: 'Chef', state: 'chef'},
+						{ title: 'IBM BigFix', state: 'bigFix'},
 						{ title: 'Kaseya', state: 'kaseya'},
+						{ title: 'ManageEngine', state: 'manageEngine'},
+						{ title: 'Microsoft SCCM', state: 'sccm'},
 						{ title: 'ObserveIT', state: 'observeIT'},
+						{ title: 'Puppet', state: 'puppet'},
 						{ title: 'Other', state: 'va'}
 					]
 				},
@@ -276,7 +276,7 @@ export const onboarding = {
 					content: 'Click here to configure it.'
 				},
 				'va':  {
-					title: 'VULNERABILITY ASSESSMENT', align: 'center', queue: 'adapters',
+					title: 'VULNERABILITY ASSESSMENT SOLUTIONS', align: 'center', queue: 'adapters',
 					content: 'Which Vulnerability Assessment solution do you use?',
 					actions: [
 						{ title: 'Qualys', state: 'qualys' },
@@ -298,7 +298,7 @@ export const onboarding = {
 					content: 'Click here to configure it.'
 				},
 				'vaNone': {
-					title: 'VULNERABILITY ASSESSMENT', align: 'center',
+					title: 'VULNERABILITY ASSESSMENT SOLUTIONS', align: 'center',
 					content: 'We do not currently support your vulnerability assessment solution.\nLet\'s continue.',
 					actions: [
 						{ title: 'OK', state: 'mdm' }
@@ -308,9 +308,9 @@ export const onboarding = {
 					title: 'MDM SOLUTIONS', align: 'center', queue: 'adapters',
 					content: 'Which MDM solution do you use most?',
 					actions: [
+						{ title: 'Blackberry UEM', state: 'blackberry' },
 						{ title: 'MobileIron', state: 'mobileIron' },
 						{ title: 'VMWare Airwatch', state: 'vmwareAirwatch' },
-						{ title: 'Blackberry UEM', state: 'blackberry' },
 						{ title: 'Other', state: 'mdmNone' }
 					]
 				},
