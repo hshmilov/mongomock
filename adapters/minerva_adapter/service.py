@@ -59,7 +59,7 @@ class MinervaAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Minerva_Domain",
+                    "name": "domain",
                     "title": "Minerva Domain",
                     "type": "string"
                 },
