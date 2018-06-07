@@ -44,7 +44,5 @@ cat > "/etc/chef/first-boot.json" << EOF
 }
 EOF
 
-#hostname ${NODE_NAME}
-
 chef-client -j /etc/chef/first-boot.json
 service chef-client restart
