@@ -619,6 +619,30 @@ class AggregatorService(PluginBase, Triggerable):
                 msg = f"tried to update tag {tag}. expected modified_count == 1 but got {result.modified_count}"
                 logger.error(msg)
                 raise ValueError(msg)
+        elif tag.get("plugin_name") == "gui" and tag['type'] == 'label' and tag['data'] is False:
+            # Gui is a special plugin. It can delete any label it wants (even if it has come from
+            # another service)
+
+            result = entities_db.update_one({
+                "internal_axon_id": axonius_entity['internal_axon_id'],
+                "tags": {
+                    "$elemMatch":
+                        {
+                            "name": tag['name'],
+                            "type": "label"
+                        }
+                }
+            }, {
+                "$set": {
+                    "tags.$.data": False
+                }
+            })
+
+            if result.modified_count != 1:
+                msg = f"tried to update label {tag}. expected modified_count == 1 but got {result.modified_count}"
+                logger.error(msg)
+                raise ValueError(msg)
+
         else:
             result = entities_db.update_one(
                 {"internal_axon_id": axonius_entity['internal_axon_id']},
