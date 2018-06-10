@@ -240,7 +240,7 @@
             checkMailSettings(on) {
             	if (!on) {
 					this.updateEmptyState({ mailSettings: false})
-				} else if (!this.globalSettings.email_settings.smtpHost || !this.globalSettings.email_settings.smtpPort) {
+				} else if (!this.globalSettings.email_settings.enabled) {
 					this.updateEmptyState({ mailSettings: true})
 					this.updateEmptyState({ syslogSettings: false})
 					this.emptySettings['mail'] = true
@@ -249,8 +249,8 @@
             checkSyslogSettings(on) {
 				if (!on) {
 					this.updateEmptyState({ syslogSettings: false})
-				} else if (!this.globalSettings.syslog_settings.syslogHost) {
-					this.updateEmptyState({ syslogSettings: true})
+				} else if (!this.globalSettings.syslog_settings.enabled) {
+					this.updateEmptyState({ syslogSettings: true })
 					this.updateEmptyState({ mailSettings: false})
 					this.emptySettings['syslog'] = true
 				}

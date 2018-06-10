@@ -40,6 +40,9 @@
             }),
             isDev() {
 				return process.env.NODE_ENV === 'development'
+            },
+            currentPage() {
+            	return this.$route.fullPath
             }
 		},
         watch: {
@@ -47,6 +50,9 @@
                 if (newUserName) {
                 	this.fetchGlobalData()
                 }
+            },
+            currentPage() {
+        		this.fetchGlobalData()
             }
         },
         methods: {
