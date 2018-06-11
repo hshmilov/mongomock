@@ -23,7 +23,7 @@ NODE_NAME=node-$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 8 | head -n 1)
 # Create client.rb
 
 mkdir -p /etc/chef
-rm -f /etc/chef/*
+rm -rf /etc/chef/*
 
 cat > /etc/chef/client.rb << EOF
 chef_server_url  "https://diag-c.axonius.com/organizations/axonius"
@@ -37,9 +37,8 @@ cat > "/etc/chef/first-boot.json" << EOF
 {
    "chef_environment": "prod",
    "run_list" :[
-   "chef-client",
-   "chef-client::delete_validation",
-   "chef-repo::delete_prov_marker"
+   "role[provision]",
+   "role[after_provision]"
    ]
 }
 EOF
