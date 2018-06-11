@@ -1457,6 +1457,9 @@ class GuiService(PluginBase, Configurable):
             return return_error("No login data provided", 400)
         user_name = log_in_data.get('user_name')
         password = log_in_data.get('password')
+        remember_me = log_in_data.get('remember_me', False)
+        if not isinstance(remember_me, bool):
+            return return_error("remember_me isn't boolean", 401)
         user_from_db = users_collection.find_one({'user_name': user_name})
         if user_from_db is None:
             logger.info(f"Unknown user {user_name} tried logging in")
@@ -1469,6 +1472,7 @@ class GuiService(PluginBase, Configurable):
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
         session['user'] = user_from_db
+        session.permanent = remember_me
         return ""
 
     @add_rule("okta-redirect", methods=['GET'], should_authenticate=False)

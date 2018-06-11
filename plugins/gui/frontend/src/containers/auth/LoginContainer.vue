@@ -46,7 +46,8 @@
                 return {
                     type: 'array', items: [
                         {name: 'user_name', title: 'User Name', type: 'string'},
-                        {name: 'password', title: 'Password', type: 'string', format: 'password'}
+                        {name: 'password', title: 'Password', type: 'string', format: 'password'},
+                        {name: 'remember_me', title: "Remember me", type: 'bool', default: false}
                     ], required: ['user_name', 'password']
                 }
             },
@@ -72,7 +73,8 @@
             return {
                 credentials: {
                     user_name: '',
-                    password: ''
+                    password: '',
+                    remember_me: false,
                 },
                 complete: false,
                 ldapData: {
