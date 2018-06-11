@@ -1146,10 +1146,10 @@ class GuiService(PluginBase, Configurable):
         if request.method == 'PUT':
             report_to_add = request.get_json(silent=True)
             query_name = report_to_add['query']
-            query_entity = report_to_add['queryEntity']
-            assert query_entity in [x.value for x in EntityType.__members__.values()]
-            queries = self.device_queries if query_entity == EntityType.Devices.value else self.user_queries
-            if queries.find_one({'name': query_name}) is None:
+            query_entity = EntityType(report_to_add['queryEntity'])
+            queries_collection = self._queries_db_map[query_entity]
+
+            if queries_collection.find_one({'name': query_name}) is None:
                 return return_error(f"Missing query {query_name} requested for creating alert")
 
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)

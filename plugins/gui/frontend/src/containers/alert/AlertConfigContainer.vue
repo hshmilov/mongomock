@@ -5,16 +5,15 @@
     ]">
         <x-box class="alert-config">
             <form @keyup.enter="saveAlert">
-                    <!-- Section for alert name and query to run by -->
+                <!-- Section for alert name and query to run by -->
                 <div class="x-grid">
                     <label for="alert_name">Alert Name:</label>
                     <input id="alert_name" v-model="alert.name" @input="tour('alertQuery')">
                     <label for="alert_query">Select Saved Query:</label>
-                    <select id="alert_query" v-model="currentQuery" @change="tour('alertIncreased')">
-                        <option v-for="query in currentQueryOptions" :value="query"
-                                :selected="query.name === alert.query">{{query.title || query.name}}</option>
-                    </select>
+                    <x-select :options="currentQueryOptions" v-model="currentQuery" placeholder="field..." :searchable="true"
+                      class="field-select" id="alert_query" />
                 </div>
+
                 <!-- Section for defining the condition which match of will trigger the alert -->
                 <div class="configuration">
                     <div class="header">Alert Trigger</div>
@@ -28,7 +27,7 @@
                                    @input="tour('alertAction')">
                         </div>
                         <x-checkbox :class="{'grid-span2': !alert.triggers.decrease}" label="Decrease"
-                                  v-model="alert.triggers.decrease" />
+                                    v-model="alert.triggers.decrease"/>
                         <div class="form-inline" v-if="alert.triggers.decrease">
                             <label for="TriggerBelow">Below:</label>
                             <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0">
@@ -42,17 +41,20 @@
                         <div class="grid-span2">
                             <input id="SeverityInfo" type="radio" value="info" v-model="alert.severity">
                             <label for="SeverityInfo" class="ml-2">
-                                <svg-icon name="symbol/info" :original="true" height="16"></svg-icon>Info</label>
+                                <svg-icon name="symbol/info" :original="true" height="16"></svg-icon>
+                                Info</label>
                         </div>
                         <div class="grid-span2">
                             <input id="SeverityWarning" type="radio" value="warning" v-model="alert.severity">
                             <label for="SeverityWarning" class="ml-2">
-                                <svg-icon name="symbol/warning" :original="true" height="16"></svg-icon>Warning</label>
+                                <svg-icon name="symbol/warning" :original="true" height="16"></svg-icon>
+                                Warning</label>
                         </div>
                         <div class="grid-span2">
                             <input id="SeverityError" type="radio" value="error" v-model="alert.severity">
                             <label for="SeverityError" class="ml-2">
-                                <svg-icon name="symbol/error" :original="true" height="16"></svg-icon>Error</label>
+                                <svg-icon name="symbol/error" :original="true" height="16"></svg-icon>
+                                Error</label>
                         </div>
                     </div>
                 </div>
@@ -63,15 +65,17 @@
                         <x-checkbox label="Push a system notification" id="alert_notification"
                                     v-model="actions.notification" @change="tour('alertSave')" /><div />
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenow"/>
-                        <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog" @change="checkSyslogSettings"/>
+                        <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog"
+                                    @change="checkSyslogSettings"/>
                         <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
                                     v-model="actions.mail" @change="checkMailSettings"/>
                         <template v-if="actions.mail">
                             <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
-                                   no-data-text="Type mail addresses..." :default-first-option="true"/>
+                                       no-data-text="Type mail addresses..." :default-first-option="true"/>
                         </template>
                         <template v-if="alert.triggers.increase">
-                            <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag Entities" v-model="actions.tag"/>
+                            <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag Entities"
+                                        v-model="actions.tag"/>
                             <template v-if="actions.tag">
                                 <input class="form-control" id="tagName" v-model="tagName">
                             </template>
@@ -91,84 +95,87 @@
 </template>
 
 <script>
-	import xPage from '../../components/layout/Page.vue'
+    import xSelect from '../../components/inputs/Select.vue'
+    import xPage from '../../components/layout/Page.vue'
     import xBox from '../../components/layout/Box.vue'
     import xCheckbox from '../../components/inputs/Checkbox.vue'
     import Modal from '../../components/popover/Modal.vue'
 
-    import { mapState, mapMutations, mapActions } from 'vuex'
-	import { FETCH_DATA_QUERIES } from '../../store/actions'
-    import { UPDATE_EMPTY_STATE } from '../../store/modules/onboarding'
-    import { SET_ALERT, UPDATE_ALERT, FETCH_ALERTS } from '../../store/modules/alert'
+    import {mapState, mapMutations, mapActions} from 'vuex'
+    import {FETCH_DATA_QUERIES} from '../../store/actions'
+    import {UPDATE_EMPTY_STATE} from '../../store/modules/onboarding'
+    import {SET_ALERT, UPDATE_ALERT, FETCH_ALERTS} from '../../store/modules/alert'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
-	export default {
-		name: 'alert-config-container',
-		components: {
-            xPage, xBox, xCheckbox, Modal },
-		computed: {
+    export default {
+        name: 'alert-config-container',
+        components: {
+            xSelect, xPage, xBox, xCheckbox, Modal
+        },
+        computed: {
             ...mapState({
                 alertData: state => state.alert.current.data,
                 alerts: state => state.alert.content.data,
                 currentQueryOptions(state) {
-                	let queries = [ ...state.devices.queries.saved.data.map((item) => {
-                        return { ...item, entity: 'devices' }
+                    let queries = [...state.devices.queries.saved.data.map((item) => {
+                        return {...item, entity: 'devices'}
                     }), ...state.users.queries.saved.data.map((item) => {
-                        return { ...item, entity: 'users' }
-                    }) ]
-                	if (!queries || !queries.length) return []
+                        return {...item, entity: 'users'}
+                    })]
+                    if (!queries || !queries.length) return []
                     if (this.alert && this.alert.query) {
-                        let hasCurrent = false
-                        queries.forEach((query) => {
-                            if (query.name === this.alert.query) hasCurrent = true
-                        })
+                        let hasCurrent = queries.some(query => query.name === this.alert.query)
                         if (!hasCurrent) {
                             queries.push({
                                 name: this.alert.query, title: `${this.alert.query} (deleted)`
                             })
                         }
                     }
-                    return queries
+                    return queries.map(q => {return {...q, title: q.title ? q.title : q.name}})
                 },
                 globalSettings(state) {
-					return state.configurable.core.CoreService.config
+                    return state.configurable.core.CoreService.config
+                },
+                selectedOption() {
+				    if (!this.currentQuery) return undefined
+				    return this.currentQueryOptions.filter(option => (option.name === this.currentQuery))[0]
                 }
-			}),
+            }),
             complete() {
-            	if (!this.alert.name || !this.currentQuery.name) return false
+                if (!this.alert.name || !this.currentQuery) return false
 
-            	if ((this.actions.mail && this.emptySettings['mail'])
+                if ((this.actions.mail && this.emptySettings['mail'])
                     || (this.actions.syslog && this.emptySettings['syslog'])) return false
 
                 if ((this.alertData.id === "new" || this.alert.name !== this.alertData.name)
-					&& this.alerts.some(e => e.name === this.alert.name)) {
-					this.error = 'An Alert with that name already exists, please choose a different one.'
-					return false
+                    && this.alerts.some(e => e.name === this.alert.name)) {
+                    this.error = 'An Alert with that name already exists, please choose a different one.'
+                    return false
                 }
                 this.error = ''
                 return true
             }
         },
         data() {
-			return {
+            return {
                 /* Control of the criteria parameter with the use of two conditions */
-                alert: { triggers: {}, actions: [] },
-                currentQuery: {},
+                alert: {triggers: {}, actions: []},
+                currentQuery: null,
                 actions: {
-                	notification: false, mail: false, tag: false, syslog: false, servicenow: false
+                    notification: false, mail: false, tag: false, syslog: false, servicenow: false
                 },
                 mailList: [],
                 tagName: '',
                 error: '',
-				emptySettings: {
-                	'mail': false,
+                emptySettings: {
+                    'mail': false,
                     'syslog': false
                 }
             }
-		},
+        },
         watch: {
-			alertData(newAlertData) {
-				this.fillAlert(newAlertData)
+            alertData(newAlertData) {
+                this.fillAlert(newAlertData)
             }
         },
         methods: {
@@ -179,15 +186,15 @@
                 fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
             }),
             fillAlert(alert) {
-				alert.actions.forEach((action) => {
-					switch (action.type) {
-						case 'create_notification':
-							this.actions.notification = true
-							break
-						case 'send_emails':
-							this.actions.mail = true
-							this.mailList = action.data
-							break
+                alert.actions.forEach((action) => {
+                    switch (action.type) {
+                        case 'create_notification':
+                            this.actions.notification = true
+                            break
+                        case 'send_emails':
+                            this.actions.mail = true
+                            this.mailList = action.data
+                            break
                         case 'tag_entities':
                             this.actions.tag = true
                             this.tagName = action.data
@@ -197,24 +204,25 @@
                             break
                         case 'create_service_now_incident':
                             this.actions.servicenow = true
-					}
-				})
-				this.alert = { ...alert,
-                    triggers: { ...alert.triggers },
+                    }
+                })
+                this.alert = {
+                    ...alert,
+                    triggers: {...alert.triggers},
                     actions: []
                 }
             },
-			saveAlert() {
-            	/* Validation */
+            saveAlert() {
+                /* Validation */
                 if (!this.complete) return
 
                 if (this.actions.notification) {
-                	this.alert.actions.push({
+                    this.alert.actions.push({
                         type: 'create_notification'
                     })
                 }
                 if (this.actions.mail) {
-                	this.alert.actions.push({
+                    this.alert.actions.push({
                         type: 'send_emails', data: this.mailList
                     })
                 }
@@ -233,14 +241,14 @@
                         type: 'create_service_now_incident'
                     })
                 }
-                this.alert.query = this.currentQuery.name
-                this.alert.queryEntity = this.currentQuery.entity
+                this.alert.query = this.currentQuery
+                this.alert.queryEntity = this.selectedOption.entity
                 /* Save and return to alerts page */
                 this.updateAlert(this.alert)
-				this.returnToAlerts()
+                this.returnToAlerts()
             },
             returnToAlerts() {
-				this.$router.push({name: 'Alerts'})
+                this.$router.push({name: 'Alerts'})
             },
             checkMailSettings(on) {
             	if (!on) {
@@ -265,29 +273,29 @@
             }
         },
         created() {
-			/*
-			    If no alert from controls source, try and fetch it.
-			    Otherwise, if alert from controls source has correct id, update local alert controls with its values
-			 */
+            /*
+                If no alert from controls source, try and fetch it.
+                Otherwise, if alert from controls source has correct id, update local alert controls with its values
+             */
             if (!this.alerts.length || !this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
                 this.fetchAlerts({}).then(() => {
                     this.setAlert(this.$route.params.id)
                 })
             } else {
-			    this.fillAlert(this.alertData)
+                this.fillAlert(this.alertData)
             }
             this.tour('alertName')
 
-			/* Fetch all saved queries for offering user to base alert upon */
+            /* Fetch all saved queries for offering user to base alert upon */
             Promise.all([this.fetchQueries({module: 'devices', type: 'saved'}),
-                         this.fetchQueries({module: 'users', type: 'saved'})]).then(() => {
+                this.fetchQueries({module: 'users', type: 'saved'})]).then(() => {
                     if (this.alertData.query) {
                         let matching = this.currentQueryOptions.filter(item =>
                             (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.query)
                         if (matching.length) {
-                            this.currentQuery = matching[0]
-                            this.alert.query = this.currentQuery.name
-                            this.alert.queryEntity = this.currentQuery.entity
+                            this.currentQuery = matching[0].name
+                            this.alert.query = this.currentQuery
+                            this.alert.queryEntity = this.selectedOption.entity
                         } else {
                             this.alert.query = ''
                         }
@@ -295,7 +303,7 @@
                 }
             )
         }
-	}
+    }
 </script>
 
 <style lang="scss">
