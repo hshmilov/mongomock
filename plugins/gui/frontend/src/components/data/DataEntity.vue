@@ -54,8 +54,10 @@
 	import xTagModal from '../../components/popover/TagModal.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
-    import { mapState, mapActions } from 'vuex'
+    import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
+	import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
+
 
     const lastSeenByModule = {
 		'users': 'last_seen_in_devices',
@@ -69,7 +71,8 @@
 			return {
 				viewBasic: true,
 				entities: [this.$route.params.id],
-                loading: true
+                loading: true,
+                adapterState: 0
 			}
 		},
         computed: {
@@ -79,6 +82,9 @@
                 },
                 fields(state) {
                 	return state[this.module].fields.data
+                },
+                tourState(state) {
+                	return state.onboarding.tourStates.current
                 }
             }),
             entityId() {
@@ -117,6 +123,7 @@
 			}
         },
         methods: {
+            ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
             ...mapActions({
                 fetchDataFields: FETCH_DATA_FIELDS, fetchDataByID: FETCH_DATA_BY_ID
             }),
@@ -145,7 +152,23 @@
 			} else {
 				this.loading = false
             }
-		}
+		},
+        updated() {
+			if (this.module === 'devices' && this.sortedSpecificData && this.sortedSpecificData.length) {
+                this.changeState({
+                    name: 'adapterDevice', id: this.sortedSpecificData[0].plugin_name
+                })
+                if (this.sortedSpecificData.length > 1) {
+                	this.updateState({
+                        name: 'otherAdapterDevice', id: this.sortedSpecificData[1].plugin_name, align: 'top'
+                	})
+                } else {
+					this.updateState({
+						name: 'otherAdapterDevice', align: 'center'
+					})
+                }
+			}
+        }
 	}
 </script>
 

@@ -391,9 +391,7 @@ table {
 }
 
 .pulsing {
-  &.pulse, .pulse {
-    animation: pulse 1.4s linear infinite;
-  }
+  animation: pulse 1.4s linear infinite;
 }
 
 

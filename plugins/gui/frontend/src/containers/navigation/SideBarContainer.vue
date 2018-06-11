@@ -23,7 +23,7 @@
                     <x-nested-nav-item route-name="Saved Queries" router-path="/users/query/saved"/>
                 </x-nested-nav>
             </x-nested-nav-item>
-            <x-nested-nav-item route-name="Alerts" icon-name="alert"/>
+            <x-nested-nav-item route-name="Alerts" icon-name="alert" id="alerts" />
             <x-nested-nav-item route-name="Adapters" icon-name="adapter" id="adapters" />
             <x-nested-nav-item route-name="Reporting" icon-name="report"/>
         </x-nested-nav>

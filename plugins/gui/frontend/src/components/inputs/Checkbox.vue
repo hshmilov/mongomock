@@ -1,9 +1,8 @@
 <template>
-    <div class="x-checkbox" :class="{'x-checked': checked}"
+    <div class="x-checkbox" :class="{'x-checked': checked}" :id="id"
          @click.stop="$refs.checkbox.click()" @keyup.enter.stop="$refs.checkbox.click()">
         <div class="x-checkbox-container" :class="{'x-checkbox-semi': semi}">
-            <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox" :id="id" v-if="id">
-            <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox" v-else>
+            <input type="checkbox" v-model="checked" @change="updateData" ref="checkbox">
         </div>
         <label v-if="label" class="x-checkbox-label">{{label}}</label>
     </div>
@@ -12,7 +11,7 @@
 <script>
 	export default {
 		name: 'x-checkbox',
-        props: {data: {}, value: {default: 'on'}, label: {}, semi: {default: false}, id: {default: null}},
+        props: {data: {}, value: {default: 'on'}, label: {}, semi: {default: false}, id: {}},
         model: {
 			prop: 'data',
             event: 'change'

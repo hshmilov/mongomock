@@ -37,7 +37,7 @@
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_ADAPTERS } from '../../store/modules/adapter'
-    import { UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
+    import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
     export default {
         name: 'adapters-container',
@@ -64,7 +64,7 @@
             }
         },
         methods: {
-            ...mapMutations({ updateState: UPDATE_TOUR_STATE }),
+            ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
             ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),
         	configAdapter(adapterId) {
             	/*
@@ -76,7 +76,7 @@
         },
         created() {
         	this.fetchAdapters().then(() => {
-                this.updateState(this.tourAdapters[0])
+                this.changeState({name: this.tourAdapters[0]})
             })
         }
     }

@@ -119,6 +119,12 @@
                     newView.fields.length > oldView.fields.length) {
                     this.loading = true
                 }
+            },
+            loading(newLoading) {
+            	if (newLoading) return
+				if (this.content.data && this.content.data.length) {
+					this.$emit('data', this.content.data[0][this.idField])
+				}
             }
         },
         methods: {

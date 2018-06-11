@@ -11,7 +11,7 @@
                     <div class="modal-footer">
                         <slot name="footer">
                             <button class="x-btn link" @click="$emit('close')">{{dismissText}}</button>
-                            <button class="x-btn" :class="{disabled}" @click="onApprove">{{approveText}}</button>
+                            <button class="x-btn" :class="{disabled}" @click="onApprove" :id="approveId">{{approveText}}</button>
                         </slot>
                     </div>
                 </div>
@@ -23,7 +23,7 @@
 <script>
 	export default {
 		name: 'modal',
-        props: { approveText: { default: 'OK' }, dismissText: { default: 'Cancel' },
+        props: { approveText: { default: 'OK' }, approveId: {}, dismissText: { default: 'Cancel' },
             disabled: {default: false}, size: {default: 'xl'} },
         methods: {
 			onApprove() {

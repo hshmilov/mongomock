@@ -13,7 +13,7 @@
     import Modal from '../../popover/Modal.vue'
 
     import { mapMutations } from 'vuex'
-    import { START_TOUR, UPDATE_TOUR_STATE, STOP_TOUR } from '../../../store/modules/onboarding'
+    import { START_TOUR, CHANGE_TOUR_STATE, STOP_TOUR } from '../../../store/modules/onboarding'
 
 	export default {
 		name: 'x-empty-system',
@@ -24,7 +24,7 @@
             }
         },
         methods: {
-            ...mapMutations({ startTour: START_TOUR, updateState: UPDATE_TOUR_STATE, stopTour: STOP_TOUR }),
+            ...mapMutations({ startTour: START_TOUR, changeState: CHANGE_TOUR_STATE, stopTour: STOP_TOUR }),
 			onClickTour() {
 				this.isActive = false
                 this.startTour()
@@ -35,7 +35,7 @@
             }
         },
         created() {
-			this.updateState('')
+			this.changeState({ name: '' })
         }
 	}
 </script>

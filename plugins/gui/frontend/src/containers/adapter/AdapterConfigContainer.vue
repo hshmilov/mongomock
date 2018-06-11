@@ -6,7 +6,7 @@
         <x-table-actions title="Add or Edit Servers">
             <template slot="actions">
                 <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="link">Remove</div>
-                <div @click="configServer('new')" id="new_server" class="x-btn pulse">+ New Server</div>
+                <div @click="configServer('new')" id="new_server" class="x-btn">+ New Server</div>
             </template>
             <x-table slot="table" :fields="tableFields" :data="adapterClients" :click-row-handler="configServer"
                      id-field="uuid" v-model="selectedServers" />
@@ -65,8 +65,8 @@
 		FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
 	} from '../../store/modules/adapter'
     import { pluginMeta } from '../../static.js'
-    import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable";
-	import { UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
+    import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable"
+	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
 	export default {
 		name: 'adapter-config-container',
@@ -126,7 +126,7 @@
 			}
 		},
 		methods: {
-            ...mapMutations({ updateAdapter: UPDATE_CURRENT_ADAPTER, updateState: UPDATE_TOUR_STATE }),
+            ...mapMutations({ updateAdapter: UPDATE_CURRENT_ADAPTER, changeState: CHANGE_TOUR_STATE }),
 			...mapActions({
                 fetchAdapters: FETCH_ADAPTERS, updateServer: SAVE_ADAPTER_SERVER,
                 archiveServer: ARCHIVE_SERVER, updatePluginConfig: SAVE_PLUGIN_CONFIG
@@ -147,7 +147,7 @@
 				this.toggleServerModal()
 			},
             promptSaveServer() {
-				this.updateState('saveServer')
+				this.changeState({name: 'saveServer'})
             },
 			removeServers () {
             	this.selectedServers.forEach(serverId => this.archiveServer({
@@ -168,7 +168,7 @@
 				}).then((updateRes) => {
 					this.fetchAdapters().then(() => {
                         document.getElementById(updateRes.data.id).children[2].id = 'status_server'
-						this.updateState(`${updateRes.data.status}Server`)
+						this.changeState({name: `${updateRes.data.status}Server`})
                         if (updateRes.data.status === 'error') {
                         	this.message = 'Problem connecting. Review error and try again.'
 						} else {
@@ -208,7 +208,7 @@
 			this.fetchAdapters().then(() => {
                 this.updateAdapter(this.adapterId)
             })
-			this.updateState('addServer')
+			this.changeState({name: 'addServer'})
 		}
 	}
 </script>

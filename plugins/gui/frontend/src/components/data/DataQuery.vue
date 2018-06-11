@@ -3,8 +3,9 @@
         <!-- Dropdown component for selecting a query --->
         <x-dropdown :arrow="false" class="flex-expand">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
-            <search-input slot="trigger" v-model="searchValue" ref="greatInput" @input="searchQuery" :tabindex="1"
-                          @keyup.enter.native="submitFilter" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex"
+            <search-input slot="trigger" v-model="searchValue" ref="greatInput" id="query_list" @input="searchQuery"
+                          @keyup.enter.native="submitFilter" @click="tour('querySelect')"
+                          @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex"
                           placeholder="Insert your query or start typing to filter recent Queries" />
             <!--
             Content is a list composed of 3 sections:
@@ -17,7 +18,8 @@
                     <div class="title">Saved Queries</div>
                     <div class="menu-content">
                         <nested-menu-item v-for="query, index in savedQueries" :key="index" :title="query.name"
-                                          :selected="queryMenuIndex === index" @click="selectQuery(query)" />
+                                          :selected="queryMenuIndex === index" @click="selectQuery(query)"
+                                          :id="(query.name === 'AD Enabled Critical Assets')? 'query_select': undefined" />
                     </div>
                 </nested-menu>
                 <nested-menu v-if="historyQueries && historyQueries.length">
@@ -34,19 +36,20 @@
                 <div v-if="noResults">No results</div>
             </div>
         </x-dropdown>
-        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery">Save Query</a>
+        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery" id="query_save">Save Query</a>
         <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false" ref="wizard">
-            <div slot="trigger" class="x-btn link" :tabindex="2">+ Query Wizard</div>
+            <div slot="trigger" class="x-btn link" id="query_wizard" @click="tour('queryField')">+ Query Wizard</div>
             <div slot="content">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
                                  @error="filterValid = false" :rebuild="rebuild"/>
                 <div class="place-right">
-                    <a class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter" :tabindex="3">Clear</a>
-                    <a class="x-btn" @click="rebuildFilter" @keyup.enter="rebuildFilter" :tabindex="4">Search</a>
+                    <a class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</a>
+                    <a class="x-btn" @click="rebuildFilter" @keyup.enter="rebuildFilter">Search</a>
                 </div>
             </div>
         </x-dropdown>
-        <modal v-if="saveModal.isActive" @close="closeSaveQuery" approveText="Save" @confirm="confirmSaveQuery" size="md">
+        <modal v-show="saveModal.isActive" approveText="Save" approveId="query_save_confirm" size="md"
+               @close="closeSaveQuery" @confirm="confirmSaveQuery" @enter="tour('querySave')" @leave="tour('queryList')">
             <div slot="body" class="query-save">
                 <label for="saveName">Save as:</label>
                 <input class="flex-expand" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveQuery">
@@ -67,6 +70,7 @@
     import { GET_DATA_FIELD_LIST_TYPED } from '../../store/getters'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_DATA_QUERIES, SAVE_DATA_QUERY } from '../../store/actions'
+	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 	import { expression } from '../../mixins/filter'
 
 	export default {
@@ -169,7 +173,7 @@
             }
         },
 		methods: {
-            ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
+            ...mapMutations({ updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE }),
 			...mapActions({
 				fetchQueries: FETCH_DATA_QUERIES, saveQuery: SAVE_DATA_QUERY,
 			}),
@@ -252,6 +256,9 @@
                 } else if (this.queryMenuIndex === -1) {
             		this.focusInput()
                 }
+            },
+            tour(stateName) {
+				this.changeState({ name: stateName })
             }
 		},
         created() {

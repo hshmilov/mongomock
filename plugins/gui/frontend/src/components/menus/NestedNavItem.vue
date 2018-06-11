@@ -3,7 +3,7 @@
                  class="x-nested-nav-item" :active-class="(!disabled && !exact)? 'active': ''"
                  :exact-active-class="(!disabled && exact)? 'active': ''" @click.native="$emit('click')">
         <a class="item-link" :title="routeName">
-            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" width="24" :original="true" class="pulse" />
+            <svg-icon v-if="iconName" :name="`navigation/${iconName}`" width="24" :original="true" />
             <span>{{ routeName }}</span>
         </a>
         <slot/>

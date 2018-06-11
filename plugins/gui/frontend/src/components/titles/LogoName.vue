@@ -1,6 +1,6 @@
 <template>
-    <div class="x-logo-name">
-        <img :src="`/src/assets/images/logos/${name}.png`" height="24" :id="name" class="pulse">
+    <div class="x-logo-name" :id="name">
+        <img :src="`/src/assets/images/logos/${name}.png`" height="24">
         <div class="title">{{prettyName}}</div>
     </div>
 </template>

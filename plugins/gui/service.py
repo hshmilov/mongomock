@@ -2283,6 +2283,6 @@ class GuiService(PluginBase, Configurable):
                 "refreshRate": 30,
                 "singleAdapter": False,
                 "multiLine": False,
-                "defaultSort": False
+                "defaultSort": True
             }
         }

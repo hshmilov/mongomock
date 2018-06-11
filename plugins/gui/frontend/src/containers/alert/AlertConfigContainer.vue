@@ -7,10 +7,10 @@
             <form @keyup.enter="saveAlert">
                     <!-- Section for alert name and query to run by -->
                 <div class="x-grid">
-                    <label for="alertName">Alert Name:</label>
-                    <input id="alertName" v-model="alert.name">
-                    <label for="alertQuery">Select Saved Query:</label>
-                    <select id="alertQuery" v-model="currentQuery">
+                    <label for="alert_name">Alert Name:</label>
+                    <input id="alert_name" v-model="alert.name" @input="tour('alertQuery')">
+                    <label for="alert_query">Select Saved Query:</label>
+                    <select id="alert_query" v-model="currentQuery" @change="tour('alertIncreased')">
                         <option v-for="query in currentQueryOptions" :value="query"
                                 :selected="query.name === alert.query">{{query.title || query.name}}</option>
                     </select>
@@ -20,11 +20,12 @@
                     <div class="header">Alert Trigger</div>
                     <div>Monitor selected query and test whether devices number...</div>
                     <div class="content">
-                        <x-checkbox :class="{'grid-span2': !alert.triggers.increase}" label="Increased"
-                                  v-model="alert.triggers.increase"/>
-                        <div class="form-inline" v-if="alert.triggers.increase">
-                            <label for="TriggerAbove">Above:</label>
-                            <input id="TriggerAbove" type="number" v-model="alert.triggers.above"  min="0">
+                        <x-checkbox label="Increased" v-model="alert.triggers.increase" id="alert_increased"
+                                    @change="tour('alertAbove')" />
+                        <div class="form-inline" v-show="alert.triggers.increase">
+                            <label for="alert_above">Above:</label>
+                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0"
+                                   @input="tour('alertAction')">
                         </div>
                         <x-checkbox :class="{'grid-span2': !alert.triggers.decrease}" label="Decrease"
                                   v-model="alert.triggers.decrease" />
@@ -59,7 +60,8 @@
                 <div class="configuration">
                     <div class="header">Action</div>
                     <div class="content">
-                        <x-checkbox class="grid-span2" label="Push a system notification" v-model="actions.notification"/>
+                        <x-checkbox label="Push a system notification" id="alert_notification"
+                                    v-model="actions.notification" @change="tour('alertSave')" /><div />
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenow"/>
                         <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog" @change="checkSyslogSettings"/>
                         <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
@@ -78,7 +80,7 @@
                 </div>
                 <div class="footer">
                     <div class="error-text">{{ error || '&nbsp;' }}</div>
-                    <div class="actions">
+                    <div class="actions" id="alert_save">
                         <a class="x-btn link" @click="returnToAlerts">Cancel</a>
                         <a class="x-btn" :class="{disabled: !complete}" @click="saveAlert">Save</a>
                     </div>
@@ -98,6 +100,7 @@
 	import { FETCH_DATA_QUERIES } from '../../store/actions'
     import { UPDATE_EMPTY_STATE } from '../../store/modules/onboarding'
     import { SET_ALERT, UPDATE_ALERT, FETCH_ALERTS } from '../../store/modules/alert'
+    import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
 	export default {
 		name: 'alert-config-container',
@@ -169,7 +172,9 @@
             }
         },
         methods: {
-            ...mapMutations({ setAlert: SET_ALERT, updateEmptyState: UPDATE_EMPTY_STATE }),
+            ...mapMutations({
+                setAlert: SET_ALERT, updateEmptyState: UPDATE_EMPTY_STATE, changeState: CHANGE_TOUR_STATE
+            }),
             ...mapActions({
                 fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
             }),
@@ -254,6 +259,9 @@
 					this.updateEmptyState({ mailSettings: false})
 					this.emptySettings['syslog'] = true
 				}
+            },
+            tour(stateName) {
+            	this.changeState({ name: stateName })
             }
         },
         created() {
@@ -268,6 +276,7 @@
             } else {
 			    this.fillAlert(this.alertData)
             }
+            this.tour('alertName')
 
 			/* Fetch all saved queries for offering user to base alert upon */
             Promise.all([this.fetchQueries({module: 'devices', type: 'saved'}),

@@ -182,7 +182,7 @@ export const alert = {
 				rule += '/' + payload.id
 				method = 'POST'
 			}
-			dispatch(REQUEST_API, {
+			return dispatch(REQUEST_API, {
 				rule: rule,
 				method: method,
 				data: payload

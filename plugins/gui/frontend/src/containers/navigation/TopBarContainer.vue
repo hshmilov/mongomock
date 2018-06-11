@@ -27,7 +27,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="item-link" @click="navigateSettings">
+                <a class="item-link" @click="navigateSettings" id="settings">
                     <svg-icon name="navigation/settings" :original="true" height="20" />
                 </a>
                 <x-tip-info content="In order to send alerts through mail, define the server under settings"

@@ -7,7 +7,7 @@
             </div>
             <div class="content">{{currentState.content}}</div>
             <div class="actions">
-                <button v-for="action in currentState.actions" @click="updateState(action.state)" class="x-btn">
+                    <button v-for="action in currentState.actions" @click="changeState({name: action.state})" class="x-btn">
                     {{action.title}}
                 </button>
             </div>
@@ -17,7 +17,7 @@
 
 <script>
     import { mapState, mapMutations } from 'vuex'
-    import { STOP_TOUR, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
+    import { STOP_TOUR, CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
 	export default {
 		name: 'x-tour-state',
@@ -58,7 +58,7 @@
             }
         },
         methods: {
-            ...mapMutations({ stopTour: STOP_TOUR, updateState: UPDATE_TOUR_STATE }),
+            ...mapMutations({ stopTour: STOP_TOUR, changeState: CHANGE_TOUR_STATE }),
             calcPosition() {
                 let selfHeight = this.$el.offsetHeight
                 let selfWidth = this.$el.offsetWidth

@@ -3,7 +3,7 @@
         <x-data-table module="alert" title="Alerts" @click-row="configAlert" id-field="uuid" v-model="selected">
             <template slot="actions">
                 <div v-if="selected && selected.length" @click="removeAlerts" class="link">Remove</div>
-                <div @click="createAlert" class="x-btn">+ New Alert</div>
+                <div @click="createAlert" class="x-btn" id="alert_new">+ New Alert</div>
             </template>
         </x-data-table>
     </x-page>
@@ -16,12 +16,17 @@
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_ALERTS, SET_ALERT, ARCHIVE_ALERTS } from '../../store/modules/alert'
+    import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
-    export default {
+	export default {
         name: 'alert-container',
         components: { xPage, xDataTable },
 		computed: {
-            ...mapState(['alert'])
+            ...mapState({
+                tourAlerts(state) {
+                    return state.onboarding.tourStates.queues.alerts
+                }
+			})
 		},
         data() {
         	return {
@@ -29,7 +34,7 @@
             }
         },
         methods: {
-            ...mapMutations({ setAlert: SET_ALERT }),
+            ...mapMutations({ setAlert: SET_ALERT, changeState: CHANGE_TOUR_STATE }),
 			...mapActions({ fetchAlerts: FETCH_ALERTS, archiveAlerts: ARCHIVE_ALERTS }),
             configAlert(alertId) {
 				/*
@@ -45,6 +50,11 @@
             },
             removeAlerts() {
             	this.archiveAlerts(this.selected)
+            }
+        },
+        created() {
+        	if (this.tourAlerts && this.tourAlerts.length) {
+			    this.changeState({ name: this.tourAlerts[0] })
             }
         }
     }

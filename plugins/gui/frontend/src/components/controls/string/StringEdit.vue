@@ -1,15 +1,11 @@
 <template>
     <input v-if="inputType" :id="schema.name" :type="inputType" v-model="data" :class="{'invalid': !valid}"
            @input="input" @focusout.stop="validate"/>
-    <div v-else-if="schema.format === 'date-time'">
         <!-- Date Picker -->
-        <x-date-edit v-model="data" @input="input" />
-    </div>
-    <div v-else-if="enumOptions">
-        <!-- Select from enum values -->
-        <x-select :options="enumOptions" v-model="data" placeholder="value..." :class="{'invalid': !valid}"
-                  @input="input" @focusout.stop="validate"/>
-    </div>
+    <x-date-edit v-else-if="schema.format === 'date-time'" v-model="data" @input="input" />
+    <!-- Select from enum values -->
+    <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..." :class="{'invalid': !valid}"
+              @input="input" @focusout.stop="validate"/>
 </template>
 
 <script>

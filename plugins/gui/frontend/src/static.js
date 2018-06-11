@@ -1,8 +1,4 @@
 export const pluginMeta = {
-    junos_adapter: {
-        title: 'Juiper Junos',
-        description: 'junos OS is the FreeBSD-based operating system used in Juniper Networks hardware devices.'
-    },
     active_directory_adapter: {
         title: 'Active Directory',
         description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticates and authorizes all users and computers.'
@@ -135,6 +131,10 @@ export const pluginMeta = {
         title: 'Juniper Junos Space',
         description: 'Juniper Junos Space Network Management Platform automates management of Juniper’s switching, routing, and security devices.'
     },
+	junos_adapter: {
+		title: 'Juniper Junos',
+		description: 'The Juniper Junos Adapter connects to Juniper switches and routers.'
+	},
     bomgar_adapter: {
         title: 'Bomgar Remote Support',
         description: 'Bomgar Remote Support allows support technicians to remotely connect to end-user systems through firewalls from their computer or mobile devices.'

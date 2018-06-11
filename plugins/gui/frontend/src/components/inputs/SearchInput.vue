@@ -31,6 +31,7 @@
             focus() {
             	this.isFocus = true
             	this.$refs.input.focus()
+                this.$emit('click')
             }
         }
     }

@@ -11,14 +11,16 @@
         <div class="expression-field">
             <x-select-symbol :options="fields" v-model="fieldSpace" />
             <x-select :options="currentFields" v-model="expression.field" placeholder="field..." :searchable="true"
-                      class="field-select"/>
+                      class="field-select" :id="first? 'query_field': undefined" />
         </div>
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
-            <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length" placeholder="func..."/>
+            <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length"
+                      placeholder="func..." :id="first? 'query_op': undefined" />
             <template v-if="showValue">
                 <component :is="`x-${valueSchema.type}-edit`" :schema="valueSchema" v-model="expression.value"
-                           class="fill" :class="{'grid-span2': !fieldOpsList.length}"/>
+                           class="fill" :class="{'grid-span2': !fieldOpsList.length}"
+                           :id="first? 'query_value': undefined" />
             </template>
             <template v-else>
                 <!-- No need for value, since function is boolean, not comparison -->
@@ -43,6 +45,9 @@
 	import xArrayEdit from '../controls/array/ArrayFilter.vue'
 	import IP from 'ip'
 	import { compOps } from '../../mixins/filter'
+
+    import { mapMutations } from 'vuex'
+	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
 	export default {
 		components: {
@@ -149,6 +154,7 @@
             }
 		},
 		methods: {
+            ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
 			checkErrors () {
 				if (!this.first && !this.expression.logicOp) {
 					return 'Logical operator is needed to add expression to the filter'
@@ -240,6 +246,13 @@
 		},
 		updated () {
 			this.compileExpression()
+            if (this.first) {
+				if (this.expression.field && this.expression.compOp && !this.expression.value) {
+					this.changeState({ name: 'queryValue' })
+                } else if (this.expression.field && !this.expression.compOp) {
+					this.changeState({ name: 'queryOp' })
+                }
+            }
 		},
         created() {
 			if (this.expression.field) {
