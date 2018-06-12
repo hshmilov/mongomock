@@ -6,6 +6,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import GetDevicesError
+from axonius.utils.parsing import make_dict_from_csv
 
 
 class CsvAdapter(AdapterBase):
@@ -23,7 +24,7 @@ class CsvAdapter(AdapterBase):
 
     def _query_devices_by_client(self, client_name, client_data):
         csv_data = self._grab_file_contents(client_data['csv']).decode('utf-8')
-        return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data[:1024]))
+        return make_dict_from_csv(csv_data)
 
     def _clients_schema(self):
         return {

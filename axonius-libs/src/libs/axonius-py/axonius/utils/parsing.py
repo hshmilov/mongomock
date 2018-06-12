@@ -679,4 +679,5 @@ def remove_duplicates_by_reference(seq):
 
 
 def make_dict_from_csv(csv_data):
-    return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data[:1024]))
+    return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data.splitlines()[0],
+                                                                             delimiters=[',', '\t']))

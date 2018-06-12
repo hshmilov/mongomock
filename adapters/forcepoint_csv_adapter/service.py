@@ -7,6 +7,7 @@ from axonius.fields import Field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_date
 from axonius.adapter_exceptions import GetDevicesError
+from axonius.utils.parsing import make_dict_from_csv
 
 
 class ForcepointCsvAdapter(AdapterBase):
@@ -27,7 +28,7 @@ class ForcepointCsvAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         filedata = self._grab_file_contents(client_data['csv'])
         csv_data = filedata.decode('utf-8')
-        return csv.DictReader(csv_data.splitlines(), dialect=csv.Sniffer().sniff(csv_data[:1024]))
+        return make_dict_from_csv(csv_data)
 
     def _clients_schema(self):
         return {
