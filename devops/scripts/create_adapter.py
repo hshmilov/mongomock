@@ -106,7 +106,7 @@ def port_validator(filename: str, adapter_name: str):
 
 def description_action(filename: str, adapter_name: str):
     ''' Appends description to the description file '''
-    new_description = "\t\t%s_adapter: {\n\t\t\ttitle: 'AUTOADAPTER',\n\t\t\tdescription: 'AUTOADAPTER'\n\t\t},\n" % (
+    new_description = "    %s_adapter: {\n        title: 'AUTOADAPTER',\n        description: 'AUTOADAPTER'\n    },\n" % (
         adapter_name, )
 
     data = open(filename, 'r').readlines()
