@@ -5,9 +5,8 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
+from axonius.clients.rest.exception import RESTException
 from mobileiron_adapter.connection import MobileironConnection
-from mobileiron_adapter.exceptions import MobileironException
 from axonius.utils.parsing import parse_date
 
 
@@ -28,19 +27,20 @@ class MobileironAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['Mobileiron_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
-            connection = MobileironConnection(domain=client_config["Mobileiron_Domain"],
-                                              verify_ssl=client_config["verify_ssl"], fetch_apps=client_config["fetch_apps"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = MobileironConnection(domain=client_config["domain"], headers={'Content-Type': 'application/json'},
+                                              url_base_prefix=client_config.get("url_base_path") + "/rest/api/v2/", verify_ssl=client_config["verify_ssl"],
+                                              fetch_apps=client_config["fetch_apps"], username=client_config["username"],
+                                              password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except MobileironException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Mobileiron_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -66,8 +66,13 @@ class MobileironAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Mobileiron_Domain",
+                    "name": "domain",
                     "title": "MobileIron Domain",
+                    "type": "string"
+                },
+                {
+                    "name": "url_base_path",
+                    "title": "URL Base Path",
                     "type": "string"
                 },
                 {
@@ -93,11 +98,12 @@ class MobileironAdapter(AdapterBase):
                 }
             ],
             "required": [
-                "Mobileiron_Domain",
+                "domain",
                 "username",
                 "password",
                 "verify_ssl",
-                "fetch_apps"
+                "fetch_apps",
+                "url_base_path"
             ],
             "type": "array"
         }

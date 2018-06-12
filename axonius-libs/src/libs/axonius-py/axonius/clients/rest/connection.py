@@ -113,7 +113,8 @@ class RESTConnection(ABC):
         return self._do_request("PUT", *args, **kwargs)
 
     def _do_request(self, method, name, url_params={}, body_params=None,
-                    force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True):
+                    force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
+                    do_digest_auth=False):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
@@ -139,6 +140,8 @@ class RESTConnection(ABC):
                 if self._username is None or self._password is None:
                     raise RESTConnectionError("No user name or password")
                 auth_dict = (self._username, self._password)
+            if do_digest_auth:
+                auth_dict = requests.auth.HTTPDigestAuth(self._username, self._password)
 
             response = self._session.request(method, url, params=url_params,
                                              headers=self._headers, verify=self._verify_ssl,

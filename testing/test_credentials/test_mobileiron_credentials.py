@@ -1,10 +1,11 @@
 
 client_details = {
-    "Mobileiron_Domain": "https://m.mobileiron.net/axonius9801",
+    "domain": "https://m.mobileiron.net",
     "username": "admin",
     "password": "Ct4qRPJPRWMPoozQG7t6",
     "verify_ssl": True,
-    "fetch_apps": True
+    "fetch_apps": True,
+    "url_base_path": "axonius9801"
 }
 
 SOME_DEVICE_ID = '1'
