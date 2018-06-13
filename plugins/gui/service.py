@@ -1652,6 +1652,7 @@ class GuiService(PluginBase, Configurable):
 
         :return:
         """
+        logger.info("Getting dashboard")
         dashboard_list = []
         for dashboard in self._get_collection('dashboard').find(filter_archived()):
             if not dashboard.get('name'):
@@ -1819,6 +1820,7 @@ class GuiService(PluginBase, Configurable):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
+        logger.info("Getting adapter devices")
         plugins_available = requests.get(self.core_address + '/register').json()
         adapter_devices = {'total_gross': 0, 'adapter_count': []}
         with self._get_db_connection() as db_connection:
@@ -1851,6 +1853,7 @@ class GuiService(PluginBase, Configurable):
 
         :return:
         """
+        logger.info("Getting dashboard coverage")
         devices_total = self.devices_db_view.count()
         if not devices_total:
             return []
@@ -1976,6 +1979,7 @@ class GuiService(PluginBase, Configurable):
                     name_to_title[field['name']] = field['title']
             return name_to_title
 
+        logger.info("Getting views data")
         views_data = []
         for entity in EntityType:
             field_to_title = _get_field_titles(entity)
@@ -2012,6 +2016,7 @@ class GuiService(PluginBase, Configurable):
         Generates the report and returns file path.
         :return: the generated report file path.
         """
+        logger.info("Starting to generate report")
         report_data = {
             'adapter_devices': self._adapter_devices(),
             'covered_devices': self._get_dashboard_coverage(),
