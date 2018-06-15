@@ -14,19 +14,19 @@
             3. Option to search for 'searchValue' everywhere in data (compares to every text field)
             -->
             <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex" class="query-quick">
-                <nested-menu v-if="savedQueries && savedQueries.length">
+                <nested-menu v-if="savedViews && savedViews.length">
                     <div class="title">Saved Queries</div>
                     <div class="menu-content">
-                        <nested-menu-item v-for="query, index in savedQueries" :key="index" :title="query.name"
+                        <nested-menu-item v-for="query, index in savedViews" :key="index" :title="query.name"
                                           :selected="queryMenuIndex === index" @click="selectQuery(query)"
                                           :id="(query.name === 'AD Enabled Critical Assets')? 'query_select': undefined" />
                     </div>
                 </nested-menu>
-                <nested-menu v-if="historyQueries && historyQueries.length">
+                <nested-menu v-if="historyViews && historyViews.length">
                     <div class="title">History</div>
                     <div class="menu-content">
-                        <nested-menu-item v-for="query, index in historyQueries" :key="index" :title="query.filter"
-                                          :selected="queryMenuIndex - savedQueries.length === index" @click="selectQuery(query)" />
+                        <nested-menu-item v-for="query, index in historyViews" :key="index" :title="query.view.query.filter"
+                                          :selected="queryMenuIndex - savedViews.length === index" @click="selectQuery(query)" />
                     </div>
                 </nested-menu>
                 <nested-menu v-if="this.searchValue && !complexSearch">
@@ -36,7 +36,7 @@
                 <div v-if="noResults">No results</div>
             </div>
         </x-dropdown>
-        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveQuery" id="query_save">Save Query</a>
+        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveView" id="query_save">Save Query</a>
         <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false" ref="wizard">
             <div slot="trigger" class="x-btn link" id="query_wizard" @click="tour('queryField')">+ Query Wizard</div>
             <div slot="content">
@@ -49,10 +49,10 @@
             </div>
         </x-dropdown>
         <modal v-show="saveModal.isActive" approveText="Save" approveId="query_save_confirm" size="md"
-               @close="closeSaveQuery" @confirm="confirmSaveQuery" @enter="tour('querySave')" @leave="tour('queryList')">
+               @close="closeSaveView" @confirm="confirmSaveView" @enter="tour('querySave')" @leave="tour('queryList')">
             <div slot="body" class="query-save">
                 <label for="saveName">Save as:</label>
-                <input class="flex-expand" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveQuery">
+                <input class="flex-expand" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveView">
             </div>
         </modal>
     </div>
@@ -69,7 +69,7 @@
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { GET_DATA_FIELD_LIST_TYPED } from '../../store/getters'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
-    import { FETCH_DATA_QUERIES, SAVE_DATA_QUERY } from '../../store/actions'
+    import { FETCH_DATA_VIEWS, SAVE_DATA_VIEW } from '../../store/actions'
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 	import { expression } from '../../mixins/filter'
 
@@ -81,11 +81,11 @@
 		props: {module: {required: true}, limit: {default: 5}},
 		computed: {
 			...mapState({
-                savedQueries(state) {
-                	return state[this.module].queries.saved.data
+                savedViews(state) {
+                	return state[this.module].views.saved.data
                 },
-				historyQueries(state) {
-					return state[this.module].queries.history.data
+				historyViews(state) {
+					return state[this.module].views.history.data
 				},
                 query(state) {
                 	return state[this.module].view.query
@@ -124,8 +124,8 @@
                 return !simpleMatch || simpleMatch.length !== 1 || simpleMatch[0] !== this.searchValue
             },
             noResults() {
-				return (!this.searchValue || this.complexSearch) && (!this.savedQueries || !this.savedQueries.length)
-                    && (!this.historyQueries || !this.historyQueries.length)
+				return (!this.searchValue || this.complexSearch) && (!this.savedViews || !this.savedViews.length)
+                    && (!this.historyViews || !this.historyViews.length)
             },
             textSearchPattern() {
 				if (!this.schema || !this.schema.length) return ''
@@ -142,13 +142,13 @@
 
                 return [ { ...this.schema[0], fields: [ {
 						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
-						enum: this.savedQueries.map((query) => {
-							return {name: query.filter, title: query.name}
+						enum: this.savedViews.map((view) => {
+							return {name: view.view.query.filter, title: view.name}
 						})
 					}, ...this.schema[0].fields]}, ...this.schema.slice(1)]
             },
             queryMenuCount() {
-                return this.savedQueries.length + this.historyQueries.length + (this.searchValue && !this.complexSearch)
+                return this.savedViews.length + this.historyViews.length + (this.searchValue && !this.complexSearch)
             }
 		},
 		data () {
@@ -175,20 +175,20 @@
 		methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE }),
 			...mapActions({
-				fetchQueries: FETCH_DATA_QUERIES, saveQuery: SAVE_DATA_QUERY,
+				fetchViews: FETCH_DATA_VIEWS, saveView: SAVE_DATA_VIEW,
 			}),
             focusInput () {
 				this.$refs.greatInput.focus()
             },
 			searchQuery () {
 				if (this.complexSearch || this.queryMenuIndex !== -1) return
-				return Promise.all([this.filterQueries('saved', 'name'), this.filterQueries('history', 'filter')])
+				return Promise.all([this.filterQueries('saved', 'name'), this.filterQueries('history', 'view.query.filter')])
 			},
 			filterQueries (type, filterField) {
-				return this.fetchQueries({
+				return this.fetchViews({
 					module: this.module,
 					type: type,
-					filter: `${filterField} == regex("${this.searchValue}")`
+					filter: this.searchValue.length > 0 ? `${filterField} == regex("${this.searchValue}")` : ``
 				})
 			},
             searchText() {
@@ -211,9 +211,10 @@
             	this.executeFilter()
 				this.$refs.greatInput.$parent.close()
             },
-			selectQuery ({ filter, expressions }) {
-            	this.queryExpressions = expressions || [ { ...expression } ]
-				this.updateFilter(filter)
+			selectQuery ({view}) {
+            	this.queryExpressions = view.query.expressions
+                this.updateView({ module: this.module, view: view })
+				this.updateFilter(view.query.filter)
 				this.focusInput()
 				this.$refs.greatInput.$parent.close()
 			},
@@ -227,17 +228,17 @@
             executeFilter () {
 				this.updateView({ module: this.module, view: { page: 0 } })
             },
-            openSaveQuery() {
+            openSaveView() {
                 if (this.disableSaveButton || this.searchValue === '') return
             	this.saveModal.isActive = true
             },
-            closeSaveQuery() {
+            closeSaveView() {
             	this.saveModal.isActive = false
             },
-            confirmSaveQuery() {
+            confirmSaveView() {
 				if (!this.saveModal.name) return
 
-				this.saveQuery({
+				this.saveView({
 					module: this.module,
 					name: this.saveModal.name
 				}).then(() => this.saveModal.isActive = false)
@@ -264,9 +265,9 @@
         created() {
 			this.searchQuery().then(() => {
                 if (this.$route.query.query) {
-                    let requestedQuery = this.savedQueries.filter(query => query.name === this.$route.query.query)
+                    let requestedQuery = this.savedViews.filter(query => query.name === this.$route.query.query)
                     if (requestedQuery && requestedQuery.length) {
-                        this.queryFilter = requestedQuery[0].filter
+                        this.queryFilter = requestedQuery[0].view.query.filter
                     }
                 }
             })

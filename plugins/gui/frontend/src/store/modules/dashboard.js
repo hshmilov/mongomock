@@ -1,5 +1,4 @@
 import { REQUEST_API } from '../actions'
-import { ADD_DATA_QUERY } from '../mutations'
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE'
 export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'

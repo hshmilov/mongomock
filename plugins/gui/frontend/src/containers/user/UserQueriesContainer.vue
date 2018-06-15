@@ -8,7 +8,7 @@
     import xPage from '../../components/layout/Page.vue'
     import xDataQueriesTable from '../../components/data/DataQueriesTable.vue'
 
-    import { UPDATE_ALERT_QUERY } from '../../store/modules/alert'
+    import { UPDATE_ALERT_VIEW } from '../../store/modules/alert'
     import { mapMutations } from 'vuex'
 
 	export default {
@@ -17,7 +17,7 @@
             xPage, xDataQueriesTable
         },
         methods: {
-            ...mapMutations({updateAlertQuery: UPDATE_ALERT_QUERY}),
+            ...mapMutations({updateAlertQuery: UPDATE_ALERT_VIEW}),
             createAlert(queryId) {
                 this.updateAlertQuery(queryId)
 

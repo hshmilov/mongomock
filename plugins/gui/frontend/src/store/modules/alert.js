@@ -8,7 +8,7 @@ export const REMOVE_ALERTS = 'REMOVE_ALERTS'
 export const UPDATE_ALERT = 'UPDATE_ALERT'
 export const ADD_ALERT = 'ADD_ALERT'
 export const SAVE_ALERT = 'SAVE_ALERT'
-export const UPDATE_ALERT_QUERY = 'UPDATE_ALERT_QUERY'
+export const UPDATE_ALERT_VIEW = 'UPDATE_ALERT_VIEW'
 
 
 const newAlert = {
@@ -22,8 +22,8 @@ const newAlert = {
 		below: 0
 	},
 	actions: [],
-	query: '',
-	queryEntity: '',
+	view: '',
+	viewEntity: '',
 	retrigger: true,
 	triggered: false,
 	severity: 'info'
@@ -36,14 +36,14 @@ export const alert = {
 		count: { data: 0, fetching: false, error: ''},
 		view: {
 			page: 0, pageSize: 20, fields: [
-				'name', 'report_creation_time', 'triggered', 'query', 'severity'
+				'name', 'report_creation_time', 'triggered', 'view', 'severity'
 			], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
 		},
 		fields: { data: { generic: [
 					{ name: 'name', title: 'Name', type: 'string' },
 					{ name: 'report_creation_time', title: 'Creation Time', type: 'string', format: 'date-time' },
 					{ name: 'triggered', title: 'Times Triggered', type: 'integer' },
-					{ name: 'query', title: 'Query Name', type: 'string'},
+					{ name: 'view', title: 'Query Name', type: 'string'},
 					{ name: 'severity', title: 'Severity', type: 'string', format: 'icon' }
 				]}},
 
@@ -119,13 +119,13 @@ export const alert = {
 				}
 			})
 		},
-		[ UPDATE_ALERT_QUERY ] (state, query) {
+		[ UPDATE_ALERT_VIEW ] (state, view) {
 			/*
 				Create new alert with given query to current alert, for creating the next alert with it.
 				Clicking on new alert, or edit of existing will override it.
 			 */
 			state.current.data = { ...newAlert,
-				query: query
+				view: view
 			}
 		}
 	},

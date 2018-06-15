@@ -110,7 +110,7 @@ class ReportsService(PluginBase, Triggerable):
         """
         # Checks if requested query isn't already watched.
         try:
-            current_query_result = self.get_query_results(report_data['query'], report_data['queryEntity'])
+            current_query_result = self.get_view_results(report_data['view'], report_data['viewEntity'])
             if current_query_result is None:
                 return return_error('Aggregator is down, please try again later.', 404)
 
@@ -118,8 +118,8 @@ class ReportsService(PluginBase, Triggerable):
                                'triggers': report_data['triggers'],
                                'actions': report_data['actions'],
                                'result': current_query_result,
-                               'query': report_data['query'],
-                               'query_entity': report_data['queryEntity'],
+                               'view': report_data['view'],
+                               'view_entity': report_data['viewEntity'],
                                'retrigger': report_data['retrigger'],
                                'triggered': 0,
                                'name': report_data['name'],
@@ -164,27 +164,26 @@ class ReportsService(PluginBase, Triggerable):
         logger.info('Removed query from reports.')
         return '', 200
 
-    def get_queries_collection(self, query_entity):
-        plugins_available = requests.get(self.core_address + '/register').json()
-        gui_name = [name for name, plugin in plugins_available.items() if plugin['plugin_name'] == 'gui'][0]
-        collection_name = 'device_queries' if query_entity == EntityType.Devices.value else 'user_queries'
+    def get_views_collection(self, view_entity):
+        gui_name = self.get_plugin_by_name('gui')[PLUGIN_UNIQUE_NAME]
+        collection_name = 'device_views' if view_entity == EntityType.Devices.value else 'user_views'
         return self._get_collection(collection_name, gui_name)
 
-    def get_entities_collection(self, query_entity):
-        return self._get_collection(f'{query_entity}_db_view', db_name=AGGREGATOR_PLUGIN_NAME)
+    def get_entities_collection(self, view_entity):
+        return self._get_collection(f'{view_entity}_db_view', db_name=AGGREGATOR_PLUGIN_NAME)
 
-    def get_query_results(self, query_name, query_entity):
+    def get_view_results(self, view_name, view_entity):
         """Gets a query's results from the aggregator devices_db.
 
-        :param query_name: The query name.
-        :param query_entity: The query entity type name.
+        :param view_name: The query name.
+        :param view_entity: The query entity type name.
         :return: The results of the query.
         """
-        query = self.get_queries_collection(query_entity).find_one({'name': query_name})
+        query = self.get_views_collection(view_entity).find_one({'name': view_name})
         if query is None:
-            raise ValueError(f'Missing query "{query_name}"')
-        parsed_query_filter = parse_filter(query['filter'])
-        return list(self.get_entities_collection(query_entity).find(parsed_query_filter))
+            raise ValueError(f'Missing query "{view_name}"')
+        parsed_query_filter = parse_filter(query['view']['query']['filter'])
+        return list(self.get_entities_collection(view_entity).find(parsed_query_filter))
 
     def update_report(self, report_data):
         """update a report data.
@@ -201,7 +200,7 @@ class ReportsService(PluginBase, Triggerable):
         with self._report_check_lock:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future_for_report_checks = {
-                    executor.submit(self._check_current_query_result, report_data): report_data['query'] for report_data
+                    executor.submit(self._check_current_query_result, report_data): report_data['view'] for report_data
                     in self._get_collection('reports').find()}
 
                 for future in concurrent.futures.as_completed(future_for_report_checks):
@@ -281,12 +280,12 @@ class ReportsService(PluginBase, Triggerable):
 
         return required_triggers
 
-    def _generate_query_link(self, entity_type, query_name):
+    def _generate_query_link(self, entity_type, view_name):
         # Getting system config from the gui.
         system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION,
                                              self.get_plugin_by_name(GUI_NAME)[PLUGIN_UNIQUE_NAME]).find_one(
             {'type': 'server'}) or {}
-        return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?query={query_name}"
+        return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?query={view_name}"
 
     def _handle_action_create_service_now_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
@@ -297,15 +296,15 @@ class ReportsService(PluginBase, Triggerable):
         :param action_data: List of email addresses to send to.
         """
         log_message = report_consts.REPORT_CONTENT.format(name=report_data['name'],
-                                                          query=report_data['query'],
+                                                          query=report_data['view'],
                                                           num_of_triggers=report_data['triggered'],
                                                           trigger_message=self._parse_action_content(
                                                               report_data['triggers'], triggered),
                                                           num_of_current_devices=current_num_of_devices,
                                                           old_results_num_of_devices=len(report_data['result']),
                                                           query_link=self._generate_query_link(
-                                                              report_data['query_entity'],
-                                                              report_data['query']))
+                                                              report_data['view_entity'],
+                                                              report_data['view']))
         self.create_service_now_incident(report_data['name'], log_message,
                                          report_consts.SERVICE_NOW_SEVERITY.get(report_data['severity'], report_consts.SERVICE_NOW_SEVERITY['error']))
 
@@ -319,15 +318,15 @@ class ReportsService(PluginBase, Triggerable):
         :param action_data: List of email addresses to send to.
         """
         log_message = report_consts.REPORT_CONTENT.format(name=report_data['name'],
-                                                          query=report_data['query'],
+                                                          query=report_data['view'],
                                                           num_of_triggers=report_data['triggered'],
                                                           trigger_message=self._parse_action_content(
                                                               report_data['triggers'], triggered),
                                                           num_of_current_devices=current_num_of_devices,
                                                           old_results_num_of_devices=len(report_data['result']),
                                                           query_link=self._generate_query_link(
-                                                              report_data['query_entity'],
-                                                              report_data['query'])).replace('\n', ' ')
+                                                              report_data['view_entity'],
+                                                              report_data['view'])).replace('\n', ' ')
         self.send_syslog_message(log_message, report_data['severity'])
 
     def _handle_action_send_emails(self, report_data, triggered, trigger_data, current_num_of_devices,
@@ -341,13 +340,13 @@ class ReportsService(PluginBase, Triggerable):
         """
         mail_sender = self.mail_sender
         if mail_sender:
-            mail_sender.new_email(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['query']), action_data) \
+            mail_sender.new_email(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']), action_data) \
                 .send(report_consts.REPORT_CONTENT_HTML.format(
-                    name=report_data['name'], query=report_data['query'], num_of_triggers=report_data['triggered'],
+                    name=report_data['name'], query=report_data['view'], num_of_triggers=report_data['triggered'],
                     trigger_message=self._parse_action_content(report_data['triggers'], triggered),
                     num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
                     old_results_num_of_devices=len(report_data['result']),
-                    query_link=self._generate_query_link(report_data['query_entity'], report_data['query'])))
+                    query_link=self._generate_query_link(report_data['view_entity'], report_data['view'])))
         else:
             logger.info("Email cannot be sent because no email server is configured")
 
@@ -360,9 +359,9 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: None.
         """
-        self.create_notification(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['query']),
+        self.create_notification(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']),
                                  report_consts.REPORT_CONTENT.format(name=report_data['name'],
-                                                                     query=report_data['query'],
+                                                                     query=report_data['view'],
                                                                      num_of_triggers=report_data['triggered'],
                                                                      trigger_message=self._parse_action_content(
                                                                          report_data['triggers'], triggered),
@@ -370,8 +369,8 @@ class ReportsService(PluginBase, Triggerable):
                                                                      old_results_num_of_devices=len(
                                                                          report_data['result']),
                                                                      query_link=self._generate_query_link(
-                                                                         report_data['query_entity'],
-                                                                         report_data['query'])),
+                                                                         report_data['view_entity'],
+                                                                         report_data['view'])),
                                  report_data['severity'])
 
     def _handle_action_tag_entities(self, report_data, triggered, trigger_data, current_num_of_devices,
@@ -383,7 +382,7 @@ class ReportsService(PluginBase, Triggerable):
         :param trigger_data: The results difference.
         :param action_data: List of email addresses to send to.
         """
-        entity_db = f"{report_data['query_entity']}_db_view"
+        entity_db = f"{report_data['view_entity']}_db_view"
         entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
 
         entities = [
@@ -391,7 +390,7 @@ class ReportsService(PluginBase, Triggerable):
             for entity in trigger_data]
         entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
 
-        self.add_many_labels_to_entity(entities, labels=[action_data], entity=report_data['query_entity'])
+        self.add_many_labels_to_entity(entities, labels=[action_data], entity=report_data['view_entity'])
 
     def _parse_action_content(self, triggers_data, triggered_triggers):
         """ Creates a readable message for the different actions.
@@ -464,7 +463,7 @@ class ReportsService(PluginBase, Triggerable):
                 self.update_report(report_data)
 
         try:
-            current_result = self.get_query_results(report_data['query'], report_data['query_entity'])
+            current_result = self.get_view_results(report_data['view'], report_data['view_entity'])
             if current_result is None:
                 logger.info("Skipping reports trigger because there were no current results.")
                 return

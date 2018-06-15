@@ -1,10 +1,10 @@
 <template>
-    <x-actionable-table title="Queries" :count="queries.data.length" :loading="loading">
+    <x-actionable-table title="Queries" :count="queries.length" :loading="loading">
         <template slot="actions">
             <div v-if="selected.length === 1" class="link" @click="createAlert">+ New Alert</div>
             <div class="link" @click="removeQuery">Remove</div>
         </template>
-        <x-table slot="table" id-field="uuid" :data="queries.data" :fields="fields" v-model="selected"
+        <x-table slot="table" id-field="uuid" :data="queries" :fields="fields" v-model="selected"
                  :click-row-handler="runQuery"/>
     </x-actionable-table>
 </template>
@@ -15,8 +15,8 @@
 
     import { mapState, mapMutations, mapActions } from 'vuex'
 	import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
-	import { FETCH_DATA_QUERIES, REMOVE_DATA_QUERY } from '../../store/actions'
-	import { UPDATE_ALERT_QUERY } from '../../store/modules/alert'
+    import {FETCH_DATA_VIEWS, REMOVE_DATA_VIEW} from '../../store/actions'
+	import { UPDATE_ALERT_VIEW } from '../../store/modules/alert'
 
 	export default {
 		name: 'data-queries-table',
@@ -31,30 +31,29 @@
         computed: {
             ...mapState({
                 queries(state) {
-                	return state[this.module].queries.saved
+                	return state[this.module].views.saved.data
                 }
             }),
             fields() {
             	return [
 					{name: 'name', title: 'Name', type: 'string'},
-					{name: 'filter', title: 'Filter', type: 'string'},
+					{name: 'view->query->filter', title: 'Filter', type: 'string'},
 					{name: 'timestamp', title: 'Save Time', type: 'string', format: 'date-time'},
 				]
             }
         },
         methods: {
 			...mapMutations({
-				updateDataView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_QUERY,
+				updateView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_VIEW,
                 clearDataContent: CLEAR_DATA_CONTENT
 	}),
             ...mapActions({
-                fetchDataQueries: FETCH_DATA_QUERIES, removeDataQuery: REMOVE_DATA_QUERY
+                fetchDataQueries: FETCH_DATA_VIEWS, removeDataQuery: REMOVE_DATA_VIEW
             }),
 			runQuery(queryId) {
-				let query = this.queries.data.filter(query => query.uuid === queryId)[0]
-				this.updateDataView({module: this.module, view: {
-						query: {filter: query.filter, expressions: query.expressions}, page: 0
-					}})
+				let query = this.queries.filter(query => query.uuid === queryId)[0]
+                this.updateView({ module: this.module, view: query.view })
+
 				this.clearDataContent({module: this.module})
 				this.$router.push({ path: `/${this.module}` })
 			},
@@ -71,7 +70,7 @@
             }
         },
         created() {
-			if (!this.queries.data || !this.queries.data.length) {
+			if (!this.queries || !this.queries.length) {
 				this.loading = true
 				this.fetchDataQueries({module: this.module, type: 'saved'}).then(() => this.loading = false)
             }

@@ -5,8 +5,9 @@ import { INIT_USER } from './modules/auth'
 import {
 	UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT,
 	UPDATE_DATA_VIEWS, ADD_DATA_VIEW,
-	UPDATE_DATA_FIELDS, UPDATE_DATA_QUERIES, ADD_DATA_QUERY, UPDATE_REMOVED_DATA_QUERY,
-	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID
+	UPDATE_DATA_FIELDS,
+	UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS, UPDATE_DATA_BY_ID,
+	UPDATE_REMOVED_DATA_VIEW
 } from './mutations'
 
 let host = ''
@@ -99,6 +100,10 @@ const createContentRequest = (state, payload) => {
 	if (view.query && view.query.filter) {
 		params.push(`filter=${encodeURI(view.query.filter)}`)
 	}
+	// TODO: Not passing expressions because it might reach max URL size
+	// if (view.query.expressions) {
+	// 	params.push(`expressions=${encodeURI(JSON.stringify(view.query.expressions))}`)
+	// }
 	if (view.sort && view.sort.field) {
 		params.push(`sort=${view.sort.field}`)
 		params.push(`desc=${view.sort.desc? '1' : '0'}`)
@@ -139,17 +144,26 @@ export const fetchDataContentCSV = ({state, dispatch}, payload) => {
 export const FETCH_DATA_VIEWS = 'FETCH_DATA_VIEWS'
 export const fetchDataViews = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
+    if (!payload.skip) payload.skip = 0
+	if (!payload.limit) payload.limit = 1000
+
+	let filter = `query_type=='${payload.type}'`
+	if (payload.filter) {
+		filter += ` and ${payload.filter}`
+	}
+	let param = `?limit=${payload.limit}&skip=${payload.skip}&filter=${encodeURI(filter)}`
+
 	return dispatch(REQUEST_API, {
-		rule: payload.module + '/views',
+		rule: `${payload.module}/views${param}`,
 		type: UPDATE_DATA_VIEWS,
-		payload: {module: payload.module}
+		payload: {module: payload.module, type: payload.type, skip: payload.skip}
 	})
 }
 
 export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW'
 export const saveDataView = ({state, dispatch, commit}, payload) => {
 	if (!validModule(state, payload)) return
-	let viewObj = {name: payload.name, view: state[payload.module].view}
+	let viewObj = {name: payload.name, view: state[payload.module].view, query_type: 'saved'}
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/views',
 		data: viewObj,
@@ -161,6 +175,22 @@ export const saveDataView = ({state, dispatch, commit}, payload) => {
 	}).catch(console.log.bind(console))
 }
 
+export const REMOVE_DATA_VIEW = 'REMOVE_DATA_VIEW'
+export const removeDataView = ({state, dispatch, commit}, payload) => {
+	if (!validModule(state, payload) || !payload.ids || !payload.ids.length) return
+
+	dispatch(REQUEST_API, {
+		rule: `${payload.module}/views`,
+		method: 'DELETE',
+		data: payload.ids
+	}).then((response) => {
+		if (response.data !== '') {
+			return
+		}
+		commit(UPDATE_REMOVED_DATA_VIEW, payload)
+	})
+}
+
 export const FETCH_DATA_FIELDS = 'FETCH_DATA_FIELDS'
 export const fetchDataFields = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
@@ -168,57 +198,6 @@ export const fetchDataFields = ({state, dispatch}, payload) => {
 		rule: payload.module + '/fields',
 		type: UPDATE_DATA_FIELDS,
 		payload: {module: payload.module}
-	})
-}
-
-export const FETCH_DATA_QUERIES = 'FETCH_DATA_QUERIES'
-export const fetchDataQueries = ({state, dispatch}, payload) => {
-	if (!validModule(state, payload) || !payload.type) return
-	if (!payload.skip) payload.skip = 0
-	if (!payload.limit) payload.limit = 1000
-
-	let filter = `query_type=='${payload.type}'`
-	if (payload.filter) {
-		filter += ` and ${payload.filter}`
-	}
-	let param = `?limit=${payload.limit}&skip=${payload.skip}&filter=${encodeURI(filter)}`
-	return dispatch(REQUEST_API, {
-		rule: `${payload.module}/queries${param}`,
-		type: UPDATE_DATA_QUERIES,
-		payload: {module: payload.module, type: payload.type, skip: payload.skip}
-	})
-}
-
-export const SAVE_DATA_QUERY = 'SAVE_DATA_QUERY'
-export const saveDataQuery = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload) || !payload.name) return
-	let queryObj = {name: payload.name, ...state[payload.module].view.query }
-	return dispatch(REQUEST_API, {
-		rule: payload.module + '/queries',
-		method: 'POST',
-		data: queryObj
-	}).then((response) => {
-		if (response.status === 200 && response.data) {
-			commit(ADD_DATA_QUERY, {
-				module: payload.module, query: { ...queryObj, uuid: response.data}
-			})
-		}
-	}).catch(console.log.bind(console))
-}
-
-export const REMOVE_DATA_QUERY = 'REMOVE_DATA_QUERY'
-export const removeDataQuery = ({state, dispatch, commit}, payload) => {
-	if (!validModule(state, payload) || !payload.ids || !payload.ids.length) return
-
-	dispatch(REQUEST_API, {
-		rule: `${payload.module}/queries`,
-		method: 'DELETE',
-		data: payload.ids
-	}).then((response) => {
-		if (response.data !== '') {
-			return
-		}
-		commit(UPDATE_REMOVED_DATA_QUERY, payload)
 	})
 }
 

@@ -28,31 +28,6 @@ def _count_num_of_labels(device):
     return len(device['labels'])
 
 
-def test_default_queries():
-    axonius_system = get_service()
-    gui_service = axonius_system.gui
-
-    assert gui_service.is_up()  # default queries are inserted when the GUI service is starting, make sure it is up...
-    queries = axonius_system.db.get_collection(gui_service.unique_name, 'device_queries')
-
-    # A sample Default Query as set in default_queries_devices.ini under gui/src
-    name = 'AD Devices'
-    query_filter = 'adapters=="active_directory_adapter"'
-
-    existed_query = queries.find_one({'filter': query_filter, 'name': name})
-    assert existed_query is not None
-
-    # Same test for Users queries
-    queries = axonius_system.db.get_collection(gui_service.unique_name, 'user_queries')
-
-    # A sample Default Query as set in default_queries_users.ini under gui/src
-    name = 'AD Users'
-    query_filter = 'adapters=="active_directory_adapter"'
-
-    existed_query = queries.find_one({'filter': query_filter, 'name': name})
-    assert existed_query is not None
-
-
 def test_default_views():
     axonius_system = get_service()
     gui_service = axonius_system.gui
@@ -60,7 +35,7 @@ def test_default_views():
     assert gui_service.is_up()  # default views are inserted when the GUI service is starting, make sure it is up...
     views = axonius_system.db.get_collection(gui_service.unique_name, 'device_views')
 
-    # A sample Default View as set in default_queries_devices.ini under gui/src
+    # A sample Default View as set in default_views_devices.ini under gui/src
     name = 'AD Printers'
 
     existed_query = views.find_one({'name': name})

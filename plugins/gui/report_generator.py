@@ -60,8 +60,9 @@ class ReportGenerator(object):
         sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
 
         # Add section for each adapter with results of its queries
-        if self.report_data.get('adapter_data'):
-            for adapter in self.report_data['adapter_data']:
+        adapter_data = self.report_data.get('adapter_data')
+        if adapter_data:
+            for adapter in adapter_data:
                 sections.append(self.templates['section'].render(
                     {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
                 logger.info(f'Report Generator, Adapter Section: Added {adapter["name"]} section')

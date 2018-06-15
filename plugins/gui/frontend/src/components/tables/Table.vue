@@ -21,7 +21,7 @@
                     <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected" />
                 </td>
                 <td v-for="field in fields" nowrap>
-                    <component :is="field.type" :value="item[field.name]" :schema="field" :limit="2" />
+                    <component :is="field.type" :value="field.name.split('->').reduce((item, field_segment) => item[field_segment], item)" :schema="field" :limit="2" />
                 </td>
             </tr>
             <template v-if="pageSize">

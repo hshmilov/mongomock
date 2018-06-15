@@ -16,9 +16,9 @@
             <!-- Query rows -->
             <template v-if="dashboard.type === 'compare'">
                 <h5 class="grid-span3">Select up to 5 queries for comparisson:</h5>
-                <template v-for="query, index in dashboard.queries">
+                <template v-for="query, index in dashboard.views">
                     <x-select-symbol :options="moduleOptions" v-model="query.module" type="icon" placeholder="module..."/>
-                    <x-select :options="queries[query.module] || []" v-model="query.name" placeholder="query..." size="md"/>
+                    <x-select :options="views[query.module] || []" v-model="query.name" placeholder="query..." size="md"/>
                     <div @click="removeQuery(index)" class="link" v-if="index > 1">x</div>
                     <div v-else></div>
                 </template>
@@ -29,18 +29,18 @@
                 <div></div>
 
                 <label>Main Query:</label>
-                <x-select :options="queries[parentQuery.module]" v-model="parentQuery.name" placeholder="query..." size="md"/>
+                <x-select :options="views[parentQuery.module]" v-model="parentQuery.name" placeholder="query..." size="md"/>
                 <div></div>
 
-                <template v-for="query, index in dashboard.queries.slice(1)">
+                <template v-for="query, index in dashboard.views.slice(1)">
                     <label>Intersecting Query:</label>
-                    <x-select :options="queries[parentQuery.module]" v-model="query.name" placeholder="query..." size="md"/>
+                    <x-select :options="views[parentQuery.module]" v-model="query.name" placeholder="query..." size="md"/>
                     <div @click="removeQuery(index)" class="link" v-if="index > 0">x</div>
                     <div v-else></div>
                 </template>
             </template>
             <a @click="addQuery" class="x-btn light" :class="{disabled: isQueryMax}"
-               :title="isQueryMax? `Limited to ${dashboard.queries.length} queries` : ''">+</a>
+               :title="isQueryMax? `Limited to ${dashboard.views.length} queries` : ''">+</a>
             <div class="grid-span2"></div>
 
             <!-- Last Row - select name -->
@@ -59,7 +59,7 @@
     import xSelect from '../../components/inputs/Select.vue'
 
 	import { mapState, mapActions } from 'vuex'
-    import { FETCH_DATA_QUERIES } from '../../store/actions'
+    import { FETCH_DATA_VIEWS } from '../../store/actions'
     import { SAVE_DASHBOARD } from '../../store/modules/dashboard'
 
     const modules = ['devices', 'users']
@@ -71,10 +71,10 @@
         props: {},
         computed: {
 			...mapState({
-				queries (state) {
+				views (state) {
 					return modules.reduce((map, module) => {
-						map[module] = state[module].queries.saved.data.map((query) => {
-							return { name: query.name, title: query.name }
+						map[module] = state[module].views.saved.data.map((view) => {
+							return { name: view.name, title: view.name }
                         })
 						return map
 					}, {})
@@ -100,20 +100,20 @@
                 }
             },
             isQueryMax() {
-				return this.dashboard.queries.length === this.queryMax
+				return this.dashboard.views.length === this.queryMax
             },
             parentQuery() {
-				if (!this.dashboard.queries || !this.dashboard.queries.length) return ''
-                return this.dashboard.queries[0]
+				if (!this.dashboard.views || !this.dashboard.views.length) return ''
+                return this.dashboard.views[0]
             },
             saveDisabled() {
                 if (this.dashboards.charts.data.some(e => e.name === this.dashboard.name)) {
                     this.message = 'A Chart With That Name Already Exists, Please Choose A Different Name.'
                     return true
                 }
-				if (!this.dashboard.name || this.dashboard.queries.length < 2) return true
+				if (!this.dashboard.name || this.dashboard.views.length < 2) return true
 				let complete = true
-				this.dashboard.queries.forEach((query) => {
+				this.dashboard.views.forEach((query) => {
 					if (!query.name) complete = false
 				})
 				return !complete
@@ -123,31 +123,31 @@
 			return {
                 isActive: false,
 				dashboard: {
-					type: 'compare', name: '', queries: [{ ...dashboardQuery }, { ...dashboardQuery }]
+					type: 'compare', name: '', views: [{ ...dashboardQuery }, { ...dashboardQuery }]
 				},
                 message: ''
 			}
         },
         methods: {
-            ...mapActions({fetchQueries: FETCH_DATA_QUERIES, saveDashboard: SAVE_DASHBOARD}),
+            ...mapActions({fetchView: FETCH_DATA_VIEWS, saveDashboard: SAVE_DASHBOARD}),
 			activate() {
 				this.isActive = true
                 this.message = ''
             },
             changeType(event) {
 				if (event.target.value === 'intersect') {
-					this.dashboard.queries.splice(0, 3)
-					while (this.dashboard.queries.length < 3) {
-						this.dashboard.queries.push({ ...dashboardQuery })
+					this.dashboard.views.splice(0, 3)
+					while (this.dashboard.views.length < 3) {
+						this.dashboard.views.push({ ...dashboardQuery })
 					}
 				}
             },
             addQuery() {
             	if (this.isQueryMax) return
-                this.dashboard.queries.push({ ...dashboardQuery })
+                this.dashboard.views.push({ ...dashboardQuery })
             },
             removeQuery(index) {
-            	this.dashboard.queries = this.dashboard.queries.filter((item, i) => i !== index)
+            	this.dashboard.views = this.dashboard.views.filter((item, i) => i !== index)
             },
 			saveNewDashboard () {
 				return this.saveDashboard(this.dashboard)
@@ -155,12 +155,12 @@
 			finishNewDashboard () {
 				this.isActive = false
 				this.dashboard = {
-					type: 'compare', name: '', queries: [{ ...dashboardQuery }, { ...dashboardQuery }]
+					type: 'compare', name: '', views: [{ ...dashboardQuery }, { ...dashboardQuery }]
 				}
 			}
         },
         created() {
-			modules.forEach(module => this.fetchQueries({module, type: 'saved'}))
+			modules.forEach(module => this.fetchView({module, type: 'saved'}))
 		}
 	}
 </script>

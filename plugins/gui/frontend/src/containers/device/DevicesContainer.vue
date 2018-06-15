@@ -6,7 +6,6 @@
             <template slot="actions">
                 <!-- Available actions for performing on currently selected group of devices --->
                 <devices-actions-container v-show="anySelected" :devices="selectedDevices" />
-                <x-data-view-menu :module="module" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" class="link" />
                 <div class="link" @click="exportCSV">Export csv</div>
@@ -20,7 +19,6 @@
 	import DevicesActionsContainer from './DevicesActionsContainer.vue'
 	import xDataQuery from '../../components/data/DataQuery.vue'
     import xDataFieldMenu from '../../components/data/DataFieldMenu.vue'
-    import xDataViewMenu from '../../components/data/DataViewMenu.vue'
     import xDataTable from '../../components/tables/DataTable.vue'
 
 
@@ -31,7 +29,7 @@
 	export default {
 		name: 'devices-container',
 		components: {
-			xPage, xDataQuery, xDataTable, DevicesActionsContainer, xDataFieldMenu, xDataViewMenu
+			xPage, xDataQuery, xDataTable, DevicesActionsContainer, xDataFieldMenu
 		},
         computed: {
             ...mapState({

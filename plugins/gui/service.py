@@ -224,8 +224,15 @@ def beautify_db_entry(entry):
     return tmp
 
 
-def filter_archived():
-    return {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
+def filter_archived(additional_filter=None):
+    """
+    Returns a filter that filters out archived values
+    :param additional_filter: optional - allows another filter to be made
+    """
+    base_non_archived = {'$or': [{'archived': {'$exists': False}}, {'archived': False}]}
+    if additional_filter and additional_filter != {}:
+        return {'$and': [base_non_archived, additional_filter]}
+    return base_non_archived
 
 
 class GuiService(PluginBase, Configurable):
@@ -239,14 +246,6 @@ class GuiService(PluginBase, Configurable):
                                              {'user_name': 'admin', 'password': bcrypt.hash('cAll2SecureAll'),
                                               'first_name': 'administrator', 'last_name': '',
                                               'pic_name': 'avatar.png'}, upsert=True)
-        self.user_queries = self._get_collection("user_queries")
-        self.device_queries = self._get_collection("device_queries")
-        self._queries_db_map = {
-            EntityType.Users: self.user_queries,
-            EntityType.Devices: self.device_queries,
-        }
-        self.add_default_queries(EntityType.Devices, 'default_queries_devices.ini')
-        self.add_default_queries(EntityType.Users, 'default_queries_users.ini')
 
         self.user_view = self._get_collection("user_views")
         self.device_view = self._get_collection("device_views")
@@ -274,38 +273,14 @@ class GuiService(PluginBase, Configurable):
             self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
         self._exec_report_scheduler.start()
 
-    def add_default_queries(self, entity_type: EntityType, default_queries_ini_path):
-        """
-        Adds default queries.
-        :param entity_type: "device" or "user"
-        :param default_queries_ini_path: the file path with the queries
-        :return:
-        """
-        # Load default queries and save them to the DB
-        try:
-            config = configparser.ConfigParser()
-            config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_queries_ini_path}')))
-
-            # Save default queries
-            for name, query in config.items():
-                if name == 'DEFAULT':
-                    # ConfigParser always has a fake DEFAULT key, skip it
-                    continue
-                try:
-                    self._insert_query(self._queries_db_map[entity_type], name, query['query'])
-                except Exception:
-                    logger.exception(f'Error adding default query {name}')
-        except Exception:
-            logger.exception(f'Error adding default queries')
-
     def add_default_views(self, entity_type: EntityType, default_views_ini_path):
         """
         Adds default views.
         :param entity_type: EntityType
-        :param default_views_ini_path: the file path with the queries
+        :param default_views_ini_path: the file path with the views
         :return:
         """
-        # Load default queries and save them to the DB
+        # Load default views and save them to the DB
         try:
             config = configparser.ConfigParser()
             config.read(os.path.abspath(os.path.join(os.path.dirname(__file__), f'configs/{default_views_ini_path}')))
@@ -349,24 +324,11 @@ class GuiService(PluginBase, Configurable):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_dashboard_chart(name, data['type'], json.loads(data['queries']))
+                    self._insert_dashboard_chart(name, data['type'], json.loads(data['views']))
                 except Exception as e:
                     logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
         except Exception as e:
             logger.exception(f'Error adding default dashboard chart. Reason: {repr(e)}')
-
-    def _insert_query(self, queries_collection, name, query_filter, query_expressions=[]):
-        existed_query = queries_collection.find_one({'filter': query_filter, 'name': name})
-        if existed_query is not None and not existed_query.get('archived'):
-            logger.info(f'Query {name} already exists id: {existed_query["_id"]}')
-            return existed_query['_id']
-        result = queries_collection.update_one({'name': name}, {'$set': {'name': name, 'filter': query_filter,
-                                                                         'expressions': query_expressions,
-                                                                         'query_type': 'saved',
-                                                                         'timestamp': datetime.now(),
-                                                                         'archived': False}}, upsert=True)
-        logger.info(f'Added query {name} id: {result.upserted_id or ""}')
-        return result.upserted_id or ''
 
     def _insert_view(self, views_collection, name, mongo_view):
         existed_view = views_collection.find_one({'name': name})
@@ -374,7 +336,7 @@ class GuiService(PluginBase, Configurable):
             logger.info(f'view {name} already exists id: {existed_view["_id"]}')
             return existed_view['_id']
 
-        result = views_collection.insert_one({'name': name, 'view': mongo_view})
+        result = views_collection.insert_one({'name': name, 'view': mongo_view, 'query_type': 'saved'})
         logger.info(f'Added view {name} id: {result.inserted_id}')
         return result.inserted_id
 
@@ -388,7 +350,7 @@ class GuiService(PluginBase, Configurable):
         result = reports_collection.insert_one({'name': name, 'adapters': json.loads(report['adapters'])})
         logger.info(f'Added report {name} id: {result.inserted_id}')
 
-    def _insert_dashboard_chart(self, dashboard_name, dashboard_type, dashboard_queries):
+    def _insert_dashboard_chart(self, dashboard_name, dashboard_type, dashboard_views):
         dashboard_collection = self._get_collection("dashboard")
         existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
@@ -397,7 +359,7 @@ class GuiService(PluginBase, Configurable):
 
         result = dashboard_collection.insert_one({'name': dashboard_name,
                                                   'type': dashboard_type,
-                                                  'queries': dashboard_queries})
+                                                  'views': dashboard_views})
 
         logger.info(f'Added report {dashboard_name} id: {result.inserted_id}')
 
@@ -405,13 +367,13 @@ class GuiService(PluginBase, Configurable):
     # DATA #
     ########
 
-    def _get_entities(self, limit, skip, query_filter, sort, projection, entity_type: EntityType,
+    def _get_entities(self, limit, skip, view_filter, sort, projection, entity_type: EntityType,
                       include_history=False):
         """
         Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
         """
         logger.debug(f'Fetching data for entity {entity_type.name}')
-        pipeline = [{'$match': query_filter}]
+        pipeline = [{'$match': view_filter}]
         if projection:
             projection['internal_axon_id'] = 1
             projection['adapters'] = 1
@@ -435,12 +397,29 @@ class GuiService(PluginBase, Configurable):
         # The reason is that sorting without the flag, causes exceeding of the memory limit.
         data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
 
-        if query_filter and not skip and request and include_history:
+        if view_filter and not skip and request and include_history:
             # getting the original filter text on purpose.
-            query_filter = request.args.get('filter')
-            self._queries_db_map[entity_type].replace_one(
-                {'name': {'$exists': False}, 'filter': query_filter},
-                {'filter': query_filter, 'query_type': 'history', 'timestamp': datetime.now(), 'archived': False},
+            view_filter = request.args.get('filter')
+            mongo_sort = {'desc': True, 'field': ''}
+            if sort:
+                desc, field = next(iter(sort.items()))
+                mongo_sort = {'desc': desc, 'field': field}
+            self._views_db_map[entity_type].replace_one(
+                {'name': {'$exists': False}, 'filter': view_filter},
+                {
+                    'view': {
+                        'page': 0,
+                        'pageSize': limit,
+                        'fields': view_filter.split(','),
+                        'coloumnSizes': [],
+                        'query': {
+                            'filter': view_filter,
+                            'expressions': json.loads(request.args.get('expressions', '{}'))
+                        },
+                        'sort': mongo_sort
+                    },
+                    'query_type': 'history'
+                },
                 upsert=True)
         if not projection:
             return [beautify_db_entry(entity) for entity in data_list]
@@ -610,36 +589,6 @@ class GuiService(PluginBase, Configurable):
             'internal_axon_id': entity['internal_axon_id']
         })
 
-    def _entity_queries(self, limit, skip, filter, entity_type: EntityType):
-        """
-                GET Fetch all queries saved for given module, answering give filter
-                POST Save a new query for given module
-                     Data with a name for the query and a string filter is expected for saving
-
-                :param limit: limit for pagination
-                :param skip: start index for pagination
-                :return: GET - List of query names and filters
-                         POST - Id of inserted document saving given query
-                """
-        queries_collection = self._queries_db_map[entity_type]
-        if request.method == 'GET':
-            filter['$or'] = filter_archived()['$or']
-            return jsonify(beautify_db_entry(entry) for entry in queries_collection.find(filter)
-                           .sort([('timestamp', pymongo.DESCENDING)])
-                           .skip(skip).limit(limit))
-        if request.method == 'POST':
-            query_to_add = request.get_json(silent=True)
-            if query_to_add is None or query_to_add['filter'] == '':
-                return return_error("Invalid query", 400)
-            inserted_id = self._insert_query(queries_collection, query_to_add.get('name'), query_to_add.get('filter'),
-                                             query_to_add.get('expressions'))
-            return str(inserted_id), 200
-        # Reached here only if request.method == 'DELETE', remove requested queries
-        query_ids = self.get_request_data_as_object()
-        queries_collection.update_many({'_id': {'$in': [ObjectId(id) for id in query_ids]}},
-                                       {'$set': {'archived': True}})
-        return ""
-
     def _get_entities_count(self, filter, entity_type: EntityType):
         """
         Count total number of devices answering given mongo_filter
@@ -802,26 +751,34 @@ class GuiService(PluginBase, Configurable):
                     )]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
-    def _entity_views(self, method, entity_type: EntityType):
+    def _entity_views(self, method, entity_type: EntityType, limit, skip, filter):
         """
         Save or fetch views over the entities db
         :return:
         """
         entity_views_collection = self._views_db_map[entity_type]
         if method == 'GET':
-            mongo_filter = filter_archived()
-            return jsonify(beautify_db_entry(entry) for entry in entity_views_collection.find(mongo_filter))
+            mongo_filter = filter_archived(filter)
+            return jsonify(beautify_db_entry(entry) for entry in
+                           entity_views_collection.find(mongo_filter).sort([('timestamp', pymongo.DESCENDING)])
+                           .skip(skip).limit(limit))
 
-        # Handle POST request
-        view_data = self.get_request_data_as_object()
-        if not view_data.get('name'):
-            return return_error(f'Name is required in order to save a view', 400)
-        if not view_data.get('view'):
-            return return_error(f'View data is required in order to save one', 400)
-        update_result = entity_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
-        if not update_result.upserted_id and not update_result.modified_count:
-            return return_error(f'View named {view_data.name} was not saved', 400)
-        return ''
+        if method == 'POST':
+            view_data = self.get_request_data_as_object()
+            if not view_data.get('name'):
+                return return_error(f'Name is required in order to save a view', 400)
+            if not view_data.get('view'):
+                return return_error(f'View data is required in order to save one', 400)
+            update_result = entity_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
+            if not update_result.upserted_id and not update_result.modified_count:
+                return return_error(f'View named {view_data.name} was not saved', 400)
+            return ''
+
+        if method == 'DELETE':
+            query_ids = self.get_request_data_as_object()
+            entity_views_collection.update_many({'_id': {'$in': [ObjectId(i) for i in query_ids]}},
+                                                {'$set': {'archived': True}})
+            return ""
 
     def _entity_labels(self, db, namespace):
         """
@@ -882,12 +839,6 @@ class GuiService(PluginBase, Configurable):
     def device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'security_patches', 'users'])
 
-    @paginated()
-    @filtered()
-    @add_rule_unauthenticated("devices/queries", methods=['POST', 'GET', 'DELETE'])
-    def device_queries_do(self, limit, skip, mongo_filter):
-        return self._entity_queries(limit, skip, mongo_filter, EntityType.Devices)
-
     @filtered()
     @add_rule_unauthenticated("devices/count")
     def get_devices_count(self, mongo_filter):
@@ -897,13 +848,15 @@ class GuiService(PluginBase, Configurable):
     def device_fields(self):
         return jsonify(self._entity_fields(EntityType.Devices))
 
-    @add_rule_unauthenticated("devices/views", methods=['GET', 'POST'])
-    def device_views(self):
+    @paginated()
+    @filtered()
+    @add_rule_unauthenticated("devices/views", methods=['GET', 'POST', 'DELETE'])
+    def device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db
         :return:
         """
-        return self._entity_views(request.method, EntityType.Devices)
+        return self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter)
 
     @add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
     def device_labels(self):
@@ -937,12 +890,6 @@ class GuiService(PluginBase, Configurable):
     def user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
 
-    @paginated()
-    @filtered()
-    @add_rule_unauthenticated("users/queries", methods=['POST', 'GET', 'DELETE'])
-    def user_queries(self, limit, skip, mongo_filter):
-        return self._entity_queries(limit, skip, mongo_filter, EntityType.Users)
-
     @filtered()
     @add_rule_unauthenticated("users/count")
     def get_users_count(self, mongo_filter):
@@ -956,9 +903,11 @@ class GuiService(PluginBase, Configurable):
     def disable_user(self):
         return self._disable_entity(EntityType.Users)
 
-    @add_rule_unauthenticated("users/views", methods=['GET', 'POST'])
-    def user_views(self):
-        return self._entity_views(request.method, EntityType.Users)
+    @paginated()
+    @filtered()
+    @add_rule_unauthenticated("users/views", methods=['GET', 'POST', 'DELETE'])
+    def user_views(self, limit, skip, mongo_filter):
+        return self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter)
 
     @add_rule_unauthenticated("users/labels", methods=['GET', 'POST', 'DELETE'])
     def user_labels(self):
@@ -1145,12 +1094,12 @@ class GuiService(PluginBase, Configurable):
 
         if request.method == 'PUT':
             report_to_add = request.get_json(silent=True)
-            query_name = report_to_add['query']
-            query_entity = EntityType(report_to_add['queryEntity'])
-            queries_collection = self._queries_db_map[query_entity]
+            view_name = report_to_add['view']
+            entity = EntityType(report_to_add['viewEntity'])
+            views_collection = self._views_db_map[entity]
 
-            if queries_collection.find_one({'name': query_name}) is None:
-                return return_error(f"Missing query {query_name} requested for creating alert")
+            if views_collection.find_one({'name': view_name}) is None:
+                return return_error(f"Missing view {view_name} requested for creating alert")
 
             response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
             return response.text, response.status_code
@@ -1180,12 +1129,12 @@ class GuiService(PluginBase, Configurable):
         :return:
         """
         alert_to_update = request.get_json(silent=True)
-        query_name = alert_to_update['query']
-        query_entity = alert_to_update['queryEntity']
-        assert query_entity in [x.value for x in EntityType.__members__.values()]
-        queries = self.device_queries if query_entity == EntityType.Devices.value else self.user_queries
-        if queries.find_one({'name': query_name}) is None:
-            return return_error(f"Missing query {query_name} requested for updating alert")
+        view_name = alert_to_update['view']
+        view_entity = alert_to_update['viewEntity']
+        assert view_entity in [x.value for x in EntityType.__members__.values()]
+        views = self._views_db_map[EntityType(view_entity)]
+        if views.find_one({'name': view_name}) is None:
+            return return_error(f"Missing view {view_name} requested for updating alert")
 
         response = self.request_remote_plugin(f"reports/{alert_id}", "reports", method='post',
                                               json=alert_to_update)
@@ -1634,7 +1583,7 @@ class GuiService(PluginBase, Configurable):
         dashboard_data = self.get_request_data_as_object()
         if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
-        if not dashboard_data.get('queries'):
+        if not dashboard_data.get('views'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
         update_result = self._get_collection('dashboard').replace_one(
             {'name': dashboard_data['name']}, dashboard_data, upsert=True)
@@ -1644,8 +1593,8 @@ class GuiService(PluginBase, Configurable):
 
     def _get_dashboard(self):
         """
-        GET Fetch current dashboard chart definitions. For each definition, fetch each of it's queries and
-        fetch devices_db_view with their view. Amount of results is mapped to each queries' name, under 'data' key,
+        GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
+        fetch devices_db_view with their view. Amount of results is mapped to each views' name, under 'data' key,
         to be returned with the dashboard definition.
 
         POST Save a new dashboard chart definition, given it has a name and at least one query attached
@@ -1657,15 +1606,15 @@ class GuiService(PluginBase, Configurable):
         for dashboard in self._get_collection('dashboard').find(filter_archived()):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
-            elif not dashboard.get('queries'):
-                logger.info(f'No queries found for dashboard {dashboard.get("name")}')
+            elif not dashboard.get('views'):
+                logger.info(f'No views found for dashboard {dashboard.get("name")}')
             else:
                 # Let's fetch and execute them query filters, depending on the chart's type
                 try:
                     if dashboard['type'] == ChartTypes.compare.name:
-                        dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['queries'])
+                        dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['views'])
                     elif dashboard['type'] == ChartTypes.intersect.name:
-                        dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['queries'])
+                        dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['views'])
                     dashboard_list.append(beautify_db_entry(dashboard))
                 except Exception as e:
                     # Since there is no data, not adding this chart to the list
@@ -1673,62 +1622,65 @@ class GuiService(PluginBase, Configurable):
                         f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]}). Reason: {e}')
         return dashboard_list
 
-    def _fetch_data_for_chart_compare(self, dashboard_queries):
+    def _fetch_data_for_chart_compare(self, dashboard_views):
         """
-        Iterate given queries, fetch each one's filter from the appropriate query collection, according to its module,
+        Iterate given views, fetch each one's filter from the appropriate query collection, according to its module,
         and execute the filter on the appropriate entity collection.
 
-        :param dashboard_queries:
+        :param dashboard_views:
         :return:
         """
-        if not dashboard_queries:
-            raise Exception('No queries for the chart')
+        if not dashboard_views:
+            raise Exception('No views for the chart')
         data = []
-        for query in dashboard_queries:
+        for view in dashboard_views:
             # Can be optimized by taking all names in advance and querying each module's collection once
             # But since list is very short the simpler and more readable implementation is fine
-            entity = EntityType(query['module']) if query.get('module') else EntityType.Devices
-            query_object = self._queries_db_map[entity].find_one({'name': query['name']})
-            if not query_object or not query_object.get('filter'):
-                raise Exception(f'No filter found for query {query["name"]}')
-            data.append({'name': query['name'], 'filter': query_object['filter'], 'module': query['module'],
-                         'count': self._entity_views_db_map[entity].find(parse_filter(query_object['filter']),
-                                                                         {'_id': 1}).count()})
+            module = view.get('module', EntityType.Devices.value)
+            entity = EntityType(module)
+            view_object = self._views_db_map[entity].find_one({'name': view['name']})
+            if not view_object:
+                raise Exception(f'No filter found for query {view["name"]}')
+            data.append({'name': view_object['name'], 'filter': view_object['view']['query']['filter'],
+                         'module': module,
+                         'count': self._entity_views_db_map[entity].find(
+                             parse_filter(view_object['view']['query']['filter']),
+                             {'_id': 1}).count()})
         return data
 
-    def _fetch_data_for_chart_intersect(self, dashboard_queries):
+    def _fetch_data_for_chart_intersect(self, dashboard_views):
         """
-        This chart shows intersection of 1 or 2 'Child' queries with a 'Parent' (expected not to be a subset of them).
+        This chart shows intersection of 1 or 2 'Child' views with a 'Parent' (expected not to be a subset of them).
         Module to be queried is defined by the parent query.
 
-        :param dashboard_queries: List of 2 or 3 queries
+        :param dashboard_views: List of 2 or 3 views
         :return: List of result portions for the query executions along with their names. First represents Parent query.
                  If 1 child, second represents Child intersecting with Parent.
                  If 2 children, intersection between all three is calculated, namely 'Intersection'.
                                 Second and third represent each Child intersecting with Parent, excluding Intersection.
                                 Fourth represents Intersection.
         """
-        if not dashboard_queries or len(dashboard_queries) < 2:
-            raise Exception('Pie chart requires at least two queries')
-        entity = EntityType(dashboard_queries[0]['module']) if dashboard_queries[0].get(
+        if not dashboard_views or len(dashboard_views) < 2:
+            raise Exception('Pie chart requires at least two views')
+        entity = EntityType(dashboard_views[0]['module']) if dashboard_views[0].get(
             'module') else EntityType.Devices
         # Query and data collections according to given parent's module
-        queries_collection = self._queries_db_map[entity]
+        views_collection = self._views_db_map[entity]
         data_collection = self._entity_views_db_map[entity]
 
-        parent_name = dashboard_queries[0]['name']
-        parent_filter = parse_filter(queries_collection.find_one({'name': parent_name})['filter'])
+        parent_name = dashboard_views[0]['name']
+        parent_filter = parse_filter(views_collection.find_one({'name': parent_name})['view']['query']['filter'])
         data = [{'name': parent_name, 'count': data_collection.find(parent_filter, {'_id': 1}).count()}]
 
-        child_name_1 = dashboard_queries[1]['name']
-        child_filter_1 = parse_filter(queries_collection.find_one({'name': child_name_1})['filter'])
-        if len(dashboard_queries) == 2:
+        child_name_1 = dashboard_views[1]['name']
+        child_filter_1 = parse_filter(views_collection.find_one({'name': child_name_1})['view']['query']['filter'])
+        if len(dashboard_views) == 2:
             # Fetch the only child, intersecting with parent
             data.append({'name': child_name_1,
                          'count': data_collection.find({'$and': [parent_filter, child_filter_1]}, {'_id': 1}).count()})
         else:
-            child_name_2 = dashboard_queries[2]['name']
-            child_filter_2 = parse_filter(queries_collection.find_one({'name': child_name_2})['filter'])
+            child_name_2 = dashboard_views[2]['name']
+            child_filter_2 = parse_filter(views_collection.find_one({'name': child_name_2})['view']['query']['filter'])
 
             # Fetch the intersection of parent and 2 children and create match to exclude their _IDs
             intersection_cursor = data_collection.find({'$and': [parent_filter, child_filter_1, child_filter_2]},
@@ -1920,7 +1872,7 @@ class GuiService(PluginBase, Configurable):
 
     def _get_adapter_data(self, adapters):
         """
-        Get the definition of the adapters to include in the report. For each adapter, get the queries defined for it
+        Get the definition of the adapters to include in the report. For each adapter, get the views defined for it
         and execute each one, according to its entity, to get the amount of results for it.
 
         :return:
@@ -1930,28 +1882,29 @@ class GuiService(PluginBase, Configurable):
             if not adapter.get('name'):
                 continue
 
-            queries = []
-            for query in adapter.get('queries', []):
+            views = []
+            for query in adapter.get('views', []):
                 if not query.get('name') or not query.get('entity'):
                     continue
                 entity = EntityType(query['entity'])
-                filter = self._queries_db_map[entity].find_one({'name': query['name']}).get('filter')
-                if filter:
-                    logger.info(f'Executing filter {filter} on entity {entity.name}')
-                    queries.append({
+                view = self._views_db_map[entity].find_one({'name': query['name']})
+                if view:
+                    view_filter = view['view']['query']['filter']
+                    logger.info(f'Executing filter {view_filter} on entity {entity.name}')
+                    views.append({
                         **query,
-                        'count': self._entity_views_db_map[entity].find(parse_filter(filter), {'_id': 1}).count()
+                        'count': self._entity_views_db_map[entity].find(parse_filter(view_filter), {'_id': 1}).count()
                     })
             adapter_clients_report = {}
             try:
-                # Exception thrown if adapter is down or report missing, and section will appear with queries only
+                # Exception thrown if adapter is down or report missing, and section will appear with views only
                 adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
                 adapter_reports_db = self._get_db_connection()[adapter_unique_name]
                 adapter_clients_report = adapter_reports_db['report'].find_one({"name": "report"}).get('data', {})
             except Exception:
                 logger.exception("Error contacting the report db for adapter {adapter_unique_name}")
 
-            adapter_data.append({'name': adapter['title'], 'queries': queries, 'views': adapter_clients_report})
+            adapter_data.append({'name': adapter['title'], 'queries': views, 'views': adapter_clients_report})
         return adapter_data
 
     def _get_saved_views_data(self):

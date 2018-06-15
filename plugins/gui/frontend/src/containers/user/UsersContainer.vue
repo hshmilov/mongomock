@@ -4,7 +4,6 @@
         <x-data-table :module="module" v-model="selectedUsers" id-field="internal_axon_id" title="Users" @click-row="configUser">
             <template slot="actions">
                 <x-data-action-menu v-show="selectedUsers && selectedUsers.length" :module="module" :selected="selectedUsers" />
-                <x-data-view-menu :module="module" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" class="link" />
                 <div class="link" @click="exportCSV">Export csv</div>
@@ -17,7 +16,6 @@
     import xPage from '../../components/layout/Page.vue'
     import xDataQuery from '../../components/data/DataQuery.vue'
     import xDataTable from '../../components/tables/DataTable.vue'
-    import xDataViewMenu from '../../components/data/DataViewMenu.vue'
     import xDataFieldMenu from '../../components/data/DataFieldMenu.vue'
     import xDataActionMenu from '../../components/data/DataActionMenu.vue'
 
@@ -26,7 +24,7 @@
 
 	export default {
 		name: 'users-container',
-        components: { xPage, xDataQuery, xDataTable, xDataViewMenu, xDataFieldMenu, xDataActionMenu },
+        components: { xPage, xDataQuery, xDataTable, xDataFieldMenu, xDataActionMenu },
         computed: {
 			module() {
 				return 'users'

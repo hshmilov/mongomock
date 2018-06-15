@@ -15,9 +15,8 @@ export const devices = {
 				'specific_data.data.network_interfaces.ips', 'specific_data.data.network_interfaces.mac', 'labels'
 			], coloumnSizes: [], query: {filter: '', expressions: []}, sort: {field: '', desc: true}
 		},
-		views: { data: [], fetching: false, error: '' },
 		fields: { data: {}, fetching: false, error: ''},
-		queries: {
+		views: {
 			saved: { data: [], fetching: false, error: ''},
 			history: { data: [], fetching: false, error: ''}
 		},

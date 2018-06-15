@@ -9,7 +9,7 @@
                 <div class="x-grid">
                     <label for="alert_name">Alert Name:</label>
                     <input id="alert_name" v-model="alert.name" @input="tour('alertQuery')">
-                    <label for="alert_query">Select Saved Query:</label>
+                    <label for="alert_query">Select Saved View:</label>
                     <x-select :options="currentQueryOptions" v-model="currentQuery" placeholder="field..." :searchable="true"
                       class="field-select" id="alert_query" />
                 </div>
@@ -102,7 +102,7 @@
     import Modal from '../../components/popover/Modal.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
-    import {FETCH_DATA_QUERIES} from '../../store/actions'
+    import {FETCH_DATA_VIEWS} from '../../store/actions'
     import {UPDATE_EMPTY_STATE} from '../../store/modules/onboarding'
     import {SET_ALERT, UPDATE_ALERT, FETCH_ALERTS} from '../../store/modules/alert'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
@@ -117,17 +117,17 @@
                 alertData: state => state.alert.current.data,
                 alerts: state => state.alert.content.data,
                 currentQueryOptions(state) {
-                    let queries = [...state.devices.queries.saved.data.map((item) => {
+                    let queries = [...state.devices.views.saved.data.map((item) => {
                         return {...item, entity: 'devices'}
-                    }), ...state.users.queries.saved.data.map((item) => {
+                    }), ...state.users.views.saved.data.map((item) => {
                         return {...item, entity: 'users'}
                     })]
                     if (!queries || !queries.length) return []
-                    if (this.alert && this.alert.query) {
-                        let hasCurrent = queries.some(query => query.name === this.alert.query)
+                    if (this.alert && this.alert.view) {
+                        let hasCurrent = queries.some(query => query.name === this.alert.view)
                         if (!hasCurrent) {
                             queries.push({
-                                name: this.alert.query, title: `${this.alert.query} (deleted)`
+                                name: this.alert.view, title: `${this.alert.view} (deleted)`
                             })
                         }
                     }
@@ -183,7 +183,7 @@
                 setAlert: SET_ALERT, updateEmptyState: UPDATE_EMPTY_STATE, changeState: CHANGE_TOUR_STATE
             }),
             ...mapActions({
-                fetchQueries: FETCH_DATA_QUERIES, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
+                fetchView: FETCH_DATA_VIEWS, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
             }),
             fillAlert(alert) {
                 alert.actions.forEach((action) => {
@@ -241,8 +241,8 @@
                         type: 'create_service_now_incident'
                     })
                 }
-                this.alert.query = this.currentQuery
-                this.alert.queryEntity = this.selectedOption.entity
+                this.alert.view = this.currentQuery
+                this.alert.viewEntity = this.selectedOption.entity
                 /* Save and return to alerts page */
                 this.updateAlert(this.alert)
                 this.returnToAlerts()
@@ -287,17 +287,17 @@
             this.tour('alertName')
 
             /* Fetch all saved queries for offering user to base alert upon */
-            Promise.all([this.fetchQueries({module: 'devices', type: 'saved'}),
-                this.fetchQueries({module: 'users', type: 'saved'})]).then(() => {
-                    if (this.alertData.query) {
+            Promise.all([this.fetchView({module: 'devices', type: 'saved'}),
+                this.fetchView({module: 'users', type: 'saved'})]).then(() => {
+                    if (this.alertData.view) {
                         let matching = this.currentQueryOptions.filter(item =>
-                            (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.query)
+                            (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.view)
                         if (matching.length) {
                             this.currentQuery = matching[0].name
-                            this.alert.query = this.currentQuery
-                            this.alert.queryEntity = this.selectedOption.entity
+                            this.alert.view = this.currentQuery
+                            this.alert.viewEntity = this.selectedOption.entity
                         } else {
-                            this.alert.query = ''
+                            this.alert.view = ''
                         }
                     }
                 }

@@ -46,20 +46,28 @@ export const clearDataContent = (state, payload) => {
 export const UPDATE_DATA_VIEWS = 'UPDATE_DATA_VIEWS'
 export const updateDataViews = (state, payload) => {
 	if (!validModule(state, payload)) return
-	const views = state[payload.module].views
+	const views = state[payload.module].views[payload.type]
 	views.fetching = payload.fetching
 	views.error = payload.error
 	if (payload.data) {
-		views.data = payload.data
+		views.data = views.data.slice(0, payload.skip).concat(payload.data)
 	}
 }
 
 export const ADD_DATA_VIEW = 'ADD_DATA_VIEW'
 export const addDataView = (state, payload) => {
 	if (!validModule(state, payload)) return
-	const views = state[payload.module].views
+	const views = state[payload.module].views[payload.query_type]
 	if (!views.data) views.data = []
 	views.data = [{ name: payload.name, view: payload.view }, ...views.data.filter(item => item.name !== payload.name)]
+}
+
+export const UPDATE_REMOVED_DATA_VIEW = 'UPDATE_REMOVED_DATA_VIEW'
+export const updateRemovedDataView = (state, payload) => {
+	if (!validModule(state, payload)) return
+
+	state[payload.module].views.saved.data =
+		state[payload.module].views.saved.data.filter(query => !payload.ids.includes(query.uuid))
 }
 
 export const UPDATE_DATA_FIELDS = 'UPDATE_DATA_FIELDS'
@@ -77,35 +85,6 @@ export const updateDataFields = (state, payload) => {
 	}
 }
 
-export const UPDATE_DATA_QUERIES = 'UPDATE_DATA_QUERIES'
-export const updateDataQueries = (state, payload) => {
-	if (!validModule(state, payload) || !payload.type) return
-	const queries = state[payload.module].queries[payload.type]
-	queries.fetching = payload.fetching
-	queries.error = payload.error
-	if (payload.data) {
-		queries.data = queries.data.slice(0, payload.skip).concat(payload.data)
-	}
-}
-
-export const ADD_DATA_QUERY = 'ADD_DATA_QUERY'
-export const addDataQuery = (state, payload) => {
-	if (!validModule(state, payload)) return
-	const savedQueries = state[payload.module].queries.saved
-	if (!savedQueries.data) savedQueries.data = []
-	savedQueries.data = [
-		{ ...payload.query, timestamp: new Date() },
-		...savedQueries.data.filter(item => item.name !== payload.query.name)
-	]
-}
-
-export const UPDATE_REMOVED_DATA_QUERY = 'UPDATE_REMOVED_DATA_QUERY'
-export const updateRemovedDataQuery = (state, payload) => {
-	if (!validModule(state, payload)) return
-
-	state[payload.module].queries.saved.data =
-		state[payload.module].queries.saved.data.filter(query => !payload.ids.includes(query.uuid))
-}
 
 export const UPDATE_DATA_LABELS = 'UPDATE_DATA_LABELS'
 export const updateDataLabels = (state, payload) => {
