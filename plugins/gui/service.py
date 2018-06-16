@@ -405,7 +405,7 @@ class GuiService(PluginBase, Configurable):
                 desc, field = next(iter(sort.items()))
                 mongo_sort = {'desc': desc, 'field': field}
             self._views_db_map[entity_type].replace_one(
-                {'name': {'$exists': False}, 'filter': view_filter},
+                {'name': {'$exists': False}, 'view.query.filter': view_filter},
                 {
                     'view': {
                         'page': 0,
