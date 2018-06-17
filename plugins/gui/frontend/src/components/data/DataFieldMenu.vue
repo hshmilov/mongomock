@@ -48,7 +48,7 @@
 				},
 				set(fields) {
 					this.updateView({ module: this.module, view: {
-                        fields
+                        fields, page: -1
                     }})
 				}
 			},
