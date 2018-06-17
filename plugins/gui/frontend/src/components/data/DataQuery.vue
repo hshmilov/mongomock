@@ -212,7 +212,6 @@
             },
 			selectQuery ({view}) {
             	this.queryExpressions = view.query.expressions
-                this.updateView({ module: this.module, view: view })
 				this.updateFilter(view.query.filter)
 				this.focusInput()
 				this.$refs.greatInput.$parent.close()
@@ -225,7 +224,7 @@
                 this.executeFilter()
             },
             executeFilter () {
-				this.updateView({ module: this.module, view: { page: 0 } })
+				this.updateView({ module: this.module, view: { page: -1 } })
             },
             openSaveView() {
                 if (this.disableSaveButton || this.searchValue === '') return

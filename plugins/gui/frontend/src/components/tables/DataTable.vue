@@ -90,6 +90,9 @@
             pageCount() {
 				return Math.ceil(this.count.data / this.view.pageSize) - 1
             },
+            viewPage() {
+			    return this.view.page
+            },
             pageLinkNumbers() {
                 let numbers = []
                 let steps = [5, 4, 3, 2, 1, 0]
@@ -110,8 +113,14 @@
             }
         },
         watch: {
-            pageLinkNumbers() {
-				this.fetchLinkedPages()
+            viewPage() {
+                if (this.viewPage == -1)
+                {
+                    this.view.page = 0
+                }
+                else {
+                    this.fetchLinkedPages()
+                }
             },
             view(newView, oldView) {
             	if (newView.query.filter !== oldView.query.filter ||
