@@ -5,6 +5,7 @@ export const UPDATE_EMPTY_STATE = 'UPDATE_EMPTY_STATE'
 export const START_TOUR = 'START_TOUR'
 export const CHANGE_TOUR_STATE = 'CHANGE_TOUR_STATE'
 export const UPDATE_TOUR_STATE = 'UPDATE_TOUR_STATE'
+export const NEXT_TOUR_STATE = 'NEXT_TOUR_STATE'
 export const STOP_TOUR = 'STOP_TOUR'
 
 export const onboarding = {
@@ -339,15 +340,15 @@ export const onboarding = {
 					content: 'Let\'s query devices by their operating system.\nClick here to build the query.'
 				},
 				'queryField': {
-					id: 'query_field', title: 'SELECT FIELD', align: 'left',
-					content: 'Click here and select the field "OS Type".\nYou can search for it, if needed.'
+					id: 'query_field', title: 'SELECT FIELD', align: 'top',
+					content: 'Click here and select the field "OS: Type".\nYou can search for it, if needed.'
 				},
 				'queryOp': {
-					id: 'query_op', title: 'SELECT OPERATOR', align: 'left',
+					id: 'query_op', title: 'SELECT OPERATOR', align: 'top',
 					content: 'Click here and select the operator "equals" to compare to a value.'
 				},
 				'queryValue': {
-					id: 'query_value', title: 'SELECT VALUE', align: 'left',
+					id: 'query_value', title: 'SELECT VALUE', align: 'top',
 					content: 'Click here and select the OS you would like to find.'
 				},
 				'queryResults': {
@@ -370,7 +371,7 @@ export const onboarding = {
 					content: 'Click here to view the saved queries as well as query history.'
 				},
 				'querySelect': {
-					id: 'query_select', title: 'SELECT A QUERY', align: 'bottom',
+					id: 'query_select', title: 'SELECT A QUERY', align: 'bottom', emphasize: false,
 					content: 'You see here the query you saved, as well as predefined queries for significant properties of AD.\nSelect a query to execute it and load the results.'
 				},
 				'alerts': {
@@ -408,13 +409,151 @@ export const onboarding = {
 				'settings': {
 					id: 'settings', title: 'SETTINGS', align: 'bottom', queue: 'alerts',
 					content: 'Settings allow configuring properties of the system functionality or the UI.'
+				},
+				'research-settings-tab': {
+					id: 'research_time', title: 'DISCOVERY RUN SCHEDULE', align: 'top',
+					content: 'Here you can select a date and time for the next discovery to run.',
+					actions: [
+						{ title: 'Next', state: 'lifecycleRate' }
+					]
+				},
+				'lifecycleRate': {
+					id: 'research_rate', title: 'DISCOVERY RUN RATE', align: 'bottom',
+					content: 'Here you can update the number of hours between Discovery Cycle runs.',
+					actions: [
+						{ title: 'Next', state: 'lifecycleRun' }
+					]
+				},
+				'lifecycleRun': {
+					id: 'research_run', title: 'DISCOVERY RUN NOW', align: 'bottom',
+					content: 'Click here to run the discovery immediately.\nOnce started, you can click again to stop it.',
+					actions: [
+						{ title: 'Next', state: 'settingsGlobal' }
+					]
+				},
+				'settingsGlobal': {
+					id: 'global-settings-tab', title: 'GLOBAL SYSTEM SETTINGS', align: 'bottom',
+					content: 'Axonius uses global settings for execution or notifications.\nClick this tab to configure them.'
+				},
+				'global-settings-tab': {
+					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'right',
+					content: 'Here you can enable and provide credentials to your syslog.\nCan be used to notify the syslog about alerts.',
+					actions: [
+						{ title: 'Next', state: 'mail' }
+					]
+				},
+				'mail': {
+					id: 'email_settings', title: 'MAIL SERVER CONFIG', align: 'right',
+					content: 'Here you can enable and provide credentials to your mail server.\nCan be send alert or reports by mail.',
+					actions: [
+						{ title: 'Next', state: 'execution' }
+					]
+				},
+				'execution': {
+					id: 'execution_settings', title: 'EXECUTION CONFIG', align: 'right',
+					content: 'Here you can enable Axonius to collect information directly from devices, in addition to the adapter-connected systems.',
+					actions: [
+						{ title: 'Next', state: 'settingsGUI' }
+					]
+				},
+				'settingsGUI': {
+					id: 'gui-settings-tab', title: 'UI SETTINGS', align: 'bottom',
+					content: 'Axonius allows some control over the UI.\nClick this tab to configure it.'
+				},
+				'gui-settings-tab': {
+					id: 'system_settings', title: 'DATA TABLES', align: 'right',
+					content: 'You can configure the rate in which devices and users are fetched.\nRemove the default sort if you have many devices or users and their loading is slow.',
+					actions: [
+						{ title: 'Next', state: 'okta' }
+					]
+				},
+				'okta': {
+					id: 'okta_login_settings', title: 'LOGIN WITH OKTA', align: 'right',
+					content: 'If you use OKTA, you can use it for logging into Axonius, by entering the details here.',
+					actions: [
+						{ title: 'Next', state: 'ldap' }
+					]
+				},
+				'ldap': {
+					id: 'ldap_login_settings', title: 'DEVICES / USER', align: 'right',
+					content: 'If you use OKTA, you can use it for logging into Axonius, by entering the details here.',
+					actions: [
+						{ title: 'Next', state: 'dashboard' }
+					]
+				},
+				'dashboard': {
+					id: 'dashboard', title: 'DASHBOARD', align: 'right',
+					content: 'The dashboard shows you a summary of the conclusions that Axonius gathered for you.'
+				},
+				'dashboardManaged': {
+					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'right', emphasize: false,
+					content: 'The coverage pie charts describe the portion of devices with essential properties.\nManaged Coverage refers to devices discovered by an adapter of a management system.',
+					actions: [
+						{ title: 'Next', state: 'dashboardManagedQuery' }
+					]
+				},
+				'dashboardManagedQuery': {
+					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'bottom',
+					content: 'Click here to load the devices which are not managed.'
+				},
+				'dashboardBack': {
+					id: 'dashboard', title: 'DASHBOARD', align: 'right',
+					content: 'Let\'s get back to the dashboard.'
+				},
+				'dashboardWizard': {
+					id: 'dashboard_wizard', title: 'CREATE YOUR OWN CHART', align: 'right',
+					content: 'Click here to launch the wizard for chart customization, to monitor the questions you are interested to see.'
+				},
+				'wizardIntersect': {
+					id: 'intersect', title: 'CHART TYPE', align: 'top', fixed: true,
+					content: 'Click here to create a Pie chart showing intersection between 2 or 3 query results.'
+				},
+				'wizardModule': {
+					id: 'module', title: 'CHART MODULE', align: 'right', fixed: true,
+					content: 'Click here to select which data we are querying. For our example, select \'Devices\''
+				},
+				'wizardMain': {
+					id: 'parent', title: 'CHART TOTAL', align: 'right', fixed: true,
+					content: 'Click here to select a query for the total of the graph. For our example, leave empty.',
+					actions: [
+						{ title: 'Next', state: 'wizardFirst' }
+					]
+				},
+				'wizardFirst': {
+					id: 'child0', title: 'CHART FIRST SUBSET', align: 'right', fixed: true,
+					content: 'Click here to select a query for one subset of the graph. For our example, select the query you saved.'
+				},
+				'wizardSecond': {
+					id: 'child1', title: 'CHART SECOND SUBSET', align: 'right', fixed: true,
+					content: 'Click here to select a query for another subset of the graph. For our example, select the DEMO query.'
+				},
+				'wizardName': {
+					id: 'chart_name', title: 'CHART NAME', align: 'right', fixed: true,
+					content: 'Give the chart a name, by which you can see it in the Dashboard.'
+				},
+				'wizardSave': {
+					id: 'chart_save', title: 'SAVE THE CHART', align: 'right', fixed: true,
+					content: 'Click here to save the chart and add it to the Dashboard.'
+				},
+				'dashboardChart': {
+					title: 'YOUR CHART', align: 'left', emphasize: false,
+					content: 'See here the chart created from the data you requested.',
+					actions: [
+						{ title: 'Next', state: 'reports' }
+					]
+				},
+				'reports': {
+					id: 'reports', title: 'REPORTING', align: 'right',
+					content: 'The reporting allows you to schedule periodic emails attached with an executive summary created for you by Axonius.'
 				}
 			},
 			queues: {
 				adapters: ['activeDirectory', 'network', 'virtualizationCloud', 'virtualizationLocal',
 					'agent', 'agentIT', 'va', 'mdm', 'serviceNow', 'csv', 'devices'],
-				devices: ['bestDevice', 'query', 'queryResults', 'alerts'],
-				alerts: ['alertNew', 'settings']
+				devices: ['bestDevice', 'query', 'queryResults', 'alerts', 'dashboardBack'],
+				alerts: ['alertNew', 'settings'],
+				dashboard: ['dashboardManaged', 'dashboardWizard'],
+				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName']
 			}
 		}
 	},
@@ -459,6 +598,12 @@ export const onboarding = {
 			if (payload.align) {
 				state.tourStates.defs[payload.name].align = payload.align
 			}
+		},
+		[ NEXT_TOUR_STATE ] (state, queueName) {
+			let queue = state.tourStates.queues[queueName]
+			if (!queue || !queue.length) return
+			state.tourStates.current = queue[0]
+			state.tourStates.queues[queueName] = queue.slice(1, queue.length)
 		},
 		[ STOP_TOUR ] (state) {
 			state.tourStates.active = false

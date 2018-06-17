@@ -1,6 +1,6 @@
 <template>
-    <x-card :title="`${title} Coverage`" :key="title" class="coverage">
-        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" />
+    <x-card :title="`${data.title} Coverage`" class="coverage">
+        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" :id="data.name" />
     </x-card>
 </template>
 
@@ -12,10 +12,10 @@
 	export default {
 		name: 'coverage-card',
         components: { xCard, xPieChart },
-        props: {portion: {required: true}, title: {}, description: {}},
+        props: { data: {} },
         computed: {
 			quarter() {
-				return Math.ceil(this.portion * 4)
+				return Math.ceil(this.data.portion * 4)
             },
             quarterMessage() {
                 if (!this.quarter) return ''
@@ -24,9 +24,9 @@
             },
 			pieSlices() {
                 return [{
-                	portion: 1 - this.portion, class: 'theme-fill-gray-light',  title: this.description
+                	portion: 1 - this.data.portion, class: 'theme-fill-gray-light',  title: this.data.description
                 }, {
-                	portion: this.portion, anotate: true, title: this.quarterMessage,
+                	portion: this.data.portion, anotate: true, title: this.quarterMessage,
                     class: `indicator-fill-${this.quarter}`
                 }]
 			}

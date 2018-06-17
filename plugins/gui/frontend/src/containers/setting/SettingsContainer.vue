@@ -1,15 +1,17 @@
 <template>
     <x-page title="Settings" class="settings">
-        <tabs ref="tabs">
+        <tabs ref="tabs" @click="determineState">
             <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
                 <h3>Discovery Phase</h3>
                 <div class="grid grid-col-2">
-                    <label for="schedule" class="label">Next Scheduled Time:</label>
-                    <x-date-edit id="schedule" :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
-                    <template v-if="schedulerSettings && schedulerSettings.config">
+                    <label for="research_time" class="label">Next Scheduled Time:</label>
+                    <div id="research_time">
+                        <x-date-edit :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
+                    </div>
+                    <template v-if="scheduleConfig">
                         <label for="research_rate" class="label">Schedule Rate (hours)</label>
                         <div class="grid-item">
-                            <input id="research_rate" type="number" min="0" v-model="schedulerSettings.config.system_research_rate">
+                            <input id="research_rate" type="number" min="0" v-model="scheduleConfig.system_research_rate">
                             <a class="x-btn right" :class="{disabled: !validResearchRate}" @click="setResearchRate">Set</a>
                         </div>
                     </template>
@@ -25,7 +27,7 @@
                     </div>
                 </div>
             </tab>
-            <tab title="GUI Settings" id="system-settings-tab" v-if="configurable.gui">
+            <tab title="GUI Settings" id="gui-settings-tab" v-if="configurable.gui">
                 <div class="tab-settings">
                     <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
                                    v-model="configurable.gui.GuiService.config" api-upload="adapters/core"/>
@@ -51,8 +53,9 @@
     import { mapState, mapActions, mapMutations } from 'vuex'
     import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from "../../store/modules/configurable";
     import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
+    import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 
-    export default {
+	export default {
         name: 'settings-container',
         components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast },
         computed: {
@@ -66,26 +69,23 @@
                 }
             }),
             limit() {
+            	let now = new Date()
+                // now.setDate(now.getDate() - 1)
                 return [{
                     type: 'fromto',
-                    from: `${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`
+                    from: now
                 }]
             },
-            schedulerSettings: {
+            scheduleConfig: {
                 get() {
-                    if (!this.configurable.system_scheduler) return null
-                    return this.configurable.system_scheduler.SystemSchedulerService
-                },
-                set(value) {
-                    this.changePluginConfig({
-                        pluginId: 'system_scheduler',
-                        configName: 'SystemSchedulerService',
-                        config: value.config
-                    })
+                    if (!this.configurable.system_scheduler || !this.configurable.system_scheduler.SystemSchedulerService) {
+                    	return null
+					}
+                    return this.configurable.system_scheduler.SystemSchedulerService.config
                 }
             },
 			validResearchRate() {
-				return this.validNumber(this.schedulerSettings.config.system_research_rate)
+				return this.validNumber(this.scheduleConfig.system_research_rate)
             }
         },
         data() {
@@ -97,7 +97,7 @@
         },
         methods: {
             ...mapMutations({
-                changePluginConfig: CHANGE_PLUGIN_CONFIG
+                changePluginConfig: CHANGE_PLUGIN_CONFIG, changeState: CHANGE_TOUR_STATE
             }),
             ...mapActions({
                 fetchData: REQUEST_API,
@@ -117,7 +117,9 @@
                     rule: `research_phase`,
                     method: 'POST',
                     data: {timestamp: scheduleDate}
-                })
+                }).then((response) => {
+                	this.createToast(response)
+				})
             },
             saveGlobalSettings() {
                 if (!this.coreComplete) return
@@ -126,9 +128,7 @@
                     configName: 'CoreService',
                     config: this.configurable.core.CoreService.config
                 }).then(response => {
-                    if (response.status === 200) {
-                        this.message = 'Saved Successfully.'
-                    }
+                    this.createToast(response)
                 }).catch(error => {
                 	if (error.response.status === 400) {
                 		this.message = error.response.data.message
@@ -148,12 +148,7 @@
                     configName: 'GuiService',
                     config: this.configurable.gui.GuiService.config
                 }).then(response => {
-                    if (response.status === 200) {
-                        this.message = 'Saved Successfully.'
-                    }
-                    else {
-                        this.message = 'Error when saving'
-                    }
+					this.createToast(response)
                 })
             },
             setResearchRate() {
@@ -162,18 +157,23 @@
                 this.updatePluginConfig({
                     pluginId: 'system_scheduler',
                     configName: 'SystemSchedulerService',
-                    config: this.schedulerSettings.config
-                }).then(response => {
-                    if (response.status === 200) {
-                        this.message = 'Saved Successfully.'
-                    }
-                    else {
-                        this.message = 'Error when saving'
-                    }
+                    config: this.scheduleConfig
+                }).then((response) => {
+                	this.createToast(response)
                 })
             },
             removeToast() {
                 this.message = ''
+            },
+            createToast(response) {
+				if (response.status === 200) {
+					this.message = 'Saved Successfully.'
+				} else {
+					this.message = response.data.message
+				}
+            },
+            determineState(tabId) {
+            	this.changeState({ name: tabId})
             }
         },
         created() {
@@ -181,6 +181,7 @@
                 pluginId: 'system_scheduler',
                 configName: 'SystemSchedulerService'
             })
+            this.changeState({ name: 'research-settings-tab' })
         },
         mounted() {
             if (this.$route.hash) {
@@ -192,10 +193,12 @@
 
 <style lang="scss">
     .settings {
+        .x-tabs > .content {
+            width: 60vw;
+        }
         .grid {
             display: grid;
             grid-row-gap: 12px;
-            width: 800px;
             align-items: center;
             grid-auto-rows: auto;
             margin-bottom: 24px;
@@ -215,7 +218,6 @@
             }
         }
         .tab-settings {
-            width: 800px;
             .schema-form {
                 > .array {
                     display: block;

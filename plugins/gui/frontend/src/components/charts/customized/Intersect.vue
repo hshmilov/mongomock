@@ -1,5 +1,5 @@
 <template>
-    <x-pie :data="portionalData" @click-one="$emit('click-one', $event)" class="intersect" />
+    <x-pie :data="portionalData" @click-one="$emit('click-one', $event)" :id="id" class="intersect" />
 </template>
 
 <script>
@@ -8,7 +8,7 @@
 	export default {
 		name: 'x-intersect',
         components: { xPie },
-        props: { data: { required: true } },
+        props: { data: { required: true }, id: {} },
         computed: {
 			portionalData() {
 				if (!this.data || !this.data.length) return []

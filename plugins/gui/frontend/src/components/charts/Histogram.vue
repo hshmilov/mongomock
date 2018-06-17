@@ -10,7 +10,7 @@
             </div>
             <div v-if="type ==='text'" class="item-title" :title="item.name">{{item.name}}</div>
         </div>
-        <div v-if="processedData.length > limit" class="remainder">+{{processedData.length - limit}}</div>
+        <div v-if="data.length > limit" class="remainder">+{{data.length - limit}}</div>
     </div>
 </template>
 
@@ -18,19 +18,14 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: {data: {required: true}, limit: {default: 6}, sort: {default: false}, type: {default: 'text'}},
+		props: {data: {required: true}, limit: {default: 6}, type: {default: 'text'}},
 		computed: {
-			processedData () {
-				if (!this.data) return []
-                if (!this.sort) return this.data
-				return this.data.sort((first, second) => second.count - first.count)
-			},
 			limitedData () {
-				return this.processedData.slice(0, this.limit)
+				return this.data.slice(0, this.limit)
 			},
 			maxQuantity () {
-				let max = this.processedData[0].count
-                this.processedData.slice(1).forEach((item) => {
+				let max = this.data[0].count
+                this.data.slice(1).forEach((item) => {
                 	if (item.count > max) {
                 		max = item.count
 					}

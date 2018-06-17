@@ -46,7 +46,7 @@
 			...mapMutations({
 				updateView: UPDATE_DATA_VIEW, updateAlertQuery: UPDATE_ALERT_VIEW,
                 clearDataContent: CLEAR_DATA_CONTENT
-	}),
+	        }),
             ...mapActions({
                 fetchDataQueries: FETCH_DATA_VIEWS, removeDataQuery: REMOVE_DATA_VIEW
             }),

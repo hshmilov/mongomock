@@ -1,5 +1,5 @@
 <template>
-    <div class="pie">
+    <div class="pie" :id="id">
         <svg viewBox="-1 -1 2 2" @mouseout="inHover = -1">
             <defs>
                 <linearGradient id="intersection-1-2">
@@ -11,7 +11,7 @@
                     <stop class="extra-stop-3" offset="100%"></stop>
                 </linearGradient>
             </defs>
-            <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)">
+            <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)" :id="getId(index)">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
                 <text v-if="slice.anotate && slice.portion" class="scaling" text-anchor="middle"
                       :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.portion * 100)}}%</text>
@@ -24,7 +24,7 @@
 <script>
 	export default {
 		name: 'x-pie-chart',
-        props: {data: {required: true}},
+        props: { data: {required: true}, id: {} },
         computed: {
 			completeData() {
 				let sumPortions = this.data.reduce((sum, item) => {
@@ -77,6 +77,11 @@
                 if (!this.$refs || !this.$refs.tooltip) return
                 this.$refs.tooltip.style.top = event.clientY + 20 + 'px'
 				this.$refs.tooltip.style.left = event.clientX + 20 + 'px'
+            },
+            getId(name) {
+				if (!this.id) return undefined
+
+                return `${this.id}_${name}`
             }
         }
 	}

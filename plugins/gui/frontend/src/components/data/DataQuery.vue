@@ -14,12 +14,11 @@
             3. Option to search for 'searchValue' everywhere in data (compares to every text field)
             -->
             <div slot="content" @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex" class="query-quick">
-                <nested-menu v-if="savedViews && savedViews.length">
+                <nested-menu v-if="savedViews && savedViews.length" id="query_select">
                     <div class="title">Saved Queries</div>
                     <div class="menu-content">
                         <nested-menu-item v-for="query, index in savedViews" :key="index" :title="query.name"
-                                          :selected="queryMenuIndex === index" @click="selectQuery(query)"
-                                          :id="(query.name === 'AD Enabled Critical Assets')? 'query_select': undefined" />
+                                          :selected="queryMenuIndex === index" @click="selectQuery(query)" />
                     </div>
                 </nested-menu>
                 <nested-menu v-if="historyViews && historyViews.length">

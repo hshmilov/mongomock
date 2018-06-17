@@ -1,5 +1,5 @@
 <template>
-    <x-checkbox v-model="data" @focusout.stop="validate" @change="input" :class="{'invalid': !valid}"></x-checkbox>
+    <x-checkbox v-model="data" @focusout.stop="validate" @change="input" :class="{'invalid': !valid}" />
 </template>
 
 <script>

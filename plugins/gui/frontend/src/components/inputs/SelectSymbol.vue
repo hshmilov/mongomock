@@ -1,5 +1,6 @@
 <template>
-    <x-select :options="options" :value="value" @input="selectOption" class="x-select-symbol" :placeholder="placeholder">
+    <x-select :options="options" :value="value" @input="selectOption" class="x-select-symbol"
+              :placeholder="placeholder" :id="id">
         <template slot-scope="{ option }">
             <div class="x-type-img">
                 <img v-if="type === 'img'" :src="`/src/assets/images/logos/${option.name}.png`" />
@@ -16,7 +17,7 @@
 	export default {
 		name: 'x-select-symbol',
         components: { xSelect },
-        props: { options: {required: true}, value: {}, type: {default: 'img'}, placeholder: {}},
+        props: { options: {required: true}, value: {}, type: {default: 'img'}, placeholder: {}, id: {} },
         methods: {
 			selectOption(option) {
 				this.$emit('input', option)
@@ -29,7 +30,6 @@
     .x-select-symbol {
         .x-type-img {
             width: 30px;
-            height: 24px;
             text-align: center;
             display: inline-block;
             vertical-align: middle;

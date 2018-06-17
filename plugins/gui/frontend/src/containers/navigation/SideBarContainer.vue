@@ -6,13 +6,13 @@
                 <h5>{{ `${auth.data.first_name} ${auth.data.last_name}` }}</h5>
             </div>
             <div class="x-user-actions">
-                <a @click="logout" data-toggle="tooltip" title="Logout">
+                <a @click="logout" title="Logout">
                     <svg-icon name="navigation/logout" height="16" :original="true" />
                 </a>
             </div>
         </div>
         <x-nested-nav>
-            <x-nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true"/>
+            <x-nested-nav-item route-name="Dashboard" router-path="/" icon-name="dashboard" :exact="true" id="dashboard"/>
             <x-nested-nav-item route-name="Devices" icon-name="devices" id="devices">
                 <x-nested-nav nest-level="1" class="collapse">
                     <x-nested-nav-item route-name="Saved Queries" router-path="/devices/query/saved"/>
@@ -25,7 +25,7 @@
             </x-nested-nav-item>
             <x-nested-nav-item route-name="Alerts" icon-name="alert" id="alerts" />
             <x-nested-nav-item route-name="Adapters" icon-name="adapter" id="adapters" />
-            <x-nested-nav-item route-name="Reporting" icon-name="report"/>
+            <x-nested-nav-item route-name="Reporting" icon-name="report" id="reports" />
         </x-nested-nav>
     </aside>
 </template>

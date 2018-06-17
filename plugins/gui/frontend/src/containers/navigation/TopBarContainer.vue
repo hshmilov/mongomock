@@ -13,7 +13,7 @@
             <li class="nav-item" v-if="runningResearch">
                 <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
             </li>
-            <li class="nav-item">
+            <li class="nav-item" id="research_run">
                 <a v-if="!runningResearch" v-tooltip.bottom="'Discover Now'" @click="startResearchNow" class="item-link">
                     <svg-icon name="action/run" :original="true" height="20"/>
                 </a>

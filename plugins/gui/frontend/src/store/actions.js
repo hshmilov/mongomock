@@ -163,7 +163,13 @@ export const fetchDataViews = ({state, dispatch}, payload) => {
 export const SAVE_DATA_VIEW = 'SAVE_DATA_VIEW'
 export const saveDataView = ({state, dispatch, commit}, payload) => {
 	if (!validModule(state, payload)) return
-	let viewObj = {name: payload.name, view: state[payload.module].view, query_type: 'saved'}
+	payload.view = state[payload.module].view
+	saveView({dispatch, commit}, payload)
+}
+
+export const SAVE_VIEW = 'SAVE_VIEW'
+export const saveView = ({dispatch, commit}, payload) => {
+	let viewObj = {name: payload.name, view: payload.view, query_type: 'saved'}
 	dispatch(REQUEST_API, {
 		rule: payload.module + '/views',
 		data: viewObj,

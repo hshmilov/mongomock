@@ -637,16 +637,16 @@ def and_function(*functions) -> FunctionType:
     return tmp
 
 
-def parse_filter(filter):
+def parse_filter(filter_str):
     """
     Translates a string representing
-    :param filter:
+    :param filter_str:
     :return:
     """
-    if filter is None or filter == '':
+    if filter_str is None or filter_str == '':
         return {}
 
-    matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter)
+    matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
     while matches:
         # Handle predefined sequence that should be replaced before translation
         computed_date = datetime.datetime.now()
@@ -656,10 +656,10 @@ def parse_filter(filter):
             computed_date -= datetime.timedelta(days=int(matches.group(1)))
         elif matches.group(2) == 'w':
             computed_date -= datetime.timedelta(days=int(matches.group(1)) * 7)
-        filter = filter.replace(matches.group(0), computed_date.strftime("%m/%d/%Y %I:%M %p"))
-        matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter)
+        filter_str = filter_str.replace(matches.group(0), computed_date.strftime("%m/%d/%Y %I:%M %p"))
+        matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
 
-    return pql.find(filter)
+    return pql.find(filter_str)
 
 
 def remove_duplicates_by_reference(seq):

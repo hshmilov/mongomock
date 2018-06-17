@@ -1,7 +1,7 @@
 <template>
     <div class="x-tabs">
         <ul class="header">
-            <li v-for="tab in tabs" v-if="tab.id !== undefined" @click="selectTab(tab.id)"
+            <li v-for="tab in tabs" v-if="tab.id !== undefined" @click="selectTab(tab.id)" :id="tab.id"
                 class="header-tab" :class="{active: tab.isActive, disabled: tab.outdated}">
                 <x-logo-name v-if="tab.logo" :name="tab.title" />
                 <div v-else>{{ tab.title }}</div>
@@ -34,6 +34,7 @@
                 if (!found) {
 					this.tabs[0].isActive = true
                 }
+                this.$emit('click', selectedId)
             }
         },
 		created() {

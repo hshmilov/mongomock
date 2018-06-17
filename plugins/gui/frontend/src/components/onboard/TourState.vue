@@ -49,7 +49,7 @@
 			    if (oldElement) {
 			    	oldElement.classList.remove('pulsing')
                 }
-                if (newElement) {
+                if (newElement && (this.currentState.emphasize === undefined || this.currentState.emphasize)) {
 			    	newElement.classList.add('pulsing')
                 }
             },
@@ -96,6 +96,8 @@
                 return element.offsetTop + this.calcOffsetTop(element.offsetParent)
             },
             calcScrollTop(element) {
+            	if (this.currentState.fixed) return 0
+
             	if (element.parentElement == null) {
             		return element.scrollTop
                 }

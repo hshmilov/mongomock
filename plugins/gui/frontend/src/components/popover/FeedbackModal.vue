@@ -1,5 +1,6 @@
 <template>
-    <modal v-show="launch" @confirm="handleConfirm" @close="handleClose" :disabled="disabled" >
+    <modal v-if="launch" @confirm="handleConfirm" @close="handleClose" :disabled="disabled"
+           @enter="$emit('enter')" @leave="$emit('leave')">
         <div slot="body" class="feedback-modal-body" @keyup.esc="handleClose">
             <template v-if="status.processing">
                 <pulse-loader :loading="true" color="#FF7D46"></pulse-loader>
@@ -20,7 +21,7 @@
         <div slot="footer">
             <template v-if="!status.success && !status.processing">
                 <button class="x-btn link" @click="handleClose">Cancel</button>
-                <button class="x-btn" :class="{disabled}" @click="handleConfirm">Save</button>
+                <button class="x-btn" :class="{disabled}" @click="handleConfirm" :id="approveId">Save</button>
             </template>
         </div>
     </modal>
@@ -37,11 +38,10 @@
 			prop: 'launch',
 			event: 'change'
 		},
-		props: {handleSave: {required: true}, message: {default: 'Save complete'},
-            launch: {default: false}, disabled: {default: false}},
+		props: { handleSave: {required: true}, message: {default: 'Save complete'},
+            launch: {default: false}, disabled: {default: false}, approveId: {}},
 		data () {
 			return {
-				isActive: false,
 				status: {
 					processing: false,
 					success: false,

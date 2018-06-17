@@ -8,17 +8,16 @@
         </template>
         <template v-else>
             <div class="dashboard-charts">
-                <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title"
-                                 :portion="item.portion" :title="item.title" :description="item.description"
+                <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title" :data="item"
                                  @click-one="runCoverageFilter(item.properties, $event)" />
                 <x-card title="Data Discovery">
                     <x-counter-chart :data="adapterDevicesCounterData"/>
                 </x-card>
                 <x-card title="Devices per Adapter">
-                    <x-histogram-chart :data="adapterDevicesCount" @click-one="runAdapterFilter" :sort="true" type="logo"/>
+                    <x-histogram-chart :data="adapterDevicesCount" @click-one="runAdapterFilter" type="logo"/>
                 </x-card>
-                <x-card v-for="chart, chartInd in dashboard.charts.data" v-if="chart.data" :key="chart.name"
-                        :title="chart.name" :removable="true" @remove="removeDashboard(chart.uuid)">
+                <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
+                        :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)" />
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
@@ -28,7 +27,7 @@
                     </div>
                 </x-card>
                 <x-card title="New Chart" class="chart-new print-exclude">
-                    <div class="link" @click="createNewDashboard">+</div>
+                    <div class="link" @click="createNewDashboard" id="dashboard_wizard">+</div>
                 </x-card>
             </div>
             <dashboard-wizard-container ref="wizard" />
@@ -53,8 +52,9 @@
 		FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD
 	} from '../../store/modules/dashboard'
     import { FETCH_ADAPTERS } from '../../store/modules/adapter'
-	import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
-
+	import { CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW } from '../../store/mutations'
+    import { SAVE_VIEW } from '../../store/actions'
+	import { CHANGE_TOUR_STATE, NEXT_TOUR_STATE } from '../../store/modules/onboarding'
 	import { mapState, mapMutations, mapActions } from 'vuex'
 
 	export default {
@@ -68,8 +68,14 @@
 				dashboard (state) {
 					return state.dashboard
 				},
+                charts (state) {
+					return state.dashboard.charts.data
+                },
                 adapterList(state) {
 					return state.adapter.adapterList.data
+                },
+                devicesView(state) {
+					return state.devices.view
                 }
 			}),
 			lifecycle () {
@@ -81,7 +87,8 @@
 				return this.dashboard.adapterDevices.data
 			},
 			adapterDevicesCount () {
-				return this.adapterDevices.adapter_count
+				if (!this.adapterDevices || !this.adapterDevices.adapter_count) return []
+				return this.adapterDevices.adapter_count.sort((first, second) => second.count - first.count)
 			},
 			adapterDevicesCounterData () {
 				let totalSeen = this.adapterDevices.total_gross || 0
@@ -111,11 +118,47 @@
                 return true
             }
 		},
+        data() {
+			return {
+				newChart: '',
+				wizardActivated: false
+            }
+        },
+        watch: {
+			adapterDevicesCount(newCount) {
+				if (newCount.length) {
+                    let adapter = newCount.find((item) => !item.name.includes('active_directory'))
+                    let name = ''
+                    let filter = ''
+                    if (adapter) {
+                    	name = adapter.name.split('_').join(' ')
+                        filter = `adapters == '${adapter.name}'`
+                    } else {
+                        name = 'Windows 10'
+                        filter = 'specific_data.data.os.distribution == "10"'
+                    }
+                    this.saveView({
+                        name: `DEMO - ${name}`, module: 'devices', view: {
+                            ...this.devicesView, query: { filter }
+                        }
+                    })
+                }
+            },
+            charts(newCharts, oldCharts) {
+				if (oldCharts && !oldCharts.length && newCharts && newCharts.length === 1) {
+					this.newChart = this.getId(newCharts[0].name)
+                }
+            }
+        },
 		methods: {
-			...mapMutations({updateView: UPDATE_DATA_VIEW, clearDataContent: CLEAR_DATA_CONTENT }),
+			...mapMutations({
+                updateView: UPDATE_DATA_VIEW, clearDataContent: CLEAR_DATA_CONTENT,
+                changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
+			}),
 			...mapActions({
 				fetchAdapterDevices: FETCH_ADAPTER_DEVICES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
                 fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD, fetchAdapters: FETCH_ADAPTERS,
+                saveView: SAVE_VIEW
 			}),
 			runAdapterFilter (index) {
 				this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')
@@ -144,17 +187,27 @@
             },
             createNewDashboard() {
 				if (!this.$refs.wizard) return
+                this.wizardActivated = true
                 this.$refs.wizard.activate()
+            },
+            getId(name) {
+				return name.split(' ').join('_').toLowerCase()
             }
 		},
 		created () {
 			this.fetchAdapters()
 			const getDashboardData = () => {
-            	Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
+            	return Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
                     .then(() => this.timer = setTimeout(getDashboardData, 10000))
             }
-            getDashboardData()
+            getDashboardData().then(() => this.nextState('dashboard'))
 		},
+        updated() {
+			if (this.wizardActivated && this.newChart) {
+                this.changeState({ name: 'dashboardChart', id: this.newChart })
+                this.newChart = ''
+            }
+        },
         beforeDestroy() {
 			clearTimeout(this.timer)
         }

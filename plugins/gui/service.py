@@ -336,7 +336,12 @@ class GuiService(PluginBase, Configurable):
             logger.info(f'view {name} already exists id: {existed_view["_id"]}')
             return existed_view['_id']
 
-        result = views_collection.insert_one({'name': name, 'view': mongo_view, 'query_type': 'saved'})
+        result = views_collection.insert_one({
+            'name': name,
+            'view': mongo_view,
+            'query_type': 'saved',
+            'timestamp': datetime.now()
+        })
         logger.info(f'Added view {name} id: {result.inserted_id}')
         return result.inserted_id
 
@@ -410,7 +415,7 @@ class GuiService(PluginBase, Configurable):
                     'view': {
                         'page': 0,
                         'pageSize': limit,
-                        'fields': view_filter.split(','),
+                        'fields': list(projection.values()),
                         'coloumnSizes': [],
                         'query': {
                             'filter': view_filter,
@@ -418,7 +423,8 @@ class GuiService(PluginBase, Configurable):
                         },
                         'sort': mongo_sort
                     },
-                    'query_type': 'history'
+                    'query_type': 'history',
+                    'timestamp': datetime.now()
                 },
                 upsert=True)
         if not projection:
@@ -769,6 +775,7 @@ class GuiService(PluginBase, Configurable):
                 return return_error(f'Name is required in order to save a view', 400)
             if not view_data.get('view'):
                 return return_error(f'View data is required in order to save one', 400)
+            view_data['timestamp'] = datetime.now()
             update_result = entity_views_collection.replace_one({'name': view_data['name']}, view_data, upsert=True)
             if not update_result.upserted_id and not update_result.modified_count:
                 return return_error(f'View named {view_data.name} was not saved', 400)
@@ -1669,7 +1676,9 @@ class GuiService(PluginBase, Configurable):
         data_collection = self._entity_views_db_map[entity]
 
         parent_name = dashboard_views[0]['name']
-        parent_filter = parse_filter(views_collection.find_one({'name': parent_name})['view']['query']['filter'])
+        parent_filter = {}
+        if parent_name:
+            parent_filter = parse_filter(views_collection.find_one({'name': parent_name})['view']['query']['filter'])
         data = [{'name': parent_name, 'count': data_collection.find(parent_filter, {'_id': 1}).count()}]
 
         child_name_1 = dashboard_views[1]['name']
@@ -1810,11 +1819,13 @@ class GuiService(PluginBase, Configurable):
         if not devices_total:
             return []
         coverage_list = [
-            {'title': 'Managed Device', 'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
+            {'name': 'managed_coverage', 'title': 'Managed Device',
+             'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
              'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},
-            {'title': 'Endpoint Protection', 'properties': [AdapterProperty.Endpoint_Protection_Platform.name],
+            {'name': 'endpoint_coverage', 'title': 'Endpoint Protection', 'properties': [AdapterProperty.Endpoint_Protection_Platform.name],
              'description': 'Add an endpoint protection solution to uncovered devices.'},
-            {'title': 'VA Scanner', 'properties': [AdapterProperty.Vulnerability_Assessment.name],
+            {'name': 'vulnerability_coverage', 'title': 'VA Scanner',
+             'properties': [AdapterProperty.Vulnerability_Assessment.name],
              'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
         ]
         for item in coverage_list:
