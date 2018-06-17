@@ -32,7 +32,10 @@ export const onboarding = {
 				},
 				'activeDirectory': {
 					id: 'active_directory_adapter', title: 'ActiveDirectory ADAPTER', queue: 'adapters', align: 'right',
-					content: 'If you use ActiveDirectory, click here to configure it.'
+					content: 'If you use ActiveDirectory, click here to configure it.',
+					actions: [
+						{ title: 'SKIP', state: 'network' }
+					]
 				},
 				'addServer': {
 					id: 'new_server', title: 'CONFIGURE YOUR SERVER', align: 'left',
@@ -584,7 +587,7 @@ export const onboarding = {
 					'agent', 'agentIT', 'va', 'mdm', 'serviceNow', 'csv', 'devices'],
 				devices: ['bestDevice', 'query', 'queryResults', 'alerts', 'dashboardBack'],
 				alerts: ['alertNew', 'settings'],
-				dashboard: ['dashboardManaged', 'dashboardWizard'],
+				dashboard: ['adapters', 'dashboardManaged', 'dashboardWizard'],
 				dashboardWizard: ['wizardIntersect', 'wizardModule', 'wizardMain', 'wizardSecond', 'wizardName']
 			}
 		}

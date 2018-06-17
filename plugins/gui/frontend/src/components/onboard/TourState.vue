@@ -2,8 +2,8 @@
     <div class="x-tour-state" :style="position" v-if="tourActive && currentState">
         <div class="state-tip" :class="alignClass">
             <div class="header">
+                <div class="remove"><div @click="stopTour">x</div></div>
                 <div class="title">{{currentState.title || '&nbsp;'}}</div>
-                <div class="remove" @click="stopTour">x</div>
             </div>
             <div class="content">{{currentState.content}}</div>
             <div class="actions">
@@ -135,12 +135,10 @@
             box-shadow: $popup-shadow;
             .header {
                 margin-bottom: 8px;
-                display: flex;
                 .title {
                     color: $theme-orange;
                     display: inline-block;
                     font-size: 20px;
-                    flex: 1 0 auto;
                 }
                 .remove {
                     margin-right: -12px;
@@ -148,6 +146,7 @@
                     color: $grey-3;
                     cursor: pointer;
                     line-height: 14px;
+                    text-align: right;
                     &:hover {
                         color: $grey-1;
                     }

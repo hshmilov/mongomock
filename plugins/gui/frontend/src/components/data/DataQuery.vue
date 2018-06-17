@@ -262,10 +262,11 @@
 		},
         created() {
 			this.searchQuery().then(() => {
-                if (this.$route.query.query) {
-                    let requestedQuery = this.savedViews.filter(query => query.name === this.$route.query.query)
-                    if (requestedQuery && requestedQuery.length) {
-                        this.queryFilter = requestedQuery[0].view.query.filter
+                if (this.$route.query.view) {
+                    let requestedQuery = this.savedViews.find(view => view.name === this.$route.query.view)
+                    if (requestedQuery) {
+                        this.queryFilter = requestedQuery.view.query.filter
+                        this.executeFilter()
                     }
                 }
             })

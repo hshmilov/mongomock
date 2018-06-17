@@ -276,7 +276,7 @@ class ReportsService(PluginBase, Triggerable):
         system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION,
                                              self.get_plugin_by_name(GUI_NAME)[PLUGIN_UNIQUE_NAME]).find_one(
             {'type': 'server'}) or {}
-        return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?query={view_name}"
+        return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?view={view_name}"
 
     def _handle_action_create_service_now_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
