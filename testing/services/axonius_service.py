@@ -80,7 +80,8 @@ class AxoniusService(object):
         for service in self.axonius_services:
             service.take_process_ownership()
 
-    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True, expose_db=False):
+    def start_and_wait(self, mode='', allow_restart=False, rebuild=False, hard=False, skip=False, show_print=True,
+                       expose_db=False):
         if allow_restart:
             for service in self.axonius_services:
                 service.remove_container()
@@ -324,13 +325,15 @@ class AxoniusService(object):
         return short_name[:-len('_service.py')]
 
     def set_system_settings(self, settings_dict):
-        settings = self.db.get_collection(self.gui.unique_name, 'settings')
-        settings.update_one(filter={}, update={"$set": settings_dict}, upsert=True)
+        settings = self.db.get_collection(self.gui.unique_name, 'configurable_configs')
+        settings.update_one(filter={"config_name": "GuiService"},
+                            update={"$set": {"config": {"system_settings": settings_dict}}}, upsert=True)
 
     def add_view(self, view_params):
         views = self.db.get_collection(self.gui.unique_name, 'device_views')
         views.insert_one(view_params)
 
-    def add_saved_query(self, query_params):
-        queries = self.db.get_collection(self.gui.unique_name, 'queries')
-        queries.insert_one(query_params)
+    def set_research_rate(self, rate):
+        settings = self.db.get_collection(self.scheduler.unique_name, 'configurable_configs')
+        settings.update_one(filter={"config_name": "SystemSchedulerService"},
+                            update={"$set": {"config": {"system_research_rate": rate}}}, upsert=True)
