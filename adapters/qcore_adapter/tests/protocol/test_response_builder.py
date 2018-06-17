@@ -3,6 +3,7 @@ import pytest
 import qcore_adapter.protocol.build_helpers.response_builder as response_builder
 from qcore_adapter.protocol.consts import PUMP_SERIAL
 from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
+from qcore_adapter.server.consts import dl_flow_packets
 
 
 def test_registration():
@@ -30,5 +31,14 @@ def test_get_log_download_message():
     assert payload['tag'] == 7
 
 
+def test_replace_serial():
+    new_serial = 12345
+    for buff in dl_flow_packets:
+        new_bytes = response_builder.replace_serial_and_wrap(buff, new_serial)
+        qtp = QtpMessage()
+        qtp.extend_bytes(new_bytes)
+        assert qtp.get_field(PUMP_SERIAL) == new_serial
+
+
 if __name__ == '__main__':
-    pytest.main([__file__])
+    pytest.main(['-s', __file__])

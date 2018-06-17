@@ -1,6 +1,6 @@
 from enum import auto
 
-from construct import Struct, Enum, Byte, Embedded, Int16ul, Int32ul, Int32sl, Int16sl
+from construct import Struct, Enum, Byte, Embedded, Int16ul, Int32ul, Int32sl, Int16sl, Probe
 
 from qcore_adapter.protocol.qtp.qdp.clinical.sequence import QcoreSequence
 from qcore_adapter.protocol.qtp.common import CStyleEnum, enum_to_mapping
@@ -57,6 +57,7 @@ class AlarmCode(CStyleEnum):
     AirInLineDuringAirVent = auto()  #
     AnnualCertificationFailed = auto()  # Annual certification is failed
     ForceInTooBig = auto()  # Detected FIn to big
+    NotDocumented = 255
 
 
 AlarmClinicalStatus = Struct(

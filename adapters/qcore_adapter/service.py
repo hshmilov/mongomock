@@ -2,23 +2,30 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from datetime import timedelta
 from threading import Thread
+from collections import defaultdict
 
 import time
 
 from axonius.adapter_base import AdapterBase
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.utils.files import get_local_config_file
 from qcore_adapter.protocol.build_helpers.construct_dict import dict_filter
-from qcore_adapter.protocol.consts import PUMP_SERIAL, CLINICAL_STATUS
+from qcore_adapter.protocol.consts import PUMP_SERIAL, CLINICAL_STATUS, INFUSIONS
 from qcore_adapter.protocol.qtp.qdp.clinical.sequence import CSI_SEQUENCE_NUMBER
 from qcore_adapter.protocol.qtp.qdp.clinical_status2 import ClinicalStatusItemType
 from qcore_adapter.qcore_mongo import QcoreMongo
 from qcore_adapter.server.consts import KEEPALIVE_TS
 from qcore_adapter.server.mediator_server import run_mediator_server
+from qcore_adapter.server.pump_state import DISCONNECTS
 
-APERIODIC = ClinicalStatusItemType.Aperiodic_Infusion.name
-PERIODIC = ClinicalStatusItemType.Infusion.name
+
+def merge_dicts(list_of_dicts):
+    dict3 = defaultdict(list)
+    for d in list_of_dicts:
+        for k, v in d.items():
+            dict3[k].append(v)
+    return dict3
 
 
 class QcoreAdapter(AdapterBase):
@@ -30,26 +37,27 @@ class QcoreAdapter(AdapterBase):
         dl_version = Field(str, 'dl version')
         location = Field(str, 'location')
 
-        # Taken from periodic/aperiodic message updates
-        inf_time_remaining = Field(str, 'Time remaining')
-        inf_volume_remaining = Field(str, 'Volume remaining [ml]')
-        inf_volume_infused = Field(str, 'Volume infused [ml]')
-        inf_line_id = Field(int, 'Line id')
-        inf_total_bag_volume_delivered = Field(float, 'Total bag volume delivered [ml]')  # complex
-        inf_is_bolus = Field(bool, 'Is Bolus')  # complex
-        inf_bolus_data = Field(list, 'Bolus data')  # complex
+        inf_time_remaining = ListField(str, 'Time remaining')
+        inf_volume_remaining = ListField(float, 'Volume remaining [ml]')
+        inf_volume_infused = ListField(float, 'Volume infused [ml]')
+        inf_line_id = ListField(int, 'Line id')
+        inf_is_bolus = ListField(int, 'Is Bolus')
+        inf_bolus_data = ListField(str, 'Bolus data')
 
-        # taken from aperiodic only
-        inf_medication = Field(str, 'Medication')
-        inf_cca = Field(int, 'Cca index')
-        inf_delivery_rate = Field(float, 'Infusion rate [ml/h]')
+        inf_medication = ListField(str, 'Medication')
+        inf_cca = ListField(int, 'Cca index')
+        inf_delivery_rate = ListField(float, 'Infusion rate [ml/h]')
 
-        inf_infusion_event = Field(str, 'Infusion event')  # complex
-        inf_dose_rate = Field(float, 'Dose rate')  # complex
-        inf_dose_rate_units = Field(str, 'Units')  # complex
-        inf_status = Field(list, 'Infusion status')  # complex
+        inf_infusion_event = ListField(str, 'Infusion event')
+        inf_dose_rate = ListField(float, 'Dose rate')
+        inf_dose_rate_units = ListField(str, 'Units')
+        inf_status = ListField(list, 'Infusion status')
+
+        inf_total_bag_volume_delivered = ListField(float, 'Total bag vol delivered [ml]')
 
         gen_device_context_type = Field(str, 'Context type')
+        alarm = Field(str, 'Alarm code')
+        disconnects = Field(int, 'Disconnects')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -60,6 +68,7 @@ class QcoreAdapter(AdapterBase):
 
         self.thread = Thread(target=run_mediator_server)
         self.thread.start()
+        self.last_alarm = None
 
     def _connect_client(self, client_config):
         return {'mediator': '1'}
@@ -73,56 +82,61 @@ class QcoreAdapter(AdapterBase):
         except Exception:
             logger.exception(f"failed to populate nic info")
 
-    def populate_infusion_status(self, device, pump_document):
+    def raise_alarm_notification(self, device, pump_document):
+        try:
+            clinical_status = pump_document[CLINICAL_STATUS]
+            if 'Alarm' not in clinical_status:
+                return
+            current_alarm = clinical_status['Alarm']['code']
+            device.alarm = current_alarm
+            if self.last_alarm is None:
+                self.last_alarm = current_alarm
+            else:
+                if self.last_alarm != current_alarm:
+                    self.last_alarm = current_alarm
+                    self.logger.info('Generating alarm notification')
+                    self.create_notification(
+                        title=f'Pump\'s {device.pump_name} current alarm changed to {current_alarm}',
+                        content=f'Pump\'s {device.pump_name} current alarm changed to {current_alarm}')
+        except Exception as e:
+            self.logger.error(f'Failed to populate Alarm {e}')
+
+    def populate_clinical_status(self, device, pump_document):
         try:
             clinical_status = pump_document[CLINICAL_STATUS]
 
-            aperiodic_inf_state = None
+            if INFUSIONS not in clinical_status:
+                return
 
-            if APERIODIC in clinical_status:
-                aperiodic_status = clinical_status[APERIODIC]
+            merged = merge_dicts(clinical_status[INFUSIONS].values())
 
-                device.inf_medication = aperiodic_status['external_drug_id']
-                device.inf_cca = aperiodic_status['cca_index']
-                device.inf_delivery_rate = aperiodic_status['delivery_infusion_rate']
+            device.inf_medication = merged['external_drug_id']
+            device.inf_cca = merged['cca_index']
+            device.inf_delivery_rate = merged['delivery_infusion_rate']
 
-                device.inf_dose_rate = aperiodic_status['dose_rate']
-                device.inf_dose_rate_units = aperiodic_status['rate_units_parsed']
+            device.inf_dose_rate = merged['dose_rate']
+            device.inf_dose_rate_units = merged['rate_units_parsed']
 
-                device.inf_status = [k for k, v in aperiodic_status['operational_status'].items() if v is True]
+            def repr_inf_status(infst):
+                return [k for k, v in infst.items() if v is True]
 
-                device.inf_infusion_event = aperiodic_status['infusion_event']
+            device.inf_status = [repr_inf_status(infst) for infst in merged['operational_status']]
+            device.inf_infusion_event = merged['infusion_event']
 
-                # this data exists both in periodic and aperiodic and we will take the most recent
-                aperiodic_inf_state = aperiodic_status['csi_infusion_state']
-
-                self.populate_infusion_state(device, aperiodic_inf_state)
-
-            if PERIODIC in clinical_status:
-                periodic_status = clinical_status[PERIODIC]
-
-                if aperiodic_inf_state is None \
-                        or periodic_status[CSI_SEQUENCE_NUMBER] > aperiodic_inf_state[CSI_SEQUENCE_NUMBER]:
-                    self.populate_infusion_state(device, periodic_status)
-
+            self.populate_infusion_state(device, merged)
         except Exception:
             logger.exception("Failed to populate infusion status")
 
-    def populate_infusion_state(self, device, infusion):
-        device.inf_is_bolus = infusion['is_bolus'] != 0
-        if device.inf_is_bolus != 0:
-            device.inf_bolus_data = [f'{k}:{round(v,3)}' for k, v in infusion['bolus_data'].items()]
-            device.inf_time_remaining = 'N/A'
-            device.inf_volume_remaining = 'N/A'
-            device.inf_volume_infused = 'N/A'
-        else:
-            device.inf_bolus_data = ['N/A']
-            device.inf_time_remaining = str(timedelta(seconds=infusion['total_time_remaining']))
-            device.inf_volume_remaining = str(infusion['total_volume_remaining'] / 1000.)
-            device.inf_volume_infused = str(infusion['total_volume_delivered'] / 1000.)
+    def populate_infusion_state(self, device, merged):
+        device.inf_is_bolus = merged['is_bolus']
+        device.inf_bolus_data = [str(bd) for bd in merged['bolus_data']]
 
-        device.inf_line_id = infusion['line_id']
-        device.inf_total_bag_volume_delivered = infusion['total_bag_volume_delivered'] / 1000.
+        device.inf_time_remaining = [str(timedelta(seconds=ttr)) for ttr in merged['total_time_remaining']]
+        device.inf_volume_remaining = [vr / 1000. for vr in merged['total_volume_remaining']]
+        device.inf_volume_infused = [vi / 1000. for vi in merged['total_volume_delivered']]
+
+        device.inf_line_id = merged['line_id']
+        device.inf_total_bag_volume_delivered = [tbag / 1000. for tbag in merged['total_bag_volume_delivered']]
 
     def _query_devices_by_client(self, client_name, client_data):
         qcore_mongo = QcoreMongo()
@@ -166,13 +180,18 @@ class QcoreAdapter(AdapterBase):
                 device.gen_device_context_type = pump_document[CLINICAL_STATUS].get('general', {}).get(
                     'device_context_type', '')
 
-            self.populate_infusion_status(device, pump_document)
+            self.populate_clinical_status(device, pump_document)
 
             device.set_raw(pump_document)
+            device.disconnects = pump_document.get(DISCONNECTS, 0)
+
+            self.raise_alarm_notification(device, pump_document)
+
             logger.info(f'Yielding a device: ')
             for k, v in device.to_dict().items():
                 if str(k).startswith("inf_"):
                     logger.info(f'{k}:{v}')
+
             yield device
 
     def _get_client_id(self, client_config):

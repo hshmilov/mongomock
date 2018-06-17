@@ -7,12 +7,16 @@ from qcore_adapter.protocol.exceptions import ProtocolException
 from qcore_adapter.protocol.qtp.qtp_keepalive_message import QtpKeepAliveMessage
 from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
 
+import construct
+
+construct.setglobalfullprinting(True)
+
 
 def bytes_to_ip(bytes):
     return str(ipaddress.ip_address(bytes))
 
 
-path = Path(__file__).parent / 'caps' / 'port_5100.pcap'
+path = Path(__file__).parent / 'caps' / 'dl2.pcap'
 
 streams = dict()
 
@@ -40,8 +44,10 @@ for ts, buff in pcap:
         # try:
         last_msg.append_byte(byte)
         if last_msg.is_complete():
+            # if ip.tcp.sport == 5100:
             print(f'TIME={round(ts-first_ts,2)} # flow={stream_name}')
-            # print(last_msg.bytes)
+            # print(last_msg.bytes.hex().find('09030000'))
+            print(last_msg.bytes)
             print(last_msg.payload_root)
             print("<==============================>")
             last_msg = QtpMessage()

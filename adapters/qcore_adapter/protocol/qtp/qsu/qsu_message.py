@@ -3,6 +3,11 @@ from construct import Struct, Enum, Byte, Probe, Embedded, Switch, this, Int32ul
 from qcore_adapter.protocol.qtp.common import enum_to_mapping, ChecksumHeader
 from qcore_adapter.protocol.qtp.data_with_crc import DataWithCrcHeader
 from qcore_adapter.protocol.qtp.qsu.consts import OperationalCode
+from qcore_adapter.protocol.qtp.qsu.qsu_compare_file_version_request import CompareFileVersionRequestMessage
+from qcore_adapter.protocol.qtp.qsu.qsu_erase_memory_request import EraseMemoryRequestMessage
+from qcore_adapter.protocol.qtp.qsu.qsu_response import ResponseMessage
+from qcore_adapter.protocol.qtp.qsu.qsu_upload_complete_notify import UploadCompleteNotifyMessage
+from qcore_adapter.protocol.qtp.qsu.qsu_validate_crc_request import ValidateCrcRequestMessage
 from qcore_adapter.protocol.qtp.qsu.qsu_write_data_request import WriteDataRequestMessage
 from qcore_adapter.protocol.qtp.qsu.qsu_write_response import WriteResponseMessage
 from qcore_adapter.protocol.qtp.qtp_protocol_units import ProtocolUnit
@@ -15,5 +20,10 @@ QsuHeader = Struct(
     'inner' / Embedded(Switch(this.operatinal_code, {
         OperationalCode.WriteDataRequest.name: WriteDataRequestMessage,
         OperationalCode.WriteResponse.name: WriteResponseMessage,
+        OperationalCode.CompareFileVersionRequest.name: CompareFileVersionRequestMessage,
+        OperationalCode.Response.name: ResponseMessage,
+        OperationalCode.EraseMemoryRequest.name: EraseMemoryRequestMessage,
+        OperationalCode.ValidateCrcRequest.name: ValidateCrcRequestMessage,
+        OperationalCode.UploadCompleteNotify.name: UploadCompleteNotifyMessage,
     })),
 )

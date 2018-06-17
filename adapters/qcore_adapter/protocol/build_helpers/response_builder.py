@@ -5,6 +5,7 @@ from qcore_adapter.protocol.qtp.common import QTP_START, QTP_END, QTP_SIZE_MARKE
 from qcore_adapter.protocol.qtp.qdp.qdp_log_download import LOG_RTC_TIMESTAMP, LOG_SEQUENCE_ID
 from qcore_adapter.protocol.qtp.qdp.qdp_message_types import QdpMessageTypes
 from qcore_adapter.protocol.qtp.qtp_decoder import QtpPayloadRoot
+from qcore_adapter.protocol.qtp.qtp_message import QtpMessage
 from qcore_adapter.protocol.qtp.qtp_protocol_units import ProtocolUnit
 
 QtpWrapper = Struct(
@@ -14,6 +15,16 @@ QtpWrapper = Struct(
     'data' / Byte[this.len],
     'trailer' / Const(QTP_END, Byte),
 )
+
+
+def replace_serial_and_wrap(bytes, new_serial):
+    qtp = QtpMessage()
+    qtp.extend_bytes(bytes)
+
+    qtp.payload_root.qtp_payload.pump_serial = new_serial
+    # qtp.payload_root.qtp_payload.qdp_payload.device_id = 'QCP300202812'
+    encoded_qtp = QtpPayloadRoot.build(qtp.payload_root)
+    return wrap_qtp(encoded_qtp)
 
 
 def wrap_qtp(bytes):

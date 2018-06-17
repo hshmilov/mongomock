@@ -1,4 +1,5 @@
-from construct import PascalString, Byte, StringsAsBytes, Struct, Int32ul, Tell, Peek, Seek, this, Check, Bytes
+from construct import PascalString, Byte, StringsAsBytes, Struct, Int32ul, Tell, Peek, Seek, this, Check, Bytes, \
+    Pointer, Checksum, Computed, Rebuild, Construct, Embedded
 import enum
 from enum import auto
 
@@ -20,19 +21,23 @@ def checksum256(st):
     return sum(st) % 256
 
 
-ChecksumHeader = Struct(
-    '_checksum_mark' / Tell,
+def from_context_to_bytes(ctx):
+    bytes = ChecksummedFields.build(ctx)
+    return bytes
+
+
+ChecksummedFields = Struct(
     'following_message_type' / Byte,
     PUMP_SERIAL / Int32ul,
     'protocol_version' / Int32ul,
-    'checksum_pos' / Tell,
-    'checksum' / Byte,
-    '_test_checksum' / Peek(Struct(
-        Seek(this._._checksum_mark),
-        'bytes' / Bytes(9),
-        Check(lambda ctx: checksum256(ctx.bytes) == ctx._.checksum),
-    )),
 )
+
+ChecksumHeader = Struct(
+    Embedded(ChecksummedFields),
+    'checksum_buff' / Computed(from_context_to_bytes),
+    'checksum' / Checksum(Byte,
+                          checksum256,
+                          this.checksum_buff))
 
 
 class CStyleEnum(enum.Enum):

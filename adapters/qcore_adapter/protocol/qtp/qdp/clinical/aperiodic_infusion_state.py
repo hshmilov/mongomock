@@ -87,7 +87,7 @@ def parse_rate(rate):
 
 AperiodicInfusionClinicalStatus = Struct(
     'AperiodicInfusionClinicalStatus' / Pass,
-    'csi_infusion_state' / InfusionStateClinicalStatus,
+    Embedded(InfusionStateClinicalStatus),
     'infusion_event' / Enum(Int16ul, **enum_to_mapping(InfusionEvent)),
     'rate_units' / Int16ul,
     'rate_units_parsed' / Computed(lambda ctx: parse_rate(ctx.rate_units)),
@@ -112,7 +112,7 @@ AperiodicInfusionClinicalStatus = Struct(
     'patient_weight' / Float64l,
     'cumulative_volume' / Int32ul,
     # 14.15
-    'is_bolus' / Byte,
+    'is_bolus_programmed' / Byte,
     'bolus_programmed_data' / If(lambda ctx: ctx.is_bolus > 0, BolusProgrammedData),
     'programmed_modes' / Int32ul,
     # 14.5

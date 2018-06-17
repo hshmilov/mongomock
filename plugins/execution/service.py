@@ -435,3 +435,7 @@ class ExecutionService(PluginBase):
                                          )
 
         return jsonify({'action_id': action_id})
+
+    @property
+    def plugin_subtype(self):
+        return "Execution"

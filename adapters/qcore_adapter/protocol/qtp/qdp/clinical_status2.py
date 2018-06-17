@@ -12,6 +12,7 @@ from qcore_adapter.protocol.qtp.qdp.clinical.connectivity import ConnectivityCli
 from qcore_adapter.protocol.qtp.qdp.clinical.device_settings_response import DeviceSettingsResponseClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical.infuser import InfuserClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical.infusion_state import InfusionStateClinicalStatus
+from qcore_adapter.protocol.qtp.qdp.clinical.package_deploy_response import PackageDeployResponseMessage
 from qcore_adapter.protocol.qtp.qdp.clinical.power import PowerClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical.ruleset_violation import RulesetViolationClinicalStatus
 from qcore_adapter.protocol.qtp.qdp.clinical.system_update import SystemUpdateClinicalStatus
@@ -91,6 +92,7 @@ ClinicalStatusItem = Struct(
         ClinicalStatusItemType.UpdateDeviceSettingsResponse.name: DeviceSettingsResponseClinicalStatus,
         ClinicalStatusItemType.Aperiodic_Infusion.name: AperiodicInfusionClinicalStatus,
         ClinicalStatusItemType.SystemUpdate.name: SystemUpdateClinicalStatus,
+        ClinicalStatusItemType.PackageDeployResponse.name: PackageDeployResponseMessage,
     },
         default=Struct(
         UNFINISHED_PARSING_MARKER / Pass,

@@ -7,6 +7,7 @@ from qcore_adapter.server.pump_connection import PumpConnection
 
 
 class MyTCPHandler(socketserver.StreamRequestHandler):
+    timeout = 35
     """
     The request handler class for our server.
 
@@ -44,18 +45,18 @@ class MyTCPHandler(socketserver.StreamRequestHandler):
 
                 pump_connection.on_message(qtp)
         except ProtocolException as e:
-            print(f'Terminating connection because of protocol error {e}')
-            self.rfile.read()
+            print(f'Terminating connection because of protocol error <{e}>')
             raise e
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    timeout = 35
+    allow_reuse_address = True
     pass
 
 
 def run_mediator_server():
     host, port = '0.0.0.0', 5016
-    socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to address
     with ThreadedTCPServer((host, port), MyTCPHandler) as server:
         # Activate the server

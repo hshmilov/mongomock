@@ -322,3 +322,15 @@ class AxoniusService(object):
         short_name = os.path.basename(inspect.getfile(plugin_obj.__class__))
         assert short_name.endswith('_service.py')
         return short_name[:-len('_service.py')]
+
+    def set_system_settings(self, settings_dict):
+        settings = self.db.get_collection(self.gui.unique_name, 'settings')
+        settings.update_one(filter={}, update={"$set": settings_dict}, upsert=True)
+
+    def add_view(self, view_params):
+        views = self.db.get_collection(self.gui.unique_name, 'device_views')
+        views.insert_one(view_params)
+
+    def add_saved_query(self, query_params):
+        queries = self.db.get_collection(self.gui.unique_name, 'queries')
+        queries.insert_one(query_params)

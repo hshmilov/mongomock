@@ -19,7 +19,7 @@ class TestClinicalStatus2(object):
         qtp = QtpMessage()
         qtp.extend_bytes(bytes=with_bolus)
         assert qtp.get_field('programmed_duration_field_details') == 2050
-        assert qtp.get_field(CSI_ELEMENTS)[7][CSI_ITEM]['csi_infusion_state']['bolus_data']['delivered_volume'] == 0.2
+        assert qtp.get_field(CSI_ELEMENTS)[7][CSI_ITEM]['bolus_data']['delivered_volume'] == 0.2
 
     def test_new_alarm(self):
         qtp = QtpMessage()
