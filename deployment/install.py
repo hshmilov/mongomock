@@ -28,7 +28,6 @@ STATE_OUTPUT_PATH = os.path.join(os.path.dirname(current_file_system_path), 'enc
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
-    parser.add_argument('--print-key', action='store_true', default=False, help='Print providers credentials file key')
 
     try:
         args = parser.parse_args()
@@ -37,11 +36,11 @@ def main():
         sys.exit(1)
 
     start = time.time()
-    install(args.first_time, args.print_key)
+    install(args.first_time)
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
-def install(just_install=False, print_key=False):
+def install(just_install=False):
     assert zip_loader is not None
     key, old_services, old_adapters = None, None, None
     if not just_install:
@@ -49,8 +48,7 @@ def install(just_install=False, print_key=False):
         key, old_services, old_adapters = pre_install()
         if 'diagnostics' in old_services:
             old_services.remove('diagnostics')
-        if print_key:
-            print(f'  Providers credentials file key: {key}')
+        print(f'  Providers credentials file key: {key}')
         stop_old(True)
         archive_old_source()
         remove_old_source()

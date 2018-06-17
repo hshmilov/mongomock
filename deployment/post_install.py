@@ -70,7 +70,10 @@ def load_providers(axonius_system, adapters_providers):
             continue
         print(f'  - {adapter_name}')
         for provider in providers:
-            adapter_service.add_client(provider)
+            try:
+                adapter_service.add_client(provider)
+            except Exception as e:
+                print(f"Failed adding client to {str(provider)}. Got the following exception {str(e)}")
 
 
 def load_queries(axonius_system, mongo, queries):
@@ -78,10 +81,13 @@ def load_queries(axonius_system, mongo, queries):
         return
     print_state('  Restoring queries')
     for query_table, query_list in queries.items():
-        collection = mongo[axonius_system.gui.unique_name][query_table]
-        collection.remove({})
-        if query_list:
-            collection.insert_many(query_list)
+        try:
+            collection = mongo[axonius_system.gui.unique_name][query_table]
+            collection.remove({})
+            if query_list:
+                collection.insert_many(query_list)
+        except Exception as e:
+            print(f"Failed loading query, got the following exception {str(e)}")
 
 
 def load_views(axonius_system, mongo, views):
@@ -89,30 +95,39 @@ def load_views(axonius_system, mongo, views):
         return
     print_state('  Restoring views')
     for view_table, view_list in views.items():
-        collection = mongo[axonius_system.gui.unique_name][view_table]
-        collection.remove({})
-        if view_list:
-            collection.insert_many(view_list)
+        try:
+            collection = mongo[axonius_system.gui.unique_name][view_table]
+            collection.remove({})
+            if view_list:
+                collection.insert_many(view_list)
+        except Exception as e:
+            print(f"Failed loading view. Got the following exception: {str(e)}")
 
 
 def load_dashboard_panels(axonius_system, mongo, panels):
-    if not panels:
-        return
-    print_state('  Restoring dashboard panels')
-    collection = mongo[axonius_system.gui.unique_name]['dashboard']
-    collection.remove({})
-    if panels:
-        collection.insert_many(panels)
+    try:
+        if not panels:
+            return
+        print_state('  Restoring dashboard panels')
+        collection = mongo[axonius_system.gui.unique_name]['dashboard']
+        collection.remove({})
+        if panels:
+            collection.insert_many(panels)
+    except Exception as e:
+        print(f"Failed loading dashboard pannels, got the following exception: {str(e)}")
 
 
 def load_alerts(axonius_system, mongo, alerts):
-    if not alerts:
-        return
-    print_state('  Restoring alerts')
-    collection = mongo[axonius_system.reports.unique_name]['reports']
-    collection.remove({})
-    if alerts:
-        collection.insert_many(alerts)
+    try:
+        if not alerts:
+            return
+        print_state('  Restoring alerts')
+        collection = mongo[axonius_system.reports.unique_name]['reports']
+        collection.remove({})
+        if alerts:
+            collection.insert_many(alerts)
+    except Exception as e:
+        print(f"Failed loading alerts, got the following exception: {str(e)}")
 
 
 def load_diagnostics(axonius_system, diag_env):
@@ -121,16 +136,19 @@ def load_diagnostics(axonius_system, diag_env):
     since we are assuming the upgrade process can happen remotely (we assume someone is upgrading from the
     diagnostics container).
     """
-    print_state('  Restoring diagnostics env')
-    open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'w').write(diag_env)
-    diagnostics = axonius_system.get_plugin('diagnostics')
-    diagnostics.take_process_ownership()
-    if diagnostics.get_is_container_up():
-        if not count(10):
-            print_state('    *Skipping* diagnostics restart')
-        else:
-            print_state('    *RESTARTING* diagnostics')
-            diagnostics.start(allow_restart=True, show_print=False)
+    try:
+        print_state('  Restoring diagnostics env')
+        open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'w').write(diag_env)
+        diagnostics = axonius_system.get_plugin('diagnostics')
+        diagnostics.take_process_ownership()
+        if diagnostics.get_is_container_up():
+            if not count(10):
+                print_state('    *Skipping* diagnostics restart')
+            else:
+                print_state('    *RESTARTING* diagnostics')
+                diagnostics.start(allow_restart=True, show_print=False)
+    except Exception as e:
+        print(f"Failed loading diagnostics. Got the following error: {str(e)}")
 
 
 def count(x):
