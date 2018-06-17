@@ -1,8 +1,8 @@
 import logging
 
-import pymongo
-
+from axonius.entities import EntityType
 from axonius.mixins.configurable import Configurable
+from axonius.utils.parsing import parse_filter
 
 logger = logging.getLogger(f"axonius.{__name__}")
 import concurrent.futures
@@ -10,7 +10,7 @@ from retrying import retry
 from concurrent.futures import ALL_COMPLETED, wait
 import threading
 import dateutil.parser
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 import requests
 from contextlib import contextmanager
@@ -183,35 +183,38 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :return:
         """
 
-        def _change_subphase(subphase_name):
-            self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase_name
-            logger.info(f'Started Subphase {subphase_name}')
+        def _change_subphase(subphase: scheduler_consts.ResearchPhases):
+            self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase.name
+            logger.info(f'Started Subphase {subphase}')
 
         with self._start_research():
             self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
 
             # Fetch Devices Data.
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
             self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
 
             # Fetch Scanners Data.
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
             self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
 
             # Clean old devices.
-            _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
             self._run_cleaning_phase()
 
             # Run Pre Correlation plugins.
-            _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Pre_Correlation)
             self._run_plugins('Pre-Correlation')
 
             # Run Correlations.
-            _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Run_Correlations)
             self._run_plugins('Correlator')
 
-            _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation.name)
+            _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins('Post-Correlation')
+
+            _change_subphase(scheduler_consts.ResearchPhases.Run_Queries)
+            self._run_queries_phase()
 
             logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfuly.")
 
@@ -342,3 +345,21 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 logger.exception("An exception was raised while stopping all plugins.")
 
         logger.info("Finished stopping all plugins.")
+
+    def _run_queries_phase(self):
+        """
+        Run all saved queries (i.e. views) and save the result count in the DB
+        """
+        for entity_type in EntityType:
+            views = self.gui.entity_query_views_db_map[entity_type].find({'query_type': 'saved'})
+            for view in views:
+                try:
+                    parsed_view_filter = parse_filter(view['view']['query']['filter'])
+                    count = self._entity_views_db_map[entity_type].count(parsed_view_filter)
+                    self.gui.entity_views_results_db_map[entity_type].insert_one({
+                        "view": view['name'],
+                        "count": count,
+                        "accurate_for_datetime": datetime.now(tz=timezone.utc)
+                    })
+                except Exception:
+                    logger.exception(f"Exception on running view {view}")

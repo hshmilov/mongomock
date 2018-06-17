@@ -19,7 +19,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
@@ -237,7 +237,8 @@ def filter_archived(additional_filter=None):
 
 class GuiService(PluginBase, Configurable):
     def __init__(self, *args, **kwargs):
-        super().__init__(get_local_config_file(__file__), *args, **kwargs)
+        super().__init__(get_local_config_file(__file__),
+                         requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
         self.wsgi_app.config['SESSION_TYPE'] = 'memcached'
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self._elk_addr = self.config['gui_specific']['elk_addr']
@@ -247,12 +248,6 @@ class GuiService(PluginBase, Configurable):
                                               'first_name': 'administrator', 'last_name': '',
                                               'pic_name': 'avatar.png'}, upsert=True)
 
-        self.user_view = self._get_collection("user_views")
-        self.device_view = self._get_collection("device_views")
-        self._views_db_map = {
-            EntityType.Users: self.user_view,
-            EntityType.Devices: self.device_view,
-        }
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
         self.add_default_reports('default_reports.ini')
@@ -291,7 +286,7 @@ class GuiService(PluginBase, Configurable):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_view(self._views_db_map[entity_type], name, json.loads(view['view']))
+                    self._insert_view(self.gui.entity_query_views_db_map[entity_type], name, json.loads(view['view']))
                 except Exception:
                     logger.exception(f'Error adding default view {name}')
         except Exception:
@@ -409,7 +404,7 @@ class GuiService(PluginBase, Configurable):
             if sort:
                 desc, field = next(iter(sort.items()))
                 mongo_sort = {'desc': desc, 'field': field}
-            self._views_db_map[entity_type].replace_one(
+            self.gui.entity_query_views_db_map[entity_type].replace_one(
                 {'name': {'$exists': False}, 'view.query.filter': view_filter},
                 {
                     'view': {
@@ -762,7 +757,7 @@ class GuiService(PluginBase, Configurable):
         Save or fetch views over the entities db
         :return:
         """
-        entity_views_collection = self._views_db_map[entity_type]
+        entity_views_collection = self.gui.entity_query_views_db_map[entity_type]
         if method == 'GET':
             mongo_filter = filter_archived(filter)
             return jsonify(beautify_db_entry(entry) for entry in
@@ -1103,7 +1098,7 @@ class GuiService(PluginBase, Configurable):
             report_to_add = request.get_json(silent=True)
             view_name = report_to_add['view']
             entity = EntityType(report_to_add['viewEntity'])
-            views_collection = self._views_db_map[entity]
+            views_collection = self.gui.entity_query_views_db_map[entity]
 
             if views_collection.find_one({'name': view_name}) is None:
                 return return_error(f"Missing view {view_name} requested for creating alert")
@@ -1139,7 +1134,7 @@ class GuiService(PluginBase, Configurable):
         view_name = alert_to_update['view']
         view_entity = alert_to_update['viewEntity']
         assert view_entity in [x.value for x in EntityType.__members__.values()]
-        views = self._views_db_map[EntityType(view_entity)]
+        views = self.gui.entity_query_views_db_map[EntityType(view_entity)]
         if views.find_one({'name': view_name}) is None:
             return return_error(f"Missing view {view_name} requested for updating alert")
 
@@ -1222,8 +1217,6 @@ class GuiService(PluginBase, Configurable):
         """
         Set a specific config on a specific plugin
         """
-        if plugin_unique_name == 'gui':
-            plugin_unique_name = self.plugin_unique_name
         if request.method == 'POST':
             config_to_set = request.get_json(silent=True)
             if config_to_set is None:
@@ -1645,7 +1638,7 @@ class GuiService(PluginBase, Configurable):
             # But since list is very short the simpler and more readable implementation is fine
             module = view.get('module', EntityType.Devices.value)
             entity = EntityType(module)
-            view_object = self._views_db_map[entity].find_one({'name': view['name']})
+            view_object = self.gui.entity_query_views_db_map[entity].find_one({'name': view['name']})
             if not view_object:
                 raise Exception(f'No filter found for query {view["name"]}')
             data.append({'name': view_object['name'], 'filter': view_object['view']['query']['filter'],
@@ -1672,7 +1665,7 @@ class GuiService(PluginBase, Configurable):
         entity = EntityType(dashboard_views[0]['module']) if dashboard_views[0].get(
             'module') else EntityType.Devices
         # Query and data collections according to given parent's module
-        views_collection = self._views_db_map[entity]
+        views_collection = self.gui.entity_query_views_db_map[entity]
         data_collection = self._entity_views_db_map[entity]
 
         parent_name = dashboard_views[0]['name']
@@ -1898,7 +1891,7 @@ class GuiService(PluginBase, Configurable):
                 if not query.get('name') or not query.get('entity'):
                     continue
                 entity = EntityType(query['entity'])
-                view = self._views_db_map[entity].find_one({'name': query['name']})
+                view = self.gui.entity_query_views_db_map[entity].find_one({'name': query['name']})
                 if view:
                     view_filter = view['view']['query']['filter']
                     logger.info(f'Executing filter {view_filter} on entity {entity.name}')
@@ -1947,7 +1940,7 @@ class GuiService(PluginBase, Configurable):
         views_data = []
         for entity in EntityType:
             field_to_title = _get_field_titles(entity)
-            saved_views = self._views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
+            saved_views = self.gui.entity_query_views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
             for i, view_doc in enumerate(saved_views):
                 view = view_doc.get('view')
                 if view:

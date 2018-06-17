@@ -4,6 +4,7 @@ import logging
 import logging.handlers
 from concurrent.futures import ALL_COMPLETED
 from funcy import chunks
+from namedlist import namedtuple
 
 from axonius.email_server import EmailServer
 
@@ -50,7 +51,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME, GUI_SYSTEM_CONFIG_COLLECTION
+    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
@@ -196,6 +197,13 @@ def return_error(error_message, http_status=500, additional_data=None):
     :param int http_status: The http status to return, 500 by default
     """
     return jsonify({'status': 'error', 'message': error_message, 'additional_data': additional_data}), http_status
+
+
+"""
+entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
+entity_views_results_db_map - map between EntityType and results collection from GUI (e.g. user_view_results) 
+"""
+GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map', 'entity_views_results_db_map'])
 
 
 class PluginBase(Configurable, Feature):
@@ -375,6 +383,26 @@ class PluginBase(Configurable, Feature):
             EntityType.Users: self.MyUserAdapter,
             EntityType.Devices: self.MyDeviceAdapter
         }
+
+        # GUI Stuff
+        gui_db_connection = self._get_db_connection()[GUI_NAME]
+        user_view = gui_db_connection["user_views"]
+        device_view = gui_db_connection["device_views"]
+
+        entity_query_views_db_map = {
+            EntityType.Users: user_view,
+            EntityType.Devices: device_view,
+        }
+
+        user_view_results = gui_db_connection["user_view_results"]
+        device_view_results = gui_db_connection["device_view_results"]
+
+        entity_views_results_db_map = {
+            EntityType.Users: user_view_results,
+            EntityType.Devices: device_view_results
+        }
+
+        self.gui = GUI_DBs(entity_query_views_db_map, entity_views_results_db_map)
 
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)
@@ -1192,7 +1220,7 @@ class PluginBase(Configurable, Feature):
             # wanna see my "something too large"?
             logger.warn(f"Got DocumentTooLarge with client.")
 
-    def _tag_many(self, identity_by_adapter, names, data, type, entity, action_if_exists):
+    def _tag_many(self, entity: EntityType, identity_by_adapter, names, data, type, action_if_exists):
         """ Function for tagging many adapter devices with many tags.
         This function will tag a wanted device. The tag will be related to all adapters in the device.
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
@@ -1205,12 +1233,11 @@ class PluginBase(Configurable, Feature):
         :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
         :return:
         """
-        assert entity == "devices" or entity == "users"
         assert action_if_exists == "replace" or (action_if_exists == "update" and type == "adapterdata")
 
         tag_data = {'association_type': 'Multitag',
                     'associated_adapters': identity_by_adapter,
-                    'entity': entity,
+                    'entity': entity.value,
                     'tags': [{
                         "action_if_exists": action_if_exists,
                         "name": name,
@@ -1227,7 +1254,7 @@ class PluginBase(Configurable, Feature):
 
         return response
 
-    def _tag(self, identity_by_adapter, name, data, type, entity, action_if_exists):
+    def _tag(self, entity: EntityType, identity_by_adapter, name, data, type, action_if_exists):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
@@ -1240,7 +1267,6 @@ class PluginBase(Configurable, Feature):
         :return:
         """
 
-        assert entity == "devices" or entity == "users"
         assert action_if_exists == "replace" or (action_if_exists == "update" and type == "adapterdata")
 
         tag_data = {'association_type': 'Tag',
@@ -1248,7 +1274,7 @@ class PluginBase(Configurable, Feature):
                     "name": name,
                     "data": data,
                     "type": type,
-                    "entity": entity,
+                    "entity": entity.value,
                     "action_if_exists": action_if_exists}
         # Since datetime is often passed here, and it is not serializable, we use json_util.default
         # That automatically serializes it as a mongodb date object.
@@ -1261,21 +1287,21 @@ class PluginBase(Configurable, Feature):
 
         return response
 
-    def add_many_labels_to_entity(self, identity_by_adapter, labels, are_enabled=True, entity=None):
+    def add_many_labels_to_entity(self, entity: EntityType, identity_by_adapter, labels, are_enabled=True):
         """ Tag many devices with many tags. if is_enabled = False, the labels are grayed out."""
-        return self._tag_many(identity_by_adapter, labels, are_enabled, "label", entity, "replace")
+        return self._tag_many(entity, identity_by_adapter, labels, are_enabled, "label", "replace")
 
-    def add_label_to_entity(self, identity_by_adapter, label, is_enabled=True, entity=None):
+    def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True):
         """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
-        return self._tag(identity_by_adapter, label, is_enabled, "label", entity, "replace")
+        return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace")
 
-    def add_data_to_entity(self, identity_by_adapter, name, data, entity=None):
+    def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data):
         """ A shortcut to __tag with type "data" """
-        return self._tag(identity_by_adapter, name, data, "data", entity, "replace")
+        return self._tag(entity, identity_by_adapter, name, data, "data", "replace")
 
-    def add_adapterdata_to_entity(self, identity_by_adapter, data, entity=None, action_if_exists="replace"):
+    def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data, action_if_exists="replace"):
         """ A shortcut to __tag with type "adapterdata" """
-        return self._tag(identity_by_adapter, self.plugin_unique_name, data, "adapterdata", entity, action_if_exists)
+        return self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata", action_if_exists)
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)
     def update_config(self):

@@ -20,6 +20,7 @@ class ResearchPhases(Enum):
     Run_Correlations = auto()
     Post_Correlation = auto()
     Clean_Devices = auto()
+    Run_Queries = auto()
 
 
 class StateLevels(Enum):

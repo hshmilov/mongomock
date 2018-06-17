@@ -6,9 +6,8 @@ import concurrent.futures
 from collections import Iterable
 import threading
 import datetime
-import requests
 from bson.objectid import ObjectId
-from flask import jsonify, json
+from flask import jsonify
 
 from axonius.entities import EntityType
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, GUI_SYSTEM_CONFIG_COLLECTION, \
@@ -110,7 +109,7 @@ class ReportsService(PluginBase, Triggerable):
         """
         # Checks if requested query isn't already watched.
         try:
-            current_query_result = self.get_view_results(report_data['view'], report_data['viewEntity'])
+            current_query_result = self.get_view_results(report_data['view'], EntityType(report_data['viewEntity']))
             if current_query_result is None:
                 return return_error('Aggregator is down, please try again later.', 404)
 
@@ -164,26 +163,18 @@ class ReportsService(PluginBase, Triggerable):
         logger.info('Removed query from reports.')
         return '', 200
 
-    def get_views_collection(self, view_entity):
-        gui_name = self.get_plugin_by_name('gui')[PLUGIN_UNIQUE_NAME]
-        collection_name = 'device_views' if view_entity == EntityType.Devices.value else 'user_views'
-        return self._get_collection(collection_name, gui_name)
-
-    def get_entities_collection(self, view_entity):
-        return self._get_collection(f'{view_entity}_db_view', db_name=AGGREGATOR_PLUGIN_NAME)
-
-    def get_view_results(self, view_name, view_entity):
+    def get_view_results(self, view_name: str, view_entity: EntityType) -> list:
         """Gets a query's results from the aggregator devices_db.
 
         :param view_name: The query name.
         :param view_entity: The query entity type name.
         :return: The results of the query.
         """
-        query = self.get_views_collection(view_entity).find_one({'name': view_name})
+        query = self.gui.entity_query_views_db_map[view_entity].find_one({'name': view_name})
         if query is None:
             raise ValueError(f'Missing query "{view_name}"')
         parsed_query_filter = parse_filter(query['view']['query']['filter'])
-        return list(self.get_entities_collection(view_entity).find(parsed_query_filter))
+        return list(self._entity_views_db_map[view_entity].find(parsed_query_filter))
 
     def update_report(self, report_data):
         """update a report data.
@@ -390,7 +381,7 @@ class ReportsService(PluginBase, Triggerable):
             for entity in trigger_data]
         entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
 
-        self.add_many_labels_to_entity(entities, labels=[action_data], entity=report_data['view_entity'])
+        self.add_many_labels_to_entity(report_data['view_entity'], entities, [action_data])
 
     def _parse_action_content(self, triggers_data, triggered_triggers):
         """ Creates a readable message for the different actions.
@@ -463,7 +454,7 @@ class ReportsService(PluginBase, Triggerable):
                 self.update_report(report_data)
 
         try:
-            current_result = self.get_view_results(report_data['view'], report_data['view_entity'])
+            current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
             if current_result is None:
                 logger.info("Skipping reports trigger because there were no current results.")
                 return

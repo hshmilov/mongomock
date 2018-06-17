@@ -70,7 +70,6 @@ class AggregatorService(PluginBase, Triggerable):
         self.__device_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
 
         # Setting up db
-        self.aggregator_db_connection = self._get_db_connection()[self.plugin_unique_name]
         self.insert_views()
 
         # insertion and link/unlink lock
@@ -89,17 +88,17 @@ class AggregatorService(PluginBase, Triggerable):
         # The following creates a view that has all adapters and tags
         # of type "adapterdata" inside one (unsorted!) array.
 
-        self.aggregator_db_connection["devices_db"].create_index([
+        self.devices_db.create_index([
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
         ], unique=True)
-        self.aggregator_db_connection["devices_db"].create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
-        self.aggregator_db_connection["devices_db"].create_index(
+        self.devices_db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
+        self.devices_db.create_index(
             [(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING), ('_id', pymongo.DESCENDING)])
 
-        self.aggregator_db_connection["users_db"].create_index([
+        self.users_db.create_index([
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
         ], unique=True)
-        self.aggregator_db_connection["users_db"].create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
+        self.users_db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
 
         for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
             try:

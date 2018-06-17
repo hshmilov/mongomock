@@ -19,16 +19,16 @@ class EntityType(Enum):
 class EntitiesNamespace(object):
     """ Just a namespace so that we could do self.devices.add_label or self.users.add_data"""
 
-    def __init__(self, plugin_base, entity: str):
+    def __init__(self, plugin_base, entity: EntityType):
         self.plugin_base = plugin_base
         self.entity = entity
 
-        self.add_label = functools.partial(plugin_base.add_label_to_entity, entity=entity)
-        self.add_many_labels = functools.partial(plugin_base.add_many_labels_to_entity, entity=entity)
-        self.add_data = functools.partial(plugin_base.add_data_to_entity, entity=entity)
-        self.add_adapterdata = functools.partial(plugin_base.add_adapterdata_to_entity, entity=entity)
-        self.tag = functools.partial(plugin_base._tag, entity=entity)
-        self.tag_many = functools.partial(plugin_base._tag_many, entity=entity)
+        self.add_label = functools.partial(plugin_base.add_label_to_entity, entity)
+        self.add_many_labels = functools.partial(plugin_base.add_many_labels_to_entity, entity)
+        self.add_data = functools.partial(plugin_base.add_data_to_entity, entity)
+        self.add_adapterdata = functools.partial(plugin_base.add_adapterdata_to_entity, entity)
+        self.tag = functools.partial(plugin_base._tag, entity)
+        self.tag_many = functools.partial(plugin_base._tag_many, entity)
 
     def get(self, mongo_filter=None, _id=None, internal_axon_id=None, data=None, identity_tuple=None):
         """
@@ -44,14 +44,8 @@ class EntitiesNamespace(object):
         :return: a list of entities
         """
 
-        if self.entity == "devices":
-            db = self.plugin_base.devices_db_view
-            entity_object = AxoniusDevice
-        elif self.entity == "users":
-            db = self.plugin_base.users_db_view
-            entity_object = AxoniusUser
-        else:
-            raise ValueError(f"entity is not devices or users")
+        db = self.plugin_base._entity_views_db_map[self.entity]
+        entity_object = axonius_entity_by_entity_type[self.entity]
 
         if mongo_filter is not None:
             final_mongo_filter = mongo_filter
@@ -86,14 +80,14 @@ class DevicesNamespace(EntitiesNamespace):
     """" Just a namespace for devices so that we could do self.devices.add_label """
 
     def __init__(self, plugin_base):
-        super().__init__(plugin_base, EntityType.Devices.value)
+        super().__init__(plugin_base, EntityType.Devices)
 
 
 class UsersNamespace(EntitiesNamespace):
     """" Just a namespace for users so that we could do self.devices.add_label """
 
     def __init__(self, plugin_base):
-        super().__init__(plugin_base, EntityType.Users.value)
+        super().__init__(plugin_base, EntityType.Users)
 
 
 class AxoniusEntity(object):
@@ -101,11 +95,11 @@ class AxoniusEntity(object):
     An axonius entity, like a device or a user.
     """
 
-    def __init__(self, plugin_base, entity: str, entity_in_db: dict):
+    def __init__(self, plugin_base, entity: EntityType, entity_in_db: dict):
         """
 
         :param plugin_base: a plugin_base instance.
-        :param str entity: "devices" or "users" as a string, to identiy what is this entity.
+        :param EntityType entity: "devices" or "users" as a string, to identiy what is this entity.
         :param dict entity_in_db: a dict representing the entity in the db.
         """
         self.plugin_base = plugin_base
@@ -130,13 +124,7 @@ class AxoniusEntity(object):
         we will have an exception here.
         :return: None
         """
-
-        if self.entity == "devices":
-            data = self.plugin_base.devices_db_view.find_one({"_id": ObjectId(self.data.get("_id"))})
-        elif self.entity == "users":
-            data = self.plugin_base.users_db_view.find_one({"_id": ObjectId(self.data.get("_id"))})
-        else:
-            raise ValueError("expected devices or users")
+        data = self.plugin_base._entity_views_db_map[self.entity].find_one({"_id": ObjectId(self.data.get("_id"))})
 
         if data is None:
             raise ValueError("Couldn't flush from db, _id wasn't found. This might happen if the document"
@@ -158,7 +146,7 @@ class AxoniusEntity(object):
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
 
-        return self.plugin_base.add_label_to_entity(identity_by_adapter, label, is_enabled, entity=self.entity)
+        return self.plugin_base.add_label_to_entity(self.entity, identity_by_adapter, label, is_enabled)
 
     def add_data(self, name, data, identity_by_adapter=None):
         """
@@ -174,7 +162,7 @@ class AxoniusEntity(object):
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
 
-        return self.plugin_base.add_data_to_entity(identity_by_adapter, name, data, entity=self.entity)
+        return self.plugin_base.add_data_to_entity(self.entity, identity_by_adapter, name, data)
 
     def add_adapterdata(self, data, identity_by_adapter=None, action_if_exists="replace"):
         """
@@ -190,8 +178,8 @@ class AxoniusEntity(object):
         if identity_by_adapter is None:
             identity_by_adapter = self.__get_all_identities()
 
-        return self.plugin_base.add_adapterdata_to_entity(identity_by_adapter, data,
-                                                          entity=self.entity, action_if_exists=action_if_exists)
+        return self.plugin_base.add_adapterdata_to_entity(self.entity, identity_by_adapter, data,
+                                                          action_if_exists=action_if_exists)
 
     def get_first_data(self, name, plugin_unique_name=None):
         """
@@ -243,7 +231,7 @@ class AxoniusDevice(AxoniusEntity):
     """
 
     def __init__(self, plugin_base, entity_in_db):
-        super().__init__(plugin_base, "devices", entity_in_db)
+        super().__init__(plugin_base, EntityType.Devices, entity_in_db)
 
 
 class AxoniusUser(AxoniusEntity):
@@ -252,4 +240,10 @@ class AxoniusUser(AxoniusEntity):
     """
 
     def __init__(self, plugin_base, entity_in_db):
-        super().__init__(plugin_base, "users", entity_in_db)
+        super().__init__(plugin_base, EntityType.Users, entity_in_db)
+
+
+axonius_entity_by_entity_type = {
+    EntityType.Devices: AxoniusDevice,
+    EntityType.Users: AxoniusUser
+}
