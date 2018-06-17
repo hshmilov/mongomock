@@ -545,6 +545,38 @@ export const onboarding = {
 				'reports': {
 					id: 'reports', title: 'REPORTING', align: 'right',
 					content: 'The reporting allows you to schedule periodic emails attached with an executive summary created for you by Axonius.'
+				},
+				'reportsSchedule': {
+					id: 'reports_schedule', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
+					content: 'You can schedule periodic emails attached with the Axonius executive report',
+					actions: [
+						{ title: 'Next', state: 'reportsFrequency' }
+					]
+				},
+				'reportsFrequency': {
+					id: 'reports_frequency', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
+					content: 'You can choose between receiving the report at the beginning of each day, of each week or of each month.',
+					actions: [
+						{ title: 'Next', state: 'reportsMails' }
+					]
+				},
+				'reportsMails': {
+					id: 'reports_mails', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
+					content: 'You can add as many email addresses as you would like to receive the report.',
+					actions: [
+						{ title: 'Next', state: 'reportsDownload'}
+					]
+				},
+				'reportsDownload': {
+					id: 'reports_download', title: 'DOWNLOAD REPORT', align: 'right',
+					content: 'Click here to generate the Axonius executive report, for this time and download it.'
+				},
+				'tourFinale': {
+					title: 'JUST THE BEGINNING', align: 'center',
+					content: 'The tour ends here but your experience with Axonius will go a long way.\nRemember you can always start the tour again, using the float on the top-right corner.',
+					actions: [
+						{ title: 'OK', state: '' }
+					]
 				}
 			},
 			queues: {

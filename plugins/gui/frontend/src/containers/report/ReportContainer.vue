@@ -2,14 +2,14 @@
     <x-page title="Reporting">
         <x-box class="x-report">
             <div class="x-report-download">
-                <a class="x-btn great" @click="startDownload" tabindex="1" :class="{disabled: downloading}">
+                <a class="x-btn great" @click="startDownload" :class="{disabled: downloading}" id="reports_download">
                     <template v-if="downloading">GENERATING...</template>
                     <template v-else>Download Now</template>
                 </a>
             </div>
-            <h3>Periodical Report Email</h3>
+            <h3 id="reports_schedule">Periodical Report Email</h3>
             <div class="x-content">
-                <div>
+                <div id="reports_frequency">
                     <h4>Email Frequency</h4>
                     <div class="x-grid">
                         <input id="period-daily" type="radio" value="daily" v-model="execReportSettings.period">
@@ -20,14 +20,14 @@
                         <label for="period-monthly">Monthly</label>
                     </div>
                 </div>
-                <div class="x-section">
+                <div class="x-section" id="reports_mails">
                     <h4>Email List</h4>
                     <vm-select v-model="execReportSettings.recipients" multiple filterable allow-create placeholder=""
                                no-data-text="Type mail addresses..." :default-first-option="true"/>
                 </div>
                 <div class="x-section x-btn-container">
-                    <a class="x-btn" :class="{disabled: !valid}" tabindex="6" @click="schedule_exec_report">Save</a>
-                    <a class="x-btn inverse" :class="{disabled: !valid}" tabindex="7" @click="test_exec_report">Test Now</a>
+                    <a class="x-btn" :class="{disabled: !valid}" @click="schedule_exec_report">Save</a>
+                    <a class="x-btn inverse" :class="{disabled: !valid}" @click="test_exec_report">Test Now</a>
                 </div>
             </div>
         </x-box>
@@ -40,9 +40,10 @@
     import xBox from '../../components/layout/Box.vue'
     import xToast from '../../components/popover/Toast.vue'
 
-    import { mapActions } from 'vuex'
+    import { mapMutations, mapActions } from 'vuex'
     import { DOWNLOAD_REPORT } from '../../store/modules/report'
-    import { REQUEST_API } from '../../store/actions'
+    import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
+	import { REQUEST_API } from '../../store/actions'
 
     export default {
         name: 'report-container',
@@ -63,7 +64,8 @@
             }
         },
         methods: {
-            ...mapActions({downloadReport: DOWNLOAD_REPORT, fetchData: REQUEST_API}),
+            ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
+            ...mapActions({ downloadReport: DOWNLOAD_REPORT, fetchData: REQUEST_API }),
             startDownload() {
                 if (this.downloading) return
                 this.downloading = true
@@ -77,6 +79,7 @@
                     let formattedTime = now.toLocaleTimeString().replace(/:/g, '')
                     link.download = `axonius-report_${formattedDate}-${formattedTime}.pdf`
                     link.click()
+                    this.changeState({ name: 'tourFinale' })
                 }).catch((error) => {
                     this.downloading = false
                     this.message = error.response.data.message
@@ -116,12 +119,14 @@
             }).then((response) => {
                 if (response.data && response.data.recipients) this.execReportSettings = response.data
             })
+            this.changeState({ name: 'reportsSchedule' })
         }
     }
 </script>
 
 <style lang="scss">
     .x-report {
+        width: 60vw;
         .x-report-download {
             margin-bottom: 24px;
             .x-btn {
@@ -152,5 +157,8 @@
                 margin-left: 12px;
             }
         }
+    }
+    #reports_schedule {
+        margin-bottom: 0;
     }
 </style>

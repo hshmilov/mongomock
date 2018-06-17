@@ -415,7 +415,7 @@ class GuiService(PluginBase, Configurable):
                     'view': {
                         'page': 0,
                         'pageSize': limit,
-                        'fields': list(projection.values()),
+                        'fields': list(projection.keys()),
                         'coloumnSizes': [],
                         'query': {
                             'filter': view_filter,
@@ -1947,11 +1947,12 @@ class GuiService(PluginBase, Configurable):
         views_data = []
         for entity in EntityType:
             field_to_title = _get_field_titles(entity)
-            saved_views = self._views_db_map[entity].find(filter_archived())
+            saved_views = self._views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
             for i, view_doc in enumerate(saved_views):
                 view = view_doc.get('view')
                 if view:
                     field_list = view.get('fields', [])
+                    logger.info(field_list)
                     views_data.append({
                         'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                         'fields': [{field_to_title.get(field, field): field} for field in field_list],
