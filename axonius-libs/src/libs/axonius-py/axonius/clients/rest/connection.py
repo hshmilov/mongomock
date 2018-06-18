@@ -114,11 +114,18 @@ class RESTConnection(ABC):
 
     def _do_request(self, method, name, url_params={}, body_params=None,
                     force_full_url=False, do_basic_auth=False, use_json_in_response=True, use_json_in_body=True,
-                    do_digest_auth=False):
+                    do_digest_auth=False, return_response_raw=False):
         """ Serves a GET request to REST API
 
         :param str name: the name of the request
-        :param dict params: Additional parameters
+        :param dict url_params: GET additional parameters
+        :param dict body_params: POST additional parameters
+        :param bool force_full_url: Force using name as the full url name without prefix
+        :param bool do_basic_auth: Use username and password as the basic auth parameters
+        :param bool use_json_in_response: Use response.json() before returning results
+        :param bool use_json_in_body: Whether or not to use json or data param in post function
+        :param bool do_digest_auth: Use specific kind of auth called digest
+        :param bool return_response_raw: Whether to return the response body as is or not
         :return: the response
         :rtype: dict
         """
@@ -156,6 +163,8 @@ class RESTConnection(ABC):
                 return response.json()
             except JSONDecodeError as e:
                 raise RESTRequestException(f"Got json error: {str(e)}")
+        elif return_response_raw:
+            return response
         else:
             return response.content
 

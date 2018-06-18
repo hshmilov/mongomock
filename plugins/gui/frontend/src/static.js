@@ -11,6 +11,10 @@ export const pluginMeta = {
         title: 'VMWare Airwatch',
         description: 'VMWare AirWatch provides of enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },
+    fireeye_hx_adapter: {
+        title: 'FireEye Endpoint Security (HX)',
+        description: 'FireEye Endpoint Security (HX)  proactively inspects, analyzes, and contains known and unknown threats at any endpoint.'
+    },
     aws_adapter: {
         title: 'Amazon Elastic',
         description: 'Amazon Elastic Compute Cloud (EC2) provides scalable computing capacity in the Amazon Web Services (AWS) cloud.'
