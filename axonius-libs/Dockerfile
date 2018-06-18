@@ -25,6 +25,9 @@ COPY src/libs /home/axonius/libs
 COPY src/hacks /home/axonius/hacks
 RUN pip3 install -e /home/axonius/libs/axonius-py
 
+# Set Metadata
+COPY __build_metadata /home/axonius/__build_metadata
+
 # Notice that supervisord runs a couple of processes (look at supervisord.conf).
 # We need both uwsgi and nginx in the same docker environment, and we need them 'operational',
 # so supervisord takes care of re-running them in case they crashed, plus it directs stdout to /dev/stdout

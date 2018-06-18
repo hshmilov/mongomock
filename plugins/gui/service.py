@@ -19,7 +19,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, METADATA_PATH
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
@@ -267,6 +267,17 @@ class GuiService(PluginBase, Configurable):
         if current_exec_report_setting != {}:
             self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
         self._exec_report_scheduler.start()
+        self.metadata = self.load_metadata()
+
+    def load_metadata(self):
+        try:
+            if os.path.exists(METADATA_PATH):
+                with open(METADATA_PATH, 'r') as metadata_file:
+                    metadata_bytes = metadata_file.read()[:-1].replace('\\', '\\\\')
+                    return json.loads(metadata_bytes)
+        except Exception:
+            logger.exception("Bad __build_metadata file.")
+            return ''
 
     def add_default_views(self, entity_type: EntityType, default_views_ini_path):
         """
@@ -2077,6 +2088,14 @@ class GuiService(PluginBase, Configurable):
             else:
                 logger.info("Email cannot be sent because no email server is configured")
                 raise RuntimeWarning("No email server configured")
+
+    @add_rule_unauthenticated('metadata', methods=['GET'])
+    def get_metadata(self):
+        """
+        Gets the system metadata.
+        :return:
+        """
+        return jsonify(self.metadata)
 
     @property
     def plugin_subtype(self):

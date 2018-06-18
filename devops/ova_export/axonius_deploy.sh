@@ -12,7 +12,7 @@ git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/$fork/corte
 source venv/bin/activate
 chmod u+x ./testing/test_credentials/docker_login.sh
 ./testing/test_credentials/docker_login.sh
-python3 ./deployment/make.py --out axonius_$build_name.py --rebuild --pull --exclude traiana_lab_machines json_file qcore stresstest_scanner stresstest splunk_symantec infinite_sleep
+python3 ./deployment/make.py --version $build_name  --rebuild --pull --exclude traiana_lab_machines json_file qcore stresstest_scanner stresstest splunk_symantec infinite_sleep
 set +e
 docker kill $(docker ps -aq)
 docker rm $(docker ps -aq)
@@ -26,4 +26,3 @@ rm -rf axonius
 python3 ./axonius_$build_name.py --first-time --root-pass $sudo_pass
 cd cortex
 ./axonius.sh system up --restart --all --prod --exclude diagnostics
-history -w && history -c

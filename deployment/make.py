@@ -34,7 +34,7 @@ from pip._vendor.packaging import markers as pip_markers
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--out', type=str, default='axonius_install{version}.py')
+    parser.add_argument('-o', '--out', type=str, default='axonius_install_{version}.py')
     parser.add_argument('--version', type=str, default='')
     parser.add_argument('--override', action='store_true', default=False, help='Override output file if already exists')
     parser.add_argument('--pull', action='store_true', default=False, help='Pull base image before rebuild')
@@ -91,7 +91,7 @@ with AutoOutputFlush():
     # main_template = 'from IPython import embed\nembed()\n'  # helper template for debugging
     metadata = get_metadata()
     download_packages(winpip)
-    images_tar = get_images_tar(pull, rebuild, exclude, prod)
+    images_tar = get_images_tar(pull, rebuild, exclude, prod, metadata, version)
     try:
         with open(output_path, 'wb') as output_file:
             output_file.write(b'#!/usr/bin/env python3\n')
@@ -106,9 +106,9 @@ with AutoOutputFlush():
     print_state(f'Done, took {int(time.time() - start)} seconds - saved to {output_path}')
 
 
-def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True):
+def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True, metadata=None, version=''):
     images_tar = tempfile.mktemp(prefix='axonius_images_')
-    images = build_images(pull, rebuild, exclude, prod)
+    images = build_images(pull, rebuild, exclude, prod, version=version)
     print_state(f'Compiling {len(images)} images')
     print('  ' + '\n  '.join(images))
     print_state('  Saving images to temp file')
@@ -125,7 +125,7 @@ def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True):
         raise
 
 
-def build_images(pull=False, rebuild=False, exclude=None, prod=True):
+def build_images(pull=False, rebuild=False, exclude=None, prod=True, metadata=None, version=None):
     axonius_system = get_service()
     axonius_system.take_process_ownership()
     images = []
@@ -138,7 +138,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
         rebuild = True
     images.append(axonius_system.pull_base_image(pull, show_print=False))
     print_state(f'Building all images')
-    images.append(axonius_system.build_libs(rebuild, show_print=False))
+    images.append(axonius_system.build_libs(rebuild, show_print=False, metadata=metadata, version=version))
     services = [name for name, variable in axonius_system.get_all_plugins()]
     adapters = [name for name, variable in axonius_system.get_all_adapters()]
     if exclude:
@@ -153,23 +153,16 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True):
 
 
 def get_metadata():
-    template = """
-Build date:
-{date}
-Hash:
-{hash}
-Ref names:
-{names}
-Committer date and subject:
-{commiter}
-"""[1:]
+    template = """{"build_date":"{date}","hash":"{hash}","ref_name":{names},"commit_date":{commit_date},"commit_subject":{commit_subject}"""
     git_hash = subprocess.check_output('git log --oneline -1 --format=%H'.split(' '), cwd=CORTEX_PATH)
-    names = subprocess.check_output('git log --oneline -1 --format=%D'.split(' '), cwd=CORTEX_PATH)
-    commiter = subprocess.check_output('git log --oneline -1 --format=%ci%n%s'.split(' '), cwd=CORTEX_PATH)
+    names = subprocess.check_output('git log --oneline -1 --format=%D'.split(' '), cwd=CORTEX_PATH).split(',')[0]
+    commit_date = subprocess.check_output('git log --oneline -1 --format=%ci'.split(' '), cwd=CORTEX_PATH)
+    commit_subject = subprocess.check_output('git log --oneline -1 --format=%s'.split(' '), cwd=CORTEX_PATH)
     return template.format(date=datetime.datetime.now().ctime(),
                            hash=git_hash.decode('utf-8')[:-1],
                            names=names.decode('utf-8')[:-1],
-                           commiter=commiter.decode('utf-8')[:-1])
+                           commit_date=commit_date.decode('utf-8')[:-1],
+                           commit_subject=commit_subject.decode('utf-8')[:-1])
 
 
 def add_source_folder(zip_file, exclude=None):

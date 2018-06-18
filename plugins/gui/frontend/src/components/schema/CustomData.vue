@@ -1,5 +1,5 @@
 <template>
-    <div class="custom-data" :style="{gridTemplateColumns: gridCols}">
+    <div class="custom-data" :style="grid">
         <template v-if="isObject && isArray">
             <div v-for="item, i in data">
                 <div v-if="data.length > 1" class="index">{{ i + 1 }}.</div>
@@ -23,7 +23,7 @@
 	export default {
 		name: 'x-custom-data',
 		components: {xTypeWrap},
-        props: {data: {required: true}},
+        props: {data: {required: true}, vertical: {default: false}},
         computed: {
 			isObject() {
 				return this.data && typeof this.data === 'object'
@@ -31,17 +31,19 @@
             isArray() {
 				return this.data && Array.isArray(this.data)
             },
-            gridCols() {
+            grid() {
                 if (!this.data || !this.isObject || this.isArray) return 'none'
 
                 let foundObjChild = false
-                return Object.keys(this.data).filter((key) => {
+                let headers =  Object.keys(this.data).filter((key) => {
                 	if (!foundObjChild && typeof this.data[key] !== 'object') return true
                     foundObjChild = true
                     return false
 				}).map(() => {
                 	return '1fr'
                 }).join(' ')
+                if (this.vertical) return {gridTemplateRows: headers}
+                return {gridTemplateColumns: headers}
             }
         }
 	}

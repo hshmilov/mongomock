@@ -5,7 +5,7 @@ cd ..
 
 echo "Appending Metadata"
 (
-install/metadata.sh >> __build_metadata
+install/metadata.sh >> axonius-libs/__build_metadata
 )
 
 echo "Building all..."

@@ -75,6 +75,8 @@ def system_entry_point(args):
                         default=[])
     parser.add_argument('--expose-db', action='store_true', default=False,
                         help='Expose db port outside of this machine.')
+    parser.add_argument('--version-name', default='',
+                        help='Puts the version name in generated metadata.')
 
     try:
         args = parser.parse_args(args)
@@ -104,7 +106,7 @@ def system_entry_point(args):
         args.rebuild = True
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
-        axonius_system.build_libs(args.hard)
+        axonius_system.build_libs(args.hard, version=args.version_name)
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         axonius_system.create_network()
@@ -161,7 +163,7 @@ def service_entry_point(target, args):
     axonius_system = get_service()
     if args.build_libs:
         assert args.mode in ('up', 'build')
-        axonius_system.build_libs(True)
+        axonius_system.build_libs(True, version=args.version_name)
         args.hard = True
     if args.hard:
         assert args.mode in ('up', 'build')

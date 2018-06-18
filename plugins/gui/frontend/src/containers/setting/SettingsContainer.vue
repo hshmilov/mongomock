@@ -1,7 +1,12 @@
 <template>
     <x-page title="Settings" class="settings">
         <tabs ref="tabs" @click="determineState">
-            <tab title="Lifecycle Settings" id="research-settings-tab" selected="true">
+            <tab title="About" id="about-settings-tab" selected="true">
+                <div class="tab-settings">
+                    <x-custom-data :data="system_info" :vertical="true"/>
+                </div>
+            </tab>
+            <tab title="Lifecycle Settings" id="research-settings-tab">
                 <h3>Discovery Phase</h3>
                 <div class="grid grid-col-2">
                     <label for="research_time" class="label">Next Scheduled Time:</label>
@@ -43,6 +48,7 @@
 
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
+    import xCustomData from '../../components/schema/CustomData.vue'
     import xPage from '../../components/layout/Page.vue'
     import Tabs from '../../components/tabs/Tabs.vue'
     import Tab from '../../components/tabs/Tab.vue'
@@ -57,7 +63,7 @@
 
 	export default {
         name: 'settings-container',
-        components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast },
+        components: { xPage, Tabs, Tab, xDateEdit, xCheckbox, xSchemaForm, xToast, xCustomData },
         computed: {
             ...mapState({
                 nextResearchStart(state) {
@@ -93,6 +99,7 @@
                 coreComplete: true,
 				guiComplete: true,
                 message: '',
+                system_info: {}
             }
         },
         methods: {
@@ -181,6 +188,14 @@
                 pluginId: 'system_scheduler',
                 configName: 'SystemSchedulerService'
             })
+            this.fetchData({
+                rule: `metadata`
+            }).then((response) => {
+                if (response.status === 200) {
+                    this.system_info = response.data
+                }
+            })
+
             this.changeState({ name: 'research-settings-tab' })
         },
         mounted() {

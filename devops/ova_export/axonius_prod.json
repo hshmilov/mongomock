@@ -55,6 +55,13 @@
       "source": "/home/ubuntu/axonius_{{user `build_name`}}.py",
       "direction": "download",
       "destination": "./axonius_{{user `build_name`}}.py"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -f ./axonius_$build_name.py",
+        "history -w && history -c"
+        ]
     }
   ],
   "post-processors": [
