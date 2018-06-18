@@ -4,7 +4,7 @@ from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_hyper_v_credentials import *
 
 
-class TestAwsAdapter(AdapterTestBase):
+class TestHyperVAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
         return HyperVService()

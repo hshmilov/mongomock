@@ -28,9 +28,10 @@ from impacket.smbconnection import SMBConnection
 from multiprocessing.pool import ThreadPool
 from retrying import retry
 from contextlib import contextmanager
+from handlers.remotewua import RemoteWUAHandler
 
 
-MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
+MAX_NUM_OF_TRIES_OVERALL = 4    # Maximum number of tries for each query
 MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
@@ -106,7 +107,9 @@ class WmiSmbRunner(object):
         self.rpc_auth_level = rpc_auth_level
         self.namespace = namespace
         self.dcom = None
-        self.iWbemServices = None
+        self.rpc_creation_lock = threading.Lock()
+        self.__iWbemServices = None
+        self.__remotewua = None
 
         if aes_key is not None:
             self.use_kerberos = True
@@ -448,6 +451,19 @@ class WmiSmbRunner(object):
             if did_put_exe_file is True:
                 self.deletefile(exe_binary_path)
 
+    def exec_pm_online(self, is_remote):
+        """
+        A special function to deal with patch management on an online environment (computers which are internet
+        accessible). This is a sensitive function since it is opening RPC interfaces.
+        :return:
+        """
+        assert type(is_remote) == bool
+
+        if is_remote is True:
+            return self.remotewua.search_online("IsInstalled=0")
+        else:
+            raise ValueError, "Not Yet Implemetned!"
+
     # TODO: This will attempt even on legitimate errors like access denied. fix that
     @retry(stop_max_attempt_number=MAX_NUM_OF_TRIES_PER_CONNECT, wait_fixed=TIME_TO_REST_BETWEEN_CONNECT_RETRY)
     def connect(self):
@@ -456,21 +472,44 @@ class WmiSmbRunner(object):
         :return: True on successful connection, or exception otherwise.
         """
 
-        dcom = DCOMConnection(self.address, self.username, self.password, self.domain, self.lmhash, self.nthash,
-                              self.aes_key, oxidResolver=True, doKerberos=self.use_kerberos, kdcHost=self.dc_ip)
+        # The actual DCOM interface
+        self.dcom = DCOMConnection(self.address, self.username, self.password, self.domain, self.lmhash, self.nthash,
+                                   self.aes_key, oxidResolver=True, doKerberos=self.use_kerberos, kdcHost=self.dc_ip)
 
-        iInterface = dcom.CoCreateInstanceEx(wmi.CLSID_WbemLevel1Login, wmi.IID_IWbemLevel1Login)
-        iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
-        iWbemServices = iWbemLevel1Login.NTLMLogin(self.namespace, NULL, NULL)
-        if self.rpc_auth_level == 'privacy':
-            iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
-        elif self.rpc_auth_level == 'integrity':
-            iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_INTEGRITY)
+    @property
+    def iWbemServices(self):
+        """
+        Creates an RPC WMI Object
+        :return: an interface for querying wmi
+        """
+        with self.rpc_creation_lock:
+            if self.__iWbemServices is None:
+                iInterface = self.dcom.CoCreateInstanceEx(wmi.CLSID_WbemLevel1Login, wmi.IID_IWbemLevel1Login)
+                iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
+                iWbemServices = iWbemLevel1Login.NTLMLogin(self.namespace, NULL, NULL)
+                if self.rpc_auth_level == 'privacy':
+                    iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY)
+                elif self.rpc_auth_level == 'integrity':
+                    iWbemServices.get_dce_rpc().set_auth_level(RPC_C_AUTHN_LEVEL_PKT_INTEGRITY)
 
-        iWbemLevel1Login.RemRelease()
+                iWbemLevel1Login.RemRelease()
 
-        self.iWbemServices = iWbemServices
-        self.dcom = dcom
+                self.__iWbemServices = iWbemServices
+
+        return self.__iWbemServices
+
+    @property
+    def remotewua(self):
+        """
+        Creates an RPC WUA Object
+        :return: an internal for querying patch management queries
+        """
+
+        with self.rpc_creation_lock:
+            if self.__remotewua is None:
+                self.__remotewua = RemoteWUAHandler(self.dcom)
+
+        return self.__remotewua
 
     @contextmanager
     def get_smb_connection(self):
@@ -496,6 +535,10 @@ class WmiSmbRunner(object):
         try:
             if self.iWbemServices is not None:
                 self.iWbemServices.RemRelease()
+        except Exception:
+            pass
+
+        try:
             if self.dcom is not None:
                 self.dcom.disconnect()
         except Exception:
@@ -572,15 +615,39 @@ def run_command(w, command_type, command_args):
         elif command_type == "pm":
             result = w.execpm(*command_args)
 
+        elif command_type == "pmonline":
+            result = w.exec_pm_online(*command_args)
+
         else:
             raise ValueError("command type {0} does not exist".format(command_type))
 
         result = {"status": "ok", "data": result}
     except Exception:
         # Note that we put here value because soon we are going to get it in minimize_and_convert
+        # print "\n" + get_exception_string() + "\n" # Useful for debugging.
         result = {"status": "exception", "data": get_exception_string()}
 
     return result
+
+
+def number_of_different_rpc_objects(commands):
+    """
+    Returns the number of different RPC objects we need to create for this set of commands.
+    :param list commands: a list of commands that we get as params to the program
+    :return:
+    """
+    usages = {"wmi": 0, "wua": 0}
+
+    for command in commands:
+        command_type = command['type']
+
+        if command_type in ["query", "method", "shell", "execbinary"]:
+            usages["wmi"] = 1
+
+        elif command_type in ["pm", "pmonline"]:
+            usages["wua"] = 1
+
+    return sum(usages.values())
 
 
 if __name__ == '__main__':
@@ -589,6 +656,13 @@ if __name__ == '__main__':
     try:
         # Commands is a json formatted list of commands.
         commands = json.loads(commands)
+
+        # We currently do not support in creating more than 1 rpc object. This is due to impacket
+        # not implementing it, and also not being able to run thread safely.
+        # the only soltuion as i see it right now is to run commands not in parallel, and this is super slow.
+        # that is why if we want to run different types of rpc's we should run this binary a couple of times.
+        assert number_of_different_rpc_objects(commands) < 2
+
         final_result_array = [None for i in range(len(commands))]
         queries_left = [True for i in range(len(commands))]
 
