@@ -23,8 +23,7 @@ docker logout
 mv ./axonius_$build_name.py ../
 cd ../
 rm -rf axonius
-echo $sudo_pass | sudo -S python3 ./axonius_$build_name.py --first-time
-echo $sudo_pass | sudo -S chown -R ubuntu:ubuntu ./cortex
+python3 ./axonius_$build_name.py --first-time --root-pass $sudo_pass
 cd cortex
 ./axonius.sh system up --restart --all --prod --exclude diagnostics
 history -w && history -c

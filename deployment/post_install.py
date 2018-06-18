@@ -105,10 +105,10 @@ def load_views(axonius_system, mongo, views):
 
 
 def load_dashboard_panels(axonius_system, mongo, panels):
+    if not panels:
+        return
+    print_state('  Restoring dashboard panels')
     try:
-        if not panels:
-            return
-        print_state('  Restoring dashboard panels')
         collection = mongo[axonius_system.gui.unique_name]['dashboard']
         collection.remove({})
         if panels:
@@ -118,10 +118,10 @@ def load_dashboard_panels(axonius_system, mongo, panels):
 
 
 def load_alerts(axonius_system, mongo, alerts):
+    if not alerts:
+        return
+    print_state('  Restoring alerts')
     try:
-        if not alerts:
-            return
-        print_state('  Restoring alerts')
         collection = mongo[axonius_system.reports.unique_name]['reports']
         collection.remove({})
         if alerts:
@@ -136,8 +136,8 @@ def load_diagnostics(axonius_system, diag_env):
     since we are assuming the upgrade process can happen remotely (we assume someone is upgrading from the
     diagnostics container).
     """
+    print_state('  Restoring diagnostics env')
     try:
-        print_state('  Restoring diagnostics env')
         open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'w').write(diag_env)
         diagnostics = axonius_system.get_plugin('diagnostics')
         diagnostics.take_process_ownership()

@@ -28,6 +28,7 @@ STATE_OUTPUT_PATH = os.path.join(os.path.dirname(current_file_system_path), 'enc
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
+    parser.add_argument('--root-pass', type=str, help='Root admin password', required=False, default=None)
 
     try:
         args = parser.parse_args()
@@ -36,11 +37,11 @@ def main():
         sys.exit(1)
 
     start = time.time()
-    install(args.first_time)
+    install(args.first_time, args.root_pass)
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
-def install(just_install=False):
+def install(just_install=False, root_pass=None):
     assert zip_loader is not None
     key, old_services, old_adapters = None, None, None
     if not just_install:
@@ -55,7 +56,7 @@ def install(just_install=False):
     load_images()
     load_new_source()
     create_venv()
-    set_logrotate()
+    set_logrotate(root_pass)
     install_requirements()
     create_system(old_services, old_adapters)
     if key is not None:
@@ -164,9 +165,12 @@ def create_venv():
     subprocess.check_call(['python3', create_pth])
 
 
-def set_logrotate():
+def set_logrotate(root_pass):
     print_state('Setting logrotate on both docker logs and cortex logs')
-    subprocess.check_call(safe_run_bash([VENV_WRAPPER, os.path.join(DEPLOYMENT_FOLDER_PATH, 'set_logrotate.py')]))
+    args = safe_run_bash([VENV_WRAPPER, os.path.join(DEPLOYMENT_FOLDER_PATH, 'set_logrotate.py')])
+    if root_pass is not None:
+        args.extend(['--root-pass', root_pass])
+    subprocess.check_call(args)
 
 
 def install_requirements():
