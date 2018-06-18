@@ -113,11 +113,27 @@ class DeviceAdapterUser(SmartJsonClass):
     origin_unique_adapter_data_id = Field(str)
 
 
+class DeviceAdapterConnectedDevice(SmartJsonClass):
+    """ A definition for connected devices of this device"""
+
+    name = Field(str, "Device Name")
+    manufacturer = Field(str, "Device Manufacturer")
+    pnp_class = Field(str, "PNP Class")
+    device_id = Field(str, "Device ID")
+
+
 class DeviceAdapterSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
     security_patch_id = Field(str, "Security Patch Name")
     installed_on = Field(datetime.datetime)
+
+
+class DeviceAdapterLocalAdmin(SmartJsonClass):
+    """A definition for local admins list"""
+
+    admin_name = Field(str, "Name of user or group")
+    admin_type = Field(str, "Admin Type", enum=['Group Membership', 'Admin User'])
 
 
 class DeviceAdapterInstalledSoftware(SmartJsonClass):
@@ -140,10 +156,12 @@ class DeviceAdapter(SmartJsonClass):
     last_used_users = ListField(str, "Last Used User")
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
     security_patches = ListField(DeviceAdapterSecurityPatch, "Security Patch")
+    connected_devices = ListField(DeviceAdapterConnectedDevice, "Connected Devices")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
     users = ListField(DeviceAdapterUser, "Users")
+    local_admins = ListField(DeviceAdapterLocalAdmin, "Local Admins")
     pretty_id = Field(str, 'Axonius Name')
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
@@ -271,6 +289,9 @@ class DeviceAdapter(SmartJsonClass):
     def add_battery(self, **kwargs):
         self.batteries.append(DeviceAdapterBattery(**kwargs))
 
+    def add_local_admin(self, **kwargs):
+        self.local_admins.append(DeviceAdapterLocalAdmin(**kwargs))
+
     def add_hd(self, **kwargs):
         self.hard_drives.append(DeviceAdapterHD(**kwargs))
 
@@ -282,6 +303,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_security_patch(self, **kwargs):
         self.security_patches.append(DeviceAdapterSecurityPatch(**kwargs))
+
+    def add_connected_device(self, **kwargs):
+        self.connected_devices.append(DeviceAdapterConnectedDevice(**kwargs))
 
     def add_installed_software(self, **kwargs):
         self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))

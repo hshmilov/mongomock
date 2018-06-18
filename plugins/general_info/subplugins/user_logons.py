@@ -60,7 +60,8 @@ class GetUserLogons(GeneralInfoSubplugin):
         return wmi_query_commands(
             [
                 "select SID,LastUseTime from Win32_UserProfile",
-                "select SID,Caption, LocalAccount from Win32_UserAccount"
+                "select SID,Caption, LocalAccount from Win32_UserAccount",
+                "select GroupComponent, PartComponent from Win32_GroupUser"
             ])
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
@@ -71,6 +72,29 @@ class GetUserLogons(GeneralInfoSubplugin):
 
         user_profiles_data = result[0]["data"]
         user_accounts_data = result[1]["data"]
+        users_groups_data = result[2]["data"]
+
+        try:
+            for users_groups_data_raw in users_groups_data:
+                try:
+                    if ',Name="Administrators"' in users_groups_data_raw["GroupComponent"]:
+                        domain_raw, username_raw = users_groups_data_raw["PartComponent"].split(',')
+                        username_raw_name = username_raw.split('=')[1].strip('"')
+                        domain_raw_type, domain_raw_name = domain_raw.split('=')
+                        domain_raw_name = domain_raw_name.strip('"')
+                        if 'UserAccount' in domain_raw_type:
+                            domain_type = 'Admin User'
+                        elif 'Group' in domain_raw_type:
+                            domain_type = 'Group Membership'
+                        else:
+                            continue
+                        username_full = f"{username_raw_name}@{domain_raw_name}"
+                        adapterdata_device.add_local_admin(admin_name=username_full, admin_type=domain_type)
+
+                except Exception:
+                    self.logger.exception(f"Problem with {users_groups_data_raw}")
+        except Exception:
+            self.logger.exception(f"Pronblem handling users groups data {str(users_groups_data)}")
 
         # Lets build the sids_to_users table. We get the base sids_to_users from the users db first.
         sids_to_users = self.get_sid_to_users_db()
@@ -89,7 +113,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                 if sid in sids_to_users:
                     # If it exists it means we have seen it in the user db. Just change the is local account
                     # which should be false but might be on weird circumstances true? (deleting user etc?)
-                    sids_to_users[1] = bool(is_local_account)
+                    sids_to_users[sid] = sids_to_users[sid][0], bool(is_local_account)
                 else:
                     sids_to_users[sid] = f"{local_username}@{local_hostname}", bool(is_local_account)
 
