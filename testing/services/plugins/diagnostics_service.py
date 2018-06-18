@@ -3,7 +3,6 @@ import subprocess
 from services.docker_service import DockerService
 from pathlib import Path
 import json
-import hashlib
 
 
 class DiagnosticsService(DockerService):
@@ -12,26 +11,13 @@ class DiagnosticsService(DockerService):
 
     def __init__(self):
         name = 'diagnostics'
-        self.diag_env_file = None
         super().__init__(name, f'../devops/{name}')
 
-    def start(self, **kwargs):
+    def start(self, *args, **kwargs):
         self.diag_env_file = Path(self.cortex_root_dir) / 'diag_env.json'
         if not self.diag_env_file.is_file():
             raise RuntimeError("env file is missing")
-
-        diag_bytes = self.diag_env_file.read_bytes()
-        new_hash = hashlib.sha1(diag_bytes).digest()
-
-        hash_file = Path(self.service_dir) / "env_hash.bin"
-        if hash_file.is_file():
-            if hash_file.read_bytes() != new_hash:
-                print('Diag env changed, forcing restart.')
-                kwargs['allow_restart'] = True
-
-        hash_file.open('wb').write(new_hash)
-
-        super().start(**kwargs)
+        super().start(*args, **kwargs)
 
     def get_dockerfile(self, mode=''):
         return ''

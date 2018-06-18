@@ -128,8 +128,7 @@ else:
             if allow_restart:
                 self.remove_container()
             else:
-                print(f'Container {self.container_name} already exist - remove it and run again (or pass --restart)')
-                return
+                print(f'Container {self.container_name} already created - consider removing it and running again')
         if self.get_image_exists():
             if rebuild:
                 self.build(mode)

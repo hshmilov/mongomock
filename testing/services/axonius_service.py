@@ -193,7 +193,7 @@ class AxoniusService(object):
                 elif self.get_plugin_short_name(plugin) in exclude_restart:
                     print(f'Ignoring - {self.get_plugin_short_name(plugin)}')
                     continue
-            plugin.start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
+            plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
         timeout = 60
         start = time.time()
         first = True

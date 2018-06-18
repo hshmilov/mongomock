@@ -305,7 +305,6 @@ deployment/axonius_install*.py
 deployment/packages/
 deployment/state.json
 env_autogen.sh
-env_hash.bin
 deploy_artifacts/*
 
 # Vim 
