@@ -833,7 +833,7 @@ class PluginBase(Configurable, Feature):
         """
         if action_type in ('execute_wmi_smb', 'execute_shell', 'execute_binary') and not self._execution_enabled:
             logger.critical("Plugins decided to execute even though execution is disabled")
-            return None
+            raise ValueError("Execution Is Disabled")
         data = {}
         if data_for_action:
             data = data_for_action.copy()

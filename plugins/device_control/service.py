@@ -35,6 +35,8 @@ class DeviceControlService(PluginBase, Triggerable):
         Calls run_action_internal.
         :return:
         """
+        if not self._execution_enabled:
+            raise ValueError("Execution is disabled")
         return self.run_action_internal()
 
     def run_action_internal(self):
@@ -217,8 +219,10 @@ class DeviceControlService(PluginBase, Triggerable):
                     f"device {device.internal_axon_id}. retrying in {SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS}. "
                     f"exc is {str(exc)}")
         try:
-            if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST:
-                logger.error(f"Reached maximum tries ({attempt_number}) with action {action_name}")
+            # Do not retry if the device is blacklisted
+            if attempt_number >= MAX_TRIES_FOR_EXECUTION_REQUEST or "[BLACKLIST]" in str(exc):
+                logger.error(f"Failed ({attempt_number}) with action {action_name}: "
+                             f"attempts: {attempt_number}, exc: {exc}")
                 device.add_data(f"Action '{action_name}' Last Error", str(exc))
                 device.add_label(f"Action '{action_name}' Failure")
                 device.add_label(f"Action '{action_name}' In Progress", False)
