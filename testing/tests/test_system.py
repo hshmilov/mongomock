@@ -8,25 +8,6 @@ from services.adapters.infinite_sleep_service import InfiniteSleepService, infin
 from test_credentials import test_infinite_sleep_credentials
 
 
-def test_stop_research(axonius_fixture, infinite_sleep_fixture):
-    @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
-    def _wait_for_state(scheduler, cond):
-        state = scheduler.current_state().json()
-        return (state[StateLevels.Phase.name] == Phases.Stable.name) == cond
-    scheduler = axonius_fixture.scheduler
-    core = axonius_fixture.core
-    aggregator = axonius_fixture.aggregator
-    assert scheduler.is_up()
-    assert aggregator.is_up()
-    assert infinite_sleep_fixture.is_up()
-    infinite_sleep_fixture.add_client(test_infinite_sleep_credentials.client_details)
-    assert len(infinite_sleep_fixture.clients()) > 0
-    scheduler.start_research()
-    _wait_for_state(scheduler, False)
-    scheduler.stop_research()
-    _wait_for_state(scheduler, True)
-
-
 def test_aggregator_in_configs(axonius_fixture):
     aggregator = axonius_fixture.aggregator
     assert aggregator.version().status_code == 200
@@ -69,3 +50,23 @@ def test_system_is_up(axonius_fixture):
     assert axonius_fixture.db.is_up()
     assert axonius_fixture.core.is_up()
     assert axonius_fixture.aggregator.is_up()
+
+
+def test_stop_research(axonius_fixture, infinite_sleep_fixture):
+    @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)
+    def _wait_for_state(scheduler, cond):
+        state = scheduler.current_state().json()
+        return (state[StateLevels.Phase.name] == Phases.Stable.name) == cond
+
+    scheduler = axonius_fixture.scheduler
+    core = axonius_fixture.core
+    aggregator = axonius_fixture.aggregator
+    assert scheduler.is_up()
+    assert aggregator.is_up()
+    assert infinite_sleep_fixture.is_up()
+    infinite_sleep_fixture.add_client(test_infinite_sleep_credentials.client_details)
+    assert len(infinite_sleep_fixture.clients()) > 0
+    scheduler.start_research()
+    _wait_for_state(scheduler, False)
+    scheduler.stop_research()
+    _wait_for_state(scheduler, True)
