@@ -5,10 +5,9 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-from service_now_adapter.consts import *
-from service_now_adapter.connection import ServiceNowConnection
+from axonius.clients.service_now.consts import *
+from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.rest.exception import RESTException
-from axonius.utils.parsing import parse_date
 from axonius.plugin_base import add_rule, return_error
 
 
@@ -27,10 +26,8 @@ class ServiceNowAdapter(AdapterBase):
         try:
             connection = ServiceNowConnection(
                 domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
-                url_base_prefix="api/now/", number_of_offsets=int(self.config["DEFAULT"]["number_of_offsets"]),
-                offset_size=int(self.config["DEFAULT"]["offset_size"]), username=client_config["username"],
-                password=client_config["password"], https_proxy=client_config.get("https_proxy"),
-                headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
+                username=client_config["username"],
+                password=client_config["password"], https_proxy=client_config.get("https_proxy"))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -111,6 +108,23 @@ class ServiceNowAdapter(AdapterBase):
             # TODO: Change that to use a get_session (a copy of the connection)
             with self._clients[client_id]:
                 success = success or self._clients[client_id].create_service_now_incident(service_now_dict)
+                if success is True:
+                    return '', 200
+        return 'Failure', 400
+
+    @add_rule('create_computer', methods=["POST"])
+    def create_service_now_computer(self):
+        if self.get_method() != 'POST':
+            return return_error("Medhod not supported", 405)
+        service_now_dict = self.get_request_data_as_object()
+        success = False
+        for client_id in self._clients:
+            # Note that we are assuming this connection is not open since this function will run in a post correlator
+            # stage. If this function will be called while in a cycle, the cycle will stop (socket will be closed..)
+            # TODO: Change that to use a get_session (a copy of the connection)
+            with self._clients[client_id]:
+                success = success or self._clients[client_id].\
+                    create_service_now_computer(service_now_dict)
                 if success is True:
                     return '', 200
         return 'Failure', 400

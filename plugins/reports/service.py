@@ -278,6 +278,48 @@ class ReportsService(PluginBase, Triggerable):
             {'type': 'server'}) or {}
         return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?view={view_name}"
 
+    def _handle_action_create_service_now_computer(self, report_data, triggered, trigger_data, current_num_of_devices,
+                                                   action_data=None):
+        entity_db = "devices_db_view"
+        entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
+        current_result = self.get_view_results(report_data['view'], report_data['view_entity'])
+        if current_result is None:
+            logger.info("Skipping reports trigger because there were no current results.")
+            return
+
+        for entry in current_result:
+            name_raw = None
+            asset_name_raw = None
+            mac_address_raw = None
+            ip_address_raw = None
+            manufacturer_raw = None
+            serial_number_raw = None
+            os_raw = None
+            if 'service_now_adapter' in entry['adapters']:
+                # It is already ServiceNow adapter
+                continue
+            for data_from_adapter in entry['specific_data']['data']:
+                name_raw = data_from_adapter.get('hostname')
+                asset_name_raw = data_from_adapter.get('name')
+                os_raw = data_from_adapter.get('os', {}).get('type')
+                mac_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('mac')
+                ip_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('ips', [None])[0]
+                serial_number_raw = data_from_adapter.get('device_serial')
+                manufacturer_raw = data_from_adapter.get('device_manufacturer')
+            # Make sure that we have name
+            if name_raw is None:
+                if asset_name_raw is None:
+                    continue
+                else:
+                    # If we don't have hostname we use asset name
+                    name_raw = asset_name_raw
+            self.create_service_now_computer(name=name_raw,
+                                             mac_address=mac_address_raw,
+                                             ip_address=ip_address_raw,
+                                             manufacturer=manufacturer_raw,
+                                             os=os_raw,
+                                             serial_number=serial_number_raw)
+
     def _handle_action_create_service_now_incident(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
         """ Create an incident in our ServiceNow acount

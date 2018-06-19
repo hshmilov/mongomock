@@ -64,7 +64,8 @@
                     <div class="content">
                         <x-checkbox label="Push a system notification" id="alert_notification"
                                     v-model="actions.notification" @change="tour('alertSave')" /><div />
-                        <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenow"/>
+                        <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenowIncident"/>
+                        <x-checkbox class="grid-span2" label="Create ServiceNow Computer" v-model="actions.servicenowComputer"/>
                         <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog"
                                     @change="checkSyslogSettings"/>
                         <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
@@ -162,7 +163,7 @@
                 alert: {triggers: {}, actions: []},
                 currentQuery: null,
                 actions: {
-                    notification: false, mail: false, tag: false, syslog: false, servicenow: false
+                	notification: false, mail: false, tag: false, syslog: false, servicenowIncident: false, servicenowComputer: false
                 },
                 mailList: [],
                 tagName: '',
@@ -203,12 +204,15 @@
                             this.actions.syslog = true
                             break
                         case 'create_service_now_incident':
-                            this.actions.servicenow = true
-                    }
-                })
-                this.alert = {
-                    ...alert,
-                    triggers: {...alert.triggers},
+                            this.actions.servicenowIncident = true
+                            break
+                        case 'create_service_now_computer':
+                            this.actions.servicenowComputer = true
+                            break
+					}
+				})
+				this.alert = { ...alert,
+                    triggers: { ...alert.triggers },
                     actions: []
                 }
             },
@@ -236,13 +240,18 @@
                         type: 'notify_syslog'
                     })
                 }
-                if (this.actions.servicenow) {
+                if (this.actions.servicenowIncident) {
                     this.alert.actions.push({
                         type: 'create_service_now_incident'
                     })
                 }
-                this.alert.view = this.currentQuery
-                this.alert.viewEntity = this.selectedOption.entity
+                if (this.actions.servicenowComputer) {
+                    this.alert.actions.push({
+                        type: 'create_service_now_computer'
+                    })
+                }
+                this.alert.query = this.currentQuery.name
+                this.alert.queryEntity = this.currentQuery.entity
                 /* Save and return to alerts page */
                 this.updateAlert(this.alert)
                 this.returnToAlerts()

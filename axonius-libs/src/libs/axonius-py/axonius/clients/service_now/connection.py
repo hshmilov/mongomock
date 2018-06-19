@@ -1,19 +1,22 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
-from service_now_adapter.consts import *
+from axonius.clients.service_now.consts import *
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.consts import report_consts
+from axonius.clients.service_now import consts
 
 
 class ServiceNowConnection(RESTConnection):
-    def __init__(self, number_of_offsets, offset_size, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """ Initializes a connection to ServiceNow using its rest API
 
         """
+        self.__number_of_offsets = consts.NUMBER_OF_OFFSETS
+        self.__offset_size = consts.OFFSET_SIZE
+        self._headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+        self._url_base_prefix = "api/now/"
         super().__init__(*args, **kwargs)
-        self.__number_of_offsets = number_of_offsets
-        self.__offset_size = offset_size
 
     def _connect(self):
         if self._username is not None and self._password is not None:
@@ -53,6 +56,14 @@ class ServiceNowConnection(RESTConnection):
         try:
             self.__add_dict_to_table('incident', {'impact': impact, 'urgency': impact,
                                                   'short_description': short_description, 'description': description})
+            return True
+        except Exception:
+            return False
+
+    def create_service_now_computer(self, connection_dict):
+
+        try:
+            self.__add_dict_to_table('cmdb_ci_computer', connection_dict)
             return True
         except Exception:
             return False

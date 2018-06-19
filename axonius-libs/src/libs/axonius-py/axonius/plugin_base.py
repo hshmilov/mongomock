@@ -58,6 +58,7 @@ from axonius.logging.logger import create_logger
 from axonius.mixins.feature import Feature
 from axonius.thread_stopper import StopThreadException, ThreadStopper, stoppable
 from axonius.utils.debug import is_debug_attached
+from axonius.clients.service_now.connection import ServiceNowConnection
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -1311,7 +1312,53 @@ class PluginBase(Configurable, Feature):
 
     def create_service_now_incident(self, short_description, description, impact):
         service_now_dict = {'short_description': short_description, 'description': description, 'impact': impact}
-        self.request_remote_plugin('create_incident', 'service_now_adapter', 'post', json=service_now_dict)
+        service_now_settings = self._service_now_settings
+        if service_now_settings['enabled'] is True:
+            try:
+                if service_now_settings['use_adapter'] is True:
+                    self.request_remote_plugin('create_incident', 'service_now_adapter', 'post', json=service_now_dict)
+                else:
+                    service_now_connection = ServiceNowConnection(domain=service_now_settings['domain'],
+                                                                  verify_ssl=service_now_settings.get("verify_ssl"),
+                                                                  username=service_now_settings.get("username"),
+                                                                  password=service_now_settings.get("password"),
+                                                                  https_proxy=service_now_settings.get("https_proxy"))
+                    with service_now_connection:
+                        service_now_connection.create_service_now_incident(service_now_dict)
+            except Exception:
+                logger.exception(f"Got exception creating ServiceNow incident wiht {service_now_dict}")
+
+    def create_service_now_computer(self, name, mac_address=None, ip_address=None,
+                                    manufacturer=None, os=None, serial_number=None):
+        connection_dict = dict()
+        if name is None or name == "":
+            return
+        connection_dict["name"] = name
+        if mac_address is not None and mac_address != "":
+            connection_dict["mac_address"] = mac_address
+        if ip_address is not None and ip_address != "":
+            connection_dict["ip_address"] = ip_address
+        if manufacturer is not None and manufacturer != "":
+            connection_dict["manufacturer"] = manufacturer
+        if serial_number is not None and serial_number != "":
+            connection_dict["serial_number"] = serial_number
+        if os is not None and os != "":
+            connection_dict["os"] = os
+        serive_now_settings = self._service_now_settings
+        if serive_now_settings['enabled'] is True:
+            if serive_now_settings['use_adapter'] is True:
+                self.request_remote_plugin('create_incident', 'service_now_adapter', 'post', json=connection_dict)
+            else:
+                try:
+                    service_now_connection = ServiceNowConnection(domain=serive_now_settings['domain'],
+                                                                  verify_ssl=serive_now_settings.get("verify_ssl"),
+                                                                  username=serive_now_settings.get("username"),
+                                                                  password=serive_now_settings.get("password"),
+                                                                  https_proxy=serive_now_settings.get("https_proxy"))
+                    with service_now_connection:
+                        service_now_connection.create_service_now_computer(connection_dict)
+                except Exception:
+                    logger.exception(f"Got exception creating ServiceNow computer with {name}")
 
     def send_syslog_message(self, message, log_level):
         syslog_settings = self._syslog_settings
@@ -1350,6 +1397,7 @@ class PluginBase(Configurable, Feature):
         self._email_settings = config['email_settings']
         self._execution_enabled = config['execution_settings']['enabled']
         self._syslog_settings = config['syslog_settings']
+        self._service_now_settings = config['service_now_settings']
 
     @staticmethod
     def global_settings_schema():
@@ -1378,6 +1426,52 @@ class PluginBase(Configurable, Feature):
                     "title": "Syslog Settings",
                     "type": "array",
                     "required": ["syslogHost"]
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
+                            "title": "Use ServiceNow",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "use_adapter",
+                            "title": "Use ServiceNow Adapter",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "domain",
+                            "title": "ServiceNow Domain",
+                            "type": "string"
+                        },
+                        {
+                            "name": "username",
+                            "title": "User Name",
+                            "type": "string"
+                        },
+                        {
+                            "name": "password",
+                            "title": "Password",
+                            "type": "string",
+                            "format": "password"
+                        },
+                        {
+                            "name": "verify_ssl",
+                            "title": "Verify SSL",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "https_proxy",
+                            "title": "HTTPS Proxy",
+                            "type": "string"
+                        }
+                    ],
+                    "required": [
+                        "enabled"
+                    ],
+                    "type": "array",
+                    "name": "service_now_settings",
+                    "title": "ServiceNow Settings",
                 },
                 {
                     "items": [
@@ -1444,6 +1538,15 @@ class PluginBase(Configurable, Feature):
     @staticmethod
     def global_settings_defaults():
         return {
+            "service_now_settings": {
+                "enabled": False,
+                "use_adapter": False,
+                "domain": None,
+                "username": None,
+                "password": None,
+                "https_proxy": None,
+                "verify_ssl": True
+            },
             "email_settings": {
                 "enabled": False,
                 "smtpHost": None,
