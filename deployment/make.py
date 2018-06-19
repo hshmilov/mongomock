@@ -153,9 +153,9 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, metadata=No
 
 
 def get_metadata():
-    template = """{"build_date":"{date}","hash":"{hash}","ref_name":{names},"commit_date":{commit_date},"commit_subject":{commit_subject}"""
+    template = "{{\"build_date\": \"{date}\", \"hash\": \"{hash}\", \"ref_name\": \"{names}\", \"commit_date\": \"{commit_date}\", \"commit_subject\": \"{commit_subject}\"}}"
     git_hash = subprocess.check_output('git log --oneline -1 --format=%H'.split(' '), cwd=CORTEX_PATH)
-    names = subprocess.check_output('git log --oneline -1 --format=%D'.split(' '), cwd=CORTEX_PATH).split(',')[0]
+    names = subprocess.check_output('git log --oneline -1 --format=%D'.split(' '), cwd=CORTEX_PATH)
     commit_date = subprocess.check_output('git log --oneline -1 --format=%ci'.split(' '), cwd=CORTEX_PATH)
     commit_subject = subprocess.check_output('git log --oneline -1 --format=%s'.split(' '), cwd=CORTEX_PATH)
     return template.format(date=datetime.datetime.now().ctime(),
