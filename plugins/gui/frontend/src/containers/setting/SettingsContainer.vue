@@ -1,12 +1,7 @@
 <template>
     <x-page title="Settings" class="settings">
         <tabs ref="tabs" @click="determineState">
-            <tab title="About" id="about-settings-tab" selected="true">
-                <div class="tab-settings">
-                    <x-custom-data :data="system_info" :vertical="true"/>
-                </div>
-            </tab>
-            <tab title="Lifecycle Settings" id="research-settings-tab">
+            <tab title="Lifecycle Settings" id="research-settings-tab" :selected="true">
                 <h3>Discovery Phase</h3>
                 <div class="grid grid-col-2">
                     <label for="research_time" class="label">Next Scheduled Time:</label>
@@ -23,22 +18,31 @@
                     <template v-else>Loading</template>
                 </div>
             </tab>
-            <tab title="Global Settings" id="global-settings-tab" v-if="configurable.core">
+            <tab title="Global Settings" id="global-settings-tab">
                 <div class="tab-settings">
-                    <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateCoreValidity"
-                                   v-model="configurable.core.CoreService.config" api-upload="adapters/core"/>
-                    <div class="place-right">
-                        <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveGlobalSettings">Save</button>
-                    </div>
+                    <template v-if="configurable.core">
+                        <x-schema-form :schema="configurable.core.CoreService.schema" @validate="updateCoreValidity"
+                                       v-model="configurable.core.CoreService.config" api-upload="adapters/core"/>
+                        <div class="place-right">
+                            <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveGlobalSettings">Save</button>
+                        </div>
+                    </template>
                 </div>
             </tab>
-            <tab title="GUI Settings" id="gui-settings-tab" v-if="configurable.gui">
+            <tab title="GUI Settings" id="gui-settings-tab">
                 <div class="tab-settings">
-                    <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
-                                   v-model="configurable.gui.GuiService.config" api-upload="adapters/core"/>
-                    <div class="place-right">
-                        <button class="x-btn" :class="{disabled: !guiComplete}" @click="saveGuiSettings">Save</button>
-                    </div>
+                    <template v-if="configurable.gui">
+                        <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
+                                       v-model="configurable.gui.GuiService.config" api-upload="adapters/core"/>
+                        <div class="place-right">
+                            <button class="x-btn" :class="{disabled: !guiComplete}" @click="saveGuiSettings">Save</button>
+                        </div>
+                    </template>
+                </div>
+            </tab>
+            <tab title="About" id="about-settings-tab">
+                <div class="tab-settings">
+                    <x-custom-data :data="system_info" :vertical="true"/>
                 </div>
             </tab>
         </tabs>

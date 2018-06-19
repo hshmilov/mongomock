@@ -50,6 +50,7 @@ def get_basic_wmi_smb_command(address=ADDRESS):
     return ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, domain, username, PASSWORD, address, '//./root/cimv2']
 
 
+@pytest.mark.skip("Too slow")
 def test_pm_online_rpc():
     commands = [
         {"type": "pmonline", "args": [True]}    # True for is_remote (meaning, we check RPC connection)
