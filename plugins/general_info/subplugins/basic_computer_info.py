@@ -43,21 +43,22 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
         # Put Results
-        win32_processor = result[0]["data"]
-        win32_bios = result[1]["data"]
-        win32_operatingsystem = result[2]["data"]
-        win32_logicaldisk = result[3]["data"]
-        win32_quickfixengineering = result[4]["data"]
-        win32_computersystem = result[5]["data"]
-        win32_battery = result[6]["data"]
-        win32_timezone = result[7]["data"]
-        win32_baseboard = result[8]["data"]
-        win32_networkadapterconfiguration = result[9]["data"]
+        win32_processor = result[0]
+        win32_bios = result[1]
+        win32_operatingsystem = result[2]
+        win32_logicaldisk = result[3]
+        win32_quickfixengineering = result[4]
+        win32_computersystem = result[5]
+        win32_battery = result[6]
+        win32_timezone = result[7]
+        win32_baseboard = result[8]
+        win32_networkadapterconfiguration = result[9]
         bad_configuration_lsa = result[10]
 
         # Win32_Processor
         try:
-            for cpu in win32_processor:
+            assert is_wmi_answer_ok(win32_processor), "WMI Answer has an exception"
+            for cpu in win32_processor["data"]:
                 architecture = cpu.get('Architecture')
                 if architecture is not None:
                     architecture = {0: "x86", 1: "MIPS", 2: "Alpha", 3: "PowerPC",
@@ -80,7 +81,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         try:
             # Bios
-            win32_bios = win32_bios[0]
+            assert is_wmi_answer_ok(win32_bios), "WMI Answer has an exception"
+            win32_bios = win32_bios["data"][0]
             adapterdata_device.bios_version = win32_bios.get('SMBIOSBIOSVersion')
             adapterdata_device.bios_serial = win32_bios.get('SerialNumber')
         except Exception:
@@ -88,7 +90,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         try:
             # Device
-            win32_computersystem = win32_computersystem[0]
+            assert is_wmi_answer_ok(win32_computersystem), "WMI Answer has an exception"
+            win32_computersystem = win32_computersystem["data"][0]
             adapterdata_device.device_model_family = win32_computersystem.get("SystemFamily")
             adapterdata_device.device_model = win32_computersystem.get("Model")
             adapterdata_device.device_manufacturer = win32_computersystem.get("Manufacturer")
@@ -121,8 +124,9 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         # We don't always have baseboards, for some reason. so lets try.
         try:
-            if len(win32_baseboard) > 0:
-                sn = win32_baseboard[0].get("SerialNumber")
+            assert is_wmi_answer_ok(win32_baseboard), "WMI Answer has an exception"
+            if len(win32_baseboard["data"]) > 0:
+                sn = win32_baseboard["data"][0].get("SerialNumber")
                 if sn is not None and sn != "None":
                     # Yep, it happens. Sometimes wmi returns "None" as a string.
                     adapterdata_device.device_serial = sn
@@ -131,7 +135,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         # Win32_OperatingSystem
         try:
-            win32_operatingsystem = win32_operatingsystem[0]
+            assert is_wmi_answer_ok(win32_operatingsystem), "WMI Answer has an exception"
+            win32_operatingsystem = win32_operatingsystem["data"][0]
             os_caption = win32_operatingsystem.get("Caption")
             if os_caption is not None:
                 adapterdata_device.figure_os(os_caption)
@@ -192,7 +197,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         # Win32_LogicalDisk
         try:
-            for ld in win32_logicaldisk:
+            assert is_wmi_answer_ok(win32_logicaldisk), "WMI Answer has an exception"
+            for ld in win32_logicaldisk["data"]:
                 total_size = ld.get("Size")
                 if total_size is not None:
                     total_size = float(total_size / (1024 ** 3))
@@ -212,7 +218,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             self.logger.exception(f"Win32_LogicalDisk {win32_logicaldisk}")
 
         try:
-            for qfe in win32_quickfixengineering:
+            assert is_wmi_answer_ok(win32_quickfixengineering), "WMI Answer has an exception"
+            for qfe in win32_quickfixengineering["data"]:
                 installed_on = qfe.get("InstalledOn")
 
                 if installed_on is not None and installed_on != "0":
@@ -230,7 +237,8 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             self.logger.exception(f"Win32_QuickFixEngineering {win32_quickfixengineering}")
 
         try:
-            for battery in win32_battery:
+            assert is_wmi_answer_ok(win32_battery), "WMI Answer has an exception"
+            for battery in win32_battery["data"]:
                 battery_status = battery.get("BatteryStatus")
                 if battery_status is not None:
                     battery_status = {
@@ -258,14 +266,16 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             self.logger.exception(f"Win32_Battery {win32_battery}")
 
         try:
-            win32_timezone = win32_timezone[0]
+            assert is_wmi_answer_ok(win32_timezone), "WMI Answer has an exception"
+            win32_timezone = win32_timezone["data"][0]
             adapterdata_device.time_zone = win32_timezone.get("Caption")
         except Exception:
             self.logger.exception(f"Win32_TimeZone {win32_timezone}")
 
         # Add network interfaces
         try:
-            for nic in win32_networkadapterconfiguration:
+            assert is_wmi_answer_ok(win32_networkadapterconfiguration), "WMI Answer has an exception"
+            for nic in win32_networkadapterconfiguration["data"]:
                 ip_enabled = nic.get("IPEnabled")
                 if ip_enabled is not None and bool(ip_enabled) is True:
                     adapterdata_device.add_nic(
@@ -278,7 +288,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         # Bad Configurations Config
 
         try:
-            assert is_wmi_answer_ok(bad_configuration_lsa)
+            assert is_wmi_answer_ok(bad_configuration_lsa), "WMI Answer has an exception"
             data = reg_view_output_to_dict(bad_configuration_lsa["data"])
 
             adapterdata_device.ad_bad_config_no_lm_hash = reg_view_parse_int(data.get("nolmhash"))

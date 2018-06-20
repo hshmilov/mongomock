@@ -113,13 +113,13 @@ class DeviceAdapterUser(SmartJsonClass):
     origin_unique_adapter_data_id = Field(str)
 
 
-class DeviceAdapterConnectedDevice(SmartJsonClass):
+class DeviceAdapterConnectedHardware(SmartJsonClass):
     """ A definition for connected devices of this device"""
 
-    name = Field(str, "Device Name")
-    manufacturer = Field(str, "Device Manufacturer")
+    name = Field(str, "Name")
+    manufacturer = Field(str, "Manufacturer")
     pnp_class = Field(str, "PNP Class")
-    device_id = Field(str, "Device ID")
+    hw_id = Field(str, "ID")
 
 
 class DeviceAdapterSecurityPatch(SmartJsonClass):
@@ -168,7 +168,7 @@ class DeviceAdapter(SmartJsonClass):
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
     security_patches = ListField(DeviceAdapterSecurityPatch, "Installed Security Patches")
     available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "Available Security Patches")
-    connected_devices = ListField(DeviceAdapterConnectedDevice, "Connected Devices")
+    connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
@@ -319,8 +319,8 @@ class DeviceAdapter(SmartJsonClass):
     def add_available_security_patch(self, **kwargs):
         self.available_security_patches.append(DeviceAdapterMsrcAvailablePatch(**kwargs))
 
-    def add_connected_device(self, **kwargs):
-        self.connected_devices.append(DeviceAdapterConnectedDevice(**kwargs))
+    def add_connected_hardware(self, **kwargs):
+        self.connected_hardware.append(DeviceAdapterConnectedHardware(**kwargs))
 
     def add_installed_software(self, **kwargs):
         self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))

@@ -852,7 +852,7 @@ class GuiService(PluginBase, Configurable):
     def device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'security_patches',
                                                                   'available_security_patches', 'users',
-                                                                  'connected_devices', 'local_admins'])
+                                                                  'connected_hardware', 'local_admins'])
 
     @filtered()
     @add_rule_unauthenticated("devices/count")

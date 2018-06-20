@@ -16,7 +16,7 @@ from axonius.utils.files import get_local_config_file
 from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares
 from general_info.subplugins.user_logons import GetUserLogons
-from general_info.subplugins.connected_devices import GetConnectedDevices
+from general_info.subplugins.connected_hardware import GetConnectedHardware
 from axonius.fields import Field, ListField
 from datetime import datetime
 
@@ -32,7 +32,7 @@ MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 300
 # The maximum time we wait until all active execution threads
 MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 180
 
-subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo, GetConnectedDevices]
+subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo, GetConnectedHardware]
 
 
 class GeneralInfoService(PluginBase, Triggerable):
