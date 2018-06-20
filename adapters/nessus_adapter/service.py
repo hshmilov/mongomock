@@ -10,12 +10,15 @@ from nessus_adapter.exceptions import NessusException
 from axonius.utils.parsing import parse_date
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
+import requests
 
 
 HOST = 'host'
 PORT = 'port'
 USERNAME = 'username'
 PASSWORD = 'password'
+ACCESS_KEY = 'access_key'
+SECRET_KEY = 'secret_key'
 
 
 class NessusVulnerability(SmartJsonClass):
@@ -54,7 +57,8 @@ class NessusAdapter(ScannerAdapterBase):
         try:
             connection = NessusConnection(host=client_config[HOST],
                                           port=(client_config[PORT] if PORT in client_config else None), verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config[USERNAME], password=client_config[PASSWORD])
+            connection.set_credentials(username=client_config.get(USERNAME), password=client_config.get(PASSWORD),
+                                       api_access_key=client_config.get(ACCESS_KEY), api_secret_key=client_config.get(SECRET_KEY))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -83,6 +87,7 @@ class NessusAdapter(ScannerAdapterBase):
                     continue
                 # Get all hosts for scan
                 try:
+                    open_session = requests.Session()
                     for host in client_data.get_hosts(scan['id']):
                         try:
                             if host.get('host_id') is None:
@@ -91,7 +96,8 @@ class NessusAdapter(ScannerAdapterBase):
                             if devices_count % 1000 == 0:
                                 logger.info(f"Got {devices_count} hosts requests so far")
                             # Get specific details of the host
-                            host_details = client_data.get_host_details(scan['id'], host['host_id'])
+                            host_details = client_data.get_host_details(scan['id'], host['host_id'],
+                                                                        open_session=open_session)
                             if not host_details:
                                 continue
 
@@ -144,12 +150,24 @@ class NessusAdapter(ScannerAdapterBase):
                     'format': 'password'
                 },
                 {
+                    'name': ACCESS_KEY,
+                    'title': 'Access API Key (instead of user/password)',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
+                    'name': SECRET_KEY,
+                    'title': 'Secret API key (instead of user/password)',
+                    'type': 'string',
+                    'format': 'password'
+                },
+                {
                     'name': "verify_ssl",
                     'title': "Verify SSL",
                     'type': "bool"
                 }
             ],
-            'required': [HOST, USERNAME, PASSWORD, "verify_ssl"],
+            'required': [HOST, "verify_ssl"],
             'type': 'array'
         }
 
