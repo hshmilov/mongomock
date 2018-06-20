@@ -76,6 +76,9 @@
                 },
                 devicesView(state) {
 					return state.devices.view
+                },
+                devicesViewsList(state) {
+					return state.devices.views.saved.data
                 }
 			}),
 			lifecycle () {
@@ -125,25 +128,6 @@
             }
         },
         watch: {
-			adapterDevicesCount(newCount) {
-				if (newCount.length) {
-                    let adapter = newCount.find((item) => !item.name.includes('active_directory'))
-                    let name = ''
-                    let filter = ''
-                    if (adapter) {
-                    	name = adapter.name.split('_').join(' ')
-                        filter = `adapters == '${adapter.name}'`
-                    } else {
-                        name = 'Windows 10'
-                        filter = 'specific_data.data.os.distribution == "10"'
-                    }
-                    this.saveView({
-                        name: `DEMO - ${name}`, module: 'devices', view: {
-                            ...this.devicesView, query: { filter }
-                        }
-                    })
-                }
-            },
             charts(newCharts, oldCharts) {
 				if (oldCharts && !oldCharts.length && newCharts && newCharts.length === 1) {
 					this.newChart = this.getId(newCharts[0].name)
@@ -200,7 +184,30 @@
             	return Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
                     .then(() => this.timer = setTimeout(getDashboardData, 10000))
             }
-            getDashboardData().then(() => this.nextState('dashboard'))
+            getDashboardData().then(() => {
+            	this.nextState('dashboard')
+                if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
+                // If DEMO view was not yet added, add it now, according to the adapters' devices count
+				if (this.adapterDevicesCount && this.adapterDevicesCount.length) {
+					let adapter = this.adapterDevicesCount.find((item) => !item.name.includes('active_directory'))
+					let name = ''
+					let filter = ''
+					if (adapter) {
+						// Found an adapter other than Active Directory - view will filter it
+						name = adapter.name.split('_').join(' ')
+						filter = `adapters == '${adapter.name}'`
+					} else {
+						// Active Directory is the only adapter - view will filter for Windows 10
+						name = 'Windows 10'
+						filter = 'specific_data.data.os.distribution == "10"'
+					}
+					this.saveView({
+						name: `DEMO - ${name}`, module: 'devices', view: {
+							...this.devicesView, query: { filter }
+						}
+					})
+				}
+			})
 		},
         updated() {
 			if (this.wizardActivated && this.newChart) {

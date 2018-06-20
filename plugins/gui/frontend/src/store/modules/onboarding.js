@@ -46,7 +46,7 @@ export const onboarding = {
 					content: 'Fill in all required fields, then click here to connect the server.',
 				},
 				'successServer': {
-					id: 'status_server', title: 'YOUR SERVER CONNECTED', align: 'bottom',
+					id: 'status_server', title: 'YOUR SERVER CONNECTED', align: 'bottom', emphasize: false,
 					content: 'This indicates that the server was added, as Axonius was able connect to it.',
 					actions: [
 						{ title: 'Next', state: 'backAdapters' }
@@ -306,11 +306,17 @@ export const onboarding = {
 				},
 				'serviceNow': {
 					id: 'service_now_adapter', title: 'ServiceNow ADAPTER', align: 'right', queue: 'adapters',
-					content: 'If you use ServiceNow, click here to configure it.'
+					content: 'If you use ServiceNow, click here to configure it.',
+					actions: [
+						{ title: 'SKIP', state: 'csv' }
+					]
 				},
 				'csv': {
 					id: 'csv_adapter', title: 'CSV Serials ADAPTER', align: 'right', queue: 'adapters',
-					content: 'If you have a CSV with other devices you want to add, click here.'
+					content: 'If you have a CSV with other devices you want to add, click here.',
+					actions: [
+						{ title: 'SKIP', state: 'devices' }
+					]
 				},
 				'devices': {
 					id: 'devices', title: 'SEE YOUR COLLECTED DEVICES', align: 'right',
