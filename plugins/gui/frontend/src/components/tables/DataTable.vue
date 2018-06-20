@@ -115,6 +115,11 @@
                     this.loading = true
                 }
                 this.fetchLinkedPages()
+            },
+            loading(newLoading) {
+            	if (!newLoading && this.content.data && this.content.data.length) {
+				    this.$emit('data', this.content.data[0][this.idField])
+                }
             }
         },
         methods: {
@@ -126,11 +131,12 @@
                     limit: this.pageLinkNumbers.length * this.view.pageSize
 				}).then(() => {
 					if (!this.content.fetching) {
-					    this.fetched = true
+						if (!this.content.data.length) {
+							this.loading = false
+                        } else {
+					        this.fetched = true
+                        }
                     }
-					if (this.content.data && this.content.data.length) {
-						this.$emit('data', this.content.data[0][this.idField])
-					}
 				})
             },
             onClickRow(id) {
@@ -162,7 +168,7 @@
             	this.updateView({module: this.module, view})
             },
             tableUpdated() {
-				if (this.fetched && this.pageData.length) {
+				if (this.fetched && this.loading && this.pageData.length) {
 					this.fetched = false
 					this.loading = false
 				}

@@ -9,9 +9,9 @@
                 <div class="x-grid">
                     <label for="alert_name">Alert Name:</label>
                     <input id="alert_name" v-model="alert.name" @input="tour('alertQuery')">
-                    <label for="alert_query">Select Saved View:</label>
-                    <x-select :options="currentQueryOptions" v-model="currentQuery" placeholder="field..." :searchable="true"
-                      class="field-select" id="alert_query" @input="tour('alertIncreased')" />
+                    <label for="alert_query">Select Saved Query:</label>
+                    <x-select :options="currentQueryOptions" v-model="currentQuery" placeholder="query..."
+                              :searchable="true" id="alert_query" @input="tour('alertIncreased')" />
                 </div>
 
                 <!-- Section for defining the condition which match of will trigger the alert -->
@@ -139,7 +139,7 @@
                 },
                 selectedOption() {
 				    if (!this.currentQuery) return undefined
-				    return this.currentQueryOptions.filter(option => (option.name === this.currentQuery))[0]
+				    return this.currentQueryOptions.find(option => (option.name === this.currentQuery))
                 }
             }),
             complete() {
@@ -250,8 +250,8 @@
                         type: 'create_service_now_computer'
                     })
                 }
-                this.alert.query = this.currentQuery.name
-                this.alert.queryEntity = this.currentQuery.entity
+                this.alert.view = this.currentQuery
+                this.alert.viewEntity = this.currentQueryOptions.find(item => item.name === this.currentQuery).entity
                 /* Save and return to alerts page */
                 this.updateAlert(this.alert)
                 this.returnToAlerts()
