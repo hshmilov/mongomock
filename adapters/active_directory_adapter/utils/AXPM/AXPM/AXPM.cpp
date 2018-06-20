@@ -5,6 +5,16 @@
 #include <string>
 #include <stdio.h>
 #include <comdef.h>
+#include <ATLComTime.h>
+#include <comutil.h>
+#include <string.h>
+#include "nlohmann/json.hpp"	// downloaded json package https://github.com/nlohmann/json
+
+#define LCID_EN_US (0x409)
+
+
+// for convenience
+using json = nlohmann::json;
 
 void print_to_stderr(const char * error_message, HRESULT error_code)
 {
@@ -13,7 +23,24 @@ void print_to_stderr(const char * error_message, HRESULT error_code)
 	fprintf(stderr, "%s: %ws (%#lx)\n", error_message, error_code_as_string, error_code);
 }
 
-int print_update(CComPtr<IUpdate> update)
+void print_usage(const char * const app_name)
+{
+	fprintf(stderr, "Usage: %s [path_to_wsusscn2.cab] [0/1]\n", app_name);
+}
+
+char * bstr_to_string(BSTR s)
+{
+	if (SysStringLen(s) == 0)
+	{
+		return (char *)"";
+	}
+	else
+	{
+		return _com_util::ConvertBSTRToString(s);
+	}
+}
+
+int get_update(CComPtr<IUpdate> update, json * update_list)
 {
 	/* Prints to the screen details of an update (i.e. a patch that is needed to be installed).
 	The function gets a point to a COM object of type IUpdate and prints useful information we use.
@@ -31,6 +58,8 @@ int print_update(CComPtr<IUpdate> update)
 	BSTR str = NULL;	// generic var for IStringCollection
 	BSTR title = NULL;
 	BSTR msrc_severity = NULL;
+	DATE depdate = NULL;
+	json final_update = {};
 
 	// Get all sort of details about the update. For a full list of details,
 	// see https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
@@ -40,7 +69,7 @@ int print_update(CComPtr<IUpdate> update)
 		print_to_stderr("Failed to call IUpdate::get_Title", rc);
 		return -1;
 	}
-	printf("\tTitle: %ws\n", title);
+	final_update["Title"] = bstr_to_string(title);
 
 	// Get MSRC Severity (e.g., Critical)
 	rc = update->get_MsrcSeverity(&msrc_severity);
@@ -49,7 +78,21 @@ int print_update(CComPtr<IUpdate> update)
 		print_to_stderr("Failed to call IUpdate::get_MsrcSeverity", rc);
 		return -1;
 	}
-	printf("\tMsrc Severity: %ws\n", msrc_severity);
+	final_update["MsrcSeverity"] = bstr_to_string(msrc_severity);
+
+	// Get Date
+	// Notice that LastDeploymentChangeTime is the time when this was changed on the remote server.
+	// If we are using online microsoft wsus or wsusscn2.cab, this will be the correct time. But if we are using a custom wsus server (dc role)
+	// Then this could be the time of deployment on this server.
+	rc = update->get_LastDeploymentChangeTime(&depdate);
+	if (FAILED(rc))
+	{
+		print_to_stderr("Failed to call IUpdate::get_LastDeploymentChangeTime", rc);
+		return -1;
+	}
+
+	// This is a transformation we have to do from depdate to seconds since epoch.
+	final_update["LastDeploymentChangeTime"] = (double)depdate * 86400 - 2209161600;
 
 	// Get type. This could be 'Software' or 'Driver'.
 	rc = update->get_Type(&update_type);
@@ -59,13 +102,13 @@ int print_update(CComPtr<IUpdate> update)
 		return -1;
 	}
 	if (update_type == utDriver) {
-		printf("\tType: Driver\n");
+		final_update["Type"] = "Driver";
 	}
 	else if (update_type == utSoftware) {
-		printf("\tType: Software\n");
+		final_update["Type"] = "Software";
 	}
 	else {
-		printf("\tType: Unknown\n");
+		final_update["Type"] = "Unknown";
 	}
 
 	// Get categories. This is a list of categories, e.g. "Windows 2008", "Visual Studio"
@@ -83,6 +126,8 @@ int print_update(CComPtr<IUpdate> update)
 		return -1;
 	}
 
+	final_update["Categories"] = json::array();
+
 	for (int i = 0; i < category_count; i++)
 	{
 		rc = category_collection->get_Item(i, &category.p);
@@ -98,7 +143,7 @@ int print_update(CComPtr<IUpdate> update)
 			print_to_stderr("Failed to call ICategory::get_Name", rc);
 			return -1;
 		}
-		printf("\tCategory: %ws\n", category_name);
+		final_update["Categories"].push_back(bstr_to_string(category_name));
 	}
 
 	// Get a list of KB's attached to this patch
@@ -116,6 +161,8 @@ int print_update(CComPtr<IUpdate> update)
 		return -1;
 	}
 
+	final_update["KBArticleIDs"] = json::array();
+
 	for (int i = 0; i < kb_article_ids_count; i++)
 	{
 		rc = kb_article_ids_collection->get_Item(i, &str);
@@ -124,7 +171,7 @@ int print_update(CComPtr<IUpdate> update)
 			print_to_stderr("Failed to call IStringCollection::get_Item for KB Article ID's", rc);
 			return -1;
 		}
-		printf("\tKB Article ID: %ws\n", str);
+		final_update["KBArticleIDs"].push_back(bstr_to_string(str));
 	}
 
 	// Get a list of Security Bulletin ID's attached to this patch
@@ -142,6 +189,8 @@ int print_update(CComPtr<IUpdate> update)
 		return -1;
 	}
 
+	final_update["SecurityBulletinIDs"] = json::array();
+
 	for (int i = 0; i < security_bulletin_ids_count; i++)
 	{
 		rc = security_bulletin_ids_collection->get_Item(i, &str);
@@ -150,36 +199,60 @@ int print_update(CComPtr<IUpdate> update)
 			print_to_stderr("Failed to call IStringCollection::get_Item for Security Bulletin ID's", rc);
 			return -1;
 		}
-		printf("\tSecurity Bulletin ID: %ws\n", str);
+		final_update["SecurityBulletinIDs"].push_back(bstr_to_string(str));
 	}
+
+	// append the final update to the update list
+	update_list->push_back(final_update);
 
 	return 0;
 }
 	
-int main(int argc, char *argv[])
+int _main(int argc, char *argv[])
 {
 	HRESULT rc = NULL;
+	bool should_check_online = false;
 	CComPtr<IUpdateServiceManager> service_manager = NULL;
 	CComPtr<IUpdateService> update_service = NULL;
 	BSTR update_service_manager_service_id = NULL;
-	CComPtr<IUpdateSession> session = NULL;
+	CComPtr<IUpdateSession2> session = NULL;
 	CComPtr<IUpdateSearcher> searcher = NULL;
 	CComPtr<ISearchResult> search_result = NULL;
 	CComPtr<IUpdateCollection> updateCollection = NULL;
 	CComPtr<IUpdate> update = NULL;
 	OperationResultCode search_result_code = orcFailed;
 	long updateCount = 0;
+	json update_list = json::array();
 
 	// Needed to convert ascii to OLE
 	USES_CONVERSION;
 
 	// Validate Arguments
-	if (argc != 2)
+	if (argc < 2 || argc > 3)
 	{
-		fprintf(stderr, "Usage: %s [path_to_wsusscn2.cab]\n", argv[0]);
+		print_usage(argv[0]);
 		return -1;
 	}
 
+	if (strcmp(argv[1], "0") == 0)
+	{
+		should_check_online = false;
+		if (argc != 3)
+		{
+			// we have to have exactly 3 arguments in this case.
+			print_usage(argv[0]);
+			return -1;
+		}
+	}
+	else if (strcmp(argv[1], "1") == 0)
+	{
+		should_check_online = true;
+	}
+	else
+	{
+		print_usage(argv[0]);
+		return -1;
+	}
 
 	// Initialize COM. 
 	rc = CoInitialize(NULL);
@@ -189,29 +262,32 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	// Since we are not using the default internet service, we need to create an update service manager.
-	// We create an IUpdateServiceManager, to be able to add an offline file for getting update results.
-	rc = service_manager.CoCreateInstance(__uuidof(UpdateServiceManager));
-	if (FAILED(rc))
+	if (should_check_online == false)
 	{
-		print_to_stderr("Failed to create IUpdateServiceManager", rc);
-		return -1;
-	}
+		// Since we are not using the default internet service, we need to create an update service manager.
+		// We create an IUpdateServiceManager, to be able to add an offline file for getting update results.
+		rc = service_manager.CoCreateInstance(__uuidof(UpdateServiceManager));
+		if (FAILED(rc))
+		{
+			print_to_stderr("Failed to create IUpdateServiceManager", rc);
+			return -1;
+		}
 
-	// Now lets add the offline updates cab file that we downloaded from microsoft.
-	rc = service_manager->AddScanPackageService(SysAllocString(L"Offline Sync Service"), SysAllocString(A2COLE(argv[1])), 0, &update_service.p);
-	if (FAILED(rc))
-	{
-		print_to_stderr("Failed to add scan package service", rc);
-		return -1;
-	}
+		// Now lets add the offline updates cab file that we downloaded from microsoft.
+		rc = service_manager->AddScanPackageService(SysAllocString(L"Offline Sync Service"), SysAllocString(A2COLE(argv[2])), 0, &update_service.p);
+		if (FAILED(rc))
+		{
+			print_to_stderr("Failed to add scan package service", rc);
+			return -1;
+		}
 
-	// Finally, we need the service id of the service we just successfully created, since we will add it to the searcher soon.
-	rc = update_service->get_ServiceID(&update_service_manager_service_id);
-	if (FAILED(rc))
-	{
-		print_to_stderr("Failed to get the service id of the add scan package service", rc);
-		return -1;
+		// Finally, we need the service id of the service we just successfully created, since we will add it to the searcher soon.
+		rc = update_service->get_ServiceID(&update_service_manager_service_id);
+		if (FAILED(rc))
+		{
+			print_to_stderr("Failed to get the service id of the add scan package service", rc);
+			return -1;
+		}
 	}
 
 	// Now we can continue to the update search.
@@ -220,6 +296,14 @@ int main(int argc, char *argv[])
 	if (FAILED(rc))
 	{
 		print_to_stderr("Failed to create IUpdateSession", rc);
+		return -1;
+	}
+
+	// Lets set up the locale to english, otherwise it would use the default UI one.
+	rc = session->put_UserLocale(LCID_EN_US);
+	if (FAILED(rc))
+	{
+		print_to_stderr("Failed to put UserLocale to English", rc);
 		return -1;
 	}
 
@@ -235,20 +319,33 @@ int main(int argc, char *argv[])
 	// CreateUpdateSearcher returned an IUpdateSearcher interface. Before we start searching, we should set some attributes.
 	// When using COM objects, to set attributes, we call put_[attribute_name], and to get them, we call get_[attribute_name].
 	// IUpdateSearcher ref: https://msdn.microsoft.com/en-us/library/windows/desktop/aa386515(v=vs.85).aspx
-	// we set the server selection to "Others", since we have added our own internal cab file.
-	rc = searcher->put_ServerSelection(ssOthers);
-	if (FAILED(rc))
-	{
-		print_to_stderr("Failed to call IUpdateSearcher::put_ServerSelection", rc);
-		return -1;
-	}
 
-	// Since we set the server selection to "Others" we need to set our own services. Lets add the service we added before.
-	rc = searcher->put_ServiceID(update_service_manager_service_id);
-	if (FAILED(rc))
+	if (should_check_online == false)
 	{
-		print_to_stderr("Failed to put service id for searcher", rc);
-		return -1;
+		// we set the server selection to "Others", since we have added our own internal cab file.
+		rc = searcher->put_ServerSelection(ssOthers);
+		if (FAILED(rc))
+		{
+			print_to_stderr("Failed to call IUpdateSearcher::put_ServerSelection", rc);
+			return -1;
+		}
+
+		// Since we set the server selection to "Others" we need to set our own services. Lets add the service we added before.
+		rc = searcher->put_ServiceID(update_service_manager_service_id);
+		if (FAILED(rc))
+		{
+			print_to_stderr("Failed to put service id for searcher", rc);
+			return -1;
+		}
+	}
+	else {
+		// we set the server selection to ssWindowsUpdate which means getting online.
+		rc = searcher->put_ServerSelection(ssWindowsUpdate);
+		if (FAILED(rc))
+		{
+			print_to_stderr("Failed to call IUpdateSearcher::put_ServerSelection", rc);
+			return -1;
+		}
 	}
 
 	// We might have a default value that indicates whether WUA can automatically upgrade when searching. Lets disable it, since we don't
@@ -301,7 +398,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	
-	printf("Updates Count: %d\n\n", updateCount);
 	for (long i = 0; i < updateCount; i++)
 	{
 		rc = updateCollection->get_Item(i, &update.p);
@@ -310,15 +406,28 @@ int main(int argc, char *argv[])
 			print_to_stderr("Failed to call IUpdateCollection::get_Item", rc);
 			return -1;
 		}
-		printf("[Update Start]\n");
 
-		rc = print_update(update);
+		rc = get_update(update, &update_list);
 		if (rc == -1) {
 			return -1;
 		}
-
-		printf("[Update End]\n\n");
 	}
-	printf("Finished successfully.");
+
+	// dump the final json. 4 is for pretty dumping (identation etc)
+	printf("%s", update_list.dump(4).c_str());
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	__try
+	{
+		_main(argc, argv);
+	}
+	__except (true)
+	{
+		printf("AXPM threw an exception. Exiting\n");
+		exit(-1);
+	}
 	return 0;
 }

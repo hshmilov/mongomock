@@ -37,6 +37,7 @@ DOCKER_PORTS = {
     'kaseya-adapter':                   5286,
     'nessus-adapter':                   5555,
     'general-info':                     5556,
+    'pm-status':                        5557,
     'symantec-adapter':                 5675,
     'symantec-altiris-adapter':         5676,
     'qualys-adapter':                   5677,

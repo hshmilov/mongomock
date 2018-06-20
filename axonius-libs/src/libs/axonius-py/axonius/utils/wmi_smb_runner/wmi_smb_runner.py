@@ -43,6 +43,34 @@ __global_counter = 0
 __global_counter_lock = threading.Lock()
 
 
+def find_shared_readonly_files():
+    """
+    Returns the shared readonly files directory of the project.
+    We can run from tests, But we can also run from within container, so we have to identify it.
+    :return: the root directory.
+    """
+    current_dir = os.path.abspath(os.path.dirname(__file__))
+    for i in range(20):
+        candidate = os.path.join(current_dir, "shared_readonly_files")
+        # Of course this isn't the best thing to do, but at least we will fail tests immediately if this condition
+        # is met and is incorrect.
+        if os.path.exists(candidate):
+            return candidate
+
+        current_dir = os.path.join(current_dir, "..")
+
+    raise ValueError, "Can't find shared readonly files dir"
+
+
+SHARED_READONLY_FILES = find_shared_readonly_files()
+
+AXPM_BINARY_LOCATION = os.path.abspath(
+    os.path.join(SHARED_READONLY_FILES, "AXPM", "AXPM.exe"))
+
+WSUSSCN2_BINARY_LOCATION = os.path.abspath(
+    os.path.join(SHARED_READONLY_FILES, "AXPM", "wsusscn2", "wsusscn2.cab"))
+
+
 def get_global_counter():
     global __global_counter
     with __global_counter_lock:
@@ -451,18 +479,43 @@ class WmiSmbRunner(object):
             if did_put_exe_file is True:
                 self.deletefile(exe_binary_path)
 
-    def exec_pm_online(self, is_remote):
+    def exec_pm_online(self, pm_type):
         """
         A special function to deal with patch management on an online environment (computers which are internet
         accessible). This is a sensitive function since it is opening RPC interfaces.
+        :param pm_type: rpc (remote) or smb (via file transfer)
         :return:
         """
-        assert type(is_remote) == bool
-
-        if is_remote is True:
+        def pm_rpc():
+            """
+            Executes pm status through rpc.
+            :return:
+            """
             return self.remotewua.search_online("IsInstalled=0")
+
+        def pm_smb():
+            """
+            Executes pm status through smb.
+            """
+            rv = self.execbinary(AXPM_BINARY_LOCATION, "1")
+            try:
+                return json.loads(rv)
+            except Exception:
+                # The program must have had an error
+                raise ValueError, "AXPM Returned an invalid json: {0}".format(rv)
+
+        if pm_type == "rpc":
+            return pm_rpc()
+        elif pm_type == "smb":
+            return pm_smb()
+        elif pm_type == "rpc_and_fallback_smb":
+            # Execute first rpc, if that fails, execute through smb.
+            try:
+                return pm_rpc()
+            except Exception:
+                return pm_smb()
         else:
-            raise ValueError, "Not Yet Implemetned!"
+            raise ValueError, "exec_pm_online: unsupported method!"
 
     # TODO: This will attempt even on legitimate errors like access denied. fix that
     @retry(stop_max_attempt_number=MAX_NUM_OF_TRIES_PER_CONNECT, wait_fixed=TIME_TO_REST_BETWEEN_CONNECT_RETRY)

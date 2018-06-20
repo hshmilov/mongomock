@@ -70,7 +70,7 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 TIME_WAIT_FOR_REGISTER = 60 * 5
 
 # After this time, the execution promise will be rejected.
-TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 150
+TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 240
 
 # Removing ssl_verify false warnings from appearing in the logs on all the plugins.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -1396,6 +1396,8 @@ class PluginBase(Configurable, Feature):
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
         self._execution_enabled = config['execution_settings']['enabled']
+        self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
+        self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
         self._syslog_settings = config['syslog_settings']
         self._service_now_settings = config['service_now_settings']
 
@@ -1524,12 +1526,24 @@ class PluginBase(Configurable, Feature):
                             "title": "Execution Enabled",
                             "type": "bool",
                             "required": True
+                        },
+                        {
+                            "name": "pm_rpc_enabled",
+                            "title": "Patch Management Using RPC (Online)",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
+                            "name": "pm_smb_enabled",
+                            "title": "Patch Management Using SMB (Online)",
+                            "type": "bool",
+                            "required": True
                         }
                     ],
                     "name": "execution_settings",
                     "title": "Execution Settings",
                     "type": "array"
-                }
+                },
             ],
             "pretty_name": "Global Configuration",
             "type": "array"
@@ -1557,7 +1571,9 @@ class PluginBase(Configurable, Feature):
                 "smtpKey": None
             },
             "execution_settings": {
-                "enabled": False
+                "enabled": False,
+                "pm_rpc_enabled": False,
+                "pm_smb_enabled": False
             },
             "syslog_settings": {
                 "enabled": False,

@@ -11,17 +11,14 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.mixins.triggerable import Triggerable
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.files import get_local_config_file
-from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
-from general_info.subplugins.installed_softwares import GetInstalledSoftwares
-from general_info.subplugins.user_logons import GetUserLogons
-from general_info.subplugins.connected_devices import GetConnectedDevices
 from axonius.fields import Field, ListField
 from datetime import datetime
 
 
-MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 100
+MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 50
 SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 # The maximum time we wait for new execution answers. If no sent execution request comes back we bail out.
@@ -32,19 +29,15 @@ MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 300
 # The maximum time we wait until all active execution threads
 MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 180
 
-subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo, GetConnectedDevices]
+
+# RPC Errors
+DCOM_ERROR_PROBABLY_RPC_ACCESS_DENIED = "0x800706ba"
+DCOM_ERROR_INTERNET_PROBLEMS = "0x80072EE2"
 
 
-class GeneralInfoService(PluginBase, Triggerable):
+class PmStatusService(PluginBase, Triggerable):
     class MyDeviceAdapter(DeviceAdapter):
-        general_info_last_success_execution = Field(datetime, "Last General Info Success")
-
-        ad_bad_config_no_lm_hash = Field(int, "Bad Config - No LMHash")
-        ad_bad_config_force_guest = Field(int, "Bad Config - Force Guest")
-        ad_bad_config_authentication_packages = ListField(str, "Bad Config - Authentication Packages")
-        ad_bad_config_lm_compatibility_level = Field(int, "Bad Config - Compatibility Level")
-        ad_bad_config_disabled_domain_creds = Field(int, "Bad Config - Disabled Domain Creds")
-        ad_bad_config_secure_boot = Field(int, "Bad Config - Secure Boot")
+        pm_last_execution_success = Field(datetime, "Last PM Success")
 
     class MyUserAdapter(UserAdapter):
         pass
@@ -58,9 +51,9 @@ class GeneralInfoService(PluginBase, Triggerable):
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
         self._number_of_triggers = 0
 
-        general_info_sync_enabled = self.config['DEFAULT']['general_info_sync_enabled'].lower()
-        assert general_info_sync_enabled in ['true', 'false']
-        self._general_info_sync_enabled = general_info_sync_enabled.strip().lower() == 'true'
+        sync_enabled = self.config['DEFAULT']['sync_enabled'].lower()
+        assert sync_enabled in ['true', 'false']
+        self._sync_enabled = sync_enabled.strip().lower() == 'true'
 
         self._activate('execute')
 
@@ -74,14 +67,14 @@ class GeneralInfoService(PluginBase, Triggerable):
             return return_error("Got bad trigger request for non-existent job", 400)
 
         self._number_of_triggers = self._number_of_triggers + 1
-        if self._number_of_triggers == 1 and self._general_info_sync_enabled is True:
+        if self._number_of_triggers == 1 and self._sync_enabled is True:
             # first trigger is blocking.
-            logger.info(f"Running gather_general_info sync (number of triggers: {self._number_of_triggers})")
-            self._gather_general_info()
+            logger.info(f"Running get_pm_status sync (number of triggers: {self._number_of_triggers})")
+            self._get_pm_status()
         else:
             # Run it in a different thread
-            logger.info(f"Running gather_general_info async (number of triggers: {self._number_of_triggers})")
-            threading.Thread(target=self._run_gather_general_info_async).start()
+            logger.info(f"Running get_pm_status async (number of triggers: {self._number_of_triggers})")
+            threading.Thread(target=self._get_pm_status_async).start()
 
     @property
     def number_of_active_execution_requests(self):
@@ -104,60 +97,60 @@ class GeneralInfoService(PluginBase, Triggerable):
         with self._execution_manager_lock:
             self._number_of_active_execution_requests_var = value
 
-    def _run_gather_general_info_async(self):
+    def _get_pm_status_async(self):
         """
         Simply runs _get_pm_status but also try/excepts it to log everything.
         :return:
         """
 
         try:
-            self._gather_general_info()
+            self._get_pm_status()
         except Exception:
-            logger.exception("Run gather_general_info asynchronously: Got an exception.")
+            logger.exception("Run get_pm_status asynchronously: Got an exception.")
 
     @stoppable
-    def _gather_general_info(self):
+    def _get_pm_status(self):
         """
-        Runs wmi queries on windows devices to understand important stuff.
-        Afterwards, adds more information to users.
+        Runs rpc queries on windows devices to understand the patch management status.
         """
         if not self._execution_enabled:
+            logger.error("Execution is not enabled, going on")
             return []
-        logger.info("Gathering General info started.")
+
+        if not self._pm_rpc_enabled and not self._pm_smb_enabled:
+            logger.error("PM Status Failure: rpc and smb settings are false (Global Settings)")
+            return []
+
+        logger.info("Get PM Status started (before lock).")
         acquired = False
         try:
             acquired = self.work_lock.acquire(False)
             if acquired:
                 logger.debug("acquired work lock")
 
-                # First, gather general info about devices
-                self._gather_windows_devices_general_info()
+                self._get_pm_status_internal()
 
-                # Second, go over all devices we have, and try to associate them with users.
-                self._associate_users_with_devices()
-
-                logger.info("Finished gathering info & associating users for all devices")
+                logger.info("Finished gathering pm status")
 
             else:
-                msg = "General info was called and is already taking place, try again later"
+                msg = "Get PM Status was called and is already taking place, try again later"
                 logger.error(msg)
                 raise RuntimeError(msg)
         finally:
             if acquired:
                 self.work_lock.release()
 
-    def _gather_windows_devices_general_info(self):
+    def _get_pm_status_internal(self):
         """
         Runs wmi queries on windows devices to understand important stuff.
         :returns: true if successful, false otherwise.
         """
 
-        logger.info("Gathering General info about windows devices - started.")
+        logger.info("Get PM Status about windows devices - started.")
         """
         1. Get a list of windows devices
-        2. Get wmi queries to run from all subplugins
-        2. Execute a wmi queries on them
-        3. Pass the result to the subplugins
+        2. Execute PM status with rpc
+        3. Parse results
         """
 
         # The following query should run on all windows devices but since Axonius does not support
@@ -218,10 +211,18 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             logger.debug(f"Going to request action on {internal_axon_id}")
 
-            # Get all wmi queries from all subadapters.
-            wmi_smb_commands = []
-            for subplugin in subplugins_objects:
-                wmi_smb_commands.extend(subplugin.get_wmi_smb_commands())
+            if self._pm_rpc_enabled is True and self._pm_smb_enabled is True:
+                pm_online_type = "rpc_and_fallback_smb"
+                logger.info("Using RPC and fallback SMB for PM")
+            elif self._pm_rpc_enabled is True:
+                pm_online_type = "rpc"
+                logger.info("Using RPC for PM")
+            elif self._pm_smb_enabled is True:
+                pm_online_type = "smb"
+                logger.info("Using SMB for PM")
+            else:
+                raise ValueError("Can not choose PM Online type")
+            wmi_smb_commands = [{"type": "pmonline", "args": [pm_online_type]}]
 
             # Now run all queries you have got on that device.
             p = self.request_action(
@@ -232,11 +233,11 @@ class GeneralInfoService(PluginBase, Triggerable):
                 }
             )
 
-            p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
-                   did_reject=functools.partial(self._handle_wmi_execution_failure, device))
+            p.then(did_fulfill=functools.partial(self._handle_pm_success, device),
+                   did_reject=functools.partial(self._handle_pm_failure, device))
 
         # execution answer threads should finish immediately because they don't do anything
-        # that takes time excpet tagging that should be extra fast. but in the future we might
+        # that takes time except tagging that should be extra fast. but in the future we might
         # have some more complex things there, so we wait here until everything is finished.
         self.seconds_stuck = 0
         while self.number_of_active_execution_requests > 0:
@@ -250,103 +251,11 @@ class GeneralInfoService(PluginBase, Triggerable):
 
         return True
 
-    def _associate_users_with_devices(self):
-        """
-        Assuming devices were assocaited with users, now we associate users with devices.
-        :return:
-        """
-        logger.info("Associating users with devices")
-
-        # 1. Get all devices which have users associations, and map all these devices to one global users object.
-        devices_with_users_association = self.devices.get(data={"users": {"$exists": True}})
-        users = {}
-        for device in devices_with_users_association:
-            # Get a list of all users associated for this device.
-            for sd_users in [d['data']['users'] for d in device.specific_data if d['data'].get('users') is not None]:
-                # for each user associated, add a (device, user) tuple.
-                for user in sd_users:
-                    if users.get(user['username']) is None:
-                        users[user['username']] = []
-
-                    # users, is a dict of all users, ordered by the key string 'username'.
-                    # the dict is a mapping of the username to a list of tuples (user, device).
-                    # (user, device) is a specific user + last_use_time + more info of that specific device.
-                    # so we might have user1 and user2 objects which have the same username, but have other data
-                    # different.
-                    users[user['username']].append((user, device))
-
-        # 2. Go over all users. for each user, associate all known devices.
-        for username, linked_devices_and_users_list in users.items():
-            # Create the new adapterdata for that user
-            adapterdata_user = self._new_user_adapter()
-
-            # Find that user
-            user = list(self.users.get(data={"id": username}))
-
-            # Do we have it? or do we need to create it?
-            if len(user) > 1:
-                # Can't be! how can we have a user with the same id? should have been correlated.
-                logger.error(f"Found a couple of users (expected one) with same id: {username} -> {user}")
-                continue
-            elif len(user) == 0:
-                # user does not exists, create it.
-                logger.debug(f"username {username} needs to be created, this is a todo task. continuing")
-                user_dict = self._new_user_adapter()
-                user_dict.id = username  # Should be the unique identifier of that user.
-                try:
-                    user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
-                except ValueError:
-                    logger.exception(f"Bad user format! expected 'username@domain' format, got {username}")
-                user_dict.is_local = True
-                self._save_data_from_plugin(
-                    self.plugin_unique_name,
-                    {"raw": [], "parsed": [user_dict.to_dict()]},
-                    EntityType.Users, False)
-                # At this point we must have it.
-                user = list(self.users.get(data={"id": username}))
-                assert len(user) == 1, f"We just created the user {username} but the length is reported as {len(user)}."
-
-            # at this point the user exists, go over all associated devices and add them.
-            user = user[0]
-            for linked_user, linked_device in linked_devices_and_users_list:
-                try:
-                    device_caption = linked_device.get_first_data("hostname") or \
-                        linked_device.get_first_data("name") or \
-                        linked_device.get_first_data("id")
-
-                    logger.debug(f"Associating {device_caption} with user {username}")
-                    try:
-                        adapterdata_user.last_seen_in_devices = \
-                            max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
-                    except Exception:
-                        # Last seen does not exist
-                        adapterdata_user.last_seen_in_devices = linked_user['last_use_date']
-
-                    adapterdata_user.add_associated_device(
-                        device_caption=device_caption,
-                        last_use_date=linked_user['last_use_date'],
-                        adapter_unique_name=linked_user['origin_unique_adapter_name'],
-                        adapter_data_id=linked_user['origin_unique_adapter_data_id']
-                    )
-                except Exception:
-                    logger.exception(f"Cant associate user {linked_user}")
-
-            # we have a new adapterdata_user, lets add it. we do not give any specific identity
-            # since this tag isn't associated to a specific adapter.
-            adapterdata_user.id = username
-            user.add_adapterdata(adapterdata_user.to_dict())
-
-        self._save_field_names_to_db(EntityType.Users)
-        logger.info("Finished associating users with devices")
-
-    def _handle_wmi_execution_success(self, device, data):
+    def _handle_pm_success(self, device, data):
         try:
             self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
             is_execution_exception = False
-            last_execution_debug = None
-
-            # Initialize all subplugins. We do that in each run, to refresh cached data.
-            subplugins_list = [con(self, logger) for con in subplugins_objects]
+            last_pm_status_debug = None
 
             # Now get some info depending on the adapter that ran the execution
             executer_info = dict()
@@ -355,42 +264,70 @@ class GeneralInfoService(PluginBase, Triggerable):
                 [adap for adap in device["adapters"] if adap["plugin_unique_name"]
                     == executer_info["adapter_unique_name"]][0]["data"]["id"]
 
-            # We have got many requests. Lets call the handler of each of our subplugins.
-            # We go through the amount of queries each subplugin requested, linearly.
-            queries_response = data["output"]["product"]
-            queries_response_index = 0
+            response = data["output"]["product"][0]
 
-            # Create a new device, since these subplugins will have some generic info enrichments.
+            # Create a new device
             adapterdata_device = self._new_device_adapter()
             all_error_logs = []
 
-            for subplugin in subplugins_list:
-                subplugin_num_queries = len(subplugin.get_wmi_smb_commands())
-                subplugin_result = queries_response[queries_response_index:
-                                                    queries_response_index + subplugin_num_queries]
-                try:
-                    did_subplugin_succeed = \
-                        subplugin.handle_result(device,
-                                                executer_info,
-                                                subplugin_result,
-                                                adapterdata_device)
+            try:
+                # Check that the response status is ok
+                if response['status'] != 'ok':
+                    if DCOM_ERROR_PROBABLY_RPC_ACCESS_DENIED in response['data']:
+                        # This happens quite often.
+                        raise ValueError("DCOM returned 0x800706ba. This probably means RPC Access Denied")
+                    elif DCOM_ERROR_INTERNET_PROBLEMS in response['data']:
+                        # This can happen on computers with no internet or with internet problems
+                        raise ValueError("Error code 0x80072EE2. This probably means internet access error")
+                    else:
+                        raise ValueError(f"PM Response is not ok: {response}")
 
-                    all_error_logs.extend(subplugin.get_error_logs())
+                # Parse the data. add data to all_error_logs
+                for patch in response['data']:
+                    try:
+                        pm_publish_date = patch.get("LastDeploymentChangeTime")
+                        if pm_publish_date is not None:
+                            pm_publish_date = datetime.fromtimestamp(pm_publish_date)
+                    except Exception:
+                        logger.exception(f"Error parsing publish date of patch {patch}")
+                        pass
 
-                    if did_subplugin_succeed is not True:
-                        raise ValueError("return value is not True")
-                except Exception:
-                    logger.exception(f"Subplugin {subplugin.__class__.__name__} exception."
-                                     f"Internal axon id is {device['internal_axon_id']}. "
-                                     f"Moving on to next plugin.")
-                    all_error_logs.append(f"Subplugin {subplugin.__class__.__name__} exception: "
-                                          f"{get_exception_string()}")
+                    pm_title = patch.get("Title")
+                    pm_msrc_severity = patch.get("MsrcSeverity")
+                    pm_type = patch.get("Type")
+                    if pm_type != "Software" and pm_type != "Driver":
+                        logger.error(f"Expected pm type to be Software/Driver but its {pm_type}")
+                        pm_type = None
 
-                # Update the response index.
-                queries_response_index = queries_response_index + subplugin_num_queries
+                    pm_categories = patch.get("Categories")
+                    pm_security_bulletin_ids = patch.get("SecurityBulletinIDs")
+                    pm_kb_article_ids = patch.get("KBArticleIDs")
+
+                    # Validate Its all strings
+                    if pm_categories is not None:
+                        pm_categories = [str(x) for x in pm_categories]
+
+                    if pm_security_bulletin_ids is not None:
+                        pm_security_bulletin_ids = [str(x) for x in pm_security_bulletin_ids]
+
+                    if pm_kb_article_ids is not None:
+                        pm_kb_article_ids = [str(x) for x in pm_kb_article_ids]
+
+                    adapterdata_device.add_available_security_patch(
+                        title=pm_title,
+                        security_bulletin_ids=pm_security_bulletin_ids,
+                        kb_article_ids=pm_kb_article_ids,
+                        msrc_severity=pm_msrc_severity,
+                        patch_type=pm_type,
+                        categories=pm_categories,
+                        publish_date=pm_publish_date
+                    )
+            except Exception:
+                logger.exception(f"Exception while parsing data on internal axon id is {device['internal_axon_id']}. ")
+                all_error_logs.append(f"exception: {get_exception_string()}")
 
             # All of these plugins might have inserted new devices, lets get it.
-            adapterdata_device.general_info_last_success_execution = datetime.now()
+            adapterdata_device.pm_last_execution_success = datetime.now()
             new_data = adapterdata_device.to_dict()
             new_data['id'] = executer_info["adapter_unique_id"]
 
@@ -405,38 +342,38 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             if len(all_error_logs) > 0:
                 is_execution_exception = True
-                last_execution_debug = "All errors logs: {0}".format("\n".join(all_error_logs))
+                last_pm_status_debug = "All errors logs: {0}".format("\n".join(all_error_logs))
 
         except Exception as e:
-            logger.exception("An error occured while processing wmi result: {0}, {1}"
+            logger.exception("An error occured while processing pm result: {0}, {1}"
                              .format(str(e), get_exception_string()))
             is_execution_exception = True
-            last_execution_debug = f"An exception occured while processing wmi results: {get_exception_string()}"
+            last_pm_status_debug = f"An exception occured while processing pm results: {get_exception_string()}"
 
         finally:
             # Disable execution failure tag if exists.
             self.devices.add_label(
                 [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                "Execution Failure", False
+                "PM Status Failure", False
             )
 
             # Enable or disable execution exception
             self.devices.add_label(
                 [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                "Execution Exception", is_execution_exception
+                "PM Status Exception", is_execution_exception
             )
 
             # If there is debug data to add, add it.
-            if last_execution_debug is not None:
-                last_execution_debug = last_execution_debug.replace("\\n", "\n")
+            if last_pm_status_debug is not None:
+                last_pm_status_debug = last_pm_status_debug.replace("\\n", "\n")
                 self.devices.add_data(
                     [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                    "Last Execution Debug", last_execution_debug
+                    "Last PM Status Debug", last_pm_status_debug
                 )
 
             logger.info(f"Finished with device {device['internal_axon_id']}.")
 
-    def _handle_wmi_execution_failure(self, device, exc):
+    def _handle_pm_failure(self, device, exc):
         self.number_of_active_execution_requests = self.number_of_active_execution_requests - 1
 
         try:
@@ -452,7 +389,7 @@ class GeneralInfoService(PluginBase, Triggerable):
                 logger.info(f"Failure because of blacklist in device {device['internal_axon_id']}")
                 return
 
-            logger.info("Failed running wmi query on device {0}! error: {1}"
+            logger.info("Failed running pm status on device {0}! error: {1}"
                         .format(device["internal_axon_id"], str(exc)))
 
             # We need to tag that device, but we have no associated adapter devices. we must use the first one.
@@ -463,27 +400,18 @@ class GeneralInfoService(PluginBase, Triggerable):
 
                 self.devices.add_label(
                     [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                    "Execution Failure", True
+                    "PM Status Failure", True
                 )
 
                 ex_str = str(exc).replace("\\n", "\n")
 
                 self.devices.add_data(
                     [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                    "Last Execution Debug", f"Execution failed: {ex_str}"
+                    "Last PM Status Debug", f"Execution failed: {ex_str}"
                 )
         except Exception:
             logger.exception("Exception in failure.")
 
     @add_rule('run', methods=['POST'], should_authenticate=False)
     def run_now(self):
-        if self.scheduler is None:
-            self.start_activatable()
-
-        else:
-            jobs = self.scheduler.get_jobs()
-            reset_job = next(job for job in jobs if job.name == 'general_info')
-            reset_job.modify(next_run_time=datetime.now())
-            self.scheduler.wakeup()
-
-        return ""
+        self._get_pm_status_async()

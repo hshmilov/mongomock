@@ -129,6 +129,17 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
     installed_on = Field(datetime.datetime)
 
 
+class DeviceAdapterMsrcAvailablePatch(SmartJsonClass):
+    """ A definition for the json-schema for an available msrc patch"""
+    title = Field(str, "Title")
+    security_bulletin_ids = ListField(str, "Security Bulletin ID's")
+    kb_article_ids = ListField(str, "KB Article ID's")
+    msrc_severity = Field(str, "MSRC Severity")
+    patch_type = Field(str, "Type", enum=["Software", "Driver"])
+    categories = ListField(str, "Categories")
+    publish_date = Field(datetime.datetime, "Publish Date")
+
+
 class DeviceAdapterLocalAdmin(SmartJsonClass):
     """A definition for local admins list"""
 
@@ -155,7 +166,8 @@ class DeviceAdapter(SmartJsonClass):
     os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
-    security_patches = ListField(DeviceAdapterSecurityPatch, "Security Patch")
+    security_patches = ListField(DeviceAdapterSecurityPatch, "Installed Security Patches")
+    available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "Available Security Patches")
     connected_devices = ListField(DeviceAdapterConnectedDevice, "Connected Devices")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
@@ -303,6 +315,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_security_patch(self, **kwargs):
         self.security_patches.append(DeviceAdapterSecurityPatch(**kwargs))
+
+    def add_available_security_patch(self, **kwargs):
+        self.available_security_patches.append(DeviceAdapterMsrcAvailablePatch(**kwargs))
 
     def add_connected_device(self, **kwargs):
         self.connected_devices.append(DeviceAdapterConnectedDevice(**kwargs))

@@ -596,7 +596,7 @@ class AggregatorService(PluginBase, Triggerable):
                 # for us (for example ip). Usually when we get some list variable we get all of it so we don't need
                 # any update things
                 tag["data"] = deep_merge_only_dict(tag["data"], final_data)
-                logger.info("action if exists on tag!")
+                logger.debug("action if exists on tag!")
 
             result = entities_db.update_one({
                 "internal_axon_id": axonius_entity['internal_axon_id'],

@@ -1,6 +1,5 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Axonius" type="CompoundRunConfigurationType" factoryName="Compound Run Configuration">
-    <toRun type="docker-deploy" name="ELKX" />
     <toRun type="PythonConfigurationType" name="basic" />
     <method />
   </configuration>

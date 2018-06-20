@@ -19,11 +19,10 @@ WMI_SMB_RUNNER_LOCATION = os.path.abspath(
 TEST_BINARY_LOCATION = os.path.abspath(
     os.path.join(ROOT_DIR, "uploaded_files", "test_binary.exe"))
 
-AXPM_BINARY_LOCATION = os.path.abspath(
-    os.path.join(ROOT_DIR, "shared_readonly_files", "AXPM", "AXPM.exe"))
 
-WSUSSCN2_BINARY_LOCATION = os.path.abspath(
-    os.path.join(ROOT_DIR, "shared_readonly_files", "AXPM", "wsusscn2", "wsusscn2.cab"))
+# Timeout in seconds for subprocesses
+MAX_TIME_FOR_PM_ONLINE_OPERATIONS = 60 * 7
+MAX_TIME_FOR_WMI_OPERATIONS = 60 * 5
 
 
 def pretty(d, indent=0):
@@ -50,20 +49,18 @@ def get_basic_wmi_smb_command(address=ADDRESS):
     return ["/usr/bin/python2", WMI_SMB_RUNNER_LOCATION, domain, username, PASSWORD, address, '//./root/cimv2']
 
 
-@pytest.mark.skip("Too slow")
-def test_pm_online_rpc():
+def _test_pm_online(method):
     commands = [
-        {"type": "pmonline", "args": [True]}    # True for is_remote (meaning, we check RPC connection)
+        {"type": "pmonline", "args": [method]}  # True for is_remote (meaning, we check RPC connection)
     ]
 
-    p = subprocess.Popen(get_basic_wmi_smb_command(address=PM_DEVICE_WINDOWS_SERVER_2012_WITH_INTERNET_ADDRESS) + [json.dumps(commands)],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(
+        get_basic_wmi_smb_command(
+            address=PM_DEVICE_WINDOWS_SERVER_2012_HEBREW_WITH_INTERNET_ADDRESS) + [json.dumps(commands)],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    start = time.time()
-    stdout, stderr = p.communicate()
-    end = time.time()
+    stdout, stderr = p.communicate(timeout=MAX_TIME_FOR_PM_ONLINE_OPERATIONS)
 
-    assert (end - start) < 60 * 20  # 20 minutes
     assert p.returncode == 0
     response = json.loads(stdout)
     assert len(response) == len(commands)
@@ -80,20 +77,29 @@ def test_pm_online_rpc():
     assert "Windows Malicious Software Removal Tool x64 - June 2018 (KB890830)" in titles
 
 
+def test_pm_online_rpc():
+    _test_pm_online("rpc")
+
+
+def test_pm_online_smb():
+    _test_pm_online("smb")
+
+
+def test_pm_online_rpc_and_fallback_smb():
+    _test_pm_online("rpc_and_fallback_smb")
+
+
 @pytest.mark.skip("file pm is temporairly disabled due to time")
 def test_pm():
     commands = [
-        {"type": "pm", "args": [AXPM_BINARY_LOCATION, WSUSSCN2_BINARY_LOCATION]}
+        {"type": "pm", "args": []}
     ]
 
     p = subprocess.Popen(get_basic_wmi_smb_command(address=PM_DEVICE_WINDOWS_SERVER_2008_NO_INTERNET_ADDRESS) + [json.dumps(commands)],
                          stdout=subprocess.PIPE)
 
-    start = time.time()
-    stdout, stderr = p.communicate()
-    end = time.time()
+    stdout, stderr = p.communicate(timeout=300)
 
-    assert (end - start) < 60 * 20    # 20 minutes
     assert p.returncode == 0
     response = json.loads(stdout)
     assert len(response) == len(commands)
@@ -122,11 +128,8 @@ def test_wmi():
     p = subprocess.Popen(get_basic_wmi_smb_command(address=WMI_QUERIES_DEVICE) + [json.dumps(commands)],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    start = time.time()
-    stdout, stderr = p.communicate()
-    end = time.time()
+    stdout, stderr = p.communicate(timeout=MAX_TIME_FOR_WMI_OPERATIONS)
 
-    assert (end - start) < 60
     assert stderr == b""
     assert p.returncode == 0
     response = json.loads(stdout)

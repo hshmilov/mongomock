@@ -56,6 +56,11 @@ class RemoteWUAHandler(object):
         """
         self.iupdatesession = new_idispatch_from_clsid(self.dcom, CLSID_UpdateSession)
 
+        # IUpdateSearcher2 inherits from IUpdateSearcher, and since we are using IDispatch we can treat
+        # this object as IUpdateSearcher2.
+        # We set the user locale in order for localized information to be shown in english.
+        self.iupdatesession.put("UserLocale", com_interfaces.idispatch.LCID_EN_US, hard_check=True)
+
         # We start with an IUpdateSession interface. Lets create an update searcher.
         i_update_searcher = self.iupdatesession.call("CreateUpdateSearcher", [])
 

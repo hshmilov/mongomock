@@ -195,6 +195,10 @@ export const pluginMeta = {
         title: 'WMI Info',
         description: ''
     },
+    pm_status: {
+        title: 'PM Status',
+        description: ''
+    },
     softlayer_adapter: {
         title: 'IBM Cloud',
         description: 'IBM\'s cloud computing platform combines platform as a service (PaaS) with infrastructure as a service (IaaS) and cloud services.'

@@ -979,7 +979,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         # We are assuming that the dc is the DNS server
         full_device_name = device_name
 
-        err = f"Resolving {full_device_name} {client_config}"
+        err = f"Resolving {full_device_name} of {client_config['dc_name']} "
 
         ips = []
 

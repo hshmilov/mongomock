@@ -10,9 +10,10 @@ from impacket.dcerpc.v5.dcomrt import OBJREF, FLAGS_OBJREF_CUSTOM, OBJREF_CUSTOM
 from impacket.dcerpc.v5.dtypes import NULL
 import datetime
 
-DISPID_PROPERTYPUT = 0xFFFFFFFD  # I can see in C sources this is -3, but for some reason impacket wants it as unsigned
+# I can see in C sources this is -3, but for some reason impacket wants it as unsigned
 # so this is how it works (might be a bug in impacket..)
-LCID_EN_US = 0x403
+DISPID_PROPERTYPUT = 0xFFFFFFFD
+LCID_EN_US = 0x409
 
 # 30. December 1899, midnight.  For VT_DATE.
 _com_null_date = datetime.datetime(1899, 12, 30, 0, 0, 0)
