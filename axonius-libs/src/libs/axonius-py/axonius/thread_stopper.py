@@ -13,17 +13,19 @@ class StopThreadException(BaseException):
 def stoppable(f):
     @functools.wraps(f)
     def wrapped(*args, **kwargs):
-        tid = threading.get_ident()
         if ThreadStopper.stopped.isSet():
             return
-        ThreadStopper.stoppable_threads.append(tid)
-        logger.debug(f'Adding {tid} to stoppable threads on function {f}')
+        with ThreadStopper.stoppable_threads_lock:
+            tid = threading.get_ident()
+            logger.debug(f'Adding {tid} to stoppable threads on function {f}')
+            ThreadStopper.stoppable_threads.append(tid)
         try:
             r = f(*args, **kwargs)
         except StopThreadException:
             r = None
         finally:
-            ThreadStopper.stoppable_threads.remove(tid)
+            with ThreadStopper.stoppable_threads_lock:
+                ThreadStopper.stoppable_threads.remove(tid)
             logger.debug(f'removing {tid}')
         return r
     return wrapped
@@ -32,6 +34,7 @@ def stoppable(f):
 class ThreadStopper(object):
     stoppable_threads = list()  # can't use set due to inheritance (have to support multiple inserts)
     stopped = threading.Event()
+    stoppable_threads_lock = threading.Lock()
 
     @classmethod
     def _async_raise(cls, tids):
