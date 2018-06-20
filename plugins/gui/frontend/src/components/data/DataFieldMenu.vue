@@ -47,9 +47,7 @@
 					return this.view.fields
 				},
 				set(fields) {
-					this.updateView({ module: this.module, view: {
-                        fields, page: -1
-                    }})
+					this.updateView({ module: this.module, view: { fields }})
 				}
 			},
 			currentFields() {

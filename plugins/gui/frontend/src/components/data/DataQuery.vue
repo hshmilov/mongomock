@@ -103,7 +103,7 @@
                 },
                 set(expressions) {
 					this.updateView({ module: this.module, view: {
-						query: { filter: this.queryFilter, expressions }
+						query: { filter: this.queryFilter, expressions }, page: 0
 					}})
                 }
             },
@@ -113,7 +113,7 @@
 				},
 				set(filter) {
 					this.updateView({ module: this.module, view: {
-                        query: { filter, expressions: this.queryExpressions }
+                        query: { filter, expressions: this.queryExpressions }, page: 0
                     }})
 				}
 			},
@@ -198,7 +198,6 @@
 				this.queryExpressions = [ {...expression} ]
                 this.searchValue = ''
                 this.queryFilter = ''
-				this.executeFilter()
             },
 			rebuildFilter() {
                 this.rebuild = true
@@ -207,7 +206,6 @@
             submitFilter () {
             	if (!this.filterValid) return
                 this.queryFilter = this.searchValue
-            	this.executeFilter()
 				this.$refs.greatInput.$parent.close()
             },
 			selectQuery ({view}) {
@@ -221,10 +219,6 @@
             	if (this.queryFilter === filter) return
 				this.queryFilter = filter
                 this.filterValid = true
-                this.executeFilter()
-            },
-            executeFilter () {
-				this.updateView({ module: this.module, view: { page: -1 } })
             },
             openSaveView() {
                 if (this.disableSaveButton || this.searchValue === '') return
@@ -266,7 +260,6 @@
                     let requestedQuery = this.savedViews.find(view => view.name === this.$route.query.view)
                     if (requestedQuery) {
                         this.queryFilter = requestedQuery.view.query.filter
-                        this.executeFilter()
                     }
                 }
             })

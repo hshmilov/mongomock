@@ -21,7 +21,7 @@
                     <x-checkbox v-model="selected" :value="item[idField]" @change="updateSelected" />
                 </td>
                 <td v-for="field in fields" nowrap>
-                    <component :is="field.type" :value="field.name.split('->').reduce((item, field_segment) => item[field_segment], item)" :schema="field" :limit="2" />
+                    <component :is="field.type" :value="parseField(field)" :schema="field" :limit="2" />
                 </td>
             </tr>
             <template v-if="pageSize">
@@ -106,7 +106,13 @@
                 // } else {
                 //     this.$emit('input', {ids: this.selected, included: true})
                 // }
+            },
+            parseField(field) {
+				return field.name.split('->').reduce((item, field_segment) => item[field_segment], item)
             }
+        },
+        updated() {
+			this.$emit('updated')
         }
 	}
 </script>

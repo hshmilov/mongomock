@@ -4,7 +4,7 @@
             <slot name="actions" slot="actions"/>
             <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
                      :id-field="idField" :value="value" @input="$emit('input', $event)"
-                     :click-row-handler="onClickRow" :click-col-handler="onClickSort"/>
+                     :click-row-handler="onClickRow" :click-col-handler="onClickSort" @updated="tableUpdated"/>
         </x-actionable-table>
         <div class="x-pagination">
             <div class="x-sizes">
@@ -43,7 +43,8 @@
         props: {module: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
-				loading: true
+				loading: true,
+                fetched: false
             }
         },
         computed: {
@@ -90,50 +91,30 @@
             pageCount() {
 				return Math.ceil(this.count.data / this.view.pageSize) - 1
             },
-            viewPage() {
-			    return this.view.page
-            },
             pageLinkNumbers() {
-                let numbers = []
-                let steps = [5, 4, 3, 2, 1, 0]
-                steps.forEach((step) => {
-                	if (step > 2 && this.pageCount - this.view.page > 5 - step) return
-                    if (this.view.page > step) {
-                    	numbers.push(this.view.page - step - 1)
-					}
-                })
-                numbers.push(this.view.page)
-                steps.reverse().forEach((step) => {
-					if (step > 2 && this.view.page > 5 - step) return
-					if (this.pageCount - this.view.page > step) {
-						numbers.push(this.view.page + step + 1)
-					}
-				})
-                return numbers
+				// Page numbers that can be navigated to, should include 3 before current and 3 after
+                let firstPage = this.view.page - 3
+                let lastPage = this.view.page + 3
+                if (this.view.page <= 3) {
+                	// For the case that current page is up to 3, page numbers should be first 7 available
+                	firstPage = 0
+                    lastPage = Math.min(firstPage + 6, this.pageCount)
+				} else if (this.view.page >= (this.pageCount - 3)) {
+					// For the case that current page is up to 3 from last, page numbers should be last 7 available
+                	lastPage = this.pageCount
+                    firstPage = Math.max(lastPage - 6, 0)
+				}
+                return Array.from({length: lastPage - firstPage + 1}, (x, i) => i + firstPage)
             }
         },
         watch: {
-            viewPage() {
-                if (this.viewPage == -1)
-                {
-                    this.view.page = 0
-                }
-                else {
-                    this.fetchLinkedPages()
-                }
-            },
             view(newView, oldView) {
             	if (newView.query.filter !== oldView.query.filter ||
                     Math.abs(newView.page - oldView.page) > 3 ||
                     newView.fields.length > oldView.fields.length) {
                     this.loading = true
                 }
-            },
-            loading(newLoading) {
-            	if (newLoading) return
-				if (this.content.data && this.content.data.length) {
-					this.$emit('data', this.content.data[0][this.idField])
-				}
+                this.fetchLinkedPages()
             }
         },
         methods: {
@@ -145,8 +126,11 @@
                     limit: this.pageLinkNumbers.length * this.view.pageSize
 				}).then(() => {
 					if (!this.content.fetching) {
-					    this.loading = false
+					    this.fetched = true
                     }
+					if (this.content.data && this.content.data.length) {
+						this.$emit('data', this.content.data[0][this.idField])
+					}
 				})
             },
             onClickRow(id) {
@@ -176,6 +160,12 @@
             },
             updateModuleView(view) {
             	this.updateView({module: this.module, view})
+            },
+            tableUpdated() {
+				if (this.fetched && this.pageData.length) {
+					this.fetched = false
+					this.loading = false
+				}
             }
         },
 		created() {
