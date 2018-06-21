@@ -108,9 +108,6 @@
                 //     this.$emit('input', {ids: this.selected, included: true})
                 // }
             }
-        },
-        updated() {
-			this.$emit('updated')
         }
 	}
 </script>

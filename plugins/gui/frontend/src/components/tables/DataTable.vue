@@ -4,7 +4,7 @@
             <slot name="actions" slot="actions"/>
             <x-table slot="table" :data="pageData" :fields="viewFields" :page-size="view.pageSize" :sort="view.sort"
                      :id-field="idField" :value="value" @input="$emit('input', $event)"
-                     :click-row-handler="onClickRow" :click-col-handler="onClickSort" @updated="tableUpdated"/>
+                     :click-row-handler="onClickRow" :click-col-handler="onClickSort"/>
         </x-actionable-table>
         <div class="x-pagination">
             <div class="x-sizes">
@@ -129,6 +129,9 @@
 					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
                     limit: this.pageLinkNumbers.length * this.view.pageSize
 				}).then(() => {
+					if (!this.content.fetching) {
+						this.loading = false
+                    }
 					if (this.content.data && this.content.data.length) {
 						this.$emit('data', this.content.data[0][this.idField])
 					}
@@ -161,9 +164,6 @@
             },
             updateModuleView(view) {
             	this.updateView({module: this.module, view})
-            },
-            tableUpdated() {
-                this.loading = false
             }
         },
 		created() {
