@@ -31,34 +31,34 @@ export const onboarding = {
 					content: 'Axonius uses Adapters to collect and correlate device and user information from your systems.'
 				},
 				'activeDirectory': {
-					id: 'active_directory_adapter', title: 'ActiveDirectory ADAPTER', queue: 'adapters', align: 'right',
-					content: 'If you use ActiveDirectory, click here to configure it.',
+					id: 'active_directory_adapter', title: 'Active Directory ADAPTER', queue: 'adapters', align: 'right',
+					content: 'If you use ActiveDirectory, click to configure it.',
 					actions: [
 						{ title: 'SKIP', state: 'network' }
 					]
 				},
 				'addServer': {
 					id: 'new_server', title: 'CONFIGURE YOUR SERVER', align: 'left',
-					content: 'This adapter can connect to any server you have credentials for.\nClick here to fill them in.'
+					content: 'This adapter can connect to any server you have credentials for.\nClick to fill them in.'
 				},
 				'saveServer': {
 					id: 'save_server', title: 'SAVE CREDENTIALS', align: 'right',
-					content: 'Fill in all required fields, then click here to connect the server.',
+					content: 'Fill in all required fields, then click to connect the server.',
 				},
 				'successServer': {
-					id: 'status_server', title: 'YOUR SERVER CONNECTED', align: 'bottom', emphasize: false,
-					content: 'This indicates that the server was added, as Axonius was able connect to it.',
+					id: 'status_server', title: 'SERVER CONNECTED', align: 'bottom', emphasize: false,
+					content: 'The green checkmark icon indicates that the server was added and Axonius was able connect to it.',
 					actions: [
 						{ title: 'Next', state: 'backAdapters' }
 					]
 				},
 				'errorServer': {
 					id: 'status_server', title: 'PROBLEM WITH CREDENTIALS', align: 'bottom',
-					content: 'The red exclamation mark indicates that connection to the server could not be established.\nClick here to view the error and try again.',
+					content: 'The red exclamation icon indicates that a connection to the server could not be established.\nClick to view the error and try again.',
 				},
 				'backAdapters': {
 					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right',
-					content: 'Let\'s return to our Adapters'
+					content: 'Click to review your Adapters'
 				},
 				'network': {
 					title: 'NETWORK ADAPTERS', align: 'center', queue: 'adapters',
@@ -71,21 +71,21 @@ export const onboarding = {
 					]
 				},
 				'cisco': {
-					title: 'CISCO ADAPTERS', align: 'center',
+					title: 'Cisco ADAPTERS', align: 'center',
 					content: 'Which Cisco management solution do you use?',
 					actions: [
 						{ title: 'Cisco Prime', state: 'ciscoPrime' },
-						{ title: 'Cisco Switch/Router (no management solution)', state: 'ciscoRegular' },
+						{ title: 'Cisco Switch/Router (direct connection, no management solution)', state: 'ciscoRegular' },
 						{ title: 'SKIP', state: 'networkNoCisco'}
 					]
 				},
 				'ciscoPrime': {
 					id: 'cisco_prime_adapter', title: 'Cisco Prime ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'ciscoRegular': {
 					id: 'cisco_adapter', title: 'Cisco ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'networkNoCisco': {
 					title: 'NETWORK ADAPTERS', align: 'center',
@@ -98,11 +98,11 @@ export const onboarding = {
 				},
 				'juniper': {
 					id: 'juniper_adapter', title: 'Juniper Junos ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'fortinet': {
 					id: 'fortigate_adapter', title: 'Fortinet Fortigate ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'virtualizationCloud': {
 					title: 'CLOUD PROVIDERS', align: 'center', queue: 'adapters',
@@ -116,15 +116,15 @@ export const onboarding = {
 				},
 				'aws': {
 					id: 'aws_adapter', title: 'Amazon Elastic ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'azure': {
 					id: 'azure_adapter', title: 'Microsoft Azure ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'ibmCloud': {
 					id: 'softlayer_adapter', title: 'IBM Cloud ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'virtualizationLocal': {
 					title: 'VIRTUALIZATION SOLUTIONS', align: 'center', queue: 'adapters',
@@ -139,25 +139,25 @@ export const onboarding = {
 				},
 				'esx': {
 					id: 'esx_adapter', title: 'VMWare ESXi ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'hyperV': {
 					id: 'hyper_v_adapter', title: 'Microsoft Hyper-V ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'openStack': {
 					id: 'openstack_adapter', title: 'OpenStack ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'oracleVM': {
 					id: 'oracle_vm', title: 'Oracle VM ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'agent': {
-					title: 'ENDPOINT PROTECTION', align: 'center', queue: 'adapters',
+					title: 'ENDPOINT PROTECTION AGENT', align: 'center', queue: 'adapters',
 					content: 'Which is the most common Endpoint Protection or EDR Agent you use?',
 					actions: [
-						{ title: 'CarbonBlack', state: 'carbonBlack' },
+						{ title: 'Carbon Black', state: 'carbonBlack' },
 						{ title: 'enSilo', state: 'enSilo' },
 						{ title: 'McAfee ePO', state: 'epo' },
 						{ title: 'Minerva Labs', state: 'minerva'},
@@ -169,15 +169,15 @@ export const onboarding = {
 				},
 				'epo': {
 					id: 'epo_adapter', title: 'McAfee ePO', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'symantec': {
 					id: 'symantec_adapter', title: 'Symantec ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'carbonBlack': {
-					title: 'CarbonBlack', align: 'center',
-					content: 'Which Carbon Black product do you use most?',
+					title: 'Carbon Black', align: 'center',
+					content: 'Which Carbon Black product do you use?',
 					actions: [
 						{ title: 'Cb Response', state: 'carbonBlackResponse' },
 						{ title: 'Cb Protection', state: 'carbonBlackProtection' },
@@ -186,31 +186,31 @@ export const onboarding = {
 				},
 				'carbonBlackResponse': {
 					id: 'carbonblack_response_adapter', title: 'CarbonBlack Response ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'carbonBlackProtection': {
 					id: 'carbonblack_protection_adapter', title: 'CarbonBlack Protection ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'carbonBlackDefense': {
 					id: 'carbonblack_defense_adapter', title: 'CarbonBlack Defense ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'minerva': {
 					id: 'minerva_adapter', title: 'Minerva Labs ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'enSilo': {
 					id: 'ensilo_adapter', title: 'enSilo Endpoint Protection', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'secdo': {
 					id: 'secdo_adapter', title: 'Secdo Endpoint Protection', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'sentinelOne': {
 					id: 'sentinelone_adapter', title: 'SentinelOne', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'agentIT': {
 					title: 'IT AGENT', align: 'center', queue: 'adapters',
@@ -229,98 +229,97 @@ export const onboarding = {
 				},
 				'sccm': {
 					id: 'sccm_adapter', title: 'Microsoft SCCM ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'bigFix': {
 					id: 'bigfix_adapter', title: 'IBM Bigfix ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'puppet': {
 					id: 'puppet_adapter', title: 'Puppet ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'chef': {
 					id: 'chef_adapter', title: 'Chef ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'bomgar': {
 					id: 'bomgar_adapter', title: 'Bomgar Remote Support ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'manageEngine': {
 					id: 'desktop_central_adapter', title: 'ManageEngine Desktop Central ADAPTER', align: 'bottom',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'kaseya': {
 					id: 'kaseya_adapter', title: 'Kaseya VSA ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'observeIT': {
 					id: 'observeit_csv_adapter', title: 'ObserveIT ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'va':  {
-					title: 'VULNERABILITY ASSESSMENT', align: 'center', queue: 'adapters',
-					content: 'Which Vulnerability Assessment solution do you use?',
+					title: 'VULNERABILITY ASSESSMENT TOOLS', align: 'center', queue: 'adapters',
+					content: 'Which Vulnerability Assessment tool do you use?',
 					actions: [
 						{ title: 'Qualys', state: 'qualys' },
-						{ title: 'Rapid7 Nexpose', state: 'nexpose' },
+						{ title: 'Rapid 7 Nexpose', state: 'nexpose' },
 						{ title: 'Tenable Nessus', state: 'nessus' },
 						{ title: 'SKIP', state: 'mdm' }
 					]
 				},
 				'qualys': {
 					id: 'qualys_scans_adapter', title: 'Qualys Scanner ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'nexpose': {
 					id: 'nexpose_adapter', title: 'Rapid7 Nexpose', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'nessus': {
 					id: 'nessus_adapter', title: 'Tenable Nessus ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'mdm': {
 					title: 'MDM SOLUTIONS', align: 'center', queue: 'adapters',
-					content: 'Which MDM solution do you use most?',
+					content: 'Which Mobile Device Management solution do you use most?',
 					actions: [
-						{ title: 'Blackberry UEM', state: 'blackberry' },
+						{ title: 'BlackBerry UEM', state: 'blackberry' },
 						{ title: 'MobileIron', state: 'mobileIron' },
 						{ title: 'VMWare Airwatch', state: 'vmwareAirwatch' },
-						{ title: 'Blackberry UEM', state: 'blackberry' },
 						{ title: 'SKIP', state: 'serviceNow' }
 					]
 				},
 				'mobileIron': {
 					id: 'mobileiron_adapter', title: 'MobileIron EMM ADAPTER', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'vmwareAirwatch': {
 					id: 'airwatch_adapter', title: 'VMWare Airwatch', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'blackberry': {
 					id: 'blackberry_uem_adapter', title: 'Blackberry UEM', align: 'right',
-					content: 'Click here to configure it.'
+					content: 'Click to configure it.'
 				},
 				'serviceNow': {
 					id: 'service_now_adapter', title: 'ServiceNow ADAPTER', align: 'right', queue: 'adapters',
-					content: 'If you use ServiceNow, click here to configure it.',
+					content: 'If you use ServiceNow, click to configure it.',
 					actions: [
 						{ title: 'SKIP', state: 'csv' }
 					]
 				},
 				'csv': {
-					id: 'csv_adapter', title: 'CSV Serials ADAPTER', align: 'right', queue: 'adapters',
-					content: 'If you have a CSV with other devices you want to add, click here.',
+					id: 'csv_adapter', title: 'CSV SERIALS ADAPTER', align: 'right', queue: 'adapters',
+					content: 'If you have a CSV file with other devices you want to add, click to configure it.',
 					actions: [
 						{ title: 'SKIP', state: 'devices' }
 					]
 				},
 				'devices': {
-					id: 'devices', title: 'SEE YOUR COLLECTED DEVICES', align: 'right',
-					content: 'Devices combine data from as many adapters as Axonius found it, according to the correlation rules.'
+					id: 'devices', title: 'SEE YOUR DEVICES', align: 'right',
+					content: 'Click to see all devices that were found and correlated.'
 				},
 				'bestDevice': {
 					title: 'DEVICE VIEW', align: 'bottom', queue: 'devices',
@@ -328,261 +327,261 @@ export const onboarding = {
 				},
 				'adapterDevice': {
 					title: 'DEVICE ADAPTER', align: 'top',
-					content: 'Here you see one Adapter\'s data of the device.\nThe fields are specific properties Axonius collects using this Adapter.',
+					content: 'Here you can see all device data from a specific Adapter.',
 					actions: [
 						{ title: 'Next', state: 'otherAdapterDevice'}
 					]
 				},
 				'otherAdapterDevice': {
 					title: 'DEVICE ADAPTER',
-					content: 'You will see a tab per Adapter that has data about the device.',
+					content: 'You will see a tab for every Adapter that has device data.',
 					actions: [
 						{ title: 'Next', state: 'backDevices'}
 					]
 				},
 				'backDevices': {
 					id: 'devices', title: 'DEVICES', align: 'right',
-					content: 'Let\'s return to our Devices.'
+					content: 'Click to see your devices.'
 				},
 				'query': {
 					id: 'query_wizard', title: 'QUERY', align: 'left', queue: 'devices',
-					content: 'Let\'s query devices by their operating system.\nClick here to build the query.'
+					content: 'Let\'s query devices by operating system. Click to build the query.'
 				},
 				'queryField': {
 					id: 'query_field', title: 'SELECT FIELD', align: 'top',
-					content: 'Click here and select the field "OS: Type".\nYou can search for it, if needed.'
+					content: 'Click to select the field "OS: Type". You can search for it if it\'s easier.'
 				},
 				'queryOp': {
 					id: 'query_op', title: 'SELECT OPERATOR', align: 'top',
-					content: 'Click here and select the operator "equals" to compare to a value.'
+					content: 'Click to select the "equals" operator to compare to a value.'
 				},
 				'queryValue': {
 					id: 'query_value', title: 'SELECT VALUE', align: 'top',
-					content: 'Click here and select the OS you would like to find.'
+					content: 'Click and select the OS you would like to find.'
 				},
 				'queryResults': {
 					title: 'QUERY RESULTS', align: 'center', queue: 'devices',
-					content: 'You can notice the content of the table changed to show the results of your query.\nYou can continue refining the query.',
+					content: 'You\'ll see that the contents of the table changed to show the results of your query.\nYou can always change and refine your query and see new results.',
 					actions: [
 						{ title: 'Next', state: 'querySave' }
 					]
 				},
 				'querySave': {
 					id: 'query_save', title: 'SAVE QUERY', align: 'bottom',
-					content: 'Click here to save this query by a name.'
+					content: 'Click to name and save your query.'
 				},
 				'querySaveConfirm': {
 					id: 'query_save_confirm', title: 'SAVE QUERY', align: 'right',
-					content: 'Fill in a name, then click here to save.'
+					content: 'Fill in the name, then click to save.'
 				},
 				'queryList': {
 					id: 'query_list', title: 'QUERIES LIST', align: 'bottom',
-					content: 'Click here to view the saved queries as well as query history.'
+					content: 'Click to see a list of saved queries and the query history.'
 				},
 				'querySelect': {
 					id: 'query_select', title: 'SELECT A QUERY', align: 'bottom', emphasize: false,
-					content: 'You see here the query you saved, as well as predefined queries for significant properties of AD.\nSelect a query to execute it and load the results.'
+					content: 'Here you see the query you saved as well as predefined queries. Select any query to see the results.'
 				},
 				'alerts': {
 					id: 'alerts', title: 'DEFINE ALERTS', align: 'right', queue: 'devices',
-					content: 'Alerts monitor results of queries and perform actions accordingly.'
+					content: 'Alerts monitor results of queries and take action.'
 				},
 				'alertNew': {
 					id: 'alert_new', title: 'NEW ALERT', align: 'left', queue: 'alerts',
-					content: 'Let\'s create an alert for the query we saved.\nClick here to start.'
+					content: 'Click to create an alert for the query we just saved.'
 				},
 				'alertName': {
 					id: 'alert_name', title: 'ALERT NAME', align: 'right',
-					content: 'Give the alert a name, by which you can find it in the table of alerts.'
+					content: 'Give the alert a meaningful name that you\'ll recognize later.'
 				},
 				'alertQuery': {
 					id: 'alert_query', title: 'ALERT QUERY', align: 'right',
-					content: 'Select the name by which you saved the query previously.'
+					content: 'Select the name of the query you just saved.'
 				},
 				'alertIncreased': {
 					id: 'alert_increased', title: 'ALERT TRIGGER', align: 'right',
-					content: 'The change to monitor in the selected query.\nSelect this to check for new added results.'
+					content: 'Select how this alert should be triggered.'
 				},
 				'alertAbove': {
 					id: 'alert_above', title: 'ALERT TRIGGER', align: 'bottom',
-					content: 'The number of new results above which to act.\nEnter 1 to be notified about 2 new results.'
+					content: 'Choose the number of results that will trigger the alert.'
 				},
 				'alertAction': {
 					id: 'alert_notification', title: 'ALERT ACTION', align: 'right',
-					content: 'The action to run when alert is triggered.\nSelect this to get a notification (added to the bell on the top bar).'
+					content: 'Choose the action to take when the alert is triggered.'
 				},
 				'alertSave': {
 					id: 'alert_save', title: 'SAVE THE ALERT', align: 'left',
-					content: 'Click here to save.'
+					content: 'Click to save the alert.'
 				},
 				'settings': {
 					id: 'settings', title: 'SETTINGS', align: 'bottom', queue: 'alerts',
-					content: 'Settings allow configuring properties of the system functionality or the UI.'
+					content: 'Choose configuration options for system functionality.'
 				},
 				'research-settings-tab': {
 					id: 'research_time', title: 'DISCOVERY RUN SCHEDULE', align: 'top',
-					content: 'Here you can select a date and time for the next discovery to run.',
+					content: 'Select a date and time for the next discovery run.',
 					actions: [
 						{ title: 'Next', state: 'lifecycleRate' }
 					]
 				},
 				'lifecycleRate': {
 					id: 'research_rate', title: 'DISCOVERY RUN RATE', align: 'bottom',
-					content: 'Here you can update the number of hours between Discovery Cycle runs.',
+					content: 'Set the number of hours between discovery runs.',
 					actions: [
 						{ title: 'Next', state: 'lifecycleRun' }
 					]
 				},
 				'lifecycleRun': {
 					id: 'research_run', title: 'DISCOVERY RUN NOW', align: 'bottom',
-					content: 'Click here to run the discovery immediately.\nOnce started, you can click again to stop it.',
+					content: 'Click to start a discovery run now. Once started, you can click to stop at any time.',
 					actions: [
 						{ title: 'Next', state: 'settingsGlobal' }
 					]
 				},
 				'settingsGlobal': {
 					id: 'global-settings-tab', title: 'GLOBAL SYSTEM SETTINGS', align: 'bottom',
-					content: 'Axonius uses global settings for execution or notifications.\nClick this tab to configure them.'
+					content: 'Configure execution and notification settings here.'
 				},
 				'global-settings-tab': {
 					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'right',
-					content: 'Here you can enable and provide credentials to your syslog.\nCan be used to notify the syslog about alerts.',
+					content: 'Enable and provide syslog credentials here for alerts.',
 					actions: [
 						{ title: 'Next', state: 'mail' }
 					]
 				},
 				'mail': {
 					id: 'email_settings', title: 'MAIL SERVER CONFIG', align: 'right',
-					content: 'Here you can enable and provide credentials to your mail server.\nCan be send alert or reports by mail.',
+					content: 'Enable and provide mail server credentials for alerts.',
 					actions: [
 						{ title: 'Next', state: 'execution' }
 					]
 				},
 				'execution': {
 					id: 'execution_settings', title: 'EXECUTION CONFIG', align: 'right',
-					content: 'Here you can enable Axonius to collect information directly from devices, in addition to the adapter-connected systems.',
+					content: 'Enable Axonius to collect information directly from devices in addition to what is collected from Adapters.',
 					actions: [
 						{ title: 'Next', state: 'settingsGUI' }
 					]
 				},
 				'settingsGUI': {
 					id: 'gui-settings-tab', title: 'UI SETTINGS', align: 'bottom',
-					content: 'Axonius allows some control over the UI.\nClick this tab to configure it.'
+					content: 'Configure settings related to the system interface.'
 				},
 				'gui-settings-tab': {
 					id: 'system_settings', title: 'DATA TABLES', align: 'right',
-					content: 'You can configure the rate in which devices and users are fetched.\nRemove the default sort if you have many devices or users and their loading is slow.',
+					content: 'Configure how frequently devices and users are collected, and determine the default sorting.',
 					actions: [
 						{ title: 'Next', state: 'okta' }
 					]
 				},
 				'okta': {
 					id: 'okta_login_settings', title: 'LOGIN WITH OKTA', align: 'right',
-					content: 'If you use OKTA, you can use it for logging into Axonius, by entering the details here.',
+					content: 'If you use Okta, you can log in to Axonius by entering Okta details.',
 					actions: [
 						{ title: 'Next', state: 'ldap' }
 					]
 				},
 				'ldap': {
-					id: 'ldap_login_settings', title: 'DEVICES / USER', align: 'right',
-					content: 'If you use OKTA, you can use it for logging into Axonius, by entering the details here.',
+					id: 'ldap_login_settings', title: 'LOGIN WITH LDAP', align: 'right',
+					content: 'If you use LDAP, you can log in to Axonius by entering LDAP user details.',
 					actions: [
 						{ title: 'Next', state: 'dashboard' }
 					]
 				},
 				'dashboard': {
 					id: 'dashboard', title: 'DASHBOARD', align: 'right',
-					content: 'The dashboard shows you a summary of the conclusions that Axonius gathered for you.'
+					content: 'The Axonius dashboard gives a system-wide snapshot.'
 				},
 				'dashboardManaged': {
 					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'right', emphasize: false,
-					content: 'The coverage pie charts describe the portion of devices with essential properties.\nManaged Coverage refers to devices discovered by an adapter of a management system.',
+					content: 'The coverage chart shows the percentage of devices managed by an adapter.',
 					actions: [
 						{ title: 'Next', state: 'dashboardManagedQuery' }
 					]
 				},
 				'dashboardManagedQuery': {
 					id: 'managed_coverage', title: 'MANAGEMENT COVERAGE', align: 'bottom',
-					content: 'Click here to load the devices which are not managed.'
+					content: 'Click to see unmanaged devices.'
 				},
 				'dashboardBack': {
 					id: 'dashboard', title: 'DASHBOARD', align: 'right',
-					content: 'Let\'s get back to the dashboard.'
+					content: 'Click to return to the dashboard.'
 				},
 				'dashboardWizard': {
 					id: 'dashboard_wizard', title: 'CREATE YOUR OWN CHART', align: 'right',
-					content: 'Click here to launch the wizard for chart customization, to monitor the questions you are interested to see.'
+					content: 'Click to launch the new chart wizard.'
 				},
 				'wizardIntersect': {
 					id: 'intersect', title: 'CHART TYPE', align: 'top', fixed: true,
-					content: 'Click here to create a Pie chart showing intersection between 2 or 3 query results.'
+					content: 'Click to create a pie chart showing the intersection of 2-3 query results.'
 				},
 				'wizardModule': {
 					id: 'module', title: 'CHART MODULE', align: 'right', fixed: true,
-					content: 'Click here to select which data we are querying. For our example, select \'Devices\''
+					content: 'Click to select which data to show. For example, select \'Devices\'.'
 				},
 				'wizardMain': {
 					id: 'parent', title: 'CHART TOTAL', align: 'right', fixed: true,
-					content: 'Click here to select a query for the total of the graph. For our example, leave empty.',
+					content: 'Click to select which query to use for the total. You can leave this empty.',
 					actions: [
 						{ title: 'Next', state: 'wizardFirst' }
 					]
 				},
 				'wizardFirst': {
 					id: 'child0', title: 'CHART FIRST SUBSET', align: 'right', fixed: true,
-					content: 'Click here to select a query for one subset of the graph. For our example, select the query you saved.'
+					content: 'Click to select a query for one subset of the graph. For example, select a query you saved.'
 				},
 				'wizardSecond': {
 					id: 'child1', title: 'CHART SECOND SUBSET', align: 'right', fixed: true,
-					content: 'Click here to select a query for another subset of the graph. For our example, select the DEMO query.'
+					content: 'Click to select a query for another subset of the graph. For example, select the \'DEMO\' query.'
 				},
 				'wizardName': {
 					id: 'chart_name', title: 'CHART NAME', align: 'right', fixed: true,
-					content: 'Give the chart a name, by which you can see it in the Dashboard.'
+					content: 'Give the chart a meaningful name that you\'ll recognize on the dashboard.'
 				},
 				'wizardSave': {
 					id: 'chart_save', title: 'SAVE THE CHART', align: 'right', fixed: true,
-					content: 'Click here to save the chart and add it to the Dashboard.'
+					content: 'Click to save the chart and add it to the dashboard.'
 				},
 				'dashboardChart': {
 					title: 'YOUR CHART', align: 'left', emphasize: false,
-					content: 'See here the chart created from the data you requested.',
+					content: 'See the chart you\'ve just created.',
 					actions: [
 						{ title: 'Next', state: 'reports' }
 					]
 				},
 				'reports': {
 					id: 'reports', title: 'REPORTING', align: 'right',
-					content: 'The reporting allows you to schedule periodic emails attached with an executive summary created for you by Axonius.'
+					content: 'Reports let you schedule an email with an executive summary.'
 				},
 				'reportsSchedule': {
 					id: 'reports_schedule', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
-					content: 'You can schedule periodic emails attached with the Axonius executive report',
+					content: 'Decide how often you\'d like to receive a report.',
 					actions: [
 						{ title: 'Next', state: 'reportsFrequency' }
 					]
 				},
 				'reportsFrequency': {
 					id: 'reports_frequency', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
-					content: 'You can choose between receiving the report at the beginning of each day, of each week or of each month.',
+					content: 'Choose between daily, weekly, or monthly reports.',
 					actions: [
 						{ title: 'Next', state: 'reportsMails' }
 					]
 				},
 				'reportsMails': {
 					id: 'reports_mails', title: 'SCHEDULE REPORTING', align: 'right', emphasize: false,
-					content: 'You can add as many email addresses as you would like to receive the report.',
+					content: 'Add all email addresses that should receive the report.',
 					actions: [
 						{ title: 'Next', state: 'reportsDownload'}
 					]
 				},
 				'reportsDownload': {
 					id: 'reports_download', title: 'DOWNLOAD REPORT', align: 'right',
-					content: 'Click here to generate the Axonius executive report, for this time and download it.'
+					content: 'Click to generate and download a report now.'
 				},
 				'tourFinale': {
 					title: 'JUST THE BEGINNING', align: 'center',
-					content: 'The tour ends here but your experience with Axonius will go a long way.\nRemember you can always start the tour again, using the float on the top-right corner.',
+					content: 'The tour ends here, but you\'re just getting started. Remember: you can always restart the tour using the icon on the top right corner.',
 					actions: [
 						{ title: 'OK', state: '' }
 					]

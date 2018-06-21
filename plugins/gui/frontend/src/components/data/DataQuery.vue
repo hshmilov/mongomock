@@ -48,7 +48,7 @@
             </div>
         </x-dropdown>
         <modal v-show="saveModal.isActive" approveText="Save" approveId="query_save_confirm" size="md"
-               @close="closeSaveView" @confirm="confirmSaveView" @enter="tour('querySave')" @leave="tour('queryList')">
+               @close="closeSaveView" @confirm="confirmSaveView" @enter="tour('querySaveConfirm')" @leave="tour('queryList')">
             <div slot="body" class="query-save">
                 <label for="saveName">Save as:</label>
                 <input class="flex-expand" v-model="saveModal.name" id="saveName" @keyup.enter="confirmSaveView">
