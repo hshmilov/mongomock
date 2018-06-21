@@ -280,9 +280,7 @@ class ReportsService(PluginBase, Triggerable):
 
     def _handle_action_create_service_now_computer(self, report_data, triggered, trigger_data, current_num_of_devices,
                                                    action_data=None):
-        entity_db = "devices_db_view"
-        entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
-        current_result = self.get_view_results(report_data['view'], report_data['view_entity'])
+        current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
         if current_result is None:
             logger.info("Skipping reports trigger because there were no current results.")
             return
@@ -298,14 +296,22 @@ class ReportsService(PluginBase, Triggerable):
             if 'service_now_adapter' in entry['adapters']:
                 # It is already ServiceNow adapter
                 continue
-            for data_from_adapter in entry['specific_data']['data']:
-                name_raw = data_from_adapter.get('hostname')
-                asset_name_raw = data_from_adapter.get('name')
-                os_raw = data_from_adapter.get('os', {}).get('type')
-                mac_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('mac')
-                ip_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('ips', [None])[0]
-                serial_number_raw = data_from_adapter.get('device_serial')
-                manufacturer_raw = data_from_adapter.get('device_manufacturer')
+            for from_adapter in entry['specific_data']:
+                data_from_adapter = from_adapter['data']
+                if name_raw is None:
+                    name_raw = data_from_adapter.get('hostname')
+                if asset_name_raw is None:
+                    asset_name_raw = data_from_adapter.get('name')
+                if os_raw is None:
+                    os_raw = data_from_adapter.get('os', {}).get('type')
+                if mac_address_raw is None:
+                    mac_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('mac')
+                if ip_address_raw is None:
+                    ip_address_raw = data_from_adapter.get('network_interfaces', [{'ip': []}])[0].get('ips', [None])[0]
+                if serial_number_raw is None:
+                    serial_number_raw = data_from_adapter.get('device_serial')
+                if manufacturer_raw is None:
+                    manufacturer_raw = data_from_adapter.get('device_manufacturer')
             # Make sure that we have name
             if name_raw is None:
                 if asset_name_raw is None:

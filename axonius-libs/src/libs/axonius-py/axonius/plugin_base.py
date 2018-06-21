@@ -1347,7 +1347,7 @@ class PluginBase(Configurable, Feature):
         serive_now_settings = self._service_now_settings
         if serive_now_settings['enabled'] is True:
             if serive_now_settings['use_adapter'] is True:
-                self.request_remote_plugin('create_incident', 'service_now_adapter', 'post', json=connection_dict)
+                self.request_remote_plugin('create_computer', 'service_now_adapter', 'post', json=connection_dict)
             else:
                 try:
                     service_now_connection = ServiceNowConnection(domain=serive_now_settings['domain'],
