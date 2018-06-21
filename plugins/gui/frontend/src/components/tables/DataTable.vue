@@ -43,8 +43,7 @@
         props: {module: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
         data() {
 			return {
-				loading: true,
-                fetched: false
+				loading: true
             }
         },
         computed: {
@@ -130,13 +129,9 @@
 					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
                     limit: this.pageLinkNumbers.length * this.view.pageSize
 				}).then(() => {
-					if (!this.content.fetching) {
-						if (!this.content.data.length) {
-							this.loading = false
-                        } else {
-					        this.fetched = true
-                        }
-                    }
+					if (this.content.data && this.content.data.length) {
+						this.$emit('data', this.content.data[0][this.idField])
+					}
 				})
             },
             onClickRow(id) {
@@ -168,10 +163,7 @@
             	this.updateView({module: this.module, view})
             },
             tableUpdated() {
-				if (this.fetched && this.loading && this.pageData.length) {
-					this.fetched = false
-					this.loading = false
-				}
+                this.loading = false
             }
         },
 		created() {

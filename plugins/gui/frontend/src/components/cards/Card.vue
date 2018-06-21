@@ -1,7 +1,7 @@
 <template>
     <div class="x-card">
         <div class="x-header">
-            <div class="x-title">{{title}}</div>
+            <div class="x-title" :title="title">{{title}}</div>
             <div v-if="removable" class="x-remove" @click="$emit('remove')">x</div>
         </div>
         <slot></slot>
