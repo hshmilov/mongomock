@@ -31,7 +31,7 @@ from contextlib import contextmanager
 from handlers.remotewua import RemoteWUAHandler
 
 
-MAX_NUM_OF_TRIES_OVERALL = 4    # Maximum number of tries for each query
+MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
 MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
