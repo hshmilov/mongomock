@@ -221,6 +221,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             assert is_wmi_answer_ok(win32_quickfixengineering), "WMI Answer has an exception"
             for qfe in win32_quickfixengineering["data"]:
                 installed_on = qfe.get("InstalledOn")
+                hotfix_id = qfe.get("HotFixID")
 
                 if installed_on is not None and installed_on != "0":
                     try:
@@ -228,11 +229,18 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     except Exception:
                         self.logger.exception(f"Can't parse installed_on {installed_on}, setting to None")
                         installed_on = None
+                else:
+                    # We better have installed_on None and not "0".
+                    installed_on = None
 
-                adapterdata_device.add_security_patch(
-                    security_patch_id=qfe.get("HotFixID"),
-                    installed_on=installed_on
-                )
+                if hotfix_id.lower() != "file 1":
+                    # This is a phenomena that happens on some windows devices, we need to ignore it.
+                    # https://social.technet.microsoft.com/Forums/exchange/en-US/ac717bfa-8ca4-474e-806c-e0a21e67482d/wh
+                    # at-does-it-mean-when-win32quickfixengineeringhotfixid-is-set-to-file-1?forum=winserverManagement
+                    adapterdata_device.add_security_patch(
+                        security_patch_id=hotfix_id,
+                        installed_on=installed_on
+                    )
         except Exception:
             self.logger.exception(f"Win32_QuickFixEngineering {win32_quickfixengineering}")
 

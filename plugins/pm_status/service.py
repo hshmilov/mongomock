@@ -177,6 +177,19 @@ class PmStatusService(PluginBase, Triggerable):
         else:
             log_message_device_count_threshold = 50
 
+        # Determine pm type
+        if self._pm_rpc_enabled is True and self._pm_smb_enabled is True:
+            pm_online_type = "rpc_and_fallback_smb"
+            logger.info("Using RPC and fallback SMB for PM")
+        elif self._pm_rpc_enabled is True:
+            pm_online_type = "rpc"
+            logger.info("Using RPC for PM")
+        elif self._pm_smb_enabled is True:
+            pm_online_type = "smb"
+            logger.info("Using SMB for PM")
+        else:
+            raise ValueError("Can not choose PM Online type")
+
         # We don't wanna burst thousands of queries here, so we are going to have a thread that always
         # keeps count of the number of requests, and shoot new ones in case needed.
         self.number_of_active_execution_requests = 0
@@ -210,18 +223,6 @@ class PmStatusService(PluginBase, Triggerable):
             internal_axon_id = device["internal_axon_id"]
 
             logger.debug(f"Going to request action on {internal_axon_id}")
-
-            if self._pm_rpc_enabled is True and self._pm_smb_enabled is True:
-                pm_online_type = "rpc_and_fallback_smb"
-                logger.info("Using RPC and fallback SMB for PM")
-            elif self._pm_rpc_enabled is True:
-                pm_online_type = "rpc"
-                logger.info("Using RPC for PM")
-            elif self._pm_smb_enabled is True:
-                pm_online_type = "smb"
-                logger.info("Using SMB for PM")
-            else:
-                raise ValueError("Can not choose PM Online type")
             wmi_smb_commands = [{"type": "pmonline", "args": [pm_online_type]}]
 
             # Now run all queries you have got on that device.
