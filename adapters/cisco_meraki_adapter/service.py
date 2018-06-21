@@ -138,9 +138,12 @@ class CiscoMerakiAdapter(AdapterBase):
                     continue
                 device.device_type = "Client Device"
                 device.hostname = client_raw.get('dhcpHostname')
-                ip_address = client_raw.get("ip", "")
-                if ip_address != "" or mac_address != "":
-                    device.add_nic(mac_address, ip_address.split(","))
+                try:
+                    ip_address = client_raw.get("ip", "")
+                    if ip_address != "" or mac_address != "":
+                        device.add_nic(mac_address, ip_address.split(","))
+                except Exception:
+                    logger.exception(f"Problem with fetching NIC in CiscoMeraki Client {client_raw}")
                 device.description = client_raw.get("description")
                 device.switch_port = client_raw.get("switchport")
                 device.dns_name = client_raw.get("mdnsName")
@@ -148,7 +151,7 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.set_raw(client_raw)
                 yield device
             except Exception:
-                logger.exception("Problem with fetching CiscoMeraki Device")
+                logger.exception(f"Problem with fetching CiscoMeraki Client {client_raw}")
 
     @classmethod
     def adapter_properties(cls):
