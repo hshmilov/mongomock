@@ -110,10 +110,11 @@
             view(newView, oldView) {
             	if (newView.query.filter !== oldView.query.filter ||
                     Math.abs(newView.page - oldView.page) > 3 ||
-                    newView.fields.length > oldView.fields.length) {
+                    newView.fields.length > oldView.fields.length ||
+                    this.content.data.length <= (newView.page % this.pageLinkNumbers.length) * newView.pageSize) {
                     this.loading = true
                 }
-                this.fetchLinkedPages()
+                this.fetchContentPages()
             },
             loading(newLoading) {
             	if (!newLoading && this.content.data && this.content.data.length) {
@@ -124,18 +125,21 @@
         methods: {
             ...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({fetchContent: FETCH_DATA_CONTENT}),
-            fetchLinkedPages() {
-            	return this.fetchContent({
-					module: this.module, skip: this.pageLinkNumbers[0] * this.view.pageSize,
-                    limit: this.pageLinkNumbers.length * this.view.pageSize
-				}).then(() => {
-					if (!this.content.fetching) {
-						this.loading = false
+            fetchContentPages() {
+            	if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
+            	    return this.fetchContentSegment(0, this.view.pageSize)
+                }
+                return this.fetchContentSegment(
+                    this.pageLinkNumbers[0] * this.view.pageSize, this.pageLinkNumbers.length * this.view.pageSize)
+            },
+            fetchContentSegment(skip, limit) {
+                return this.fetchContent({
+                    module: this.module, skip, limit
+                }).then(() => {
+                    if (!this.content.fetching) {
+                        this.loading = false
                     }
-					if (this.content.data && this.content.data.length) {
-						this.$emit('data', this.content.data[0][this.idField])
-					}
-				})
+                })
             },
             onClickRow(id) {
 				if (!document.getSelection().isCollapsed) return
@@ -168,13 +172,13 @@
         },
 		created() {
 			if (!this.pageData || !this.pageData.length) {
-			    this.fetchLinkedPages()
+			    this.fetchContentPages()
             } else {
 				this.loading = false
             }
             if (this.refresh) {
                 const fetchAuto = () => {
-					this.fetchLinkedPages().then(() => this.timer = setTimeout(fetchAuto, this.refresh * 1000))
+					this.fetchContentPages().then(() => this.timer = setTimeout(fetchAuto, this.refresh * 1000))
                 }
 				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
             }

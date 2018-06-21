@@ -544,7 +544,7 @@ export const onboarding = {
 					content: 'Click to save the chart and add it to the dashboard.'
 				},
 				'dashboardChart': {
-					title: 'YOUR CHART', align: 'left', emphasize: false,
+					title: 'YOUR CHART', align: 'top', emphasize: false,
 					content: 'See the chart you\'ve just created.',
 					actions: [
 						{ title: 'Next', state: 'reports' }
