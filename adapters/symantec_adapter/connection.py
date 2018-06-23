@@ -45,16 +45,26 @@ class SymantecConnection(RESTConnection):
         super().close()
 
     def get_device_list(self):
-        page_num = 1
-        last_page = False
-        while not last_page:
+        current_clients_page = self._get("computers",
+                                         url_params={"pageSize": consts.DEVICES_PER_PAGE,
+                                                     "pageIndex": 1})
+        yield from current_clients_page['content']
+        last_page = current_clients_page['lastPage']
+        totalPages = current_clients_page['totalPages']
+        page_num = 2
+        exception_in_row = 0
+        while not last_page and page_num <= totalPages:
             try:
                 current_clients_page = self._get("computers",
-                                                 url_params={"pageSize": str(consts.DEVICES_PER_PAGE),
-                                                             "pageIndex": str(page_num)})
+                                                 url_params={"pageSize": consts.DEVICES_PER_PAGE,
+                                                             "pageIndex": page_num})
                 yield from current_clients_page['content']
                 last_page = current_clients_page['lastPage']
+                exception_in_row = 0
             except Exception:
                 logger.exception(f"Got error on page {page_num}, skipping")
+                exception_in_row += 1
+                if exception_in_row >= 100:
+                    break
             page_num += 1
-            logger.debug(f"Got {page_num*1000} devices so far")
+            logger.debug(f"Got {page_num*consts.DEVICES_PER_PAGE} devices so far")
