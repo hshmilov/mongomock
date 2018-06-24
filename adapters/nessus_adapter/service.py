@@ -114,9 +114,9 @@ class NessusAdapter(ScannerAdapterBase):
                 except Exception:
                     logger.exception(f"Got problems getting scan {str(scan)}")
             client_data.disconnect()
-        except NessusException:
+        except NessusException as e:
             logger.exception(f'Error querying devices from client {client_name}')
-            raise AdapterException('Nessus Adapter failed querying devices for {0}'.format(client_name))
+            raise AdapterException('Nessus Adapter failed querying devices for {0}: {1}'.format(client_name, str(e)))
 
     def _clients_schema(self):
         """
@@ -184,7 +184,15 @@ class NessusAdapter(ScannerAdapterBase):
             device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
                            [device_raw.get('info', {}).get('host-ip', '')])
             device.last_seen = parse_date(str(device_raw.get('info', {}).get('host_end', '')))
-            device.hostname = device_raw.get('info', {}).get("netbios-name")
+            netbios_name = device_raw.get('info', {}).get("netbios-name")
+            try:
+                if "\\" in netbios_name:
+                    hostname = netbios_name.split("\\")[1]
+                else:
+                    hostname = netbios_name
+                device.hostname = hostname
+            except Exception:
+                logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
             vulnerabilities_raw = device_raw.get("vulnerabilities", [])
             device.vulnerabilities = []
             for vulnerability_raw in vulnerabilities_raw:

@@ -70,6 +70,7 @@ DOCKER_PORTS = {
     'azure-adapter':                    6024,
     'junos-adapter':                    6025,
     'okta-adapter':                     6026,
+    'tenable-security-center-adapter':  6027,
     'mongo':                            27017,
 }
 

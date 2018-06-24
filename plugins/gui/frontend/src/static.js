@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    tenable_security_center_adapter: {
+        title: 'Tenable Security Center',
+        description: 'SecurityCenter consolidates and evaluates vulnerability data across your organization, prioritizing security risks and providing a clear view of your security posture.'
+    },
     active_directory_adapter: {
         title: 'Active Directory',
         description: 'Active Directory (AD) is a directory service for Windows domain networks that authenticates and authorizes all users and computers.'
