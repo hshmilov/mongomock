@@ -8,7 +8,7 @@ import os
 
 from axonius.plugin_base import EntityType
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from services import adapters
 from services import plugins
@@ -333,7 +333,7 @@ class AxoniusService(object):
     def set_system_settings(self, settings_dict):
         settings = self.db.get_collection(self.gui.unique_name, 'configurable_configs')
         settings.update_one(filter={"config_name": "GuiService"},
-                            update={"$set": {"config": {"system_settings": settings_dict}}}, upsert=True)
+                            update={"$set": {"config": {SYSTEM_SETTINGS: settings_dict}}}, upsert=True)
 
     def add_view(self, view_params):
         views = self.db.get_collection(self.gui.unique_name, 'device_views')

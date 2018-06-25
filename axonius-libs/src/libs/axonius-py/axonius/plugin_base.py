@@ -51,7 +51,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME
+    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
@@ -59,6 +59,8 @@ from axonius.mixins.feature import Feature
 from axonius.thread_stopper import StopThreadException, ThreadStopper, stoppable
 from axonius.utils.debug import is_debug_attached
 from axonius.clients.service_now.connection import ServiceNowConnection
+
+MAINTENANCE_SETTINGS = 'maintenance_settings'
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -1401,6 +1403,16 @@ class PluginBase(Configurable, Feature):
         self._syslog_settings = config['syslog_settings']
         self._service_now_settings = config['service_now_settings']
 
+        if not config[MAINTENANCE_SETTINGS][ANALYTICS_SETTING]:
+            config[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = False
+
+        self._maintenance_settings = config[MAINTENANCE_SETTINGS]
+
+        self._get_db_connection()[CORE_UNIQUE_NAME]['configurable_configs'].update_one(
+            filter={'config_name': 'CoreService'}, update={"$set": {"config": config}})
+
+        logger.info(self._maintenance_settings)
+
     @staticmethod
     def global_settings_schema():
         return {
@@ -1544,6 +1556,27 @@ class PluginBase(Configurable, Feature):
                     "title": "Execution Settings",
                     "type": "array"
                 },
+                {
+                    "items": [
+                        {
+                            "name": ANALYTICS_SETTING,
+                            "title": "Anonymised Analytics (warning: turning this feature off will prevent axonius \
+                                      from proactively detecting issues and notifying about errors)",
+                            "type": "bool"
+                        },
+                        {
+                            "name": TROUBLESHOOTING_SETTING,
+                            "title": "Remote troubleshooting (warning: turning this feature off prevents axonius from \
+                                      keeping the system up to date, and can lead to slower issues resolution). \
+                                      Anonymised analytics must be enabled for this feature to work.",
+                            "type": "bool"
+                        }
+                    ],
+                    "name": MAINTENANCE_SETTINGS,
+                    "title": "Maintenance Settings",
+                    "type": "array",
+                    "required": [ANALYTICS_SETTING, TROUBLESHOOTING_SETTING]
+                }
             ],
             "pretty_name": "Global Configuration",
             "type": "array"
@@ -1579,5 +1612,9 @@ class PluginBase(Configurable, Feature):
                 "enabled": False,
                 "syslogHost": None,
                 "syslogPort": logging.handlers.SYSLOG_UDP_PORT
+            },
+            MAINTENANCE_SETTINGS: {
+                ANALYTICS_SETTING: True,
+                TROUBLESHOOTING_SETTING: True
             }
         }

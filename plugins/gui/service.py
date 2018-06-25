@@ -19,7 +19,8 @@ from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
-    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, METADATA_PATH
+    PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
+    METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
@@ -2121,7 +2122,15 @@ class GuiService(PluginBase, Configurable):
         logger.info(f"Loading GuiService config: {config}")
         self.__okta = config['okta_login_settings']
         self.__ldap_login = config['ldap_login_settings']
-        self.__system_settings = config['system_settings']
+        self.__system_settings = config[SYSTEM_SETTINGS]
+
+    @add_rule_unauthenticated('analytics', methods=['GET'], require_connected=False)
+    def get_analytics(self):
+        return jsonify(self._maintenance_settings[ANALYTICS_SETTING])
+
+    @add_rule_unauthenticated('troubleshooting', methods=['GET'], require_connected=False)
+    def get_troubleshooting(self):
+        return jsonify(self._maintenance_settings[TROUBLESHOOTING_SETTING])
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -2148,11 +2157,10 @@ class GuiService(PluginBase, Configurable):
                             "name": "defaultSort",
                             "title": "Sort by Number of Adapters in Default View",
                             "type": "bool"
-                        },
-
+                        }
                     ],
                     "required": ["refreshRate", "singleAdapter", "multiLine", "defaultSort"],
-                    "name": "system_settings",
+                    "name": SYSTEM_SETTINGS,
                     "title": "System Settings",
                     "type": "array"
                 },
@@ -2222,19 +2230,19 @@ class GuiService(PluginBase, Configurable):
                             "name": "ca_file",
                             "title": "CA File",
                             "description": "The binary contents of the ca_file",
-                            "type": "file",
+                            "type": "file"
                         },
                         {
                             "name": "cert_file",
                             "title": "Certificate File",
                             "description": "The binary contents of the cert_file",
-                            "type": "file",
+                            "type": "file"
                         },
                         {
                             "name": "private_key",
                             "title": "Private Key File",
                             "description": "The binary contents of the private_key",
-                            "type": "file",
+                            "type": "file"
                         },
                     ],
                     "required": ["enabled", "dc_address"],
@@ -2267,7 +2275,7 @@ class GuiService(PluginBase, Configurable):
                 "cert_file": None,
                 "private_key": None
             },
-            "system_settings": {
+            SYSTEM_SETTINGS: {
                 "refreshRate": 30,
                 "singleAdapter": False,
                 "multiLine": False,
