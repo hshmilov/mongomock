@@ -3,7 +3,7 @@
 client_details = {
     "domain": "10.0.2.171",
     "username": "admin",
-    "password": "7ldUJKtYG8oe1243fds",
+    "password": "BringOrder!",
     "verify_ssl": False
 }
 
