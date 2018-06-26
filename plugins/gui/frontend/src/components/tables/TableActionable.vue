@@ -1,5 +1,7 @@
 <template>
     <div class="x-table-actionable">
+        <div class="v-spinner-bg" v-if="loading"></div>
+        <pulse-loader :loading="loading" color="#FF7D46" />
         <div class="x-table-header">
             <div class="x-title">
                 <div>{{ title }}</div>
@@ -9,8 +11,6 @@
             <div class="x-actions"><slot name="actions"/></div>
         </div>
         <div class="x-table-container" :tabindex="-1" ref="greatTable">
-            <div class="v-spinner-bg" v-if="loading"></div>
-            <pulse-loader :loading="loading" color="#FF7D46" />
             <slot name="table" />
         </div>
     </div>
@@ -35,6 +35,7 @@
     .x-table-actionable {
         height: calc(100% - 30px);
         background: $theme-white;
+        position: relative;
         .x-table-header {
             display: flex;
             padding: 8px;
@@ -62,7 +63,6 @@
         .x-table-container {
             overflow: auto;
             max-height: calc(100% - 40px);
-            position: relative;
         }
     }
 </style>

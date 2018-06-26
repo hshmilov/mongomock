@@ -7,7 +7,7 @@
                 <!-- Available actions for performing on currently selected group of devices --->
                 <devices-actions-container v-show="anySelected" :devices="selectedDevices" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
-                <x-data-field-menu :module="module" class="link" />
+                <x-data-field-menu :module="module" />
                 <div class="link" @click="exportCSV">Export csv</div>
             </template>
         </x-data-table>

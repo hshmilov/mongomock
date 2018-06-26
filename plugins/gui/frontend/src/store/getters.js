@@ -6,14 +6,23 @@ export const getDataFieldsListTyped = (state) => (module) => {
 	let fields = state[module].fields.data
 	if (!fields.generic || !state[module].fields.data.generic.length) return []
 
+	let fieldTypes = Object.keys(fields.specific).map((name) => {
+		let title = pluginMeta[name] ? pluginMeta[name].title : name
+		return { title, name, fields: fields.specific[name] }
+	})
+	fieldTypes.sort((first, second) => {
+		// Sort by adapter plugin name (the one that is shown in the gui).
+		let firstText = first.title.toLowerCase()
+		let secondText = second.title.toLowerCase()
+		if (firstText < secondText) return -1
+		if (firstText > secondText) return 1
+		return 0
+	})
+
 	return [
 		{
 			name: 'axonius', title: 'General', fields: fields.generic
-		},
-		...Object.keys(fields.specific).map((name) => {
-			let title = pluginMeta[name] ? pluginMeta[name].title : name
-			return { title, name, fields: fields.specific[name] }
-		})
+		}, ...fieldTypes
 	]
 }
 

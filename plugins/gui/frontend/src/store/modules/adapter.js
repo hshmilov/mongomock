@@ -46,6 +46,14 @@ export const adapter = {
 						supported_features: adapter.supported_features
 					})
 				})
+				state.adapterList.data.sort((first, second) => {
+					// Sort by adapter plugin name (the one that is shown in the gui).
+					let firstText = first.title.toLowerCase()
+					let secondText = second.title.toLowerCase()
+					if (firstText < secondText) return -1
+					if (firstText > secondText) return 1
+					return 0
+				})
 				if (state.currentAdapter && state.currentAdapter.id) {
 					state.currentAdapter = state.adapterList.data.find(
 						adapter => adapter.unique_plugin_name === state.currentAdapter.id)

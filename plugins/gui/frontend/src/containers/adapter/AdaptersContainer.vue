@@ -10,7 +10,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in sortedSpecificData" @click="configAdapter(item['id'])" class="table-row">
+                    <tr v-for="item in adaptersData" @click="configAdapter(item['id'])" class="table-row">
                         <td class="status">
                             <div class="symbol">
                                 <svg-icon :name="`symbol/${item['status']}`" :original="true" height="20px"></svg-icon>
@@ -44,24 +44,13 @@
         components: { xPage, xLogoName },
         computed: {
             ...mapState({
-                adapters(state) {
-                	return state.adapter.adapterList
+                adaptersData(state) {
+                	return state.adapter.adapterList.data
                 },
                 tourAdapters(state) {
                 	return state.onboarding.tourStates.queues.adapters
                 }
-            }),
-            sortedSpecificData () {
-                if (!this.adapters || !this.adapters.data) return []
-                return [...this.adapters.data].sort((first, second) => {
-                    // Sort by adapter plugin name (the one that is shown in the gui).
-                    let firstText = first.title.toLowerCase()
-                    let secondText = second.title.toLowerCase()
-                    if (firstText < secondText) return -1
-                    if (firstText > secondText) return 1
-                    return 0
-                })
-            }
+            })
         },
         methods: {
             ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
