@@ -1,4 +1,4 @@
-<template>
+d<template>
     <div class="login-container" v-if="!auth.data.user_name && !auth.fetching">
         <div class="login">
             <div class="header">
@@ -7,7 +7,7 @@
             </div>
             <div class="body">
                 <h3 class="title">Login</h3>
-                <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="updateValidity"
+                <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="onValidate"
                                @submit="onLogin" :error="auth.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
                 <a @click="onOktaLogin" v-if="oktaConfig.enabled" class="link">Login with Okta</a>
@@ -19,7 +19,7 @@
                 <div class="show-space">
                     <h2>Login with LDAP</h2>
                     <x-schema-form :schema="ldapSchema" v-model="ldapData.credentials" @input="initError"
-                                   @validate="ldapUpdateValidity" @submit="onLdapLogin" :error="auth.error"/>
+                                   @validate="onValidateLDAP" @submit="onLdapLogin" :error="auth.error"/>
                 </div>
             </div>
             <div slot="footer">
@@ -42,12 +42,13 @@
         name: 'login-container',
         components: { xSchemaForm, Modal },
         computed: {
+			...mapState(['auth']),
             schema() {
                 return {
                     type: 'array', items: [
-                        {name: 'user_name', title: 'User Name', type: 'string'},
-                        {name: 'password', title: 'Password', type: 'string', format: 'password'},
-                        {name: 'remember_me', title: "Remember me", type: 'bool', default: false}
+                        { name: 'user_name', title: 'User Name', type: 'string' },
+                        { name: 'password', title: 'Password', type: 'string', format: 'password' },
+                        { name: 'remember_me', title: "Remember me", type: 'bool', default: false }
                     ], required: ['user_name', 'password']
                 }
             },
@@ -55,19 +56,14 @@
                 return {
                     type: 'array',
                     items: [
-                        {
-                            name: 'user_name', title: 'User Name', type: 'string'
-                        },
-                        {
-                            name: 'domain', title: 'Domain', type: 'string', default: this.ldapConfig.default_domain
-                        },
-                        {
-                            name: 'password', title: 'Password', type: 'string', format: 'password'
+                        { name: 'user_name', title: 'User Name', type: 'string' },
+                        { name: 'domain', title: 'Domain', type: 'string', default: this.ldapConfig.default_domain },
+                        { name: 'password', title: 'Password', type: 'string', format: 'password'
                         }
                     ], required: ['user_name', 'domain', 'password']
-                    }
+                }
             },
-            ...mapState(['auth'])
+
         },
         data() {
             return {
@@ -97,10 +93,10 @@
         methods: {
             ...mapMutations({ initError: INIT_ERROR }),
             ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, login: LOGIN, ldapLogin: LDAP_LOGIN}),
-            updateValidity(valid) {
+            onValidate(valid) {
                 this.complete = valid
             },
-            ldapUpdateValidity(valid) {
+            onValidateLDAP(valid) {
                 this.ldapData.complete = valid
             },
             onLdapLogin(){
@@ -147,8 +143,7 @@
         height: 100vh;
         padding-top: 20vh;
         .login {
-            width: 30vw;
-            min-width: 300px;
+            width: 400px;
             margin: auto;
             border-radius: 4px;
             background-color: $grey-1;

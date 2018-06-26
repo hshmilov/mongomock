@@ -214,6 +214,7 @@
     .settings {
         .x-tabs > .content {
             width: 60vw;
+            min-width: 640px;
         }
         .grid {
             display: grid;

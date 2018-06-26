@@ -4,16 +4,14 @@
         <div v-for="item in shownSchemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
-                <component :is="item.type" :schema="item" v-model="data[item.name]" :validator="validate"
-                           @input="onInput" @focusout="onFocusout" :api-upload="apiUpload"/>
+                <component :is="item.type" :schema="item" v-model="data[item.name]" @validate="onValidate"
+                           @input="onInput" :api-upload="apiUpload" ref="itemChild" />
             </x-type-wrap>
         </div>
     </div>
 </template>
 
 <script>
-    import Vue from 'vue'
-
     import xTypeWrap from './TypeWrap.vue'
     import string from '../string/StringEdit.vue'
     import number from '../numerical/NumberEdit.vue'
@@ -27,30 +25,44 @@
         name: 'array',
         mixins: [ArrayMixin],
         components: {
-            xTypeWrap,
-            string,
-            number,
-            integer,
-            bool,
-            file
+            xTypeWrap, string, number, integer, bool, file
         },
-        computed: {
-            validate() {
-                if (this.validator) return this.validator
-
-                return new Vue()
-            },
+        data() {
+        	return {
+				data: { ...this.value },
+                needsValidation: false
+            }
         },
         methods: {
-            onFocusout() {
-                this.validate.$emit('focusout')
-            },
             onInput() {
                 this.$emit('input', this.data)
             },
+            onValidate(validity) {
+                this.$emit('validate', validity)
+            },
+            validate(silent) {
+            	if (!this.$refs.itemChild) return
+                this.$refs.itemChild.forEach(item => item.validate(silent))
+            }
         },
-        created() {
-            this.validate.$on('validate', (valid) => this.$emit('validate', valid))
+        watch: {
+        	isHidden() {
+        		/*
+        		    Change of hidden, means some fields may appear or disappear.
+        		    Therefore, the new children should be re-validated but the DOM has not updated yet
+        		 */
+        		this.needsValidation = true
+            }
+        },
+        mounted() {
+            this.validate(true)
+        },
+        updated() {
+        	if (this.needsValidation) {
+        		// Here the new children (after change of hidden) are updated in the DOM
+				this.validate(true)
+                this.needsValidation = false
+            }
         }
     }
 </script>

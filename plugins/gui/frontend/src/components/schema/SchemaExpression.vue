@@ -18,7 +18,7 @@
             <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length"
                       placeholder="func..." :id="first? 'query_op': undefined" />
             <template v-if="showValue">
-                <component :is="`x-${valueSchema.type}-edit`" :schema="valueSchema" v-model="expression.value"
+                <component :is="valueSchema.type" :schema="valueSchema" v-model="expression.value"
                            class="fill" :class="{'grid-span2': !fieldOpsList.length}"
                            :id="first? 'query_value': undefined" />
             </template>
@@ -38,11 +38,11 @@
 <script>
     import xSelect from '../inputs/Select.vue'
     import xSelectSymbol from '../inputs/SelectSymbol.vue'
-	import xStringEdit from '../controls/string/StringEdit.vue'
-	import xNumberEdit from '../controls/numerical/NumberEdit.vue'
-	import xIntegerEdit from '../controls/numerical/IntegerEdit.vue'
-	import xBoolEdit from '../controls/boolean/BooleanEdit.vue'
-	import xArrayEdit from '../controls/array/ArrayFilter.vue'
+	import string from '../controls/string/StringEdit.vue'
+	import number from '../controls/numerical/NumberEdit.vue'
+	import integer from '../controls/numerical/IntegerEdit.vue'
+	import bool from '../controls/boolean/BooleanEdit.vue'
+	import array from '../controls/array/ArrayFilter.vue'
 	import IP from 'ip'
 	import { compOps } from '../../mixins/filter'
 
@@ -51,7 +51,7 @@
 
 	export default {
 		components: {
-			xSelect, xSelectSymbol, xStringEdit, xNumberEdit, xIntegerEdit, xBoolEdit, xArrayEdit,
+			xSelect, xSelectSymbol, string, number, integer, bool, array,
 		},
 		name: 'x-schema-expression',
 		props: {

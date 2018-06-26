@@ -4,27 +4,24 @@
 	Received props include:
 	 - schema - parameters configuring the functionality of the control
 	 - value - current value of the control (primitive object)
-	 - validator - a Vue instance serving as an event bus, to dispatch events directly to ancestor
 
 	Defined data includes:
 	 - data - created from given value and emitted as an input event (implementing v-model)
 	 - valid - validity state of current data. Common validity test is whether empty, if data is required by schema.
 
-	Declared methods include:
-	 - handleData - to be called on any change of data.
-	   After formatting, via helper method, data is sent on a 'input' event, for v-model purposes.
-	   After validating, via helper method, validity is sent, using the validator, on a 'validate' event.
-	 - formatData - May be overridden by mixed components to convert formatting inferred by schema.
-	 - validateData - By default, initiates the validity to true (common validity test runs after it).
-	   May be overridden by mixed components to enforce formatting inferred by schema.
+	Methods to be implemented by extending components:
+	 - formatData - Changes to be made to the data user inputs so it complys to the given schema
+	 - checkData - Check that data user inputs cannot comply to the given schema
+	 - isEmpty - If the type requires a special method to determine whether it is empty
 
  */
 export default {
-	props: ['schema', 'value', 'validator'],
+	props: ['schema', 'value'],
 	data() {
 		return {
 			data: null,
-			valid: true
+			valid: true,
+			error: ''
 		}
 	},
 	computed: {
@@ -47,14 +44,28 @@ export default {
 		}
 	},
 	methods: {
-		validate() {
-			if (!this.validator) { return }
+		emitValidity() {
+			this.$emit('validate', { name: this.schema.name, valid: this.valid, error: this.error })
+		},
+		validate(silent) {
+			// Data is invalid if checkData is negative or the field is required and empty
 			this.valid = this.checkData() && (!this.schema.required || !this.isEmpty())
-			this.validator.$emit('validate', { title: this.schema.title, valid: this.valid })
+			this.error = ''
+			if (!silent && !this.valid) {
+				// Error is added if the data is invalid, unless silent is set to true.
+				this.error = `'${this.schema.title}' has an illegal value`
+			}
+			this.emitValidity()
+		},
+		focusout() {
+			this.validate(false)
 		},
 		input() {
 			this.data = this.formatData()
 			this.$emit('input', this.data)
+			// Upon input, overall validity should be affected but no need to scare the user with an error yet.
+			// Validate without publishing the error
+			this.validate(true)
 		},
 		formatData() {
 			return this.data
@@ -67,9 +78,6 @@ export default {
 		}
 	},
 	created() {
-		if (this.validator) {
-			this.validator.$on('focusout', this.validate)
-		}
 		if (this.schema.default) {
 			this.data = this.schema.default
 		}
@@ -79,7 +87,7 @@ export default {
 	},
 	destroyed() {
 		this.valid = true
-		if (!this.validator) { return }
-		this.validator.$emit('validate', { title: this.schema.title, valid: this.valid })
+		this.error = ''
+		this.emitValidity()
 	}
 }

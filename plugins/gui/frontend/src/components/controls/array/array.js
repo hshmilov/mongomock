@@ -10,7 +10,7 @@
 
 export default {
 	props: {
-		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}, validator: {}
+		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}
 	},
 	computed: {
 		schemaItems () {
@@ -38,18 +38,18 @@ export default {
 			return schemaItems
 		},
 		isHidden() {
-                return this.data['enabled'] === false
+			return this.data['enabled'] === false
 		},
 		shownSchemaItems() {
 			if (this.isHidden){
-				return this.schemaItems.filter(x => x.name == 'enabled')
+				return this.schemaItems.filter(x => x.name === 'enabled')
 			}
 			return this.schemaItems
 		}
 	},
 	data () {
 		return {
-			data: {...this.value}
+			data: { ...this.value }
 		}
 	},
 	watch: {

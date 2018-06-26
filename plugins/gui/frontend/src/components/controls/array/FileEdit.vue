@@ -7,8 +7,8 @@
             </div>
         </template>
         <template v-else>
-            <input type="file" @change="uploadFile" @focusout="updateValidity(fileUploaded)" ref="file"/>
-            <div class="file-name" :class="{'invalid': !valid}">{{value ? value.filename : "No file chosen"}}</div>
+            <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file"/>
+            <div class="file-name" :class="{'error-border': error}">{{value ? value.filename : "No file chosen"}}</div>
             <div class="x-btn link" @click="selectFile">Choose file</div>
         </template>
     </div>
@@ -17,11 +17,11 @@
 <script>
     export default {
         name: 'x-array-edit',
-        props: ['schema', 'value', 'validator', 'apiUpload'],
+        props: ['schema', 'value', 'apiUpload'],
         data() {
             return {
-                valid: true,
-                fileUploaded: !!this.value,
+                valid: !!this.value,
+                error: '',
                 uploading: false,
                 filename: ""
             }
@@ -33,7 +33,8 @@
             uploadFile(uploadEvent) {
                 const files = uploadEvent.target.files || uploadEvent.dataTransfer.files
                 if (!files.length) {
-                    this.updateValidity(false)
+                	this.valid = false
+                    this.validate(false)
                     return
                 }
                 var file = files[0]
@@ -42,26 +43,31 @@
                 formData.append("userfile", file)
 
                 this.uploading = true
-
-
                 var request = new XMLHttpRequest()
                 request.open('POST', `/api/${this.apiUpload}/upload_file`)
                 request.onload = (result) => {
                     var res = JSON.parse(result.srcElement.responseText)
                     this.uploading = false
-                    this.fileUploaded = true
                     this.filename = file.name
-                    this.updateValidity(true)
+                    this.valid = true
+                    this.validate(true)
                     this.$emit('input', {"uuid": res.uuid, "filename": file.name})
                 };
                 request.send(formData)
             },
-            updateValidity(valid) {
-                if (!this.validator || !this.schema.required) {
-                    return
+            validate(silent) {
+                if (!this.schema.required) return
+
+				this.error = ''
+                if (!silent && !this.valid) {
+                	this.error = `${this.schema.name} File is required`
                 }
-                this.valid = valid
-                this.validator.$emit('validate', {title: this.schema.title, valid: valid})
+                this.$emit('validate', {
+                	title: this.schema.title, valid: this.valid, error: this.error
+                })
+            },
+            onFocusout() {
+        		this.validate(false)
             }
         }
     }

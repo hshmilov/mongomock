@@ -1,5 +1,5 @@
 <template>
-    <x-checkbox v-model="data" @focusout.stop="validate" @change="input" :class="{'invalid': !valid}" />
+    <x-checkbox v-model="data" @focusout.stop="focusout" @change="input" :class="{'error-border': error}" />
 </template>
 
 <script>
@@ -18,8 +18,7 @@
         created() {
 			if (!this.data) {
 				this.data = false
-                this.input()
-                this.validate()
+				this.$emit('input', this.data)
             }
         }
 	}

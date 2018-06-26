@@ -20,8 +20,9 @@
                     <tab v-for="config, configName, i in currentAdapter.config" :key="i"
                          :title="config.schema.pretty_name || configName" :id="configName" :selected="!i">
                         <div class="configuration">
-                            <x-schema-form :schema="config.schema" v-model="config.config" @validate="serverModal.valid = $event"/>
-                            <a class="x-btn" @click="saveConfig(configName, config.config)" tabindex="1">Save Config</a>
+                            <x-schema-form :schema="config.schema" v-model="config.config" @validate="validateConfig"/>
+                            <a @click="saveConfig(configName, config.config)" tabindex="1"
+                               class="x-btn" :class="{disabled: !configValid}">Save Config</a>
                         </div>
                     </tab>
                 </tabs>
@@ -38,11 +39,11 @@
                     <div class="error-text">{{serverModal.error}}</div>
                 </div>
                 <x-schema-form :schema="adapterSchema" v-model="serverModal.serverData" @submit="saveServer"
-                               @validate="serverModal.valid = $event" :api-upload="`adapters/${adapterId}`" />
+                               @validate="validateServer" :api-upload="`adapters/${adapterId}`" />
             </div>
             <template slot="footer">
                 <button @click="toggleServerModal" class="x-btn link">Cancel</button>
-                <button id="save_server" @click="saveServer" class="x-btn">Save</button>
+                <button id="save_server" @click="saveServer" class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
             </template>
         </modal>
         <x-toast v-if="message" :message="message" @done="removeToast" :timed="false" />
@@ -118,11 +119,12 @@
                     error: '',
                     serverName: 'New Server',
                     uuid: null,
-                    valid: true
+                    valid: false
 				},
                 selectedServers: [],
                 message: '',
-                advancedSettings: false
+                advancedSettings: false,
+                configValid: true
 			}
 		},
 		methods: {
@@ -136,12 +138,12 @@
 				this.serverModal.valid = true
 				if (serverId === 'new') {
 					this.serverModal = { ...this.serverModal,
-                        serverData: {}, serverName: 'New Server', uuid: serverId, error: '' }
+                        serverData: {}, serverName: 'New Server', uuid: serverId, error: '', valid: false }
 				} else {
 					let server = this.currentAdapter.clients.find(server => (server.uuid === serverId))
                     this.serverModal = { ...this.serverModal,
                         serverData: { ...server.client_config }, serverName: server.client_id,
-                        uuid: server.uuid, error: server.error
+                        uuid: server.uuid, error: server.error, valid: true
                     }
 				}
 				this.toggleServerModal()
@@ -156,6 +158,9 @@
 				}))
                 this.selectedServers = []
 			},
+            validateServer(valid) {
+            	this.serverModal.valid = valid
+            },
 			saveServer () {
 				if (!this.serverModal.valid) {
 					return
@@ -181,6 +186,9 @@
 			toggleServerModal () {
 				this.serverModal.open = !this.serverModal.open
 			},
+            validateConfig(valid) {
+            	this.configValid = valid
+            },
             saveConfig(configName, config) {
                 this.updatePluginConfig({
                     pluginId: this.adapterId,
