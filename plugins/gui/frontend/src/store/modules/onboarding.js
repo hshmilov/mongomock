@@ -58,7 +58,7 @@ export const onboarding = {
 				},
 				'backAdapters': {
 					id: 'adapters', title: 'CONNECT YOUR NETWORK', align: 'right',
-					content: 'Click to review your Adapters'
+					content: 'Click to review your Adapters.'
 				},
 				'network': {
 					title: 'NETWORK ADAPTERS', align: 'center', queue: 'adapters',
@@ -323,7 +323,7 @@ export const onboarding = {
 				},
 				'bestDevice': {
 					title: 'DEVICE VIEW', align: 'bottom', queue: 'devices',
-					content: 'Click here to view in-depth details about this device.'
+					content: 'Click to view in-depth details about this device.'
 				},
 				'adapterDevice': {
 					title: 'DEVICE ADAPTER', align: 'top',
@@ -419,14 +419,14 @@ export const onboarding = {
 					content: 'Choose configuration options for system functionality.'
 				},
 				'research-settings-tab': {
-					id: 'research_time', title: 'DISCOVERY RUN SCHEDULE', align: 'top',
+					id: 'research_time', title: 'DISCOVERY SCHEDULE', align: 'top',
 					content: 'Select a date and time for the next discovery run.',
 					actions: [
 						{ title: 'Next', state: 'lifecycleRate' }
 					]
 				},
 				'lifecycleRate': {
-					id: 'research_rate', title: 'DISCOVERY RUN RATE', align: 'bottom',
+					id: 'research_rate', title: 'DISCOVERY RUN FREQUENCY', align: 'bottom',
 					content: 'Set the number of hours between discovery runs.',
 					actions: [
 						{ title: 'Next', state: 'lifecycleRun' }
