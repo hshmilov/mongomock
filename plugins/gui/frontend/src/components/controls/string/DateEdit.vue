@@ -3,32 +3,45 @@
 </template>
 
 <script>
-	import DatePicker from 'vue-datepicker'
+    import DatePicker from 'vue-datepicker'
 
-	export default {
-		name: 'x-date-edit',
-		components: { 'date-picker': DatePicker },
-        props: ['value', 'limit'],
+    export default {
+        name: 'x-date-edit',
+        components: {'date-picker': DatePicker},
+        props: {
+            value: {
+                required: false
+            },
+            limit: {
+                required: false
+            },
+            showTime: {
+                default: true
+            },
+            placeholder: {
+                default: ''
+            }
+        },
         computed: {
-			dateTimeOption() {
-				return {
-					type: 'min',
-					week: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
-					month: ['January', 'February', 'March', 'April', 'May', 'June',
-						'July', 'August', 'September', 'October', 'November', 'December'],
-					format: /*(navigator.language === 'en-US') ?*/ 'MM/DD/YYYY h:mm A' /*: 'DD/MM/YYYY HH:mm'*/,
-					placeholder: '',
-					inputStyle: {},
-					color: {
-						header: '#1d212c',
-						headerText: '#f26739'
-					}
-				}
-			}
+            dateTimeOption() {
+                return {
+                    type: this.showTime ? 'min' : 'day',
+                    week: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+                    month: ['January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'],
+                    format: this.showTime ? 'MM/DD/YYYY h:mm A' : 'MM/DD/YYYY',
+                    placeholder: this.placeholder,
+                    inputStyle: {},
+                    color: {
+                        header: '#1d212c',
+                        headerText: '#f26739'
+                    }
+                }
+            }
         },
         data() {
-			return {
-				date: { time: this.value }
+            return {
+                date: {time: this.value}
             }
         },
         watch: {
@@ -36,7 +49,7 @@
                 this.date.time = newValue
             }
         }
-	}
+    }
 </script>
 
 <style lang="scss">
@@ -73,7 +86,9 @@
                         direction: rtl;
                         width: 80%;
                         font-size: 18px;
-                        br { display: none; }
+                        br {
+                            display: none;
+                        }
                         span:last-child {
                             float: left;
                             margin-left: 20px;

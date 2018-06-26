@@ -7,7 +7,12 @@ from setuptools import setup
 setup(
     name="Axonius",
     packages=["axonius", "axonius.mixins", "axonius.consts", "axonius.devices", "axonius.utils", "axonius.users",
-              "axonius.logging", "axonius.types"],
+              "axonius.logging", "axonius.types", "axonius.clients",
+              "axonius.clients.service_now",
+              "axonius.clients.rest",
+              "axonius.clients.mssql",
+              "axonius.clients.ldap",
+              "axonius.clients.cisco"],
     version="1.0.0",
     description="External libs for Axonius",
     author="Axonius, Inc",

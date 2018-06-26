@@ -18,6 +18,8 @@ export const UPDATE_REMOVED_DASHBOARD = 'UPDATE_REMOVED_DASHBOARD'
 export const FETCH_DASHBOARD_COVERAGE = 'FETCH_DASHBOARD_COVERAGE'
 export const UPDATE_DASHBOARD_COVERAGE = 'UPDATE_DASHBOARD_COVERAGE'
 
+export const FETCH_HISTORICAL_SAVED_CARD = 'FETCH_HISTORICAL_SAVED_CARD'
+
 export const dashboard = {
 	state: {
 		lifecycle: { data: {}, fetching: false, error: '' },
@@ -113,6 +115,11 @@ export const dashboard = {
 			return dispatch(REQUEST_API, {
 				rule: 'dashboard/coverage',
 				type: UPDATE_DASHBOARD_COVERAGE
+			})
+		},
+		[FETCH_HISTORICAL_SAVED_CARD] ({dispatch}, payload) {
+			return dispatch(REQUEST_API, {
+				rule: `saved_card_results/${encodeURI(payload.cardName)}?date_to=${encodeURI(payload.date)} 23:59:59&date_from=${encodeURI(payload.date)}`,
 			})
 		}
 	}

@@ -36,6 +36,7 @@ import io
 import os
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+from dateutil.parser import parse as parse_date
 from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
 from passlib.hash import bcrypt
 from elasticsearch import Elasticsearch
@@ -1588,6 +1589,63 @@ class GuiService(PluginBase, Configurable):
     # DASHBOARD #
     #############
 
+    def __get_saved_view_result_from_views(self, views, from_given_date, to_given_date):
+        """
+        Finds the latest saved result from the given view list (from card) that are in the given date range
+        """
+        module_name = None
+        for view in views:
+            view_name = view.get('name')
+            # pie charts don't save the `module` for all views, so we can just 'use' the last one
+            module_name = view.get('module') or module_name
+            if not module_name or not view_name:
+                continue
+            try:
+                saved_result = self.gui.entity_views_results_db_map[EntityType(module_name)].find_one(
+                    {
+                        'view': view_name,
+                        'accurate_for_datetime': {
+                            '$lt': to_given_date,
+                            '$gt': from_given_date,
+                        }
+                    },
+                    sort=[
+                        ['accurate_for_datetime', -1]
+                    ]
+                )
+                if not saved_result:
+                    continue
+                yield {
+                    'name': view_name,
+                    'count': saved_result['count'],
+                    'accurate_for_datetime': saved_result['accurate_for_datetime']
+                }
+            except Exception:
+                logger.exception(f"When dealing with {view_name} and {module_name}")
+
+    @add_rule_unauthenticated("saved_card_results/<card_name>", methods=['GET'])
+    def saved_card_results(self, card_name: str):
+        """
+        Saved results for cards, i.e. the mechanism used to show the user the results
+        of some "card" (collection of views) in the past
+        """
+        from_given_date = request.args.get('date_from')
+        if not from_given_date:
+            return return_error("date_from must be provided")
+        to_given_date = request.args.get('date_to')
+        if not to_given_date:
+            return return_error("date_to must be provided")
+        try:
+            from_given_date = parse_date(from_given_date)
+            to_given_date = parse_date(to_given_date)
+        except Exception:
+            return return_error("Given date is invalid")
+        card = self._get_collection('dashboard').find_one({'name': card_name})
+        if not card:
+            return return_error("Card doesn't exist")
+        return jsonify({x['name']: x for x in self.__get_saved_view_result_from_views(card['views'],
+                                                                                      from_given_date, to_given_date)})
+
     @add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
     def get_dashboard(self):
         if request.method == 'GET':
@@ -1616,7 +1674,6 @@ class GuiService(PluginBase, Configurable):
         :return:
         """
         logger.info("Getting dashboard")
-        dashboard_list = []
         for dashboard in self._get_collection('dashboard').find(filter_archived()):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
@@ -1629,12 +1686,11 @@ class GuiService(PluginBase, Configurable):
                         dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['views'])
                     elif dashboard['type'] == ChartTypes.intersect.name:
                         dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['views'])
-                    dashboard_list.append(beautify_db_entry(dashboard))
+                    yield beautify_db_entry(dashboard)
                 except Exception as e:
                     # Since there is no data, not adding this chart to the list
                     logger.exception(
                         f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]}). Reason: {e}')
-        return dashboard_list
 
     def _fetch_data_for_chart_compare(self, dashboard_views):
         """
@@ -1707,7 +1763,7 @@ class GuiService(PluginBase, Configurable):
                          'count': data_collection.find({'$and': [parent_filter, child_filter_1, not_intersection]},
                                                        {'_id': 1}).count()})
             # Intersection
-            data.append({'name': f'{child_name_1} + {child_name_2}', 'count': intersection_cursor.count()})
+            data.append({'name': [child_name_1, child_name_2], 'count': intersection_cursor.count()})
             # Child2 + Parent - Intersection
             data.append({'name': child_name_2,
                          'count': data_collection.find({'$and': [parent_filter, child_filter_2, not_intersection]},
@@ -1992,7 +2048,7 @@ class GuiService(PluginBase, Configurable):
         report_data = {
             'adapter_devices': self._adapter_devices(),
             'covered_devices': self._get_dashboard_coverage(),
-            'custom_charts': self._get_dashboard(),
+            'custom_charts': list(self._get_dashboard()),
             'views_data': self._get_saved_views_data()
         }
         report = self._get_collection('reports').find_one({'name': 'Main Report'})

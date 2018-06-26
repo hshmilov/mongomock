@@ -9,10 +9,10 @@
 </template>
 
 <script>
-	export default {
-		name: 'x-card',
-        props: {title: {required: true}, removable: {default: false}}
-	}
+    export default {
+        name: 'x-card',
+        props: {title: {required: true}, removable: {default: false}},
+    }
 </script>
 
 <style lang="scss">
