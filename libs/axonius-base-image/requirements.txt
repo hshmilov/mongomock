@@ -47,3 +47,7 @@ azure-mgmt-network==1.7.1
 azure-mgmt-compute==3.0.1
 SoftLayer==5.4.4
 aiohttp==3.3.2
+ipython-genutils==0.2.0
+google-api-python-client==1.7.3
+google-auth==1.5.0
+google-auth-httplib2==0.0.3
