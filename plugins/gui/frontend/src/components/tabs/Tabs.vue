@@ -1,5 +1,5 @@
 <template>
-    <div class="x-tabs">
+    <div class="x-tabs" :class="{ vertical }">
         <ul class="header">
             <li v-for="tab in tabs" v-if="tab.id !== undefined" @click="selectTab(tab.id)" :id="tab.id"
                 class="header-tab" :class="{active: tab.isActive, disabled: tab.outdated}">
@@ -7,7 +7,7 @@
                 <div v-else>{{ tab.title }}</div>
             </li>
         </ul>
-        <div class="content">
+        <div class="body">
             <slot></slot>
         </div>
     </div>
@@ -18,7 +18,8 @@
 
 	export default {
 		name: 'x-tabs',
-        components: {xLogoName},
+        components: { xLogoName },
+        props: { vertical: { default: false } },
         data() {
 			return {
 				tabs: []
@@ -61,7 +62,6 @@
                 }
                 &.active {
                     background: $theme-white;
-                    z-index: 100;
                     &:after {
                         background: $theme-white;
                     }
@@ -84,12 +84,37 @@
             }
         }
 
-        .content {
+        .body {
             background-color: $theme-white;
             border-top: 0;
             border-bottom-right-radius: 4px;
             border-bottom-left-radius: 4px;
             padding: 12px;
+        }
+
+        &.vertical {
+            display: flex;
+            > .header {
+                display: block;
+                border-right: 2px solid $grey-1;
+                width: 20%;
+                overflow: auto;
+                margin-left: -12px;
+                .header-tab {
+                    padding: 24px;
+                    background: $theme-white;
+                    &:after {
+                        content: none;
+                    }
+                    &.active {
+                        background-color: $grey-1;
+                    }
+                }
+            }
+            .body {
+                width: calc(80% - 24px);
+                height: calc(100% - 24px);
+            }
         }
     }
 </style>

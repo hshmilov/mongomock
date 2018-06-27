@@ -212,7 +212,7 @@
 
 <style lang="scss">
     .settings {
-        .x-tabs > .content {
+        .x-tabs > .body {
             width: 60vw;
             min-width: 640px;
         }

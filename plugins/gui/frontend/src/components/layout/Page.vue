@@ -32,7 +32,7 @@
     .x-page {
         display: flex;
         flex-direction: column;
-        background: $grey-1;
+        background: $grey-0;
         padding: 12px 24px 24px 264px;
         position: relative;
         margin-top: 60px;

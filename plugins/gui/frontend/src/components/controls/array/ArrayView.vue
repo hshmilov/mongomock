@@ -1,6 +1,7 @@
 <template>
     <div class="array">
-        <label v-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
+        <div v-if="schema.title === 'SEPARATOR'" class="separator">&nbsp;</div>
+        <label v-else-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
         <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
             <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
@@ -29,11 +30,18 @@
 </script>
 
 <style lang="scss">
-
-    .item {
-        .index {
-            display: inline-block;
-            vertical-align: top;
+    .array {
+        .separator {
+            width: 100%;
+            height: 1px;
+            background-color: rgba($theme-orange, 0.2);
+            margin: 12px 0;
+        }
+        .item {
+            .index {
+                display: inline-block;
+                vertical-align: top;
+            }
         }
     }
 </style>

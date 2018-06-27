@@ -686,6 +686,7 @@ class GuiService(PluginBase, Configurable):
             'specific': {}
         }
         plugins_available = requests.get(self.core_address + '/register').json()
+        exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
         with self._get_db_connection() as db_connection:
             plugins_from_db = list(db_connection['core']['configs'].find({}).
                                    sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
@@ -698,7 +699,11 @@ class GuiService(PluginBase, Configurable):
                 plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
                 if not plugin_fields_record:
                     continue
-                fields['schema']['specific'][plugin[PLUGIN_NAME]] = plugin_fields_record['schema']
+                fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
+                    'type': plugin_fields_record['schema']['type'],
+                    'required': plugin_fields_record['schema'].get('required', []),
+                    'items': filter(lambda x: x['name'] not in exclude_specific_schema, plugin_fields_record['schema'].get('items', []))
+                }
                 fields['specific'][plugin[PLUGIN_NAME]] = self._flatten_fields(
                     plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
 

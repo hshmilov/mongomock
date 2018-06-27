@@ -2,46 +2,49 @@
     <div class="x-data-entity">
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
-        <template v-if="fields.generic && entity.generic">
-            <tabs>
-                <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                    <x-schema-list :data="entity.generic.basic" :schema="{type: 'array', items: fields.generic}"/>
-                </tab>
-                <tab v-for="item, i in entityGenericAdvanced" :title="item.title" :id="i" :key="i">
-                    <x-schema-list :data="item.data" :schema="item.schema" />
-                </tab>
-                <tab v-for="item, i in entity.generic.data" :title="item.name" :id="`data_${i}`" :key="`data_${i}`">
-                    <x-custom-data :data="item.data"/>
-                </tab>
-                <tab title="Tags" id="tags" key="tags">
-                    <div @click="activateTag" class="link tag-edit">Edit Tags</div>
-                    <div class="x-grid x-grid-col-2 w-20">
-                        <template v-for="label in entity.labels">
-                            <div>{{ label }}</div>
-                            <div class="link" @click="removeTag(label)">Remove</div>
-                        </template>
-                    </div>
-                </tab>
-            </tabs>
-        </template>
-        <template v-if="fields.specific">
-            <tabs>
-                <tab v-for="item, i in sortedSpecificData" :id="item.data.id+item.plugin_unique_name"
-                     :key="item.data.id+item.plugin_unique_name" :selected="!i" :title="item.plugin_name"
-                     :logo="true" :outdated="item.outdated">
-                    <div class="d-flex tab-header">
-                        <div class="flex-expand">Data From: {{ item.client_used }}</div>
-                        <div v-if="viewBasic" @click="toggleView" class="link">View advanced</div>
-                        <div v-if="!viewBasic" @click="toggleView" class="link">View basic</div>
-                    </div>
-                    <x-schema-list v-if="viewBasic && fields.specific[item.plugin_name]"
-                                   :data="item.data" :schema="fields.schema.specific[item.plugin_name]"/>
-                    <div v-if="!viewBasic">
-                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}"/>
-                    </div>
-                </tab>
-            </tabs>
-        </template>
+        <tabs v-if="!loading">
+            <tab title="General Data" id="generic" key="generic" :selected="true">
+                <tabs :vertical="true">
+                    <tab title="Basic Info" id="basic" key="basic" :selected="true">
+                        <x-schema-list :data="entity.generic.basic" :schema="{type: 'array', items: fields.generic}"/>
+                    </tab>
+                    <tab v-for="item, i in entityGenericAdvanced" :title="item.title" :id="item.name" :key="item.name">
+                        <x-schema-list :data="item.data" :schema="item.schema" />
+                    </tab>
+                </tabs>
+            </tab>
+            <tab title="Adapters Data" id="specific" key="specific">
+                <tabs :vertical="true">
+                    <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="item.id" :selected="!i"
+                         :title="item.plugin_name" :logo="true" :outdated="item.outdated">
+                        <div class="d-flex content-header">
+                            <div class="flex-expand server-info">Data From: {{ item.client_used }}</div>
+                            <div v-if="viewBasic" @click="toggleView" class="link">View advanced</div>
+                            <div v-if="!viewBasic" @click="toggleView" class="link">View basic</div>
+                        </div>
+                        <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)"/>
+                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else/>
+                    </tab>
+                </tabs>
+            </tab>
+            <tab title="Extended Data" id="extended" key="extended">
+                <tabs :vertical="true">
+                    <tab v-for="item, i in entity.generic.data" :title="item.name" :id="`data_${i}`" :key="`data_${i}`"
+                         :selected="!i">
+                        <x-custom-data :data="item.data"/>
+                    </tab>
+                </tabs>
+            </tab>
+            <tab title="Tags" id="tags" key="tags">
+                <div @click="activateTag" class="link tag-edit">Edit Tags</div>
+                <div class="x-grid x-grid-col-2 w-lg">
+                    <template v-for="label in entity.labels">
+                        <div>{{ label }}</div>
+                        <div class="link" @click="removeTag(label)">Remove</div>
+                    </template>
+                </div>
+            </tab>
+        </tabs>
         <x-tag-modal :module="module" :entities="entities" :tags="entity.labels" ref="tagModal" />
     </div>
 </template>
@@ -71,7 +74,6 @@
 			return {
 				viewBasic: true,
 				entities: [this.$route.params.id],
-                loading: true,
                 adapterState: 0
 			}
 		},
@@ -116,11 +118,16 @@
 					// Turn strings into dates and subtract them to get a negative, positive, or zero value.
 					return new Date(secondSeen) - new Date(firstSeen)
 				}).map((item) => {
+					item.id = `${item.plugin_unique_name}_${item.data.id}`
 					if (lastSeen.has(item.plugin_name)) return { ...item, outdated: true }
 					lastSeen.add(item.plugin_name)
 					return item
 				})
-			}
+			},
+            loading() {
+            	return (!this.fields || !this.fields.generic || !this.fields.schema)
+                    || (!this.entity || this.entity.internal_axon_id !== this.entityId)
+            }
         },
         methods: {
             ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
@@ -141,6 +148,14 @@
 			},
             toggleView() {
             	this.viewBasic = !this.viewBasic
+            },
+            adapterSchema(name) {
+            	return {
+            		type: 'array', items: [
+                        { ...this.fields.schema.generic, name: 'data' },
+                        { ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
+					]
+                }
             }
         },
 		created () {
@@ -148,10 +163,8 @@
 				this.fetchDataFields({ module: this.module })
 			}
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId) {
-				this.fetchDataByID({ module: this.module, id: this.entityId }).then(() => this.loading = false)
-			} else {
-				this.loading = false
-            }
+				this.fetchDataByID({ module: this.module, id: this.entityId })
+			}
 		},
         updated() {
 			if (this.module === 'devices' && this.sortedSpecificData && this.sortedSpecificData.length) {
@@ -174,16 +187,42 @@
 
 <style lang="scss">
     .x-data-entity {
+        position: relative;
         height: 100%;
         .x-tabs {
             width: 100%;
-            height: 48%;
-            margin-bottom: 12px;
-            .content {
+            height: 100%;
+            .body {
                 overflow: auto;
                 height: calc(100% - 80px);
-                .object {
-                    width: calc(100% - 24px);
+                .content-header {
+                    padding-bottom: 4px;
+                    margin-bottom: 16px;
+                    border-bottom: 2px solid rgba($theme-orange, 0.4);
+                    .server-info {
+                        text-transform: uppercase;
+                    }
+                }
+                .schema-list {
+                    height: 100%;
+                    overflow: auto;
+                    .object {
+                        width: calc(100% - 24px);
+                    }
+                }
+                .specific .schema-list {
+                    height: calc(100% - 36px);
+                    > .array {
+                        display: block;
+                        > .item > .object > .array {
+                            display: grid;
+                            grid-template-columns: 50% 50%;
+                            grid-gap: 12px 24px;
+                            .separator {
+                                grid-column-end: span 2;
+                            }
+                        }
+                    }
                 }
             }
             .tag-edit {

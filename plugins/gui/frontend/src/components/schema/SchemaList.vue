@@ -22,8 +22,8 @@
 <style lang="scss">
     .schema-list > .array {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-        grid-gap: 12px 24px;
+        grid-template-columns: 50% 50%;
+        grid-gap: 4px 0;
         .label, .index {
             font-weight: 500;
         }
