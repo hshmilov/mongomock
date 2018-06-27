@@ -1560,15 +1560,15 @@ class PluginBase(Configurable, Feature):
                     "items": [
                         {
                             "name": ANALYTICS_SETTING,
-                            "title": "Anonymised Analytics (warning: turning this feature off will prevent axonius \
-                                      from proactively detecting issues and notifying about errors)",
+                            "title": "Anonymized Analytics - Warning: turning off this feature prevents Axonius from \
+                            proactively detecting issues and notifying about errors.",
                             "type": "bool"
                         },
                         {
                             "name": TROUBLESHOOTING_SETTING,
-                            "title": "Remote troubleshooting (warning: turning this feature off prevents axonius from \
-                                      keeping the system up to date, and can lead to slower issues resolution). \
-                                      Anonymised analytics must be enabled for this feature to work.",
+                            "title": "Remote Support - Warning: turning off this feature prevents Axonius from \
+                            updating the system and can lead to slower issue resolution time. \
+                            Note: anonymized analytics must be enabled for remote support",
                             "type": "bool"
                         }
                     ],
