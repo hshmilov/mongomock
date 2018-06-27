@@ -376,15 +376,12 @@ export const onboarding = {
 					title: 'DEVICE VIEW', align: 'bottom', queue: 'devices',
 					content: 'Click to view in-depth details about this device.'
 				},
-				'adapterDevice': {
-					title: 'DEVICE ADAPTER', align: 'top',
-					content: 'Here you can see all device data from a specific Adapter.',
-					actions: [
-						{ title: 'Next', state: 'otherAdapterDevice'}
-					]
+				'adaptersData': {
+					id: 'specific', title: 'ADAPTERS DATA', align: 'top',
+					content: 'Here you can see all device data from a it\'s Adapters.'
 				},
-				'otherAdapterDevice': {
-					title: 'DEVICE ADAPTER',
+				'adapterDevice': {
+					title: 'DEVICE ADAPTER', emphasize: false,
 					content: 'You will see a tab for every Adapter that has device data.',
 					actions: [
 						{ title: 'Next', state: 'backDevices'}

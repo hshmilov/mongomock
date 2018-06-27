@@ -2,7 +2,7 @@
     <div class="x-data-entity">
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
-        <tabs v-if="!loading">
+        <tabs v-if="!loading" @click="determineState">
             <tab title="General Data" id="generic" key="generic" :selected="true">
                 <tabs :vertical="true">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
@@ -73,8 +73,7 @@
 		data () {
 			return {
 				viewBasic: true,
-				entities: [this.$route.params.id],
-                adapterState: 0
+				entities: [this.$route.params.id]
 			}
 		},
         computed: {
@@ -156,6 +155,11 @@
                         { ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
 					]
                 }
+            },
+            determineState(tabId) {
+            	if (tabId === 'specific') {
+            	    this.changeState({ name: 'adapterDevice' })
+                }
             }
         },
 		created () {
@@ -168,18 +172,10 @@
 		},
         updated() {
 			if (this.module === 'devices' && this.sortedSpecificData && this.sortedSpecificData.length) {
-                this.changeState({
-                    name: 'adapterDevice', id: this.sortedSpecificData[0].plugin_name
+                this.changeState({ name: 'adaptersData' })
+                this.updateState({
+                    name: 'adapterDevice', id: this.sortedSpecificData[0].plugin_name, align: 'top'
                 })
-                if (this.sortedSpecificData.length > 1) {
-                	this.updateState({
-                        name: 'otherAdapterDevice', id: this.sortedSpecificData[1].plugin_name, align: 'top'
-                	})
-                } else {
-					this.updateState({
-						name: 'otherAdapterDevice', align: 'center'
-					})
-                }
 			}
         }
 	}
