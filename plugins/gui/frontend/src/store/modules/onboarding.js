@@ -67,6 +67,7 @@ export const onboarding = {
 						{ title: 'Cisco', state: 'cisco' },
 						{ title: 'Juniper', state: 'juniper' },
 						{ title: 'Fortinet', state: 'fortinet' },
+						{ title: 'Infoblox', state: 'infoblox' },
 						{ title: 'SKIP', state: 'virtualizationCloud' }
 					]
 				},
@@ -75,12 +76,17 @@ export const onboarding = {
 					content: 'Which Cisco management solution do you use?',
 					actions: [
 						{ title: 'Cisco Prime', state: 'ciscoPrime' },
+						{ title: 'Cisco Meraki', state: 'ciscoMeraki' },
 						{ title: 'Cisco Switch/Router (direct connection, no management solution)', state: 'ciscoRegular' },
 						{ title: 'SKIP', state: 'networkNoCisco'}
 					]
 				},
 				'ciscoPrime': {
 					id: 'cisco_prime_adapter', title: 'Cisco Prime ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'ciscoMeraki': {
+					id: 'cisco_meraki_adapter', title: 'Cisco Meraki ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'ciscoRegular': {
@@ -93,15 +99,43 @@ export const onboarding = {
 					actions: [
 						{ title: 'Juniper', state: 'juniper' },
 						{ title: 'Fortinet', state: 'fortinet' },
+						{ title: 'Infoblox', state: 'infoblox' },
 						{ title: 'SKIP', state: 'virtualizationCloud' }
 					]
 				},
 				'juniper': {
-					id: 'juniper_adapter', title: 'Juniper Junos ADAPTER', align: 'right',
+					title: 'Juniper ADAPTERS', align: 'center',
+					content: 'Which Juniper management solution do you use?',
+					actions: [
+						{ title: 'Juniper Junos', state: 'juniperJunos' },
+						{ title: 'Juniper Junos Space', state: 'juniperJunosSpace' },
+						{ title: 'SKIP', state: 'networkNoJuniper' }
+					]
+				},
+				'juniperJunos': {
+					id: 'junos_adapter', title: 'Juniper Junos ADAPTER', align: 'right',
 					content: 'Click to configure it.'
+				},
+				'juniperJunosSpace': {
+					id: 'juniper_adapter', title: 'Juniper Junos Space ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'networkNoJuniper': {
+					title: 'NETWORK ADAPTERS', align: 'center', queue: 'adapters',
+					content: 'Which other major switch/router do you use?',
+					actions: [
+						{ title: 'Cisco', state: 'cisco' },
+						{ title: 'Fortinet', state: 'fortinet' },
+						{ title: 'Infoblox', state: 'infoblox' },
+						{ title: 'SKIP', state: 'virtualizationCloud' }
+					]
 				},
 				'fortinet': {
 					id: 'fortigate_adapter', title: 'Fortinet Fortigate ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'infoblox': {
+					id: 'infoblox_adapter', title: 'Infoblox ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'virtualizationCloud': {
@@ -164,6 +198,7 @@ export const onboarding = {
 						{ title: 'Secdo', state: 'secdo' },
 						{ title: 'SentinelOne', state: 'sentinelOne' },
 						{ title: 'Symantec', state: 'symantec' },
+						{ title: 'FireEye HX', state: 'fireeyeHX' },
 						{ title: 'SKIP', state: 'agentIT' }
 					]
 				},
@@ -212,6 +247,10 @@ export const onboarding = {
 					id: 'sentinelone_adapter', title: 'SentinelOne', align: 'right',
 					content: 'Click to configure it.'
 				},
+				'fireeyeHX': {
+					id: 'fireeye_hx_adapter', title: 'FireEye HX ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
 				'agentIT': {
 					title: 'IT AGENT', align: 'center', queue: 'adapters',
 					content: 'Which IT agent do you use?',
@@ -224,6 +263,7 @@ export const onboarding = {
 						{ title: 'Microsoft SCCM', state: 'sccm'},
 						{ title: 'ObserveIT', state: 'observeIT'},
 						{ title: 'Puppet', state: 'puppet'},
+						{ title: 'Symantec Altiris', state: 'symantecAltiris' },
 						{ title: 'SKIP', state: 'va'}
 					]
 				},
@@ -259,6 +299,10 @@ export const onboarding = {
 					id: 'observeit_csv_adapter', title: 'ObserveIT ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
+				'symantecAltiris': {
+					id: 'symantec_altiris_adapter', title: 'Symantec Altiris ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
 				'va':  {
 					title: 'VULNERABILITY ASSESSMENT TOOLS', align: 'center', queue: 'adapters',
 					content: 'Which Vulnerability Assessment tool do you use?',
@@ -288,7 +332,7 @@ export const onboarding = {
 						{ title: 'BlackBerry UEM', state: 'blackberry' },
 						{ title: 'MobileIron', state: 'mobileIron' },
 						{ title: 'VMWare Airwatch', state: 'vmwareAirwatch' },
-						{ title: 'SKIP', state: 'serviceNow' }
+						{ title: 'SKIP', state: 'serviceNowAdapter' }
 					]
 				},
 				'mobileIron': {
@@ -296,16 +340,23 @@ export const onboarding = {
 					content: 'Click to configure it.'
 				},
 				'vmwareAirwatch': {
-					id: 'airwatch_adapter', title: 'VMWare Airwatch', align: 'right',
+					id: 'airwatch_adapter', title: 'VMWare Airwatch ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'blackberry': {
-					id: 'blackberry_uem_adapter', title: 'Blackberry UEM', align: 'right',
+					id: 'blackberry_uem_adapter', title: 'Blackberry UEM ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
-				'serviceNow': {
+				'serviceNowAdapter': {
 					id: 'service_now_adapter', title: 'ServiceNow ADAPTER', align: 'right', queue: 'adapters',
 					content: 'If you use ServiceNow, click to configure it.',
+					actions: [
+						{ title: 'SKIP', state: 'oktaAdapter' }
+					]
+				},
+				'oktaAdapter': {
+					id: 'okta_adapter', title: 'Okta ADAPTER', align: 'right', queue: 'adapters',
+					content: 'If you use Okta, click to configure it.',
 					actions: [
 						{ title: 'SKIP', state: 'csv' }
 					]
@@ -447,6 +498,13 @@ export const onboarding = {
 					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'right',
 					content: 'Enable and provide syslog credentials here for alerts.',
 					actions: [
+						{ title: 'Next', state: 'serviceNow' }
+					]
+				},
+				'serviceNow': {
+					id: 'service_now_settings', title: 'ServiceNow SERVER CONFIG', align: 'right',
+					content: 'Enable and provide ServiceNow credentials here, or use the Adapter (if it is connected) for alerts.',
+					actions: [
 						{ title: 'Next', state: 'mail' }
 					]
 				},
@@ -460,6 +518,13 @@ export const onboarding = {
 				'execution': {
 					id: 'execution_settings', title: 'EXECUTION CONFIG', align: 'right',
 					content: 'Enable Axonius to collect information directly from devices in addition to what is collected from Adapters.',
+					actions: [
+						{ title: 'Next', state: 'maintenance' }
+					]
+				},
+				'maintenance': {
+					id: 'maintenance_settings', title: 'MAINTENANCE CONFIG', align: 'right',
+					content: 'Enable Axonius to anonymously save analytics info or troubleshoot remotely',
 					actions: [
 						{ title: 'Next', state: 'settingsGUI' }
 					]
@@ -589,7 +654,7 @@ export const onboarding = {
 			},
 			queues: {
 				adapters: ['activeDirectory', 'network', 'virtualizationCloud', 'virtualizationLocal',
-					'agent', 'agentIT', 'va', 'mdm', 'serviceNow', 'csv', 'devices'],
+					'agent', 'agentIT', 'va', 'mdm', 'serviceNowAdapter', 'oktaAdapter', 'csv', 'devices'],
 				devices: ['bestDevice', 'query', 'queryResults', 'alerts', 'dashboardBack'],
 				alerts: ['alertNew', 'settings'],
 				dashboard: ['adapters', 'dashboardManaged', 'dashboardWizard'],
