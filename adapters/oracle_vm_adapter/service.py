@@ -24,7 +24,6 @@ class OracleVmAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(OracleVmDeviceType, "Device Type")
         run_state = Field(str, "Run State")
-        description = Field(str, "Description")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)

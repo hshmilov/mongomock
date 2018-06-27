@@ -5,4 +5,4 @@ client_details = {
     "verify_ssl": True,
 }
 
-SOME_DEVICE_ID = 'VRT-2207618213681'
+SOME_DEVICE_ID = 'VRT-2207618486294'

@@ -19,7 +19,6 @@ class CiscoMerakiAdapter(AdapterBase):
         lng = Field(str, "Lng")
         lat = Field(str, "Lat")
         address = Field(str, "Address")
-        description = Field(str, "Description")
         switch_port = Field(str, "Switch Port")
         dns_name = Field(str, "DNS Name")
         associated_device = Field(str, "Associated Device")
