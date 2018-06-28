@@ -32,9 +32,11 @@
             <nav>
               <ul class="nav nav-pills pull-right">
                 <li id='menu_link_1' role="presentation"><a id="vm_instances_link" href="#vm_instances" onclick="return changeMenu(this);">Instances</a></li>
-                <li id='menu_link_2' role="presentation"><a id="vm_exports_link" href="#vm_exports" onclick="return changeMenu(this);">Exports</a></li>
-                <li id='menu_link_3' role="presentation"><a id="vm_images_link" href="#vm_images" onclick="return changeMenu(this);">Images</a></li>
-                <li id='menu_link_4' role="presentation"><a id="vm_configurations_link" href="#vm_configurations" onclick="return changeMenu(this);">Configurations</a></li>
+                <li id='menu_link_2' role="presentation"><a id="vm_demos_link" href="#vm_demos" onclick="return changeMenu(this);">Demos</a></li>
+                <li id='menu_link_3' role="presentation"><a id="vm_exports_link" href="#vm_exports" onclick="return changeMenu(this);">Exports</a></li>
+                  <li id='menu_link_4' role="presentation"><a id="vm_configurations_link" href="#vm_configurations" onclick="return changeMenu(this);">Configurations</a></li>
+                <!--<li id='menu_link_5' role="presentation"><a id="vm_images_link" href="#vm_images" onclick="return changeMenu(this);">Images</a></li>-->
+
               </ul>
             <h3 class="text-muted">Axonius Builds</h3>
             A tool to help create Axonius systems and manage our CI process.
@@ -134,7 +136,7 @@
         </div>
         <table class="table table-hover" id="instances_table">
         </table>
-        All of the resources below are aws paied resources. If you don't need anything, stop or terminate it.<br>
+        All of the resources below are aws paid resources. If you don't need anything, stop or terminate it.<br>
         To create a new instance, click <a href='#' onclick="add_instance_modal();return false;">here.</a><br>
         To connect to an instance, simply <code>ssh ubuntu@instance_addr</code>. Don't forget to import the key.
         </div>
@@ -190,6 +192,84 @@
                             <div class="panel-body">
                             <table class="table">
                                 <tbody id="tbody_configuration_info">
+                                    <tr>
+                                        <td>Loading..</td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+        <div class="container hidden_container" id="vm_demos">
+        <div class="row">
+        <div class="col-md-12">
+        <div class="page-header">
+        <h3>Demos</h3>
+        <a href='#' onclick='toggle_terminated_instances_view(); return false;' id='ttdv_text'>Show</a> terminated instances.
+        </div>
+        <table class="table table-hover" id="demos_table">
+        </table>
+        All of the resources below are aws paid resources. If you don't need anything, stop or terminate it.<br>
+        To create a new demo, click <a href='#' onclick="add_demo_modal();return false;">here.</a><br>
+        To connect to an instance, simply <code>ssh ubuntu@instance_addr</code>. Don't forget to import the key.
+        </div>
+    </div>
+        <div class="row">
+        <div class="col-md-12">
+            <div class="page-header">
+                <h3>Demo Details</h3>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                        <h4 class="panel-title">VM Info</h4>
+                        </div>
+                        <div class="panel-body">
+                        <table class="table">
+                            <tbody id="tbody_demo_info">
+                                <tr>
+                                        <td>Loading..</td>
+                                        <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+
+                        <div class="panel panel-primary">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Instance Info</h4>
+                            </div>
+                            <div class="panel-body">
+                                <table class="table">
+                                    <tbody id="tbody_demo_instance_info">
+                                        <tr>
+                                            <td>Loading..</td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="panel panel-primary">
+                            <div class="panel-heading">
+                            <h4 class="panel-title">Configuration</h4>
+                            </div>
+                            <div class="panel-body">
+                            <table class="table">
+                                <tbody id="tbody_demo_configuration_info">
                                     <tr>
                                         <td>Loading..</td>
                                         <td></td>
@@ -286,12 +366,55 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>By Branch or Release</td>
+                        <td>
+                            <input type="radio" name="fork_or_release" value="Branch" checked="checked" onchange="new_instance_by_release_code_change(this.value)">Branch<br>
+                        </td>
+                        <td>
+                            <input type="radio" name="fork_or_release" value="Release" onchange="new_instance_by_release_code_change(this.value)">Release<br>
+                        </td>
+                    </tr>
+                    <tr id="new_instance_fork_and_branch_select_cell">
+                        <td>Fork & Branch</td>
+                        <td>
+                            <select id='new_vm_fork' onchange="new_instance_modal_fork_change(this.value, 1)">
+                                <option>Loading...</option>
+                            </select>
+                        </td>
+                        <td>Branch</td>
+                        <td>
+                            <select id='new_vm_branch' onchange="new_instance_modal_branch_change(this.value)">
+                                <option>Loading...</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr id="new_instance_release_select_cell" hidden="hidden">
+                        <td>Release</td>
+                        <td>
+                            <select id='new_vm_release' onchange="new_instance_modal_branch_change(this.value, 'axonius/cortex')">
+                                <option>Loading...</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Public</td>
+                        <td>
+                            <input type='checkbox' placeholder='Public' id='new_vm_public'/>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Comments</td>
                         <td>
                             <textarea rows="2" id='new_vm_comments'></textarea>
                         </td>
                     </tr>
                     <tr>
+                        <td>Set Credentials</td>
+                        <td>
+                            <input type='checkbox' placeholder='Public' id='new_vm_set_credentials'/>
+                        </td>
+                    </tr>
+                    <tr id="new_instance_configuration_cell">
                         <td>Configuration Name</td>
                         <td>
                             <select id="new_instance_configuration_picker" onchange="new_instance_modal_change_configuration_code(this.selectedIndex);">
@@ -299,13 +422,27 @@
                             </select>
                         </td>
                     </tr>
-                    <tr>
+                    <tr id="new_instance_configuration_code_cell">
                         <td>Configuration Code</td>
                         <td>
                             <textarea rows="10" id="new_instance_configuration_code" disabled="true">
 
                             </textarea>
                         </td>
+                    </tr>
+                    <tr id="new_instance_adapters_cell" hidden="hidden">
+                        <tr>
+                            <td></td>
+                            <td><b>By choosing "ALL" the rest of the choices will be excluded.</b></td>
+                        </tr>
+                        <tr>
+                            <td>Adapters</td>
+                            <td>
+                                <select id="new_vm_adapters_options" multiple style='width: 100%; height: 60vh;'>
+                                    <option value="All">ALL</option>
+                                </select>
+                            </td>
+                        </tr>
                     </tr>
                 </table>
               </div>
@@ -316,8 +453,7 @@
             </div>
           </div>
         </div>
-
-        <div class="modal fade" id="generic_modal" tabindex="-1" role="dialog" aria-labelledby="new_instance_modal">
+        <div class="modal fade" id="generic_modal" tabindex="-1" role="dialog" aria-labelledby="new_demo_modal">
           <div class="modal-dialog" role="document">
             <div class="modal-content">
               <div class="modal-header">

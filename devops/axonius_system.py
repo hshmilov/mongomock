@@ -55,6 +55,14 @@ def main():
         service_entry_point(args.target, sys.argv[2:])
 
 
+class ExtendAction(argparse.Action):
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = getattr(namespace, self.dest) or []
+        items.extend(values)
+        setattr(namespace, self.dest, items)
+
+
 def system_entry_point(args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
@@ -71,7 +79,7 @@ def system_entry_point(args):
     parser.add_argument('--skip', action='store_true', default=False, help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
-    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', help='Adapters and Services to exclude',
+    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction, help='Adapters and Services to exclude',
                         default=[])
     parser.add_argument('--expose-db', action='store_true', default=False,
                         help='Expose db port outside of this machine.')

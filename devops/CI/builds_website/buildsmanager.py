@@ -12,12 +12,17 @@ import random
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
+BUILDS_INSTANCE_VM_TYPE = "Builds-VM"
+BUILDS_DEMO_VM_TYPE = "Demo-VM"
+
 AXONIUS_EXPORTS_SERVER = 'exports.axonius.lan'
 
 KEY_NAME = "Builds-VM-Key"  # The key we use for identification.
-IMAGE_ID = "ami-a93811cc"  # Our own imported ubuntu 16.04 Server.
+IMAGE_ID = "ami-906f56f5"  # Our own imported ubuntu 16.04 Server.
 INSTANCE_TYPE = "t2.xlarge"
-SUBNET_ID = "subnet-4154273a"   # Our builds subnet.
+PRIVATE_SUBNET_ID = "subnet-4154273a"   # Our private builds subnet.
+PUBLIC_SUBNET_ID = "subnet-942157ef"   # Our public subnet.
+PUBLIC_SECURITY_GROUP = "sg-f5742f9e"
 
 S3_EXPORT_PREFIX = "vm-"
 S3_BUCKET_NAME_FOR_VM_EXPORTS = "axonius-vms"
@@ -173,12 +178,12 @@ class BuildsManager(object):
 
         return list(export_tasks)
 
-    def getInstances(self, ec2_id=None):
+    def getInstances(self, ec2_id=None, vm_type=BUILDS_INSTANCE_VM_TYPE):
         """Return the different aws instances & our internal db."""
-        if (ec2_id is None):
-            db_instances = self.db.instances.find({})
+        if ec2_id is None:
+            db_instances = self.db.instances.find({"vm_type": vm_type})
         else:
-            db_instances = self.db.instances.find({"ec2_id": ec2_id})
+            db_instances = self.db.instances.find({"ec2_id": ec2_id, "vm_type": vm_type})
 
         # Get a list of all subnets and vpc's so we can query much faster
         subnets = list(self.ec2.subnets.all())
@@ -193,7 +198,7 @@ class BuildsManager(object):
             instances_array.append(i)
 
         # Lets get information about our instances.
-        ec2_instances = list(self.ec2.instances.filter(Filters=[{"Name": "tag:VM-Type", "Values": ["Builds-VM"]}]))
+        ec2_instances = list(self.ec2.instances.filter(Filters=[{"Name": "tag:VM-Type", "Values": [vm_type]}]))
 
         # After we have this information, we need to build our joined array of information
         all_instances = []
@@ -209,6 +214,7 @@ class BuildsManager(object):
             ec2_i["instance_type"] = i.instance_type
             ec2_i["key_name"] = i.key_name
             ec2_i["private_ip_address"] = i.private_ip_address
+            ec2_i["public_ip_address"] = i.public_ip_address or ''
             ec2_i["state"] = i.state["Name"]
             ec2_i["vpc_name"] = ""
 
@@ -256,7 +262,7 @@ class BuildsManager(object):
         """
 
         while self.redis_client.llen('test_instances') < (NUMBER_OF_TEST_INSTANCES_AVAILABLE + 1):
-            instance_id = self.addInstance(
+            instance_id = self.add_instance(
                 'AutoTest_{0}'.format(random.randint(1, 10000)),
                 'Builds-System',
                 'Created automatically for automatic tests',
@@ -276,15 +282,16 @@ class BuildsManager(object):
 
         return {"instance_id": instance_id}
 
-    def addInstance(self, name, owner, comments, configuration_name, configuration_code,
-                    image_id=IMAGE_ID, instance_type=INSTANCE_TYPE,
-                    key_name=KEY_NAME, subnet_id=SUBNET_ID):
+    def add_instance(self, name, owner, comments, configuration_name, configuration_code, fork, branch,
+                     public=False,
+                     image_id=IMAGE_ID, instance_type=INSTANCE_TYPE,
+                     key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID, vm_type=BUILDS_INSTANCE_VM_TYPE):
         """As the name suggests, make a new instance."""
 
         # Give names to our instance and volume
         name_tag = [
-            {"Key": "Name", "Value": "Builds-%s" % (name, )},
-            {"Key": "VM-Type", "Value": "Builds-VM"}
+            {"Key": "Name", "Value": "{0}-{1}".format(vm_type, name)},
+            {"Key": "VM-Type", "Value": vm_type}
         ]
 
         ts1 = {}
@@ -296,10 +303,14 @@ class BuildsManager(object):
         ts2["Tags"] = name_tag
         tags_specifications = [ts1, ts2]
 
+        subnet_id = subnet_id if not public else PUBLIC_SUBNET_ID
+        security_group_id = PUBLIC_SECURITY_GROUP if public else ''
+        termination_protection = False if vm_type == BUILDS_INSTANCE_VM_TYPE else True
         ec2_instances = self.ec2.create_instances(ImageId=image_id, InstanceType=instance_type, KeyName=key_name,
                                                   MinCount=1, MaxCount=1, SubnetId=subnet_id,
                                                   TagSpecifications=tags_specifications,
                                                   UserData=configuration_code,
+                                                  SecurityGroupIds=[security_group_id],
                                                   BlockDeviceMappings=[
                                                       {
                                                           'DeviceName': '/dev/sda1',
@@ -307,10 +318,18 @@ class BuildsManager(object):
                                                               'DeleteOnTermination': True
                                                           }
                                                       }
-                                                  ]
+                                                  ],
+                                                  DisableApiTermination=termination_protection
                                                   )
 
         instance_id = ec2_instances[0].id
+        elastic_ip_id = ''
+        if public:
+            allocation = self.ec2_client.allocate_address(Domain='vpc')
+            waiter = self.ec2_client.get_waiter('instance_running')
+            waiter.wait(InstanceIds=[instance_id])
+            self.ec2_client.associate_address(AllocationId=allocation['AllocationId'], InstanceId=instance_id)
+            elastic_ip_id = allocation['AllocationId']
 
         self.db.instances.insert_one({"name": name,
                                       "owner": owner,
@@ -318,7 +337,11 @@ class BuildsManager(object):
                                       "configuration_name": configuration_name,
                                       "configuration_code": configuration_code,
                                       "ec2_id": instance_id,
-                                      "date": datetime.datetime.utcnow()})
+                                      "elastic_ip_id": elastic_ip_id,
+                                      "date": datetime.datetime.utcnow(),
+                                      "vm_type": vm_type,
+                                      "fork": fork,
+                                      "branch": branch})
 
         return {"instance_id": instance_id}  # Return new list of vms
 
@@ -330,7 +353,14 @@ class BuildsManager(object):
         self.ec2.instances.filter(InstanceIds=[ec2_id]).terminate()
 
         # Do not delete instances from the db. just update that they are terminated.
-        self.db.instances.update_one({"ec2_id": ec2_id}, {"$set": {"terminated": True}})
+        instance = self.db.instances.find_one({"ec2_id": ec2_id})
+        self.db.instances.update_one({"_id": instance['_id']}, {"$set": {"terminated": True, }})
+
+        elastic_ip_address_id = instance.get('elastic_ip_id', '')
+        if elastic_ip_address_id != '':
+            waiter = self.ec2_client.get_waiter('instance_terminated')
+            waiter.wait(InstanceIds=[instance['ec2_id']])
+            self.ec2_client.release_address(AllocationId=elastic_ip_address_id)
         # deleted = self.db.instances.delete_one({"ec2_id": ec2_id})
         return True
 

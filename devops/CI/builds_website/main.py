@@ -9,6 +9,27 @@ from flask import Flask, render_template, jsonify, request
 app = Flask(__name__, static_url_path='/static')
 db = None
 bm = buildsmanager.BuildsManager()
+INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds.axonius.lan/install_demo[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
+rm -rf axonius
+mkdir axonius
+cd axonius
+git init
+# Beware! do not save this token.
+git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}
+history -c
+history -w
+cd install
+chmod 777 *
+# Notice that this raises the system in debug mode (all ports are opened outside and files are mounted from the outside of the system).
+# The public up has only port 443 open but the private one is completely open.
+# This is done this way for getting the credentials of the raised adapters (more precisely to query the core register endpoint to get registered adapters.
+# This should be changed in the future when the system matures for security reasons and others.
+./install.sh {install_params} --clean --run-system {set_credentials}
+cd ..
+rm .git*
+exit"""
+
+INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/axonius/install/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\ncurl -k 'https://builds.axonius.lan/install_demo?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}' | bash -\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
 
 
 @app.route('/')
@@ -20,11 +41,11 @@ def main():
 @app.route("/images", methods=['GET', 'POST', 'DELETE'])
 def images():
     """Returns all docker images."""
-    if (request.method == "GET"):
+    if request.method == "GET":
         json_result = (bm.getImages())
-    elif (request.method == "POST"):
+    elif request.method == "POST":
         json_result = (bm.postImageDetails(request.form["repositoryName"], request.form["imageDigest"], request.form))
-    elif (request.method == "DELETE"):
+    elif request.method == "DELETE":
         json_result = (bm.deleteImage(request.form["repositoryName"], request.form["imageDigest"]))
 
     return jsonify({"result": json_result, "current": bm.getImages()})
@@ -77,9 +98,9 @@ def get_export_manifest(key):
 @app.route("/exports/<key>", methods=['GET', 'DELETE'])
 def export(key):
     """Does all sort of actions on a specific export"""
-    if (request.method == "GET"):
+    if request.method == "GET":
         json_result = (bm.getExports(key=key))
-    elif (request.method == "DELETE"):
+    elif request.method == "DELETE":
         json_result = (bm.deleteExport(version=key))
 
     return jsonify({"result": json_result, "current": bm.getExports()})
@@ -104,34 +125,55 @@ def testinstances():
 
 @app.route("/instances", methods=['GET', 'POST'])
 def instances():
+    instance_type = request.args.get("instance_type")
+
     """Return info about ec2."""
-    if(request.method == "GET"):
-        json_result = (bm.getInstances())
-    elif(request.method == "POST"):
-        json_result = (bm.addInstance(
+    if request.method == "GET":
+        json_result = (bm.getInstances(vm_type=instance_type))
+    elif request.method == "POST":
+        if instance_type == buildsmanager.BUILDS_DEMO_VM_TYPE:
+            adapters = request.form["adapters"].split(',')
+            should_run_all = "ALL" in adapters
+            if should_run_all:
+                adapters.remove('ALL')
+            exclude = ','.join(adapters) if should_run_all else ''
+            include = ','.join(adapters) if not should_run_all else ''
+
+            config_code = INSTALL_DEMO_CONFIG.format(fork=request.form["fork"], branch=request.form["branch"],
+                                                     set_credentials=request.form.get("set_credentials", 'off'),
+                                                     include=include, exclude=exclude)
+        else:
+            config_code = request.form["configuration_code"]
+
+        json_result = (bm.add_instance(
             request.form["name"],
             request.form["owner"],
             request.form["comments"],
             request.form["configuration_name"],
-            request.form["configuration_code"]))
+            config_code,
+            request.form["fork"],
+            request.form["branch"],
+            request.form["public"] == 'on',
+            vm_type=instance_type,
+        ))
 
-    return jsonify({"result": json_result, "current": bm.getInstances()})
+    return jsonify({"result": json_result, "current": bm.getInstances(vm_type=instance_type)})
 
 
 @app.route("/instances/<instance_id>", methods=['GET', 'DELETE', 'POST'])
 def instance(instance_id):
     """Get information about instance and provide actions on it."""
-    if (request.method == "GET"):
+    if request.method == "GET":
         json_result = (bm.getInstances(ec2_id=instance_id))
 
-    elif (request.method == "DELETE"):
+    elif request.method == "DELETE":
         json_result = (bm.terminateInstance(instance_id))
 
-    elif (request.method == "POST"):
+    elif request.method == "POST":
         action = request.form["action"]
-        if (action == "start"):
+        if action == "start":
             json_result = (bm.startInstance(ec2_id=instance_id))
-        elif (action == "stop"):
+        elif action == "stop":
             json_result = (bm.stopInstance(ec2_id=instance_id))
 
     return jsonify({"result": json_result, "current": bm.getInstances()})
@@ -141,10 +183,10 @@ def instance(instance_id):
 @app.route("/instances/<instance_id>/manifest/<manifest_key>", methods=['GET', 'POST'])
 def instance_manifest(instance_id, manifest_key=None):
     """Get information about instance and provide actions on it."""
-    if (request.method == "GET"):
+    if request.method == "GET":
         json_result = (bm.getManifest(instance_id, manifest_key))
 
-    elif (request.method == "POST"):
+    elif request.method == "POST":
         key = request.form["key"]
         if "value" in request.form:
             # Its a regular form
@@ -162,12 +204,12 @@ def instance_manifest(instance_id, manifest_key=None):
 @app.route("/configurations/<object_id>", methods=['GET', 'DELETE', 'POST'])
 def configuration(object_id=None):
     """Does all sort of actions on a specific configuration"""
-    if (request.method == "GET"):
+    if request.method == "GET":
         json_result = (bm.getConfigurations())
-    elif (request.method == "POST"):
+    elif request.method == "POST":
         json_result = (bm.updateConfiguration(
             object_id, request.form["name"], request.form["author"], request.form["purpose"], request.form["code"]))
-    elif (request.method == "DELETE"):
+    elif request.method == "DELETE":
         json_result = (bm.deleteConfiguration(object_id))
 
     return jsonify({"result": json_result, "current": bm.getConfigurations()})
@@ -175,27 +217,35 @@ def configuration(object_id=None):
 
 @app.route("/install", methods=['GET'])
 def get_install_script():
-    branch = request.args.get("branch")
+    branch = request.args.get("branch", "develop")
+    fork = request.args.get("fork", "axonius")
     if branch is None:
         branch = "develop"
 
-    return "# how to use: curl -k https://builds.axonius.lan/install[?branch=develop] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/axonius/cortex {0}\n" \
-        "history -c\nhistory -w\ncd install\nchmod 777 *\n./install.sh\nexit\n".format(branch)
+    return "# how to use: curl -k https://builds.axonius.lan/install[?branch=develop&fork=axonius] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}\n" \
+        "history -c\nhistory -w\ncd install\nchmod 777 *\n./install.sh --clean\nexit\n".format(fork=fork, branch=branch)
 
 
 @app.route("/install_demo", methods=['GET'])
 def get_install_demo_script():
-    branch = request.args.get("branch")
-    extra_params = request.args.get("exclude")
-    if extra_params is None:
-        opt_params = ''
-    else:
-        opt_params = "'--exclude {0}'".format(str(extra_params).replace(',', ' '))
+    branch = request.args.get("branch", "develop")
+    fork = request.args.get("fork", "axonius").split('/')[0]
+    set_credentials = "--set-credentials" if request.args.get("set_credentials", False) == "on" else ""
+    exclude = request.args.get("exclude")
+    include = request.args.get("include")
+    if exclude != '':
+        exclude = [current_adapter[:-len('_adapter')] for current_adapter in exclude.split(',')]
+        opt_params = "'--exclude {0}'".format(' '.join(exclude))
+    elif include != '':
+        include = [current_adapter[:-len('_adapter')] for current_adapter in include.split(',')]
+        opt_params = "'{0}'".format(' '.join(include))
+    elif include == '' and exclude == '':
+        opt_params = "'--exclude'"
     if branch is None:
         branch = "develop"
 
-    return "# how to use: curl -k https://builds.axonius.lan/install_demo[?branch=develop?exclude=ad,esx,puppet] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/axonius/cortex {0}\n" \
-        "history -c\nhistory -w\ncd install\nchmod 777 *\n./install_demo.sh {1}\nexit\n".format(branch, opt_params)
+    return INSTALL_DEMO_SCRIPT.format(fork=fork, branch=branch, set_credentials=set_credentials,
+                                      install_params=opt_params)
 
 
 @app.after_request
