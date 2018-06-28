@@ -95,3 +95,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
 
     def logout_user(self):
         return self.get('logout', session=self._session)
+
+    def anaylitics(self):
+        return self.get('analytics').content
+
+    def troubleshooting(self):
+        return self.get('troubleshooting').content

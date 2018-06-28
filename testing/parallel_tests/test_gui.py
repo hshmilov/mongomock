@@ -199,5 +199,13 @@ def test_login():
     assert response.status_code == 200
 
 
+def test_maintenance_endpoints():
+    axonius_system = get_service()
+    gui_service = axonius_system.gui
+
+    assert gui_service.anaylitics().strip() == b'true'
+    assert gui_service.troubleshooting().strip() == b'true'
+
+
 if __name__ == '__main__':
-    pytest.main(["parallel_tests/test_gui.py"])
+    pytest.main([__file__])
