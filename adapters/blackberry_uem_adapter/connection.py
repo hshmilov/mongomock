@@ -26,7 +26,7 @@ class BlackberryUemConnection(RESTConnection):
                     'Content-Type': "application/vnd.blackberry.authorizationrequest-v1+json"},
                     verify=self._verify_ssl, timeout=self._session_timeout, proxies=self._proxies)
                 response.raise_for_status()
-                self._headers["Authorization"] = response.text
+                self._session_headers["Authorization"] = response.text
                 self._get('devices')
             except requests.HTTPError as e:
                 raise RESTException(str(e))

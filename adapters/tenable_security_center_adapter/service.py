@@ -1,4 +1,3 @@
-
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 
@@ -54,28 +53,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
 
     def _query_devices_by_client(self, client_name, session: TenableSecurityScannerConnection):
         try:
-            # Get a list of ip's from our devices, to request information only about them.
-            devices = self.devices_db.find(
-                {"adapters.data.network_interfaces.ips": {"$exists": True}},
-                projection={"_id": 0, "adapters.data.network_interfaces.ips": 1})
-
-            # Make a list (which is unique) of all of the ip
-            ips = set()
-            for device in devices:
-                for record_adapter in device['adapters']:
-                    for network_interface in record_adapter['data']['network_interfaces']:
-                        for ip in network_interface['ips']:
-                            # validate that this is indeed a good ipv4
-                            try:
-                                assert type(ipaddress.ip_address(ip)) == ipaddress.IPv4Address
-                            except Exception:
-                                logger.warning(f"Bypassing ip {ip}: its not an ipv4 address.")
-                                continue
-
-                            # Some ip's we can have which are clearly not good.
-                            if ip not in ["0.0.0.0", "255.255.255.255", "1.2.3.4", "1.1.1.1"]:
-                                ips.add(ip)
-            ips = list(ips)
+            ips = self.devices.get_all_ips({})
 
             # finally, query about all of them.
             logger.info(f"Getting info about {len(ips)} ip's")
@@ -117,24 +95,33 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
 
         # Parse all raw data
         device.figure_os(raw_device_data.get("os"))
-        ip = raw_device_data.get("ip")
+        ip_list_raw = raw_device_data.get("ip", [])
+        if type(ip_list_raw) == str:
+            # maybe we have a couple of ip's. we don't know since we don't have it in the api docs.
+            ip_list_raw = ip_list_raw.split(",")
 
+        ips = []
         try:
-            # assert this is a valid ip address
-            assert type(ipaddress.ip_address(ip)) == ipaddress.IPv4Address
-            ips = [ip]
+            for ip in ip_list_raw:
+                try:
+                    assert ipaddress.ip_address(ip) is not None
+                    # If we got by now (and didn't throw an exception) that's a valid ip address.
+                    ips.append(ip)
+                except Exception:
+                    print("Got an invalid ip address {ip}, moving on")
         except Exception:
-            logger.warning(f"Got an invalid (non ipv4 address): {ip}, not inserting ip")
-            ips = None
+            logger.warning(f"Got an invalid ip address list: {ip_list_raw}, not inserting ips")
+
         device.add_nic(mac=raw_device_data.get("macAddress"), ips=ips)
 
         netbios_name = raw_device_data.get("netbiosName")
         try:
-            if "\\" in netbios_name:
+            if netbios_name is not None and "\\" in netbios_name:
                 hostname_by_netbios = netbios_name.split("\\")[1]
             else:
                 hostname_by_netbios = netbios_name
         except Exception:
+            hostname_by_netbios = None
             logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
 
         device.hostname = raw_device_data.get("dnsName", hostname_by_netbios)

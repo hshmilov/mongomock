@@ -18,7 +18,7 @@ class SymantecConnection(RESTConnection):
         """
         self.__token = token
         self.__adminId = adminId
-        self._headers['Authorization'] = 'Bearer ' + self.__token
+        self._session_headers['Authorization'] = 'Bearer ' + self.__token
 
     def _connect(self):
         if self._username is not None and self._password is not None and self._username_domain is not None:

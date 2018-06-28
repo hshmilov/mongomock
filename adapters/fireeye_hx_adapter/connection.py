@@ -10,7 +10,7 @@ class FireeyeHxConnection(RESTConnection):
     def _connect(self):
         if self._username is not None and self._password is not None:
             response = self._get('token', do_basic_auth=True, return_response_raw=True, use_json_in_response=False)
-            self._headers["X-FeApi-Token"] = response.headers["X-FeApi-Token"]
+            self._session_headers["X-FeApi-Token"] = response.headers["X-FeApi-Token"]
         else:
             raise RESTException("No user name or password")
 

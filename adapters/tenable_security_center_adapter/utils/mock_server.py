@@ -3,6 +3,8 @@ The best mocking we can have for an adapter we don't have.
 """
 import random
 import time
+import string
+import ipaddress
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -10,7 +12,8 @@ app = Flask(__name__)
 # Credentials for admin
 GOOD_USER_USERNAME = "admin"
 GOOD_USER_PASSWORD = "admin"
-TOKEN = "123456789"
+TOKEN = ""
+TOKEN_LENGTH = 10
 
 # Credentials for maximum login limit
 BAD_USER_USERNAME = "too"
@@ -22,7 +25,8 @@ GOOD_REQUEST_CHANCES = 0.9
 def build_sc_response(data, error=None):
     """
     Gets a reponse object and returns the whole response to be returned.
-    :param data:
+    :param data: the data
+    :param error: error string
     :return:
     """
 
@@ -34,6 +38,7 @@ def build_sc_response(data, error=None):
         final_object["error_msg"] = error
         final_object["warnings"] = ["warning 1"]
         final_object["timestamp"] = int(time.time())
+        rc = 401
 
     else:
         final_object["type"] = "regular"
@@ -42,14 +47,18 @@ def build_sc_response(data, error=None):
         final_object["warnings"] = []
         final_object["timestamp"] = int(time.time())
         final_object['response'] = data
+        rc = 200
 
-    return jsonify(final_object)
+    return jsonify(final_object), rc
 
 
 @app.route("/rest/token", methods=['POST', 'DELETE'])
 def token():
     if request.method == "DELETE":
         return build_sc_response({})
+
+    if request.headers.get("X-SecurityCenter") is not None:
+        return build_sc_response({}, error="Can not request for token while having another token. Delete your headers")
 
     json_params = request.get_json()
     username = json_params['username']
@@ -69,6 +78,9 @@ def token():
     if regular_token is False:
         return build_sc_response({"releaseSession": True})
     else:
+        # Generate a token
+        global TOKEN
+        TOKEN = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(TOKEN_LENGTH))
         return build_sc_response({"token": TOKEN})
 
 
@@ -81,9 +93,8 @@ def system():
 @app.route("/rest/ipInfo")
 def ip_info():
     token = request.headers.get("X-SecurityCenter")
-    print(f"Token is {token}")
     if token != TOKEN:
-        return build_sc_response({}, error="Invalid Token")
+        return build_sc_response({}, error=f"Invalid Token, got {token} but expected {TOKEN}")
 
     # Randomly drop the request to check if the adapter takes it
     if random.random() > GOOD_REQUEST_CHANCES:
@@ -97,9 +108,15 @@ def ip_info():
     if type(fields) == str:
         fields = fields.split(",")
 
-    ip_to_list = [int(x) for x in ip.split(".")]
+    try:
+        ip_to_list = [int(x) for x in ip.split(".")]
+        mac = "00:00:%0.2x:%0.2x:%0.2x:%0.2x" % (ip_to_list[0], ip_to_list[1], ip_to_list[2], ip_to_list[3])
+    except Exception:
+        # its ipv6
+        ip_to_list = [int(x, 16) % 256 for x in ipaddress.ip_address(ip).exploded.split(":")]
+        mac = "%0.2x:%0.2x:%0.2x:%0.2x:%0.2x:%0.2x" % (
+            ip_to_list[0], ip_to_list[1], ip_to_list[2], ip_to_list[3], ip_to_list[4], ip_to_list[5])
     repository_id = str(ip_to_list[0])
-    mac = "00:00:%0.2x:%0.2x:%0.2x:%0.2x" % (ip_to_list[0], ip_to_list[1], ip_to_list[2], ip_to_list[3])
     security_critical_number = random.randint(1, 100)
 
     response = {

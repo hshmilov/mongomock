@@ -278,7 +278,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         return to_json(self.clean_db())
 
     @add_rule('devices', methods=['GET'])
-    def devices(self):
+    def devices_callback(self):
         """ /devices Query adapter to fetch all available devices.
         An "available" device is a device that is registered with the adapter source.
 

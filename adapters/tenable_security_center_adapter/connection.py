@@ -10,19 +10,6 @@ class TenableSecurityScannerConnection(RESTConnection):
     # 24e0fbd6191907b46c4e2e1b6cee176e93ad6d4d/tenable/securitycenter/securitycenter.py
     def _connect(self):
         if self._username is not None and self._password is not None:
-            try:
-                # We might have SecurityScanner v4, but we only support v5.
-                system = self._get("system")
-                system_version = system['version']
-            except Exception:
-                logger.exception("Error while connecting and requesting system")
-                raise RESTException(f"Invalid API response (Is the url provided a SecurityCenter v5 instance? "
-                                    f"Did you forget the port?)")
-
-            if not str(system_version).startswith("5"):
-                raise RESTException(f"Tenable Security Center version is {system_version}, "
-                                    f"but only version 5 is supported")
-
             # Based on Tenable SCCV Documentation (https://docs.tenable.com/sccv/api/index.html)
             # and https://docs.tenable.com/sccv/api/Token.html
             # We need to post to 'token' and get the token and cookie.
@@ -35,7 +22,7 @@ class TenableSecurityScannerConnection(RESTConnection):
                 raise RESTException(f"User {self._username} has reached its maximum login limit.")
 
             # We don't have to set the cookie since RESTConnection does that for us (uses request.Session)
-            self._headers["X-SecurityCenter"] = str(response['token'])
+            self._session_headers["X-SecurityCenter"] = str(response['token'])
         else:
             raise RESTException("No user name or password")
 
@@ -52,7 +39,10 @@ class TenableSecurityScannerConnection(RESTConnection):
 
     def close(self):
         # Deletes the token associated with the logged in User (https://docs.tenable.com/sccv/api/Token.html)
-        self._delete("token")
+        try:
+            self._delete("token")
+        except Exception:
+            logger.exception("Couldn't delete token")
         super().close()
 
     def get_device_list(self):
@@ -99,6 +89,8 @@ class TenableSecurityScannerConnection(RESTConnection):
 # All fields are taken from https://docs.tenable.com/sccv/api/IP-Information.html
 # unimportant data is commented.
 IP_INFO_FIELDS = [
+    "ip",   # This is a must field by the documentation but we still put it
+    "repositoryID",  # This is a must field by the documentation but we still put it
     "repositories",
     "repository",
     "score",

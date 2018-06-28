@@ -123,9 +123,17 @@ def figure_out_os(s):
     linux_names = ["linux", 'ubuntu', 'canonical', 'red hat',
                    'debian', 'fedora', 'centos', 'oracle', 'opensuse']
 
-    ios_names = ["iphone", "ipad", "ios", "apple"]
+    ios_devices = ["iphone", "ipad", "apple"]
+    ios_names = ios_devices + ["ios"]
 
-    if 'windows' in s or 'win' in s:
+    # Start with the one who have for sure capital in their names
+    # The first part is not enough, since some devices have only 'IOS' in them, but not "cisco".
+    # We have seen this happening in clients (a device with 2 adapters had "Cisco", "iOS" operating systems,
+    # in a client that did not let us connect to any system that see mobile devices)
+    if 'cisco' in s or ('IOS' in orig_s and not any(x in s for x in ios_devices)):
+        # If it has 'cisco', or it has 'IOS' (upper letters) and it doesn't have 'iphone', 'ipad', etc.
+        os_type = 'Cisco'
+    elif 'windows' in s or 'win' in s:
         os_type = 'Windows'
         # XP must reamin the last item in the list because there is a chance it will be found in "s" by chacne
         windows_distribution = ['Vista', 'Windows 7', 'Windows 8', 'Windows 8.1', 'Windows 10',
@@ -137,7 +145,6 @@ def figure_out_os(s):
             if dist.lower() in s:
                 distribution = dist.replace("Windows ", "").replace("Windows", "").replace("Win", "")
                 break
-
     elif any(x in s for x in linux_names):
         os_type = 'Linux'
         linux_distributions = [ubuntu_full, "Ubuntu", "Red Hat", "Debian", "Fedora"]
@@ -202,10 +209,6 @@ def figure_out_os(s):
         distribution = s.replace("VMWare ", "")
         if distribution not in esx_distributions:
             distribution = "(?) " + distribution
-
-    elif 'cisco' in s.lower():
-        os_type = 'Cisco'
-
     elif 'mikrotik' in s.lower():
         os_type = 'Mikrotik'
 

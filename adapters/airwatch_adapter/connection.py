@@ -9,8 +9,11 @@ class AirwatchConnection(RESTConnection):
 
     def _connect(self):
         if self._username is not None and self._password is not None:
+            # Note that the following self._get will have the application/xml Accept type,
+            # but only afterwards we will update session headers to application/json.
+            # when having both "Accept" in permanent and session headers, session wins.
             self._get("system/info", do_basic_auth=True, use_json_in_response=False)
-            self._headers["Accept"] = "application/json"
+            self._session_headers["Accept"] = "application/json"
         else:
             raise RESTException("No user name or password or API key")
 

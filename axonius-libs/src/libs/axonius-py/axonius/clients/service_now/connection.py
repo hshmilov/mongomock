@@ -15,8 +15,7 @@ class ServiceNowConnection(RESTConnection):
         self.__number_of_offsets = consts.NUMBER_OF_OFFSETS
         self.__offset_size = consts.OFFSET_SIZE
         super().__init__(url_base_prefix="api/now/", *args, **kwargs)
-        self._headers = {'Content-Type': 'application/json',
-                         'Accept': 'application/json'}
+        self._permanent_headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 
     def _connect(self):
         if self._username is not None and self._password is not None:

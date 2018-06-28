@@ -1,9 +1,12 @@
 """
 Axonius entities class wrappers. Implement methods to be used on devices/users from the db.
 """
-import functools
-from enum import Enum
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 
+import functools
+import ipaddress
+from enum import Enum
 from bson import ObjectId
 
 
@@ -81,6 +84,49 @@ class DevicesNamespace(EntitiesNamespace):
 
     def __init__(self, plugin_base):
         super().__init__(plugin_base, EntityType.Devices)
+
+    def get_all_ips(self, mongodb_filter):
+        """
+        Gets a list of unique ip's of all devices that answer a specific filter
+        :param mongodb_filter: a filter you would normally run on self.devices_db_view.find({})
+        :return: a list of ip's.
+        """
+        # Get a list of ip's from our devices, to request information only about them.
+        db = self.plugin_base._entity_views_db_map[self.entity]
+
+        # We extend the filter, we want it to have the ip's array.
+        mongodb_filter = {"$and": [mongodb_filter, {"specific_data.data.network_interfaces.ips": {"$exists": True}}]}
+
+        devices = db.find(
+            mongodb_filter,
+            projection={"_id": 0, "specific_data.data.network_interfaces.ips": 1})
+
+        # Make a list (which is unique) of all of the ip
+        ips = list()
+
+        # Note - While we search for mongo queries that have ips, not all adapters
+        # have to have them. We get devices which have at least one.
+
+        for device in devices:
+            for specific_data_record in device.get('specific_data', []):
+                for network_interface in specific_data_record.get('data', {}).get('network_interfaces', []):
+                    for ip in network_interface.get('ips', []):
+                        # validate that this is indeed a good ipv4
+                        try:
+                            ip_addr = ipaddress.ip_address(ip)
+                            # If we got by now (and didn't throw an exception) that's a valid ip address.
+                        except Exception:
+                            logger.error(f"Bypassing ip {ip}: its not a valid ip address.")
+                            continue
+
+                        # Some ip's we can have which are clearly not good.
+                        if ip not in ["0.0.0.0", "255.255.255.255", "1.2.3.4", "1.1.1.1"] \
+                                and ip_addr.is_loopback is False \
+                                and ip_addr not in [ipaddress.ip_address("::0"), ipaddress.ip_address("::1")] \
+                                and ip not in ips:
+                            ips.append(ip)
+
+        return ips
 
 
 class UsersNamespace(EntitiesNamespace):

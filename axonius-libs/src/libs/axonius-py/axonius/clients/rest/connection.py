@@ -57,7 +57,8 @@ class RESTConnection(ABC):
         url_port = url_parsed.port or self._port
         self._url = uritools.compose.uricompose(
             scheme=url_scheme, authority=url_parsed.host, port=url_port, path=self._url_base_prefix)
-        self._headers = headers
+        self._permanent_headers = headers
+        self._session_headers = {}
         self._session = None
 
     def __del__(self):
@@ -85,6 +86,7 @@ class RESTConnection(ABC):
         """ Closes the connection """
         self._session.close()
         self._session = None
+        self._session_headers = {}
 
     @property
     def _is_connected(self):
@@ -150,14 +152,26 @@ class RESTConnection(ABC):
             if do_digest_auth:
                 auth_dict = requests.auth.HTTPDigestAuth(self._username, self._password)
 
+            # If the same header exists in both headers, _session_headers win.
+            headers_for_request = self._permanent_headers.copy()
+            headers_for_request.update(self._session_headers)
             response = self._session.request(method, url, params=url_params,
-                                             headers=self._headers, verify=self._verify_ssl,
+                                             headers=headers_for_request, verify=self._verify_ssl,
                                              json=request_json, data=request_data,
                                              timeout=self._session_timeout, proxies=self._proxies,
                                              auth=auth_dict)
             response.raise_for_status()
         except requests.HTTPError as e:
-            raise RESTRequestException(str(e))
+            try:
+                # Try get the error if it comes back.
+                try:
+                    rp = response.json()
+                except Exception:
+                    rp = str(response.content)
+                message = f"{str(e)}: {rp}"
+            except Exception:
+                message = str(e)
+            raise RESTRequestException(message)
         if use_json_in_response:
             try:
                 return response.json()

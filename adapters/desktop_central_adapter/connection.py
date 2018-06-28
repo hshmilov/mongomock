@@ -25,7 +25,7 @@ class DesktopCentralConnection(RESTConnection):
             if (('message_response' not in response or 'status' not in response or 'message_version' not in response or
                  'message_version' not in response) or (response['status'] != 'success')):
                 raise RESTException("Unknown connection error in authentication")
-            self._headers["Authorization"] = response["message_response"]["authentication"]["auth_data"][
+            self._session_headers["Authorization"] = response["message_response"]["authentication"]["auth_data"][
                 "auth_token"]
         else:
             raise RESTException("No username or password")
