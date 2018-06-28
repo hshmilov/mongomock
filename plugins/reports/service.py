@@ -174,7 +174,9 @@ class ReportsService(PluginBase, Triggerable):
         if query is None:
             raise ValueError(f'Missing query "{view_name}"')
         parsed_query_filter = parse_filter(query['view']['query']['filter'])
-        return list(self._entity_views_db_map[view_entity].find(parsed_query_filter))
+
+        # Projection to get only the needed data to differentiate between results.
+        return list(self._entity_views_db_map[view_entity].find(parsed_query_filter, {'specific_data.data.id': 1}))
 
     def update_report(self, report_data):
         """update a report data.
