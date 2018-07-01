@@ -1,13 +1,20 @@
 <template>
-    <div class="array">
+    <div class="x-array-view">
         <div v-if="schema.title === 'SEPARATOR'" class="separator">&nbsp;</div>
-        <label v-else-if="schema.title" :title="schema.description || ''" class="label">{{schema.title}}</label>
-        <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
-            <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
-            <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
-                         :required="true">
-                <component :is="item.type" :schema="item" :value="data[item.name]" @input="$emit('input', data)"/>
-            </x-type-wrap>
+        <template v-else-if="schema.title">
+            <div @click="toggleCollapsed" class="x-btn link expander">{{ collapsed? '+': '-'}}</div>
+            <label :title="schema.description || ''" class="label">{{ schema.title }}</label>
+        </template>
+        <div class="array-container">
+            <div v-if="!collapsed" class="array" :class="{ 'growing-y': collapsable}" ref="items">
+                <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
+                    <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
+                    <x-type-wrap v-bind="item" :required="true">
+                        <component :is="item.type" :schema="item" :value="data[item.name]" :ref="item.type" />
+                    </x-type-wrap>
+                </div>
+            </div>
+            <div class="placeholder" v-else>...</div>
         </div>
     </div>
 </template>
@@ -24,24 +31,74 @@
 
 	export default {
 		name: 'array',
-		mixins: [ArrayMixin],
-		components: { xTypeWrap, string, number, integer, bool, file }
+		mixins: [ ArrayMixin ],
+		components: { xTypeWrap, string, number, integer, bool, file },
+        computed: {
+			collapsable() {
+				return this.schema.title && this.schema.title !== 'SEPARATOR'
+            }
+        },
+        methods: {
+			updateCollapsed(collapsed) {
+				if (!this.collapsable) return
+
+				if (!collapsed) {
+					this.collapsed = false
+				} else if (!this.collapsed) {
+					this.$refs.items.classList.add('shrinking-y')
+					setTimeout(() => this.collapsed = true, 1000)
+				}
+			},
+			toggleCollapsed() {
+				this.updateCollapsed(!this.collapsed)
+            },
+            collapseRecurse(collapsed) {
+                this.updateCollapsed(collapsed)
+                setTimeout(() => {
+                    if (!this.$refs.array) return
+                    this.$refs.array.forEach(item => {
+                        item.collapseRecurse(collapsed)
+                    })
+                })
+            }
+        },
+        created() {
+			if (this.collapsable) {
+				this.collapsed = true
+            }
+        }
 	}
 </script>
 
 <style lang="scss">
-    .array {
+    .x-array-view {
         .separator {
             width: 100%;
             height: 1px;
             background-color: rgba($theme-orange, 0.2);
             margin: 12px 0;
         }
-        .item {
-            .index {
-                display: inline-block;
-                vertical-align: top;
+        .x-btn.link.expander {
+            display: inline-block;
+            padding: 0;
+            width: 20px;
+            text-align: left;
+        }
+        .array-container {
+            overflow: hidden;
+            .placeholder {
+                margin-left: 20px;
+                color: $grey-3;
+                font-weight: 500;
             }
+        }
+        .label, .index {
+            font-weight: 500;
+        }
+        .index {
+            margin-right: 4px;
+            display: inline-block;
+            vertical-align: top;
         }
     }
 </style>

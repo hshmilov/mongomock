@@ -671,7 +671,7 @@ export const onboarding = {
 		},
 		[ CHANGE_TOUR_STATE ] (state, payload) {
 			let stateName = payload.name
-			if (stateName) {
+			if (stateName && state.tourStates.defs[stateName]) {
 				let queueName = state.tourStates.defs[stateName].queue
 				if (queueName && state.tourStates.queues[queueName]) {
 					if (state.tourStates.queues[queueName].includes(stateName)) {

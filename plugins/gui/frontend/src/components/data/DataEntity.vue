@@ -19,15 +19,14 @@
                          :title="item.plugin_name" :logo="true" :outdated="item.outdated">
                         <div class="d-flex content-header">
                             <div class="flex-expand server-info">Data From: {{ item.client_used }}</div>
-                            <div v-if="viewBasic" @click="toggleView" class="link">View advanced</div>
-                            <div v-if="!viewBasic" @click="toggleView" class="link">View basic</div>
+                            <div @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</div>
                         </div>
-                        <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)"/>
-                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else/>
+                        <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)" />
+                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else />
                     </tab>
                 </tabs>
             </tab>
-            <tab title="Extended Data" id="extended" key="extended">
+            <tab title="Extended Data" id="extended" key="extended" v-if="entity.generic.data.length">
                 <tabs :vertical="true">
                     <tab v-for="item, i in entity.generic.data" :title="item.name" :id="`data_${i}`" :key="`data_${i}`"
                          :selected="!i">
@@ -151,7 +150,7 @@
             adapterSchema(name) {
             	return {
             		type: 'array', items: [
-                        { ...this.fields.schema.generic, name: 'data' },
+                        { ...this.fields.schema.generic, name: 'data', title: 'SEPARATOR' },
                         { ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
 					]
                 }
@@ -193,7 +192,7 @@
                 height: calc(100% - 80px);
                 .content-header {
                     padding-bottom: 4px;
-                    margin-bottom: 16px;
+                    margin-bottom: 12px;
                     border-bottom: 2px solid rgba($theme-orange, 0.4);
                     .server-info {
                         text-transform: uppercase;
@@ -205,15 +204,29 @@
                     .object {
                         width: calc(100% - 24px);
                     }
+                    >.x-array-view >.array-container >.array {
+                        display: grid;
+                        grid-template-columns: 50% 50%;
+                        grid-gap: 4px 0;
+                        overflow-wrap: break-word;
+                        .array {
+                            margin-left: 20px;
+                        }
+                    }
                 }
                 .specific .schema-list {
                     height: calc(100% - 36px);
-                    > .array {
+                    > .x-array-view > .array-container > .array {
                         display: block;
-                        > .item > .object > .array {
+                        > .item > .object > .x-array-view > .array-container > .array {
+                            overflow-wrap: break-word;
                             display: grid;
                             grid-template-columns: 50% 50%;
                             grid-gap: 12px 24px;
+                            margin-left: 0;
+                            .array {
+                                margin-left: 20px;
+                            }
                             .separator {
                                 grid-column-end: span 2;
                             }

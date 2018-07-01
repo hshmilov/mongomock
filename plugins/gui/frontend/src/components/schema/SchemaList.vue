@@ -1,6 +1,10 @@
 <template>
     <div class="schema-list">
-        <x-array-view :value="data" :schema="schema" />
+        <div class="actions-bar">
+            <div @click="expandAll" class="x-btn link">+ Expand all</div>
+            <div @click="collapseAll" class="x-btn link">- Collapse all</div>
+        </div>
+        <x-array-view :value="data" :schema="schema" ref="arrayView" />
     </div>
 </template>
 
@@ -15,20 +19,26 @@
 	export default {
 		name: 'x-schema-list',
         components: { xArrayView },
-        props: {data: {required: true}, schema: {required: true}}
+        props: { data: { required: true }, schema: { required: true } },
+        methods: {
+			expandAll() {
+				this.$refs.arrayView.collapseRecurse(false)
+            },
+			collapseAll() {
+				this.$refs.arrayView.collapseRecurse(true)
+			}
+        }
 	}
 </script>
 
 <style lang="scss">
-    .schema-list > .array {
-        display: grid;
-        grid-template-columns: 50% 50%;
-        grid-gap: 4px 0;
-        .label, .index {
-            font-weight: 500;
-        }
-        .index {
-            margin-right: 4px;
+    .schema-list {
+        .actions-bar {
+            display: flex;
+            justify-content: flex-end;
+            .x-btn {
+                font-size: 12px;
+            }
         }
     }
 </style>

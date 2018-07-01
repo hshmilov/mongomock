@@ -103,6 +103,7 @@
                 .header-tab {
                     padding: 24px;
                     background: $theme-white;
+                    white-space: pre-line;
                     &:after {
                         content: none;
                     }

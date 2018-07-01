@@ -18,7 +18,8 @@ export default {
 			// Process schema to create list of items which Array components can present
 			if (Array.isArray(this.schema.items)) {
 				// schema.items contains explicit definition for each type of contained children
-				schemaItems = this.schema.items
+				// Filter those without a 'title' property since they are not for presentation
+				schemaItems = this.schema.items.filter(item => item.title)
 			} else if (this.schema.items instanceof Object && this.schema.name) {
 				// schema.items contains one unified definition for type of all children
 				schemaItems = this.toList(this.data).map((item, index) => {
@@ -49,7 +50,8 @@ export default {
 	},
 	data () {
 		return {
-			data: { ...this.value }
+			data: { ...this.value },
+			collapsed: false
 		}
 	},
 	watch: {

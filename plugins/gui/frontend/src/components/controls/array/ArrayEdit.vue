@@ -1,6 +1,8 @@
 <template>
     <div class="array">
-        <h4 v-if="schema.title" :title="schema.description || ''" class="header grid-span2" :id="schema.name">{{ schema.title }}</h4>
+        <h4 v-if="schema.title" :title="schema.description || ''" class="header grid-span2" :id="schema.name">
+            {{ schema.title }}
+        </h4>
         <div v-for="item in shownSchemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">

@@ -78,6 +78,9 @@
             }
 		},
         created() {
+			if (this.tags) {
+				this.selected = [ ...this.tags ]
+            }
 			this.fetchLabels({module: this.module})
         }
 	}
