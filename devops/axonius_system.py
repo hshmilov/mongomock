@@ -171,7 +171,7 @@ def service_entry_point(target, args):
     axonius_system = get_service()
     if args.build_libs:
         assert args.mode in ('up', 'build')
-        axonius_system.build_libs(True, version=args.version_name)
+        axonius_system.build_libs(True, version=args.version_name if 'version_name' in args else '')
         args.hard = True
     if args.hard:
         assert args.mode in ('up', 'build')
