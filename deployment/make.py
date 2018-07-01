@@ -18,7 +18,9 @@ import sys
 import tempfile
 import time
 import zipfile
+from pathlib import Path
 
+import lists
 from utils import AutoOutputFlush, CORTEX_PATH, SOURCES_FOLDER_NAME, print_state, get_service
 
 if pip.__version__.startswith('9.'):
@@ -196,18 +198,12 @@ def add_source_folder(zip_file, exclude=None):
     def filter_folder(source_path):
         if source_path in exclude_folders:
             return False
-        if os.path.basename(source_path) in ('.git', '.idea', '.cache', '__pycache__', 'tests'):
+        if os.path.basename(source_path) in lists.FILENAMES_EXCLUDE_GLOBAL:
             return False
-        if source_path in ('venv', 'logs', 'devops/systemization', 'devops/CI', 'deploy_artifacts',
-                           'plugins/gui/frontend/node_modules', 'plugins/gui/frontend/dist'):
+        if source_path in lists.DIRS_EXCLUDE_GLOBAL:
             return False
-        if source_path.startswith('testing/'):
-            if source_path in ('testing/services', 'testing/test_helpers') or \
-                    source_path.startswith('testing/services/') or source_path.startswith('testing/test_helpers/'):
-                return True
+        if (Path(CORTEX_PATH) / Path(source_path) / lists.SKIP_DEPLOYMENT_MARKER).is_file():
             return False
-        if source_path.startswith('devops/scripts/'):
-            return source_path.startswith('devops/scripts/fast_axonius')
         return True
 
     def filter_file(source_path):
@@ -215,13 +211,10 @@ def add_source_folder(zip_file, exclude=None):
             return False
         if source_path.endswith('.bat') or os.path.basename(source_path).startswith('.git'):
             return False
-        if source_path in ('adapters/debug_main.py', 'plugins/debug_main.py', 'deployment/make.py',
-                           'deployment/run_tests.py', 'deployment/run_tests.sh'):
+        if source_path in lists.FILENAMES_EXCLUDE_GLOBAL:
             return False
         if install_out_regex.match(source_path):
             return False
-        if source_path.startswith('devops/scripts/'):
-            return source_path == 'devops/scripts/__init__.py'
         return True
 
     def add_folder(source_path, zip_rel_path):

@@ -43,7 +43,6 @@ def load_state(path, key):
     load_views(axonius_system, mongo_client, state['views'])
     load_dashboard_panels(axonius_system, mongo_client, state['panels'])
     load_alerts(axonius_system, mongo_client, state['alerts'])
-    load_diagnostics(axonius_system, state['diag_env'])  # SHOULD BE THE LAST STEP
 
 
 def decrypt(data, key):
@@ -128,27 +127,6 @@ def load_alerts(axonius_system, mongo, alerts):
             collection.insert_many(alerts)
     except Exception as e:
         print(f"Failed loading alerts, got the following exception: {str(e)}")
-
-
-def load_diagnostics(axonius_system, diag_env):
-    """
-    Loads the diagnostics server. Note that this function is called in the last step of the installation
-    since we are assuming the upgrade process can happen remotely (we assume someone is upgrading from the
-    diagnostics container).
-    """
-    print_state('  Restoring diagnostics env')
-    try:
-        open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'w').write(diag_env)
-        diagnostics = axonius_system.get_plugin('diagnostics')
-        diagnostics.take_process_ownership()
-        if diagnostics.get_is_container_up():
-            if not count(10):
-                print_state('    *Skipping* diagnostics restart')
-            else:
-                print_state('    *RESTARTING* diagnostics')
-                diagnostics.start(allow_restart=True, show_print=False)
-    except Exception as e:
-        print(f"Failed loading diagnostics. Got the following error: {str(e)}")
 
 
 def count(x):

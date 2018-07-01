@@ -31,7 +31,7 @@ if [[ $* == *--set-credentials* ]]; then
     echo "Setting all credentials."
     (
     source ./prepare_python_env.sh
-    python3 ./devops/scripts/credentials_inputer.py
+    python3 ./devops/scripts/automate_dev/credentials_inputer.py
     ./axonius.sh service aggregator up --restart
     )
 fi

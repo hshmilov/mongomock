@@ -54,8 +54,7 @@ def save_state(path, key):
         'queries': get_all_queries(axonius_system, mongo_client),
         'views': get_all_views(axonius_system, mongo_client),
         'panels': get_dashboard_panels(axonius_system, mongo_client),
-        'alerts': get_alerts(axonius_system, mongo_client),
-        'diag_env': open(os.path.join(CORTEX_PATH, 'diag_env.json'), 'r').read(),
+        'alerts': get_alerts(axonius_system, mongo_client)
     }
     state_string = to_json(state, indent=2)
     enc_state_binary = encrypt(state_string, key)
