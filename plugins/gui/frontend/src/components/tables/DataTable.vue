@@ -139,7 +139,7 @@
                     if (!this.content.fetching) {
                         this.loading = false
                     }
-                })
+                }).catch(() => this.loading = false)
             },
             onClickRow(id) {
 				if (!document.getSelection().isCollapsed) return

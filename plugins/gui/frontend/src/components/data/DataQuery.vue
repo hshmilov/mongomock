@@ -1,12 +1,12 @@
 <template>
     <div class="x-data-query">
         <!-- Dropdown component for selecting a query --->
-        <x-dropdown :arrow="false" class="flex-expand">
+        <x-dropdown class="flex-expand" @activated="tour('querySelect')">
             <!-- Trigger is an input field containing a 'freestyle' query, a logical condition on fields -->
             <search-input slot="trigger" v-model="searchValue" ref="greatInput" id="query_list" @input="searchQuery"
-                          @keyup.enter.native="submitFilter" @click="tour('querySelect')"
-                          @keyup.down="incQueryMenuIndex" @keyup.up="decQueryMenuIndex"
-                          placeholder="Insert your query or start typing to filter recent Queries" />
+                          @keyup.enter.native.stop="submitFilter"
+                          @keyup.down.native="incQueryMenuIndex" @keyup.up.native="decQueryMenuIndex"
+                          placeholder="Insert your query or start typing to filter recent Queries" :tabindex="-1" />
             <!--
             Content is a list composed of 3 sections:
             1. Saved queries, filtered to whose names contain the value 'searchValue'
@@ -18,32 +18,32 @@
                     <div class="title">Saved Queries</div>
                     <div class="menu-content">
                         <nested-menu-item v-for="query, index in savedViews" :key="index" :title="query.name"
-                                          :selected="queryMenuIndex === index" @click="selectQuery(query)" />
+                                          :selected="isSelectedSaved(index)" @click="selectQuery(query)" />
                     </div>
                 </nested-menu>
                 <nested-menu v-if="historyViews && historyViews.length">
                     <div class="title">History</div>
                     <div class="menu-content">
                         <nested-menu-item v-for="query, index in historyViews" :key="index" :title="query.view.query.filter"
-                                          :selected="queryMenuIndex - savedViews.length === index" @click="selectQuery(query)" />
+                                          :selected="isSelectedHistory(index)" @click="selectQuery(query)" />
                     </div>
                 </nested-menu>
-                <nested-menu v-if="this.searchValue && !complexSearch">
-                    <nested-menu-item :title="`Search everywhere for: ${searchValue}`" @click="searchText"
-                                      :selected="queryMenuIndex === queryMenuCount - 1"/>
+                <nested-menu v-if="this.searchValue && isSearchSimple">
+                    <nested-menu-item :title="`Search in table: ${searchValue}`" @click="searchText" :selected="isSelectedSearch"/>
                 </nested-menu>
                 <div v-if="noResults">No results</div>
             </div>
         </x-dropdown>
-        <a class="x-btn link" :class="{disabled: disableSaveButton}" @click="openSaveView" id="query_save">Save Query</a>
-        <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false" ref="wizard">
-            <div slot="trigger" class="x-btn link" id="query_wizard" @click="tour('queryField')">+ Query Wizard</div>
+        <a class="x-btn link" :class="{disabled: disableSaveQuery}" @click="openSaveView" id="query_save">Save Query</a>
+        <!-- Triggerable menu containing a wizard for building a query filter -->
+        <x-dropdown class="query-wizard" align="right" :alignSpace="4" size="xl" :arrow="false" ref="wizard" @activated="tour('queryField')">
+            <div slot="trigger" class="x-btn link" id="query_wizard">+ Query Wizard</div>
             <div slot="content">
                 <x-schema-filter :schema="filterSchema" v-model="queryExpressions" @change="updateFilter"
-                                 @error="filterValid = false" :rebuild="rebuild"/>
+                                 @error="filterValid = false" ref="filter" />
                 <div class="place-right">
                     <a class="x-btn link" @click="clearFilter" @keyup.enter="clearFilter">Clear</a>
-                    <a class="x-btn" @click="rebuildFilter" @keyup.enter="rebuildFilter">Search</a>
+                    <a class="x-btn" @click="compileFilter" @keyup.enter="compileFilter">Search</a>
                 </div>
             </div>
         </x-dropdown>
@@ -66,7 +66,7 @@
 	import Modal from '../../components/popover/Modal.vue'
 
 	import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-    import { GET_DATA_FIELD_LIST_TYPED } from '../../store/getters'
+    import { GET_DATA_FIELD_BY_PLUGIN } from '../../store/getters'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_DATA_VIEWS, SAVE_DATA_VIEW } from '../../store/actions'
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
@@ -93,9 +93,9 @@
                 	return state[this.module].view.fields
                 }
             }),
-            ...mapGetters({getDataFieldsListTyped: GET_DATA_FIELD_LIST_TYPED}),
+            ...mapGetters({ getDataFieldsByPlugin: GET_DATA_FIELD_BY_PLUGIN }),
             schema() {
-				return this.getDataFieldsListTyped(this.module)
+				return this.getDataFieldsByPlugin(this.module)
             },
             queryExpressions: {
 				get() {
@@ -117,28 +117,34 @@
                     }})
 				}
 			},
-            complexSearch() {
-				if (!this.searchValue) return false
+			disableSaveQuery() {
+				/* Determine whether query cannot be saved right now or it can */
+				return this.queryFilter === '' || this.queryFilter !== this.searchValue || !this.filterValid
+			},
+            isSearchSimple() {
+				/* Determine whether current search input value is an AQL filter, or just text */
+				if (!this.searchValue) return true
                 let simpleMatch = this.searchValue.match('[a-zA-Z0-9 -\._]*')
-                return !simpleMatch || simpleMatch.length !== 1 || simpleMatch[0] !== this.searchValue
+                return simpleMatch && simpleMatch.length === 1 && simpleMatch[0] === this.searchValue
             },
             noResults() {
-				return (!this.searchValue || this.complexSearch) && (!this.savedViews || !this.savedViews.length)
+				/* Determine whether there are no results to show in the search input dropdown */
+				return (!this.searchValue || !this.isSearchSimple) && (!this.savedViews || !this.savedViews.length)
                     && (!this.historyViews || !this.historyViews.length)
             },
             textSearchPattern() {
+				/* Create a template for the search everywhere filter, from all currently selected fields */
 				if (!this.schema || !this.schema.length) return ''
 				let patternParts = []
-                this.schema[0].fields.forEach((field) => {
-					if (field.type === 'string' && this.selected.includes(field.name)) {
-						patternParts.push(field.name + ' == regex("{val}", "i")')
-					}
+                this.selected.forEach((field) => {
+                    patternParts.push(field + ' == regex("{val}", "i")')
                 })
                 return patternParts.join(' or ')
             },
             filterSchema () {
 				if (!this.schema || !this.schema.length) return []
 
+                /* Compose a schema by which to offer fields and values for building query expressions in the wizard */
                 return [ { ...this.schema[0], fields: [ {
 						name: 'saved_query', title: 'Saved Query', type: 'string', format: 'predefined',
 						enum: this.savedViews.map((view) => {
@@ -147,15 +153,19 @@
 					}, ...this.schema[0].fields]}, ...this.schema.slice(1)]
             },
             queryMenuCount() {
-                return this.savedViews.length + this.historyViews.length + (this.searchValue && !this.complexSearch)
+				/* Total items to appear in the search input dropdown */
+                return this.savedViews.length + this.historyViews.length + (this.searchValue && this.isSearchSimple)
+            },
+            isSelectedSearch() {
+				/* Determine whether the search in table option of the search input dropdown is selected  */
+				return this.queryMenuIndex === this.queryMenuCount - 1
             }
 		},
 		data () {
 			return {
 				searchValue: '',
-                disableSaveButton: true,
+                inTextSearch: false,
                 filterValid: true,
-                rebuild: false,
                 saveModal: {
 					isActive: false,
                     name: ''
@@ -165,63 +175,80 @@
 		},
         watch: {
 			queryFilter(newFilter) {
-				this.searchValue = newFilter
-            },
-            searchValue(newSearchValue) {
-                this.disableSaveButton = newSearchValue === ''
+				if (!this.inTextSearch) {
+				    this.searchValue = newFilter
+                }
             }
         },
 		methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW, changeState: CHANGE_TOUR_STATE }),
 			...mapActions({
-				fetchViews: FETCH_DATA_VIEWS, saveView: SAVE_DATA_VIEW,
+				fetchViews: FETCH_DATA_VIEWS, saveView: SAVE_DATA_VIEW
 			}),
             focusInput () {
 				this.$refs.greatInput.focus()
             },
+            closeInput() {
+				this.$refs.greatInput.$parent.close()
+            },
 			searchQuery () {
-				if (this.complexSearch || this.queryMenuIndex !== -1) return
-				return Promise.all([this.filterQueries('saved', 'name'), this.filterQueries('history', 'view.query.filter')])
+				this.inTextSearch = false
+                if (!this.isSearchSimple) return
+                /* Filter the saved and history queries in the dropdown, by the string user inserted */
+				return Promise.all([
+					this.filterQueries('saved', 'name'), this.filterQueries('history', 'view.query.filter')
+                ])
 			},
 			filterQueries (type, filterField) {
 				return this.fetchViews({
 					module: this.module,
 					type: type,
 					filter: this.searchValue.length > 0 ? `${filterField} == regex("${this.searchValue}")` : ``
-				})
+				}).catch((error) => this.$emit('error', error))
+			},
+			selectQuery ({ view }) {
+            	/* Load given view by setting current filter and expressions to it */
+				this.inTextSearch = false
+				this.updateView({ module: this.module, view })
+				this.filterValid = true
+				this.focusInput()
+				this.closeInput()
 			},
             searchText() {
-                this.searchValue = this.textSearchPattern.replace(/{val}/g, this.searchValue)
-                this.submitFilter()
-            },
-            clearFilter() {
-				this.queryExpressions = [ {...expression} ]
-                this.searchValue = ''
-                this.queryFilter = ''
-            },
-			rebuildFilter() {
-                this.rebuild = true
-				this.$refs.wizard.close()
+            	/* Plug the search value in the template for filtering by any of currently selected fields */
+                this.queryFilter = this.textSearchPattern.replace(/{val}/g, this.searchValue)
+                this.inTextSearch = true
+                this.closeInput()
             },
             submitFilter () {
             	if (!this.filterValid) return
-                this.queryFilter = this.searchValue
-				this.$refs.greatInput.$parent.close()
+				if (this.isSearchSimple) {
+				    // Search for value in all selected fields
+            		this.searchText()
+                } else {
+            		// Use the search value as a filter
+                    this.queryFilter = this.searchValue
+                }
+				this.closeInput()
             },
-			selectQuery ({view}) {
-            	this.queryExpressions = view.query.expressions
-				this.updateFilter(view.query.filter)
-				this.focusInput()
-				this.$refs.greatInput.$parent.close()
-			},
+            clearFilter() {
+            	// Restart the expressions, search input and filter
+				this.queryExpressions = [ { ...expression } ]
+                this.searchValue = ''
+                this.queryFilter = ''
+            },
+			compileFilter() {
+            	// Instruct the filter to re-compile, in case filter was edited
+            	this.$refs.filter.compile()
+				this.$refs.wizard.close()
+            },
             updateFilter (filter) {
-            	this.rebuild = false
             	if (this.queryFilter === filter) return
 				this.queryFilter = filter
                 this.filterValid = true
             },
             openSaveView() {
-                if (this.disableSaveButton || this.searchValue === '') return
+                if (this.disableSaveQuery || this.searchValue === '') return
             	this.saveModal.isActive = true
             },
             closeSaveView() {
@@ -249,6 +276,12 @@
                 } else if (this.queryMenuIndex === -1) {
             		this.focusInput()
                 }
+            },
+            isSelectedSaved(index) {
+                return this.queryMenuIndex === index
+            },
+            isSelectedHistory(index) {
+                return this.queryMenuIndex === index + this.savedViews.length
             },
             tour(stateName) {
 				this.changeState({ name: stateName })
@@ -299,6 +332,7 @@
                         text-transform: uppercase;
                         padding-left: 6px;
                         margin-top: 6px;
+                        color: $grey-4;
                     }
                     &:first-child {
                         .title {

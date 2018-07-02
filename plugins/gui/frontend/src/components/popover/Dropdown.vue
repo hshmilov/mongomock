@@ -4,7 +4,7 @@
              @click="toggle" @keyup.enter="toggle" @keyup.down="open" @keyup.up="close" @keyup.esc="close">
             <slot name="trigger"></slot>
         </div>
-        <div :class="`content ${sizeClass}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}">
+        <div :class="`content ${sizeClass}`" :style="{[align]: alignSpace + 'px', [alignAuto]: 'auto'}" v-if="isActive">
             <slot name="content"></slot>
         </div>
     </div>
@@ -31,7 +31,13 @@
         },
         data() {
             return {
-                isActive: false
+                isActive: false,
+                activated: false
+            }
+        },
+        watch: {
+        	isActive(newIsActive) {
+        		this.activated = newIsActive
             }
         },
         methods: {
@@ -43,6 +49,12 @@
             },
         	close() {
         		this.isActive = false
+            }
+        },
+        updated() {
+            if (this.activated) {
+            	this.$emit('activated')
+                this.activated = false
             }
         }
     }
@@ -59,7 +71,6 @@
             }
         }
         > .content {
-            display: none;
             background-color: $theme-white;
             position: absolute;
             z-index: 300;
@@ -69,11 +80,6 @@
             box-shadow: $popup-shadow;
             &.expand {
                 width: calc(100% - 24px);
-            }
-        }
-        &.active {
-            > .content {
-                display: block;
             }
         }
     }

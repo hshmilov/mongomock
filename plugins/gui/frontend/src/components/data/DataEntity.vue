@@ -2,7 +2,7 @@
     <div class="x-data-entity">
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
-        <tabs v-if="!loading" @click="determineState">
+        <tabs v-if="!loading" @click="determineState" @updated="initTourState">
             <tab title="General Data" id="generic" key="generic" :selected="true">
                 <tabs :vertical="true">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
@@ -68,11 +68,12 @@
 	export default {
 		name: 'x-data-entity',
         components: { Tabs, Tab, xSchemaList, xCustomData, xTagModal, PulseLoader },
-        props: { module: {required: true}},
+        props: { module: {required: true } },
 		data () {
 			return {
 				viewBasic: true,
-				entities: [this.$route.params.id]
+				entities: [ this.$route.params.id ],
+				delayInitTourState: false
 			}
 		},
         computed: {
@@ -127,6 +128,15 @@
                     || (!this.entity || this.entity.internal_axon_id !== this.entityId)
             }
         },
+        watch: {
+			entity(newEntity, oldEntity) {
+                if (!this.delayInitTourState &&
+                    (!oldEntity || oldEntity.internal_axon_id !== this.entityId)) {
+                	// Indicate the tour state should be changed, once tabs are updated, so the element exists
+					this.delayInitTourState = true
+                }
+            }
+        },
         methods: {
             ...mapMutations({ changeState: CHANGE_TOUR_STATE, updateState: UPDATE_TOUR_STATE }),
             ...mapActions({
@@ -159,6 +169,18 @@
             	if (tabId === 'specific') {
             	    this.changeState({ name: 'adapterDevice' })
                 }
+            },
+            initTourState() {
+            	if (!this.delayInitTourState) return
+
+                // Now is the time to change the tour's state
+				if (this.module === 'devices' && this.sortedSpecificData && this.sortedSpecificData.length) {
+					this.changeState({ name: 'adaptersData' })
+					this.updateState({
+						name: 'adapterDevice', id: this.sortedSpecificData[0].plugin_name, align: 'top'
+					})
+				}
+				this.delayInitTourState = false
             }
         },
 		created () {
@@ -167,16 +189,10 @@
 			}
 			if (!this.entity || this.entity.internal_axon_id !== this.entityId) {
 				this.fetchDataByID({ module: this.module, id: this.entityId })
-			}
-		},
-        updated() {
-			if (this.module === 'devices' && this.sortedSpecificData && this.sortedSpecificData.length) {
-                this.changeState({ name: 'adaptersData' })
-                this.updateState({
-                    name: 'adapterDevice', id: this.sortedSpecificData[0].plugin_name, align: 'top'
-                })
-			}
-        }
+			} else {
+				this.delayInitTourState = true
+            }
+		}
 	}
 </script>
 

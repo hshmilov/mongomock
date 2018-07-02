@@ -256,8 +256,8 @@
 		},
         created() {
 			if (this.expression.field) {
+				// Need to update the field space, since it is not saved in the expression
 				this.updateFieldSpace()
-				this.compileExpression()
             }
         }
 	}

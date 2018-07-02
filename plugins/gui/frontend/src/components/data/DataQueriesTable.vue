@@ -25,7 +25,7 @@
         data() {
 			return {
 				selected: [],
-                loading: false
+                loading: true
             }
         },
         computed: {
@@ -70,10 +70,7 @@
             }
         },
         created() {
-			if (!this.queries || !this.queries.length) {
-				this.loading = true
-				this.fetchDataQueries({module: this.module, type: 'saved'}).then(() => this.loading = false)
-            }
+            this.fetchDataQueries({module: this.module, type: 'saved'}).then(() => this.loading = false)
         }
 	}
 </script>

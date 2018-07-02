@@ -1,11 +1,10 @@
 <template>
-    <div class="search-input" @keyup.esc="$emit('keyup.esc')" :class="{focus: isFocus}" @click="focus">
-        <input type="text" v-model="searchValue" class="input-value" ref="input" :placeholder="placeholder"
-               @input="updateSearchValue()" @focusout="isFocus = false"
-               @keydown.prevent.down="$emit('keydown.down')" @keydown.prevent.up="$emit('keydown.up')">
+    <div class="search-input" :class="{focus: focused}" @click="focus">
         <div class="input-icon">
             <svg-icon name="action/search" :original="true" height="18"></svg-icon>
         </div>
+        <input type="text" v-model="searchValue" class="input-value" ref="input" :placeholder="placeholder"
+               @input="updateSearchValue()" @focusout="focused = false" @click.stop="focused = true">
     </div>
 </template>
 
@@ -16,7 +15,7 @@
         data() {
             return {
                 searchValue: this.value,
-                isFocus: false
+                focused: false
             }
         },
         watch: {
@@ -29,10 +28,12 @@
                 this.$emit('input', this.searchValue)
             },
             focus() {
-            	this.isFocus = true
+            	this.focused = true
             	this.$refs.input.focus()
-                this.$emit('click')
             }
+        },
+        mounted() {
+        	this.focus()
         }
     }
 </script>
@@ -47,21 +48,21 @@
             border-color: $theme-blue;
         }
         .input-value {
-            width: calc(100% - 36px);
+            width: calc(100% - 64px);
             border: none;
             background: transparent;
-            padding: 4px;
+            padding: 4px 4px 4px 42px;
         }
         .input-icon {
             border: 0;
             position: absolute;
-            right: 0;
+            left: 0;
             top: 0;
             z-index: 100;
             padding: 0 12px;
             line-height: 30px;
-            .svg-fill { fill: $theme-black }
-            .svg-stroke { stroke: $theme-black }
+            .svg-fill { fill: $grey-4 }
+            .svg-stroke { stroke: $grey-4 }
         }
     }
 </style>

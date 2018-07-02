@@ -40,7 +40,10 @@
         },
 		created() {
 			this.tabs = this.$children
-		}
+		},
+        updated() {
+			this.$emit('updated')
+        }
 	}
 </script>
 

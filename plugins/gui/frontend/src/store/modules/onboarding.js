@@ -423,7 +423,7 @@ export const onboarding = {
 					content: 'Fill in the name, then click to save.'
 				},
 				'queryList': {
-					id: 'query_list', title: 'QUERIES LIST', align: 'bottom',
+					id: 'query_list', title: 'QUERIES LIST', align: 'right',
 					content: 'Click to see a list of saved queries and the query history.'
 				},
 				'querySelect': {

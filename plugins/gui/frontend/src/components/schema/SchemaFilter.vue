@@ -1,8 +1,8 @@
 <template>
     <div class="filter">
         <div class="mb-4">Show only Devices:</div>
-        <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i"
-                             v-model="expressions[i]" :fields="schema"
+        <x-schema-expression v-for="expression, i in expressions" :key="expression.i" :first="!i" :fields="schema"
+                             v-model="expressions[i]" ref="expression"
                              @change="compileFilter(i, $event)" @remove="removeExpression(i)"/>
         <div class="footer">
             <div @click="addExpression" class="x-btn light">+</div>
@@ -18,7 +18,7 @@
 	export default {
 		name: 'x-schema-filter',
 		components: { xSchemaExpression },
-		props: {schema: {required: true}, value: {}, rebuild: {default: false}},
+		props: { schema: { required: true }, value: {} },
 		data () {
 			return {
 				expressions: [],
@@ -35,12 +35,7 @@
 					this.error = ''
                     this.filters = []
                 }
-			},
-            rebuild (newRebuild) {
-				if (newRebuild) {
-					this.$emit('change', this.filters.join(' '))
-                }
-            }
+			}
 		},
 		methods: {
 			compileFilter (index, payload) {
@@ -90,6 +85,9 @@
 					return false
 				}
 				return true
+            },
+            compile() {
+				this.$refs.expression.forEach((expression) => expression.compileExpression())
             }
 		},
 		created () {

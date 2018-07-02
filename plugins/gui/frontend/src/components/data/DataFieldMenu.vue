@@ -22,7 +22,7 @@
     import SearchInput from '../inputs/SearchInput.vue'
     import xCheckboxList from '../inputs/CheckboxList.vue'
     import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
-    import { GET_DATA_FIELD_LIST_TYPED } from '../../store/getters'
+    import { GET_DATA_FIELD_BY_PLUGIN } from '../../store/getters'
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_DATA_FIELDS } from '../../store/actions'
 
@@ -37,10 +37,10 @@
 				}
             }),
             ...mapGetters( {
-				getDataFieldsListTyped: [ GET_DATA_FIELD_LIST_TYPED ]
+				getDataFieldsByPlugin: [ GET_DATA_FIELD_BY_PLUGIN ]
             }),
             schema() {
-				return this.getDataFieldsListTyped(this.module)
+				return this.getDataFieldsByPlugin(this.module)
             },
 			selectedFields: {
 				get() {

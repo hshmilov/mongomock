@@ -36,7 +36,7 @@ import {
 	UPDATE_DATA_BY_ID, updateDataByID,
 } from './mutations'
 import {
-	GET_DATA_FIELD_LIST_TYPED, getDataFieldsListTyped,
+	GET_DATA_FIELD_BY_PLUGIN, getDataFieldsByPlugin,
 	GET_DATA_FIELD_LIST_SPREAD, getDataFieldListSpread,
 	GET_DATA_BY_ID, getDataByID
 } from './getters'
@@ -62,7 +62,7 @@ export default new Vuex.Store({
         }
     },
 	getters: {
-		[ GET_DATA_FIELD_LIST_TYPED ]: getDataFieldsListTyped,
+		[ GET_DATA_FIELD_BY_PLUGIN ]: getDataFieldsByPlugin,
 		[ GET_DATA_FIELD_LIST_SPREAD ]: getDataFieldListSpread,
 		[ GET_DATA_BY_ID ]: getDataByID
 	},

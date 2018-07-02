@@ -30,6 +30,7 @@
     .x-select-symbol {
         .x-type-img {
             width: 30px;
+            line-height: 14px;
             text-align: center;
             display: inline-block;
             vertical-align: middle;
