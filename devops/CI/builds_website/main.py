@@ -140,7 +140,7 @@ def instances():
             include = ','.join(adapters) if not should_run_all else ''
 
             config_code = INSTALL_DEMO_CONFIG.format(fork=request.form["fork"], branch=request.form["branch"],
-                                                     set_credentials=request.form.get("set_credentials", 'off'),
+                                                     set_credentials=request.form.get("set_credentials", 'false'),
                                                      include=include, exclude=exclude)
         else:
             config_code = request.form["configuration_code"]
@@ -153,7 +153,7 @@ def instances():
             config_code,
             request.form["fork"],
             request.form["branch"],
-            request.form["public"] == 'on',
+            request.form["public"] == 'true',
             vm_type=instance_type,
         ))
 
@@ -230,7 +230,7 @@ def get_install_script():
 def get_install_demo_script():
     branch = request.args.get("branch", "develop")
     fork = request.args.get("fork", "axonius").split('/')[0]
-    set_credentials = "--set-credentials" if request.args.get("set_credentials", False) == "on" else ""
+    set_credentials = "--set-credentials" if request.args.get("set_credentials", False) == "true" else ""
     exclude = request.args.get("exclude")
     include = request.args.get("include")
     if exclude != '':

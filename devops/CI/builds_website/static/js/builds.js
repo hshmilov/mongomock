@@ -460,6 +460,7 @@
         $("#new_instance_configuration_cell").show();
         $("#new_instance_configuration_code_cell").show();
         $("#new_instance_adapters_cell").hide();
+        $("#set_credentials_cell").hide();
         $('#new_instance_modal').modal();
     }
     function add_demo_modal() {
@@ -467,6 +468,7 @@
         $("#new_instance_configuration_cell").hide();
         $("#new_instance_configuration_code_cell").hide();
         $("#new_instance_adapters_cell").show();
+        $("#set_credentials_cell").show();
         $('#new_instance_modal').modal();
     }
     function add_export_modal() {
@@ -632,8 +634,9 @@
         data["fork"] = $("#new_vm_fork")[0].value;
         data["branch"] = $("#new_vm_branch")[0].value;
         data["owner"] = $("#new_vm_owner")[0].value;
-        data["public"] = $("#new_vm_public")[0].value;
+        data["public"] = $("#new_vm_public")[0].checked;
         data["comments"] = $("#new_vm_comments")[0].value;
+        data["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
         data["configuration_code"] = $("#new_instance_configuration_code")[0].value;
         data["adapters"] = $("#new_vm_adapters_options option:selected").map(function () {
             return $(this).text();
