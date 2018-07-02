@@ -12,7 +12,7 @@ export const pluginMeta = {
         description: 'GoToAssist is a cloud-based toolset for IT and customer support teams an includes remote support, IT monitoring and service desk management.'
     },
     airwatch_adapter: {
-        title: 'VMWare Airwatch',
+        title: 'VMWare AirWatch',
         description: 'VMWare AirWatch provides of enterprise mobility management (EMM) software and standalone management systems for content, applications, and email.'
     },
     fireeye_hx_adapter: {
@@ -185,7 +185,7 @@ export const pluginMeta = {
     },
     oracle_vm_adapter: {
         title: 'OracleVM',
-        descriptions: 'Oracle\'s server virtualization products support x86 and SPARC architectures and a variety of workloads such as Linux, Windows and Oracle Solaris.'
+        description: 'Oracle\'s server virtualization products support x86 and SPARC architectures and a variety of workloads such as Linux, Windows and Oracle Solaris.'
     },
     cisco_meraki_adapter: {
         title: 'Cisco Meraki',
