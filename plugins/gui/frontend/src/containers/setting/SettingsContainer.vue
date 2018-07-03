@@ -33,7 +33,7 @@
                 <div class="tab-settings">
                     <template v-if="configurable.gui">
                         <x-schema-form :schema="configurable.gui.GuiService.schema" @validate="updateGuiValidity"
-                                       v-model="configurable.gui.GuiService.config" api-upload="adapters/core"/>
+                                       v-model="configurable.gui.GuiService.config" api-upload="adapters/gui"/>
                         <div class="place-right">
                             <button class="x-btn" :class="{disabled: !guiComplete}" @click="saveGuiSettings">Save</button>
                         </div>

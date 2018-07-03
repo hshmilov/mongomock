@@ -238,6 +238,8 @@ def filter_archived(additional_filter=None):
 
 
 class GuiService(PluginBase, Configurable):
+    DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
+
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=GUI_NAME, *args, **kwargs)
@@ -248,7 +250,7 @@ class GuiService(PluginBase, Configurable):
         self._get_collection('users').update({'user_name': 'admin'},
                                              {'user_name': 'admin', 'password': bcrypt.hash('cAll2SecureAll'),
                                               'first_name': 'administrator', 'last_name': '',
-                                              'pic_name': 'avatar.png'}, upsert=True)
+                                              'pic_name': self.DEFAULT_AVATAR_PIC}, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')
@@ -702,7 +704,8 @@ class GuiService(PluginBase, Configurable):
                 fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
                     'type': plugin_fields_record['schema']['type'],
                     'required': plugin_fields_record['schema'].get('required', []),
-                    'items': filter(lambda x: x['name'] not in exclude_specific_schema, plugin_fields_record['schema'].get('items', []))
+                    'items': filter(lambda x: x['name'] not in exclude_specific_schema,
+                                    plugin_fields_record['schema'].get('items', []))
                 }
                 fields['specific'][plugin[PLUGIN_NAME]] = self._flatten_fields(
                     plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
@@ -1392,13 +1395,17 @@ class GuiService(PluginBase, Configurable):
             return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @add_rule("get_login_options", should_authenticate=False)
-    def get_okta_status(self):
+    def get_login_options(self):
         return jsonify({
             "okta": {
                 'enabled': self.__okta['enabled'],
                 "client_id": self.__okta['client_id'],
                 "url": self.__okta['url'],
                 "gui_url": self.__okta['gui_url']
+            },
+            "google": {
+                'enabled': self.__google['enabled'],
+                'client_id': self.__google['client_id']
             },
             "ldap": {
                 'enabled': self.__ldap_login['enabled'],
@@ -1502,7 +1509,7 @@ class GuiService(PluginBase, Configurable):
             session['user'] = {'user_name': user.get('displayName') or user_name,
                                'first_name': user.get('givenName') or '',
                                'last_name': user.get('sn') or '',
-                               'pic_name': image or 'avatar.png',
+                               'pic_name': image or self.DEFAULT_AVATAR_PIC,
                                }
             return ""
         except ldap3.core.exceptions.LDAPException:
@@ -1510,6 +1517,60 @@ class GuiService(PluginBase, Configurable):
         except Exception:
             logger.exception("LDAP Verification error")
             return return_error("An error has occurred while verifying your account")
+
+    @add_rule("google-login", methods=['POST'], should_authenticate=False)
+    def google_login(self):
+        """
+        Login with google
+        """
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests
+        except ImportError:
+            return return_error("Import error, Google login isn't available")
+        google_creds = self.__google
+        log_in_data = self.get_request_data_as_object()
+        if log_in_data is None:
+            return return_error("No login data provided", 400)
+
+        token = log_in_data.get('id_token')
+        if token is None:
+            return return_error("No id_token provided", 400)
+
+        try:
+            # Specify the CLIENT_ID of the app that accesses the backend:
+            idinfo = id_token.verify_oauth2_token(token, requests.Request(), google_creds['client_id'])
+
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Wrong issuer.')
+
+            # If auth request is from a G Suite domain:
+            if google_creds['allowed_domain'] and idinfo.get('hd') != google_creds['allowed_domain']:
+                return return_error('Wrong hosted domain.')
+
+            if google_creds['allowed_group']:
+                user_id = idinfo.get('sub')
+                if not user_id:
+                    return return_error("No user id present")
+                auth_file = json.loads(self._grab_file_contents(google_creds['keypair_file']))
+                from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
+                connection = GSuiteAdminConnection(auth_file, google_creds['account_to_impersonate'],
+                                                   ['https://www.googleapis.com/auth/admin.directory.group.readonly'])
+                if not any(google_creds['allowed_group'] in group.get('name', '')
+                           for group
+                           in connection.get_user_groups(user_id)):
+                    return return_error(f"You're not in the allowed group {google_creds['allowed_group']}")
+
+            # ID token is valid. Get the user's Google Account ID from the decoded token.
+            session['user'] = {
+                'user_name': idinfo.get('name') or 'unamed',
+                'first_name': idinfo.get('given_name') or 'unamed',
+                'last_name': idinfo.get('family_name') or 'unamed',
+                'pic_name': idinfo.get('picture') or self.DEFAULT_AVATAR_PIC,
+            }
+            return ""
+        except ValueError:
+            return return_error("Invalid token")
 
     @add_rule_unauthenticated("logout", methods=['GET'])
     def logout(self):
@@ -1890,7 +1951,8 @@ class GuiService(PluginBase, Configurable):
             {'name': 'managed_coverage', 'title': 'Managed Device',
              'properties': [AdapterProperty.Manager.name, AdapterProperty.Agent.name],
              'description': 'Deploy appropriate agents on unmanaged devices, and add them to Active Directory.'},
-            {'name': 'endpoint_coverage', 'title': 'Endpoint Protection', 'properties': [AdapterProperty.Endpoint_Protection_Platform.name],
+            {'name': 'endpoint_coverage', 'title': 'Endpoint Protection',
+             'properties': [AdapterProperty.Endpoint_Protection_Platform.name],
              'description': 'Add an endpoint protection solution to uncovered devices.'},
             {'name': 'vulnerability_coverage', 'title': 'VA Scanner',
              'properties': [AdapterProperty.Vulnerability_Assessment.name],
@@ -2182,6 +2244,7 @@ class GuiService(PluginBase, Configurable):
     def _on_config_update(self, config):
         logger.info(f"Loading GuiService config: {config}")
         self.__okta = config['okta_login_settings']
+        self.__google = config['google_login_settings']
         self.__ldap_login = config['ldap_login_settings']
         self.__system_settings = config[SYSTEM_SETTINGS]
 
@@ -2262,6 +2325,45 @@ class GuiService(PluginBase, Configurable):
                     "items": [
                         {
                             "name": "enabled",
+                            "title": "Allow Google logins",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "client_id",
+                            "title": "Google client id",
+                            "type": "string"
+                        },
+                        {
+                            "name": "account_to_impersonate",
+                            "title": "Email of an admin account to impersonate",
+                            "type": "string"
+                        },
+                        {
+                            "name": "keypair_file",
+                            "title": "JSON Key pair for the service account",
+                            "description": "The binary contents of the keypair file",
+                            "type": "file",
+                        },
+                        {
+                            "name": "allowed_domain",
+                            "title": "Allowed G Suite domain (Leave empty for all domains)",
+                            "type": "string"
+                        },
+                        {
+                            "name": "allowed_group",
+                            "title": "Only users in this group will be allowed (Leave empty for all groups)",
+                            "type": "string"
+                        }
+                    ],
+                    "required": ["enabled", "client_id", 'account_to_impersonate', 'keypair_file'],
+                    "name": "google_login_settings",
+                    "title": "Google Login Settings",
+                    "type": "array"
+                },
+                {
+                    "items": [
+                        {
+                            "name": "enabled",
                             "title": "Allow LDAP logins",
                             "type": "bool"
                         },
@@ -2335,6 +2437,14 @@ class GuiService(PluginBase, Configurable):
                 "ca_file": None,
                 "cert_file": None,
                 "private_key": None
+            },
+            "google_login_settings": {
+                "enabled": False,
+                "client_id": None,
+                "allowed_domain": None,
+                "allowed_group": None,
+                'account_to_impersonate': None,
+                'keypair_file': None
             },
             SYSTEM_SETTINGS: {
                 "refreshRate": 30,

@@ -87,7 +87,7 @@ def description_validator(filename: str, adapter_name: str):
         :raise: ValidateError on failure'''
 
     filename = os.path.join(get_cortex_dir(), filename)
-    file_data = open(filename, 'r').read()
+    file_data = open(filename, 'r', encoding='utf-8').read()
     if f'{adapter_name}_adapter' in file_data:
         raise ValidateError(f'Description for "{adapter_name}" already defined in {filename}')
 
@@ -109,7 +109,7 @@ def description_action(filename: str, adapter_name: str):
     new_description = "    %s_adapter: {\n        title: 'AUTOADAPTER',\n        description: 'AUTOADAPTER'\n    },\n" % (
         adapter_name, )
 
-    data = open(filename, 'r').readlines()
+    data = open(filename, 'r', encoding='utf-8').readlines()
 
     for i, line in enumerate(data):
         # Start of dict should be 'pluginMeta = {dict}'

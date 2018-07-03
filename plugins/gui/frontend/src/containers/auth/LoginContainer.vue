@@ -12,6 +12,8 @@ d<template>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
                 <a @click="onOktaLogin" v-if="oktaConfig.enabled" class="link">Login with Okta</a>
                 <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" class="link">Login with LDAP</a>
+                <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client_id"
+                              v-on:success="onGoogleSignIn"></google-login>
             </div>
         </div>
         <modal v-if="ldapData.active" @close="toggleLdapLogin">
@@ -33,14 +35,15 @@ d<template>
 <script>
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
     import Modal from '../../components/popover/Modal.vue'
+    import GoogleLogin from '../../components/login_providers/GoogleLogin.vue'
 
     import { mapState, mapMutations, mapActions } from 'vuex'
-    import { LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS } from '../../store/modules/auth'
+    import { LOGIN, LDAP_LOGIN, INIT_ERROR, GET_LOGIN_OPTIONS, GOOGLE_LOGIN } from '../../store/modules/auth'
     import * as OktaAuth from '@okta/okta-auth-js';
 
     export default {
         name: 'login-container',
-        components: { xSchemaForm, Modal },
+        components: {xSchemaForm, Modal, GoogleLogin},
         computed: {
 			...mapState(['auth']),
             schema() {
@@ -86,23 +89,25 @@ d<template>
                     enabled: false
                 },
                 ldapConfig: {
-					enabled: false
+                    enabled: false
+                },
+                googleConfig: {
+                    enabled: false
                 }
             }
         },
         methods: {
             ...mapMutations({ initError: INIT_ERROR }),
-            ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, login: LOGIN, ldapLogin: LDAP_LOGIN}),
+            ...mapActions({ getLoginSettings: GET_LOGIN_OPTIONS, login: LOGIN, ldapLogin: LDAP_LOGIN, googleLogin: GOOGLE_LOGIN}),
             onValidate(valid) {
                 this.complete = valid
             },
             onValidateLDAP(valid) {
                 this.ldapData.complete = valid
             },
-            onLdapLogin(){
+            onLdapLogin() {
                 if (!this.ldapData.complete) return
-                if (!this.ldapData.credentials.domain)
-                {
+                if (!this.ldapData.credentials.domain) {
                     // workaround for default values not showing up
                     this.ldapData.credentials.domain = this.ldapConfig.default_domain
                 }
@@ -114,23 +119,28 @@ d<template>
             },
             onOktaLogin() {
                 var x = new OktaAuth({
-					url: this.oktaConfig.url,
-					issuer: this.oktaConfig.url,
-					clientId: this.oktaConfig.client_id,
-					redirectUri: `${this.oktaConfig.gui_url}/api/okta-redirect`,
-					scope: 'openid'
-				});
-				x.token.getWithRedirect({ responseType: 'code' })
-			},
-			toggleLdapLogin() {
-				this.ldapData.active = !this.ldapData.active
-			}
+                    url: this.oktaConfig.url,
+                    issuer: this.oktaConfig.url,
+                    clientId: this.oktaConfig.client_id,
+                    redirectUri: `${this.oktaConfig.gui_url}/api/okta-redirect`,
+                    scope: 'openid'
+                });
+                x.token.getWithRedirect({responseType: 'code'})
+            },
+            toggleLdapLogin() {
+                this.ldapData.active = !this.ldapData.active
+            },
+            onGoogleSignIn(googleUser) {
+                let id_token = googleUser.getAuthResponse().id_token
+                this.googleLogin({id_token: id_token})
+            }
         },
         created() {
             this.getLoginSettings().then(response => {
                 if (response.status === 200) {
                     this.oktaConfig = response.data.okta
                     this.ldapConfig = response.data.ldap
+                    this.googleConfig = response.data.google
                 }
             })
         }
