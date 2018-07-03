@@ -30,7 +30,9 @@ SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 60 * 30
 
 # The maximum time we wait until all active execution threads
-MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 180
+# If this time is met we will still have all devices data inserted, we just will have less users data (association
+# will begin before all devices have finished)
+MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 60 * 10
 
 subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo, GetConnectedHardware]
 
@@ -239,9 +241,8 @@ class GeneralInfoService(PluginBase, Triggerable):
             p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
                    did_reject=functools.partial(self._handle_wmi_execution_failure, device))
 
-        # execution answer threads should finish immediately because they don't do anything
-        # that takes time excpet tagging that should be extra fast. but in the future we might
-        # have some more complex things there, so we wait here until everything is finished.
+        # At this moment we have some execution threads which are running (should finish almost immediately since
+        # they aren't doing any complex logic) and threads that haven't come back already. we wait for them.
         self.seconds_stuck = 0
         while self.number_of_active_execution_requests > 0:
             time.sleep(1)

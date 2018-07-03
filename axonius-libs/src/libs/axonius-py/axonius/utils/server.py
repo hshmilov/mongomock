@@ -1,6 +1,10 @@
 """
 Utility functions for any server-related activities, i.e. a flask server, wsgi things, etc.
 """
+# Disable warnings about unverified certificates
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 import functools
 import threading
 

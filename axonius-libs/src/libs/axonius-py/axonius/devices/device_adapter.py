@@ -121,7 +121,6 @@ class DeviceAdapterConnectedHardware(SmartJsonClass):
 
     name = Field(str, "Name")
     manufacturer = Field(str, "Manufacturer")
-    pnp_class = Field(str, "PNP Class")
     hw_id = Field(str, "ID")
 
 
