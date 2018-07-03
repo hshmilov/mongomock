@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e # from now on exit on any error
+
 export CORTEX_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $CORTEX_ROOT/venv/bin/activate
 

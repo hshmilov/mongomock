@@ -31,12 +31,16 @@ from contextlib import contextmanager
 from handlers.remotewua import RemoteWUAHandler
 
 
-MAX_NUM_OF_TRIES_OVERALL = 3    # Maximum number of tries for each query
+MAX_NUM_OF_CONSECUTIVE_QUERY_FAILURES = 3    # Maximum number of times we can fail with not even one success
 MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
 MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
 MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 2  # The amount of seconds we wait for the created shell process to finish
+
+# each request gets this amount of seconds to return. If one returns, the timer of all the rest resets.
+TIMER_RESET_FOR_EACH_REQUEST_IN_SECONDS = 180
+TIME_TO_SLEEP_BETWEEN_EACH_ANSWER_CHECK_IN_SECONDS = 2
 DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
 
 __global_counter = 0
@@ -705,7 +709,7 @@ def number_of_different_rpc_objects(commands):
 
 if __name__ == '__main__':
     _, domain, username, password, address, namespace, commands = sys.argv
-    tp = ThreadPool(processes=30)
+    tp = ThreadPool(processes=40)
     try:
         # Commands is a json formatted list of commands.
         commands = json.loads(commands)
@@ -721,9 +725,12 @@ if __name__ == '__main__':
 
         # We are going to try to get each one of these queries a couple of times.
         # Between each try, we'll query only what we haven't queried yet, and we'll reconnect.
-        for _ in range(MAX_NUM_OF_TRIES_OVERALL):
+        consecutive_failures = 0
+        while consecutive_failures < MAX_NUM_OF_CONSECUTIVE_QUERY_FAILURES:
+            consecutive_failures += 1
             # If we have something left, lets connect and run it.
             if any(queries_left):
+                timer_start = time.time()
                 with WmiSmbRunner(address, username, password, domain=domain, namespace=namespace) as w:
                     # First, add every one needed.
                     for i, is_left in enumerate(queries_left):
@@ -733,13 +740,33 @@ if __name__ == '__main__':
                             final_result_array[i] = tp.apply_async(run_command, (w, command_type, command_args))
 
                     # Now wait for all of the added ones to finish to finish
-                    for i, is_left in enumerate(queries_left):
-                        if is_left is True:
-                            final_result_array[i] = final_result_array[i].get()
+                    # queries_left are the queries that did not succeed with "ok",
+                    # but queries_left_for_round are the queries that returned any answer ("ok", "exception", etc)
+                    # so we don't need to do anything with them this round
+                    queries_left_for_round = list(queries_left)  # use list to make a copy() and not use the same ref
+                    while any(queries_left_for_round) and (time.time() - timer_start) < TIMER_RESET_FOR_EACH_REQUEST_IN_SECONDS:
+                        for i, is_left in enumerate(queries_left):
+                            if is_left is True:
+                                # any query left can be one that hasn't finished and one that has failed
+                                # before due to an exception
+                                if type(final_result_array[i]) is not dict and final_result_array[i].ready() is True:
+                                    final_result_array[i] = final_result_array[i].get()
+                                    queries_left_for_round[i] = False
 
-                            # Check if we are done with it.
-                            if final_result_array[i]["status"] == "ok":
-                                queries_left[i] = False
+                                    # Check if we are done with it.
+                                    if final_result_array[i]["status"] == "ok":
+                                        queries_left[i] = False
+                                        queries_left_for_round[i] = False
+                                        timer_start = time.time()
+                                        consecutive_failures = 0
+                        time.sleep(TIME_TO_SLEEP_BETWEEN_EACH_ANSWER_CHECK_IN_SECONDS)
+
+                    # At this point some queries succeeded, some queries failed due to an exception (eg network problem)
+                    # and some queries failed due to timeout. Those which have failed due to a timeout should have
+                    # a timeout error, they are the only one that doesn't contain dicts.
+                    for i, is_left in enumerate(queries_left):
+                        if is_left is True and type(final_result_array[i]) is not dict:
+                            final_result_array[i] = {"status": "exception", "data": "Timeout on request"}
             else:
                 break
 

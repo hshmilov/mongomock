@@ -368,12 +368,13 @@ class TestAdAdapter(AdapterTestBase):
 
         def check_get_files_after_delete_results():
             action_data = self.axonius_system.execution.get_action_data(self.axonius_system.db, action_id)[0]
+            action_product = action_data["product"]
             assert action_data["result"] == "Failure"
             assert len(action_data["product"]) == 2
-            assert action_data["product"][0]["status"] == "exception"
-            assert action_data["product"][1]["status"] == "exception"
+            assert action_product[0]["status"] == "exception"
+            assert action_product[1]["status"] == "exception"
             # file not found errors
-            assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_data["product"][0]["data"]
-            assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_data["product"][1]["data"]
+            assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[0]["data"]
+            assert "STATUS_OBJECT_NAME_NOT_FOUND" in action_product[1]["data"]
 
         try_until_not_thrown(15, 5, check_get_files_after_delete_results)

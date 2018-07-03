@@ -596,7 +596,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :param **kwargs: Another parameters needed for this specific action (retrieved from the request body)
         """
         # Sending update that this action has started
-        self._update_action_data(action_id, status="started")
+        self._update_action_data(action_id, status="started", output={
+                                 "result": "In Progress", "product": "In Progress"})
 
         try:
             # Running the function, it should block until action is finished

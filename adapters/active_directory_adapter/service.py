@@ -52,7 +52,7 @@ LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 # In case its the execution we might leave some files on the target machine which is a bad idea.
 # For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
 # This value should be for times we are really really sure there is a problem.
-MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60 * 5
+MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60 * 1     # 1 hour
 
 
 # TODO ofir: Change the return values protocol

@@ -72,7 +72,7 @@ LOG_PATH = str(Path.home().joinpath('logs'))
 TIME_WAIT_FOR_REGISTER = 60 * 5
 
 # After this time, the execution promise will be rejected.
-TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 600
+TIMEOUT_FOR_EXECUTION_THREADS_IN_SECONDS = 60 * 25
 
 # Removing ssl_verify false warnings from appearing in the logs on all the plugins.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
