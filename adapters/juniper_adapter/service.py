@@ -20,7 +20,6 @@ class JuniperAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         interfaces = ListField(str, 'Interface')
         device_type = Field(str, 'Device Type')
-        serial = Field(str, 'Serial')
         related_ips = ListField(str, 'Realated IPs', converter=format_ip, json_format=JsonStringFormat.ip,
                                 description='A list of ips that are routed through the device')
 
@@ -58,7 +57,24 @@ class JuniperAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         raw_arp_devices = {}
         for device_type, juno_device in raw_data:
-            if device_type == 'arp_device':
+            if device_type == 'Juniper Device':
+                try:
+                    device = self._new_device_adapter()
+                    device.device_type = device_type
+                    device.name = juno_device.name
+                    device.device_serial = str(juno_device.serialNumber)
+                    device.id = device.device_serial
+                    device.figure_os("junos")
+                    device.device_model_family = str(juno_device.deviceFamily)
+                    device.device_model = f"{str(juno_device.platform)} {str(juno_device.OSVersion)}"
+                    ip_address = str(juno_device.ipAddr)
+                    device.add_nic(None, [ip_address] if ip_address is not None else None)
+                    device.set_raw({})
+                    yield device
+                except Exception:
+                    logger.exception(f"Got problems with {juno_device.name}")
+
+            elif device_type == 'Arp Device':
                 xml_juno_device = ET.fromstring(juno_device)
                 if 'rpc-reply' not in xml_juno_device.tag or 'arp-table-information' not in xml_juno_device[0].tag:
                     logger.error(f"Bad rpc reply from {juno_device}")
@@ -67,6 +83,10 @@ class JuniperAdapter(AdapterBase):
                     try:
                         if 'arp-table-entry' not in xml_arp_item.tag:
                             continue
+                        mac_address = None
+                        ip_address = None
+                        name = None
+                        interface = None
                         for xml_arp_property in xml_arp_item:
                             if 'mac-address' in xml_arp_property.tag:
                                 mac_address = xml_arp_property.text
@@ -76,31 +96,25 @@ class JuniperAdapter(AdapterBase):
                                 name = xml_arp_property.text
                             if 'interface-name' in xml_arp_property.tag:
                                 interface = xml_arp_property.text
+                        if mac_address is None:
+                            continue
                         if mac_address not in raw_arp_devices:
                             raw_arp_devices[mac_address] = defaultdict(set)
                         raw_arp_devices[mac_address]['mac_address'] = mac_address
-                        raw_arp_devices[mac_address]['related_ips'].add(ip_address)
-                        raw_arp_devices[mac_address]['interface'].add(interface)
-                        raw_arp_devices[mac_address]['name'].add(name)
+                        if ip_address is not None:
+                            raw_arp_devices[mac_address]['related_ips'].add(ip_address)
+                        if interface is not None:
+                            raw_arp_devices[mac_address]['interface'].add(interface)
+                        if name is not None:
+                            raw_arp_devices[mac_address]['name'].add(name)
                     except Exception:
                         logger.exception(f"Got bad arp item with missing data in {arp_item}")
-            elif device_type == 'juniper_device':
-                device = self._new_device_adapter()
-                device.device_type = device_type
-                device.id = juno_device.get('deviceId')
-                device.name = juno_device.get('name')
-                device.serial = juno_device.get('serial')
-                device.figure_os(f"Junos OS {juno_device.get('OSVersion', '')}")
-                ip_address = juno_device.get('ipAddr')
-                device.add_nic(None, [ip_address] if ip_address is not None else None)
-                device.set_raw(juno_device)
-                yield device
         for raw_arp_device in raw_arp_devices.values():
             try:
                 device = self._new_device_adapter()
                 device.id = raw_arp_device['mac_address']
                 device.add_nic(raw_arp_device['mac_address'], None)
-                device.device_type = 'device_type'
+                device.device_type = 'Arp Device'
                 try:
                     device.related_ips = list(raw_arp_device['related_ips'])
                 except Exception:

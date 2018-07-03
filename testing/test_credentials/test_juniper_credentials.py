@@ -1,7 +1,7 @@
 client_details = {
-    "host": "10.0.229.91",
-    "username": "axonius_juniper",
-    "password": "zqQvLwQaWeOUrRfOXCv9",
+    "host": "sd.cloudlabs.juniper.net",
+    "username": "guest",
+    "password": "demo12#",
 }
 
-SOME_DEVICE_ID = '3669333'
+SOME_DEVICE_ID = 'CW2216AF1098'

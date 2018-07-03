@@ -26,36 +26,43 @@ class JuniperClient(object):
 
     def get_all_devices(self):
         devices = self.space_rest_client.device_management.devices.get(
-            filter_={'deviceFamily': 'junos', 'connectionStatus': 'up'})
+            filter_={'connectionStatus': 'up'})
+
+        for current_device in devices:
+            yield ('Juniper Device', current_device)
 
         tm = async.TaskMonitor(self.space_rest_client, 'get_arp_q')
 
         try:
             task_ids = []
             for current_device in devices:
-                yield ('juniper_device', current_device)
-                logger.info(
-                    f"Getting arp from {current_device.name}, {current_device.ipAddr}, {current_device.platform}")
-                result = current_device.exec_rpc_async.post(
-                    task_monitor=tm,
-                    rpcCommand="<get-arp-table-information/>"
-                )
+                try:
+                    logger.info(
+                        f"Getting arp from {current_device.name}, {current_device.ipAddr}, {current_device.platform}")
+                    result = current_device.exec_rpc_async.post(
+                        task_monitor=tm,
+                        rpcCommand="<get-arp-table-information/>"
+                    )
 
-                if result.id > 0:
-                    logger.error("Async RPC execution Failed. Failed to get arp table from device.")
-                    continue
+                    if result.id > 0:
+                        logger.error("Async RPC execution Failed. Failed to get arp table from device.")
+                        continue
 
-                task_ids.append(result.id)
+                    task_ids.append(result.id)
+                except Exception:
+                    logger.exception(f"Got exception with device {current_device.name}")
 
             # Wait for all tasks to complete
             pu_list = tm.wait_for_tasks(task_ids)
             for pu in pu_list:
-                if (pu.state != "DONE" or pu.status != "SUCCESS" or
-                        str(pu.percentage) != "100.0"):
-                    logger.error(
-                        f"Async RPC execution Failed. Failed to get arp table from device. The process state was {pu.state}")
-
-                # Print the RPC result for each
-                yield ('arp_device', pu.data)
+                try:
+                    if (pu.state != "DONE" or pu.status != "SUCCESS" or
+                            str(pu.percentage) != "100.0"):
+                        logger.error(
+                            f"Async RPC execution Failed. Failed to get arp table from device. The process state was {pu.state}")
+                    else:
+                        yield ('Arp Device', pu.data)
+                except Exception:
+                    logger.exception(f"Something is wrong with pu {str(pu)}")
         finally:
             tm.delete()
