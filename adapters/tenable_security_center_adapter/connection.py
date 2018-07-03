@@ -1,8 +1,8 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
-
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from tenable_security_center_adapter import consts
 
 
 class TenableSecurityScannerConnection(RESTConnection):
@@ -46,8 +46,36 @@ class TenableSecurityScannerConnection(RESTConnection):
         super().close()
 
     def get_device_list(self):
-        # Not implemented
-        raise NotImplementedError("Can not get information about all ip addresses")
+        start_offest = 0
+        end_offset = consts.DEVICE_PER_PAGE
+        # This API is half documented. Ofri got this API after playing with the instance
+        response = self._post("analysis", body_params={"type": "vuln",
+                                                       "sourceType": "cumulative",
+                                                       "query": {'tool': 'sumip',
+                                                                 'type': 'vuln',
+                                                                 'startOffset': start_offest,
+                                                                 'endOffset': end_offset}})
+        start_offest += consts.DEVICE_PER_PAGE
+        end_offset += consts.DEVICE_PER_PAGE
+        yield from response["results"]
+        total_records = response["totalRecords"]
+        records_returned = response["returnedRecords"]
+        logger.info(f"Got {records_returned} out of {total_records} at the first page")
+        while start_offest < total_records and start_offest < consts.MAX_RECORDS:
+            try:
+                response = self._post("analysis", body_params={"type": "vuln",
+                                                               "sourceType": "cumulative",
+                                                               "query": {'tool': 'sumip',
+                                                                         'type': 'vuln',
+                                                                         'startOffset': start_offest,
+                                                                         'endOffset': end_offset}})
+                yield from response["results"]
+                records_returned = response["returnedRecords"]
+                logger.info(f"Got {records_returned} out of {total_records} at offset {start_offest}")
+            except Exception:
+                logger.exception(f"Problems at offset {start_offest}")
+            start_offest += consts.DEVICE_PER_PAGE
+            end_offset += consts.DEVICE_PER_PAGE
 
     def get_data_about_list_of_ips(self, ips):
         """

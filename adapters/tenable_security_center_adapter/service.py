@@ -15,7 +15,7 @@ import ipaddress
 class TenableSecurityCenterAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         repository_id = Field(str, "Repository ID")
-        score = Field(str, "Score")
+        score = Field(int, "Score")
         total = Field(int, "Total Vulnerabilities")
         severity_info = Field(int, "Info Vulnerabilities Count")
         severity_low = Field(int, "Low Vulnerabilities Count")
@@ -53,12 +53,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
 
     def _query_devices_by_client(self, client_name, session: TenableSecurityScannerConnection):
         try:
-            ips = self.devices.get_all_ips({})
-
-            # finally, query about all of them.
-            logger.info(f"Getting info about {len(ips)} ip's")
             session.connect()
-            yield from session.get_data_about_list_of_ips(ips)
+            yield from session.get_device_list()
         finally:
             session.close()
 
