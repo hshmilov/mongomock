@@ -2,6 +2,8 @@ import sys
 import os
 
 
+# note: DO NOT IMPORT ANY EXTERNAL PACKAGE (axonius included) HERE. THIS FILE RUNS BEFORE VENV IS SET!
+
 class AutoOutputFlush(object):
     def __init__(self):
         self._stdout_write = sys.stdout.write

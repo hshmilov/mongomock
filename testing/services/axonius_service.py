@@ -8,7 +8,7 @@ import os
 
 from axonius.plugin_base import EntityType
 
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, CONFIGURABLE_CONFIGS
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from services import adapters
 from services import plugins
@@ -331,7 +331,7 @@ class AxoniusService(object):
         return short_name[:-len('_service.py')]
 
     def set_system_settings(self, settings_dict):
-        settings = self.db.get_collection(self.gui.unique_name, 'configurable_configs')
+        settings = self.db.get_collection(self.gui.unique_name, CONFIGURABLE_CONFIGS)
         settings.update_one(filter={"config_name": "GuiService"},
                             update={"$set": {"config": {SYSTEM_SETTINGS: settings_dict}}}, upsert=True)
 
@@ -340,6 +340,6 @@ class AxoniusService(object):
         views.insert_one(view_params)
 
     def set_research_rate(self, rate):
-        settings = self.db.get_collection(self.scheduler.unique_name, 'configurable_configs')
+        settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS)
         settings.update_one(filter={"config_name": "SystemSchedulerService"},
                             update={"$set": {"config": {"system_research_rate": rate}}}, upsert=True)

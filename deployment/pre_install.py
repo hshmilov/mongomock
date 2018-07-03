@@ -7,6 +7,8 @@ from cryptography.fernet import Fernet
 import os
 import sys
 
+from axonius.consts import plugin_consts
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state, get_mongo_client
 from axonius.utils.json import to_json
 
@@ -54,8 +56,10 @@ def save_state(path, key):
         'queries': get_all_queries(axonius_system, mongo_client),
         'views': get_all_views(axonius_system, mongo_client),
         'panels': get_dashboard_panels(axonius_system, mongo_client),
-        'alerts': get_alerts(axonius_system, mongo_client)
+        'alerts': get_alerts(axonius_system, mongo_client),
+        'plugin_configs': get_all_plugin_configs(mongo_client)
     }
+
     state_string = to_json(state, indent=2)
     enc_state_binary = encrypt(state_string, key)
     with open(path, 'wb') as f:
@@ -77,6 +81,20 @@ def get_all_providers(mongo):
         for provider in mongo[plugin_unique_name]['clients'].find():
             providers.setdefault(adapter_name, []).append(provider['client_config'])
     return providers
+
+
+def get_all_plugin_configs(mongo):
+    print_state(f'  Extracting configs')
+    all_plugins = [plugin_data[plugin_consts.PLUGIN_UNIQUE_NAME] for plugin_data in mongo['core']['configs'].find()]
+    settings = {}
+    for plugin in all_plugins:
+        try:
+            plugin_db = mongo[plugin]
+            if CONFIGURABLE_CONFIGS in plugin_db.collection_names():
+                settings[plugin] = list(plugin_db[CONFIGURABLE_CONFIGS].find(projection={'_id': 0}))
+        except Exception as e:
+            print(f'Failed to save config of {plugin}, {e}')
+    return settings
 
 
 def get_all_queries(axonius_system, mongo):

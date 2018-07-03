@@ -8,6 +8,8 @@ import os
 import sys
 import time
 
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
+from axonius.devices import deep_merge_only_dict
 from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state, get_mongo_client
 from axonius.utils.json import from_json
 
@@ -33,8 +35,10 @@ def load_state(path, key):
         return
     state = from_json(decrypt(open(path, 'rb').read(), key))
     supported_state_file_version = 1
+
     while state['version'] < supported_state_file_version:
         state = upgrade_state(state)
+
     axonius_system = get_service()
     mongo_client = get_mongo_client()
     axonius_system.take_process_ownership()
@@ -56,6 +60,30 @@ def upgrade_state(state):
     # set version to new version number
     # return new state object
     raise NotImplementedError()
+
+
+def load_all_plugin_configs(mongo_client, configs_state):
+    print_state('  Restoring configs:')
+    for plugin, settings in configs_state.items():
+        try:
+            saved_config = configs_state[plugin]
+            config_collection = mongo_client[plugin][CONFIGURABLE_CONFIGS]
+
+            def_config = list(config_collection.find(projection={'_id': 0}))
+            for def_item in def_config:
+                def_name = def_item['config_name']
+                def_config_content = def_item['config']
+                for saved_item in saved_config:
+                    saved_name = saved_item['config_name']
+                    saved_config_content = saved_item['config']
+
+                    if def_name == saved_name:
+                        deep_merge_only_dict(saved_config_content, def_config_content)
+
+            config_collection.remove({})
+            config_collection.insert_many(def_config)
+        except Exception as e:
+            print(f'Failed to load current config of {plugin} - {e}')
 
 
 def load_providers(axonius_system, adapters_providers):

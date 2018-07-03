@@ -20,7 +20,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
-    METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING
+    METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
 from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
@@ -1221,7 +1221,7 @@ class GuiService(PluginBase, Configurable):
         """
         plugin_data = {}
         schemas = list(db_connection[plugin_unique_name]['config_schemas'].find())
-        configs = list(db_connection[plugin_unique_name]['configurable_configs'].find())
+        configs = list(db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS].find())
         for schema in schemas:
             associated_config = [c for c in configs if c['config_name'] == schema['config_name']]
             if not associated_config:
@@ -1266,7 +1266,7 @@ class GuiService(PluginBase, Configurable):
                     return return_error(message, 400)
 
             with self._get_db_connection() as db_connection:
-                config_collection = db_connection[plugin_unique_name]['configurable_configs']
+                config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS]
 
                 config_collection.replace_one(filter={
                     'config_name': config_name
@@ -1280,7 +1280,7 @@ class GuiService(PluginBase, Configurable):
             return ""
         if request.method == 'GET':
             with self._get_db_connection() as db_connection:
-                config_collection = db_connection[plugin_unique_name]['configurable_configs']
+                config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS]
                 schema_collection = db_connection[plugin_unique_name]['config_schemas']
                 return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
                                 'schema': schema_collection.find_one({'config_name': config_name})['schema']})

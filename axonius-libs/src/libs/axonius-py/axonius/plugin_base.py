@@ -51,7 +51,7 @@ from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING
+    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.users.user_adapter import UserAdapter
 from axonius.logging.logger import create_logger
@@ -1393,7 +1393,7 @@ class PluginBase(Configurable, Feature):
     # and making sure you don't break a setting somebody else uses.
 
     def __renew_global_settings_from_db(self):
-        config = self._get_db_connection()[CORE_UNIQUE_NAME]['configurable_configs'].find_one(
+        config = self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS].find_one(
             {'config_name': 'CoreService'})['config']
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
@@ -1408,7 +1408,7 @@ class PluginBase(Configurable, Feature):
 
         self._maintenance_settings = config[MAINTENANCE_SETTINGS]
 
-        self._get_db_connection()[CORE_UNIQUE_NAME]['configurable_configs'].update_one(
+        self._get_db_connection()[CORE_UNIQUE_NAME][CONFIGURABLE_CONFIGS].update_one(
             filter={'config_name': 'CoreService'}, update={"$set": {"config": config}})
 
         logger.info(self._maintenance_settings)

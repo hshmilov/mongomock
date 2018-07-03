@@ -18,3 +18,5 @@ METADATA_PATH = '/home/axonius/__build_metadata'
 SYSTEM_SETTINGS = 'system_settings'
 ANALYTICS_SETTING = 'analytics'
 TROUBLESHOOTING_SETTING = 'troubleshooting'
+
+CONFIGURABLE_CONFIGS = 'configurable_configs'

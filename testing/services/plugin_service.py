@@ -3,6 +3,7 @@ import requests
 import os
 
 from axonius.config_reader import PluginConfig, PluginVolatileConfig, AdapterConfig
+from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
 from axonius.utils.files import CONFIG_FILE_NAME
 from axonius.utils.json import from_json
@@ -141,7 +142,7 @@ class PluginService(DockerService):
         :param conf_name: The class name of the config to return
         :return: the config or None
         """
-        config_bulk = self.db.client[self.unique_name]['configurable_configs'].find_one({'config_name': conf_name})
+        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS].find_one({'config_name': conf_name})
         if config_bulk:
             return config_bulk.get('config')
         return None
