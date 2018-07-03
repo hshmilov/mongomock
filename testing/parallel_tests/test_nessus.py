@@ -26,7 +26,6 @@ class TestNessusAdapter(AdapterTestBase):
     def some_device_ip(self):
         return SOME_DEVICE_IP
 
-    @pytest.mark.skip("not working")
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         devices_as_tuple = self.adapter_service.devices()
