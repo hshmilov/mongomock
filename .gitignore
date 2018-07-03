@@ -307,6 +307,8 @@ deployment/state.json
 env_autogen.sh
 deploy_artifacts/*
 axonius-libs/__build_metadata
+*.json.zip
+nvd_current_state.json
 
 # Vim 
 *.swp

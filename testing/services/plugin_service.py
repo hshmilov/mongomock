@@ -36,7 +36,7 @@ class PluginService(DockerService):
     @property
     def volumes_override(self):
         libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', 'src', 'libs'))
-        return [f'{self.service_dir}:/home/axonius/app/{self.package_name}:ro', f'{libs}:/home/axonius/libs:ro']
+        return [f'{self.service_dir}:/home/axonius/app/{self.package_name}', f'{libs}:/home/axonius/libs:ro']
 
     def request(self, method, endpoint, api_key=None, headers=None, session=None, *vargs, **kwargs):
         if headers is None:

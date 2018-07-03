@@ -158,6 +158,17 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     version = Field(str, "Software Version")
 
 
+class DeviceAdapterSoftwareCVE(SmartJsonClass):
+    """ A definition for a CVE that is available for a software"""
+    software_vendor = Field(str, "Software Vendor")
+    software_name = Field(str, "Software Name")
+    software_version = Field(str, "Software Version")
+    cve_id = Field(str, "CVE ID")
+    cve_description = Field(str, "CVE Description")
+    cve_references = ListField(str, "CVE References")
+    cve_severity = Field(str, "CVE Severity (Metric V3)")
+
+
 class DeviceAdapter(SmartJsonClass):
     """ A definition for the json-scheme for a Device """
 
@@ -169,8 +180,9 @@ class DeviceAdapter(SmartJsonClass):
     os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")
     installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
-    security_patches = ListField(DeviceAdapterSecurityPatch, "Installed Security Patches")
-    available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "Available Security Patches")
+    software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software")
+    security_patches = ListField(DeviceAdapterSecurityPatch, "OS Installed Security Patches")
+    available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches")
     connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
@@ -327,6 +339,9 @@ class DeviceAdapter(SmartJsonClass):
 
     def add_installed_software(self, **kwargs):
         self.installed_software.append(DeviceAdapterInstalledSoftware(**kwargs))
+
+    def add_vulnerable_software(self, **kwargs):
+        self.software_cves.append(DeviceAdapterSoftwareCVE(**kwargs))
 
 
 NETWORK_INTERFACES_FIELD = DeviceAdapter.network_interfaces.name

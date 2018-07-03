@@ -69,10 +69,11 @@ def is_wmi_answer_ok(answer):
     return answer["status"] == "ok"
 
 
-def check_wmi_answers_integrity(answers):
+def check_wmi_answers_integrity(wmi_requests, wmi_answers):
     """
     Gets answers and checks for integrity.
-    :param answers: list of answers from wmi execution.
+    :param wmi_requests: the wmi requests list
+    :param wmi_answers: list of answers from wmi execution.
     :param logger: optional logger.
     :param prefix: optional logger prefix.
     :return:
@@ -80,11 +81,16 @@ def check_wmi_answers_integrity(answers):
 
     ok = True
 
-    for i, a in enumerate(answers):
+    for i, a in enumerate(wmi_answers):
         if is_wmi_answer_ok(a) is False:
             ok = False
             if logger is not None:
-                logger.error(f"Query {i} exception: {a['data']}")
+                # It has to be but i still check it
+                try:
+                    req = wmi_requests[i]
+                except Exception:
+                    req = ""
+                logger.error(f"Query {i} ({req}) exception: {a['data']}")
 
     return ok
 

@@ -17,8 +17,22 @@ docker network create axonius
 
 echo "Building all images"
 python3.6 devops/prepare_setup.py
+if [ $? -eq 0 ]
+then
+  echo "Successfully built images"
+else
+  echo "Could not build images"
+  exit 1
+fi
 
-# echo "Downloading wsusscn2.cab file.."
-# (
-# wget http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab -O shared_readonly_files/AXPM/wsusscn2/wsusscn2.cab
-# )
+# Now we have to use some scripts the system uses, lets active the venv
+source ./prepare_python_env.sh
+
+./download_artifacts.sh
+if [ $? -eq 0 ]
+then
+  echo "Successfully downloaded artifacts"
+else
+  echo "Could not download artifacts"
+  exit 1
+fi

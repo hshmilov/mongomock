@@ -733,9 +733,9 @@ class GuiService(PluginBase, Configurable, API):
 
     @helpers.add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
     def device_by_id(self, device_id):
-        return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'security_patches',
-                                                                  'available_security_patches', 'users',
-                                                                  'connected_hardware', 'local_admins'])
+        return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'software_cves',
+                                                                  'security_patches', 'available_security_patches',
+                                                                  'users', 'connected_hardware', 'local_admins'])
 
     @helpers.filtered()
     @helpers.add_rule_unauthenticated("devices/count")

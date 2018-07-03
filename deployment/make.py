@@ -92,6 +92,7 @@ with AutoOutputFlush():
 """
     # main_template = 'from IPython import embed\nembed()\n'  # helper template for debugging
     metadata = get_metadata()
+    download_artifacts()
     download_packages(winpip)
     images_tar = get_images_tar(pull, rebuild, exclude, prod, metadata, version)
     try:
@@ -247,6 +248,14 @@ def add_source_folder(zip_file, exclude=None):
     print(f'  Collected {len(files)} source files')
     print_state(f'Compiling sources')
     write_files()
+
+
+def download_artifacts():
+    """
+    Simply calls the download artifacts script to download things from the internet before we create the installer.
+    :return:
+    """
+    subprocess.check_output(os.path.join(CORTEX_PATH, "download_artifacts.sh"))
 
 
 def download_packages(winpip=False):

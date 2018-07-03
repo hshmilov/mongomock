@@ -57,6 +57,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         self._execution_manager_lock = threading.Lock()  # This is not an RLock. it can be acquired only once.
         self._number_of_active_execution_requests_var = 0  # Number of active execution requests
         self._number_of_triggers = 0
+        self.subplugins_list = []
 
         general_info_sync_enabled = self.config['DEFAULT']['general_info_sync_enabled'].lower()
         assert general_info_sync_enabled in ['true', 'false']
@@ -159,6 +160,9 @@ class GeneralInfoService(PluginBase, Triggerable):
         2. Execute a wmi queries on them
         3. Pass the result to the subplugins
         """
+        # Initialize all of our subplugins
+        self.subplugins_list = [con(self, logger) for con in subplugins_objects]
+        logger.info("Done initializing subplugins")
 
         # The following query should run on all windows devices but since Axonius does not support
         # any type of execution other than AD this is an AD-HOC solution we put here to be faster.
@@ -356,9 +360,6 @@ class GeneralInfoService(PluginBase, Triggerable):
             is_execution_exception = False
             last_execution_debug = None
 
-            # Initialize all subplugins. We do that in each run, to refresh cached data.
-            subplugins_list = [con(self, logger) for con in subplugins_objects]
-
             # Now get some info depending on the adapter that ran the execution
             executer_info = dict()
             executer_info["adapter_unique_name"] = data["responder"]
@@ -376,7 +377,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             adapterdata_device = self._new_device_adapter()
             all_error_logs = []
 
-            for subplugin in subplugins_list:
+            for subplugin in self.subplugins_list:
                 subplugin_num_queries = len(subplugin.get_wmi_smb_commands())
                 subplugin_result = queries_response[queries_response_index:
                                                     queries_response_index + subplugin_num_queries]

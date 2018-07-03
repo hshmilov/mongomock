@@ -14,7 +14,7 @@ class GetConnectedHardware(GeneralInfoSubplugin):
 
     @staticmethod
     def get_wmi_smb_commands():
-        return wmi_query_commands(["select DeviceID, Name, Manufacturer, PNPClass from Win32_PnPEntity "])
+        return wmi_query_commands(["select DeviceID, Name, Manufacturer, PNPClass from Win32_PnPEntity"])
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)

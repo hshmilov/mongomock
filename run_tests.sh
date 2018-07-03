@@ -19,6 +19,12 @@ if [ $(git ls-files | grep -E "(\.py|\.sh|\.yml|Dockerfile)" | xargs grep $(prin
     exit 1
 fi
 
+grep -q -v "==" ./requirements.txt ./libs/axonius-base-image/requirements*
+if [ $? -ne 1 ]; then
+    echo "some requirements.txt file doesn't have == in all lines!"
+    exit 1
+fi
+
 # We must delete old data, or else tests will fail.
 # In order to delete them, we must stop the current containers first. We are going to do that anyway
 # in the integration tests.
