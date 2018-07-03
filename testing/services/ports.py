@@ -71,7 +71,8 @@ DOCKER_PORTS = {
     'junos-adapter':                    6025,
     'okta-adapter':                     6026,
     'tenable-security-center-adapter':  6027,
-    'mdm-adapter':                      6028,
+    'redseal-adapter':                  6028,
+    'mdm-adapter':                      6029,
     'mongo':                            27017,
 }
 

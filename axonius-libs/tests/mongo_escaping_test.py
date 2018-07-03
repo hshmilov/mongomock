@@ -11,7 +11,7 @@ def test_escaping():
 
 def test_escaping_random():
     for x in range(1000):
-        case = ''.join(random.choice(BAD_KEY + FILLER + HELPER) for _ in range(20))
+        case = ''.join(random.choice(list(TABLE.keys()) + list(TABLE.values())) for _ in range(20))
         assert unescape_key(escape_key(case)) == case, case
         assert '.' not in escape_key(case)
 
@@ -21,12 +21,12 @@ def test_recursive_escaping():
     escaped = escape_dict(d)
     for key in escaped:
         if isinstance(key, str):
-            assert BAD_KEY not in key, key
+            assert '.' not in key, key
 
         value = escaped[key]
         if isinstance(value, dict):
             for k in value:
-                assert BAD_KEY not in k
+                assert '.' not in k
 
 
 def test_similar_names():

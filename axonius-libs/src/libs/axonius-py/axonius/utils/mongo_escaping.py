@@ -1,5 +1,8 @@
-BAD_KEY = '.'
-FILLER = '_DOT_'
+TABLE = {
+    '.': '_DOT_',
+    '$': '_DOL_',
+}
+
 HELPER = ';'
 
 
@@ -8,7 +11,9 @@ def escape_key(key):
     :param key: key
     :return: escaped key
     """
-    return key.replace(FILLER, FILLER + HELPER).replace(BAD_KEY, FILLER * 2)
+    for bad_key, filler in TABLE.items():
+        key = key.replace(filler, filler + HELPER).replace(bad_key, filler * 2)
+    return key
 
 
 def unescape_key(key):
@@ -16,7 +21,9 @@ def unescape_key(key):
     :param key: escaped key
     :return: unescaped key
     """
-    return key.replace(FILLER * 2, BAD_KEY).replace(FILLER + HELPER, FILLER)
+    for bad_key, filler in TABLE.items():
+        key = key.replace(filler * 2, bad_key).replace(filler + HELPER, filler)
+    return key
 
 
 def escape_dict(to_escape: object):
