@@ -57,7 +57,7 @@ def save_state(path, key):
         'views': get_all_views(axonius_system, mongo_client),
         'panels': get_dashboard_panels(axonius_system, mongo_client),
         'alerts': get_alerts(axonius_system, mongo_client),
-        'plugin_configs': get_all_plugin_configs(mongo_client)
+        'config_settings': get_all_plugin_configs(mongo_client)
     }
 
     state_string = to_json(state, indent=2)
@@ -86,6 +86,7 @@ def get_all_providers(mongo):
 def get_all_plugin_configs(mongo):
     print_state(f'  Extracting configs')
     all_plugins = [plugin_data[plugin_consts.PLUGIN_UNIQUE_NAME] for plugin_data in mongo['core']['configs'].find()]
+    all_plugins += ['core']
     settings = {}
     for plugin in all_plugins:
         try:

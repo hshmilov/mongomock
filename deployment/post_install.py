@@ -48,6 +48,11 @@ def load_state(path, key):
     load_dashboard_panels(axonius_system, mongo_client, state['panels'])
     load_alerts(axonius_system, mongo_client, state['alerts'])
 
+    if 'config_settings' in state:
+        load_all_plugin_configs(mongo_client, state['config_settings'])
+    else:
+        print_state(f'    config_settings was missing, skipping')
+
 
 def decrypt(data, key):
     f = Fernet(key)
