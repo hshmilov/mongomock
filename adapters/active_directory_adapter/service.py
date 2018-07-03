@@ -421,6 +421,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 user.domain = domain_name
                 user.id = f"{username}@{domain_name}"  # Should be the unique identifier of that user.
 
+                user.user_sid = user_raw.get('objectSid')
                 user.mail = user_raw.get("mail")
                 user.ad_user_principal_name = user_raw.get("userPrincipalName")
                 user.is_local = False

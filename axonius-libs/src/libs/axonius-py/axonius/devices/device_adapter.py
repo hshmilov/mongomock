@@ -104,13 +104,16 @@ class DeviceAdapterBattery(SmartJsonClass):
 class DeviceAdapterUser(SmartJsonClass):
     """ A definition for users known by this device"""
 
-    username = Field(str, "User Known Name")
-    last_use_date = Field(datetime.datetime, 'User Last Use Time')
-    is_local = Field(bool, "User Is Local")
+    user_sid = Field(str, "SID")
+    username = Field(str, "Username")
+    last_use_date = Field(datetime.datetime, 'Last Use Time')
+    is_local = Field(bool, "Is Local")
+    is_disabled = Field(bool, "Is Disabled")
 
     # Where did this user really come from?
     origin_unique_adapter_name = Field(str)
     origin_unique_adapter_data_id = Field(str)
+    origin_unique_adapter_client = Field(str)
 
 
 class DeviceAdapterConnectedHardware(SmartJsonClass):

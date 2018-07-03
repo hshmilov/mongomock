@@ -98,7 +98,6 @@ class NessusCsvAdapter(ScannerAdapterBase):
                         device.scans.append(new_scan)
                     except Exception:
                         logger.exception(f"IP {ip_address} got problem adding scan_raw {scan_raw}")
-                device.scanner = True
                 device.set_raw({})
                 yield device
             except Exception:

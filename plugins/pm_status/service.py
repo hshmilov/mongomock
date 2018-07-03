@@ -261,9 +261,10 @@ class PmStatusService(PluginBase, Triggerable):
             # Now get some info depending on the adapter that ran the execution
             executer_info = dict()
             executer_info["adapter_unique_name"] = data["responder"]
-            executer_info["adapter_unique_id"] = \
-                [adap for adap in device["adapters"] if adap["plugin_unique_name"]
-                    == executer_info["adapter_unique_name"]][0]["data"]["id"]
+            adapter_used = [adap for adap in device["adapters"] if adap["plugin_unique_name"]
+                            == executer_info["adapter_unique_name"]][0]
+            executer_info["adapter_client_used"] = adapter_used['client_used']
+            executer_info["adapter_unique_id"] = adapter_used["data"]["id"]
 
             response = data["output"]["product"][0]
 
@@ -335,7 +336,9 @@ class PmStatusService(PluginBase, Triggerable):
             # Add the final one
             self.devices.add_adapterdata(
                 [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])], new_data,
-                action_if_exists="update")  # If the tag exists, we update it using deep merge (and not replace it).
+                action_if_exists="update",  # If the tag exists, we update it using deep merge (and not replace it).
+                client_used=executer_info["adapter_client_used"]
+            )
 
             # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
             # Fixme: running all queries.

@@ -159,7 +159,6 @@ class QualysScansAdapter(ScannerAdapterBase):
             if 'IP' in device_raw:
                 device.add_nic('', [device_raw['IP']])
             device.qualys_scan_id = device_raw.get('ID')
-            device.scanner = True
             device.set_raw(device_raw)
             yield device
 

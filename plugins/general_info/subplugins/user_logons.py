@@ -49,7 +49,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                         username = f"{username}@{domain}"
 
                     self.logger.debug(f"enriching sids_to_users: {sid} -> {username}")
-                    GetUserLogons.users_to_sids[sid] = username, False  # False for is_local_user
+                    GetUserLogons.users_to_sids[sid] = {"username": username, "is_local": False}
 
                     GetUserLogons.users_to_sids_last_query = datetime.datetime.now()
 
@@ -60,7 +60,7 @@ class GetUserLogons(GeneralInfoSubplugin):
         return wmi_query_commands(
             [
                 "select SID,LastUseTime from Win32_UserProfile",
-                "select SID,Caption, LocalAccount from Win32_UserAccount",
+                "select SID,Caption,LocalAccount,Disabled from Win32_UserAccount",
                 "select GroupComponent, PartComponent from Win32_GroupUser"
             ])
 
@@ -94,9 +94,12 @@ class GetUserLogons(GeneralInfoSubplugin):
                 except Exception:
                     self.logger.exception(f"Problem with {users_groups_data_raw}")
         except Exception:
-            self.logger.exception(f"Pronblem handling users groups data {str(users_groups_data)}")
+            self.logger.exception(f"Problem handling users groups data {str(users_groups_data)}")
+
+        users_on_this_device = dict()
 
         # Lets build the sids_to_users table. We get the base sids_to_users from the users db first.
+        local_hostname = "local"    # will be changed in the following loop
         sids_to_users = self.get_sid_to_users_db()
         for user in user_accounts_data:
             # a caption is domain + username.
@@ -105,28 +108,42 @@ class GetUserLogons(GeneralInfoSubplugin):
             caption = user.get('Caption')  # This comes in a format of domain\user. transform to user@domain.
             sid = user.get('SID')
             is_local_account = user.get('LocalAccount')
-            if caption is None or sid is None or is_local_account is None:
-                self.logger.error(f"Couldn't find Caption/SID/LocalAccount in user_accounts_data: {user} "
-                                  f"not enriching")
+            is_disabled_raw = user.get('Disabled')
+            is_disabled = None
+
+            # All of the below can happen
+            if type(is_disabled_raw) == bool:
+                is_disabled = is_disabled_raw
+            elif type(is_disabled_raw) == int:
+                is_disabled = bool(is_disabled_raw)
+            elif type(is_disabled_raw) == str and is_disabled_raw.lower() in ["true", "false"]:
+                is_disabled = True if is_disabled_raw.lower() == "true" else False
+
+            if caption is None or sid is None:
+                self.logger.error(f"Couldn't find Caption/SID in user_accounts_data: {user} not enriching")
             else:
                 local_hostname, local_username = caption.split("\\")
-                if sid in sids_to_users:
-                    # If it exists it means we have seen it in the user db. Just change the is local account
-                    # which should be false but might be on weird circumstances true? (deleting user etc?)
-                    sids_to_users[sid] = sids_to_users[sid][0], bool(is_local_account)
-                else:
-                    sids_to_users[sid] = f"{local_username}@{local_hostname}", bool(is_local_account)
+                user_object = {
+                    "username": f"{local_username}@{local_hostname}",
+                    "is_local": is_local_account if type(is_local_account) is bool else None,
+                    "is_disabled": is_disabled if type(is_disabled) is bool else None
+                }
+                users_on_this_device[sid] = user_object
+                sids_to_users[sid] = user_object
 
         # Now, go over all users, parse their last use time date and add them to the array.
+        # note that user_profiles is the profiles we have on this computer, not all users have profiles (unlogged users)
+        # and some profiles have no useraccounts (remote domain users).
+        # in general, win32_useraccount is for local users, win32_userprofile is profiles for logged in local and remote
+        # users
         last_used_time_arr = []
         for profile in user_profiles_data:
             sid = profile.get('SID')
             last_use_time = profile.get('LastUseTime')
 
-            if sid is None or last_use_time is None:
-                self.logger.error(f"Couldn't find SID/LastUseTime in user_profiles_data: {profile}. "
-                                  f"Returning")
-                return False
+            if sid is None:
+                self.logger.error(f"Couldn't find SID in user_profiles_data: {profile}. Moving on")
+                continue
 
             # Specifically, we have to get rid of non-users sid's like NT_AUTHORITY, groups sid's, etc.
             # Any domain/local user starts with S-1-5-21.
@@ -135,32 +152,51 @@ class GetUserLogons(GeneralInfoSubplugin):
 
             # For some reason last_use_time is sometimes 0....
             try:
-                last_use_time = wmi_date_to_datetime(last_use_time)
+                if last_use_time is not None:
+                    last_use_time = wmi_date_to_datetime(last_use_time)
             except Exception:
-                self.logger.exception(f"Error parsing LastUseTime ({last_use_time}). Setting to 1 Jan 01")
-                last_use_time = datetime.datetime(1, 1, 1)
+                self.logger.exception(f"Error parsing LastUseTime ({last_use_time}). Continuing")
+                continue
 
-            # This is a string in a special format, we need to parse it.
-            # In case we don't have a user here, we need a hostname. Lets take one of the
-            user = sids_to_users.get(sid, [f"Unknown@{local_hostname}", False])
+            # we have an sid which can be local or remote. Lets try to get it, but in case we don't have any translation
+            # which usually occurs if a user is deleted and then we have its profile but no data about it, put unknown.
+            user = sids_to_users.get(sid,
+                                     {
+                                         "username": f"Unknown@{local_hostname}",
+                                         "is_local": False,
+                                         "is_disabled": False
+                                     }
+                                     )
             last_used_time_arr.append(
                 {"Sid": sid,
-                 "User": user[0],
-                 "Is Local": user[1],
+                 "User": user["username"],
+                 "Is Local": user.get("is_local", False),
                  "Last Use": last_use_time})
+
+            # Add these users. In case the user exists (Local User), we just add a last_use_date to it.
+            # But if its a remote domain then we add it for the first time.
+            users_on_this_device[sid] = {
+                "username": user["username"],
+                "is_local": user.get("is_local"),
+                "is_disabled": user.get("is_disabled"),
+                "last_use_date": last_use_time
+            }
+
+        # Update our adapterdata_device, add all users we have.
+        for sid, u in users_on_this_device.items():
+            adapterdata_device.add_users(
+                user_sid=sid,
+                username=u.get("username"),
+                last_use_date=u.get("last_use_date"),
+                is_local=u.get("is_local"),
+                is_disabled=u.get("is_disabled"),
+                origin_unique_adapter_name=executer_info["adapter_unique_name"],
+                origin_unique_adapter_data_id=executer_info["adapter_unique_id"],
+                origin_unique_adapter_client=executer_info["adapter_client_used"]
+            )
 
         # Now sort the array.
         last_used_time_arr = sorted(last_used_time_arr, key=lambda k: k["Last Use"], reverse=True)
-
-        # Update our adapterdata_device.
-        for u in last_used_time_arr:
-            adapterdata_device.add_users(
-                username=u["User"],
-                last_use_date=u["Last Use"],
-                is_local=u["Is Local"],
-                origin_unique_adapter_name=executer_info["adapter_unique_name"],
-                origin_unique_adapter_data_id=executer_info["adapter_unique_id"]
-            )
 
         # Now we have a sorted list of sid's, users, and last_use_time.
         # We could have a couple of last logged users. Usually, if a user is logged in, and then we remotely

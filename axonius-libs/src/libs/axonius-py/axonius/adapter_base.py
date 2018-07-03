@@ -782,6 +782,10 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         for parsed_device in self._parse_raw_data(raw_devices):
             assert isinstance(parsed_device, DeviceAdapter)
 
+            # All scanners should have this automatically
+            if self.plugin_subtype == adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE:
+                parsed_device.scanner = True
+
             if should_check_for_unique_ids:
                 parsed_device_id = parsed_device.id  # we must have an id (its definitely not a scanner)
                 if parsed_device_id in devices_ids:

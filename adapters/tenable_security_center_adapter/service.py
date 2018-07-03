@@ -174,7 +174,6 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase):
             else:
                 logger.error(f"hasCompliance should be yes/no but its {has_compliance}")
 
-        device.scanner = True
         device.set_raw(raw_device_data)
         return device
 

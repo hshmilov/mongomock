@@ -96,8 +96,7 @@ class NexposeV3Client(NexposeClient):
         if risk_score is not None:
             try:
                 device.risk_score = float(risk_score)
-            except Exception as e:
+            except Exception:
                 logger.exception("Cant get risk score")
-        device.scanner = True
         device.set_raw(device_raw)
         return device

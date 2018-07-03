@@ -1257,28 +1257,34 @@ class PluginBase(Configurable, Feature):
 
         return response
 
-    def _tag(self, entity: EntityType, identity_by_adapter, name, data, type, action_if_exists):
+    def _tag(self, entity: EntityType, identity_by_adapter, name, data, tag_type, action_if_exists, client_used=None):
         """ Function for tagging adapter devices.
         This function will tag a wanted device. The tag will be related only to this adapter
         :param identity_by_adapter: a list of tuples of (adapter_unique_name, unique_id).
                                            e.g. [("ad-adapter-1234", "CN=EC2AMAZ-3B5UJ01,OU=D....")]
         :param name: the name of the tag. should be a string.
         :param data: the data of the tag. could be any object.
-        :param type: the type of the tag. "label" for a regular tag, "data" for a data tag.
+        :param tag_type: the type of the tag. "label" for a regular tag, "data" for a data tag.
         :param entity: "devices" or "users" -> what is the entity we are tagging.
         :param action_if_exists: "replace" to replace the tag, "update" to update the tag (in case its a dict)
+        :param client_used: an optional parameter to indicate client_used
         :return:
         """
 
-        assert action_if_exists == "replace" or (action_if_exists == "update" and type == "adapterdata")
+        assert action_if_exists == "replace" or (action_if_exists == "update" and tag_type == "adapterdata")
 
         tag_data = {'association_type': 'Tag',
                     'associated_adapters': identity_by_adapter,
                     "name": name,
                     "data": data,
-                    "type": type,
+                    "type": tag_type,
                     "entity": entity.value,
                     "action_if_exists": action_if_exists}
+
+        if client_used is not None:
+            assert type(client_used) == str
+            tag_data['client_used'] = client_used
+
         # Since datetime is often passed here, and it is not serializable, we use json_util.default
         # That automatically serializes it as a mongodb date object.
         response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post',
@@ -1296,15 +1302,17 @@ class PluginBase(Configurable, Feature):
 
     def add_label_to_entity(self, entity: EntityType, identity_by_adapter, label, is_enabled=True):
         """ A shortcut to __tag with type "label" . if is_enabled = False, the label is grayed out."""
-        return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace")
+        return self._tag(entity, identity_by_adapter, label, is_enabled, "label", "replace", None)
 
     def add_data_to_entity(self, entity: EntityType, identity_by_adapter, name, data):
         """ A shortcut to __tag with type "data" """
-        return self._tag(entity, identity_by_adapter, name, data, "data", "replace")
+        return self._tag(entity, identity_by_adapter, name, data, "data", "replace", None)
 
-    def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data, action_if_exists="replace"):
+    def add_adapterdata_to_entity(self, entity: EntityType, identity_by_adapter, data,
+                                  action_if_exists="replace", client_used=None):
         """ A shortcut to __tag with type "adapterdata" """
-        return self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata", action_if_exists)
+        return self._tag(entity, identity_by_adapter, self.plugin_unique_name, data, "adapterdata",
+                         action_if_exists, client_used=client_used)
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)
     def update_config(self):

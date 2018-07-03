@@ -206,7 +206,6 @@ class NessusAdapter(ScannerAdapterBase):
                     device.vulnerabilities.append(new_vulnerability)
                 except Exception:
                     logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
-            device.scanner = True
             device.set_raw(device_raw)
             yield device
 

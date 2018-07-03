@@ -17,6 +17,7 @@ class UserAdapterDevice(SmartJsonClass):
 
     adapter_unique_name = Field(str)  # the adapter unique name of the device
     adapter_data_id = Field(str)
+    adapter_client_used = Field(str)
     last_use_date = Field(datetime.datetime)
 
 
@@ -25,6 +26,7 @@ class UserAdapter(SmartJsonClass):
 
     image = Field(str, "Image", json_format=JsonStringFormat.image)
     id = Field(str, "ID")  # Usually username@domain.
+    user_sid = Field(str, "SID")
     mail = Field(str, "mail")
     username = Field(str, 'User Name')  # Only username, no domain
     description = Field(str, 'Description')

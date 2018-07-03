@@ -296,7 +296,8 @@ class GeneralInfoService(PluginBase, Triggerable):
                 try:
                     user_dict.username, user_dict.domain = username.split("@")  # expecting username to be user@domain.
                 except ValueError:
-                    logger.exception(f"Bad user format! expected 'username@domain' format, got {username}")
+                    logger.exception(f"Bad user format! expected 'username@domain' format, got {username}. bypassing")
+                    continue
                 user_dict.is_local = True
                 self._save_data_from_plugin(
                     self.plugin_unique_name,
@@ -308,6 +309,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
+            client_used = None
             for linked_user, linked_device in linked_devices_and_users_list:
                 try:
                     device_caption = linked_device.get_first_data("hostname") or \
@@ -319,14 +321,23 @@ class GeneralInfoService(PluginBase, Triggerable):
                         adapterdata_user.last_seen_in_devices = \
                             max(linked_user['last_use_date'], adapterdata_user.last_seen_in_devices)
                     except Exception:
-                        # Last seen does not exist
-                        adapterdata_user.last_seen_in_devices = linked_user['last_use_date']
+                        if linked_user.get('last_use_date') is not None:
+                            adapterdata_user.last_seen_in_devices = linked_user.get('last_use_date')
+
+                    if linked_user.get('user_sid') is not None:
+                        adapterdata_user.user_sid = linked_user.get('user_sid')
+
+                    if linked_user.get('is_disabled') is not None:
+                        adapterdata_user.account_disabled = linked_user.get('is_disabled')
+
+                    client_used = linked_user['origin_unique_adapter_client']
 
                     adapterdata_user.add_associated_device(
                         device_caption=device_caption,
-                        last_use_date=linked_user['last_use_date'],
+                        last_use_date=linked_user.get('last_use_date'),
                         adapter_unique_name=linked_user['origin_unique_adapter_name'],
-                        adapter_data_id=linked_user['origin_unique_adapter_data_id']
+                        adapter_data_id=linked_user['origin_unique_adapter_data_id'],
+                        adapter_client_used=client_used
                     )
                 except Exception:
                     logger.exception(f"Cant associate user {linked_user}")
@@ -334,7 +345,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             # we have a new adapterdata_user, lets add it. we do not give any specific identity
             # since this tag isn't associated to a specific adapter.
             adapterdata_user.id = username
-            user.add_adapterdata(adapterdata_user.to_dict())
+            user.add_adapterdata(adapterdata_user.to_dict(), client_used=client_used)
 
         self._save_field_names_to_db(EntityType.Users)
         logger.info("Finished associating users with devices")
@@ -351,9 +362,10 @@ class GeneralInfoService(PluginBase, Triggerable):
             # Now get some info depending on the adapter that ran the execution
             executer_info = dict()
             executer_info["adapter_unique_name"] = data["responder"]
-            executer_info["adapter_unique_id"] = \
-                [adap for adap in device["adapters"] if adap["plugin_unique_name"]
-                    == executer_info["adapter_unique_name"]][0]["data"]["id"]
+            adapter_used = [adap for adap in device["adapters"] if adap["plugin_unique_name"]
+                            == executer_info["adapter_unique_name"]][0]
+            executer_info["adapter_client_used"] = adapter_used['client_used']
+            executer_info["adapter_unique_id"] = adapter_used["data"]["id"]
 
             # We have got many requests. Lets call the handler of each of our subplugins.
             # We go through the amount of queries each subplugin requested, linearly.
@@ -397,7 +409,9 @@ class GeneralInfoService(PluginBase, Triggerable):
             # Add the final one
             self.devices.add_adapterdata(
                 [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])], new_data,
-                action_if_exists="update")  # If the tag exists, we update it using deep merge (and not replace it).
+                action_if_exists="update",  # If the tag exists, we update it using deep merge (and not replace it).
+                client_used=executer_info["adapter_client_used"]
+            )
 
             # Fixme: That is super inefficient, we save the fields upon each wmi success instead when we finish
             # Fixme: running all queries.

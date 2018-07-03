@@ -133,6 +133,5 @@ class NexposeV2Client(NexposeClient):
                 device.risk_score = float(risk_score)
             except Exception as e:
                 logger.exception("Cant get risk score")
-        device.scanner = True
         device.set_raw(device_raw)
         return device
