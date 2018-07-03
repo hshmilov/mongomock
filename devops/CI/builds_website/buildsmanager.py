@@ -282,7 +282,7 @@ class BuildsManager(object):
 
         return {"instance_id": instance_id}
 
-    def add_instance(self, name, owner, comments, configuration_name, configuration_code, fork, branch,
+    def add_instance(self, name, owner, configuration_code, fork, branch,
                      public=False,
                      image_id=IMAGE_ID, instance_type=INSTANCE_TYPE,
                      key_name=KEY_NAME, subnet_id=PRIVATE_SUBNET_ID, vm_type=BUILDS_INSTANCE_VM_TYPE):
@@ -306,21 +306,27 @@ class BuildsManager(object):
         subnet_id = subnet_id if not public else PUBLIC_SUBNET_ID
         security_group_id = PUBLIC_SECURITY_GROUP if public else ''
         termination_protection = False if vm_type == BUILDS_INSTANCE_VM_TYPE else True
-        ec2_instances = self.ec2.create_instances(ImageId=image_id, InstanceType=instance_type, KeyName=key_name,
-                                                  MinCount=1, MaxCount=1, SubnetId=subnet_id,
-                                                  TagSpecifications=tags_specifications,
-                                                  UserData=configuration_code,
-                                                  SecurityGroupIds=[security_group_id],
-                                                  BlockDeviceMappings=[
-                                                      {
-                                                          'DeviceName': '/dev/sda1',
-                                                          'Ebs': {
-                                                              'DeleteOnTermination': True
-                                                          }
-                                                      }
-                                                  ],
-                                                  DisableApiTermination=termination_protection
-                                                  )
+
+        args = {
+            "ImageId": image_id, "InstanceType": instance_type, "KeyName": key_name,
+            "MinCount": 1, "MaxCount": 1, "SubnetId": subnet_id,
+            "TagSpecifications": tags_specifications,
+            "UserData": configuration_code,
+            "BlockDeviceMappings": [
+                {
+                    "DeviceName": "/dev/sda1",
+                    "Ebs": {
+                        "DeleteOnTermination": True
+                    }
+                }
+            ],
+            "DisableApiTermination": termination_protection
+        }
+
+        if public:
+            args["SecurityGroupIds"] = [security_group_id]
+
+        ec2_instances = self.ec2.create_instances(**args)
 
         instance_id = ec2_instances[0].id
         elastic_ip_id = ''
@@ -333,8 +339,7 @@ class BuildsManager(object):
 
         self.db.instances.insert_one({"name": name,
                                       "owner": owner,
-                                      "comments": comments,
-                                      "configuration_name": configuration_name,
+                                      "configuration_name": "Constant",
                                       "configuration_code": configuration_code,
                                       "ec2_id": instance_id,
                                       "elastic_ip_id": elastic_ip_id,

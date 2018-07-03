@@ -64,17 +64,17 @@
         // build the body
 
         if (fields != undefined) {
-            let modal_body = m.find(".modal-body");
+            var modal_body = m.find(".modal-body");
             modal_body.html(message);
-            let fields_table = $("<table>").addClass("new_instance_table");
-            for (let i in fields) {
-                let field = fields[i];
-                let tr = $("<tr>");
-                if (field['type'] === 'textarea') {
-                    let input = $("<textarea>").attr("rows", field['rows']).text(field["value"]);
+            var fields_table = $("<table>").addClass("new_instance_table");
+            for (var i in fields) {
+                var field = fields[i];
+                var tr = $("<tr>");
+                if (field['type'] == 'textarea') {
+                    var input = $("<textarea>").attr("rows", field['rows']).text(field["value"]);
                 }
                 else {
-                    let input = $("<input>").attr("type", "text").attr("value", field["value"]);
+                    var input = $("<input>").attr("type", "text").attr("value", field["value"]);
                 }
                 input.addClass("modal-input").attr("name", field['name']).attr("placeholder", field['name']);
                 if (field["disabled"] == true) {
@@ -457,18 +457,16 @@
     }
     function add_instance_modal() {
         instance_vm_type = "instance";
-        $("#new_instance_configuration_cell").show();
-        $("#new_instance_configuration_code_cell").show();
-        $("#new_instance_adapters_cell").hide();
-        $("#set_credentials_cell").hide();
+        // $("#new_instance_configuration_cell").show();
+        // $("#new_instance_configuration_code_cell").show();
+        // $("#new_instance_adapters_cell").hide();
         $('#new_instance_modal').modal();
     }
     function add_demo_modal() {
         instance_vm_type = "demo";
-        $("#new_instance_configuration_cell").hide();
-        $("#new_instance_configuration_code_cell").hide();
-        $("#new_instance_adapters_cell").show();
-        $("#set_credentials_cell").show();
+        // $("#new_instance_configuration_cell").hide();
+        // $("#new_instance_configuration_code_cell").hide();
+        // $("#new_instance_adapters_cell").show();
         $('#new_instance_modal').modal();
     }
     function add_export_modal() {
@@ -635,21 +633,10 @@
         data["branch"] = $("#new_vm_branch")[0].value;
         data["owner"] = $("#new_vm_owner")[0].value;
         data["public"] = $("#new_vm_public")[0].checked;
-        data["comments"] = $("#new_vm_comments")[0].value;
         data["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
-        data["configuration_code"] = $("#new_instance_configuration_code")[0].value;
         data["adapters"] = $("#new_vm_adapters_options option:selected").map(function () {
             return $(this).text();
         }).get().join(',');
-
-        var configuration_index = $("#new_instance_configuration_picker")[0].selectedIndex;
-        if (configuration_index === current_configurations.length) {
-            // Its "custom"
-            data["configuration_name"] = "Custom";
-        }
-        else {
-            data["configuration_name"] = current_configurations[configuration_index]['name'];
-        }
 
         $("#new_instance_modal_add_button").text("Loading..");
         $("#new_instance_modal_add_button").prop("disabled", true);

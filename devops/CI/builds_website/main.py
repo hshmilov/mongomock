@@ -9,7 +9,7 @@ from flask import Flask, render_template, jsonify, request
 app = Flask(__name__, static_url_path='/static')
 db = None
 bm = buildsmanager.BuildsManager()
-INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds.axonius.lan/install_demo[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
+INSTALL_DEMO_SCRIPT = """# how to use: curl -k https://builds.axonius.lan/install[?fork=axonius&branch=develop&exclude=ad,esx,puppet&set_credentials=true] | bash -
 rm -rf axonius
 mkdir axonius
 cd axonius
@@ -29,7 +29,7 @@ cd ..
 rm .git*
 exit"""
 
-INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/axonius/install/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\ncurl -k 'https://builds.axonius.lan/install_demo?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}' | bash -\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
+INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/axonius/install/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\ncurl -k 'https://builds.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}' | bash -\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
 
 
 @app.route('/')
@@ -131,25 +131,20 @@ def instances():
     if request.method == "GET":
         json_result = (bm.getInstances(vm_type=instance_type))
     elif request.method == "POST":
-        if instance_type == buildsmanager.BUILDS_DEMO_VM_TYPE:
-            adapters = request.form["adapters"].split(',')
-            should_run_all = "ALL" in adapters
-            if should_run_all:
-                adapters.remove('ALL')
-            exclude = ','.join(adapters) if should_run_all else ''
-            include = ','.join(adapters) if not should_run_all else ''
+        adapters = request.form["adapters"].split(',')
+        should_run_all = "ALL" in adapters
+        if should_run_all:
+            adapters.remove('ALL')
+        exclude = ','.join(adapters) if should_run_all else ''
+        include = ','.join(adapters) if not should_run_all else ''
 
-            config_code = INSTALL_DEMO_CONFIG.format(fork=request.form["fork"], branch=request.form["branch"],
-                                                     set_credentials=request.form.get("set_credentials", 'false'),
-                                                     include=include, exclude=exclude)
-        else:
-            config_code = request.form["configuration_code"]
+        config_code = INSTALL_DEMO_CONFIG.format(fork=request.form["fork"], branch=request.form["branch"],
+                                                 set_credentials=request.form.get("set_credentials", 'false'),
+                                                 include=include, exclude=exclude)
 
         json_result = (bm.add_instance(
             request.form["name"],
             request.form["owner"],
-            request.form["comments"],
-            request.form["configuration_name"],
             config_code,
             request.form["fork"],
             request.form["branch"],
@@ -216,17 +211,6 @@ def configuration(object_id=None):
 
 
 @app.route("/install", methods=['GET'])
-def get_install_script():
-    branch = request.args.get("branch", "develop")
-    fork = request.args.get("fork", "axonius")
-    if branch is None:
-        branch = "develop"
-
-    return "# how to use: curl -k https://builds.axonius.lan/install[?branch=develop&fork=axonius] | bash -\nrm -rf axonius\nmkdir axonius\ncd axonius\ngit init\n# Beware! do not save this token.\ngit pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/{fork}/cortex {branch}\n" \
-        "history -c\nhistory -w\ncd install\nchmod 777 *\n./install.sh --clean\nexit\n".format(fork=fork, branch=branch)
-
-
-@app.route("/install_demo", methods=['GET'])
 def get_install_demo_script():
     branch = request.args.get("branch", "develop")
     fork = request.args.get("fork", "axonius").split('/')[0]
@@ -241,6 +225,7 @@ def get_install_demo_script():
         opt_params = "'{0}'".format(' '.join(include))
     elif include == '' and exclude == '':
         opt_params = "'--exclude'"
+
     if branch is None:
         branch = "develop"
 
