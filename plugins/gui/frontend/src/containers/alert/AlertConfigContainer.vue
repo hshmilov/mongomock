@@ -75,7 +75,7 @@
                                        no-data-text="Type mail addresses..." :default-first-option="true"/>
                         </template>
                         <template v-if="alert.triggers.increase">
-                            <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag Entities"
+                            <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag New Entities"
                                         v-model="actions.tag"/>
                             <template v-if="actions.tag">
                                 <input class="form-control" id="tagName" v-model="tagName">
