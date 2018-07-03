@@ -106,8 +106,17 @@ class AxoniusService(object):
     def get_users_db(self):
         return self.db.get_entity_db(EntityType.Users)
 
+    def get_reports_db(self):
+        return self.db.get_collection(self.reports.unique_name, 'reports')
+
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)
+
+    def insert_user(self, user_data):
+        self.get_users_db().insert_one(user_data)
+
+    def insert_report(self, report_data):
+        self.get_reports_db().insert_one(report_data)
 
     def db_find(self, db_name, collection_name, cond):
         return list(self.db.get_collection(db_name, collection_name).find(cond))

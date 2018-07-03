@@ -1,9 +1,14 @@
+import random
+
 import pytest
 from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.device_helper import get_device_dict, filter_by_plugin_name
+from test_helpers.user_helper import get_user_dict
+from test_helpers.report_helper import get_alert_dict, create_alert_dict
 
 GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
+API_TOKEN = (DEFAULT_USER['user_name'], DEFAULT_USER['password'])
 
 
 def test_devices():
@@ -205,6 +210,153 @@ def test_maintenance_endpoints():
 
     assert gui_service.anaylitics().strip() == b'true'
     assert gui_service.troubleshooting().strip() == b'true'
+
+
+#######
+# API #
+#######
+
+def test_api_devices():
+    def test_get_all_devices():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+
+        for x in [4, 5, 6]:
+            axonius_system.insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_2"))
+
+        devices_response = gui_service.get_api_devices(auth=API_TOKEN)
+        assert devices_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
+                                                    f"{devices_response.content}"
+
+        devices_count_response = gui_service.get_devices_count()
+        assert devices_count_response.status_code == 200, f"Error in response. Got: {str(devices_count_response)}, " \
+                                                          f"{devices_count_response.content}"
+
+        assert int(devices_count_response.content) == len(devices_response.json()), f"Error in device count . Got: {str(len(devices_response.json()))}, " \
+            f"{devices_count_response.content}"
+        assert isinstance(devices_count_response.json(),
+                          int), f"Unexpected response type: {devices_count_response.json()}"
+
+        def test_get_specific_device():
+            axonius_system = get_service()
+            gui_service = axonius_system.gui
+            random_id = random.randint(50, 1000)
+            device_to_get = get_device_dict("GUI_TEST", str(random_id), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_3")
+
+            axonius_system.insert_device(device_to_get)
+
+            device_response = gui_service.get_api_device_by_id(device_to_get['internal_axon_id'], auth=API_TOKEN)
+            assert device_response.status_code == 200, f"Error in response. got response: {str(devices_response)}, " \
+                f"{devices_response.content}"
+
+            assert device_response.json() == device_to_get, f"Error brought bad device by id. Got: {str(devices_response.json())}, " \
+                f"{device_to_get}"
+
+        test_get_all_devices()
+        test_get_specific_device()
+
+
+def test_api_users():
+    def test_get_all_users():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+
+        for x in [4, 5, 6]:
+            # insert_device(get_device_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_2"))
+            axonius_system.insert_user(get_user_dict("GUI_TEST", str(x), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_2"))
+
+        users_response = gui_service.get_api_users(auth=API_TOKEN)
+        assert users_response.status_code == 200, f"Error in response. got response: {str(users_response)}, " \
+            f"{users_response.content}"
+
+        gui_service.login_user(DEFAULT_USER)
+        users_count_response = gui_service.get_users_count()
+        assert users_count_response.status_code == 200, f"Error in response. Got: {str(users_count_response)}, " \
+            f"{users_count_response.content}"
+
+        assert isinstance(users_count_response.json(),
+                          int), f"Unexpected response type: {users_count_response.json()}"
+
+        assert users_count_response.json() == len(
+            users_response.json()), f"Error in device count. Got: {str(len(users_response.json()))}, " \
+            f"{users_count_response.json()}"
+
+    def test_get_specific_user():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+        random_id = random.randint(50, 1000)
+        user_to_get = get_user_dict("GUI_TEST", str(random_id), GUI_TEST_PLUGIN, "GUI_TEST_PLUGIN_3")
+
+        axonius_system.insert_user(user_to_get)
+
+        user_response = gui_service.get_api_user_by_id(user_to_get['internal_axon_id'], auth=API_TOKEN)
+        assert user_response.status_code == 200, f"Error in response. got response: {str(user_response)}, " \
+            f"{user_response.content}"
+
+    test_get_all_users()
+    test_get_specific_user()
+
+
+def test_api_alerts():
+    def test_get_all_alerts():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+
+        for x in [4, 5, 6]:
+            axonius_system.insert_report(get_alert_dict(f"GUI_TEST_QUERY{x}", f"GUI_TEST_REPORT_{x}"))
+
+        alert_response = gui_service.get_api_reports(auth=API_TOKEN)
+        assert alert_response.status_code == 200, f"Error in response. got response: {str(alert_response)}, " \
+                                                  f"{alert_response.content}"
+
+    def test_get_specific_alert():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+        alert_to_get = get_alert_dict("GUI_TEST_QUERY_1", "GUI_TEST_REPORT_1")
+
+        axonius_system.insert_report(alert_to_get)
+
+        alert_response = gui_service.get_api_report_by_id(str(alert_to_get['_id']), auth=API_TOKEN)
+        assert alert_response.status_code == 200, f"Error in response. got response: {str(alert_response)}, " \
+            f"{alert_response.content}"
+
+        assert alert_response.json() == alert_to_get, f"Error brought bad device by id. Got: {str(alert_response.json())}, " \
+            f"{alert_to_get}"
+
+    def test_create_alert():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+        alert_to_put = create_alert_dict("AD Printers", "GUI_TEST_REPORT_1")
+
+        alert_response = gui_service.put_api_report(alert_to_put, auth=API_TOKEN)
+        assert alert_response.status_code == 201, f"Error in response. got response: {str(alert_response)}, " \
+                                                  f"{alert_response.content}"
+
+        alert_response = gui_service.get_api_report_by_id(str(alert_to_put), auth=API_TOKEN)
+        assert alert_response.status_code == 200, f"Error in response. got response: {str(alert_response)}, " \
+                                                  f"{alert_response.content}"
+
+        assert alert_response.json() == alert_to_put, f"Error brought bad device by id. Got: {str(alert_response.json())}, " \
+                                                      f"{alert_to_put}"
+
+    def test_delete_alert():
+        axonius_system = get_service()
+        gui_service = axonius_system.gui
+        alert_to_get = get_alert_dict("GUI_TEST_QUERY_1", "GUI_TEST_REPORT_1")
+
+        axonius_system.insert_report(alert_to_get)
+
+        alert_response = gui_service.delete_api_report_by_id(str(alert_to_get['_id']), auth=API_TOKEN)
+        assert alert_response.status_code == 200, f"Error in response. got response: {str(alert_response)}, " \
+                                                  f"{alert_response.content}"
+
+        assert alert_response.json() == alert_to_get, f"Error brought bad device by id. Got: {str(alert_response.json())}, " \
+                                                      f"{alert_to_get}"
+
+        test_get_all_alerts()
+        test_get_specific_alert()
+        test_create_alert()
+        test_delete_alert()
 
 
 if __name__ == '__main__':

@@ -68,6 +68,9 @@ RUN cd ./gui/frontend/ && npm run {dev}build
     def get_devices_count(self, *vargs, **kwargs):
         return self.get('devices/count', session=self._session, *vargs, **kwargs)
 
+    def get_users_count(self, *vargs, **kwargs):
+        return self.get('users/count', session=self._session, *vargs, **kwargs)
+
     def get_device_by_id(self, id, *vargs, **kwargs):
         return self.get('devices/{0}'.format(id), session=self._session, *vargs, **kwargs)
 
@@ -101,3 +104,30 @@ RUN cd ./gui/frontend/ && npm run {dev}build
 
     def troubleshooting(self):
         return self.get('troubleshooting').content
+
+    def get_api_version(self, *vargs, **kwargs):
+        return self.get(f'api', *vargs, **kwargs)
+
+    def get_api_devices(self, *vargs, **kwargs):
+        return self.get(f'V{self.get_api_version()}/devices', *vargs, **kwargs)
+
+    def get_api_device_by_id(self, device_id, *vargs, **kwargs):
+        return self.get(f'V{self.get_api_version()}/devices/{device_id}', *vargs, **kwargs)
+
+    def get_api_users(self, *vargs, **kwargs):
+        return self.get(f'V{self.get_api_version().json()}/users', *vargs, **kwargs)
+
+    def get_api_user_by_id(self, user_id, *vargs, **kwargs):
+        return self.get(f'V{self.get_api_version().json()}/users/{user_id}', *vargs, **kwargs)
+
+    def get_api_reports(self, *vargs, **kwargs):
+        return self.get(f'V{self.get_api_version().json()}/reports', *vargs, **kwargs)
+
+    def get_api_report_by_id(self, report_id, *vargs, **kwargs):
+        return self.get(f'V{self.get_api_version().json()}/reports/{report_id}', *vargs, **kwargs)
+
+    def delete_api_report_by_id(self, report_id, *vargs, **kwargs):
+        return self.delete(f'V{self.get_api_version().json()}/reports/{report_id}', *vargs, **kwargs)
+
+    def put_api_report(self, report_data, *vargs, **kwargs):
+        return self.put(f'V{self.get_api_version().json()}/reports', report_data, *vargs, **kwargs)
