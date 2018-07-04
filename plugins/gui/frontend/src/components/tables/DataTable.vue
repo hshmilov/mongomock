@@ -117,8 +117,12 @@
                 this.fetchContentPages()
             },
             loading(newLoading) {
-            	if (!newLoading && this.content.data && this.content.data.length) {
-				    this.$emit('data', this.content.data[0][this.idField])
+            	if (!newLoading) {
+            		if (this.content.data && this.content.data.length) {
+				        this.$emit('data', this.content.data[0][this.idField])
+                    } else {
+            			this.$emit('data')
+                    }
                 }
             }
         },
