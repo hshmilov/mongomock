@@ -100,9 +100,9 @@
             > .header {
                 display: block;
                 border-right: 2px solid $grey-1;
-                width: 20%;
                 overflow: auto;
                 margin-left: -12px;
+                max-width: 20%;
                 .header-tab {
                     padding: 24px;
                     background: $theme-white;
@@ -113,10 +113,14 @@
                     &.active {
                         background-color: $grey-1;
                     }
+                    .title {
+                        white-space: pre-line;
+                    }
                 }
             }
             .body {
-                width: calc(80% - 24px);
+                flex: 1 0 auto;
+                max-width: calc(84% - 24px);
                 height: calc(100% - 24px);
             }
         }
