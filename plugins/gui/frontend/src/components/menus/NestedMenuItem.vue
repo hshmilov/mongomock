@@ -1,7 +1,6 @@
 <template>
     <div class="menu-item" :class="{nested: nested, active: isActive}" @mouseover="isActive = true" tabindex="-1"
-         @mouseout="isActive = false" @click="$emit('click')" @keyup.enter="$emit('click')"
-         @keyup.up="$emit('keyup.up')" @keyup.down="$emit('keyup.down')">
+         @mouseout="isActive = false" @click="$emit('click')" @keyup.enter="$emit('click')">
         <div class="item-content">{{ title }}</div>
         <div v-show="isActive">
             <slot></slot>
@@ -20,7 +19,7 @@
         },
         data() {
 			return {
-				isActive: this.selected
+				isActive: false
             }
         },
         watch: {
@@ -32,6 +31,9 @@
 					this.$el.focus()
                 }
             }
+        },
+        created() {
+			this.isActive = this.selected
         }
 	}
 </script>
