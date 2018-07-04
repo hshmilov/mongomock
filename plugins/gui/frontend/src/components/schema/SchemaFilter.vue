@@ -19,19 +19,25 @@
 		name: 'x-schema-filter',
 		components: { xSchemaExpression },
 		props: { schema: { required: true }, value: {} },
+        computed: {
+			isFilterEmpty() {
+				return !this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)
+            }
+        },
 		data () {
 			return {
 				expressions: [],
 				filters: [],
 				bracketWeights: [],
-				error: ''
+				error: '',
+                rebuild: false
 			}
 		},
 		watch: {
 			value (newValue) {
 				if (!newValue) return
 				this.expressions = [...newValue]
-                if (!this.expressions.length || (this.expressions.length === 1 && !this.expressions[0].field)) {
+                if (this.isFilterEmpty) {
 					this.error = ''
                     this.filters = []
                 }
@@ -52,9 +58,18 @@
                 }
 				this.bracketWeights[index] = payload.bracketWeight
                 if (!this.validateBrackets()) return
-
-				// No compilation error - propagating
+				// No compilation error - can remove existing error
 				this.error = ''
+
+				if (this.rebuild) {
+					// Rebuild state is when expressions are given on initialization
+                    // and filters should be updated but not passed on, in case the user edited the filter
+					if (this.filters.length === this.expressions.length) {
+						this.rebuild = false
+					}
+					return
+				}
+				// In ongoing update state - propagating the filter and expression values
 				this.$emit('input', this.expressions)
 				this.$emit('change', this.filters.join(' '))
 			},
@@ -67,18 +82,17 @@
 				this.expressions.splice(index, 1)
 				this.filters.splice(index, 1)
                 this.bracketWeights.splice(index, 1)
-				if (!this.validateBrackets()) return
-
 				if (!index && this.expressions.length) {
 					this.expressions[index].logicOp = ''
 					if (this.filters.length) {
 						this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
 					}
 				}
+				if (!this.validateBrackets()) return
 				this.$emit('change', this.filters.join(' '))
 			},
             validateBrackets() {
-				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal)
+				let totalBrackets = this.bracketWeights.reduce((accumulator, currentVal) => accumulator + currentVal, 0)
 				if (totalBrackets !== 0) {
 					this.error = (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket'
 					this.$emit('error')
@@ -97,6 +111,11 @@
 			if (!this.expressions.length) {
 				this.addExpression()
 			}
+			if (!this.isFilterEmpty) {
+				// Filter was created with existing expressions and the filters list should be updated accordingly,
+                // but final result should not be emitted since it was created externally to begin with.
+				this.rebuild = true
+            }
 		}
 	}
 </script>
