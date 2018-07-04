@@ -883,6 +883,9 @@ class GuiService(PluginBase, Configurable, API):
     def _fetch_after_clients_thread(self, adapter_unique_name, client_id, client_to_add):
         # if there's no aggregator, that's fine
         try:
+            logger.info(f"Stopping research phase after adding client {client_id}")
+            response = self.request_remote_plugin('stop_all', SYSTEM_SCHEDULER_PLUGIN_NAME, 'POST')
+            response.raise_for_status()
             logger.info(f"Requesting {adapter_unique_name} to fetch data from newly added client {client_id}")
             response = self.request_remote_plugin(f"insert_to_db?client_name={client_id}",
                                                   adapter_unique_name, method='PUT')
