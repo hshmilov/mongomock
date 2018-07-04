@@ -1136,10 +1136,18 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if wmi_smb_commands is None:
             return {"result": 'Failure', "product": 'No WMI/SMB queries/commands list supplied'}
 
+        hostname_validation = True
+        for command in wmi_smb_commands:
+            if command["type"].lower() in ["pm", "pmonline"]:
+                # Due to a problem in impacket (look at wmi_smb_runner.py) we cannot query for wmi + rpc objects
+                # in the same run. will be fixed in AX-1384
+                hostname_validation = False
+
         # In some scenarios, we think we run code on device X while the dns is incorrect and it makes us
         # run code on device Y which has the same ip. That is why we append hostname query.
         # if the hostname returns, we see if the hostname we know this machine has is the same as what returned.
-        wmi_smb_commands.append({"type": "query", "args": ["select Name from Win32_ComputerSystem"]})
+        if hostname_validation is True:
+            wmi_smb_commands.append({"type": "query", "args": ["select Name from Win32_ComputerSystem"]})
 
         command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
         logger.debug("running wmi {0}".format(command_list))
@@ -1187,32 +1195,33 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             raise ValueError(err_log)
 
         # product[0] should have the hostname.
-        hostname_answer = product.pop()
-        try:
-            if hostname_answer['status'] == 'ok':
-                hostname_on_device = hostname_answer["data"][0].get("Name")
-                hostname_on_ad = device_data['data']['hostname']
-                if hostname_on_device is not None and hostname_on_device != "" and hostname_on_ad != "":
-                    hostname_on_device = hostname_on_device.lower()
-                    hostname_on_ad = hostname_on_ad.lower()
-                    if not (hostname_on_device.startswith(hostname_on_ad) or
-                            hostname_on_ad.startswith(hostname_on_device)):
+        if hostname_validation is True:
+            hostname_answer = product.pop()
+            try:
+                if hostname_answer['status'] == 'ok':
+                    hostname_on_device = hostname_answer["data"][0].get("Name")
+                    hostname_on_ad = device_data['data']['hostname']
+                    if hostname_on_device is not None and hostname_on_device != "" and hostname_on_ad != "":
+                        hostname_on_device = hostname_on_device.lower()
+                        hostname_on_ad = hostname_on_ad.lower()
+                        if not (hostname_on_device.startswith(hostname_on_ad) or
+                                hostname_on_ad.startswith(hostname_on_device)):
 
-                        logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
-                                       f"of {hostname_on_device}! Adding tags and failing")
+                            logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
+                                           f"of {hostname_on_device}! Adding tags and failing")
 
-                        identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
-                        self.devices.add_label([identity_tuple], "Hostname Conflict")
-                        self.devices.add_data([identity_tuple], "Hostname Conflict",
-                                              f"Hostname from Active Directory: '{hostname_on_ad}'\n'"
-                                              f"Hostname on device: '{hostname_on_device}'")
+                            identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
+                            self.devices.add_label([identity_tuple], "Hostname Conflict")
+                            self.devices.add_data([identity_tuple], "Hostname Conflict",
+                                                  f"Hostname from Active Directory: '{hostname_on_ad}'\n'"
+                                                  f"Hostname on device: '{hostname_on_device}'")
 
-                        return {
-                            "result": 'Failure',
-                            "product": f"Hostname Mismatch. Expected {hostname_on_ad} but got {hostname_on_device}"
-                        }
-        except Exception:
-            logger.exception("Exception in checking the hostname, continuing without check")
+                            return {
+                                "result": 'Failure',
+                                "product": f"Hostname Mismatch. Expected {hostname_on_ad} but got {hostname_on_device}"
+                            }
+            except Exception:
+                logger.exception("Exception in checking the hostname, continuing without check")
 
         # Optimization if all failed
         if all([True if line['status'] != 'ok' else False for line in product]):
