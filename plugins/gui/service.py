@@ -2012,17 +2012,20 @@ class GuiService(PluginBase, Configurable, API):
             field_to_title = _get_field_titles(entity)
             saved_views = self.gui.entity_query_views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
             for i, view_doc in enumerate(saved_views):
-                view = view_doc.get('view')
-                if view:
-                    field_list = view.get('fields', [])
-                    logger.info(field_list)
-                    views_data.append({
-                        'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
-                        'fields': [{field_to_title.get(field, field): field} for field in field_list],
-                        'data': self._get_entities(view.get('pageSize', 20), 0,
-                                                   parse_filter(view.get('query', {}).get('filter', '')),
-                                                   _get_sort(view), {field: 1 for field in field_list}, entity)
-                    })
+                try:
+                    view = view_doc.get('view')
+                    if view:
+                        field_list = view.get('fields', [])
+                        logger.info(field_list)
+                        views_data.append({
+                            'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
+                            'fields': [{field_to_title.get(field, field): field} for field in field_list],
+                            'data': self._get_entities(view.get('pageSize', 20), 0,
+                                                       parse_filter(view.get('query', {}).get('filter', '')),
+                                                       _get_sort(view), {field: 1 for field in field_list}, entity)
+                        })
+                except Exception:
+                    logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")
         return views_data
 
     @helpers.add_rule_unauthenticated('export_report')
