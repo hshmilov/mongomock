@@ -97,7 +97,7 @@ def try_connecting_using_okta(okta_config) -> bool:
             'leeway': leeway
         },
         'issuer': okta_config["url"],
-        'audience': '0oa15qw57jfeRloxd2p7'
+        'audience': okta_config['client_id']
     }
     if 'access_token' in return_value:
         jwt_kwargs['access_token'] = return_value['access_token']
