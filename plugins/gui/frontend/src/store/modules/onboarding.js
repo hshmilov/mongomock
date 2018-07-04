@@ -332,6 +332,7 @@ export const onboarding = {
 						{ title: 'BlackBerry UEM', state: 'blackberry' },
 						{ title: 'MobileIron', state: 'mobileIron' },
 						{ title: 'VMWare Airwatch', state: 'vmwareAirwatch' },
+						{ title: 'G-Suite MDM', state: 'gsuiteMDM' },
 						{ title: 'SKIP', state: 'serviceNowAdapter' }
 					]
 				},
@@ -345,6 +346,10 @@ export const onboarding = {
 				},
 				'blackberry': {
 					id: 'blackberry_uem_adapter', title: 'Blackberry UEM ADAPTER', align: 'right',
+					content: 'Click to configure it.'
+				},
+				'gsuiteMDM': {
+					id: 'mdm_adapter', title: 'G-Suite MDM ADAPTER', align: 'right',
 					content: 'Click to configure it.'
 				},
 				'serviceNowAdapter': {

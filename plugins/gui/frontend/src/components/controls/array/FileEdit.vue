@@ -3,7 +3,7 @@
         <template v-if="uploading">
             <div class="file-name">
                 <svg-icon name="symbol/running" :original="true" height="20" class="rotating"/>
-                <div>Uploading...</div>
+                <div class="name-placeholder">Uploading...</div>
             </div>
         </template>
         <template v-else>
@@ -98,6 +98,9 @@
                     stroke: $grey-3;
                     stroke-width: 6px;
                 }
+            }
+            .name-placeholder {
+                display: inline-block;
             }
         }
     }
