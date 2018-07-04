@@ -179,35 +179,47 @@ class NessusAdapter(ScannerAdapterBase):
         :return: Data structured as expected by adapters
         """
         for device_raw in devices_raw_data:
-            device = self._new_device_adapter()
-            device.figure_os(device_raw.get('info', {}).get('operating-system', ''))
-            device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
-                           [device_raw.get('info', {}).get('host-ip', '')])
-            device.last_seen = parse_date(str(device_raw.get('info', {}).get('host_end', '')))
-            netbios_name = device_raw.get('info', {}).get("netbios-name")
             try:
-                if "\\" in netbios_name:
-                    hostname = netbios_name.split("\\")[1]
-                else:
-                    hostname = netbios_name
-                device.hostname = hostname
-            except Exception:
-                logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
-            vulnerabilities_raw = device_raw.get("vulnerabilities", [])
-            device.vulnerabilities = []
-            for vulnerability_raw in vulnerabilities_raw:
+                device = self._new_device_adapter()
                 try:
-                    new_vulnerability = NessusVulnerability()
-                    new_vulnerability.plugin_id = vulnerability_raw.get("plugin_id")
-                    new_vulnerability.plugin_name = vulnerability_raw.get("plugin_name")
-                    new_vulnerability.severity = str(vulnerability_raw.get("severity"))
-                    new_vulnerability.severity_index = str(vulnerability_raw.get("severity_index"))
-                    new_vulnerability.vuln_index = str(vulnerability_raw.get("vuln_index"))
-                    device.vulnerabilities.append(new_vulnerability)
+                    device.figure_os(str(device_raw.get('info', {}).get('operating-system', '')))
                 except Exception:
-                    logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
-            device.set_raw(device_raw)
-            yield device
+                    logger.exception(f"Problem with figure os on {device_raw}")
+                try:
+                    device.add_nic(device_raw.get('info', {}).get('mac-address', ''),
+                                   [device_raw.get('info', {}).get('host-ip', '')])
+                except Exception:
+                    logger.exception(f"Problems with add nic at device {device_raw}")
+                try:
+                    device.last_seen = parse_date(str(device_raw.get('info', {}).get('host_end', '')))
+                except Exception:
+                    logger.exception(f"Problems with parse date at device {device_raw}")
+                netbios_name = device_raw.get('info', {}).get("netbios-name")
+                try:
+                    if "\\" in netbios_name:
+                        hostname = netbios_name.split("\\")[1]
+                    else:
+                        hostname = netbios_name
+                    device.hostname = hostname
+                except Exception:
+                    logger.warning(f"Couldn't parse hostname from netbios name {netbios_name}")
+                vulnerabilities_raw = device_raw.get("vulnerabilities", [])
+                device.vulnerabilities = []
+                for vulnerability_raw in vulnerabilities_raw:
+                    try:
+                        new_vulnerability = NessusVulnerability()
+                        new_vulnerability.plugin_id = vulnerability_raw.get("plugin_id")
+                        new_vulnerability.plugin_name = vulnerability_raw.get("plugin_name")
+                        new_vulnerability.severity = str(vulnerability_raw.get("severity"))
+                        new_vulnerability.severity_index = str(vulnerability_raw.get("severity_index"))
+                        new_vulnerability.vuln_index = str(vulnerability_raw.get("vuln_index"))
+                        device.vulnerabilities.append(new_vulnerability)
+                    except Exception:
+                        logger.exception(f"Problem adding vulnerability {vulnerability_raw}")
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f"Problems with {device_raw}")
 
     @classmethod
     def adapter_properties(cls):

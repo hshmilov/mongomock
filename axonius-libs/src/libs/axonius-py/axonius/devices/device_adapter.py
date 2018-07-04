@@ -255,6 +255,7 @@ class DeviceAdapter(SmartJsonClass):
         """
         nic = DeviceAdapterNetworkInterface()
         if mac is not None:
+            mac = str(mac)
             if normalize_mac(mac) != '000000000000':
                 try:
                     nic.mac = mac
@@ -307,7 +308,7 @@ class DeviceAdapter(SmartJsonClass):
         self.network_interfaces.append(nic)
 
     def figure_os(self, os_string):
-        os_dict = figure_out_os(os_string)
+        os_dict = figure_out_os(str(os_string))
         if os_dict is None:
             return
         self.os = DeviceAdapterOS(**os_dict)

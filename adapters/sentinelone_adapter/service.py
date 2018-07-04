@@ -6,28 +6,10 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
-
 from sentinelone_adapter.connection import SentinelOneConnection
-from sentinelone_adapter.exceptions import SentinelOneException
+from axonius.clients.rest.exception import RESTException
 from axonius.fields import Field
 from axonius.utils.parsing import parse_date
-
-
-"""
-OS types - should be moved to configuration
-"""
-WINDOWS_NAME = 'Windows'
-OSX_NAME = 'macOS'
-LINUX_NAME = 'Linux'
-
-"""
-Matches SentinelOne IDs
-"""
-sentinelone_ID_Matcher = {
-    WINDOWS_NAME: re.compile('[a-fA-F0-9]{40}'),
-    OSX_NAME: re.compile('[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'),
-    LINUX_NAME: re.compile('[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}')
-}
 
 
 class SentineloneAdapter(AdapterBase):
@@ -35,12 +17,13 @@ class SentineloneAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         agent_version = Field(str, 'Agent Version')
         active_state = Field(str, 'Active State')
+        public_ip = Field(str, "Public IP")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['SentinelOne_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         has_token = bool(client_config.get('token'))
@@ -48,26 +31,31 @@ class SentineloneAdapter(AdapterBase):
         has_user = bool(client_config.get('username')) and bool(client_config.get('password'))
         if has_token and maybe_has_user:
             msg = f"Different logins for SentinelOne domain " \
-                  f"{client_config.get('SentinelOne_Domain')}, user: {client_config.get('username', '')}"
+                  f"{client_config.get('domain')}, user: {client_config.get('username', '')}"
             logger.error(msg)
             raise ClientConnectionException(msg)
         elif maybe_has_user and not has_user:
             msg = f"Missing credentials for SentinelOne domain " \
-                  f"{client_config.get('SentinelOne_Domain')}, user: {client_config.get('username', '')}"
+                  f"{client_config.get('domain')}, user: {client_config.get('username', '')}"
             logger.error(msg)
             raise ClientConnectionException(msg)
         try:
-            connection = SentinelOneConnection(domain=client_config["SentinelOne_Domain"])
+            connection = SentinelOneConnection(domain=client_config["domain"],
+                                               https_proxy=client_config.get("https_proxy"),
+                                               username=client_config.get("username"),
+                                               password=client_config.get("password"),
+                                               url_base_prefix="web/api/v2.0/",
+                                               headers={'Content-Type': 'application/json',
+                                                        'Accept': 'application/json'},
+                                               verify_ssl=client_config["verify_ssl"])
             if has_token:
                 connection.set_token(client_config['token'])
-            else:
-                connection.set_credentials(username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except SentinelOneException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['SentinelOne_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -81,17 +69,7 @@ class SentineloneAdapter(AdapterBase):
         :return: A json with all the attributes returned from the SentinelOne Server
         """
         with client_data:
-            devices_count = 0
-            current_clients_page = client_data.get_device_iterator(limit='200')
-            client_list = current_clients_page['data']
-            last_id = current_clients_page['last_id']
-            while last_id is not None:
-                devices_count += 1
-                logger.info(f"Got {devices_count*200} devices so far")
-                current_clients_page = client_data.get_device_iterator(limit='200', last_id=last_id)
-                client_list.extend(current_clients_page['data'])
-                last_id = current_clients_page['last_id']
-            return client_list
+            yield from client_data.get_device_list()
 
     def _clients_schema(self):
         """
@@ -102,7 +80,7 @@ class SentineloneAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "SentinelOne_Domain",
+                    "name": "domain",
                     "title": "Sentinel One Domain",
                     "type": "string"
                 },
@@ -120,72 +98,76 @@ class SentineloneAdapter(AdapterBase):
                 {
                     "name": "token",
                     "title": "API token",
+                    "type": "string",
+                    "format": "password"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS Proxy",
                     "type": "string"
                 },
+                {
+                    "name": "verify_ssl",
+                    "title": "Verify SSL",
+                    "type": "bool"
+                }
             ],
             "required": [
-                "SentinelOne_Domain"
+                "domain",
+                "verify_ssl"
             ],
             "type": "array"
         }
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            soft_info = device_raw.get('software_information', {})
-            net_info = device_raw.get('network_information', {})
-            device = self._new_device_adapter()
-            computer_name, domain = net_info.get('computer_name'), net_info.get('domain')
-            if computer_name is not None:
-                hostname = computer_name
-                if domain is not None:
-                    hostname = f"{hostname}.{domain}"
-                device.hostname = hostname
-            device.domain = net_info.get('domain')
-            device.figure_os(' '.join([soft_info.get('os_name', ''), soft_info.get(
-                'os_arch', ''), soft_info.get('os_revision', '')]))
-            for interface in net_info.get('interfaces', []):
+            try:
+                device = self._new_device_adapter()
+                device.id = device_raw['id']
+                device.agent_version = device_raw.get('agentVersion')
+                device.last_seen = parse_date(str(device_raw.get('lastActiveDate', '')))
+                device.public_ip = device_raw.get("externalIp")
+                device.domain = device_raw.get("domain")
                 try:
-                    device.add_nic(interface.get('physical'), interface.get('inet6', []) + interface.get('inet', []))
+                    ad_domain = ""
+                    ad_nodes_names = device_raw.get("activeDirectory", {}).\
+                        get("computerDistinguishedName", "").split(',')
+                    for ad_node in ad_nodes_names:
+                        ad_node_split = ad_node.split('=')
+                        if len(ad_node_split) != 2:
+                            continue
+                        if ad_node_split[0].upper() != "DC":
+                            continue
+                        ad_domain += "." + ad_node_split[1]
                 except Exception:
-                    logger.exception(f"Problem adding nic {str(interface)} to SentinelOne")
-            device.agent_version = device_raw.get('agent_version')
-            device.id = device_raw['id']
-            device.last_seen = parse_date(str(device_raw.get('last_active_date', '')))
-            device.active_state = device_raw.get('is_active')
-            device.set_raw(device_raw)
-            yield device
-
-    def _correlation_cmds(self):
-        """
-        Correlation commands for SentinelOne
-        :return: shell commands that help correlations
-        """
-
-        # Both the agent id and the agent unique id remain intact when uninstalling
-        # We chose the uuid as it's a globally unique id and not a mongoDB one
-        # return {
-        #     WINDOWS_NAME: r"""
-        #                 Powershell -Command "& invoke-command -ScriptBlock {$bla = Get-ItemPropertyValue Registry::'HKLM\SYSTEM\CurrentControlSet\Services\SentinelMonitor\Config' -Name InProcessClientsDir; cmd /c "`\"${bla}SentinelCtl.exe`\" agent_id"}"
-        #                """.strip(),
-        #     OSX_NAME: """system_profiler SPHardwareDataType | awk '/UUID/ { print $3; }'""",
-        #     LINUX_NAME: """cat /sys/class/dmi/id/product_uuid"""
-        # }
-        raise NotImplementedError('; cannot be used as a separator')
-
-    def _parse_correlation_results(self, correlation_cmd_result, os_type):
-        """
-        Parses (very easily) the correlation cmd result, or None if failed
-        :type correlation_cmd_result: str
-        :param correlation_cmd_result: result of running cmd on a machine
-        :type os_type: str
-        :param os_type: the type of machine ran upon
-        :return:
-        """
-        if os_type in sentinelone_ID_Matcher:
-            return next(sentinelone_ID_Matcher[os_type].findall(correlation_cmd_result.strip()), None)
-        else:
-            logger.warning("The OS type {0} doesn't have a sentinelone matcher", os_type)
-            return None
+                    logger.exception(f"Problem getting SentinelOne AD info {device_raw}")
+                computer_name = device_raw.get('computerName')
+                if computer_name is not None:
+                    hostname = computer_name
+                    if ad_domain is not None and ad_domain != "" and ad_domain.upper() != "N/A":
+                        hostname = f"{hostname}{ad_domain}"
+                    device.hostname = hostname
+                device.figure_os(device_raw.get("osType", "") + " " + device_raw.get("osName"))
+                interfaces = device_raw.get("networkInterfaces", [])
+                for interface in interfaces:
+                    try:
+                        device.add_nic(interface.get('physical'),
+                                       interface.get('inet6', []) + interface.get('inet', []),
+                                       name=interface.get('name'))
+                    except Exception:
+                        logger.exception(f"Problem adding nic {str(interface)} to SentinelOne")
+                try:
+                    device.last_used_users = device_raw.get("lastLoggedInUserName", "").split(',')
+                except Exception:
+                    logger.exception(f"Problem with adding users to {device_raw}")
+                try:
+                    device.total_physical_memory = int(device_raw.get("totalMemory", 0)) / 1024.0
+                except Exception:
+                    logger.exception(f"Problem with adding memory to {device_raw}")
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f"Got problems with device {device_raw}")
 
     @classmethod
     def adapter_properties(cls):

@@ -396,6 +396,7 @@ def parse_date(datetime_to_parse):
         if type(datetime_to_parse) == datetime.datetime:
             # sometimes that happens too
             return datetime_to_parse
+        datetime_to_parse = str(datetime_to_parse)
         d = dateutil.parser.parse(datetime_to_parse).astimezone(datetime.timezone.utc)
 
         # Sometimes, this would be a fake date (see is_date_real). in this case return None

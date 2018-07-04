@@ -15,7 +15,7 @@ class TenableSecurityScannerConnection(RESTConnection):
             # We need to post to 'token' and get the token and cookie.
             connection_dict = {'username': self._username,
                                'password': self._password,
-                               'releaseSession': False}  # releaseSession is default false
+                               'releaseSession': True}  # releaseSession is default false
 
             response = self._post("token", body_params=connection_dict)
             if response.get('releaseSession') is True:
@@ -46,6 +46,16 @@ class TenableSecurityScannerConnection(RESTConnection):
         super().close()
 
     def get_device_list(self):
+        repositories = self._get('repository')
+        repositories_ids = [repository.get('id', '') for repository in repositories]
+        for repository_id in repositories_ids:
+            try:
+                if repository_id != '':
+                    yield from self.get_device_list_from_repository(repository_id)
+            except Exception:
+                logger.exception(f"Problem with repository {repository_id}")
+
+    def get_device_list_from_repository(self, repository_id):
         start_offest = 0
         end_offset = consts.DEVICE_PER_PAGE
         # This API is half documented. Ofri got this API after playing with the instance
@@ -54,14 +64,20 @@ class TenableSecurityScannerConnection(RESTConnection):
                                                        "query": {'tool': 'sumip',
                                                                  'type': 'vuln',
                                                                  'startOffset': start_offest,
-                                                                 'endOffset': end_offset}})
+                                                                 'endOffset': end_offset,
+                                                                 'filters': [{
+                                                                     'filterName': 'repository', 'id': 'repository',
+                                                                     'isPredefined': True, 'operator': '=',
+                                                                     'type': 'vuln', 'value': [{'id': repository_id}]
+                                                                 }]}})
         start_offest += consts.DEVICE_PER_PAGE
         end_offset += consts.DEVICE_PER_PAGE
         yield from response["results"]
         total_records = response["totalRecords"]
         records_returned = response["returnedRecords"]
         logger.info(f"Got {records_returned} out of {total_records} at the first page")
-        while start_offest < total_records and start_offest < consts.MAX_RECORDS:
+        while int(start_offest) < int(total_records) \
+                and int(start_offest) < int(consts.MAX_RECORDS):
             try:
                 response = self._post("analysis", body_params={"type": "vuln",
                                                                "sourceType": "cumulative",
