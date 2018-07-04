@@ -99,6 +99,44 @@ def beautify_db_entry(entry):
     return tmp
 
 
+# this is a magic that means that the value shouldn't be changed, i.e. when used by passwords
+# that aren't sent to the client from the server and if they aren't modified we need to not change them
+UNCHANGED_MAGIC_FOR_GUI = ['unchanged']
+
+
+def clear_passwords_fields(data, schema):
+    """
+    Assumes "data" is organized according to schema and nullifies all password fields
+    """
+    if not data:
+        return data
+    if schema.get('format') == 'password':
+        return UNCHANGED_MAGIC_FOR_GUI
+    if schema['type'] == 'array':
+        for item in schema['items']:
+            if item['name'] in data:
+                data[item['name']] = clear_passwords_fields(data[item['name']], item)
+        return data
+    return data
+
+
+def refill_passwords_fields(data, data_from_db):
+    """
+    Uses `data_from_db` to fill out "incomplete" (i.e. "unchanged") data in `data`
+    """
+    if data == UNCHANGED_MAGIC_FOR_GUI:
+        return data_from_db
+    if isinstance(data, dict):
+        for key in data.keys():
+            if key in data_from_db:
+                data[key] = refill_passwords_fields(data[key], data_from_db[key])
+        return data
+    if isinstance(data, list):
+        raise RuntimeError("We shouldn't have lists in schemas")
+
+    return data
+
+
 def filter_archived(additional_filter=None):
     """
     Returns a filter that filters out archived values
@@ -852,6 +890,8 @@ class GuiService(PluginBase, Configurable, API):
                 schema = self._get_plugin_schemas(db_connection, adapter_name)['clients']
                 clients = [beautify_db_entry(client) for client in clients_collection.find()
                            .sort([('_id', pymongo.DESCENDING)])]
+                for client in clients:
+                    client['client_config'] = clear_passwords_fields(client['client_config'], schema)
                 status = ''
                 if len(clients):
                     clients_connected = clients_collection.find({'status': 'success'}, projection={'_id': 1}).count()
@@ -861,18 +901,20 @@ class GuiService(PluginBase, Configurable, API):
                                            'unique_plugin_name': adapter_name,
                                            'status': status,
                                            'supported_features': adapter['supported_features'],
-                                           'schema': schema, 'clients': clients,
+                                           'schema': schema,
+                                           'clients': clients,
                                            'config': self.__extract_configs_and_schemas(db_connection,
                                                                                         adapter_name)
                                            })
 
             return jsonify(adapters_to_return)
 
-    def _query_client_for_devices(self, request, adapter_unique_name):
+    def _query_client_for_devices(self, request, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_add = request.get_json(silent=True)
         if client_to_add is None:
             return return_error("Invalid client", 400)
-
+        if data_from_db_for_unchanged:
+            client_to_add = refill_passwords_fields(client_to_add, data_from_db_for_unchanged['client_config'])
         # adding client to specific adapter
         response = self.request_remote_plugin("clients", adapter_unique_name, method='put', json=client_to_add)
         if response.status_code == 200:
@@ -938,11 +980,13 @@ class GuiService(PluginBase, Configurable, API):
         :param client_id: UUID of client to delete
         :return:
         """
+        if request.method == 'PUT':
+            client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
-            return self._query_client_for_devices(request, adapter_unique_name)
-        if request.method == 'DELETE':
-            return '', 200
+            return self._query_client_for_devices(request, adapter_unique_name, data_from_db_for_unchanged=client_from_db)
+
+        return '', 200
 
     @helpers.add_rule_unauthenticated("actions/<action_type>", methods=['POST'])
     def actions_run(self, action_type):
