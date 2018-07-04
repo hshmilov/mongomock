@@ -40,7 +40,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8_to_timedelta, \
     is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip, \
-    get_organizational_units_from_dn, get_member_of_list_from_memberof, get_first_object_from_dn
+    get_organizational_units_from_dn, get_member_of_list_from_memberof, get_first_object_from_dn, parse_bool_from_raw
 
 
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
@@ -371,7 +371,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         ad_entity.ad_usn_created = raw_data.get("uSNCreated")
         ad_entity.ad_when_changed = parse_date(raw_data.get("whenChanged"))
         ad_entity.ad_when_created = parse_date(raw_data.get("whenCreated"))
-        ad_entity.ad_is_critical_system_object = raw_data.get("isCriticalSystemObject")
+        ad_entity.ad_is_critical_system_object = parse_bool_from_raw(raw_data.get("isCriticalSystemObject"))
         ad_entity.ad_member_of = get_member_of_list_from_memberof(raw_data.get("memberOf"))
         ad_entity.ad_managed_by = get_first_object_from_dn(raw_data.get('managedBy'))
         ad_entity.ad_msds_allowed_to_delegate_to = raw_data.get("msDS-AllowedToDelegateTo")
@@ -427,7 +427,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 user.is_local = False
                 is_admin = user_raw.get("adminCount")
                 if is_admin is not None:
-                    user.is_admin = bool(is_admin)
+                    user.is_admin = parse_bool_from_raw(is_admin)
 
                 use_timestamps = []  # Last usage times
                 user.account_expires = parse_date(user_raw.get("accountExpires"))
@@ -1136,6 +1136,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         if wmi_smb_commands is None:
             return {"result": 'Failure', "product": 'No WMI/SMB queries/commands list supplied'}
 
+        # In some scenarios, we think we run code on device X while the dns is incorrect and it makes us
+        # run code on device Y which has the same ip. That is why we append hostname query.
+        # if the hostname returns, we see if the hostname we know this machine has is the same as what returned.
+        wmi_smb_commands.append({"type": "query", "args": ["select Name from Win32_ComputerSystem"]})
+
         command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(wmi_smb_commands)]
         logger.debug("running wmi {0}".format(command_list))
 
@@ -1174,16 +1179,44 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         product = json.loads(command_stdout.strip())
         logger.debug("command returned with return code 0 (successfully).")
 
-        # Optimization if all failed
-        if all([True if line['status'] != 'ok' else False for line in product]):
-            return {"result": 'Failure', "product": product}
-
         # Some more validity check
         if len(product) != len(wmi_smb_commands):
             err_log = f"Error, needed to run {wmi_smb_commands} and expected the same length in return " \
                       f"but got {product}, stdout {command_stdout} stderr {command_stderr}"
             logger.error(err_log)
             raise ValueError(err_log)
+
+        # product[0] should have the hostname.
+        hostname_answer = product.pop()
+        try:
+            if hostname_answer['status'] == 'ok':
+                hostname_on_device = hostname_answer["data"][0].get("Name")
+                hostname_on_ad = device_data['data']['hostname']
+                if hostname_on_device is not None and hostname_on_device != "" and hostname_on_ad != "":
+                    hostname_on_device = hostname_on_device.lower()
+                    hostname_on_ad = hostname_on_ad.lower()
+                    if not (hostname_on_device.startswith(hostname_on_ad) or
+                            hostname_on_ad.startswith(hostname_on_device)):
+
+                        logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
+                                       f"of {hostname_on_device}! Adding tags and failing")
+
+                        identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
+                        self.devices.add_label([identity_tuple], "Hostname Conflict")
+                        self.devices.add_data([identity_tuple], "Hostname Conflict",
+                                              f"Hostname from Active Directory: '{hostname_on_ad}'\n'"
+                                              f"Hostname on device: '{hostname_on_device}'")
+
+                        return {
+                            "result": 'Failure',
+                            "product": f"Hostname Mismatch. Expected {hostname_on_ad} but got {hostname_on_device}"
+                        }
+        except Exception:
+            logger.exception("Exception in checking the hostname, continuing without check")
+
+        # Optimization if all failed
+        if all([True if line['status'] != 'ok' else False for line in product]):
+            return {"result": 'Failure', "product": product}
 
         # If we got here that means the the command executed successfuly
         return {"result": 'Success', "product": product}

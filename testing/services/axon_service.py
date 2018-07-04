@@ -1,5 +1,7 @@
 import time
 from abc import ABC, abstractmethod
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class TimeoutException(Exception):

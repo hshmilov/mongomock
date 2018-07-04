@@ -1,6 +1,5 @@
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.parsing import parse_date
-from axonius.utils import str2bool
+from axonius.utils.parsing import parse_date, parse_bool_from_raw
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, \
     smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, reg_view_parse_int
@@ -111,7 +110,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             adapterdata_device.domain = win32_computersystem.get("Domain")
             partofdomain = win32_computersystem.get("PartOfDomain")
             if partofdomain is not None:
-                adapterdata_device.part_of_domain = str2bool(partofdomain)
+                adapterdata_device.part_of_domain = parse_bool_from_raw(partofdomain)
 
             # Type of system
             pc_system_type = win32_computersystem.get("PCSystemType")
@@ -285,7 +284,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             assert is_wmi_answer_ok(win32_networkadapterconfiguration), "WMI Answer has an exception"
             for nic in win32_networkadapterconfiguration["data"]:
                 ip_enabled = nic.get("IPEnabled")
-                if ip_enabled is not None and bool(ip_enabled) is True:
+                if ip_enabled is not None and parse_bool_from_raw(ip_enabled) is True:
                     adapterdata_device.add_nic(
                         mac=nic.get("MACAddress"),
                         ips=nic.get("IPAddress")

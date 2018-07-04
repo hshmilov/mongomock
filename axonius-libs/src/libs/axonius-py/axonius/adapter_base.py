@@ -609,7 +609,11 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             return
 
         # Sending the result to the issuer
-        self._update_action_data(action_id, status="finished", output=result)
+        if str(result.get('result')).lower() == 'success':
+            status = "finished"
+        else:
+            status = "failed"
+        self._update_action_data(action_id, status=status, output=result)
 
     def _create_action_thread(self, device, func, action_id, **kwargs):
         """ Function for creating action thread.

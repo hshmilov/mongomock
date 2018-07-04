@@ -19,6 +19,8 @@ import sys
 import requests
 import time
 from datetime import datetime
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 URL = "https://localhost/api/version?whoami=periodic_api_version_runner"
 SLEEP_COUNT = 10  # In seconds.

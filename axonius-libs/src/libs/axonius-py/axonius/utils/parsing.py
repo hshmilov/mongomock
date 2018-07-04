@@ -55,6 +55,29 @@ mac_manufacturer_details = {x[1]: x for x in
 del oui_data
 
 
+def parse_bool_from_raw(bool_raw_value, raise_on_exception=False):
+    """
+    Gets a raw value and returns the bool from it. we do it since bool(x) isn't good enough,
+    e.g. bool("false") is True.
+    :param bool_raw_value: the raw value
+    :param raise_on_exception: (optional) raise an exception if you can't succeed. otherwise return None
+    :return:
+    """
+    # All of the below can happen
+    if type(bool_raw_value) == bool:
+        return bool_raw_value
+    elif type(bool_raw_value) == int:
+        return bool(bool_raw_value)
+    elif type(bool_raw_value) == str and bool_raw_value.lower() in ["true", "false", "0", "1"]:
+        return bool_raw_value.lower() in ["true", "1"]
+
+    if raise_on_exception is True:
+        raise ValueError(f"{bool_raw_value} isn't a boolean value")
+
+    else:
+        return None
+
+
 def get_manufacturer_from_mac(mac: str) -> str:
     if mac:
         mac = format_mac(mac).replace(':', '')[:6]

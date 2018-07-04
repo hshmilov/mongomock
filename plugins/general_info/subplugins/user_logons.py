@@ -3,6 +3,7 @@ import threading
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, is_wmi_answer_ok
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.parsing import parse_bool_from_raw
 
 USERS_QUERY_TRESHOLD_HOURS = 1  # Hours to query users_to_sids per each adapter
 
@@ -107,17 +108,6 @@ class GetUserLogons(GeneralInfoSubplugin):
             # whats the actual name of the account, is it disabled, and more.
             caption = user.get('Caption')  # This comes in a format of domain\user. transform to user@domain.
             sid = user.get('SID')
-            is_local_account = user.get('LocalAccount')
-            is_disabled_raw = user.get('Disabled')
-            is_disabled = None
-
-            # All of the below can happen
-            if type(is_disabled_raw) == bool:
-                is_disabled = is_disabled_raw
-            elif type(is_disabled_raw) == int:
-                is_disabled = bool(is_disabled_raw)
-            elif type(is_disabled_raw) == str and is_disabled_raw.lower() in ["true", "false"]:
-                is_disabled = True if is_disabled_raw.lower() == "true" else False
 
             if caption is None or sid is None:
                 self.logger.error(f"Couldn't find Caption/SID in user_accounts_data: {user} not enriching")
@@ -125,8 +115,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                 local_hostname, local_username = caption.split("\\")
                 user_object = {
                     "username": f"{local_username}@{local_hostname}",
-                    "is_local": is_local_account if type(is_local_account) is bool else None,
-                    "is_disabled": is_disabled if type(is_disabled) is bool else None
+                    "is_local": parse_bool_from_raw(user.get('LocalAccount')),
+                    "is_disabled": parse_bool_from_raw(user.get('Disabled'))
                 }
                 users_on_this_device[sid] = user_object
                 sids_to_users[sid] = user_object

@@ -6,7 +6,9 @@ import json
 import zipfile
 import logging
 import threading
+import requests.exceptions
 from general_info.utils.nvd_nist import nvd_update
+from axonius.utils.parsing import get_exception_string
 
 logger = logging.getLogger(f"axonius.{__name__}")
 
@@ -38,7 +40,12 @@ class NVDSearcher(object):
         Updates the NVD DB.
         :return:
         """
-        nvd_update.update()
+        try:
+            nvd_update.update()
+        except requests.exceptions.RequestException:
+            logger.warning(f"Warning, Internet problem. moving on: {get_exception_string()}")
+        except Exception:
+            logger.exception("Can't update nvd database, loading what's in the disk")
         self._load_artifacts()
 
     def _load_artifacts(self):
