@@ -9,6 +9,7 @@ export const LOGOUT = 'LOGOUT'
 export const INIT_USER = 'INIT_USER'
 export const INIT_ERROR = 'INIT_ERROR'
 export const GET_LOGIN_OPTIONS = 'GET_LOGIN_OPTIONS'
+export const CHANGE_PASSWORD = 'CHANGE_PASSWORD'
 
 
 export const auth = {
@@ -136,6 +137,19 @@ export const auth = {
 				// this is needed because google login only works from top page
             	if (window.location.pathname != '/') window.location.pathname = '/'
 			})
-		}
+		},
+		[ CHANGE_PASSWORD ] ({dispatch, commit}, payload) {
+			/*
+				Request from server to login a user according to its Google token id
+			 */
+			if (!payload || !payload.user_name || !payload.old_password || !payload.new_password) {
+				return
+			}
+			return dispatch(REQUEST_API, {
+				rule: 'authusers',
+				method: 'POST',
+				data: payload
+			})
+		},
 	}
 }

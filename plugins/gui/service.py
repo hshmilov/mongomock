@@ -159,7 +159,8 @@ class GuiService(PluginBase, Configurable, API):
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
         self._get_collection('users').update({'user_name': 'admin'},
-                                             {'user_name': 'admin', 'password': bcrypt.hash('cAll2SecureAll'),
+                                             {'user_name': 'admin',
+                                              'password': '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
                                               'first_name': 'administrator', 'last_name': '',
                                               'pic_name': self.DEFAULT_AVATAR_PIC}, upsert=True)
 
@@ -1023,7 +1024,7 @@ class GuiService(PluginBase, Configurable, API):
             sort.append(('report_creation_time', pymongo.DESCENDING))
         return [beautify_db_entry(report) for report in
                 self._get_collection('reports', db_name=report_service).find(
-            mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)]
+                    mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)]
 
     def put_alert(self, report_to_add):
         view_name = report_to_add['view']
@@ -1351,7 +1352,7 @@ class GuiService(PluginBase, Configurable, API):
             if user is None:
                 return return_error('', 401)
             if 'password' in user:
-                del user['password']
+                user = {k: v for k, v in user.items() if k != 'password'}
             return jsonify(user), 200
 
         users_collection = self._get_collection('users')
@@ -1508,36 +1509,41 @@ class GuiService(PluginBase, Configurable, API):
         session['user'] = None
         return ""
 
-    # @helpers.paginated()
-    # @add_rule("users", methods=['GET', 'POST'])
-    # def users(self, limit, skip):
-    #     """
-    #     View or add users
-    #     :param limit: limit for pagination
-    #     :param skip: start index for pagination
-    #     :return:
-    #     """
-    #     users_collection = self._get_collection('users')
-    #     if request.method == 'GET':
-    #         return jsonify(beautify_db_entry(n) for n in
-    #                        users_collection.find(projection={
-    #                            "_id": 1,
-    #                            "user_name": 1,
-    #                            "first_name": 1,
-    #                            "last_name": 1,
-    #                            "pic_name": 1}).sort(
-    #                            [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
-    #     elif request.method == 'POST':
-    #         user_data = self.get_request_data_as_object()
-    #         users_collection.update({'user_name': user_data['user_name']},
-    #                                 {'user_name': user_data['user_name'],
-    #                                  'first_name': user_data.get('first_name'),
-    #                                  'last_name': user_data.get('last_name'),
-    #                                  'pic_name': user_data.get('pic_name'),
-    #                                  'password': bcrypt.hash(user_data['password']),
-    #                                  },
-    #                                 upsert=True)
-    #         return "", 201
+    @helpers.paginated()
+    @helpers.add_rule_unauthenticated("authusers", methods=['GET', 'POST'])
+    def authusers(self, limit, skip):
+        """
+        View or add users
+        :param limit: limit for pagination
+        :param skip: start index for pagination
+        :return:
+        """
+        users_collection = self._get_collection('users')
+        if request.method == 'GET':
+            return jsonify(beautify_db_entry(n) for n in
+                           users_collection.find(projection={
+                               "_id": 1,
+                               "user_name": 1,
+                               "first_name": 1,
+                               "last_name": 1,
+                               "pic_name": 1}).sort(
+                               [('_id', pymongo.ASCENDING)]).skip(skip).limit(limit))
+        elif request.method == 'POST':
+            post_data = self.get_request_data_as_object()
+            user = session.get('user')
+            if user['user_name'] != post_data['user_name']:
+                return return_error("Login to your user first")
+            if not bcrypt.verify(post_data['old_password'], user['password']):
+                return return_error("Given password is wrong")
+            users_collection.update({'user_name': user['user_name']},
+                                    {
+                                        "$set": {
+                                            'password': bcrypt.hash(post_data['new_password'])
+                                        }
+            })
+            user_from_db = users_collection.find_one({'user_name': user['user_name']})
+            session['user'] = user_from_db
+            return "", 200
 
     @helpers.paginated()
     @helpers.add_rule_unauthenticated("logs")

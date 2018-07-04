@@ -40,6 +40,37 @@
                     </template>
                 </div>
             </tab>
+            <tab title="Change admin password" id="change-admin-password">
+                <div class="tab-settings">
+                    <x-schema-form :schema="{type:'array','items':[
+                        {
+                            name: 'currentPassword',
+                            title: 'Current password',
+                            type: 'string',
+                            format: 'password'
+                        },
+                        {
+                            name: 'newPassword',
+                            title: 'New password',
+                            type: 'string',
+                            format: 'password'
+                        },
+                        {
+                            name: 'confirmNewPassword',
+                            title: 'Confirm new password',
+                            type: 'string',
+                            format: 'password'
+                        },
+                     ], required: ['currentPassword', 'newPassword', 'confirmNewPassword']}"
+                                   v-model="adminChangePassword"
+                                   @validate="updateChangePassValidity"/>
+                    <div class="place-right">
+                        <button class="x-btn" :class="{disabled: !adminChangePasswordComplete}" @click="doChangePassword">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </tab>
             <tab title="About" id="about-settings-tab">
                 <div class="tab-settings">
                     <x-custom-data :data="system_info" :vertical="true"/>
@@ -64,6 +95,7 @@
     import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG, CHANGE_PLUGIN_CONFIG } from "../../store/modules/configurable";
     import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '../../store/actions'
     import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
+    import { CHANGE_PASSWORD } from "../../store/modules/auth";
 
 	export default {
         name: 'settings-container',
@@ -76,6 +108,9 @@
                 },
                 configurable(state) {
                     return state.configurable
+                },
+                userName(state) {
+                	return state.auth.data.user_name
                 }
             }),
             limit() {
@@ -101,9 +136,15 @@
         data() {
             return {
                 coreComplete: true,
-				guiComplete: true,
+                guiComplete: true,
                 message: '',
-                system_info: {}
+                system_info: {},
+                adminChangePassword: {
+                    currentPassword: null,
+                    newPassword: null,
+                    confirmNewPassword: null
+                },
+                adminChangePasswordComplete: false,
             }
         },
         methods: {
@@ -115,7 +156,8 @@
                 startResearch: START_RESEARCH_PHASE,
                 stopResearch: STOP_RESEARCH_PHASE,
                 updatePluginConfig: SAVE_PLUGIN_CONFIG,
-                loadPluginConfig: LOAD_PLUGIN_CONFIG
+                loadPluginConfig: LOAD_PLUGIN_CONFIG,
+                changePassword: CHANGE_PASSWORD
             }),
             validNumber(value) {
 				if (value === undefined || isNaN(value) || value <= 0) {
@@ -149,9 +191,32 @@
             updateCoreValidity(valid) {
                 this.coreComplete = valid
             },
-			updateGuiValidity(valid) {
-				this.guiComplete = valid
-			},
+            updateGuiValidity(valid) {
+                this.guiComplete = valid
+            },
+            updateChangePassValidity(valid) {
+                this.adminChangePasswordComplete = valid
+            },
+            doChangePassword() {
+                if (!this.adminChangePasswordComplete) return
+                if (this.adminChangePassword.newPassword !== this.adminChangePassword.confirmNewPassword) {
+                    this.message = "Passwords don't match"
+                    return
+                }
+                this.changePassword({
+                    'user_name': this.userName,
+                    'old_password': this.adminChangePassword.currentPassword,
+                    'new_password': this.adminChangePassword.newPassword
+                }).then(() => {
+                    this.message = "Password changed"
+                    this.adminChangePassword.currentPassword = null
+                    this.adminChangePassword.newPassword = null
+                    this.adminChangePassword.confirmNewPassword = null
+                    this.adminChangePassword = {...this.adminChangePassword}
+                }).catch(error => {
+                    this.message = JSON.parse(error.request.response).message
+			    })
+            },
             saveGuiSettings() {
             	if (!this.guiComplete) return
                 this.updatePluginConfig({
