@@ -36,7 +36,7 @@ from pip._vendor.packaging import markers as pip_markers
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--out', type=str, default='axonius_install_{version}.py')
+    parser.add_argument('-o', '--out', type=str, default='axonius_{version}.py')
     parser.add_argument('--version', type=str, default='')
     parser.add_argument('--override', action='store_true', default=False, help='Override output file if already exists')
     parser.add_argument('--pull', action='store_true', default=False, help='Pull base image before rebuild')

@@ -60,7 +60,7 @@
       "type": "shell",
       "inline": [
         "rm -f /home/ubuntu/axonius_{{user `build_name`}}.py",
-        "history -w && history -c"
+        "cat /dev/null > /home/ubuntu/.bash_history"
         ]
     }
   ],
@@ -71,7 +71,7 @@
         "mkdir ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}",
         "mv ./axonius_{{user `build_name`}}.py ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/",
         "ovftool ./output-axonius-{{user `build_name` }}-build/*.vmx ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova",
-        "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassword/Releases/",
+        "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassshare/Releases/",
         "echo 'Password2' | sudo -S chmod -R 0744 /mnt/smb_share/nopassshare/Releases/{{user `build_name`}}",
         "aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} s3://axonius-releases/{{user `build_name`}}/ --acl public-read",
         "rm -rf ./output-axonius-{{user `build_name` }}-build"
