@@ -18,23 +18,16 @@
                 </x-card>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <template v-if="chart.type == 'compare'">
-                            Showing for  <x-date-edit @input="confirmPickDate(chartsCurrentlyShowing[chart.name], chart.name)" placeholder="latest" v-model="chartsCurrentlyShowing[chart.name]" :show-time="false"/>
-                            <!--<template v-if="chart.showingHistorical">-->
-                                <!--Showing for {{chart.showingHistorical}}-->
-                            <!--</template>-->
-                            <!--<template v-else>-->
-                                <!--Showing latest data-->
-                            <!--</template>-->
+                    <div v-if="chart.type == 'compare'" class="timeline">Showing for
+                        <x-date-edit @input="confirmPickDate(chartsCurrentlyShowing[chart.name], chart.name)"
+                                     placeholder="latest" v-model="chartsCurrentlyShowing[chart.name]" :show-time="false"/>
                         <a v-if="chart.showingHistorical" class="link" @click="clearDate(chart.name)">clear</a>
-                    </template>
-                    <components :is="chart.type" :data="chart.data"
-                    @click-one="runChartFilter(chartInd, $event)"/>
+                    </div>
+                    <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle-chart :data="lifecycle.subPhases"/>
-                    <div class="cycle-time">Next cycle starts in
-                        <div class="blue">{{ nextRunTime }}</div>
+                    <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div>
                     </div>
                 </x-card>
                 <x-card title="New Chart" class="chart-new print-exclude">
@@ -246,7 +239,7 @@
                     date: pendingDateChosen
                 }).then(response => {
                     if (_.isEmpty(response.data)) {
-                        this.message = `Can't gather any data from ${pendingDateChosen} for '${cardName}', perhaps try another?`
+                        this.message = `Can't gather any data from ${pendingDateChosen} for '${cardName}'`
                         this.clearDate(cardName)
                     }
                     else {
@@ -313,6 +306,22 @@
         .x-card {
             width: 320px;
             height: 320px;
+            .timeline {
+                font-size: 12px;
+                color: $grey-4;
+                text-align: right;
+                margin-bottom: 8px;
+                .cov-vue-date {
+                    width: auto;
+                    margin-left: 4px;
+                    .cov-datepicker {
+                        line-height: 16px;
+                    }
+                    .cov-date-body {
+                        max-width: 240px;
+                    }
+                }
+            }
         }
         .chart-lifecycle {
             display: flex;

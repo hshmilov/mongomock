@@ -84,6 +84,7 @@
         .remainder {
             position: absolute;
             bottom: 0;
+            right: 0;
             font-size: 14px;
             color: $indicator-info;
         }
