@@ -145,16 +145,19 @@ class ReportGenerator(object):
                 if not custom_chart.get('type') or not custom_chart.get('data'):
                     continue
                 title = custom_chart.get('name', f'Custom Chart {i}')
-                if custom_chart['type'] == ChartTypes.compare.name:
-                    content = self._create_query_histogram(custom_chart['data'])
-                elif custom_chart['type'] == ChartTypes.intersect.name:
-                    query_pie_filename = f'{self.output_path}{"_".join(title.split(" "))}.png'
-                    svg2png(bytestring=self._create_query_pie(custom_chart['data']), write_to=query_pie_filename)
-                    content = f'<img src="{query_pie_filename}">'
-                if not content:
-                    continue
-                charts_added += 1
-                summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
+                try:
+                    if custom_chart['type'] == ChartTypes.compare.name:
+                        content = self._create_query_histogram(custom_chart['data'])
+                    elif custom_chart['type'] == ChartTypes.intersect.name:
+                        query_pie_filename = f'{self.output_path}{"_".join(title.split(" "))}.png'
+                        svg2png(bytestring=self._create_query_pie(custom_chart['data']), write_to=query_pie_filename)
+                        content = f'<img src="{query_pie_filename}">'
+                    if not content:
+                        continue
+                    charts_added += 1
+                    summary_content.append(self.templates['card'].render({'title': title, 'content': content}))
+                except Exception:
+                    logger.exception(f"Problem adding pie chart to reports with title: {title}")
             logger.info(f'Report Generator, Summary Section: Added {charts_added} Custom Panels')
         return '\n'.join(summary_content)
 
