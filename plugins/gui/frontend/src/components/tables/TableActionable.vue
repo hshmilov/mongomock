@@ -40,7 +40,7 @@
             display: flex;
             padding: 8px;
             line-height: 24px;
-            background: $grey-1;
+            background: $grey-0;
             .x-title {
                 display: flex;
                 .count {

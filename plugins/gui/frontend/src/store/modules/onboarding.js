@@ -378,7 +378,7 @@ export const onboarding = {
 				},
 				'adaptersData': {
 					id: 'specific', title: 'ADAPTERS DATA', align: 'top',
-					content: 'Here you can see all device data from a it\'s Adapters.'
+					content: 'Here you can see all device data from its Adapters.'
 				},
 				'adapterDevice': {
 					title: 'DEVICE ADAPTER', emphasize: false,
