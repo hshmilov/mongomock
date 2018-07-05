@@ -150,7 +150,10 @@ class ReportGenerator(object):
                         content = self._create_query_histogram(custom_chart['data'])
                     elif custom_chart['type'] == ChartTypes.intersect.name:
                         query_pie_filename = f'{self.output_path}{"_".join(title.split(" "))}.png'
-                        svg2png(bytestring=self._create_query_pie(custom_chart['data']), write_to=query_pie_filename)
+                        byte_string = self._create_query_pie(custom_chart['data'])
+                        if byte_string == '':
+                            continue
+                        svg2png(bytestring=byte_string, write_to=query_pie_filename)
                         content = f'<img src="{query_pie_filename}">'
                     if not content:
                         continue
