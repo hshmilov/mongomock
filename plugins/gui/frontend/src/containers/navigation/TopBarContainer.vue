@@ -153,7 +153,7 @@
 
 <style lang="scss">
     .x-top-bar {
-        background: $grey-1;
+        background: $grey-0;
         position: fixed;
         top: 0;
         width: 100%;

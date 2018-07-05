@@ -178,8 +178,8 @@
                 }
             },
             charts(newCharts, oldCharts) {
-                if (oldCharts && !oldCharts.length && newCharts && newCharts.length === 1) {
-                    this.newChart = this.getId(newCharts[0].name)
+                if (newCharts && newCharts.length && (!oldCharts || oldCharts.length < newCharts.length)) {
+                    this.newChart = this.getId(newCharts[newCharts.length - 1].name)
                 }
             }
         },

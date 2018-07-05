@@ -382,7 +382,7 @@ export const onboarding = {
 					content: 'Click to view in-depth details about this device.'
 				},
 				'adaptersData': {
-					id: 'specific', title: 'ADAPTERS DATA', align: 'top',
+					id: 'specific', title: 'ADAPTERS DATA', align: 'right',
 					content: 'Here you can see all device data from its Adapters.'
 				},
 				'adapterDevice': {
