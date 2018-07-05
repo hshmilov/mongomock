@@ -118,11 +118,15 @@ d<template>
                 this.login(this.credentials)
             },
             onOktaLogin() {
+                var guiurl = this.oktaConfig.gui_url.endsWith('/') ?
+                    this.oktaConfig.gui_url.substr(0, this.oktaConfig.gui_url.length - 1)
+                    :
+                    this.oktaConfig.gui_url;
                 var x = new OktaAuth({
                     url: this.oktaConfig.url,
                     issuer: this.oktaConfig.url,
                     clientId: this.oktaConfig.client_id,
-                    redirectUri: `${this.oktaConfig.gui_url}/api/okta-redirect`,
+                    redirectUri: `${guiurl}/api/okta-redirect`,
                     scope: 'openid'
                 });
                 x.token.getWithRedirect({responseType: 'code'})

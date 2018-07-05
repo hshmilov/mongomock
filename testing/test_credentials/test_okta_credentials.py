@@ -10,4 +10,4 @@ SOME_USER_ID = '00ufgeajv5CjAcTKI0h7'  # Dean (Ofri) Sysman!
 # client id 0oafnwsabgsiZGSQx0h7
 # client secret wf9ldosnEPUle9zXRnmF873SOf23ndibNa55CRk8
 # url https://dev-734958.oktapreview.com
-# gui url https://localhost
+# gui url https://marxonius.com
