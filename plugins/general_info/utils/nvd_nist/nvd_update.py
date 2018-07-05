@@ -16,6 +16,7 @@ logger = logging.getLogger(f"axonius.{__name__}")
 NVD_DIST_EARLIEST_YEAR = 2010
 NVD_DIST_URL = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{version}.{ext}"
 MAX_RETRY_FOR_INTERNET_OPERATIONS = 3
+TIMEOUT_FOR_REQUESTS_IN_SECONDS = 7
 
 # Paths
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -30,7 +31,7 @@ def get_current_year_online():
     This also servers as a check for internet. If we have no internet - this will fail.
     :return: the current year. If we have no internet, this will throw an exception.
     """
-    now = requests.get("http://worldclockapi.com/api/json/est/now")
+    now = requests.get("http://worldclockapi.com/api/json/est/now", timeout=TIMEOUT_FOR_REQUESTS_IN_SECONDS)
     now.raise_for_status()
     return dateutil.parser.parse(now.json()['currentDateTime']).year
 
@@ -42,7 +43,7 @@ def get_nvd_sha256_for_version(version):
     :param version: the specific version.
     :return: sha256 string.
     """
-    res = requests.get(NVD_DIST_URL.format(version=version, ext="meta"))
+    res = requests.get(NVD_DIST_URL.format(version=version, ext="meta"), timeout=TIMEOUT_FOR_REQUESTS_IN_SECONDS)
     res.raise_for_status()
 
     """
@@ -69,7 +70,7 @@ def get_nvd_file_for_version(version):
     :param version: the specific version
     :return: a json
     """
-    res = requests.get(NVD_DIST_URL.format(version=version, ext="json.zip"))
+    res = requests.get(NVD_DIST_URL.format(version=version, ext="json.zip"), timeout=TIMEOUT_FOR_REQUESTS_IN_SECONDS)
     res.raise_for_status()
 
     return res.content
