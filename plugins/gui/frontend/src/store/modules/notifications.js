@@ -43,7 +43,7 @@ export const notifications = {
 			state.aggregatedList.fetching = payload.fetching
 			state.aggregatedList.error = payload.error
 			if (payload.data) {
-				state.aggregatedList.data = [...payload.data]
+				state.aggregatedList.data = payload.data.slice(0, 6)
 			}
 		},
 		[ SET_NOTIFICATION ] (state, payload) {

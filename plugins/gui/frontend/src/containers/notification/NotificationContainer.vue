@@ -1,6 +1,6 @@
 <template>
     <x-page title="notifications">
-        <x-data-table module="notifications" title="Notifications" id-field="uuid" @click-row="navigateNotification"/>
+        <x-data-table module="notifications" title="Notifications" id-field="uuid" @click-row="navigateNotification" ref="table"/>
     </x-page>
 </template>
 
@@ -25,6 +25,9 @@
             	this.fetchNotification(notificationId)
                 this.$router.push({path: `/notification/${notificationId}`})
             }
+        },
+        mounted() {
+			this.$refs.table.fetchContentPages()
         }
 	}
 </script>
