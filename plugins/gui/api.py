@@ -85,18 +85,17 @@ class API:
     @helpers.filtered()
     @helpers.sorted_endpoint()
     @helpers.projected()
-    @helpers.add_rule_unauthenticated(f'V{api_version}/alerts', methods=['GET', 'PUT'], auth_method=basic_authentication)
+    @helpers.add_rule_unauthenticated(f'V{api_version}/alerts', methods=['GET', 'PUT', 'DELETE'], auth_method=basic_authentication)
     def api_alerts(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == 'GET':
             return jsonify(self.get_alerts(limit, mongo_filter, mongo_projection, mongo_sort, skip))
-        else:
+
+        if request.method == 'PUT':
             report_to_add = request.get_json(silent=True)
             return self.put_alert(report_to_add)
 
-    @helpers.add_rule_unauthenticated(f'V{api_version}/alerts/<alert_id>',
-                                      methods=['GET', 'DELETE'], auth_method=basic_authentication)
-    def api_alerts_by_id(self, alert_id):
-        return self.delete_alert([alert_id])
+        report_ids = self.get_request_data_as_object()
+        return self.delete_alert(report_ids)
 
     ###########
     # QUERIES #
