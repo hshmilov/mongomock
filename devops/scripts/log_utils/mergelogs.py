@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 import sys
+import pathlib
+import os
+import glob
 import dateutil.parser
 
 all_log_lines = []
 
-for logfile in sys.argv[1:]:
+logs_location = str(pathlib.Path(os.path.dirname(__file__)) / '..' / '..' / '..' / 'logs')
+for logfile in glob.iglob(logs_location + '/**/*axonius.log', recursive=True):
     for line in open(logfile).readlines():
         as_dict = eval(line)
         as_dict['ts'] = dateutil.parser.parse(as_dict['@timestamp'])
