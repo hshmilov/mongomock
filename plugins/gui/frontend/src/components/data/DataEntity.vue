@@ -9,7 +9,10 @@
                         <x-schema-list :data="entity.generic.basic" :schema="{type: 'array', items: fields.generic}"/>
                     </tab>
                     <tab v-for="item, i in entityGenericAdvanced" :title="item.title" :id="item.name" :key="item.name">
-                        <x-schema-list :data="item.data" :schema="item.schema" />
+                        <!-- For tabs representing a list of objects, show as a table -->
+                        <x-table v-if="tableView && item.schema.items && item.schema.items.items"
+                                 :data="item.data" :fields="item.schema.items.items" />
+                        <x-schema-list :data="item.data" :schema="item.schema" v-else />
                     </tab>
                 </tabs>
             </tab>
@@ -52,6 +55,7 @@
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
 	import xSchemaList from '../../components/schema/SchemaList.vue'
+    import xTable from '../../components/tables/Table.vue'
 	import xCustomData from '../../components/schema/CustomData.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
@@ -67,7 +71,7 @@
     }
 	export default {
 		name: 'x-data-entity',
-        components: { Tabs, Tab, xSchemaList, xCustomData, xTagModal, PulseLoader },
+        components: { Tabs, Tab, xSchemaList, xTable, xCustomData, xTagModal, PulseLoader },
         props: { module: {required: true } },
 		data () {
 			return {
@@ -86,6 +90,9 @@
                 },
                 tourState(state) {
                 	return state.onboarding.tourStates.current
+                },
+                tableView(state) {
+                	return state.configurable.gui.GuiService.config.system_settings.tableView
                 }
             }),
             entityId() {
@@ -144,7 +151,7 @@
             }),
 			getAdvancedFieldSchema(field) {
 				if (!this.fields.schema || !this.fields.schema.generic) return {}
-				return this.fields.schema.generic.items.filter(schema => schema.name === field)[0]
+				return this.fields.schema.generic.items.find(schema => schema.name === field)
 			},
 			removeTag (label) {
 				if (!this.$refs || !this.$refs.tagModal) return

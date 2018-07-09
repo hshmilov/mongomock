@@ -277,10 +277,6 @@
 
 <style lang="scss">
     .settings {
-        .x-tabs > .body {
-            width: 60vw;
-            min-width: 640px;
-        }
         .grid {
             display: grid;
             grid-row-gap: 12px;

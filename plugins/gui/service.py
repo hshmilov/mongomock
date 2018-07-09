@@ -2217,9 +2217,14 @@ class GuiService(PluginBase, Configurable, API):
                             "name": "defaultSort",
                             "title": "Sort by Number of Adapters in Default View",
                             "type": "bool"
+                        },
+                        {
+                            "name": "tableView",
+                            "title": "Present advanced General Data of entity in a table",
+                            "type": "bool"
                         }
                     ],
-                    "required": ["refreshRate", "singleAdapter", "multiLine", "defaultSort"],
+                    "required": ["refreshRate", "singleAdapter", "multiLine", "defaultSort", "tableView"],
                     "name": SYSTEM_SETTINGS,
                     "title": "System Settings",
                     "type": "array"
@@ -2386,6 +2391,7 @@ class GuiService(PluginBase, Configurable, API):
                 "refreshRate": 30,
                 "singleAdapter": False,
                 "multiLine": False,
-                "defaultSort": True
+                "defaultSort": True,
+                "tableView": True
             }
         }
