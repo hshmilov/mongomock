@@ -2219,6 +2219,29 @@ class GuiService(PluginBase, Configurable, API):
                             "type": "bool"
                         },
                         {
+                            "name": "percentageThresholds",
+                            "title": "Ranges for Dividing Percentage Fields",
+                            "type": "array",
+                            "items": [
+                                {
+                                    "name": "error",
+                                    "title": "Poor:",
+                                    "type": "range"
+                                },
+                                {
+                                    "name": "warning",
+                                    "title": "Average:",
+                                    "type": "range"
+                                },
+                                {
+                                    "name": "success",
+                                    "title": "Good:",
+                                    "type": "range"
+                                }
+                            ],
+                            "required": ["poor", "average", "good"]
+                        },
+                        {
                             "name": "tableView",
                             "title": "Present advanced General Data of entity in a table",
                             "type": "bool"
@@ -2392,6 +2415,11 @@ class GuiService(PluginBase, Configurable, API):
                 "singleAdapter": False,
                 "multiLine": False,
                 "defaultSort": True,
+                "percentageThresholds": {
+                    "error": {"lte": 40, "gte": 0},
+                    "warning": {"lte": 60, "gte": 41},
+                    "success": {"lte": 100, "gte": 61},
+                },
                 "tableView": True
             }
         }

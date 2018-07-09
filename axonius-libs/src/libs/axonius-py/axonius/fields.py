@@ -15,7 +15,11 @@ class NamedProperty(property):
         return self._name
 
 
-class JsonStringFormat(Enum):
+class JsonFormat(Enum):
+    """ pass """
+
+
+class JsonStringFormat(JsonFormat):
     """ see https://spacetelescope.github.io/understanding-json-schema/reference/string.html#format """
     date_time = auto()
     email = auto()
@@ -29,10 +33,14 @@ class JsonStringFormat(Enum):
     subnet = auto()
 
 
+class JsonNumericFormat(JsonFormat):
+    percentage = auto()
+
+
 class Field(object):
     """ A single field class, holds information regarding python type checking and json-serialization """
 
-    def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonStringFormat = None,
+    def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonFormat = None,
                  min_value=None, max_value=None, pattern=None, enum=None):
         """
         :param field_type: The python type of the field, must be provided.
@@ -54,7 +62,7 @@ class Field(object):
         if json_format is None and isinstance(field_type, type) and issubclass(field_type, datetime.datetime):
             json_format = JsonStringFormat.date_time
         if json_format is not None:
-            assert isinstance(json_format, JsonStringFormat)
+            assert isinstance(json_format, JsonFormat)
         self._format = json_format
         if min_value is not None:
             assert isinstance(min_value, int)

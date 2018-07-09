@@ -1,5 +1,5 @@
 <template>
-    <input v-if="inputType" :id="schema.name" :type="inputType" v-model="computedData" :class="{'error-border': error}"
+        <input v-if="inputType" :id="schema.name" :type="inputType" v-model="processedData" :class="{'error-border': error}"
            @input="input" @focusout.stop="focusout"/>
         <!-- Date Picker -->
     <x-date-edit v-else-if="schema.format === 'date-time'" v-model="data" @input="input" />
@@ -18,7 +18,7 @@
         mixins: [PrimitiveMixin],
         components: { xDateEdit, xSelect },
         computed: {
-		    computedData: {
+		    processedData: {
 				get() {
 					return this.isUnchangedPassword ? "********" : this.data
                 },

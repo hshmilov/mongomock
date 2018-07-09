@@ -20,6 +20,7 @@
     import integer from '../numerical/IntegerEdit.vue'
     import bool from '../boolean/BooleanEdit.vue'
     import file from './FileEdit.vue'
+    import range from '../string/RangeEdit.vue'
 
     import ArrayMixin from './array'
 
@@ -27,7 +28,7 @@
         name: 'array',
         mixins: [ArrayMixin],
         components: {
-            xTypeWrap, string, number, integer, bool, file
+            xTypeWrap, string, number, integer, bool, file, range
         },
         data() {
         	return {
