@@ -12,8 +12,12 @@ class SentinelOneConnection(RESTConnection):
         :param str token: API Token
         """
         self._token = token
-        token_type = 'ApiToken ' if (self._username is None or self._username == "") else 'Token '
-        self._session_headers['Authorization'] = token_type + self._token
+        if (self._username is None or self._username == ""):
+            token_type = 'ApiToken '
+            self._permanent_headers['Authorization'] = token_type + self._token
+        else:
+            token_type = 'Token '
+            self._session_headers['Authorization'] = token_type + self._token
 
     def _connect(self):
         if self._username is not None and self._username != ""\
