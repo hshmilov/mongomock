@@ -74,7 +74,7 @@ def _test_pm_online(method):
         titles.append(p["Title"])
         # pretty(p)
 
-    assert "Windows Malicious Software Removal Tool x64 - June 2018 (KB890830)" in titles
+    assert "Update for Windows Server 2012 (KB2769165)" in titles
 
 
 def test_pm_online_rpc():
