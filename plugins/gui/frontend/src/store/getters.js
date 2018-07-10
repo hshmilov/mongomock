@@ -1,4 +1,5 @@
 import { pluginMeta } from '../static.js'
+import { SINGLE_ADAPTER } from './modules/configurable'
 
 export const GET_DATA_FIELD_BY_PLUGIN = 'GET_DATA_FIELD_BY_PLUGIN'
 export const getDataFieldsByPlugin = (state) => (module) => {
@@ -24,7 +25,7 @@ export const getDataFieldsByPlugin = (state) => (module) => {
 }
 
 export const GET_DATA_FIELD_LIST_SPREAD = 'GET_DATA_FIELD_LIST_SPREAD'
-export const getDataFieldListSpread =  (state) => (module) => {
+export const getDataFieldListSpread =  (state, getters) => (module) => {
 	if (!state[module] || !state[module].fields || !state[module].fields.data) return []
 	let fields = state[module].fields.data
 	if (!fields.generic || !state[module].fields.data.generic.length) return []
@@ -34,7 +35,7 @@ export const getDataFieldListSpread =  (state) => (module) => {
 	}).concat(Object.keys(fields.specific || []).reduce((list, name) => {
 		if (!fields.specific[name]) return list
 		list = [...list, ...fields.specific[name].map((field) => {
-			if (state.configurable.gui && state.configurable.gui.GuiService.config.system_settings.singleAdapter) return field
+			if (getters[SINGLE_ADAPTER]) return field
 			return { ...field, logo: name}
 		})]
 		return list

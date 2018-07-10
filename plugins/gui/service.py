@@ -2220,7 +2220,7 @@ class GuiService(PluginBase, Configurable, API):
                         },
                         {
                             "name": "percentageThresholds",
-                            "title": "Ranges for Dividing Percentage Fields",
+                            "title": "Percentage Fields Severity Ranges",
                             "type": "array",
                             "items": [
                                 {

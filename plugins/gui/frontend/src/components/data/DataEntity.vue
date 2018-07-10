@@ -6,7 +6,7 @@
             <tab title="General Data" id="generic" key="generic" :selected="true">
                 <tabs :vertical="true">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                        <x-schema-list :data="entity.generic.basic" :schema="{type: 'array', items: fields.generic}"/>
+                        <x-schema-list :data="basicInfoData" :schema="basicInfoSchema"/>
                     </tab>
                     <tab v-for="item, i in entityGenericAdvanced" :title="item.title" :id="item.name" :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
@@ -16,7 +16,7 @@
                     </tab>
                 </tabs>
             </tab>
-            <tab title="Adapters Data" id="specific" key="specific">
+            <tab title="Adapters Data" id="specific" key="specific" v-if="!singleAdapter">
                 <tabs :vertical="true">
                     <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="item.id" :selected="!i"
                          :title="item.plugin_name" :logo="true" :outdated="item.outdated">
@@ -60,9 +60,10 @@
 	import xTagModal from '../../components/popover/TagModal.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
-    import { mapState, mapMutations, mapActions } from 'vuex'
+    import { mapState, mapGetters, mapMutations, mapActions } from 'vuex'
     import { FETCH_DATA_FIELDS, FETCH_DATA_BY_ID } from '../../store/actions'
 	import { CHANGE_TOUR_STATE, UPDATE_TOUR_STATE } from '../../store/modules/onboarding'
+	import { SINGLE_ADAPTER } from '../../store/modules/configurable'
 
 
     const lastSeenByModule = {
@@ -95,8 +96,31 @@
                 	return state.configurable.gui.GuiService.config.system_settings.tableView
                 }
             }),
+            ...mapGetters({ singleAdapter: SINGLE_ADAPTER }),
             entityId() {
 				return this.$route.params.id
+            },
+            advancedFields() {
+            	// Get list of the advanced fields names (data designated for separate tabs)
+            	return this.entity.generic.advanced.map(item => item.name)
+            },
+            basicInfoData() {
+            	// Which data to show in the 'Basic Info' tab? Depends whether singleAdapter mode is on
+            	if (!this.singleAdapter) {
+					return this.entity.generic.basic
+                }
+                // If so, show the data of the first adapter, after filtering the fields defined as advanced
+                let data = this.entity.specific[0].data
+				return Object.keys(data).filter( key => !this.advancedFields.includes(data[key]) )
+					.reduce( (res, key) => Object.assign(res, { [key]: data[key] }), {} )
+            },
+            basicInfoSchema() {
+            	// Which schema to use for the 'Basic Info' tab? Depends whether singleAdapter mode is on
+            	if (!this.singleAdapter) {
+            		return { type: 'array', items: this.fields.generic }
+				}
+				// If so, take the schema of the first adapter
+				return this.adapterSchema(this.entity.specific[0].plugin_name, true)
             },
 			entityGenericAdvanced() {
 				if (!this.entity.generic || !this.entity.generic.advanced) return []
@@ -150,8 +174,9 @@
                 fetchDataFields: FETCH_DATA_FIELDS, fetchDataByID: FETCH_DATA_BY_ID
             }),
 			getAdvancedFieldSchema(field) {
-				if (!this.fields.schema || !this.fields.schema.generic) return {}
-				return this.fields.schema.generic.items.find(schema => schema.name === field)
+                let schema = this.fields.schema.generic.items.find(schema => schema.name === field)
+                if (schema) return schema
+				return Object.values(this.fields.schema.specific)[0].items.find(schema => schema.name === field)
 			},
 			removeTag (label) {
 				if (!this.$refs || !this.$refs.tagModal) return
@@ -164,13 +189,12 @@
             toggleView() {
             	this.viewBasic = !this.viewBasic
             },
-            adapterSchema(name) {
-            	return {
-            		type: 'array', items: [
-                        { ...this.fields.schema.generic, name: 'data', title: 'SEPARATOR' },
-                        { ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
-					]
-                }
+            adapterSchema(name, merged) {
+            	let items = !merged? [
+					{ type: 'array', ...this.fields.schema.generic, name: 'data', title: 'SEPARATOR' },
+					{ type: 'array', ...this.fields.schema.specific[name], name: 'data', title: 'SEPARATOR' }
+				]: [ ...this.fields.schema.generic.items, ...this.fields.schema.specific[name].items ]
+            	return { type: 'array', items }
             },
             determineState(tabId) {
             	if (tabId === 'specific') {

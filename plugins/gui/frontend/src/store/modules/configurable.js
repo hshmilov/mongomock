@@ -4,9 +4,16 @@ export const SAVE_PLUGIN_CONFIG = 'SAVE_PLUGIN_CONFIG'
 export const LOAD_PLUGIN_CONFIG = 'LOAD_PLUGIN_CONFIG'
 export const CHANGE_PLUGIN_CONFIG = 'CHANGE_PLUGIN_CONFIG'
 
+export const SINGLE_ADAPTER = 'SINGLE_ADAPTER'
+
 export const configurable = {
     state: {},
-    getters: {},
+    getters: {
+        [ SINGLE_ADAPTER ] (state) {
+            if (!state.gui || !state.gui.GuiService || !state.gui.GuiService.config) return false
+            return state.gui.GuiService.config.system_settings.singleAdapter
+        }
+    },
     mutations: {
         [CHANGE_PLUGIN_CONFIG](state, payload) {
             if (!state[payload.pluginId]) state[payload.pluginId] = {}
