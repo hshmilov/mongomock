@@ -21,9 +21,9 @@ MOBILE_SCOPES = ['https://www.googleapis.com/auth/admin.directory.device.mobile.
 USER_SCOPES = ['https://www.googleapis.com/auth/admin.directory.user.readonly']
 
 
-class MdmAdapter(AdapterBase):
+class GoogleMdmAdapter(AdapterBase):
     """
-    Adapter to access Google MDM sutie
+    Adapter to access Google MDM suite
     """
 
     class MyDeviceAdapter(DeviceAdapter):

@@ -1,17 +1,17 @@
 import json
 import uuid
 
-from services.adapters.mdm_service import MdmService, mdm_fixture
+from services.adapters.google_mdm_service import GoogleMdmService, google_mdm_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_mdm_credentials import *
-from mdm_adapter.service import MdmAdapter
+from test_credentials.test_google_mdm_credentials import *
+from google_mdm_adapter.service import GoogleMdmAdapter
 import pytest
 
 
-class TestMdmAdapter(AdapterTestBase):
+class TestGoogleMdmAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return MdmService()
+        return GoogleMdmService()
 
     @property
     def some_client_id(self):

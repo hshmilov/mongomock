@@ -3,7 +3,7 @@ export const pluginMeta = {
         title: 'RedSeal',
         description: 'RedSeal provides companies with a simple metric for how effectively their current security measures are working to protect their network.'
     },
-    mdm_adapter: {
+    google_mdm_adapter: {
         title: 'G-Suite MDM',
         description: 'Google Mobile Management is an MDM solution for G Suite customers for Android, iOS, Windows and other smartphones.'
     },

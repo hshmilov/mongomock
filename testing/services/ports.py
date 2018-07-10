@@ -72,7 +72,7 @@ DOCKER_PORTS = {
     'okta-adapter':                     6026,
     'tenable-security-center-adapter':  6027,
     'redseal-adapter':                  6028,
-    'mdm-adapter':                      6029,
+    'google-mdm-adapter':               6029,
     'mongo':                            27017,
 }
 
