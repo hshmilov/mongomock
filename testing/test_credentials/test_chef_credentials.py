@@ -34,4 +34,4 @@ Tv9QCeGX7KSpGYZXelviljZxQtRP4QavJI3MdK/BJxdgB8YVMgEerdw=
     "ssl_verify": False
 }
 
-SOME_DEVICE_ID = '38ccfb1aec5b4cd89da57c6f6ef32996'
+SOME_DEVICE_ID = 'station1'
