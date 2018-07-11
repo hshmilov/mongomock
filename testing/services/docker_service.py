@@ -113,8 +113,8 @@ else:
         volumes = self.volumes
 
         docker_up.extend(['--restart', 'always'])
-        if mode != 'prod':
-            volumes.extend(self.volumes_override)
+
+        volumes.extend(self.volumes_override)
 
         for volume in volumes:
             docker_up.extend(['--volume', volume])
