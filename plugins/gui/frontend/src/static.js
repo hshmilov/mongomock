@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    duo_adapter: {
+        title: 'Duo Beyond',
+        description: 'Duo Beyond is a zero-trust security platform that bases application access decisions on the trust of user identities and their devices.'
+    },
     redseal_adapter: {
         title: 'RedSeal',
         description: 'RedSeal provides companies with a simple metric for how effectively their current security measures are working to protect their network.'

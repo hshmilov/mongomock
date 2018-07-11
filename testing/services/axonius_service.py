@@ -133,16 +133,26 @@ class AxoniusService(object):
         cond = {'adapters.data.id': device_id, 'adapters.plugin_unique_name': adapter_name}
         return self.get_devices_with_condition(cond)
 
+    def get_user_by_id(self, adapter_name, user_id):
+        cond = {'adapters.data.id': user_id, 'adapters.plugin_unique_name': adapter_name}
+        return self.get_users_with_condition(cond)
+
     def get_device_network_interfaces(self, adapter_name, device_id):
         device = self.get_device_by_id(adapter_name, device_id)
         adapter_device = next(adapter_device for adapter_device in device[0]['adapters'] if
                               adapter_device[PLUGIN_UNIQUE_NAME] == adapter_name)
         return adapter_device['data'][NETWORK_INTERFACES_FIELD]
 
-    def assert_device_aggregated(self, adapter, client_details, max_tries=30):
+    def assert_device_aggregated(self, adapter, client_details):
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
         for client_id, some_device_id in client_details:
             devices = self.get_device_by_id(adapter.unique_name, some_device_id)
+            assert len(devices) == 1
+
+    def assert_user_aggregated(self, adapter, client_details):
+        self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
+        for client_id, some_device_id in client_details:
+            devices = self.get_user_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
     def restart_plugin(self, plugin):

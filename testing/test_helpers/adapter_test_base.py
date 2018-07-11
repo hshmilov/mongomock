@@ -40,6 +40,10 @@ class AdapterTestBase(object):
         raise NotImplementedError
 
     @property
+    def some_user_id(self):
+        raise NotImplementedError
+
+    @property
     def some_client_details(self):
         raise NotImplementedError
 
@@ -88,6 +92,15 @@ class AdapterTestBase(object):
     def test_fetch_devices(self):
         self.adapter_service.add_client(self.some_client_details)
         self.axonius_system.assert_device_aggregated(self.adapter_service, [(self.some_client_id, self.some_device_id)])
+
+    def test_fetch_users(self):
+        try:
+            # not all implement this
+            user_id = self.some_user_id
+        except NotImplementedError:
+            return
+        self.adapter_service.add_client(self.some_client_details)
+        self.axonius_system.assert_user_aggregated(self.adapter_service, [(self.some_client_id, user_id)])
 
     def test_devices_cleaning(self):
         return self.do_test_entity_cleaning(EntityType.Devices)

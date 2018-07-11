@@ -46,7 +46,7 @@ class ActionError(Exception):
 
 def get_cortex_dir() -> str:
     ''' Returns the relative path to cortex repo root directory'''
-    return os.path.relpath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    return os.path.relpath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 
 def capitalize_adapter_name(adapter_name: str) -> str:
@@ -87,8 +87,8 @@ def description_validator(filename: str, adapter_name: str):
         :raise: ValidateError on failure'''
 
     filename = os.path.join(get_cortex_dir(), filename)
-    file_data = open(filename, 'r', encoding='utf-8').read()
-    if f'{adapter_name}_adapter' in file_data:
+    file_data = open(filename, 'rb').read()
+    if f'{adapter_name}_adapter'.encode() in file_data:
         raise ValidateError(f'Description for "{adapter_name}" already defined in {filename}')
 
 
@@ -109,6 +109,7 @@ def description_action(filename: str, adapter_name: str):
     new_description = "    %s_adapter: {\n        title: 'AUTOADAPTER',\n        description: 'AUTOADAPTER'\n    },\n" % (
         adapter_name, )
 
+    filename = os.path.join(get_cortex_dir(), filename)
     data = open(filename, 'r', encoding='utf-8').readlines()
 
     for i, line in enumerate(data):
@@ -130,17 +131,20 @@ def image_action(filename: str, adapter_name: str):
 
     placeholder = f"AUTOADAPTER - replace this file with logo for {adapter_name}"
 
+    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(placeholder)
 
 
 def adapter_dir_action(filename: str, _):
     ''' Create the base directory for the adapter '''
+    filename = os.path.join(get_cortex_dir(), filename)
     os.makedirs(filename)
 
 
 def adapter_init_action(filename: str, _):
     ''' Create __init__.py file for the adapter '''
+    filename = os.path.join(get_cortex_dir(), filename)
     open(filename, 'w').close()
 
 
@@ -155,6 +159,7 @@ host = 0.0.0.0
 port = 443
 core_address = https://core"""
 
+    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -221,6 +226,7 @@ class %sAdapter(AdapterBase):
         'AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets]
 """ % (capitalize_adapter_name(adapter_name), )
+    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -233,6 +239,7 @@ def creds_action(filename: str, _):
 
 SOME_DEVICE_ID = 'AUTOADAPTER - give one device_id that should return from the above client'
 """
+    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -257,6 +264,7 @@ def {adapter_name}_fixture(request):
     initialize_fixture(request, service)
     return service
 """
+    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -288,6 +296,7 @@ class Test{capitalize_adapter_name(adapter_name)}Adapter(AdapterTestBase):
     def some_device_id(self):
         return SOME_DEVICE_ID
 """
+    filename = os.path.join(get_cortex_dir(), filename)
     with open(filename, 'w') as file_:
         file_.write(template)
 
@@ -296,6 +305,7 @@ def ports_action(filename: str, adapter_name: str):
     ''' Appends port to the ports file '''
     regex = r".*'(.*?)':.*(\D.*?),.*"
 
+    filename = os.path.join(get_cortex_dir(), filename)
     data = open(filename, 'r').readlines()
     mongoline = None
     highest_port = 0
