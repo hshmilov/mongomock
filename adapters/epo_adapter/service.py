@@ -182,7 +182,7 @@ class EpoAdapter(AdapterBase):
                 # Set up cpu's
                 device.total_number_of_cores = int(device_raw.get("EPOComputerProperties.NumOfCPU"))
                 device.add_cpu(
-                    speed=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
+                    ghz=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
                     name=device_raw.get("EPOComputerProperties.CPUType")
                 )
             except Exception:
