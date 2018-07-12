@@ -107,7 +107,10 @@ class EsetClient(object):
         fields = csv.pop(0).split(',')
         for current_device in csv:
             new_device = {k: v for k, v in zip(fields, current_device.split(','))}
-            devices[new_device['Computer name']].update(new_device)
+            if new_device['Computer name'] in devices:
+                devices[new_device['Computer name']].update(new_device)
+            else:
+                devices[new_device['Computer name']] = new_device
 
         return devices.values()
 
