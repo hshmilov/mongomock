@@ -37,12 +37,12 @@
 
 <script>
     import xCheckbox from '../inputs/Checkbox.vue'
-	import string from '../../components/controls/string/StringView.vue'
-	import number from '../../components/controls/numerical/NumberView.vue'
-	import integer from '../../components/controls/numerical/IntegerView.vue'
-	import bool from '../../components/controls/boolean/BooleanView.vue'
-	import file from '../../components/controls/array/FileView.vue'
-	import array from '../../components/controls/array/ArrayInlineView.vue'
+	import string from '../controls/string/StringView.vue'
+	import number from '../controls/numerical/NumberView.vue'
+	import integer from '../controls/numerical/IntegerView.vue'
+	import bool from '../controls/boolean/BooleanView.vue'
+	import file from '../controls/array/FileView.vue'
+	import array from '../controls/array/ArrayInlineView.vue'
 
 	export default {
 		name: 'x-table',

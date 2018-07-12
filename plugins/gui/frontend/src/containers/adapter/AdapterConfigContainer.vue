@@ -52,8 +52,8 @@
 
 <script>
 	import xPage from '../../components/layout/Page.vue'
-    import xTableActions from '../../components/tables/TableActionable.vue'
-    import xTable from '../../components/tables/Table.vue'
+    import xTableActions from '../../components/tables/ActionableTable.vue'
+    import xTable from '../../components/schema/SchemaTable.vue'
 	import Modal from '../../components/popover/Modal.vue'
     import xSchemaForm from '../../components/schema/SchemaForm.vue'
 	import Tabs from '../../components/tabs/Tabs.vue'

@@ -10,8 +10,10 @@
                     </tab>
                     <tab v-for="item, i in entityGenericAdvanced" :title="item.title" :id="item.name" :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
-                        <x-table v-if="tableView && item.schema.items && item.schema.items.items"
+                        <x-schema-table v-if="tableView && item.schema.format && item.schema.format === 'table'"
                                  :data="item.data" :fields="item.schema.items.items" />
+                        <x-schema-calendar v-else-if="item.schema.format && item.schema.format === 'calendar'"
+                                           :data="item.data" :schema="item.schema" />
                         <x-schema-list :data="item.data" :schema="item.schema" v-else />
                     </tab>
                 </tabs>
@@ -55,7 +57,8 @@
 	import Tabs from '../../components/tabs/Tabs.vue'
 	import Tab from '../../components/tabs/Tab.vue'
 	import xSchemaList from '../../components/schema/SchemaList.vue'
-    import xTable from '../../components/tables/Table.vue'
+    import xSchemaTable from '../schema/SchemaTable.vue'
+    import xSchemaCalendar from '../schema/SchemaCalendar.vue'
 	import xCustomData from '../../components/schema/CustomData.vue'
 	import xTagModal from '../../components/popover/TagModal.vue'
 	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
@@ -72,7 +75,7 @@
     }
 	export default {
 		name: 'x-data-entity',
-        components: { Tabs, Tab, xSchemaList, xTable, xCustomData, xTagModal, PulseLoader },
+        components: { Tabs, Tab, xSchemaList, xSchemaTable, xSchemaCalendar, xCustomData, xTagModal, PulseLoader },
         props: { module: {required: true } },
 		data () {
 			return {
@@ -111,7 +114,7 @@
                 }
                 // If so, show the data of the first adapter, after filtering the fields defined as advanced
                 let data = this.entity.specific[0].data
-				return Object.keys(data).filter( key => !this.advancedFields.includes(data[key]) )
+				return Object.keys(data).filter( key => !this.advancedFields.includes(key) )
 					.reduce( (res, key) => Object.assign(res, { [key]: data[key] }), {} )
             },
             basicInfoSchema() {
@@ -124,13 +127,15 @@
             },
 			entityGenericAdvanced() {
 				if (!this.entity.generic || !this.entity.generic.advanced) return []
-				return this.entity.generic.advanced.filter(item => item.data && item.data.length).map((item) => {
-					let schema = this.getAdvancedFieldSchema(item.name)
-					return { ...item,
-						title: schema.title,
-						schema: { ...schema, title: undefined }
-					}
-				})
+				return this.entity.generic.advanced
+                    .filter(item => item.data && (item.data.length || Object.keys(item.data).length))
+                    .map((item) => {
+                        let schema = this.getAdvancedFieldSchema(item.name) || {}
+                        return { ...item,
+                            title: schema.title,
+                            schema: { ...schema, title: undefined }
+                        }
+                    })
 			},
 			sortedSpecificData () {
 				if (!this.entity.specific) return []

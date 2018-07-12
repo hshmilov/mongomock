@@ -37,6 +37,11 @@ class JsonNumericFormat(JsonFormat):
     percentage = auto()
 
 
+class JsonArrayFormat(JsonFormat):
+    table = auto()
+    calendar = auto()
+
+
 class Field(object):
     """ A single field class, holds information regarding python type checking and json-serialization """
 
@@ -129,6 +134,8 @@ class Field(object):
             return 'number'
         elif issubclass(self.type, str):
             return 'string'
+        elif issubclass(self.type, dict):
+            return 'object'
         return 'string'
 
     def __repr__(self):

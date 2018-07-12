@@ -120,7 +120,6 @@
             }
             .body {
                 flex: 1 0 auto;
-                max-width: calc(84% - 24px);
                 height: calc(100% - 24px);
             }
         }

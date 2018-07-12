@@ -1,14 +1,16 @@
 import logging
+
 logger = logging.getLogger(f"axonius.{__name__}")
 import datetime
 import typing
 
-from axonius.fields import Field, ListField, JsonStringFormat
+from axonius.fields import Field, ListField, JsonStringFormat, JsonArrayFormat
 from axonius.utils.parsing import figure_out_os, format_mac, format_ip, format_ip_raw, format_subnet, \
     get_manufacturer_from_mac, normalize_mac
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.mongo_escaping import escape_dict
 from enum import Enum, auto
+
 """
     For adding new fields, see https://axonius.atlassian.net/wiki/spaces/AX/pages/398819372/Adding+New+Field
 """
@@ -178,16 +180,20 @@ class DeviceAdapter(SmartJsonClass):
     network_interfaces = ListField(DeviceAdapterNetworkInterface, 'Network Interfaces')
     os = Field(DeviceAdapterOS, 'OS')
     last_used_users = ListField(str, "Last Used User")
-    installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software")
+    installed_software = ListField(DeviceAdapterInstalledSoftware, "Installed Software",
+                                   json_format=JsonArrayFormat.table)
     software_cves = ListField(DeviceAdapterSoftwareCVE, "Vulnerable Software")
-    security_patches = ListField(DeviceAdapterSecurityPatch, "OS Installed Security Patches")
-    available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches")
-    connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware")
+    security_patches = ListField(DeviceAdapterSecurityPatch, "OS Installed Security Patches",
+                                 json_format=JsonArrayFormat.table)
+    available_security_patches = ListField(DeviceAdapterMsrcAvailablePatch, "OS Available Security Patches",
+                                           json_format=JsonArrayFormat.table)
+    connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware",
+                                   json_format=JsonArrayFormat.table)
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
-    users = ListField(DeviceAdapterUser, "Users")
-    local_admins = ListField(DeviceAdapterLocalAdmin, "Local Admins")
+    users = ListField(DeviceAdapterUser, "Users", json_format=JsonArrayFormat.table)
+    local_admins = ListField(DeviceAdapterLocalAdmin, "Local Admins", json_format=JsonArrayFormat.table)
     pretty_id = Field(str, 'Axonius Name')
     device_manufacturer = Field(str, "Device Manufacturer")
     device_model = Field(str, "Device Model")
@@ -212,7 +218,7 @@ class DeviceAdapter(SmartJsonClass):
     current_logged_user = Field(str, "Currently Logged User")
     device_disabled = Field(bool, "Device Disabled")
     power_state = Field(DeviceRunningState, "Power State")
-    device_managed_by = Field(str, "Managed By")    # Who is the entity managing the device
+    device_managed_by = Field(str, "Managed By")  # Who is the entity managing the device
     organizational_unit = ListField(str, "Organizational Unit")
     security_patch_level = Field(datetime.datetime, "Security Patch Level")
     scanner = Field(bool, 'Scanner')
