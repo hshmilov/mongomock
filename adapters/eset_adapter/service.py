@@ -1,6 +1,7 @@
 import threading
 import ctypes
-
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.parsing import format_mac, parse_date
 from axonius.devices.device_adapter import DeviceAdapter
@@ -97,23 +98,32 @@ class EsetAdapter(AdapterBase):
 
     def _parse_raw_data(self, raw_data):
         for entry in raw_data:
-            device = self._new_device_adapter()
-            device.hostname = entry.get('Computer name', '')
-            mac_address = format_mac(entry.get('MAC address', ''))
-            device.id = mac_address
-            device.figure_os(' '.join([entry.get('OS type', ''),
-                                       entry.get('OS name', ''),
-                                       entry.get('OS platform', ''),
-                                       entry.get('OS version', '')]))
-            device.add_nic(mac_address, [entry.get('Adapter IPv4 address', '')])
+            try:
+                device = self._new_device_adapter()
+                hostname = entry.get('Computer name', '')
+                mac_address = format_mac(entry.get('MAC address', ''))
+                if mac_address is None and hostname == "":
+                    logger.warning(f"No id for entry: {entry}")
+                    continue
+                device.hostname = hostname
+                device.id = f"{str(mac_address)}{str(hostname)}"
+                device.figure_os(' '.join([entry.get('OS type', ''),
+                                           entry.get('OS name', ''),
+                                           entry.get('OS platform', ''),
+                                           entry.get('OS version', '')]))
+                device.add_nic(mac_address, [entry.get('Adapter IPv4 address', '')])
+                try:
+                    last_seen = parse_date(entry.get('Last connected', ''))
+                    if last_seen:
+                        device.last_seen = last_seen
+                except Exception:
+                    logger.exception(f"Problem adding last seen to entry {entry}")
 
-            last_seen = parse_date(entry.get('Last connected', ''))
-            if last_seen:
-                device.last_seen = last_seen
+                device.set_raw(entry)
 
-            device.set_raw(entry)
-
-            yield device
+                yield device
+            except Exception:
+                logger.exception(f"Got problem with entry: {entry}")
 
     def _query_devices_by_client(self, client_name, client_data):
         assert isinstance(client_data, EsetClient)

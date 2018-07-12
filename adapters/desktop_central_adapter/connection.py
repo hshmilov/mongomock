@@ -31,4 +31,13 @@ class DesktopCentralConnection(RESTConnection):
             raise RESTException("No username or password")
 
     def get_device_list(self):
-        yield from self._get(f"som/computers")["message_response"]["computers"]
+        response = self._get("som/computers", url_params={'page': 1,
+                                                          'pagelimit': consts.DEVICES_PER_PAGE})["message_response"]
+        yield from response["computers"]
+        total_pages = response["total"]
+        for page in range(2, total_pages + 1):
+            try:
+                yield from self._get("som/computers", url_params={'page': str(page),
+                                                                  'pagelimit': consts.DEVICES_PER_PAGE})["message_response"]["computers"]
+            except Exception:
+                logger.exception(f"Problem getting pgae {page}")

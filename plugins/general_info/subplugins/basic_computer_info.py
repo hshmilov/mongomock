@@ -126,7 +126,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             assert is_wmi_answer_ok(win32_baseboard), "WMI Answer has an exception"
             if len(win32_baseboard["data"]) > 0:
                 sn = win32_baseboard["data"][0].get("SerialNumber")
-                if sn is not None and sn != "None":
+                if (sn is not None) and (sn != "None") and (sn.upper() != "INVALID") and (sn.strip() != ""):
                     # Yep, it happens. Sometimes wmi returns "None" as a string.
                     adapterdata_device.device_serial = sn
         except Exception:

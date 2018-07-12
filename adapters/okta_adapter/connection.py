@@ -12,7 +12,7 @@ class OktaConnection:
         self.__base_url = url
         self.__api_key = api_key
 
-    def __make_request(self, api, params={}, forced_url=None):
+    def __make_request(self, api="", params={}, forced_url=None):
         """
         Makes a request to the Okta service.
         Either 'api' or 'forced_url' must be provided.

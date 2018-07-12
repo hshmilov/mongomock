@@ -84,6 +84,7 @@ class OktaAdapter(AdapterBase):
                 user.user_title = profile.get('title')
                 user.user_department = profile.get('department')
                 user.user_country = profile.get('countryCode')
+                user.set_raw(user_raw)
                 yield user
             except Exception:
                 logger.exception(f"Problem parsing user: {str(user_raw)}")

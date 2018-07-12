@@ -78,25 +78,37 @@ class BomgarAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for hostname, device_raw in devices_raw_data.items():
-            device = self._new_device_adapter()
-            device.hostname = device_raw['hostname']
-            device.id = device_raw['hostname']
-            device.figure_os(device_raw['operating_system'])
-            device.created_timestamp = datetime.datetime.fromtimestamp(device_raw['created_timestamp'])
-            device.device_type = device_raw['device_type']
-            device.last_seen = datetime.datetime.fromtimestamp(device_raw['last_seen'])
-            if device_raw['device_type'] == 'representative':
-                device.public_display_name = device_raw.get('public_display_name')
-                device.user_id = device_raw.get('user_id')
-                device.username = device_raw.get('username')
-            else:
-                device.last_session_representative_username = device_raw.get('last_session_representative_username')
-                device.last_session_start = datetime.datetime.fromtimestamp(device_raw.get('last_session_start'))
-                device.last_session_start_method = device_raw.get('last_session_start_method')
-            device.add_nic(None, [device_raw['private_ip']])
-            device.public_ip = device_raw['public_ip']
-            device.set_raw(device_raw)
-            yield device
+            try:
+                device = self._new_device_adapter()
+                device.hostname = device_raw.get('hostname', "")
+                device_id = device_raw.get('hostname', "")
+                if device_id == "":
+                    continue
+                device.id = device_id
+                device.figure_os(device_raw.get('operating_system', ""))
+                device.created_timestamp = datetime.datetime.fromtimestamp(device_raw.get('created_timestamp', 0))
+                device.device_type = device_raw['device_type']
+                device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('last_seen', 0))
+                if device_raw['device_type'] == 'representative':
+                    device.public_display_name = device_raw.get('public_display_name')
+                    device.user_id = device_raw.get('user_id')
+                    device.username = device_raw.get('username')
+                else:
+                    try:
+                        device.last_session_representative_username = device_raw.get(
+                            'last_session_representative_username')
+                        if device_raw.get('last_session_start') is not None:
+                            device.last_session_start = datetime.datetime.fromtimestamp(
+                                device_raw.get('last_session_start'))
+                        device.last_session_start_method = device_raw.get('last_session_start_method')
+                    except Exception:
+                        logger.exception(f"Problem at adding start time for {device_raw}")
+                device.add_nic(None, [device_raw.get('private_ip', "")])
+                device.public_ip = device_raw.get('public_ip', '')
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f"Problem with device {device_raw}")
 
     @classmethod
     def adapter_properties(cls):
