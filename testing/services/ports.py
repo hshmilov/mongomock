@@ -74,6 +74,7 @@ DOCKER_PORTS = {
     'redseal-adapter':                  6028,
     'google-mdm-adapter':               6029,
     'duo-adapter':                      6030,
+    'gce-adapter':                      6031,
     'mongo':                            27017,
 }
 

@@ -40,10 +40,21 @@ class DeviceRunningState(Enum):
     Device is in the process of shutting down
     """
     ShuttingDown = auto()
+    Rebooting = auto()
+    StartingUp = auto()
+    Normal = auto()
     """
     State is unknown
     """
     Unknown = auto()
+    """
+    Error has occurred
+    """
+    Error = auto()
+    """
+    VM in migration process
+    """
+    Migrating = auto()
 
 
 class DeviceAdapterOS(SmartJsonClass):

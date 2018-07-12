@@ -7,6 +7,7 @@ from funcy import chunks
 from namedlist import namedtuple
 
 from axonius.email_server import EmailServer
+from axonius.utils.json_encoders import IteratorJSONEncoder
 
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.mixins.configurable import Configurable
@@ -22,7 +23,6 @@ import threading
 import functools
 import socket
 import ssl
-import urllib3
 import pymongo
 import concurrent
 import uuid
@@ -32,7 +32,6 @@ from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.utils.threading import run_in_executor_helper, LazyMultiLocker
 from axonius.utils.parsing import get_exception_string
 from flask import Flask, request, jsonify
-from flask.json import JSONEncoder
 from bson import json_util
 from pymongo import MongoClient
 # bson is requirement of mongo and its not recommended to install it manually
@@ -171,19 +170,6 @@ def add_rule(rule, methods=['GET'], should_authenticate: bool = True):
         return actual_wrapper
 
     return wrap
-
-
-class IteratorJSONEncoder(JSONEncoder):
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o.generation_time)
-        try:
-            iterable = iter(o)
-        except TypeError:
-            pass
-        else:
-            return list(iterable)
-        return JSONEncoder.default(self, o)
 
 
 def retry_if_connection_error(exception):

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    gce_adapter: {
+        title: 'Google Compute Engine',
+        description: 'Google Compute Engine delivers virtual machines running in Google\'s data centers and worldwide fiber network.'
+    },
     duo_adapter: {
         title: 'Duo Beyond',
         description: 'Duo Beyond is a zero-trust security platform that bases application access decisions on the trust of user identities and their devices.'
