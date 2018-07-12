@@ -28,7 +28,13 @@
 					if (dateTime === 'Invalid Date') return value
 
 					return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
-				}
+				} else if (this.schema.format === 'time') {
+					if (!value) return ''
+					let dateTime = new Date(value)
+					if (dateTime === 'Invalid Date') return value
+
+					return dateTime.toLocaleTimeString()
+                }
 				return value
             }
         }
