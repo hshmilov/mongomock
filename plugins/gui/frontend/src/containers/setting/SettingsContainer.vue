@@ -8,14 +8,15 @@
                     <div id="research_time">
                         <x-date-edit :value="nextResearchStart" @input="scheduleResearch" :limit="limit"/>
                     </div>
-                    <template v-if="scheduleConfig">
-                        <label for="research_rate" class="label">Schedule Rate (hours)</label>
-                        <div class="grid-item">
-                            <input id="research_rate" type="number" min="0" v-model="scheduleConfig.system_research_rate">
-                            <a class="x-btn right" :class="{disabled: !validResearchRate}" @click="setResearchRate">Set</a>
+                </div>
+                <div class="tab-settings">
+                    <template v-if="configurable.system_scheduler">
+                        <x-schema-form :schema="configurable.system_scheduler.SystemSchedulerService.schema" @validate="updateSystemSchedulerValidity"
+                                       v-model="configurable.system_scheduler.SystemSchedulerService.config" api-upload="adapters/system_scheduler"/>
+                        <div class="place-right">
+                            <button class="x-btn" :class="{disabled: !coreComplete}" @click="saveSystemSchedulerSettings">Save</button>
                         </div>
                     </template>
-                    <template v-else>Loading</template>
                 </div>
             </tab>
             <tab title="Global Settings" id="global-settings-tab">
@@ -188,6 +189,23 @@
                     }
                 })
             },
+            saveSystemSchedulerSettings() {
+                if (!this.system_schedulerComplete || !this.validResearchRate) return
+                this.updatePluginConfig({
+                    pluginId: 'system_scheduler',
+                    configName: 'SystemSchedulerService',
+                    config: this.scheduleConfig
+                }).then(response => {
+                    this.createToast(response)
+                }).catch(error => {
+                    if (error.response.status === 400) {
+                		this.message = error.response.data.message
+                    }
+                })
+            },
+            updateSystemSchedulerValidity(valid) {
+                this.system_schedulerComplete = valid
+            },
             updateCoreValidity(valid) {
                 this.coreComplete = valid
             },
@@ -225,17 +243,6 @@
                     config: this.configurable.gui.GuiService.config
                 }).then(response => {
 					this.createToast(response)
-                })
-            },
-            setResearchRate() {
-            	if (!this.validResearchRate) return
-
-                this.updatePluginConfig({
-                    pluginId: 'system_scheduler',
-                    configName: 'SystemSchedulerService',
-                    config: this.scheduleConfig
-                }).then((response) => {
-                	this.createToast(response)
                 })
             },
             removeToast() {

@@ -55,10 +55,15 @@ class ReportGenerator(object):
         :return: The name of the generated pdf file
         """
         now = datetime.now()
+        timestamp = now.strftime("%d%m%Y-%H%M%S")
+        temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
+        logger.info(f'Report Generator: PDF generated and saved to ${temp_report_filename}')
+        return self.render_html(now).write_pdf(temp_report_filename)
+
+    def render_html(self, current_time):
         sections = []
         # Add summary section containing dashboard panels, pre- and user-defined
         sections.append(self.templates['section'].render({'title': 'Summary', 'content': self._create_summary()}))
-
         # Add section for each adapter with results of its queries
         adapter_data = self.report_data.get('adapter_data')
         if adapter_data:
@@ -66,29 +71,22 @@ class ReportGenerator(object):
                 sections.append(self.templates['section'].render(
                     {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
                 logger.info(f'Report Generator, Adapter Section: Added {adapter["name"]} section')
-
         # Add section for all saved queries
         if self.report_data.get('views_data'):
             sections.append(self.templates['section'].render(
                 {'title': 'Saved Views', 'content': self._create_data_views()}))
-
         # Join all sections as the content of the report
-        html_data = self.templates['report'].render({'date': now.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
-
-        timestamp = now.strftime("%d%m%Y-%H%M%S")
+        html_data = self.templates['report'].render(
+            {'date': current_time.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})
+        timestamp = current_time.strftime("%d%m%Y-%H%M%S")
         temp_html_filename = f'{self.output_path}axonius-report_{timestamp}.html'
         with open(temp_html_filename, 'wb') as file:
             file.write(bytes(html_data.encode('utf-8')))
             logger.info(f'Report Generator: HTML created and saved to ${temp_html_filename}')
-
         font_config = FontConfiguration()
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
 
-        temp_report_filename = f'{self.output_path}axonius-report_{timestamp}.pdf'
-        HTML(string=html_data, base_url=self.template_path).write_pdf(
-            temp_report_filename, stylesheets=[css], font_config=font_config)
-        logger.info(f'Report Generator: PDF generated and saved to ${temp_report_filename}')
-        return temp_report_filename
+        return HTML(string=html_data, base_url=self.template_path).render(stylesheets=[css], font_config=font_config)
 
     def _get_template(self, template_name):
         """

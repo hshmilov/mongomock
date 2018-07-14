@@ -87,16 +87,24 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                     "name": "system_research_rate",
                     "title": "Schedule Rate (hours)",
                     "type": "number"
+                },
+                {
+                    "name": "generate_report",
+                    "title": "Automatically Generate Report after Discovery Phase - Warning: turning off this feature can result in very long download times for executive reports.",
+                    "type": "bool",
+                    "required": True
                 }
             ],
             "pretty_name": "Scheduler Configuration",
+            "title": "Discovery Settings",
             "type": "array"
         }
 
     @classmethod
     def _db_config_default(cls):
         return {
-            'system_research_rate': 12
+            "system_research_rate": 12,
+            "generate_report": True
         }
 
     @add_rule('sub_phase_update', ['POST'])
@@ -212,9 +220,6 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins('Post-Correlation')
-
-            _change_subphase(scheduler_consts.ResearchPhases.Run_Queries)
-            self._run_queries_phase()
 
             logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfuly.")
 
@@ -345,21 +350,3 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 logger.exception("An exception was raised while stopping all plugins.")
 
         logger.info("Finished stopping all plugins.")
-
-    def _run_queries_phase(self):
-        """
-        Run all saved queries (i.e. views) and save the result count in the DB
-        """
-        for entity_type in EntityType:
-            views = self.gui.entity_query_views_db_map[entity_type].find({'query_type': 'saved'})
-            for view in views:
-                try:
-                    parsed_view_filter = parse_filter(view['view']['query']['filter'])
-                    count = self._entity_views_db_map[entity_type].count(parsed_view_filter)
-                    self.gui.entity_views_results_db_map[entity_type].insert_one({
-                        "view": view['name'],
-                        "count": count,
-                        "accurate_for_datetime": datetime.now(tz=timezone.utc)
-                    })
-                except Exception:
-                    logger.exception(f"Exception on running view {view}")

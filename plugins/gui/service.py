@@ -2,6 +2,7 @@ import csv
 import logging
 import threading
 
+import gridfs
 import ldap3
 
 from axonius.clients.ldap.exceptions import LdapException
@@ -27,6 +28,7 @@ from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXE
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.email_server import EmailServer
+from axonius.mixins.triggerable import Triggerable
 from gui import helpers
 from gui.api import API
 
@@ -36,7 +38,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse as parse_date
 from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
@@ -148,7 +150,7 @@ def filter_archived(additional_filter=None):
     return base_non_archived
 
 
-class GuiService(PluginBase, Configurable, API):
+class GuiService(PluginBase, Triggerable, Configurable, API):
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
 
     def __init__(self, *args, **kwargs):
@@ -184,6 +186,7 @@ class GuiService(PluginBase, Configurable, API):
             self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
         self._exec_report_scheduler.start()
         self.metadata = self.load_metadata()
+        self._activate('execute')
 
     def load_metadata(self):
         try:
@@ -229,7 +232,7 @@ class GuiService(PluginBase, Configurable, API):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_report(name, report)
+                    self._insert_report_config(name, report)
                 except Exception as e:
                     logger.exception(f'Error adding default report {name}. Reason: {repr(e)}')
         except Exception as e:
@@ -267,8 +270,8 @@ class GuiService(PluginBase, Configurable, API):
         logger.info(f'Added view {name} id: {result.inserted_id}')
         return result.inserted_id
 
-    def _insert_report(self, name, report):
-        reports_collection = self._get_collection("reports")
+    def _insert_report_config(self, name, report):
+        reports_collection = self._get_collection("reports_config")
         existed_report = reports_collection.find_one({'name': name})
         if existed_report is not None and not existed_report.get('archived'):
             logger.info(f'Report {name} already exists under id: {existed_report["_id"]}')
@@ -1906,6 +1909,12 @@ class GuiService(PluginBase, Configurable, API):
     def get_dashboard_coverage(self):
         return jsonify(self._get_dashboard_coverage())
 
+    @helpers.add_rule_unauthenticated("get_latest_report_date", methods=['GET'])
+    def get_latest_report_date(self):
+        recent_report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
+        if recent_report is not None:
+            return jsonify(recent_report['time'])
+
     @helpers.add_rule_unauthenticated("research_phase", methods=['POST'])
     def schedule_research_phase(self):
         """
@@ -1913,6 +1922,7 @@ class GuiService(PluginBase, Configurable, API):
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
+
         data = self.get_request_data_as_object()
         logger.info(f"Scheduling Research Phase to: {data if data else 'Now'}")
         response = self.request_remote_plugin(
@@ -2028,6 +2038,97 @@ class GuiService(PluginBase, Configurable, API):
                     logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")
         return views_data
 
+    def _triggered(self, job_name: str, post_json: dict, *args):
+        if job_name != 'execute':
+            logger.error(f"Got bad trigger request for non-existent job: {job_name}")
+            return return_error("Got bad trigger request for non-existent job", 400)
+        else:
+            self._run_queries_phase()
+            with self._get_db_connection() as db_connection:
+                schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
+                if schemas['config']['generate_report'] is True:
+                    return self.generate_new_report_offline()
+                else:
+                    return
+
+    def generate_new_report_offline(self):
+        '''
+        Generates a new version of the report as a PDF file and saves it to the db
+        (this method is NOT an endpoint)
+
+        :return: "Success" if successful, error if there is an error
+        '''
+
+        try:
+            logger.info("Rendering Report.")
+            # generate_report() renders the report html
+            report_html = self.generate_report()
+            # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
+            with io.BytesIO() as report_data:
+                report_html.write_pdf(report_data)
+                report_data.seek(0)
+                # Uploads the report to the db and returns a uuid to retrieve it
+                uuid = self._upload_report(report_data)
+                logger.info(f"Report was saved to the db {uuid}")
+            # Stores the uuid in the db in the "reports" collection
+            self._get_collection("reports").replace_one(
+                {'filename': 'most_recent_report'},
+                {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
+            )
+            return "Success"
+        except Exception as e:
+            logger.exception('Failed to generate report.')
+            return return_error(f'Problem generating report:\n{str(e.args[0]) if e.args else e}', 400)
+
+    @helpers.add_rule_unauthenticated('generate_new_report', methods=['POST'])
+    def generate_new_report(self):
+        '''
+        Calls local method that generates a new version of the report as a PDF file and saves it to the db.
+
+        :return: "Success" if successful, error if there is an error
+        '''
+
+        try:
+            return self.generate_new_report_offline()
+        except Exception as e:
+            logger.exception('Failed to generate report.')
+            return return_error(f'Problem generating report:\n{str(e.args[0]) if e.args else e}', 400)
+
+    def _upload_report(self, report):
+        """
+        Uploads the latest report PDF to the db
+        :param report: report data
+        :return:
+        """
+        if not report:
+            return return_error("Report must exist", 401)
+
+        # First, need to delete the old report
+        self._delete_last_report()
+
+        report_name = "most_recent_report"
+        with self._get_db_connection() as db_connection:
+            fs = gridfs.GridFS(db_connection[GUI_NAME])
+            written_file_id = fs.put(report, filename=report_name)
+            logger.info("Report successfully placed in the db")
+        return str(written_file_id)
+
+    def _delete_last_report(self):
+        """
+        Deletes the last version of the report pdf to avoid having too many saved versions
+        :return:
+        """
+        report_collection = self._get_collection("reports")
+        if report_collection != None:
+            most_recent_report = report_collection.find_one({'filename': 'most_recent_report'})
+            if most_recent_report != None:
+                uuid = most_recent_report.get('uuid')
+                if uuid != None:
+                    logger.info(f'DELETE: {uuid}')
+                    with self._get_db_connection() as db_connection:
+                        fs = gridfs.GridFS(db_connection[GUI_NAME])
+                        fs.delete(ObjectId(uuid))
+
     @helpers.add_rule_unauthenticated('export_report')
     def export_report(self):
         """
@@ -2035,16 +2136,29 @@ class GuiService(PluginBase, Configurable, API):
         Gets all the needed data for both pre-defined and dynamic content definitions.
         Sends the complete data to the report generator to be composed to one document and generated as a pdf file.
 
+        If background report generation setting is turned off, the report will be generated here, as well.
+
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
-        report_path = self.generate_report()
-        return send_file(report_path, mimetype='application/pdf', as_attachment=True,
-                         attachment_filename=report_path)
+        with self._get_db_connection() as db_connection:
+            schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
+            if schemas['config']['generate_report'] is False:
+                self.generate_new_report_offline()
+
+        uuid = self._get_collection("reports").find_one({'filename': 'most_recent_report'})['uuid']
+        with self._get_db_connection() as db_connection:
+            timestamp = datetime.now()
+            report_pdf = f'/tmp/axonius-report_{timestamp}.pdf'
+            with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_file:
+                file = open(report_pdf, 'wb')
+                file.write(report_file.read())
+                return send_file(report_pdf, mimetype='application/pdf', as_attachment=True,
+                                 attachment_filename=report_pdf)
 
     def generate_report(self):
         """
-        Generates the report and returns file path.
+        Generates the report and returns html.
         :return: the generated report file path.
         """
         logger.info("Starting to generate report")
@@ -2054,13 +2168,31 @@ class GuiService(PluginBase, Configurable, API):
             'custom_charts': list(self._get_dashboard()),
             'views_data': self._get_saved_views_data()
         }
-        report = self._get_collection('reports').find_one({'name': 'Main Report'})
+        report = self._get_collection('reports_config').find_one({'name': 'Main Report'})
         if report.get('adapters'):
             report_data['adapter_data'] = self._get_adapter_data(report['adapters'])
         system_config = self.system_collection.find_one({'type': 'server'}) or {}
         server_name = system_config.get('server_name', 'localhost')
         logger.info(f'All data for report gathered - about to generate for server {server_name}')
-        return ReportGenerator(report_data, 'gui/templates/report/', host=server_name).generate_report_pdf()
+        return ReportGenerator(report_data, 'gui/templates/report/', host=server_name).render_html(datetime.now())
+
+    def _run_queries_phase(self):
+        """
+        Run all saved queries (i.e. views) and save the result count in the DB
+        """
+        for entity_type in EntityType:
+            views = self.gui.entity_query_views_db_map[entity_type].find({'query_type': 'saved'})
+            for view in views:
+                try:
+                    parsed_view_filter = parse_filter(view['view']['query']['filter'])
+                    count = self._entity_views_db_map[entity_type].count(parsed_view_filter)
+                    self.gui.entity_views_results_db_map[entity_type].insert_one({
+                        "view": view['name'],
+                        "count": count,
+                        "accurate_for_datetime": datetime.now(tz=timezone.utc)
+                    })
+                except Exception:
+                    logger.exception(f"Exception on running view {view}")
 
     @helpers.add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):
@@ -2160,7 +2292,7 @@ class GuiService(PluginBase, Configurable, API):
 
     @property
     def plugin_subtype(self):
-        return "Core"
+        return "Post-Correlation"
 
     @property
     def system_collection(self):

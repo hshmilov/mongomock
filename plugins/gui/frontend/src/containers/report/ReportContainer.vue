@@ -2,10 +2,14 @@
     <x-page title="Reporting">
         <x-box class="x-report">
             <div class="x-report-download">
-                <a class="x-btn great" @click="startDownload" :class="{disabled: downloading}" id="reports_download">
-                    <template v-if="downloading">GENERATING...</template>
+                <a class="x-btn great" @click="startDownload" :class="{disabled: canDownloadReport}" id="reports_download">
+                    <template v-if="downloading">DOWNLOADING...</template>
                     <template v-else>Download Now</template>
                 </a>
+            </div>
+            <div class="x-report-latest">
+                {{latestReportDate}}.
+                <template v-if="!isLatestReport"></template>
             </div>
             <h3 id="reports_schedule">Periodical Report Email</h3>
             <div class="x-content">
@@ -51,6 +55,9 @@
         computed: {
         	valid() {
         		return this.execReportSettings.recipients.length > 0 && this.execReportSettings.period
+            },
+            canDownloadReport() {
+        	    return this.downloading || !this.isLatestReport
             }
         },
         data() {
@@ -60,6 +67,8 @@
                     recipients: []
                 },
                 downloading: false,
+                latestReportDate: 'No report generated. Press \"Discover Now\" to generate',
+                isLatestReport: false,
                 message: ''
             }
         },
@@ -67,7 +76,7 @@
             ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
             ...mapActions({ downloadReport: DOWNLOAD_REPORT, fetchData: REQUEST_API }),
             startDownload() {
-                if (this.downloading) return
+                if (this.canDownloadReport) return
                 this.downloading = true
                 this.downloadReport().then((response) => {
                     this.downloading = false
@@ -120,6 +129,15 @@
                 if (response.data && response.data.recipients) this.execReportSettings = response.data
             })
             this.changeState({ name: 'reportsSchedule' })
+            this.fetchData({
+                rule: `get_latest_report_date`,
+                method: 'GET',
+            }).then((response) => {
+                if (response.data) {
+                    this.latestReportDate = "Last generated: " + response.data;
+                    this.isLatestReport = true;
+                }
+            })
         }
     }
 </script>
