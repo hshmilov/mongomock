@@ -131,8 +131,12 @@ export const adapter = {
 		},
 		[ ARCHIVE_SERVER ] ({dispatch, commit}, payload) {
 			if (!payload.adapterId || !payload.serverId) { return }
+            let param = ''
+            if (payload.deleteEntities) {
+				param = '?deleteEntities=True'
+			}
 			dispatch(REQUEST_API, {
-				rule: `adapters/${payload.adapterId}/clients/${payload.serverId}`,
+				rule: `adapters/${payload.adapterId}/clients/${payload.serverId}${param}`,
 				method: 'DELETE'
 			}).then((response) => {
 				if (response.data !== '') {

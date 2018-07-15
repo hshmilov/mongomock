@@ -130,11 +130,25 @@ class AxoniusService(object):
         return list(cursor)
 
     def get_device_by_id(self, adapter_name, device_id):
-        cond = {'adapters.data.id': device_id, 'adapters.plugin_unique_name': adapter_name}
+        cond = {
+            'adapters': {
+                "$elemMatch": {
+                    'data.id': device_id,
+                    PLUGIN_UNIQUE_NAME: adapter_name
+                }
+            }
+        }
         return self.get_devices_with_condition(cond)
 
     def get_user_by_id(self, adapter_name, user_id):
-        cond = {'adapters.data.id': user_id, 'adapters.plugin_unique_name': adapter_name}
+        cond = {
+            'adapters': {
+                "$elemMatch": {
+                    'data.id': user_id,
+                    PLUGIN_UNIQUE_NAME: adapter_name
+                }
+            }
+        }
         return self.get_users_with_condition(cond)
 
     def get_device_network_interfaces(self, adapter_name, device_id):

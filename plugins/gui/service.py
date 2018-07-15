@@ -340,7 +340,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     'view': {
                         'page': 0,
                         'pageSize': limit,
-                        'fields': list(projection.keys()),
+                        'fields': list((projection or {}).keys()),
                         'coloumnSizes': [],
                         'query': {
                             'filter': view_filter,
@@ -527,11 +527,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :param filter: Object defining a Mongo query
         :return: Number of devices
         """
-        if filter:
-            data_collection = self._entity_views_db_map[entity_type]
-        else:
-            # optimization: if there's no filter we can search the raw DB
-            data_collection = self._entity_db_map[entity_type]
+        data_collection = self._entity_views_db_map[entity_type]
         return str(data_collection.count(filter))
 
     def _flatten_fields(self, schema, name='', exclude=[]):
@@ -913,7 +909,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
             return jsonify(adapters_to_return)
 
-    def _query_client_for_devices(self, request, adapter_unique_name, data_from_db_for_unchanged=None):
+    def _query_client_for_devices(self, adapter_unique_name, data_from_db_for_unchanged=None):
         client_to_add = request.get_json(silent=True)
         if client_to_add is None:
             return return_error("Invalid client", 400)
@@ -969,21 +965,63 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         Gets or creates clients in the adapter
         :param adapter_unique_name: the adapter to refer to
-        :param limit: for pagination (only for GET)
-        :param skip: for pagination (only for GET)
         :return:
         """
         with self._get_db_connection() as db_connection:
-            return self._query_client_for_devices(request, adapter_unique_name)
+            return self._query_client_for_devices(adapter_unique_name)
 
     @helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
-    def adapters_clients_update(self, adapter_unique_name, client_id):
+    def adapters_clients_update(self, adapter_unique_name, client_id=None):
         """
-        Gets or creates clients in the adapter
+        Create or delete credential sets (clients) in the adapter
         :param adapter_unique_name: the adapter to refer to
-        :param client_id: UUID of client to delete
+        :param client_id: UUID of client to delete if DELETE is used
         :return:
         """
+        if request.method == 'DELETE':
+            plugin_name = self.get_plugin_by_name(adapter_unique_name)[PLUGIN_NAME]
+            delete_entities = request.args.get('deleteEntities', False)
+            if delete_entities:
+                client_from_db = self._get_collection('clients', adapter_unique_name). \
+                    find_one({'_id': ObjectId(client_id)})
+                if client_from_db:
+                    # this is the "client_id" - i.e. AD server or AWS Access Key
+                    local_client_id = client_from_db['client_id']
+                    for entity_type in EntityType:
+                        res = self._entity_db_map[entity_type].update_many(
+                            {
+                                'adapters': {
+                                    '$elemMatch': {
+                                        "$and": [
+                                            {
+                                                PLUGIN_NAME: plugin_name
+                                            },
+                                            {
+                                                # and the device must be from this adapter
+                                                "client_used": local_client_id
+                                            }
+                                        ]
+                                    }
+                                }
+                            },
+                            {
+                                "$set": {
+                                    "adapters.$[i].pending_delete": True
+                                }
+                            },
+                            array_filters=[
+                                {
+                                    "$and": [
+                                        {f"i.{PLUGIN_NAME}": plugin_name},
+                                        {"i.client_used": local_client_id}
+                                    ]
+                                }
+                            ]
+                        )
+                        logger.info(f"Set pending_delete on {res.modified_count} axonius entities "
+                                    f"(or some adapters in them)" +
+                                    f"from {res.matched_count} matches")
+
         if request.method == 'PUT':
             client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
@@ -1856,7 +1894,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
-                devices_count = self.devices_db.count({'adapters.plugin_name': adapter['plugin_name']})
+                devices_count = self.devices_db_view.count({'specific_data.plugin_name': adapter['plugin_name']})
                 if not devices_count:
                     # No need to document since adapter has no devices
                     continue

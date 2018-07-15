@@ -668,14 +668,17 @@ class PluginBase(Configurable, Feature):
     def get_plugin_by_name(self, plugin_name, verify_single=True, verify_exists=True):
         """
         Finds plugin_name in the online plugin list
-        :param plugin_name: str
+        :param plugin_name: str for plugin_name or plugin_unique_name
         :param verify_single: If True, will raise if many instances are found.
         :param verify_exists: If True, will raise if no instances are found.
         :return: if verify_single: single plugin data or None; if not verify_single: all plugin datas
         """
         # using requests directly so the api key won't be sent, so the core will give a list of the plugins
         plugins_available = requests.get(self.core_address + '/register').json()
-        found_plugins = [x for x in plugins_available.values() if x['plugin_name'] == plugin_name]
+        found_plugins = [x
+                         for x
+                         in plugins_available.values()
+                         if x['plugin_name'] == plugin_name or x[PLUGIN_UNIQUE_NAME] == plugin_name]
 
         if verify_single:
             if len(found_plugins) == 0:

@@ -152,7 +152,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
 
     def __find_old_axonius_entities(self, entity_age_cutoff: Tuple[date, date], entity_db):
         """
-        Scans the DB for axonius devices that have at least one old entity
+        Scans the DB for axonius devices that have at least one old entity or are pending to be deleted
         :return: entity cursor
         """
         last_seen_cutoff, last_fetched_cutoff = entity_age_cutoff
@@ -170,19 +170,41 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             }
         ]
         dbfilter = {
-            'adapters': {
-                '$elemMatch': {
-                    "$and": [
-                        {
-                            "$or": dates_for_device
-                        },
-                        {
-                            # and the device must be from this adapter
-                            PLUGIN_NAME: self.plugin_name
-                        }
-                    ]
-                }
-            }
+            '$or':
+                [
+                    {
+                        'adapters':
+                            {
+                                '$elemMatch': {
+                                    "$and": [
+                                        {
+                                            "$or": dates_for_device
+                                        },
+                                        {
+                                            # and the device must be from this adapter
+                                            PLUGIN_NAME: self.plugin_name
+                                        }
+                                    ]
+                                }
+                            }
+                    },
+                    {
+                        'adapters':
+                            {
+                                '$elemMatch': {
+                                    "$and": [
+                                        {
+                                            "adapters.pending_delete": True
+                                        },
+                                        {
+                                            # and the device must be from this adapter
+                                            PLUGIN_NAME: self.plugin_name
+                                        }
+                                    ]
+                                }
+                            }
+                    }
+                ]
         }
         return entity_db.find(dbfilter)
 
@@ -216,39 +238,48 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         """
         db_to_use = self._entity_db_map.get(entity_type)
         deleted_entities_count = 0
-        for axonius_device in self.__find_old_axonius_entities(age_cutoff, db_to_use):
-            old_adapter_entities = self.__extract_old_entities_from_axonius_device(axonius_device,
+        for axonius_entity in self.__find_old_axonius_entities(age_cutoff, db_to_use):
+            old_adapter_entities = self.__extract_old_entities_from_axonius_device(axonius_entity,
                                                                                    age_cutoff)
 
-            for index, entity_to_remove in enumerate(old_adapter_entities):
-                if index < len(axonius_device['adapters']) - 1:
-                    logger.info(f"Unlinking entity {entity_to_remove}")
-                    # if the above condition isn't met it means
-                    # that the current entity is the last one (or even the only one)
-                    # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
-                    response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
-                        "plugin_type": "Plugin",
-                        "data": {
-                            'Reason': 'The device is too old so it is going to be deleted'
-                        },
-                        "associated_adapters": [
-                            entity_to_remove
-                        ],
-                        "association_type": "Unlink",
-                        "entity": entity_type.value
-                    })
-                    if response.status_code != 200:
-                        logger.error(f"Unlink failed for {entity_to_remove}," +
-                                     "not removing the device for consistency." +
-                                     f"Error: {response.status_code}, {str(response.content)}")
-
-                        continue
-
-                logger.info(f"Deleting axonius device {entity_to_remove}")
-                if self.__archive_axonius_device(*entity_to_remove, db_to_use):
-                    deleted_entities_count += 1
+            deleted_entities_count += self.__unlink_and_delete_entity(axonius_entity,
+                                                                      db_to_use,
+                                                                      entity_type,
+                                                                      old_adapter_entities)
 
         return deleted_entities_count
+
+    def __unlink_and_delete_entity(self, axonius_entity, db_to_use, entity_type,
+                                   adapter_entities_to_delete):
+        counter = 0
+        for index, entity_to_remove in enumerate(adapter_entities_to_delete):
+            if index < len(axonius_entity['adapters']) - 1:
+                logger.info(f"Unlinking entity {entity_to_remove}")
+                # if the above condition isn't met it means
+                # that the current entity is the last one (or even the only one)
+                # if it is in fact the only one there's no Unlink to do: the whole axonius device is gone
+                response = self.request_remote_plugin('plugin_push', AGGREGATOR_PLUGIN_NAME, 'post', json={
+                    "plugin_type": "Plugin",
+                    "data": {
+                        'Reason': 'The device is too old so it is going to be deleted'
+                    },
+                    "associated_adapters": [
+                        entity_to_remove
+                    ],
+                    "association_type": "Unlink",
+                    "entity": entity_type.value
+                })
+                if response.status_code != 200:
+                    logger.error(f"Unlink failed for {entity_to_remove}," +
+                                 "not removing the device for consistency." +
+                                 f"Error: {response.status_code}, {str(response.content)}")
+
+                    continue
+
+            logger.info(f"Deleting axonius device {entity_to_remove}")
+            if self.__archive_axonius_device(*entity_to_remove, db_to_use):
+                counter += 1
+        return counter
 
     def clean_db(self):
         """
@@ -256,7 +287,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         Unlinks devices first if necessary.
         :return: Amount of deleted devices
         """
-        if not(self._last_seen_timedelta or self._last_fetched_timedelta or
+        if not (self._last_seen_timedelta or self._last_fetched_timedelta or
                 self.__user_last_fetched_timedelta or self.__user_last_seen_timedelta):
             return 0
 
@@ -743,8 +774,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         Finds all entities that are old in an axonius device
         """
         for adapter in axonius_device['adapters']:
-            if self.__is_old_entity(adapter, entity_age_cutoff):
-                yield adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']
+            if adapter[PLUGIN_NAME] == self.plugin_name:
+                if self.__is_old_entity(adapter, entity_age_cutoff) or adapter.get('pending_delete') is True:
+                    yield adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']
 
     def _remove_big_keys(self, key_to_check, entity_id):
         """ Function for removing big elements in data chanks.

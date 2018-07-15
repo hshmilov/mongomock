@@ -155,7 +155,7 @@ class AdapterService(PluginService):
         self.adapter_name = name
 
     def add_client(self, client_details):
-        self.clients(client_details)
+        return self.clients(client_details)
 
     def users(self):
         response = requests.get(self.req_url + "/users", headers={API_KEY_HEADER: self.api_key})

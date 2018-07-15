@@ -44,6 +44,14 @@ class TestNessusCsvAdapter(AdapterTestBase):
 
         assert len(wanted_device_list) == 1, str(devices_as_tuple)
 
+    @pytest.mark.skip("No test env")
+    def test_removing_adapter_creds_with_devices(self):
+        pass
+
+    @pytest.mark.skip("No test env")
+    def test_removing_adapter_creds_with_users(self):
+        pass
+
 
 if __name__ == '__main__':
     import pytest

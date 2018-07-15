@@ -68,11 +68,18 @@ RUN cd ./gui/frontend/ && npm run {dev}build
     def get_devices_count(self, *vargs, **kwargs):
         return self.get('devices/count', session=self._session, *vargs, **kwargs)
 
+    def get_users(self, *vargs, **kwargs):
+        return self.get('users', session=self._session, *vargs, **kwargs)
+
     def get_users_count(self, *vargs, **kwargs):
         return self.get('users/count', session=self._session, *vargs, **kwargs)
 
     def get_device_by_id(self, id, *vargs, **kwargs):
         return self.get('devices/{0}'.format(id), session=self._session, *vargs, **kwargs)
+
+    def delete_client(self, adapter_unique_name, client_id, *vargs, **kwargs):
+        return self.delete(f'adapters/{adapter_unique_name}/clients/{client_id}', session=self._session,
+                           *vargs, **kwargs)
 
     def get_all_tags(self, *vargs, **kwargs):
         return self.get('tags', session=self._session, *vargs, **kwargs)

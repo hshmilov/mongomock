@@ -1,5 +1,9 @@
 import os
 import sys
+
+from test_credentials.test_gui_credentials import DEFAULT_USER
+from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
+
 try:
     import axonius
 except (ModuleNotFoundError, ImportError):
@@ -10,10 +14,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 
 from axonius.plugin_base import EntityType
-from flaky import flaky
 import pytest
-
-from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 
 from services.axonius_service import get_service
 from test_helpers.utils import check_conf
@@ -245,3 +246,156 @@ class AdapterTestBase(object):
         # it's ok to restart adapter in adapter test
         service.take_process_ownership()
         self.axonius_system.restart_plugin(service)
+
+    def test_removing_adapter_creds_with_devices(self):
+        """
+        This tests the feature that allows the user to delete a set of credentials from an adapter
+        and also deleting all associated devices to those credentials.
+        """
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        gui_service = self.axonius_system.gui
+        gui_service.login_user(DEFAULT_USER)
+
+        adapter_tested = [self.adapter_service.plugin_name, self.adapter_service.unique_name]
+        not_our_adapter = ['lol_adapter', 'lol_adapter_321']
+
+        axon_device = get_entity_axonius_dict_multiadapter('GUI_CLIENT_DELETE_TEST',
+                                                           [[uuid.uuid4().hex, *adapter_tested, out_client_id],
+                                                            [uuid.uuid4().hex, *not_our_adapter]])
+        out_id = axon_device['adapters'][0]['data']['id']
+        lol_id = axon_device['adapters'][1]['data']['id']
+        self.axonius_system.insert_device(axon_device)
+
+        def get_devices_by_id(adapter_name, data_id):
+            res = gui_service.get_devices(params={
+                'filter':
+                    f'adapters_data.{adapter_name}.id == "{data_id}"'}
+            ).json()
+            return res
+
+        devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id).status_code == 200
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
+
+        devices_response = get_devices_by_id('lol_adapter', lol_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
+                                         params={
+                                             "deleteEntities": 'True'
+                                         }).status_code == 200
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        devices_response = get_devices_by_id('lol_adapter', lol_id)[0]
+        assert set(devices_response['adapters']) == {'lol_adapter'}
+        assert len(get_devices_by_id(self.adapter_service.plugin_name, out_id)) == 0
+
+        # test without linked devices
+        axon_device = get_entity_axonius_dict_multiadapter('GUI_CLIENT_DELETE_TEST',
+                                                           [[uuid.uuid4().hex, *adapter_tested, out_client_id]])
+        out_id = axon_device['adapters'][0]['data']['id']
+
+        self.axonius_system.insert_device(axon_device)
+
+        devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id).status_code == 200
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        devices_response = get_devices_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
+                                         params={
+                                             "deleteEntities": 'True'
+                                         }).status_code == 200
+        assert len(get_devices_by_id(self.adapter_service.plugin_name, out_id)) == 0
+        self.adapter_service.trigger_clean_db()
+
+    def test_removing_adapter_creds_with_users(self):
+        """
+        This tests the feature that allows the user to delete a set of credentials from an adapter
+        and also deleting all associated users to those credentials.
+        """
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        gui_service = self.axonius_system.gui
+        gui_service.login_user(DEFAULT_USER)
+
+        adapter_tested = [self.adapter_service.plugin_name,
+                          self.adapter_service.unique_name]  # plugin_name, plugin_unique_name
+        not_our_adapter = ['lol_adapter', 'lol_adapter_321']
+
+        axon_device = get_entity_axonius_dict_multiadapter('GUI_CLIENT_DELETE_TEST',
+                                                           [[uuid.uuid4().hex, *adapter_tested, out_client_id],
+                                                            [uuid.uuid4().hex, *not_our_adapter]])
+        out_id = axon_device['adapters'][0]['data']['id']
+        lol_id = axon_device['adapters'][1]['data']['id']
+        self.axonius_system.insert_user(axon_device)
+
+        def get_users_by_id(adapter_name, data_id):
+            res = gui_service.get_users(params={
+                'filter':
+                    f'adapters_data.{adapter_name}.id == "{data_id}"'}
+            ).json()
+            return res
+
+        devices_response = get_users_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id).status_code == 200
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        devices_response = get_users_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
+
+        devices_response = get_users_by_id('lol_adapter', lol_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name, 'lol_adapter'}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
+                                         params={
+                                             "deleteEntities": 'True'
+                                         }).status_code == 200
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        devices_response = get_users_by_id('lol_adapter', lol_id)[0]
+        assert set(devices_response['adapters']) == {'lol_adapter'}
+        assert len(get_users_by_id(self.adapter_service.plugin_name, out_id)) == 0
+
+        # test without linked devices
+        axon_device = get_entity_axonius_dict_multiadapter('GUI_CLIENT_DELETE_TEST',
+                                                           [[uuid.uuid4().hex, *adapter_tested, out_client_id]])
+        out_id = axon_device['adapters'][0]['data']['id']
+
+        self.axonius_system.insert_user(axon_device)
+
+        devices_response = get_users_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id).status_code == 200
+        our_client_object_id = self.adapter_service.add_client(self.some_client_details)['id']
+        out_client_id = self.some_client_id
+
+        devices_response = get_users_by_id(self.adapter_service.plugin_name, out_id)[0]
+        assert set(devices_response['adapters']) == {self.adapter_service.plugin_name}
+
+        assert gui_service.delete_client(self.adapter_service.unique_name, our_client_object_id,
+                                         params={
+                                             "deleteEntities": 'True'
+                                         }).status_code == 200
+        assert len(get_users_by_id(self.adapter_service.plugin_name, out_id)) == 0
+        self.adapter_service.trigger_clean_db()

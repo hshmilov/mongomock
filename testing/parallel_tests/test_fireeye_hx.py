@@ -24,3 +24,11 @@ class TestFireeyeHxAdapter(AdapterTestBase):
     @pytest.mark.skip("No test environment.")
     def test_fetch_devices(self):
         pass
+
+    @pytest.mark.skip("No test env")
+    def test_removing_adapter_creds_with_devices(self):
+        pass
+
+    @pytest.mark.skip("No test env")
+    def test_removing_adapter_creds_with_users(self):
+        pass

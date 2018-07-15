@@ -275,9 +275,7 @@ class ReportsService(PluginBase, Triggerable):
 
     def _generate_query_link(self, entity_type, view_name):
         # Getting system config from the gui.
-        system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION,
-                                             self.get_plugin_by_name(GUI_NAME)[PLUGIN_UNIQUE_NAME]).find_one(
-            {'type': 'server'}) or {}
+        system_config = self._get_collection(GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME).find_one({'type': 'server'}) or {}
         return f"https://{system_config.get('server_name', 'localhost')}/{entity_type}?view={view_name}"
 
     def _handle_action_create_service_now_computer(self, report_data, triggered, trigger_data, current_num_of_devices,

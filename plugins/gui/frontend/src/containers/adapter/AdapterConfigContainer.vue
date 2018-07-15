@@ -5,7 +5,7 @@
     ]" class="adapter-config">
         <x-table-actions title="Add or Edit Servers">
             <template slot="actions">
-                <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="link">Remove</div>
+                <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="x-btn">Remove</div>
                 <div @click="configServer('new')" id="new_server" class="x-btn">+ New Server</div>
             </template>
             <x-table slot="table" :fields="tableFields" :data="adapterClients" :click-row-handler="configServer"
@@ -45,6 +45,14 @@
                 <button @click="toggleServerModal" class="x-btn link">Cancel</button>
                 <button id="save_server" @click="saveServer" class="x-btn" :class="{disabled: !serverModal.valid}">Save</button>
             </template>
+        </modal>
+        <modal v-if="deleting"
+                @close="closeConfirmDelete" @confirm="doRemoveServers">
+            <div slot="body">
+                Are you sure you want to delete this server? <br/><br/>
+                <input type="checkbox" id="deleteEntitiesCheckbox" v-model="deleteEntities">
+                <label for="deleteEntitiesCheckbox">Also delete all associated entities (devices, users)</label>
+            </div>
         </modal>
         <x-toast v-if="message" :message="message" @done="removeToast" :timed="false" />
     </x-page>
@@ -107,7 +115,7 @@
 				if (!this.adapterSchema || !this.adapterSchema.items) return []
 				return [
 					{ name: 'status', title: '', type: 'string', format: 'icon' },
-                    ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password'))
+                    ...this.adapterSchema.items.filter(field => (field.type !== 'file' && field.format !== 'password')),
                 ]
             }
 		},
@@ -124,7 +132,10 @@
                 selectedServers: [],
                 message: '',
                 advancedSettings: false,
-                configValid: true
+                configValid: true,
+                deleting: false,        // whether or not the modal for deleting confirmation is displayed
+                deleteEntities: false,  // if 'deleting = true' and deleting was confirmed this means that
+                                        // also the entities of the associated users should be deleted
 			}
 		},
 		methods: {
@@ -152,12 +163,21 @@
 				this.changeState({name: 'saveServer'})
             },
 			removeServers () {
-            	this.selectedServers.forEach(serverId => this.archiveServer({
+                this.deleting = true
+			},
+            doRemoveServers() {
+                this.selectedServers.forEach(serverId => this.archiveServer({
 					adapterId: this.adapterId,
-					serverId: serverId
+					serverId: serverId,
+                    deleteEntities: this.deleteEntities
 				}))
                 this.selectedServers = []
-			},
+                this.deleting = false
+            },
+            closeConfirmDelete() {
+                this.deleting = false
+                this.deleteEntities = false
+            },
             validateServer(valid) {
             	this.serverModal.valid = valid
             },
