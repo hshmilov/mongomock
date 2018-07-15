@@ -5,10 +5,9 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
-from ensilo_adapter.connection import EnsiloConnection
-from ensilo_adapter.exceptions import EnsiloException
 from axonius.utils.parsing import parse_date
+from ensilo_adapter.connection import EnsiloConnection
+from axonius.clients.rest.exception import RESTException
 
 
 class EnsiloAdapter(AdapterBase):
@@ -21,20 +20,25 @@ class EnsiloAdapter(AdapterBase):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['Ensilo_Domain']
+        return client_config['domain']
 
     def _connect_client(self, client_config):
         try:
 
-            connection = EnsiloConnection(domain=client_config["Ensilo_Domain"],
-                                          verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = EnsiloConnection(domain=client_config["domain"],
+                                          verify_ssl=client_config["verify_ssl"],
+                                          username=client_config["username"],
+                                          password=client_config["password"],
+                                          https_proxy=client_config.get("https_proxy"),
+                                          url_base_prefix="management-rest/",
+                                          headers={'Content-Type': 'application/json',
+                                                   'Accept': 'application/json'})
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except EnsiloException as e:
+        except RESTException as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
-                client_config['Ensilo_Domain'], str(e))
+                client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
@@ -48,7 +52,7 @@ class EnsiloAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Ensilo Server
         """
         with client_data:
-            return client_data.get_device_list()
+            yield from client_data.get_device_list()
 
     def _clients_schema(self):
         """
@@ -59,7 +63,7 @@ class EnsiloAdapter(AdapterBase):
         return {
             "items": [
                 {
-                    "name": "Ensilo_Domain",
+                    "name": "domain",
                     "title": "Ensilo Domain",
                     "type": "string"
                 },
@@ -78,10 +82,16 @@ class EnsiloAdapter(AdapterBase):
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS Proxy",
+                    "type": "string"
                 }
+
             ],
             "required": [
-                "Ensilo_Domain",
+                "domain",
                 "username",
                 "password",
                 "verify_ssl"
@@ -93,7 +103,7 @@ class EnsiloAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device.id = device_raw.get("name")
+                device.id = str(device_raw.get("name")) + str(device_raw.get("macAddresses"))
                 if device.id is None:
                     continue
                 device.state = device_raw.get("state")
@@ -103,7 +113,7 @@ class EnsiloAdapter(AdapterBase):
                     mac_addresses = list(device_raw.get("macAddresses", []))
                     ip_addresses = device_raw.get("ipAddress")
                     if ip_addresses is not None:
-                        ip_addresses = ip_addresses.split(",")
+                        ip_addresses = str(ip_addresses).split(",")
                     if mac_addresses == []:
                         if ip_addresses is not None:
                             device.add_nic(None, ip_addresses)

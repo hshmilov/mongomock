@@ -1,8 +1,9 @@
 
 client_details = {
-    "Ensilo_Domain": "example.com",
-    "username": "user",
-    "password": "password"
+    "domain": "35.224.216.117",
+    "username": "test_user",
+    "password": "Axonius1",
+    "verify_ssl": False
 }
 
-SOME_DEVICE_ID = 'aa'
+SOME_DEVICE_ID = ''

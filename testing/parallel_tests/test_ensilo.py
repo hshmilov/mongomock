@@ -12,7 +12,7 @@ class TestEnsiloAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return client_details['Ensilo_Domain']
+        return client_details['domain']
 
     @property
     def some_client_details(self):
