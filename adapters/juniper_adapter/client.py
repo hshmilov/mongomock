@@ -31,9 +31,10 @@ class JuniperClient(object):
         for current_device in devices:
             yield ('Juniper Device', current_device)
 
-        tm = async.TaskMonitor(self.space_rest_client, 'get_arp_q')
+        tm = async.TaskMonitor(self.space_rest_client, 'get_arp_q', wait_time="10")
 
         try:
+            id_to_name_dict = dict()
             task_ids = []
             for current_device in devices:
                 try:
@@ -43,8 +44,8 @@ class JuniperClient(object):
                         task_monitor=tm,
                         rpcCommand="<get-arp-table-information/>"
                     )
-
-                    if result.id > 0:
+                    id_to_name_dict[str(result.id)] = current_device.name
+                    if not result.id > 0:
                         logger.error("Async RPC execution Failed. Failed to get arp table from device.")
                         continue
 
@@ -61,7 +62,7 @@ class JuniperClient(object):
                         logger.error(
                             f"Async RPC execution Failed. Failed to get arp table from device. The process state was {pu.state}")
                     else:
-                        yield ('Arp Device', pu.data)
+                        yield ('Arp Device', (pu.data, id_to_name_dict.get(str(pu.taskId), "")))
                 except Exception:
                     logger.exception(f"Something is wrong with pu {str(pu)}")
         finally:

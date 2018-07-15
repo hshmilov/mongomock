@@ -66,7 +66,7 @@ class TaskMonitor(object):
     """
 
     def __init__(self, rest_end_point, qname,
-                 wait_time=10, max_consecutive_attempts=10):
+                 wait_time="10", max_consecutive_attempts=10):
         """Creates an instance of this class to encapsulate a hornet-q.
 
         :param rest_end_point: An instance of ``rest.Space`` class which
@@ -148,7 +148,7 @@ class TaskMonitor(object):
 
         """
 
-        headers = {"accept-wait": self.wait_time}
+        headers = {"accept-wait": str(self.wait_time)}
         response = self._rest_end_point.post(self.next_msg_url, headers, body=None)
         next_msg = response.headers["msg-consume-next"]
         if len(next_msg) > 0:
@@ -185,7 +185,7 @@ class TaskMonitor(object):
             message = self.pull_message()
             if message is None:
                 num_consecutive_attempts += 1
-                time.sleep(self.wait_time)
+                time.sleep(int(self.wait_time))
                 continue
             else:
                 num_consecutive_attempts = 0
@@ -247,7 +247,7 @@ class TaskMonitor(object):
                 if num_consecutive_attempts > self.max_consecutive_attempts:
                     break
 
-                time.sleep(self.wait_time)
+                time.sleep(int(self.wait_time))
                 continue
             else:
                 num_consecutive_attempts = 0
