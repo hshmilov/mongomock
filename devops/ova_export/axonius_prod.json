@@ -47,7 +47,7 @@
         "chown root:root /etc/cron.d/chef_scheduled_provision.sh",
         "chmod  0500 /etc/cron.d/chef_scheduled_provision.sh",
         "crontab -l | { cat; echo \"*/1 * * * * /etc/cron.d/chef_scheduled_provision.sh\"; } | crontab -"
-        ],
+      ],
       "execute_command": "echo {{user `password`}} | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
@@ -61,21 +61,48 @@
       "inline": [
         "rm -f /home/ubuntu/axonius_{{user `build_name`}}.py",
         "cat /dev/null > /home/ubuntu/.bash_history"
-        ]
+      ]
     }
   ],
   "post-processors": [
-    {
-      "type": "shell-local",
-      "inline": [
-        "mkdir ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}",
-        "mv ./axonius_{{user `build_name`}}.py ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/",
-        "ovftool ./output-axonius-{{user `build_name` }}-build/*.vmx ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova",
-        "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassshare/Releases/",
-        "echo 'Password2' | sudo -S chmod -R 0777 /mnt/smb_share/nopassshare/Releases/{{user `build_name`}}",
-        "aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} s3://axonius-releases/{{user `build_name`}}/ --acl public-read",
-        "rm -rf ./output-axonius-{{user `build_name` }}-build"
-      ]
-    }
+    [
+      {
+        "type": "shell-local",
+        "inline": [
+          "mkdir ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}",
+          "mv ./axonius_{{user `build_name`}}.py ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/",
+          "ovftool ./output-axonius-{{user `build_name` }}-build/*.vmx ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova",
+          "echo 'Password2' | sudo -S cp -R ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}} /mnt/smb_share/nopassshare/Releases/",
+          "echo 'Password2' | sudo -S chmod -R 0777 /mnt/smb_share/nopassshare/Releases/{{user `build_name`}}",
+          "aws s3 sync ./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/axonius_{{user `build_name`}}.py s3://axonius-releases/{{user `build_name`}}/ --acl public-read"
+        ]
+      },
+      {
+        "type": "artifice",
+        "files": [
+          "./output-axonius-{{user `build_name` }}-build/{{user `build_name`}}/{{user `build_name`}}_export.ova"
+        ]
+      },
+      {
+        "type": "amazon-import",
+        "access_key": "AKIAJQ6MMS3DA7M5FW3Q",
+        "secret_key": "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",
+        "region": "us-east-2",
+        "s3_bucket_name": "axonius-releases",
+        "s3_key_name": "{{user `build_name`}}/{{user `build_name`}}/{{user `build_name`}}_export.ova",
+        "license_type": "BYOL",
+        "skip_clean": true,
+        "ami_name": "Axonius {{user `build_name`}}",
+        "tags": {
+          "Description": "Axonius Export {{user `build_name`}}."
+        }
+      },
+      {
+        "type": "shell-local",
+        "inline": [
+          "rm -rf ./output-axonius-{{user `build_name` }}-build"
+        ]
+      }
+    ]
   ]
 }

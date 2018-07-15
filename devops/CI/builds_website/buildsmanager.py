@@ -170,11 +170,19 @@ class BuildsManager(object):
                 }}
             )
 
+        def delete_ami():
+            for image in self.ec2.images.filter(Owners=['self']):
+                if f'Axonius {version}' in image.name:
+                    image.deregister()
+                    break
+
         deleted = _delete_s3_export()
 
         delete_from_storage()
 
         delete_from_db()
+
+        delete_ami()
 
         return len(deleted) > 0
 
