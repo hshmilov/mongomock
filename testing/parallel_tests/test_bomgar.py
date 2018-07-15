@@ -21,9 +21,3 @@ class TestBomgarAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Bomgar License expired")
-    def test_fetch_devices(self):
-        # Our license expires on Friday, March 2nd, 2018 @ 06:00 UTC
-        # so tests will stop working then...
-        pass

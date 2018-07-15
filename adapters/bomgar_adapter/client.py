@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(f"axonius.{__name__}")
+
 import datetime
 import json
 from gzip import decompress as gzip_decompress
@@ -63,6 +66,7 @@ class BomgarConnection(object):
         if self.is_connected:
             raise BomgarAlreadyConnected()
         session = requests.Session()
+        # post request for token.
         response = session.post(self.oauth2_url, data={'grant_type': 'client_credentials'}, auth=(self.client_id,
                                                                                                   self.client_secret), timeout=(5, 30))
         try:
@@ -213,13 +217,15 @@ class BomgarConnection(object):
                             'last_session_start_method': support_session['start_method'],
                         }
                         last_session_representative_username = None
-                        # get the representative username by support_session_id
-                        for representative_support_session in archive['representative_support_session'].values():
-                            if representative_support_session['support_session_id'] == support_session_id:
-                                representative_id = representative_support_session['representative_id']
-                                last_session_representative_username = archive['representative'].get(representative_id,
-                                                                                                     {}).get('username')
-                                break
+
+                        if archive['representative_support_session'] is not None:
+                            logger.info("A representative support session exists")
+                            for representative_support_session in archive['representative_support_session'].values():
+                                if representative_support_session['support_session_id'] == support_session_id:
+                                    representative_id = representative_support_session['representative_id']
+                                    last_session_representative_username = archive['representative'].get(representative_id,
+                                                                                                         {}).get('username')
+                                    break
                         if last_session_representative_username is not None:
                             session['last_session_representative_username'] = last_session_representative_username
                         client_sessions[hostname] = session

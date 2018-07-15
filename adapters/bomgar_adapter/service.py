@@ -83,28 +83,43 @@ class BomgarAdapter(AdapterBase):
                 device.hostname = device_raw.get('hostname', "")
                 device_id = device_raw.get('hostname', "")
                 if device_id == "":
+                    logger.warning('Hostname was empty or None')
                     continue
                 device.id = device_id
                 device.figure_os(device_raw.get('operating_system', ""))
-                device.created_timestamp = datetime.datetime.fromtimestamp(device_raw.get('created_timestamp', 0))
-                device.device_type = device_raw['device_type']
-                device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('last_seen', 0))
-                if device_raw['device_type'] == 'representative':
-                    device.public_display_name = device_raw.get('public_display_name')
-                    device.user_id = device_raw.get('user_id')
-                    device.username = device_raw.get('username')
+                try:
+                    device.created_timestamp = datetime.datetime.fromtimestamp(int(device_raw.get('created_timestamp')))
+                except Exception:
+                    logger.exception(f"The device {device_raw} did not have a timestamp")
+                device.device_type = device_raw.get("device_type", "")
+                try:
+                    device.last_seen = datetime.datetime.fromtimestamp(int(device_raw.get("last_seen")))
+                except Exception:
+                    logger.exception(f"The device {device_raw} did not have a last seen timestamp")
+
+                if device_raw.get("device_type", "") == 'representative':
+                    device.public_display_name = device_raw.get('public_display_name', "")
+                    device.user_id = device_raw.get('user_id', "")
+                    device.username = device_raw.get('username', "")
                 else:
                     try:
                         device.last_session_representative_username = device_raw.get(
-                            'last_session_representative_username')
-                        if device_raw.get('last_session_start') is not None:
+                            'last_session_representative_username', "")
+                        if device_raw.get('last_session_start'):
                             device.last_session_start = datetime.datetime.fromtimestamp(
-                                device_raw.get('last_session_start'))
-                        device.last_session_start_method = device_raw.get('last_session_start_method')
+                                int(device_raw.get('last_session_start')))
+                        device.last_session_start_method = device_raw.get('last_session_start_method', "")
                     except Exception:
                         logger.exception(f"Problem at adding start time for {device_raw}")
-                device.add_nic(None, [device_raw.get('private_ip', "")])
-                device.public_ip = device_raw.get('public_ip', '')
+
+                possible_private_ip = device_raw.get("private_ip", "")
+                if possible_private_ip is not 'localhost' and possible_private_ip:
+                    device.add_nic(None, [possible_private_ip])
+
+                possible_public_ip = device_raw.get("private_ip", "")
+                if possible_public_ip is not 'localhost' and possible_public_ip:
+                    device.add_nic(None, [possible_public_ip])
+
                 device.set_raw(device_raw)
                 yield device
             except Exception:
