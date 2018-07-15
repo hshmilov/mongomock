@@ -242,14 +242,14 @@
         var ec2_state = inst['ec2']['state'];
         if (ec2_state !== 'terminated' && ec2_state !== 'shutting-down') {
             actions_data = [
-                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate the instance?", function () { return terminate_instance('', inst['ec2']['id']);})]
+                ["Terminate", wrap_modal_with_td("Are you sure you want to terminate the instance?", function (yes_function) { return terminate_instance(yes_function, inst['ec2']['id']);})]
             ];
 
              if (ec2_state === "running") {
-                 actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop the instance?", function () { return stop_instance('', inst['ec2']['id']);})]);
+                 actions_data.unshift(["Stop", wrap_modal_with_td("Are you sure you want to stop the instance?", function (yes_function) { return stop_instance(yes_function, inst['ec2']['id']);})]);
              }
              else {
-                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start the instance?", function () { return start_instance('', inst['ec2']['id']);})]);
+                 actions_data.unshift(["Start", wrap_modal_with_td("Are you sure you want to start the instance?", function (yes_function) { return start_instance(yes_function, inst['ec2']['id']);})]);
              }
         }
 
@@ -348,7 +348,6 @@
             })
             .fail(exception_modal)
             .always(always_function);
-
     }
     function stop_instance(always_function, instance_id) {
         var data = {};
@@ -366,12 +365,7 @@
         $.ajax({url: "/instances/" + instance_id, type: "DELETE", data: {}})
             .done(function(data) {
                 current_instances = data["current"];
-                for (i in current_instances) {
-                    if (current_instances[i]['ec2']['state'] !== 'terminated') {
-                        update_instance_view(i);
-                        break;
-                    }
-                }
+                update_instance_view(current_demo_details_i);
             })
             .fail(exception_modal)
             .always(always_function);
@@ -460,6 +454,7 @@
         // $("#new_instance_configuration_cell").show();
         // $("#new_instance_configuration_code_cell").show();
         // $("#new_instance_adapters_cell").hide();
+        $("#do_not_run_axonius_cell").show();
         $('#new_instance_modal').modal();
     }
     function add_demo_modal() {
@@ -467,6 +462,7 @@
         // $("#new_instance_configuration_cell").hide();
         // $("#new_instance_configuration_code_cell").hide();
         // $("#new_instance_adapters_cell").show();
+        $("#do_not_run_axonius_cell").hide();
         $('#new_instance_modal').modal();
     }
     function add_export_modal() {
@@ -604,7 +600,7 @@
         var select = $("#new_vm_adapters_options").html("");
 
         select.append($("<option>").attr("value", "ALL").text("ALL"));
-        $.ajax({url: "https://api.github.com/repos/" + fork_name + "/contents/adapters?ref=" + branch_name,
+        $.ajax({url: "https://api.github.com/repos/" + fork_name + "/contents/testing/services/adapters?ref=" + branch_name,
             type: "GET",
             beforeSend: function (xhr) {
                 var token_hash = "Basic " + btoa(github_token);
@@ -612,8 +608,9 @@
             }})
             .done(function(data) {
                 data.forEach(function (i) {
-                    if (i.name !== "debug_main.py") {
-                        select.append($("<option>").attr("value", i.name).text(i.name));
+                    if (i.name !== "__init__.py") {
+                        let option_name = i.name.substring(0, i.name.length - "_service.py".length);
+                        select.append($("<option>").attr("value", option_name).text(option_name));
                     }
                 });
             })
@@ -634,6 +631,7 @@
         data["owner"] = $("#new_vm_owner")[0].value;
         data["public"] = $("#new_vm_public")[0].checked;
         data["set_credentials"] = $("#new_vm_set_credentials")[0].checked;
+        data["empty"] = $("#new_vm_empty_server")[0].checked;
         data["adapters"] = $("#new_vm_adapters_options option:selected").map(function () {
             return $(this).text();
         }).get().join(',');
@@ -805,6 +803,7 @@
                 data.push(export_i["branch"]);
                 data.push(export_i["client_name"]);
                 data.push(export_i["comments"]);
+                data.push("<a herf=\"javascript:void(0);\" onclick=\"open_running_export_log('" + export_i["version"]  + "')\">Click Here</a>");
                 data.push(export_i["status"]);
                 data.push(export_i["date"]);
                 dataSet.push(data);
@@ -813,17 +812,24 @@
         update_datatable("exports_in_progress_table", dataSet)
     }
     function get_export_url(key_name, el) {
-        data = {};
 
-        $.ajax({url: "/exports/" + key_name + "/url", type: "GET", data: data})
+        $.ajax({url: "/exports/" + key_name + "/url", type: "GET"})
             .done(function(data) {
                 url = data["result"]["url"];
                 $(el).parent().html("<a href='" + url + "'>Click here</a>");
             })
             .fail(exception_modal)
     }
-    function open_log(log) {
-        new_modal("log", null, null, true, log)
+    function open_running_export_log(export_id) {
+        // $.ajax({url: "/exports/" + export_id + "/status", type: "GET"})
+        //     .done(function (data) {
+        //         new_modal("log", null, null, true, data);
+        //     })
+        $.ajax({
+            url: "/exports/" + export_id + "/status",
+            type: "GET"}).done(function (data) {
+                new_modal("Log", function() {}, [], true, "<textarea style='width: 100%; height: 60vh;'>" + data['result']['value'] + "</textarea>");
+        })
     }
     function delete_export(always_function) {
         var id = current_exports[current_export_details_i]['version'];
@@ -862,7 +868,7 @@
             data.push(ecr["imageTags"].join("<br>"));
             data.push(ecr["imagePushedAt"]);
             data.push(ecr["size"]);
-            data.push($("<div>").append(build_link).html())
+            data.push($("<div>").append(build_link).html());
 
             dataSet.push(data);
         }
@@ -1099,6 +1105,7 @@
                 { title: "Branch" },
                 { title: "Client Name" },
                 { title: "Comments" },
+                { title: "Log" },
                 { title: "Status" },
                 { title: "Last Modified" }
             ]
@@ -1128,7 +1135,7 @@
         update_datatable("instances_table", [["1", "Loading...", "", "", "", "", ""]]);
         update_datatable("demos_table", [["1", "Loading...", "", "", "", "", ""]]);
         update_datatable("exports_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
-        update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", "", "", ""]]);
+        update_datatable("exports_in_progress_table", [["1", "Loading...", "", "", "", "", "", "", "", ""]]);
         update_datatable("images_table", [["1", "Loading...", "", "", "", ""]]);
         update_datatable("configurations_table", [["1", "Loading...", "", "", ""]]);
 

@@ -3,6 +3,7 @@
 This project assumes the aws settings & credentials are already configured in the machine, either by using aws cli
 (aws configure) or by putting it in "~/.aws.config"
 """
+import subprocess
 import boto3
 import datetime
 import json
@@ -144,21 +145,42 @@ class BuildsManager(object):
 
     def deleteExport(self, version):
         """Deletes an export. """
+        def _delete_s3_export():
+            exports = self.s3_client.list_objects(Bucket=S3_BUCKET_NAME_FOR_OVA)['Contents']
+            to_delete = []
+            for export in exports:
+                if version == export['Key'].split('/')[0]:
+                    to_delete.append(export)
 
-        exports = self.s3_client.list_objects(Bucket=S3_BUCKET_NAME_FOR_OVA)['contents']
-        to_delete = []
-        for export in exports:
-            if version == export['Key'].split('/')[0]:
-                to_delete.append(export)
+            for current_deletion in to_delete:
+                self.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_OVA, Key=current_deletion['Key'])
 
-        for current_deletion in to_delete:
-            self.s3_client.delete_object(Bucket=S3_BUCKET_NAME_FOR_OVA, Key=current_deletion['Key'])
+            return to_delete
 
-        return list(to_delete) > 0
+        def delete_from_storage():
+            subprocess.check_call(['sudo', 'rm', '-rf', '/mnt/smb_share/Releases/{0}'.format(version)],
+                                  stdout=subprocess.PIPE)
+
+        def delete_from_db():
+            self.db.exports.update_one(
+                {"version": version},
+                {"$set": {
+                    "status": "deleted",
+                    "date": datetime.datetime.utcnow()
+                }}
+            )
+
+        deleted = _delete_s3_export()
+
+        delete_from_storage()
+
+        delete_from_db()
+
+        return len(deleted) > 0
 
     def getExports(self, key=None):
         """Return all vm exports we have on our s3 bucket."""
-        completed_exports = self.db.exports.find({'status': {"$ne": "InProgress"}}, {"_id": 0})
+        completed_exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0})
 
         return list(completed_exports)
 
@@ -355,6 +377,8 @@ class BuildsManager(object):
         # If that's a test vm then remove it from the list
         self.redis_client.lrem('test_instances', 0, ec2_id)
 
+        self.ec2_client.modify_instance_attribute(InstanceId=ec2_id, DisableApiTermination={'Value': False})
+
         self.ec2.instances.filter(InstanceIds=[ec2_id]).terminate()
 
         # Do not delete instances from the db. just update that they are terminated.
@@ -412,6 +436,13 @@ class BuildsManager(object):
 
         self.db.exports.insert_one(db_json)
         return True
+
+    def get_export_running_log(self, export_version):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
+        with ssh.open_sftp().open('/home/ubuntu/packer_image_creator/build_{0}.log'.format(export_version), 'r') as remote_file:
+            return {'value': remote_file.read().decode('utf-8')}
 
     def update_export_status(self, export_id, status, log):
         export = self.db.exports.find_one({"_id": ObjectId(export_id)})

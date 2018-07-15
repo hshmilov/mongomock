@@ -29,7 +29,8 @@ cd ..
 rm .git*
 exit"""
 
-INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/axonius/install/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\ncurl -k 'https://builds.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}' | bash -\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
+INSTALL_SYSTEM_LINE = "curl -k 'https://builds.axonius.lan/install?fork={fork}&branch={branch}&set_credentials={set_credentials}&include={include}&exclude={exclude}' | bash -"
+INSTALL_DEMO_CONFIG = "#!/bin/bash\nset -x\nHOME_DIRECTORY=/home/ubuntu/axonius/install/\nmkdir -p $HOME_DIRECTORY\nLOG_FILE=$HOME_DIRECTORY\"install.log\"\nexec 1>$LOG_FILE 2>&1\n\n{install_system_line}\n\necho Reporting current state to builds server\n\n\nBUILDS_SERVER_URL=\"https://builds.axonius.lan\"\nINSTANCE_ID=$(cat /var/lib/cloud/data/instance-id)\nURL=$(printf \"%s/instances/%s/manifest\" \"$BUILDS_SERVER_URL\" \"$INSTANCE_ID\")\n\ndocker images --digests\ndocker images --digests > $DOCKER_IMAGES_FILE\n\ncurl -k -v -F \"key=docker_images\" -F \"value=@$DOCKER_IMAGES_FILE\" $URL\n\n# we have to copy the install log file and send the copied one, or else problems will happen\n# since this file is open.\ncp $LOG_FILE $LOG_FILE.send\ncurl -k -v -F \"key=install_log\" -F \"value=@$LOG_FILE.send\" $URL\n\necho downloading final manifest from server\ncurl -k $URL > $HOME_DIRECTORY\"manifest.json\"\n\necho final tweeks\nchown -R ubuntu:ubuntu $HOME_DIRECTORY"
 
 
 @app.route('/')
@@ -75,13 +76,17 @@ def export_url(key):
     return jsonify({"result": json_result, "current": {}})
 
 
-@app.route('/exports/<export_id>/status', methods=['POST'])
-def set_export_status(export_id):
+@app.route('/exports/<export_identifier>/status', methods=['POST', 'GET'])
+def set_export_status(export_identifier):
     """Returns a link for a exported ova. Expects to get the key name in the post request."""
-    status = request.form["status"]
-    log = request.files["log"].read().decode("utf-8")
 
-    json_result = (bm.update_export_status(export_id, "completed" if int(status) == 0 else "failed", log))
+    if request.method == "GET":
+        json_result = bm.get_export_running_log(export_identifier)
+    else:
+        status = request.form["status"]
+        log = request.files["log"].read().decode("utf-8")
+
+        json_result = (bm.update_export_status(export_identifier, "completed" if int(status) == 0 else "failed", log))
 
     return jsonify({"result": json_result, "current": {}})
 
@@ -138,9 +143,15 @@ def instances():
         exclude = ','.join(adapters) if should_run_all else ''
         include = ','.join(adapters) if not should_run_all else ''
 
-        config_code = INSTALL_DEMO_CONFIG.format(fork=request.form["fork"], branch=request.form["branch"],
-                                                 set_credentials=request.form.get("set_credentials", 'false'),
-                                                 include=include, exclude=exclude)
+        if request.form.get("empty", False) == 'true':
+            config_code = INSTALL_DEMO_CONFIG.format(install_system_line='')
+
+        else:
+            config_code = INSTALL_DEMO_CONFIG.format(
+                install_system_line=INSTALL_SYSTEM_LINE.format(fork=request.form["fork"], branch=request.form["branch"],
+                                                               set_credentials=request.form.get("set_credentials",
+                                                                                                'false'),
+                                                               include=include, exclude=exclude))
 
         json_result = (bm.add_instance(
             request.form["name"],
