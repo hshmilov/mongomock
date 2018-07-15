@@ -85,8 +85,9 @@ def load_all_plugin_configs(mongo_client, configs_state):
                     if def_name == saved_name:
                         deep_merge_only_dict(saved_config_content, def_config_content)
 
-            config_collection.remove({})
-            config_collection.insert_many(def_config)
+            if len(def_config) > 0:
+                config_collection.remove({})
+                config_collection.insert_many(def_config)
         except Exception as e:
             print(f'Failed to load current config of {plugin} - {e}')
 

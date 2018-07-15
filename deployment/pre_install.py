@@ -25,24 +25,12 @@ def main():
 
     key = generate_key()
     sys.stderr.write(key + '\n')  # we use stderr to communicate to our parent process
-    print_loaded()
     save_state(args.out, key)
 
 
 def generate_key():
     """ Generates temporary encryption key for saving and loading current system state """
     return Fernet.generate_key().decode('ascii')
-
-
-def print_loaded():
-    axonius_system = get_service()
-    # Prepare a list of the current system components that are up; once the set up is ready, we use this list
-    # to run *only* those components again after an upgrade.
-    # [we use stderr to communicate to our parent process]
-    sys.stderr.write('|'.join([name for name, plugin in axonius_system.get_all_plugins()
-                               if plugin().get_is_container_up()]) + '\n')
-    sys.stderr.write('|'.join([name for name, plugin in axonius_system.get_all_adapters()
-                               if plugin().get_is_container_up()]) + '\n')
 
 
 def save_state(path, key):

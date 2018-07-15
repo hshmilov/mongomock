@@ -16,6 +16,8 @@ def main():
     parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
+    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', help='Exclude from run list',
+                        default=['diagnostics'])
 
     try:
         args = parser.parse_args()
@@ -29,8 +31,10 @@ def main():
 
     if args.all:
         assert len(args.services) == 0 and len(args.adapters) == 0
-        args.services = [name for name, variable in axonius_system.get_all_plugins() if variable().get_image_exists()]
-        args.adapters = [name for name, variable in axonius_system.get_all_adapters() if variable().get_image_exists()]
+        args.services = [name for name, variable in axonius_system.get_all_plugins() if
+                         variable().get_image_exists() and name not in args.exclude]
+        args.adapters = [name for name, variable in axonius_system.get_all_adapters() if
+                         variable().get_image_exists() and name not in args.exclude]
 
     print(f'Starting system and {args.adapters + args.services}')
 

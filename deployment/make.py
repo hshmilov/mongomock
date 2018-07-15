@@ -75,6 +75,7 @@ def create_package(output_path, version='', pull=False, rebuild=False, exclude=N
         __main__.py
     """
     start = time.time()
+    version = f'print("Version: {version}")' if version else version
     main_template = f"""
 import sys
 import os

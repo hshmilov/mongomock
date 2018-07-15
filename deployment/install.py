@@ -43,12 +43,10 @@ def main():
 
 def install(just_install=False, root_pass=None):
     assert zip_loader is not None
-    key, old_services, old_adapters = None, None, None
+    key = None
     if not just_install:
         validate_old_state()
-        key, old_services, old_adapters = pre_install()
-        if 'diagnostics' in old_services:
-            old_services.remove('diagnostics')
+        key = pre_install()
         print(f'  Providers credentials file key: {key}')
         stop_old(True)
         archive_old_source()
@@ -58,7 +56,7 @@ def install(just_install=False, root_pass=None):
     create_venv()
     set_logrotate(root_pass)
     install_requirements()
-    create_system(old_services, old_adapters)
+    create_system()
     if key is not None:
         post_install(key)
 
@@ -81,10 +79,8 @@ def pre_install():
         stderr = ret.stderr.decode('utf-8')
         print(stderr)
         raise CalledProcessError(ret.returncode, args[0], stderr=stderr)
-    key, old_services, old_adapters, _ = ret.stderr.decode('utf-8').split('\n')
-    old_services = old_services.split('|')
-    old_adapters = old_adapters.split('|')
-    return key, old_services, old_adapters
+    key = ret.stderr.decode('utf-8').split('\n')[0]
+    return key
 
 
 def stop_old(keep_logs=False, keep_diag=True):
@@ -188,14 +184,10 @@ def install_requirements():
     subprocess.check_call(args)
 
 
-def create_system(old_services, old_adapters):
+def create_system():
     print_state('Starting up axonius system')
     create_script_path = os.path.join(DEPLOYMENT_FOLDER_PATH, 'create.py')
-    args = safe_run_bash([VENV_WRAPPER, create_script_path, '--prod'])
-    if old_services is not None:
-        args.extend(['--services'] + old_services)
-    if old_adapters is not None:
-        args.extend(['--adapters'] + old_adapters)
+    args = safe_run_bash([VENV_WRAPPER, create_script_path, '--all', '--prod', '--exclude', 'diagnostics'])
     subprocess.check_call(args)
 
 
