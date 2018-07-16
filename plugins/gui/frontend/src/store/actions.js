@@ -268,6 +268,17 @@ export const disableData = ({state, dispatch}, payload) => {
 	})
 }
 
+export const DELETE_DATA = 'DELETE_DATA'
+export const deleteData = ({state, dispatch}, payload) => {
+	if (!validModule(state, payload) || !payload.data.internal_axon_ids) return
+
+	return dispatch(REQUEST_API, {
+		rule: `${payload.module}`,
+		method: 'DELETE',
+		data: payload.data
+	})
+}
+
 export const FETCH_DATA_BY_ID = 'FETCH_DATA_BY_ID'
 export const fetchDataByID = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return

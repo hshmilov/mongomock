@@ -13,6 +13,12 @@
             <div>These {{module}} will not appear in further scans.</div>
             <div>Are you sure you want to continue?</div>
         </x-data-action-item>
+            <x-data-action-item title="Delete..." :handle-save="deleteEntities" :message="`Deleted ${module}`" ref="disable" >
+            <div>You are about to delete {{selected.length}} {{module}}, {{selectedAdaptersCount}} total adapter
+                {{module}}.</div>
+            <div>These {{module}} could reappear in further scans if they're not removed or detached.</div>
+            <div>Are you sure you want to delete these {{module}}?</div>
+        </x-data-action-item>
         <slot></slot>
     </div>
 </template>
@@ -27,7 +33,7 @@
 	import { mapState, mapGetters, mapActions } from 'vuex'
     import { FETCH_ADAPTERS } from '../../store/modules/adapter'
 	import { GET_DATA_BY_ID } from '../../store/getters'
-    import { DISABLE_DATA } from '../../store/actions'
+    import { DELETE_DATA, DISABLE_DATA } from '../../store/actions'
 
     const disableableByModule = {
 		'devices': 'Devicedisabelable',
@@ -82,10 +88,17 @@
                         return adapter && adapter.supported_features.includes(disableableByModule[this.module])
                     })
 				})
+            },
+            selectedAdaptersCount() {
+                let count = 0
+                this.selected.forEach(entity => {
+                    count += this.dataByID[entity].adapters.length
+                })
+                return count
             }
         },
         methods: {
-            ...mapActions({ disableData: DISABLE_DATA, fetchAdapters: FETCH_ADAPTERS }),
+            ...mapActions({ disableData: DISABLE_DATA, deleteData: DELETE_DATA, fetchAdapters: FETCH_ADAPTERS }),
             activate(item) {
             	if (!item || !item.activate) return
                 item.activate()
@@ -93,7 +106,12 @@
             },
 			disableEntities() {
 				return this.disableData({ module: this.module, data: this.disableable })
-			}
+			},
+            deleteEntities() {
+                return this.deleteData({ module: this.module, data: {
+                        internal_axon_ids: this.selected
+                    }}).then(() => this.$emit('done'))
+            }
         },
         created() {
 			this.fetchAdapters()

@@ -16,6 +16,7 @@ import {
 	ADD_DATA_LABELS, addDataLabels,
 	REMOVE_DATA_LABELS, removeDataLabels,
 	DISABLE_DATA, disableData,
+	DELETE_DATA, deleteData,
 	FETCH_DATA_BY_ID, fetchDataByID,
 	RUN_ACTION, runAction,
     STOP_RESEARCH_PHASE, stopResearch
@@ -96,6 +97,7 @@ export default new Vuex.Store({
 		[ ADD_DATA_LABELS ]: addDataLabels,
 		[ REMOVE_DATA_LABELS ]: removeDataLabels,
 		[ DISABLE_DATA ]: disableData,
+		[ DELETE_DATA ]: deleteData,
 		[ FETCH_DATA_BY_ID ]: fetchDataByID,
 		[ RUN_ACTION ]: runAction,
         [ STOP_RESEARCH_PHASE ]: stopResearch

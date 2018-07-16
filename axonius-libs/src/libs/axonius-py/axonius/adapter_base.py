@@ -194,7 +194,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                                 '$elemMatch': {
                                     "$and": [
                                         {
-                                            "adapters.pending_delete": True
+                                            "pending_delete": True
                                         },
                                         {
                                             # and the device must be from this adapter

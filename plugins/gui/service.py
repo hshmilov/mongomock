@@ -1,6 +1,7 @@
 import csv
 import logging
 import threading
+from typing import Iterable
 
 import gridfs
 import ldap3
@@ -488,7 +489,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[]):
         """
-        Retrieve device by the given id, from current devices DB or update it
+        Retrieve or delete device by the given id, from current devices DB or update it
         Currently, update works only for tags because that is the only edit operation user has
         :return:
         """
@@ -749,6 +750,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
             return '', 200
 
+    def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, internal_axon_ids: Iterable[str]):
+        self._entity_db_map[entity_type].update_many({'internal_axon_id': {
+            "$in": list(internal_axon_ids)
+        }},
+            {
+                "$set": {
+                    "adapters.$[].pending_delete": True
+                }
+        })
+        return '', 200
+
     ##########
     # DEVICE #
     ##########
@@ -757,8 +769,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @helpers.filtered()
     @helpers.sorted_endpoint()
     @helpers.projected()
-    @helpers.add_rule_unauthenticated("devices")
+    @helpers.add_rule_unauthenticated("devices", methods=['GET', 'DELETE'])
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        if request.method == 'DELETE':
+            to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
+            return self.__delete_entities_by_internal_axon_id(EntityType.Devices, to_delete)
         return jsonify(
             self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices, True))
 
@@ -810,8 +825,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @helpers.filtered()
     @helpers.sorted_endpoint()
     @helpers.projected()
-    @helpers.add_rule_unauthenticated("users")
+    @helpers.add_rule_unauthenticated("users", methods=['GET', 'DELETE'])
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        if request.method == 'DELETE':
+            to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
+            return self.__delete_entities_by_internal_axon_id(EntityType.Users, to_delete)
         return jsonify(
             self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users, True))
 
@@ -1026,7 +1044,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
-            return self._query_client_for_devices(request, adapter_unique_name, data_from_db_for_unchanged=client_from_db)
+            return self._query_client_for_devices(request, adapter_unique_name,
+                                                  data_from_db_for_unchanged=client_from_db)
 
         return '', 200
 

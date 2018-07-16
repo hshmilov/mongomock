@@ -1,12 +1,15 @@
 import random
+import uuid
 
 import pytest
 
+from test_helpers.device_helper import get_entity_axonius_dict_multiadapter
 from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.device_helper import get_entity_axonius_dict, filter_by_plugin_name
 from test_helpers.user_helper import get_user_dict
 from test_helpers.report_helper import get_alert_dict, create_alert_dict
+from test_helpers.utils import populate_test_devices
 
 GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 API_TOKEN = (DEFAULT_USER['user_name'], DEFAULT_USER['password'])
@@ -211,6 +214,57 @@ def test_maintenance_endpoints():
 
     assert gui_service.anaylitics().strip() == b'true'
     assert gui_service.troubleshooting().strip() == b'true'
+
+
+def test_deleting_devices():
+    """
+    This tests the feature that allows the user to delete devices
+    """
+    axonius_system = get_service()
+
+    gui_service = axonius_system.gui
+    gui_service.login_user(DEFAULT_USER)
+
+    adapter_tested = ['some_adapter', 'some_adapter_123']  # plugin_name, plugin_unique_name
+    some_id = uuid.uuid4().hex
+    axon_device = get_entity_axonius_dict_multiadapter('GUI_TEST', [[uuid.uuid4().hex, *adapter_tested, some_id]])
+    axonius_system.insert_device(axon_device)
+
+    def get_device_by_internal_axon_id(internal_axon_id):
+        return gui_service.get_devices(params={'filter': f'internal_axon_id == "{internal_axon_id}"'}).json()
+
+    devices_response = get_device_by_internal_axon_id(axon_device['internal_axon_id'])[0]
+    assert set(devices_response['adapters']) == {'some_adapter'}
+
+    assert gui_service.delete_devices([axon_device['internal_axon_id']]).status_code == 200
+    devices_response = get_device_by_internal_axon_id(axon_device['internal_axon_id'])
+    assert len(devices_response) == 0
+
+
+def test_deleting_users():
+    """
+    This tests the feature that allows the user to delete users
+    """
+    axonius_system = get_service()
+
+    gui_service = axonius_system.gui
+    gui_service.login_user(DEFAULT_USER)
+
+    adapter_tested = ['some_adapter', 'some_adapter_123']  # plugin_name, plugin_unique_name
+    some_id = uuid.uuid4().hex
+
+    axon_device = get_entity_axonius_dict_multiadapter('GUI_TEST', [[uuid.uuid4().hex, *adapter_tested, some_id]])
+    axonius_system.insert_user(axon_device)
+
+    def get_user_by_internal_axon_id(internal_axon_id):
+        return gui_service.get_users(params={'filter': f'internal_axon_id == "{internal_axon_id}"'}).json()
+
+    users_response = get_user_by_internal_axon_id(axon_device['internal_axon_id'])[0]
+    assert set(users_response['adapters']) == {'some_adapter'}
+
+    assert gui_service.delete_users([axon_device['internal_axon_id']]).status_code == 200
+    users_response = get_user_by_internal_axon_id(axon_device['internal_axon_id'])
+    assert len(users_response) == 0
 
 
 #######

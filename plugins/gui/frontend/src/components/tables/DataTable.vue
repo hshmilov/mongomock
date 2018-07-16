@@ -129,9 +129,12 @@
         methods: {
             ...mapMutations({updateView: UPDATE_DATA_VIEW}),
 			...mapActions({fetchContent: FETCH_DATA_CONTENT}),
-            fetchContentPages() {
+            fetchContentPages(loading) {
             	if (!this.pageLinkNumbers || !this.pageLinkNumbers.length) {
             	    return this.fetchContentSegment(0, this.view.pageSize)
+                }
+                if (loading) {
+            		this.loading = true
                 }
                 return this.fetchContentSegment(
                     this.pageLinkNumbers[0] * this.view.pageSize, this.pageLinkNumbers.length * this.view.pageSize)

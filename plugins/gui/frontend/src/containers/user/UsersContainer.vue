@@ -1,9 +1,11 @@
 <template>
     <x-page title="users">
         <x-data-query :module="module" />
-        <x-data-table :module="module" v-model="selectedUsers" id-field="internal_axon_id" title="Users" @click-row="configUser">
+        <x-data-table :module="module" v-model="selectedUsers" id-field="internal_axon_id" title="Users"
+                      @click-row="configUser" ref="table">
             <template slot="actions">
-                <x-data-action-menu v-show="selectedUsers && selectedUsers.length" :module="module" :selected="selectedUsers" />
+                <x-data-action-menu v-show="selectedUsers && selectedUsers.length" :module="module"
+                                    :selected="selectedUsers" @done="updateUsers" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" class="link" />
                 <div class="link" @click="exportCSV">Export csv</div>
@@ -46,7 +48,11 @@
 			},
 			exportCSV() {
 				this.fetchContentCSV({ module: this.module })
-			}
+			},
+            updateUsers() {
+				this.$refs.table.fetchContentPages()
+				this.selectedUsers = []
+            }
         }
     }
 </script>
