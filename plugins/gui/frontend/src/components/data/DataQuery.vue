@@ -98,6 +98,15 @@
             schema() {
 				return this.getDataFieldsByPlugin(this.module)
             },
+            schemaByField() {
+				let map = {}
+				return this.schema.reduce((map, item) => {
+					item.fields.forEach(field => {
+						map[field.name] = field
+                    })
+                    return map
+                }, {})
+            },
             queryExpressions: {
 				get() {
 					return this.query.expressions
@@ -138,6 +147,8 @@
 				if (!this.schema || !this.schema.length) return ''
 				let patternParts = []
                 this.selected.forEach((field) => {
+                	// Filter fields containing image data, since it is not relevant for searching
+                	if (this.schemaByField[field].format === 'image') return
                     patternParts.push(field + ' == regex("{val}", "i")')
                 })
                 return patternParts.join(' or ')
