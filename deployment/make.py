@@ -85,7 +85,7 @@ from utils import AutoOutputFlush
 from install import main
 
 print('Axonius package install')
-{version}
+print('Version: {version}')
 
 with AutoOutputFlush():
     main()
