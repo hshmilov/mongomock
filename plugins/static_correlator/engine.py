@@ -115,7 +115,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [lambda a, b: a['data']['device_serial'].upper() == b['data'][
                                           'device_serial'].upper()],
                                       [],
-                                      [],
+                                      [hostnames_do_not_contradict],
                                       {'Reason': 'They have the same serial'},
                                       CorrelationReason.StaticAnalysis)
 

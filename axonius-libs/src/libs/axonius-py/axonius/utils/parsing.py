@@ -503,7 +503,9 @@ def get_hostname(adapter_device):
 
 
 def get_serial(adapter_device):
-    return adapter_device['data'].get('device_serial')
+    serial = (adapter_device['data'].get('device_serial') or '').strip()
+    if serial and serial.upper() != 'INVALID':
+        return serial
 
 
 def has_mac_or_ip(adapter_data):

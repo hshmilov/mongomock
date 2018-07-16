@@ -511,6 +511,12 @@ def test_no_mac_with_hostname_contradiction():
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC', 0)
 
 
+def test_contradiction_rules_per_hostname():
+    device1 = get_raw_device(serial="Some serial", hostname="A")
+    device2 = get_raw_device(serial="Some serial", hostname="B")
+    assert_success(correlate([device1, device2]), [device1, device2], 'They have the same serial', 0)
+
+
 if __name__ == '__main__':
     import pytest
 
