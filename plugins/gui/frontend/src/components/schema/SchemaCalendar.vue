@@ -1,5 +1,5 @@
 <template>
-    <div class="week">
+    <div class="x-schema-calendar">
         <div @click="decCurrentWeek" class="x-btn link">&lt;</div>
         <div v-for="day in currentWeekDays" class="day">
             <div class="day-title">
@@ -144,7 +144,7 @@
 </script>
 
 <style lang="scss">
-    .week {
+    .x-schema-calendar {
         height: 100%;
         display: grid;
         grid-template-columns: 1fr repeat(7, 4fr) 1fr;
