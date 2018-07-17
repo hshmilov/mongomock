@@ -56,6 +56,8 @@ class ReportsService(PluginBase, Triggerable):
                 return self._remove_report(report_id)
             elif self.get_method() == 'POST':
                 report_data = self.get_request_data_as_object()
+                report_data['last_triggered'] = self._get_collection('reports').find_one(
+                    {"_id": ObjectId(report_data['id'])}).get('last_triggered', None)
                 delete_response = self._remove_report(report_id)
                 if delete_response[1] == 404:
                     return return_error('A reports with that ID was not found.', 404)
@@ -122,7 +124,9 @@ class ReportsService(PluginBase, Triggerable):
                                'retrigger': report_data['retrigger'],
                                'triggered': 0,
                                'name': report_data['name'],
-                               'severity': report_data['severity']
+                               'severity': report_data['severity'],
+                               'period': report_data['period'],
+                               'last_triggered': report_data.get('last_triggered', None)
                                }
 
             if '_id' in report_data:
@@ -502,6 +506,14 @@ class ReportsService(PluginBase, Triggerable):
                 self.update_report(report_data)
 
         try:
+            report_period = report_data.get('period', 'all')
+            if report_period != 'all':
+                if 'last_triggered' in report_data and report_data['last_triggered'] is not None:
+                    if report_period == 'weekly' and report_data['last_triggered'] + datetime.timedelta(days=7) <= datetime.datetime.now():
+                        return
+                    elif report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(days=1) <= datetime.datetime.now():
+                        return
+
             current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
             if current_result is None:
                 logger.info("Skipping reports trigger because there were no current results.")
@@ -525,6 +537,9 @@ class ReportsService(PluginBase, Triggerable):
             if len(intersection) > 0:
 
                 _trigger_watch(intersection, result_difference)
+
+                # Update last triggered.
+                report_data['last_triggered'] = datetime.datetime.now()
 
                 if retrigger:
                     report_data['result'] = current_result

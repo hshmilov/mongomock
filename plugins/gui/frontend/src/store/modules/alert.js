@@ -26,7 +26,8 @@ const newAlert = {
 	viewEntity: '',
 	retrigger: true,
 	triggered: false,
-	severity: 'info'
+	severity: 'info',
+    period: 'all'
 }
 
 export const alert = {

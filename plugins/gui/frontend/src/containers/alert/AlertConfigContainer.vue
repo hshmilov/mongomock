@@ -16,6 +16,24 @@
 
                 <!-- Section for defining the condition which match of will trigger the alert -->
                 <div class="configuration">
+                    <div class="header">Alert Period</div>
+                    <div>How often would you like to receive this alert?</div>
+                    <div class="content">
+                        <div class="grid-span2">
+                            <input id="WeeklyPeriod" type="radio" value="weekly" v-model="alert.period">
+                            <label for="WeeklyPeriod" class="ml-2">Weekly</label>
+                        </div>
+                        <div class="grid-span2">
+                            <input id="DailyPeriod" type="radio" value="daily" v-model="alert.period">
+                            <label for="DailyPeriod" class="ml-2">Daily</label>
+                        </div>
+                        <div class="grid-span2">
+                            <input id="EveryPhasePeriod" type="radio" value="all" v-model="alert.period">
+                            <label for="EveryPhasePeriod" class="ml-2">Every Research Phase</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="configuration">
                     <div class="header">Alert Trigger</div>
                     <div>Monitor selected query and test whether devices number...</div>
                     <div class="content">
