@@ -106,11 +106,14 @@ class BigfixAdapter(AdapterBase):
             try:
                 device_raw = dict()
                 for xml_property in ET.fromstring(device_raw_xml)[0]:
-                    if xml_property.tag == 'Property':
-                        if xml_property.attrib["Name"] in device_raw:
-                            device_raw[xml_property.attrib["Name"]] += "," + str(xml_property.text)
-                        else:
-                            device_raw[xml_property.attrib["Name"]] = str(xml_property.text)
+                    try:
+                        if xml_property.tag == 'Property':
+                            if xml_property.attrib["Name"] in device_raw:
+                                device_raw[xml_property.attrib["Name"]] += "," + str(xml_property.text)
+                            else:
+                                device_raw[xml_property.attrib["Name"]] = str(xml_property.text)
+                    except Exception:
+                        logger.exception("Can't parse some xml properties")
                 device = self._new_device_adapter()
                 if not device_raw.get("ID"):
                     continue
@@ -118,13 +121,19 @@ class BigfixAdapter(AdapterBase):
                     device.id = str(device_raw.get("ID"))
                 dns_name = device_raw.get("DNS Name")
                 computer_name = device_raw.get("Computer Name")
-                if computer_name is not None and dns_name is not None:
-                    if dns_name.lower().startswith(computer_name.lower()):
-                        device.hostname = dns_name
+
+                try:
+                    if computer_name is not None and dns_name is not None:
+                        if dns_name.lower().startswith(computer_name.lower()):
+                            device.hostname = dns_name
+                        else:
+                            device.hostname = computer_name
                     else:
-                        device.hostname = computer_name
-                else:
-                    device.hostname = computer_name or dns_name
+                        device.hostname = computer_name or dns_name
+                except Exception:
+                    logger.exception(f"Failed to parse hostname: "
+                                     f"dns name is {str(dns_name)} and computer name is {str(computer_name)}")
+
                 device.figure_os(device_raw.get("OS", ""))
                 try:
                     device.add_nic(None, device_raw.get("IP Address", "").split(",") +
@@ -133,7 +142,11 @@ class BigfixAdapter(AdapterBase):
                     logger.exception("Problem adding nic to Bigfix")
                 device.agent_version = device_raw.get("Agent Version", "")
                 device.last_used_users = device_raw.get("User Name", "").split(",")
-                device.last_seen = parse_date(device_raw.get("Last Report Time", ""))
+                last_report_time = device_raw.get("Last Report Time", "")
+                try:
+                    device.last_seen = parse_date(last_report_time)
+                except Exception:
+                    logger.exception(f"Failure parsing last seen date: {last_report_time}")
                 device.bigfix_device_type = device_raw.get("Device Type", "")
                 device.bigfix_computer_type = device_raw.get("Computer Type", "")
                 device.set_raw(device_raw)

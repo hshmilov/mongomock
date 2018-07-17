@@ -31,7 +31,7 @@ class JamfConnection(object):
         :param str domain: domain address for Jamf
         """
         url = domain
-        if not url.lower().startswith('https://'):
+        if not url.lower().startswith('https://') and not url.lower().startswith("http://"):
             url = 'https://' + url
         if not url.endswith('/'):
             url += '/'

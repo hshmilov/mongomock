@@ -99,6 +99,10 @@ export const pluginMeta = {
         title: 'Tenable Nessus',
         description: 'Tenable Nessus is a vulnerability scanning platform for auditors and security analysts.'
     },
+    tenable_io_adapter: {
+        title: 'Tenable.io',
+        description: 'Tenable.io automatically discovers and assesses a customer\'s environment for vulnerabilities, misconfigurations, and other cybersecurity issues.'
+    },
     nessus_csv_adapter: {
         title: 'Tenable Nessus CSV File',
         description: 'Tenable Nessus CSV File '

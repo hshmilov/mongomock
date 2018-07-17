@@ -122,13 +122,22 @@ class JamfAdapter(AdapterBase):
             try:
                 device = self._new_device_adapter()
                 general_info = device_raw['general']
+
+                udid = general_info.get('udid')
+                if not udid:
+                    logger.error(f"Error! got a device with no id: {device_raw}")
+                    continue
+                device.id = udid
+
                 device.hostname = general_info.get('name', '')
-                device.id = general_info.get('udid', '')
                 device.public_ip = general_info.get('ip_address')
                 try:
                     site = general_info.get('site')
                     if site:
-                        device.site = JamfSite(id=int(site.get('id')), name=site.get('name'))
+                        site_id = site.get('id')
+                        if type(site_id) is not None:
+                            site_id = int(site_id)
+                        device.site = JamfSite(id=site_id, name=site.get('name'))
                 except Exception:
                     logger.exception(f'device site is unexpected {device_raw}')
 
@@ -136,6 +145,13 @@ class JamfAdapter(AdapterBase):
                 if 'platform' in general_info:
                     # The field 'platform' means that we are handling a computer, and not a mobile.
                     # Thus we believe the following fields will be present.
+                    last_contact_time_utc = general_info.get('last_contact_time_utc')
+                    try:
+                        if last_contact_time_utc:
+                            device.last_seen = parse_date(last_contact_time_utc)
+                    except Exception:
+                        logger.exception(f"Problem parsing last seen date {last_contact_time_utc}")
+
                     device.jamf_version = general_info.get('jamf_version')
                     try:
                         device.add_nic(general_info.get('mac_address', ''), [general_info.get('last_reported_ip', '')])
@@ -143,37 +159,56 @@ class JamfAdapter(AdapterBase):
                     except Exception:
                         logger.exception(f"Problem adding nic to Jamf {str(device_raw)}")
 
-                    hardware = device_raw['hardware']
+                    hardware = device_raw.get('hardware', {})
                     device.figure_os(' '.join([hardware.get('os_name', ''),
                                                hardware.get('os_version', ''),
                                                hardware.get('processor_architecture', '')]))
                     device.os.build = hardware.get('os_build', '')
-                    device.last_seen = parse_date(general_info.get('last_contact_time_utc', ''))
+
                     device.device_model = hardware.get('model_identifier')
                     device.device_model_family = hardware.get('model')
 
                     total_ram_mb = hardware.get('total_ram_mb')
                     if total_ram_mb is not None:
-                        total_ram_mb = float(total_ram_mb)
-                        device.total_physical_memory = total_ram_mb / 1024.0
+                        try:
+                            total_ram_mb = float(total_ram_mb)
+                            device.total_physical_memory = total_ram_mb / 1024.0
+                        except Exception:
+                            logger.exception(f"Problem parsing total ram mb: {total_ram_mb}")
 
                     total_number_of_physical_procesors = hardware.get("number_processors")
                     if total_number_of_physical_procesors is not None:
-                        device.total_number_of_physical_processors = int(total_number_of_physical_procesors)
+                        try:
+                            device.total_number_of_physical_processors = int(total_number_of_physical_procesors)
+                        except Exception:
+                            logger.exception(f"Problem parsing total namber of physical "
+                                             f"processors: {total_number_of_physical_procesors}")
 
                     total_number_of_cores = hardware.get("number_cores")
                     if total_number_of_cores is not None:
-                        device.total_number_of_cores = int(total_number_of_cores)
+                        try:
+                            device.total_number_of_cores = int(total_number_of_cores)
+                        except Exception:
+                            logger.exception(f"Problem adding total number of cores {total_number_of_cores}")
                     processor_speed_mhz = hardware.get("processor_speed_mhz")
                     processor_type = hardware.get("processor_type")
                     if processor_speed_mhz is not None and processor_type is not None:
-                        device.add_cpu(
-                            name=processor_type,
-                            ghz=float(processor_speed_mhz) / 1024.0
-                        )
+                        try:
+                            device.add_cpu(
+                                name=processor_type,
+                                ghz=float(processor_speed_mhz) / 1024.0
+                            )
+                        except Exception:
+                            logger.exception(f"Problem adding cpu {cpu}")
                     device.device_manufacturer = hardware.get('make')
-                    device.policies = device_raw['policies']
-                    device_raw['policies'] = [x.to_dict() for x in device_raw['policies']]
+                    try:
+                        device.policies = device_raw['policies']
+
+                        # Now transform this to dict so that we will put it as raw
+                        device_raw['policies'] = [x.to_dict() for x in device_raw['policies']]
+                    except Exception:
+                        logger.exception(f"Problem adding policies of device raw")
+
                     drives = ((hardware.get('storage') or {}).get('device') or [])
                     drives = [drives] if type(drives) != list else drives
                     for drive in drives:
@@ -194,12 +229,29 @@ class JamfAdapter(AdapterBase):
                         device.part_of_domain = False
                     else:
                         device.part_of_domain = True
-                        device.domain = active_directory_status
-                        device.hostname += "." + active_directory_status
+                        device.domain = str(active_directory_status)
+                        # hostname can be none or empty. if it is this could crash or make unwanted results
+                        try:
+                            # This could raise an exception if hostname was not set or was set to ''.
+                            if len(device.hostname) > 0:
+                                device.hostname += "." + active_directory_status
+                        except Exception:
+                            logger.exception(f"Problem adding active directory status to device")
+
                     applications = ((device_raw.get('software') or {}).get('applications') or {}).get('application', [])
                 else:
-                    last_inventory_update_utc = parse_date(general_info.get('last_inventory_update_utc', ''))
-                    lost_location_utc = parse_date((device_raw.get('security') or {}).get('lost_location_utc', ''))
+                    try:
+                        last_inventory_update_utc = parse_date(general_info.get('last_inventory_update_utc', ''))
+                    except Exception:
+                        logger.exception(f"Problem handling last inventory update utc")
+                        last_inventory_update_utc = None
+
+                    try:
+                        lost_location_utc = parse_date((device_raw.get('security') or {}).get('lost_location_utc', ''))
+                    except Exception:
+                        logger.exception(f"Problem pasring lost location utc")
+                        lost_location_utc = None
+
                     if last_inventory_update_utc and lost_location_utc:
                         device.last_seen = max(last_inventory_update_utc, lost_location_utc)
                     elif last_inventory_update_utc:
@@ -207,21 +259,28 @@ class JamfAdapter(AdapterBase):
                     elif lost_location_utc:
                         device.last_seen = lost_location_utc
 
-                    total_size = general_info.get('capacity_mb')
-                    if total_size:
-                        total_size = int(total_size) / 1024.0
-                    free_size = general_info.get('available_mb')
-                    if free_size:
-                        free_size = int(free_size) / 1024.0
-                    if any([free_size, total_size]):
-                        device.add_hd(total_size=total_size, free_size=free_size)
+                    try:
+                        total_size = general_info.get('capacity_mb')
+                        if total_size:
+                            total_size = int(total_size) / 1024.0
+                        free_size = general_info.get('available_mb')
+                        if free_size:
+                            free_size = int(free_size) / 1024.0
+                        if any([free_size, total_size]):
+                            device.add_hd(total_size=total_size, free_size=free_size)
+                    except Exception:
+                        logger.exception(f"Problem parsing harddrive total & free size of mobile device")
 
                     device.figure_os(' '.join([general_info.get('os_type', ''),
                                                general_info.get('os_version', '')]))
                     device.os.build = general_info.get('os_build', '')
                     device.phone_number = general_info.get('phone_number') or None
-                    device.add_nic(general_info.get('wifi_mac_address', ''), [general_info.get('ip_address', '')])
-                    device.add_nic(general_info.get('bluetooth_mac_address', ''))
+
+                    try:
+                        device.add_nic(general_info.get('wifi_mac_address', ''), [general_info.get('ip_address', '')])
+                        device.add_nic(general_info.get('bluetooth_mac_address', ''))
+                    except Exception:
+                        logger.exception(f"Problem parsing nic's of mobile device")
 
                     device.device_model = general_info.get('model_identifier')
                     device.device_model_family = general_info.get('model')
@@ -236,10 +295,13 @@ class JamfAdapter(AdapterBase):
                             logger.exception(f"Unexpected profile {profile}")
                 applications = [applications] if type(applications) != list else applications
                 for app in applications:
-                    device.add_installed_software(
-                        name=app.get('name', app.get('application_name', '')),
-                        version=app.get('version', app.get('application_version', ''))
-                    )
+                    try:
+                        device.add_installed_software(
+                            name=app.get('name', app.get('application_name', '')),
+                            version=app.get('version', app.get('application_version', ''))
+                        )
+                    except Exception:
+                        logger.exception(f"Problem adding app {str(app)} to device")
 
                 device.set_raw(device_raw)
             except Exception:

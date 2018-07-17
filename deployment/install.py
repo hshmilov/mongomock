@@ -134,7 +134,7 @@ def load_images():
 def load_new_source():
     print_state('Loading new source folder')
     zip_folder_source_path = f'{SOURCES_FOLDER_NAME}/'
-    os.makedirs(AXONIUS_DEPLOYMENT_PATH)
+    os.makedirs(AXONIUS_DEPLOYMENT_PATH, exist_ok=True)
     # Extracting source files from currently running python zip to AXONIUS_DEPLOYMENT_PATH
     for zip_path in zip_loader._files.keys():
         zip_path = zip_path.replace('\\', '/')

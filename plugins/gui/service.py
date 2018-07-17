@@ -161,11 +161,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.wsgi_app.config['SECRET_KEY'] = 'this is my secret key which I like very much, I have no idea what is this'
         self._elk_addr = self.config['gui_specific']['elk_addr']
         self._elk_auth = self.config['gui_specific']['elk_auth']
-        self._get_collection('users').update({'user_name': 'admin'},
-                                             {'user_name': 'admin',
-                                              'password': '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
-                                              'first_name': 'administrator', 'last_name': '',
-                                              'pic_name': self.DEFAULT_AVATAR_PIC}, upsert=True)
+        current_user = self._get_collection('users').find_one({'user_name': 'admin'})
+        if current_user is None:
+            # User doesn't exist, this must be the installation process
+            self._get_collection('users').update({'user_name': 'admin'},
+                                                 {'user_name': 'admin',
+                                                  'password':
+                                                      '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
+                                                  'first_name': 'administrator', 'last_name': '',
+                                                  'pic_name': self.DEFAULT_AVATAR_PIC}, upsert=True)
 
         self.add_default_views(EntityType.Devices, 'default_views_devices.ini')
         self.add_default_views(EntityType.Users, 'default_views_users.ini')

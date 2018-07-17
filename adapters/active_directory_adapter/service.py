@@ -436,9 +436,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 if is_date_real(pwd_last_set):
                     user.last_password_change = pwd_last_set
                     # parse maxPwdAge
-                    max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
-                    if max_pwd_age is not None:
-                        user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
+                    try:
+                        max_pwd_age = user_raw.get("axonius_extended", {}).get("maxPwdAge")
+                        if max_pwd_age is not None:
+                            user.password_expiration_date = pwd_last_set + ad_integer8_to_timedelta(max_pwd_age)
+                    except Exception:
+                        logger.exception(f"Error parsing max pwd age {max_pwd_age}, is it too large?")
                 last_logoff = parse_date(user_raw.get("lastLogoff"))
                 if is_date_real(last_logoff):
                     user.last_logoff = last_logoff

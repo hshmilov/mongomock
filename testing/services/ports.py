@@ -27,6 +27,7 @@ DOCKER_PORTS = {
     'infinite-sleep-adapter':           5116,
     'service-now-adapter':              5117,
     'cisco-meraki-adapter':             5130,
+    'tenable-io-adapter':               5141,
     'gotoassist-adapter':               5200,
     'carbonblack-defense-adapter':      5211,
     'carbonblack-protection-adapter':   5212,
