@@ -3,7 +3,7 @@
     	{ title: 'adapters', path: { name: 'Adapters'}},
     	{ title: adapterName }
     ]" class="adapter-config">
-        <x-table-actions title="Add or Edit Servers">
+        <x-table-actions title="Add or Edit Servers" :loading="loading">
             <template slot="actions">
                 <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="x-btn">Remove</div>
                 <div @click="configServer('new')" id="new_server" class="x-btn">+ New Server</div>
@@ -121,6 +121,7 @@
 		},
 		data () {
 			return {
+				loading: false,
 				serverModal: {
 					open: false,
 					serverData: {},
@@ -229,12 +230,12 @@
             }
 		},
 		created () {
-			/*
-                If no adapter mapped controls source, or has wrong id for current adapter selection,
-                try and fetch it (happens after refresh) and update local adapter
-             */
+			if (!this.currentAdapter || this.currentAdapter.id !== this.adapterId) {
+				this.loading = true
+            }
 			this.fetchAdapters().then(() => {
                 this.updateAdapter(this.adapterId)
+                this.loading = false
             })
 			this.changeState({name: 'addServer'})
 		}
