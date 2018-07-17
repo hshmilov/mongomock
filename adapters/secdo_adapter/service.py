@@ -26,7 +26,7 @@ class SecdoAdapter(AdapterBase):
         try:
             connection = SecdoConnection(domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
                                          company=client_config["company"], apikey=client_config["apikey"],
-                                         url_base_prefix="publicapiv2/run/command/",
+                                         url_base_prefix="",
                                          headers={'Content-Type': 'application/json', "COMMAND-NAME": "get_agents",
                                                   "API-KEY": client_config["apikey"]})
             with connection:

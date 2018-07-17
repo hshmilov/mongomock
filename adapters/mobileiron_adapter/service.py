@@ -31,7 +31,8 @@ class MobileironAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = MobileironConnection(domain=client_config["domain"], headers={'Content-Type': 'application/json'},
+            connection = MobileironConnection(domain=client_config["domain"], headers={'Content-Type': 'application/json',
+                                                                                       'Accept': 'application/json'},
                                               url_base_prefix=client_config.get("url_base_path") + "/rest/api/v2/", verify_ssl=client_config["verify_ssl"],
                                               fetch_apps=client_config["fetch_apps"], username=client_config["username"],
                                               password=client_config["password"])

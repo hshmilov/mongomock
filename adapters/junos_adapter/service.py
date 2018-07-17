@@ -16,9 +16,6 @@ def is_valid_mac(x):
 
 class JunosAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        related_ips = ListField(str, 'Realated IPs', converter=format_ip, json_format=JsonStringFormat.ip,
-                                description='A list of ips that are routed through the device')
-
         interfaces = ListField(str, 'Interfaces', description='A list of interfaces that the device has')
 
     def __init__(self):
@@ -110,7 +107,7 @@ class JunosAdapter(AdapterBase):
         for raw_device in raw_devices.values():
             device = self._new_device_adapter()
             device.id = raw_device['mac_addr']
-            device.related_ips = list(raw_device['related_ips'])
+            device.add_related_ips(list(raw_device['related_ips']))
             device.interfaces = list(raw_device['interface'])
 
             device.add_nic(mac=raw_device['mac_addr'])

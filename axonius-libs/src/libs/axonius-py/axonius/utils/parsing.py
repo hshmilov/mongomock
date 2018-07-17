@@ -504,7 +504,7 @@ def get_hostname(adapter_device):
 
 def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
-    if serial and serial.upper() != 'INVALID':
+    if serial and serial.upper().strip() != 'INVALID':
         return serial
 
 

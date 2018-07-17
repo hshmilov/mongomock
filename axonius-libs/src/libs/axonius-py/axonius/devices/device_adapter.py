@@ -71,6 +71,15 @@ class DeviceAdapterOS(SmartJsonClass):
     minor = Field(int, 'Minor')
 
 
+class DeviceAdapterRelatedIps(SmartJsonClass):
+    """ A definition for the json-scheme for a network interface """
+    ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    subnets = ListField(str, 'Subnets', converter=format_subnet, json_format=JsonStringFormat.subnet,
+                        description='A list of subnets in ip format, that correspond the IPs')
+    ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
+                        converter=format_ip_raw)
+
+
 class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     name = Field(str, 'Iface Name')
@@ -210,6 +219,7 @@ class DeviceAdapter(SmartJsonClass):
     device_model = Field(str, "Device Model")
     device_model_family = Field(str, "Device Model Family")
     device_serial = Field(str, "Device Manufacturer Serial")
+    related_ips = Field(DeviceAdapterRelatedIps, "Related Ips")
     pc_type = Field(str, "PC Type", enum=["Unspecified", "Desktop", "Laptop or Tablet", "Workstation",
                                           "Enterprise Server", "SOHO Server", "Appliance PC", "Performance Server",
                                           "Maximum"])
@@ -262,6 +272,47 @@ class DeviceAdapter(SmartJsonClass):
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
 
+    def add_related_ips(self, ips=None, subnets=None):
+        related_ips = DeviceAdapterRelatedIps()
+        related_ips = self.__add_ips_and_subnets(related_ips, ips, subnets)
+        self.related_ips = related_ips
+
+    def __add_ips_and_subnets(self, obj, ips, subnets):
+        if ips is not None:
+            try:
+                ips_iter = iter(ips)
+            except TypeError:
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid ips: {repr(ips)}')
+            else:
+                for ip in ips_iter:
+                    try:
+                        obj.ips.append(ip)
+                        obj.ips_raw.append(ip)
+                    except (ValueError, TypeError):
+                        if logger is None:
+                            raise
+                        logger.exception(f'Invalid ip: {repr(ip)}')
+        if subnets is not None:
+            try:
+                subnets_iter = iter(subnets)
+            except TypeError:
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid subnets: {repr(subnets)}')
+            else:
+                for subnet in subnets_iter:
+                    try:
+                        subnet = format_subnet(subnet)  # formatting here just to make sure we don't add duplicates...
+                        if subnet not in obj.subnets:
+                            obj.subnets.append(subnet)
+                    except (ValueError, TypeError):
+                        if logger is None:
+                            raise
+                        logger.exception(f'Invalid subnet: {repr(subnet)}')
+        return obj
+
     def add_nic(self, mac=None, ips=None, subnets=None, name=None):
         """
         Add a new network interface card to this device.
@@ -281,39 +332,7 @@ class DeviceAdapter(SmartJsonClass):
                     if logger is None:
                         raise
                     logger.exception(f'Invalid mac: {repr(mac)}')
-        if ips is not None:
-            try:
-                ips_iter = iter(ips)
-            except TypeError:
-                if logger is None:
-                    raise
-                logger.exception(f'Invalid ips: {repr(ips)}')
-            else:
-                for ip in ips_iter:
-                    try:
-                        nic.ips.append(ip)
-                        nic.ips_raw.append(ip)
-                    except (ValueError, TypeError):
-                        if logger is None:
-                            raise
-                        logger.exception(f'Invalid ip: {repr(ip)}')
-        if subnets is not None:
-            try:
-                subnets_iter = iter(subnets)
-            except TypeError:
-                if logger is None:
-                    raise
-                logger.exception(f'Invalid subnets: {repr(subnets)}')
-            else:
-                for subnet in subnets_iter:
-                    try:
-                        subnet = format_subnet(subnet)  # formatting here just to make sure we don't add duplicates...
-                        if subnet not in nic.subnets:
-                            nic.subnets.append(subnet)
-                    except (ValueError, TypeError):
-                        if logger is None:
-                            raise
-                        logger.exception(f'Invalid subnet: {repr(subnet)}')
+        nic = self.__add_ips_and_subnets(nic, ips, subnets)
         if name is not None:
             try:
                 nic.name = name

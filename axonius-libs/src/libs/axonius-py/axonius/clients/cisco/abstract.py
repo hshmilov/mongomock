@@ -10,8 +10,6 @@ from collections import defaultdict
 class CiscoDevice(DeviceAdapter):
     # Fetch protocol refers to the way we discover new devices (by querying arp, cdp, dhcp tables, or by adding the client itself).
     fetch_proto = Field(str, "Fetch Protocol", enum=['ARP', 'CDP', 'DHCP', 'CLIENT'])
-    related_ips = ListField(str, 'Realated IPs', converter=format_ip, json_format=JsonStringFormat.ip,
-                            description='A list of ips that routed through the device')
     reachability = Field(str, "Reachability")
 
 
@@ -135,7 +133,7 @@ class AbstractCiscoData(object):
         new_device.os.build = instance.get('version')
 
         if 'related_ips' in instance:
-            new_device.related_ips = instance['related_ips']
+            new_device.add_related_ips(instance['related_ips'])
 
         # TODO: the real raw data is self._raw_data
         # but it isn't a dict so for now we only save the instance - which must be a dict

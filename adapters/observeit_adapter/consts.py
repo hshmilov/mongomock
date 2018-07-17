@@ -1,0 +1,10 @@
+PASSWORD = 'password'
+USER = 'username'
+OBSERVEIT_HOST = 'server'
+OBSERVEIT_PORT = 'port'
+OBSERVEIT_DATABASE = 'database'
+DRIVER = 'driver'
+DEFAULT_OBSERVEIT_PORT = 1433
+DEFAULT_OBSERVEIT_DATABASE = 'ObserveIT'
+DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
+OBSERVEIT_QUERY = 'Select * from ServerInventory'

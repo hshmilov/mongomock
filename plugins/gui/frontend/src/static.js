@@ -203,7 +203,7 @@ export const pluginMeta = {
         title: 'Cisco Prime',
         description: 'Cisco Prime is a network management software suite consisting of different software applications by Cisco Systems.'
     },
-    observeit_csv_adapter: {
+    observeit_adapter: {
         title: 'ObserveIT',
         description: 'ObserveIT provides insider threat security solutions, including employee monitoring, user activity monitoring, behavioral analytics, policy enforcement, and digital forensics.'
     },

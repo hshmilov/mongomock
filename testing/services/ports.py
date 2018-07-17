@@ -52,7 +52,7 @@ DOCKER_PORTS = {
     'oracle-vm-adapter':                5694,
     'sccm-adapter':                     5699,
     'forcepoint-csv-adapter':           5770,
-    'observeit-csv-adapter':            5773,
+    'observeit-adapter':                5773,
     'qualys-scans-adapter':             5777,
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,

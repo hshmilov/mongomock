@@ -18,13 +18,13 @@ from axonius.fields import Field, ListField
 from datetime import datetime
 
 
-MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 50
+MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS = 4
 SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS = 5
 
 # The maximum time we wait for new execution answers. If no sent execution request comes back we bail out.
 # note that this timeout shouldn't be met since the execution request will be rejected before (plugin base execution
 # monitor will reject the promise if an update wasn't done)
-MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 60 * 30
+MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 60 * 10
 
 # The maximum time we wait until all active execution threads
 MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 180

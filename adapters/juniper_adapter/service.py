@@ -20,8 +20,6 @@ class JuniperAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         interfaces = ListField(str, 'Interface')
         device_type = Field(str, 'Device Type')
-        related_ips = ListField(str, 'Realated IPs', converter=format_ip, json_format=JsonStringFormat.ip,
-                                description='A list of ips that are routed through the device')
         juniper_device_name = Field(str, "Juniper Device Name")
 
     def __init__(self, *args, **kwargs):
@@ -130,7 +128,7 @@ class JuniperAdapter(AdapterBase):
                 device.juniper_device_name = raw_arp_device.get("juniper_device_name")
                 device.device_type = 'Arp Device'
                 try:
-                    device.related_ips = list(raw_arp_device['related_ips'])
+                    device.add_related_ips(list(raw_arp_device['related_ips']))
                 except Exception:
                     logger.exception(f"Problem getting IPs in {raw_arp_device}")
                 try:

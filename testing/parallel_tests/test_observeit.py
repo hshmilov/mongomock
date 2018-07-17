@@ -1,17 +1,17 @@
 import pytest
-from services.adapters.observeit_csv_service import observeit_csv_fixture, ObserveitCsvService
+from services.adapters.observeit_service import observeit_fixture, ObserveitService
 from test_helpers.adapter_test_base import AdapterTestBase
-from test_credentials.test_observeit_csv_credentials import *
+from test_credentials.test_observeit_credentials import *
 
 
-class TestObserveitCsvAdapter(AdapterTestBase):
+class TestObserveitAdapter(AdapterTestBase):
     @property
     def adapter_service(self):
-        return ObserveitCsvService()
+        return ObserveitService()
 
     @property
     def some_client_id(self):
-        return client_details['user_id']
+        return client_details['server']
 
     @property
     def some_client_details(self):

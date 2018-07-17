@@ -4,13 +4,13 @@ from services.plugin_service import AdapterService
 from services.simple_fixture import initialize_fixture
 
 
-class ObserveitCsvService(AdapterService):
+class ObserveitService(AdapterService):
     def __init__(self):
-        super().__init__('observeit-csv')
+        super().__init__('observeit')
 
 
 @pytest.fixture(scope="module", autouse=True)
-def observeit_csv_fixture(request):
-    service = ObserveitCsvService()
+def observeit_fixture(request):
+    service = ObserveitService()
     initialize_fixture(request, service)
     return service

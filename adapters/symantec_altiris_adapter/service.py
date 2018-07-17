@@ -95,35 +95,39 @@ class SymantecAltirisAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device_id = str(UUID(bytes=device_raw.get('Guid')))
-            if not device_id:
-                logger.error(f'Got a device with no distinguished name {device_raw}')
-                continue
-            device = self._new_device_adapter()
-            device.id = device_id
-            domain = device_raw.get('Domain')
-            server_full_name = device_raw.get('Server')
-            name = device_raw.get('Name')
-            device.name = name
-            device.hostname = server_full_name
-
-            # The last one is to make sure that the server_full_name actually
-            # includes the full domain name as well as the server name.
-            if domain is not None and server_full_name is not None and len(server_full_name) > len(domain) + len(name):
-                device.domain = server_full_name[len(name) + 1:]
-                device.part_of_domain = True
-
-            device.figure_os(device_raw.get('OS Name', '') + ' ' + device_raw.get('OS Version') + ' ' +
-                             device_raw.get("OS Revision", '') + ' ' + device_raw.get("System Type", ''))
             try:
-                device.add_nic(device_raw.get('MAC Address'), [device_raw.get('IP Address')])
-            except Exception:
-                logger.exception(f"Caught weird NIC for device id {device_raw}")
-                pass
+                device_id = str(UUID(bytes=device_raw.get('Guid')))
+                if not device_id:
+                    logger.error(f'Got a device with no distinguished name {device_raw}')
+                    continue
+                device = self._new_device_adapter()
+                device.id = device_id
+                domain = device_raw.get('Domain')
+                server_full_name = device_raw.get('Server')
+                name = device_raw.get('Name')
+                device.name = name
+                device.hostname = server_full_name
 
-            device.add_users(username=device_raw.get('User'), is_local=True if domain is not None else False)
-            device.set_raw(device_raw)
-            yield device
+                # The last one is to make sure that the server_full_name actually
+                # includes the full domain name as well as the server name.
+                if domain is not None and server_full_name is not None and len(server_full_name) > len(domain) + len(name):
+                    device.domain = server_full_name[len(name) + 1:]
+                    device.part_of_domain = True
+
+                device.figure_os(device_raw.get('OS Name', '') + ' ' + device_raw.get('OS Version') + ' ' +
+                                 device_raw.get("OS Revision", '') + ' ' + device_raw.get("System Type", ''))
+                try:
+                    device.add_nic(device_raw.get('MAC Address'), [device_raw.get('IP Address')])
+                except Exception:
+                    logger.exception(f"Caught weird NIC for device id {device_raw}")
+                    pass
+                username = device_raw.get('User')
+                if username is not None:
+                    device.add_users(username=str(username), is_local=True if domain is not None else False)
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f"Problem with Altiris device {device_raw}")
 
     def _correlation_cmds(self):
         logger.error("correlation_cmds is not implemented for sccm adapter")
