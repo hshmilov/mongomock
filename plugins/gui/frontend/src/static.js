@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    solarwinds_orion_adapter: {
+        title: 'Solarwinds Network Performance Manager',
+        description: 'Solarwinds is a unified IT system management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hyrbid environment, or in the cloud.'
+    },
     gce_adapter: {
         title: 'Google Compute Engine',
         description: 'Google Compute Engine delivers virtual machines running in Google\'s data centers and worldwide fiber network.'

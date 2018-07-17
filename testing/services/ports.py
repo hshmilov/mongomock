@@ -77,6 +77,7 @@ DOCKER_PORTS = {
     'google-mdm-adapter':               6029,
     'duo-adapter':                      6030,
     'gce-adapter':                      6031,
+    'solarwinds-orion-adapter':         6032,
     'mongo':                            27017,
 }
 
