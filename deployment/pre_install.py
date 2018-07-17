@@ -4,12 +4,11 @@ This script is run *from the install.py* and saves current state data +
 """
 import argparse
 from cryptography.fernet import Fernet
-import os
 import sys
 
 from axonius.consts import plugin_consts
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
-from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state, get_mongo_client
+from utils import AutoOutputFlush, get_service, print_state, get_mongo_client
 from axonius.utils.json import to_json
 
 
@@ -45,7 +44,8 @@ def save_state(path, key):
         'views': get_all_views(axonius_system, mongo_client),
         'panels': get_dashboard_panels(axonius_system, mongo_client),
         'alerts': get_alerts(axonius_system, mongo_client),
-        'config_settings': get_all_plugin_configs(mongo_client)
+        'config_settings': get_all_plugin_configs(mongo_client),
+        'gui_users': get_gui_users(mongo_client)
     }
 
     state_string = to_json(state, indent=2)
@@ -57,6 +57,12 @@ def save_state(path, key):
 def encrypt(data, key):
     f = Fernet(key)
     return f.encrypt(data.encode('utf-8'))
+
+
+def get_gui_users(mongo):
+    print_state(f'  Extracting gui users')
+    users = list(mongo['gui']['users'].find(projection={'_id': 0}))
+    return users
 
 
 def get_all_providers(mongo):

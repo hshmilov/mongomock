@@ -10,7 +10,7 @@ import time
 
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 from axonius.devices import deep_merge_only_dict
-from utils import AutoOutputFlush, CORTEX_PATH, get_service, print_state, get_mongo_client
+from utils import AutoOutputFlush, get_service, print_state, get_mongo_client
 from axonius.utils.json import from_json
 
 
@@ -53,6 +53,11 @@ def load_state(path, key):
     else:
         print_state(f'    config_settings was missing, skipping')
 
+    if 'gui_users' in state:
+        load_gui_users(mongo_client, state['gui_users'])
+    else:
+        print_state(f'    gui users was missing, skipping')
+
 
 def decrypt(data, key):
     f = Fernet(key)
@@ -65,6 +70,16 @@ def upgrade_state(state):
     # set version to new version number
     # return new state object
     raise NotImplementedError()
+
+
+def load_gui_users(mongo_client, users_state):
+    print_state('  Restoring gui users')
+    if len(users_state) == 0:
+        return
+
+    collection = mongo_client['gui']['users']
+    collection.remove({})
+    collection.insert_many(users_state)
 
 
 def load_all_plugin_configs(mongo_client, configs_state):
