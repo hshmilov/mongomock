@@ -59,6 +59,10 @@ export const pluginMeta = {
         title: 'McAfee ePO',
         description: 'McAfee ePolicy Orchestrator (ePO) is a security management platform that provides real-time monitoring of security solutions.'
     },
+    cylance_adapter: {
+        title: "CylancePROTECT",
+        description: "CylancePROTECT uses artificial intelligence to detect and protect against ransomware, advanced threats, fileless malware and malicious documents."
+    },
     kaseya_adapter: {
         title: 'Kaseya VSA',
         description: 'Kaseya VSA is a remote monitoring and management solution for remote control, discovery, patch management, and monitoring.'

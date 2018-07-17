@@ -29,6 +29,7 @@ DOCKER_PORTS = {
     'cisco-meraki-adapter':             5130,
     'tenable-io-adapter':               5141,
     'gotoassist-adapter':               5200,
+    'cylance-adapter':                  5210,
     'carbonblack-defense-adapter':      5211,
     'carbonblack-protection-adapter':   5212,
     'carbonblack-response-adapter':     5213,
