@@ -71,15 +71,6 @@ class DeviceAdapterOS(SmartJsonClass):
     minor = Field(int, 'Minor')
 
 
-class DeviceAdapterRelatedIps(SmartJsonClass):
-    """ A definition for the json-scheme for a network interface """
-    ips = ListField(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
-    subnets = ListField(str, 'Subnets', converter=format_subnet, json_format=JsonStringFormat.subnet,
-                        description='A list of subnets in ip format, that correspond the IPs')
-    ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
-                        converter=format_ip_raw)
-
-
 class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     name = Field(str, 'Iface Name')
@@ -90,6 +81,10 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
                         description='A list of subnets in ip format, that correspond the IPs')
     ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
                         converter=format_ip_raw)
+
+
+class DeviceAdapterRelatedIps(DeviceAdapterNetworkInterface):
+    pass
 
 
 class DeviceAdapterHD(SmartJsonClass):
@@ -272,9 +267,9 @@ class DeviceAdapter(SmartJsonClass):
         self._dict['raw'] = self._raw_data
         self._extend_names('raw', raw_data)
 
-    def add_related_ips(self, ips=None, subnets=None):
+    def set_related_ips(self, ips):
         related_ips = DeviceAdapterRelatedIps()
-        related_ips = self.__add_ips_and_subnets(related_ips, ips, subnets)
+        related_ips = self.__add_ips_and_subnets(related_ips, ips, None)
         self.related_ips = related_ips
 
     def __add_ips_and_subnets(self, obj, ips, subnets):

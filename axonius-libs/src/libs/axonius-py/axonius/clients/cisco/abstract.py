@@ -133,7 +133,7 @@ class AbstractCiscoData(object):
         new_device.os.build = instance.get('version')
 
         if 'related_ips' in instance:
-            new_device.add_related_ips(instance['related_ips'])
+            new_device.set_related_ips(instance['related_ips'])
 
         # TODO: the real raw data is self._raw_data
         # but it isn't a dict so for now we only save the instance - which must be a dict

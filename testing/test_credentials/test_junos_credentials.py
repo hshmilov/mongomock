@@ -5,4 +5,4 @@ client_details = {
     'port': 22
 }
 
-SOME_DEVICE_ID = '10:65:30:08:54:a4'
+SOME_DEVICE_ID = '90:6c:ac:fe:5b:bc'

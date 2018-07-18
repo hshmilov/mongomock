@@ -21,19 +21,3 @@ class TestJunosAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("No test environment - only local vm")
-    def test_fetch_devices(self):
-        pass
-
-    @pytest.mark.skip("No test environment - only local vm")
-    def test_fetch_devices(self):
-        pass
-
-    @pytest.mark.skip("No test environment - only local vm")
-    def test_removing_adapter_creds_with_devices(self):
-        pass
-
-    @pytest.mark.skip("No test environment - only local vm")
-    def test_removing_adapter_creds_with_users(self):
-        pass

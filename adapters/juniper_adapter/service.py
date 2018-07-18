@@ -128,7 +128,7 @@ class JuniperAdapter(AdapterBase):
                 device.juniper_device_name = raw_arp_device.get("juniper_device_name")
                 device.device_type = 'Arp Device'
                 try:
-                    device.add_related_ips(list(raw_arp_device['related_ips']))
+                    device.set_related_ips(list(raw_arp_device['related_ips']))
                 except Exception:
                     logger.exception(f"Problem getting IPs in {raw_arp_device}")
                 try:

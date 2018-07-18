@@ -80,26 +80,26 @@ class JunosAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         raw_devices = {}
         for raw_line in raw_data:
+            # Make sure device has valid mac addr
             try:
-                raw_line = raw_line.split()
-                flags = 'none'
-                mac_addr, ip_addr, name, interface = raw_line[0], raw_line[1], raw_line[2], raw_line[3]
-                if len(raw_line) > 4:
-                    flags = raw_line[4]
-
-                if not is_valid_mac(mac_addr):
+                if raw_line['mac_address'] == None:
+                    continue
+                else:
+                    mac_address = raw_line['mac_address']
+                if not is_valid_mac(mac_address):
                     logger.error('Invalid mac addr - skipping device {raw_line}')
                     continue
-
+            except BaseException:
+                logger.error("Skipping device {raw_line} because it does not contain field for mac_address.")
+                continue
+            try:
                 # If this device isn't already set up, lets set a default dict that represents it
-                if mac_addr not in raw_devices:
-                    raw_devices[mac_addr] = defaultdict(set)
+                if mac_address not in raw_devices:
+                    raw_devices[mac_address] = defaultdict(set)
 
-                raw_devices[mac_addr]['mac_addr'] = mac_addr
-                raw_devices[mac_addr]['related_ips'].add(ip_addr)
-                raw_devices[mac_addr]['name'].add(name)
-                raw_devices[mac_addr]['interface'].add(interface)
-                raw_devices[mac_addr]['flags'].add(flags)
+                raw_devices[mac_address]['mac_addr'] = mac_address
+                raw_devices[mac_address]['related_ips'].add(raw_line['ip_address'])
+                raw_devices[mac_address]['interface'].add(raw_line['interface_name'])
             except Exception:
                 logger.exception(f"Error parsing line {raw_data}, bypassing")
 
@@ -107,17 +107,15 @@ class JunosAdapter(AdapterBase):
         for raw_device in raw_devices.values():
             device = self._new_device_adapter()
             device.id = raw_device['mac_addr']
-            device.add_related_ips(list(raw_device['related_ips']))
+            device.set_related_ips(list(raw_device['related_ips']))
             device.interfaces = list(raw_device['interface'])
 
             device.add_nic(mac=raw_device['mac_addr'])
 
             device.set_raw({
                 "mac_addr": device.id,
-                "related_ips": device.related_ips,
-                "name": list(raw_device['name']),
-                "interface": list(raw_device['interface']),
-                "flags": list(raw_device['flags'])
+                "related_ips": device.related_ips.ips,
+                "interface": device.interfaces,
             })
 
             yield device

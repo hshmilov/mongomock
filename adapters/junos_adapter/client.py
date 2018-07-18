@@ -1,6 +1,8 @@
 ''' client module for junos devices '''
 import logging
-from netmiko import ConnectHandler
+from jnpr.junos import Device
+from jnpr.junos.op.arp import ArpTable
+import json
 
 logger = logging.getLogger(f"axonius.{__name__}")
 
@@ -13,26 +15,20 @@ class JunOSClient(object):
         self._username = username
         self._password = password
         self._port = port
-
-        self._sess = None
+        self._dev = None
 
     def __enter__(self):
         """ entry that connect to the juniper device. """
-        self._sess = ConnectHandler(device_type='juniper_junos', ip=self._host,
-                                    username=self._username, password=self._password, port=self._port)
+        self._dev = Device(host=self._host, user=self._username, password=self._password, port=self._port)
+        self._dev.open()
         return self
 
     def __exit__(self, *args):
         """ exit function to close connection """
-        self._sess.disconnect()
+        self._dev.close()
 
     def query_arp_table(self):
         """ query the arp table and return neighbors """
-        # Strip and remove first and last line.
-
-        data = self._sess.send_command('show arp')
-        data = data.strip().splitlines()[1:]
-        # If we have multiline result, remove the "Total entries" suffix
-        if len(data) > 1:
-            data = data[:-1]
-        return data
+        arp_table = ArpTable(self._dev)
+        raw_table_data = list(arp_table.get())
+        return raw_table_data
