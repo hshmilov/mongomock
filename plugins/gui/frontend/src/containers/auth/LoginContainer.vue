@@ -10,10 +10,13 @@ d<template>
                 <x-schema-form :schema="schema" v-model="credentials" @input="initError" @validate="onValidate"
                                @submit="onLogin" :error="auth.error"/>
                 <button class="x-btn" :class="{disabled: !complete}" @click="onLogin">Login</button>
-                <a @click="onOktaLogin" v-if="oktaConfig.enabled" class="link">Login with Okta</a>
-                <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" class="link">Login with LDAP</a>
-                <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client_id"
-                              v-on:success="onGoogleSignIn"></google-login>
+                <div v-if="oktaConfig.enabled || ldapConfig.enabled || googleConfig.enabled" class="t-center mt-12">Or</div>
+                <div class="login-options">
+                    <a @click="onOktaLogin" v-if="oktaConfig.enabled" class="x-btn link">Login with Okta</a>
+                    <a @click="toggleLdapLogin" v-if="ldapConfig.enabled" class="x-btn link">Login with LDAP</a>
+                    <google-login v-if="googleConfig.enabled" :client_id="googleConfig.client_id"
+                                  v-on:success="onGoogleSignIn" />
+                </div>
             </div>
         </div>
         <modal v-if="ldapData.active" @close="toggleLdapLogin">
@@ -192,6 +195,17 @@ d<template>
                 }
                 .x-btn {
                     width: 100%;
+                }
+                .login-options {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    grid-gap: 12px 0;
+                    .x-btn.link {
+                        width: auto;
+                    }
+                    .abcRioButton {
+                        margin: auto;
+                    }
                 }
             }
 

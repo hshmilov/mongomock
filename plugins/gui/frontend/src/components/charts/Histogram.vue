@@ -18,7 +18,7 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: {data: {required: true}, limit: {default: 10}, type: {default: 'text'}},
+		props: {data: {required: true}, limit: {default: 9}, type: {default: 'text'}},
 		computed: {
 			limitedData () {
 				return this.data.slice(0, this.limit)
