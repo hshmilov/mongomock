@@ -4,10 +4,8 @@ branch=$1
 fork=$2
 sudo_pass=$3
 build_name=$4
-mkdir axonius
-cd axonius
-git init
-git pull https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/$fork/cortex $branch
+git clone https://0e28371fe6803ffc7cba318c130a465e9f28d26f@github.com/$fork/cortex -b $branch
+cd cortex
 ./create_venv.sh
 source venv/bin/activate
 chmod u+x ./testing/test_credentials/docker_login.sh
@@ -22,7 +20,7 @@ set -e
 docker logout
 mv ./axonius_$build_name.py ../
 cd ../
-rm -rf axonius
+rm -rf cortex
 deactivate
 echo $sudo_pass | sudo -S python3 ./axonius_$build_name.py --first-time
 echo $sudo_pass | sudo -S chown -R ubuntu:ubuntu ./cortex

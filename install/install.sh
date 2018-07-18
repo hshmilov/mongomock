@@ -23,7 +23,6 @@ if [[ $* == *--run-system* ]]; then
         eval ./axonius.sh system up --services general_info careful_execution_correlator execution --adapters ${optional_parameters}
     else
         eval ./axonius.sh system up --exclude qcore traiana_lab_machines stresstest stresstest_scanner json_file infinite_sleep diagnostics --all ${optional_parameters}
-        eval ./axonius.sh system up --exclude qcore traiana_lab_machines stresstest stresstest_scanner json_file infinite_sleep diagnostics --all ${optional_parameters}
     fi
     )
 fi
