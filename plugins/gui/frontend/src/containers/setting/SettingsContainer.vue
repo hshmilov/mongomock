@@ -305,15 +305,16 @@
                 justify-self: end;
             }
         }
-        .tab-settings {
-            .schema-form {
-                > .array {
-                    display: block;
-                }
-                .x-btn {
-                    justify-self: end;
-                }
+        .tab-settings .schema-form {
+            > .array {
+                display: block;
             }
+            .x-btn {
+                justify-self: end;
+            }
+        }
+        .research-settings-tab .tab-settings .schema-form > .array {
+            display: grid;
         }
         #research_rate {
             width: 80px;

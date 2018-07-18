@@ -18,7 +18,7 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: {data: {required: true}, limit: {default: 6}, type: {default: 'text'}},
+		props: {data: {required: true}, limit: {default: 10}, type: {default: 'text'}},
 		computed: {
 			limitedData () {
 				return this.data.slice(0, this.limit)
@@ -51,7 +51,6 @@
         position: relative;
         .histogram-item {
             width: 100%;
-            margin-bottom: 12px;
             cursor: pointer;
             .item-bar {
                 display: flex;

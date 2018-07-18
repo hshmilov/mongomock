@@ -1048,7 +1048,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
         self.request_remote_plugin("clients/" + client_id, adapter_unique_name, method='delete')
         if request.method == 'PUT':
-            return self._query_client_for_devices(request, adapter_unique_name,
+            return self._query_client_for_devices(adapter_unique_name,
                                                   data_from_db_for_unchanged=client_from_db)
 
         return '', 200

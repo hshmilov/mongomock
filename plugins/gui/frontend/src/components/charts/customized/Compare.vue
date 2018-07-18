@@ -1,5 +1,5 @@
 <template>
-    <x-histogram :data="data" @click-one="$emit('click-one', $event)" :limit="4"/>
+    <x-histogram :data="data" @click-one="$emit('click-one', $event)" :limit="5"/>
 </template>
 
 <script>
