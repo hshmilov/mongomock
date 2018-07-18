@@ -158,8 +158,8 @@ class BuildsManager(object):
             return to_delete
 
         def delete_from_storage():
-            subprocess.check_call(['sudo', 'rm', '-rf', '/mnt/smb_share/Releases/{0}'.format(version)],
-                                  stdout=subprocess.PIPE)
+            subprocess.call(['sudo', 'rm', '-rf', '/mnt/smb_share/Releases/{0}'.format(version)],
+                            stdout=subprocess.PIPE)
 
         def delete_from_db():
             self.db.exports.update_one(
