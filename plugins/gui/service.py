@@ -30,7 +30,7 @@ from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.email_server import EmailServer
 from axonius.mixins.triggerable import Triggerable
-from gui import helpers
+from axonius.utils import gui_helpers
 from gui.api import API
 
 import tarfile
@@ -87,19 +87,6 @@ def gzipped_downloadable(filename, extension):
         return view_func
 
     return gzipped_downloadable_wrapper
-
-
-def beautify_db_entry(entry):
-    """
-    Renames the '_id' to 'date_fetched', and stores it as an id to 'uuid' in a dict from mongo
-    :type entry: dict
-    :param entry: dict from mongodb
-    :return: dict
-    """
-    tmp = {**entry, **{'date_fetched': entry['_id']}}
-    tmp['uuid'] = str(entry['_id'])
-    del tmp['_id']
-    return tmp
 
 
 # this is a magic that means that the value shouldn't be changed, i.e. when used by passwords
@@ -302,145 +289,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DATA #
     ########
 
-    def _get_entities(self, limit, skip, view_filter, sort, projection, entity_type: EntityType,
-                      include_history=False):
-        """
-        Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
-        """
-        logger.debug(f'Fetching data for entity {entity_type.name}')
-        pipeline = [{'$match': view_filter}]
-        if projection:
-            projection['internal_axon_id'] = 1
-            projection['adapters'] = 1
-            projection['unique_adapter_names'] = 1
-            projection['labels'] = 1
-            projection[ADAPTERS_LIST_LENGTH] = 1
-            pipeline.append({'$project': projection})
-        if sort:
-            pipeline.append({'$sort': sort})
-        elif entity_type == EntityType.Devices:
-            if self.__system_settings['defaultSort']:
-                # Default sort by adapters list size and then Mongo id (giving order of insertion)
-                pipeline.append({'$sort': {ADAPTERS_LIST_LENGTH: pymongo.DESCENDING, '_id': pymongo.DESCENDING}})
-
-        if skip:
-            pipeline.append({'$skip': skip})
-        if limit:
-            pipeline.append({'$limit': limit})
-
-        # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
-        # The reason is that sorting without the flag, causes exceeding of the memory limit.
-        data_list = self._entity_views_db_map[entity_type].aggregate(pipeline, allowDiskUse=True)
-
-        if view_filter and not skip and request and include_history:
-            # getting the original filter text on purpose.
-            view_filter = request.args.get('filter')
-            mongo_sort = {'desc': True, 'field': ''}
-            if sort:
-                desc, field = next(iter(sort.items()))
-                mongo_sort = {'desc': desc, 'field': field}
-            self.gui.entity_query_views_db_map[entity_type].replace_one(
-                {'name': {'$exists': False}, 'view.query.filter': view_filter},
-                {
-                    'view': {
-                        'page': 0,
-                        'pageSize': limit,
-                        'fields': list((projection or {}).keys()),
-                        'coloumnSizes': [],
-                        'query': {
-                            'filter': view_filter,
-                            'expressions': json.loads(request.args.get('expressions', '{}'))
-                        },
-                        'sort': mongo_sort
-                    },
-                    'query_type': 'history',
-                    'timestamp': datetime.now()
-                },
-                upsert=True)
-        if not projection:
-            return [beautify_db_entry(entity) for entity in data_list]
-        return [self._parse_entity_fields(entity, projection.keys()) for entity in data_list]
-
-    def _parse_entity_fields(self, entity_data, fields):
-        """
-        For each field in given list, if it begins with adapters_data, just fetch it from corresponding adapter.
-
-        :param entity_data: A nested dict representing parsed values of an entity
-        :param fields:      List of paths to values in the entity_data dict
-        :return:            Mapping of a field path to it's value list as found in the entity_data
-        """
-        field_to_value = {}
-        for field in fields:
-            field_to_value[field] = self._find_entity_field(entity_data, field)
-        return field_to_value
-
-    def _find_entity_field(self, entity_data, field_path):
-        """
-        Recursively expand given entity, following period separated properties of given field_path,
-        until reaching the requested value
-
-        :param entity_data: A nested dict representing parsed values of an entity
-        :param field_path:  A path to a field ('.' separated chain of keys)
-        :return:
-        """
-        if entity_data is None:
-            # Return no value for this path
-            return ''
-        if not field_path:
-            # Return value corresponding with given path
-            return entity_data
-
-        if type(entity_data) != list:
-            first_dot = field_path.find('.')
-            if first_dot == -1:
-                # Return value of last key in the chain
-                return entity_data.get(field_path)
-            # Continue recursively with value of current key and rest of path
-            return self._find_entity_field(entity_data.get(field_path[:first_dot]), field_path[first_dot + 1:])
-
-        if len(entity_data) == 1:
-            # Continue recursively on the single element in the list, with the same path
-            return self._find_entity_field(entity_data[0], field_path)
-
-        children = []
-        for item in entity_data:
-            # Continue recursively for current element of the list
-            child_value = self._find_entity_field(item, field_path)
-            if child_value is not None and child_value != '' and child_value != []:
-                def new_instance(value):
-                    """
-                    Test if given value is not yet found in the children list, according to comparison rules.
-                    For strings, if value is a prefix of or has a prefix in the list, is considered to be found.
-                    :param value:   Value for testing if exists in the list
-                    :return: True, if value is new to the children list and False otherwise
-                    """
-
-                    def same_string(x, y):
-                        if type(x) != str:
-                            return False
-                        x = x.lower()
-                        y = y.lower()
-                        return x in y or y in x
-
-                    if type(value) == str:
-                        return len([child for child in children if same_string(child, value)]) == 0
-                    if type(value) == int:
-                        return value not in children
-                    if type(value) == dict:
-                        # For a dict, check if there is an element of whom all keys are identical to value's keys
-                        return len([item for item in children if len([key for key in item.keys()
-                                                                      if same_string(item[key], value[key])]) > 0]) == 0
-                    return True
-
-                if type(child_value) == list:
-                    # Check which elements of found value can be added to children
-                    children = children + list(filter(new_instance, child_value))
-                elif new_instance(child_value):
-                    # Check if value found can be added to children
-                    children.append(child_value)
-
-        return children
-
     def _get_csv(self, mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType):
         """
         Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
@@ -454,7 +302,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         logger.info("Generating csv")
         string_output = io.StringIO()
-        entities = self._get_entities(None, None, mongo_filter, mongo_sort, mongo_projection, entity_type)
+        entities = gui_helpers.get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
+                                            self.gui.entity_query_views_db_map[entity_type],
+                                            self._entity_views_db_map[entity_type], entity_type,
+                                            default_sort=self._system_settings['defaultSort'])
         output = ''
         if len(entities) > 0:
             # Beautifying the resulting csv.
@@ -515,9 +366,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify({
             'specific': entity['specific_data'],
             'generic': {
-                'basic': self._parse_entity_fields(entity, _basic_generic_field_names()),
+                'basic': gui_helpers.parse_entity_fields(entity, _basic_generic_field_names()),
                 'advanced': [{
-                    'name': category, 'data': self._find_entity_field(entity, f'specific_data.data.{category}')
+                    'name': category, 'data': gui_helpers.find_entity_field(entity, f'specific_data.data.{category}')
                 } for category in advanced_fields],
                 'data': entity['generic_data']
             },
@@ -697,7 +548,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         entity_views_collection = self.gui.entity_query_views_db_map[entity_type]
         if method == 'GET':
             mongo_filter = filter_archived(filter)
-            return jsonify(beautify_db_entry(entry) for entry in
+            return jsonify(gui_helpers.beautify_db_entry(entry) for entry in
                            entity_views_collection.find(mongo_filter).sort([('timestamp', pymongo.DESCENDING)])
                            .skip(skip).limit(limit))
 
@@ -769,43 +620,46 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DEVICE #
     ##########
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated("devices", methods=['GET', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated("devices", methods=['GET', 'DELETE'])
     def get_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
             return self.__delete_entities_by_internal_axon_id(EntityType.Devices, to_delete)
         return jsonify(
-            self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices, True))
+            gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                     self.gui.entity_query_views_db_map[EntityType.Devices],
+                                     self._entity_views_db_map[EntityType.Devices], EntityType.Devices, True,
+                                     default_sort=self._system_settings['defaultSort']))
 
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated("devices/csv")
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated("devices/csv")
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices)
 
-    @helpers.add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
     def device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'software_cves',
                                                                   'security_patches', 'available_security_patches',
                                                                   'users', 'connected_hardware', 'local_admins'])
 
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("devices/count")
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("devices/count")
     def get_devices_count(self, mongo_filter):
         return self._get_entities_count(mongo_filter, EntityType.Devices)
 
-    @helpers.add_rule_unauthenticated("devices/fields")
+    @gui_helpers.add_rule_unauthenticated("devices/fields")
     def device_fields(self):
         return jsonify(self._entity_fields(EntityType.Devices))
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("devices/views", methods=['GET', 'POST', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("devices/views", methods=['GET', 'POST', 'DELETE'])
     def device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -813,11 +667,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         return self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter)
 
-    @helpers.add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
+    @gui_helpers.add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
     def device_labels(self):
         return self._entity_labels(self.devices_db_view, self.devices)
 
-    @helpers.add_rule_unauthenticated("devices/disable", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("devices/disable", methods=['POST'])
     def disable_device(self):
         return self._disable_entity(EntityType.Devices)
 
@@ -825,49 +679,52 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # USER #
     #########
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated("users", methods=['GET', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated("users", methods=['GET', 'DELETE'])
     def get_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == 'DELETE':
             to_delete = self.get_request_data_as_object().get('internal_axon_ids', [])
             return self.__delete_entities_by_internal_axon_id(EntityType.Users, to_delete)
         return jsonify(
-            self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users, True))
+            gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                     self.gui.entity_query_views_db_map[EntityType.Users],
+                                     self._entity_views_db_map[EntityType.Users], EntityType.Users, True,
+                                     default_sort=self._system_settings['defaultSort']))
 
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated("users/csv")
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated("users/csv")
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
         return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users)
 
-    @helpers.add_rule_unauthenticated("users/<user_id>", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("users/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
 
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("users/count")
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("users/count")
     def get_users_count(self, mongo_filter):
         return self._get_entities_count(mongo_filter, EntityType.Users)
 
-    @helpers.add_rule_unauthenticated("users/fields")
+    @gui_helpers.add_rule_unauthenticated("users/fields")
     def user_fields(self):
         return jsonify(self._entity_fields(EntityType.Users))
 
-    @helpers.add_rule_unauthenticated("users/disable", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("users/disable", methods=['POST'])
     def disable_user(self):
         return self._disable_entity(EntityType.Users)
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("users/views", methods=['GET', 'POST', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("users/views", methods=['GET', 'POST', 'DELETE'])
     def user_views(self, limit, skip, mongo_filter):
         return self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter)
 
-    @helpers.add_rule_unauthenticated("users/labels", methods=['GET', 'POST', 'DELETE'])
+    @gui_helpers.add_rule_unauthenticated("users/labels", methods=['GET', 'POST', 'DELETE'])
     def user_labels(self):
         return self._entity_labels(self.users_db_view, self.users)
 
@@ -889,8 +746,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return {}
         return {'clients': clients_value.get('schema')}
 
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("adapters")
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("adapters")
     def adapters(self, mongo_filter):
         """
         Get all adapters from the core
@@ -910,7 +767,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
                 clients_collection = db_connection[adapter_name]['clients']
                 schema = self._get_plugin_schemas(db_connection, adapter_name)['clients']
-                clients = [beautify_db_entry(client) for client in clients_collection.find()
+                clients = [gui_helpers.beautify_db_entry(client) for client in clients_collection.find()
                            .sort([('_id', pymongo.DESCENDING)])]
                 for client in clients:
                     client['client_config'] = clear_passwords_fields(client['client_config'], schema)
@@ -964,7 +821,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             pass
         return
 
-    @helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/upload_file", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/upload_file", methods=['POST'])
     def adapter_upload_file(self, adapter_unique_name):
         return self._upload_file(adapter_unique_name)
 
@@ -982,7 +839,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             written_file = fs.put(file, filename=filename)
         return jsonify({'uuid': str(written_file)})
 
-    @helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT'])
+    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients", methods=['PUT'])
     def adapters_clients(self, adapter_unique_name):
         """
         Gets or creates clients in the adapter
@@ -992,7 +849,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         with self._get_db_connection() as db_connection:
             return self._query_client_for_devices(adapter_unique_name)
 
-    @helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
+    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id=None):
         """
         Create or delete credential sets (clients) in the adapter
@@ -1053,7 +910,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return '', 200
 
-    @helpers.add_rule_unauthenticated("actions/<action_type>", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("actions/<action_type>", methods=['POST'])
     def actions_run(self, action_type):
         """
         Executes a run shell command on devices.
@@ -1075,7 +932,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
 
-    @helpers.add_rule_unauthenticated("actions/upload_file", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("actions/upload_file", methods=['POST'])
     def actions_upload_file(self):
         return self._upload_file(self.device_control_plugin)
 
@@ -1086,7 +943,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             sort.append((field, direction))
         if not sort:
             sort.append(('report_creation_time', pymongo.DESCENDING))
-        return [beautify_db_entry(report) for report in
+        return [gui_helpers.beautify_db_entry(report) for report in
                 self._get_collection('reports', db_name=report_service).find(
                     mongo_filter, projection=mongo_projection).sort(sort).skip(skip).limit(limit)]
 
@@ -1109,11 +966,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error("No response whether alert was removed")
         return response.text, response.status_code
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated("alert", methods=['GET', 'PUT', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated("alert", methods=['GET', 'PUT', 'DELETE'])
     def alert(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         """
         GET results in list of all currently configured alerts, with their query id they were created with
@@ -1131,14 +988,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         report_ids = self.get_request_data_as_object()
         return self.delete_alert(report_ids)
 
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("alert/count")
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("alert/count")
     def alert_count(self, mongo_filter):
         with self._get_db_connection() as db_connection:
             report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
             return jsonify(db_connection[report_service]['reports'].find(mongo_filter).count())
 
-    @helpers.add_rule_unauthenticated("alert/<alert_id>", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("alert/<alert_id>", methods=['POST'])
     def alerts_update(self, alert_id):
         """
 
@@ -1160,8 +1017,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return response.text, response.status_code
 
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("plugins")
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("plugins")
     def plugins(self, mongo_filter):
         """
         Get all plugins configured in core and update each one's status.
@@ -1227,7 +1084,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
         return plugin_data
 
-    @helpers.add_rule_unauthenticated("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST', 'GET'])
+    @gui_helpers.add_rule_unauthenticated("plugins/configs/<plugin_unique_name>/<config_name>", methods=['POST', 'GET'])
     def plugins_configs_set(self, plugin_unique_name, config_name):
         """
         Set a specific config on a specific plugin
@@ -1277,7 +1134,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
                                 'schema': schema_collection.find_one({'config_name': config_name})['schema']})
 
-    @helpers.add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
         """
         Calls endpoint of given plugin_unique_name, according to given command
@@ -1292,7 +1149,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return ""
         return response.json(), response.status_code
 
-    @helpers.add_rule_unauthenticated("config/<config_name>", methods=['POST', 'GET'])
+    @gui_helpers.add_rule_unauthenticated("config/<config_name>", methods=['POST', 'GET'])
     def config(self, config_name):
         """
         Get or set config by name
@@ -1313,10 +1170,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                       upsert=True)
             return ""
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.add_rule_unauthenticated("notifications", methods=['POST', 'GET'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.add_rule_unauthenticated("notifications", methods=['POST', 'GET'])
     def notifications(self, limit, skip, mongo_filter, mongo_sort):
         """
         Get all notifications
@@ -1337,14 +1194,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     notifications = []
                     for n in notification_collection.aggregate(pipeline):
                         n['_id'] = n['date']
-                        notifications.append(beautify_db_entry(n))
+                        notifications.append(gui_helpers.beautify_db_entry(n))
                 else:
                     sort = []
                     for field, direction in mongo_sort.items():
                         sort.append(('_id' if field == 'date_fetched' else field, direction))
                     if not sort:
                         sort.append(('_id', pymongo.DESCENDING))
-                    notifications = [beautify_db_entry(n) for n in notification_collection.find(
+                    notifications = [gui_helpers.beautify_db_entry(n) for n in notification_collection.find(
                         mongo_filter, projection={"_id": 1, "who": 1, "plugin_name": 1, "type": 1, "title": 1,
                                                   "seen": 1, "severity": 1}).sort(sort).skip(skip).limit(limit)]
 
@@ -1362,8 +1219,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                          }, {"$set": {'seen': True}})
                 return str(update_result.modified_count), 200
 
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated("notifications/count", methods=['GET'])
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated("notifications/count", methods=['GET'])
     def notifications_count(self, mongo_filter):
         """
         Fetches from core's notification collection, according to given mongo_filter,
@@ -1375,7 +1232,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             notification_collection = db['core']['notifications']
             return str(notification_collection.find(mongo_filter).count())
 
-    @helpers.add_rule_unauthenticated("notifications/<notification_id>", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("notifications/<notification_id>", methods=['GET'])
     def notifications_by_id(self, notification_id):
         """
         Get all notification data
@@ -1384,7 +1241,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         with self._get_db_connection() as db:
             notification_collection = db['core']['notifications']
-            return jsonify(beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
+            return jsonify(gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @add_rule("get_login_options", should_authenticate=False)
     def get_login_options(self):
@@ -1564,7 +1421,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         except ValueError:
             return return_error("Invalid token")
 
-    @helpers.add_rule_unauthenticated("logout", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("logout", methods=['GET'])
     def logout(self):
         """
         Clears session, logs out
@@ -1573,8 +1430,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         session['user'] = None
         return ""
 
-    @helpers.paginated()
-    @helpers.add_rule_unauthenticated("authusers", methods=['GET', 'POST'])
+    @gui_helpers.paginated()
+    @gui_helpers.add_rule_unauthenticated("authusers", methods=['GET', 'POST'])
     def authusers(self, limit, skip):
         """
         View or add users
@@ -1584,7 +1441,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         users_collection = self._get_collection('users')
         if request.method == 'GET':
-            return jsonify(beautify_db_entry(n) for n in
+            return jsonify(gui_helpers.beautify_db_entry(n) for n in
                            users_collection.find(projection={
                                "_id": 1,
                                "user_name": 1,
@@ -1609,8 +1466,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             session['user'] = user_from_db
             return "", 200
 
-    @helpers.paginated()
-    @helpers.add_rule_unauthenticated("logs")
+    @gui_helpers.paginated()
+    @gui_helpers.add_rule_unauthenticated("logs")
     def logs(self, limit, skip):
         """
         Maybe this should be datewise paginated, perhaps the whole scheme will change.
@@ -1686,7 +1543,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             except Exception:
                 logger.exception(f"When dealing with {view_name} and {module_name}")
 
-    @helpers.add_rule_unauthenticated("saved_card_results/<card_name>", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_name>", methods=['GET'])
     def saved_card_results(self, card_name: str):
         """
         Saved results for cards, i.e. the mechanism used to show the user the results
@@ -1709,7 +1566,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return jsonify({x['name']: x for x in self.__get_saved_view_result_from_views(card['views'],
                                                                                       from_given_date, to_given_date)})
 
-    @helpers.add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
+    @gui_helpers.add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
     def get_dashboard(self):
         if request.method == 'GET':
             return jsonify(self._get_dashboard())
@@ -1749,7 +1606,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['views'])
                     elif dashboard['type'] == ChartTypes.intersect.name:
                         dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['views'])
-                    yield beautify_db_entry(dashboard)
+                    yield gui_helpers.beautify_db_entry(dashboard)
                 except Exception as e:
                     # Since there is no data, not adding this chart to the list
                     logger.exception(
@@ -1833,7 +1690,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                        {'_id': 1}).count()})
         return data
 
-    @helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
+    @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
     def remove_dashboard(self, dashboard_id):
         """
         Fetches data, according to definition saved for the dashboard named by given name
@@ -1847,7 +1704,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error(f'No dashboard by the id {dashboard_id} found or updated', 400)
         return ''
 
-    @helpers.add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("dashboard/lifecycle", methods=['GET'])
     def get_system_lifecycle(self):
         """
         Fetches and build data needed for presenting current status of the system's lifecycle in a graph
@@ -1886,7 +1743,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return jsonify({'sub_phases': sub_phases, 'next_run_time': run_time_response.text})
 
-    @helpers.add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
+    @gui_helpers.add_rule_unauthenticated("dashboard/lifecycle_rate", methods=['GET', 'POST'])
     def system_lifecycle_rate(self):
         """
 
@@ -1925,7 +1782,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
         return adapter_devices
 
-    @helpers.add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
     def get_adapter_devices(self):
         return jsonify(self._adapter_devices())
 
@@ -1966,17 +1823,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             item['portion'] = devices_property / devices_total
         return coverage_list
 
-    @helpers.add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("dashboard/coverage", methods=['GET'])
     def get_dashboard_coverage(self):
         return jsonify(self._get_dashboard_coverage())
 
-    @helpers.add_rule_unauthenticated("get_latest_report_date", methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated("get_latest_report_date", methods=['GET'])
     def get_latest_report_date(self):
         recent_report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
         if recent_report is not None:
             return jsonify(recent_report['time'])
 
-    @helpers.add_rule_unauthenticated("research_phase", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("research_phase", methods=['POST'])
     def schedule_research_phase(self):
         """
         Schedules or initiates research phase.
@@ -1996,7 +1853,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         return ''
 
-    @helpers.add_rule_unauthenticated("stop_research_phase", methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated("stop_research_phase", methods=['POST'])
     def stop_research_phase(self):
         """
         Stops currently running research phase.
@@ -2060,13 +1917,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
         """
 
-        def _get_sort(view):
-            sort_def = view.get('sort')
-            sort_obj = {}
-            if sort_def and sort_def.get('field'):
-                sort_obj[sort_def['field']] = pymongo.DESCENDING if (sort_def['desc']) else pymongo.ASCENDING
-            return sort_obj
-
         def _get_field_titles(entity):
             entity_fields = self._entity_fields(entity)
             name_to_title = {}
@@ -2091,9 +1941,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         views_data.append({
                             'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
-                            'data': self._get_entities(view.get('pageSize', 20), 0,
-                                                       parse_filter(view.get('query', {}).get('filter', '')),
-                                                       _get_sort(view), {field: 1 for field in field_list}, entity)
+                            'data': gui_helpers.get_entities(view.get('pageSize', 20), 0,
+                                                             parse_filter(view.get('query', {}).get('filter', '')),
+                                                             gui_helpers.get_sort(
+                                                                 view), {field: 1 for field in field_list},
+                                                             self.gui.entity_query_views_db_map[entity],
+                                                             self._entity_views_db_map[entity], entity,
+                                                             default_sort=self._system_settings['defaultSort'])
                         })
                 except Exception:
                     logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")
@@ -2141,7 +1995,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception('Failed to generate report.')
             return return_error(f'Problem generating report:\n{str(e.args[0]) if e.args else e}', 400)
 
-    @helpers.add_rule_unauthenticated('generate_new_report', methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated('generate_new_report', methods=['POST'])
     def generate_new_report(self):
         '''
         Calls local method that generates a new version of the report as a PDF file and saves it to the db.
@@ -2190,7 +2044,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         fs = gridfs.GridFS(db_connection[GUI_NAME])
                         fs.delete(ObjectId(uuid))
 
-    @helpers.add_rule_unauthenticated('export_report')
+    @gui_helpers.add_rule_unauthenticated('export_report')
     def export_report(self):
         """
         Gets definition of report from DB for the dynamic content.
@@ -2255,7 +2109,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 except Exception:
                     logger.exception(f"Exception on running view {view}")
 
-    @helpers.add_rule_unauthenticated('test_exec_report', methods=['POST'])
+    @gui_helpers.add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):
         try:
             recipients = self.get_request_data_as_object()
@@ -2313,7 +2167,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         logger.info(f"Scheduling an exec_report sending for {next_run_time} and period of {time_period}.")
         return "Scheduled next run."
 
-    @helpers.add_rule_unauthenticated('exec_report', methods=['POST', 'GET'])
+    @gui_helpers.add_rule_unauthenticated('exec_report', methods=['POST', 'GET'])
     def exec_report(self):
         """
         Makes the apscheduler schedule a research phase right now.
@@ -2343,7 +2197,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 logger.info("Email cannot be sent because no email server is configured")
                 raise RuntimeWarning("No email server configured")
 
-    @helpers.add_rule_unauthenticated('metadata', methods=['GET'])
+    @gui_helpers.add_rule_unauthenticated('metadata', methods=['GET'])
     def get_metadata(self):
         """
         Gets the system metadata.
@@ -2375,13 +2229,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         self.__okta = config['okta_login_settings']
         self.__google = config['google_login_settings']
         self.__ldap_login = config['ldap_login_settings']
-        self.__system_settings = config[SYSTEM_SETTINGS]
+        self._system_settings = config[SYSTEM_SETTINGS]
 
-    @helpers.add_rule_unauthenticated('analytics', methods=['GET'], auth_method=None)
+    @gui_helpers.add_rule_unauthenticated('analytics', methods=['GET'], auth_method=None)
     def get_analytics(self):
         return jsonify(self._maintenance_settings[ANALYTICS_SETTING])
 
-    @helpers.add_rule_unauthenticated('troubleshooting', methods=['GET'], auth_method=None)
+    @gui_helpers.add_rule_unauthenticated('troubleshooting', methods=['GET'], auth_method=None)
     def get_troubleshooting(self):
         return jsonify(self._maintenance_settings[TROUBLESHOOTING_SETTING])
 

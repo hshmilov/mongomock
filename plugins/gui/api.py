@@ -1,5 +1,5 @@
 from flask import jsonify, request
-from gui import helpers
+from axonius.utils import gui_helpers
 from axonius.plugin_base import EntityType, return_error
 import logging
 from passlib.hash import bcrypt
@@ -40,21 +40,24 @@ class API:
     ###########
     # DEVICES #
     ###########
-    @helpers.add_rule_unauthenticated(f'api', methods=['GET'],
-                                      auth_method=None)
+    @gui_helpers.add_rule_unauthenticated(f'api', methods=['GET'],
+                                          auth_method=None)
     def api_description(self):
         return api_version
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated(f'V{api_version}/devices',  methods=['GET'], auth_method=basic_authentication)
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/devices',  methods=['GET'], auth_method=basic_authentication)
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(
-            self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Devices, True))
+            gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                     self.gui.entity_query_views_db_map[EntityType.Devices],
+                                     self._entity_views_db_map[EntityType.Devices], EntityType.Devices, True,
+                                     default_sort=self._system_settings['defaultSort']))
 
-    @helpers.add_rule_unauthenticated(f'V{api_version}/devices/<device_id>',  methods=['GET'], auth_method=basic_authentication)
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/devices/<device_id>',  methods=['GET'], auth_method=basic_authentication)
     def api_device_by_id(self, device_id):
         return self._entity_by_id(EntityType.Devices, device_id, ['installed_software', 'security_patches',
                                                                   'available_security_patches', 'users',
@@ -64,16 +67,19 @@ class API:
     # USERS #
     #########
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated(f'V{api_version}/users',  auth_method=basic_authentication)
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/users',  auth_method=basic_authentication)
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(
-            self._get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection, EntityType.Users, True))
+            gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
+                                     self.gui.entity_query_views_db_map[EntityType.Users],
+                                     self._entity_views_db_map[EntityType.Users], EntityType.Users, True,
+                                     default_sort=self._system_settings['defaultSort']))
 
-    @helpers.add_rule_unauthenticated(f'V{api_version}/users/<user_id>',  methods=['GET'], auth_method=basic_authentication)
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/users/<user_id>',  methods=['GET'], auth_method=basic_authentication)
     def api_user_by_id(self, user_id):
         return self._entity_by_id(EntityType.Users, user_id, ['associated_devices'])
 
@@ -81,11 +87,11 @@ class API:
     # ALERTS #
     ##########
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.sorted_endpoint()
-    @helpers.projected()
-    @helpers.add_rule_unauthenticated(f'V{api_version}/alerts', methods=['GET', 'PUT', 'DELETE'], auth_method=basic_authentication)
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.sorted_endpoint()
+    @gui_helpers.projected()
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/alerts', methods=['GET', 'PUT', 'DELETE'], auth_method=basic_authentication)
     def api_alerts(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         if request.method == 'GET':
             return jsonify(self.get_alerts(limit, mongo_filter, mongo_projection, mongo_sort, skip))
@@ -101,9 +107,9 @@ class API:
     # QUERIES #
     ###########
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated(f'V{api_version}/devices/views', methods=['GET', 'POST', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/devices/views', methods=['GET', 'POST', 'DELETE'])
     def api_device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db
@@ -111,9 +117,9 @@ class API:
         """
         return self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter)
 
-    @helpers.paginated()
-    @helpers.filtered()
-    @helpers.add_rule_unauthenticated(f'V{api_version}/users/views', methods=['GET', 'POST', 'DELETE'])
+    @gui_helpers.paginated()
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated(f'V{api_version}/users/views', methods=['GET', 'POST', 'DELETE'])
     def api_device_views(self, limit, skip, mongo_filter):
         """
         Save or fetch views over the devices db

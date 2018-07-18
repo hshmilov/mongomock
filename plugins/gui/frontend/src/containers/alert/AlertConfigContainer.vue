@@ -84,8 +84,14 @@
                                     v-model="actions.notification" @change="tour('alertSave')" /><div />
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenowIncident"/>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Computer" v-model="actions.servicenowComputer"/>
-                        <x-checkbox class="grid-span2" label="Notify Syslog" v-model="actions.syslog"
+                        <x-checkbox label="Notify Syslog" v-model="actions.syslog"
                                     @change="checkSyslogSettings"/>
+                        <template v-if="actions.syslog">
+                            <div>
+                                <x-checkbox label="Send Device Data To Syslog"
+                                            v-model="sendAllDevicesToSyslog"/>
+                            </div>
+                        </template>
                         <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
                                     v-model="actions.mail" @change="checkMailSettings"/>
                         <template v-if="actions.mail">
@@ -185,6 +191,7 @@
                 },
                 mailList: [],
                 tagName: '',
+                sendAllDevicesToSyslog: false,
                 error: '',
                 emptySettings: {
                     'mail': false,
@@ -220,6 +227,7 @@
                             break
                         case 'notify_syslog':
                             this.actions.syslog = true
+                            this.sendAllDevicesToSyslog = action.data
                             break
                         case 'create_service_now_incident':
                             this.actions.servicenowIncident = true
@@ -255,7 +263,7 @@
                 }
                 if (this.actions.syslog) {
                     this.alert.actions.push({
-                        type: 'notify_syslog'
+                        type: 'notify_syslog', data: this.sendAllDevicesToSyslog
                     })
                 }
                 if (this.actions.servicenowIncident) {

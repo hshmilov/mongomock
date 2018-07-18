@@ -1,3 +1,4 @@
+import json
 import logging
 
 logger = logging.getLogger(f"axonius.{__name__}")
@@ -18,6 +19,7 @@ from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_filter
+from axonius.utils import gui_helpers
 
 
 class ReportsService(PluginBase, Triggerable):
@@ -370,7 +372,25 @@ class ReportsService(PluginBase, Triggerable):
                                                           query_link=self._generate_query_link(
                                                               report_data['view_entity'],
                                                               report_data['view'])).replace('\n', ' ')
+        # Check if send device data is checked.
         self.send_syslog_message(log_message, report_data['severity'])
+
+        if action_data:
+            query = self.gui.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
+                'name': report_data['view']})
+            parsed_query_filter = parse_filter(query['view']['query']['filter'])
+            field_list = query['view'].get('fields', [])
+            all_gui_entities = list(gui_helpers.get_entities(query['view'].get('pageSize', 20), 0, parsed_query_filter,
+                                                             gui_helpers.get_sort(query['view']),
+                                                             {field: 1 for field in field_list},
+                                                             self.gui.entity_query_views_db_map[EntityType(
+                                                                 report_data['view_entity'])],
+                                                             self._entity_views_db_map[EntityType(report_data['view_entity'])
+                                                                                       ], EntityType(report_data['view_entity']),
+                                                             default_sort=True))
+
+            for entity in all_gui_entities:
+                self.send_syslog_message(json.dumps(entity),  report_data['severity'])
 
     def _handle_action_send_emails(self, report_data, triggered, trigger_data, current_num_of_devices,
                                    action_data=None):
