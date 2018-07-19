@@ -3,7 +3,20 @@
         <div class="v-spinner-bg" v-if="loading"></div>
         <pulse-loader :loading="loading" color="#FF7D46" />
         <tabs v-if="!loading" @click="determineState" @updated="initTourState">
-            <tab title="General Data" id="generic" key="generic" :selected="true">
+            <tab title="Adapters Data" id="specific" key="specific" v-if="!singleAdapter" :selected="true">
+                <tabs :vertical="true">
+                    <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="item.id" :selected="!i"
+                         :title="item.plugin_name" :logo="true" :outdated="item.outdated">
+                        <div class="d-flex content-header">
+                            <div class="flex-expand server-info">Data From: {{ item.client_used }}</div>
+                            <div @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</div>
+                        </div>
+                        <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)" />
+                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else />
+                    </tab>
+                </tabs>
+            </tab>
+            <tab title="General Data" id="generic" key="generic" :selected="singleAdapter">
                 <tabs :vertical="true">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
                         <x-schema-list :data="basicInfoData" :schema="basicInfoSchema"/>
@@ -15,19 +28,6 @@
                         <x-schema-calendar v-else-if="item.schema.format && item.schema.format === 'calendar'"
                                            :data="item.data" :schema="item.schema" />
                         <x-schema-list :data="item.data" :schema="item.schema" v-else />
-                    </tab>
-                </tabs>
-            </tab>
-            <tab title="Adapters Data" id="specific" key="specific" v-if="!singleAdapter">
-                <tabs :vertical="true">
-                    <tab v-for="item, i in sortedSpecificData" :id="item.id" :key="item.id" :selected="!i"
-                         :title="item.plugin_name" :logo="true" :outdated="item.outdated">
-                        <div class="d-flex content-header">
-                            <div class="flex-expand server-info">Data From: {{ item.client_used }}</div>
-                            <div @click="toggleView" class="x-btn link">View {{viewBasic? 'advanced': 'basic'}}</div>
-                        </div>
-                        <x-schema-list v-if="viewBasic" :data="item" :schema="adapterSchema(item.plugin_name)" />
-                        <tree-view :data="item.data.raw" :options="{rootObjectKey: 'raw', maxDepth: 1}" v-else />
                     </tab>
                 </tabs>
             </tab>
