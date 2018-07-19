@@ -15,7 +15,7 @@ def correlate(devices):
 
 def test_benchmark(msg, generate_func):
     generate = time.time()
-    devices = [generate_func(x) for x in chain(range(0, pairs), range(0, pairs))]
+    devices = [generate_func(x) for x in chain(range(1, pairs + 1), range(1, pairs + 1))]
 
     print(f'{msg} generate in {time.time() - generate} {len(devices)} devices')
 
