@@ -430,8 +430,11 @@ class CoreService(PluginBase, Configurable):
 
     def _on_config_update(self, config):
         logger.info(f"Loading core config: {config}")
-        for plugin in self.online_plugins.keys():
-            self._request_plugin('update_config', plugin, method='post')
+        for plugin_name in self.online_plugins.keys():
+            try:
+                self._request_plugin('update_config', plugin_name, method='post')
+            except Exception:
+                logger.exception(f"Failed to update config on {plugin_name}")
 
     @classmethod
     def _db_config_schema(cls) -> dict:
