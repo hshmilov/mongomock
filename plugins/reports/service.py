@@ -448,12 +448,16 @@ class ReportsService(PluginBase, Triggerable):
         entity_db = f"{report_data['view_entity']}_db_view"
         entities_collection = self._get_collection(entity_db, db_name=AGGREGATOR_PLUGIN_NAME)
 
-        entities = [
-            entities_collection.find_one({'internal_axon_id': entity[1]['internal_axon_id']})['specific_data'][0]
-            for entity in trigger_data]
-        entities = [(entity[PLUGIN_UNIQUE_NAME], entity['data']['id']) for entity in entities]
+        entities = []
+        for entity in trigger_data:
+            db_entity = entities_collection.find_one({'_id': ObjectId(entity[1]['_id'])})
+            if db_entity is not None:
+                for adapter_data in db_entity['specific_data']:
+                    entities.append((adapter_data[PLUGIN_UNIQUE_NAME], adapter_data['data']['id']))
+            else:
+                logger.warning(f"Couldn't find entity to tag. {entity}")
 
-        self.add_many_labels_to_entity(report_data['view_entity'], entities, [action_data])
+        self.add_many_labels_to_entity(EntityType(report_data['view_entity']), entities, [action_data])
 
     def _parse_action_content(self, triggers_data, triggered_triggers):
         """ Creates a readable message for the different actions.

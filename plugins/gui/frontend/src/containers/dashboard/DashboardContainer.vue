@@ -27,7 +27,7 @@
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle-chart :data="lifecycle.subPhases"/>
-                    <div class="cycle-time">Next cycle starts in<div class="blue">{{ nextRunTime }}</div>
+                    <div class="cycle-time">Next cycle starts in <div class="blue">{{ nextRunTime }}</div>
                     </div>
                 </x-card>
                 <x-card title="New Chart" class="chart-new print-exclude">
