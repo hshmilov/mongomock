@@ -17,6 +17,8 @@ def create_pth_file():
         pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'plugins')) + '\n')
         pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'testing')) + '\n')
         pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'adapters')) + '\n')
+        pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'deployment')) + '\n')
+        pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'devops')) + '\n')
         pth_file.write(os.path.abspath(os.path.join(cortex_dir)) + '\n')
 
 
