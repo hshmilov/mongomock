@@ -102,3 +102,6 @@ class MongoService(DockerService):
 
     def get_devices(self, aggregator_unique_name):
         return self.get_devices_db(aggregator_unique_name).find({})
+
+    def gui_users_collection(self):
+        return self.client['gui']['users']
