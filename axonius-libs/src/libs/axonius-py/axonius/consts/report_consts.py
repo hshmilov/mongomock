@@ -32,11 +32,11 @@ REPORT_CONTENT_HTML = """\
   <body>
     <p>Alert - \"{name}\" for the following query has been triggered: {query}<br><br>
        <b>Alert Details</b><br>
-       Number of times this alert has been triggered:{num_of_triggers}<br>
+       Number of times this alert has been triggered: {num_of_triggers}<br>
        The alert was triggered because:the number of devices has {trigger_message}<br>
-       The number of devices returned by the query:{num_of_current_devices}<br>
-       The previous number of devices was:{old_results_num_of_devices}<br><br>
-       You can watch the query and its results here:<a href="{query_link}">Link</a>
+       The number of devices returned by the query: {num_of_current_devices}<br>
+       The previous number of devices was: {old_results_num_of_devices}<br><br>
+       You can watch the query and its results here:<br><a href="{query_link}">Link</a>
     </p>
   </body>
 </html>

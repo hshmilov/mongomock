@@ -39,16 +39,19 @@
                     <div class="content">
                         <x-checkbox label="Increased" v-model="alert.triggers.increase" id="alert_increased"
                                     @change="tour('alertAbove')" />
-                        <div class="form-inline" v-show="alert.triggers.increase">
-                            <label for="alert_above">Above:</label>
-                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0"
-                                   @input="tour('alertAction')">
+                        <div class="form-inline">
+                            <template v-if="alert.triggers.increase">
+                                <label for="alert_above">Above:</label>
+                                <input id="alert_above" type="number" v-model="alert.triggers.above" min="0"
+                                       @input="tour('alertAction')">
+                            </template>
                         </div>
-                        <x-checkbox :class="{'grid-span2': !alert.triggers.decrease}" label="Decrease"
-                                    v-model="alert.triggers.decrease"/>
-                        <div class="form-inline" v-if="alert.triggers.decrease">
-                            <label for="TriggerBelow">Below:</label>
-                            <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0">
+                        <x-checkbox label="Decreased" v-model="alert.triggers.decrease" />
+                        <div class="form-inline">
+                            <template  v-if="alert.triggers.decrease">
+                                <label for="TriggerBelow">Below:</label>
+                                <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0" >
+                            </template>
                         </div>
                         <x-checkbox class="grid-span2" label="Not Changed" v-model="alert.triggers.no_change"/>
                     </div>
@@ -80,31 +83,29 @@
                 <div class="configuration">
                     <div class="header">Action</div>
                     <div class="content">
-                        <x-checkbox label="Push a system notification" id="alert_notification"
-                                    v-model="actions.notification" @change="tour('alertSave')" /><div />
+                        <x-checkbox label="Push a system notification" id="alert_notification" class="grid-span2"
+                                    v-model="actions.notification" @change="tour('alertSave')" />
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenowIncident"/>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Computer" v-model="actions.servicenowComputer"/>
-                        <x-checkbox label="Notify Syslog" v-model="actions.syslog"
-                                    @change="checkSyslogSettings"/>
-                        <template v-if="actions.syslog">
-                            <div>
-                                <x-checkbox label="Send Device Data To Syslog"
-                                            v-model="sendAllDevicesToSyslog"/>
-                            </div>
-                        </template>
-                        <x-checkbox :class="{'grid-span2': !actions.mail}" label="Send an Email"
-                                    v-model="actions.mail" @change="checkMailSettings"/>
-                        <template v-if="actions.mail">
-                            <vm-select v-model="mailList" multiple filterable allow-create placeholder=""
-                                       no-data-text="Type mail addresses..." :default-first-option="true"/>
-                        </template>
+                        <!-- SYSLOG -->
+                        <x-checkbox label="Notify Syslog" v-model="actions.syslog" @change="checkSyslogSettings"/>
+                        <x-checkbox v-if="actions.syslog" label="Send Device Data To Syslog" v-model="sendAllDevicesToSyslog"/>
+                        <div v-if="!actions.syslog"></div>
+                        <!-- SYSLOG -->
+                        <!-- MAIL -->
+                        <x-checkbox label="Send an Email" v-model="actions.mail" @change="checkMailSettings"/>
+                        <vm-select v-if="actions.mail" v-model="mailList" no-data-text="Type mail addresses..."
+                                   placeholder="" multiple filterable allow-create :default-first-option="true" />
+                        <div v-if="!actions.mail"></div>
+                        <!-- MAIL -->
+                        <!-- TAGS -->
                         <template v-if="alert.triggers.increase">
                             <x-checkbox :class="{'grid-span2': !actions.tag}" label="Tag New Entities"
                                         v-model="actions.tag"/>
-                            <template v-if="actions.tag">
-                                <input class="form-control" id="tagName" v-model="tagName">
-                            </template>
+                            <input class="form-control" id="tagName" v-model="tagName" v-if="actions.tag">
+                            <div v-if="!actions.tag"></div>
                         </template>
+                        <!-- TAGS -->
                     </div>
                 </div>
                 <div class="footer">
@@ -179,12 +180,22 @@
                 }
                 this.error = ''
                 return true
-            }
-        },
+            },
+            triggerAbove() {
+            	return this.alert.triggers.above
+            },
+			triggerBelow() {
+				return this.alert.triggers.below
+			}
+		},
         data() {
             return {
                 /* Control of the criteria parameter with the use of two conditions */
-                alert: {triggers: {}, actions: []},
+                alert: {
+                	triggers: {
+                		above: null, below: null
+                    }, actions: []
+                },
                 currentQuery: null,
                 actions: {
                 	notification: false, mail: false, tag: false, syslog: false, servicenowIncident: false, servicenowComputer: false
@@ -202,7 +213,17 @@
         watch: {
             alertData(newAlertData) {
                 this.fillAlert(newAlertData)
-            }
+            },
+            triggerAbove(newAbove) {
+            	if (newAbove) {
+            		this.alert.triggers.above = this.alert.triggers.above.replace('-', '').replace('e', '')
+                }
+            },
+			triggerBelow(newBelow) {
+				if (newBelow) {
+					this.alert.triggers.below = this.alert.triggers.below.replace('-', '').replace('e', '')
+				}
+			}
         },
         methods: {
             ...mapMutations({
