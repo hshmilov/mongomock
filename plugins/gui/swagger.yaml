@@ -1,731 +1,524 @@
-{
-  "swagger": "2.0",
-  "info": {
-    "description": "This API Gives Access to Axonius Data",
-    "version": "1.0.0",
-    "title": "Axonius API",
-    "termsOfService": "http://swagger.io/terms/",
-    "contact": {
-      "email": "support@axonius.com"
-    }
-  },
-  "basePath": "/api/V1",
-  "tags": [
-    {
-      "name": "Devices",
-      "description": "Device Entities Found By Axonious"
-    },
-    {
-      "name": "Users",
-      "description": "User Entities Found By Axonious"
-    },
-    {
-      "name": "Alerts",
-      "description": "Alerts configured on Axonious"
-    }
-  ],
-  "schemes": [
-    "https"
-  ],
-  "paths": {
-    "/devices": {
-      "get": {
-        "tags": [
-          "Devices"
-        ],
-        "summary": "Query devices",
-        "description": "",
-        "operationId": "getDevices",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "skip",
-            "in": "query",
-            "description": "How many devices to skip (0 means none and bring devices from the start).",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "How many devices to return (pagination).",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "description": "The fields to return back for each device.",
-            "required": false,
-            "type": "string",
-            "items": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "filter",
-            "in": "query",
-            "description": "The filter to get devices by.",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "description": "The field to sort the devices by.",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Returns a list of device objects that contains the requested fields, sorted by the the requested field that fits the filter."
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      }
-    },
-    "/devices/{device_id}": {
-      "get": {
-        "tags": [
-          "Devices"
-        ],
-        "summary": "Get device by ID",
-        "description": "Returns a single device",
-        "operationId": "getDeviceById",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "device_id",
-            "in": "path",
-            "description": "ID of device to return",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful operation"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Entity ID wasn't found"
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      }
-    },
-    "/users": {
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Query users",
-        "description": "",
-        "operationId": "getUsers",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "skip",
-            "in": "query",
-            "description": "How many devices to skip (0 means none and bring devices from the start).",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "How many users to return (pagination).",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "description": "The fields to return back for each user.",
-            "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "description": "The field to sort the users by.",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "filter",
-            "in": "query",
-            "description": "The filter to get devices by.",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Returns a list of users objects that contains the requested fields, sorted by the the requested field that fits the filter."
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      }
-    },
-    "/users/{user_id}": {
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Get user by ID",
-        "description": "Returns a single user",
-        "operationId": "getUserById",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "description": "ID of user to return",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful operation"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Entity ID wasn't found"
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      }
-    },
-    "/alerts": {
-     "get": {
-        "tags": [
-          "Alerts"
-        ],
-        "summary": "Get configured alerts",
-        "description": "",
-        "operationId": "getAlerts",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "skip",
-            "in": "query",
-            "description": "How many devices to skip (0 means none and bring devices from the start).",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "How many devices to return (pagination).",
-            "required": true,
-            "type": "integer"
-          },
-          {
-            "name": "fields",
-            "in": "query",
-            "description": "The fields to return back for each device.",
-            "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "filter",
-            "in": "query",
-            "description": "The filter to get devices by.",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "description": "The field to sort the devices by.",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "Alerts"
-        ],
-        "summary": "Create a new alert",
-        "operationId": "createAlert",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "description": "New alert object",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/Alert"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created a new alert"
-          },
-          "400": {
-            "description": "Invalid user supplied"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      }
-    },
-    "/alerts/{alert_id}": {
-      "delete": {
-        "tags": [
-          "Alerts"
-        ],
-        "summary": "Updated user",
-        "description": "This can only be done by the logged in user.",
-        "operationId": "deleteAlert",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "alert_id",
-            "in": "path",
-            "description": "ID of alert to delete",
-            "required": true,
-            "type": "integer",
-            "format": "int64"
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Invalid user supplied"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      }
-    },
-    "/devices/views": {
-      "get": {
-        "tags": [
-          "Devices"
-        ],
-        "summary": "Gets all saved queries",
-        "description": "",
-        "operationId": "getDevicesViews",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "description": "A view filter to add to the system",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/View"
-            }
-          },
-          {
-            "name": "filter",
-            "in": "query",
-            "description": "The filter to get devices by.",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "Devices"
-        ],
-        "summary": "Saves a new query",
-        "description": "This can only be done by the logged in user.",
-        "operationId": "createDevicesView",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "view",
-            "description": "name that need to be updated",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/View"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Invalid user supplied"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Devices"
-        ],
-        "summary": "Deletes a saved query",
-        "description": "This can only be done by the logged in user.",
-        "operationId": "deleteDevicesView",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "description": "Updated user object",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/View"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Invalid user supplied"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      }
-    },
-    "/users/views": {
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Add a new view filter to the system",
-        "description": "",
-        "operationId": "getUsersViews",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "view",
-            "description": "A view filter to add to the system",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/Alert"
-            }
-          },
-          {
-            "name": "filter",
-            "in": "query",
-            "description": "The filter to get devices by.",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Create a new user view filter",
-        "description": "This can only be done by the logged in user.",
-        "operationId": "createUserView",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "description": "Updated user object",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/View"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Invalid user supplied"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        },
-        "security": [
-          {
-            "axonius_api_auth": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Updated user",
-        "description": "This can only be done by the logged in user.",
-        "operationId": "deleteUserView",
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "description": "Updated user object",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/View"
-            }
-          }
-        ],
-        "responses": {
-          "400": {
-            "description": "Invalid user supplied"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      }
-    }
-  },
-  "securityDefinitions": {
-    "axonius_api_auth": {
-      "type": "basic"
-    }
-  },
-  "definitions": {
-    "Alert": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "default": "new"
-        },
-        "name": {
-          "type": "string"
-        },
-        "triggers": {
-          "type": "object",
-          "example": {
-            "increase": false,
-            "decrease": false,
-            "no_change": true,
-            "above": 0,
-            "below": 0
-          },
-          "properties": {}
-        },
-        "actions": {
-          "type": "array",
-          "example": [
-            {
-              "type": "create_notification"
-            }
-          ],
-          "items": {
-            "type": "object",
-            "properties": {}
-          }
-        },
-        "view": {
-          "type": "string",
-          "description": "Name of View"
-        },
-        "viewEntity": {
-          "type": "string",
-          "enum": [
-            "devices",
-            "users"
-          ]
-        },
-        "severity": {
-          "type": "string",
-          "enum": [
-            "info",
-            "warning",
-            "error"
-          ]
-        }
-      },
-      "example": {
-        "severity": "info",
-        "view": "view",
-        "viewEntity": "devices",
-        "name": "name",
-        "id": "new",
-        "triggers": {
-          "increase": false,
-          "decrease": false,
-          "no_change": true,
-          "above": 0,
-          "below": 0
-        },
-        "actions": [
-          {
-            "type": "create_notification"
-          }
-        ]
-      }
-    },
-    "View": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "view": {
-          "$ref": "#/definitions/View_view"
-        },
-        "query_type": {
-          "type": "string",
-          "default": "saved"
-        }
-      },
-      "example": {
-        "name": "test",
-        "view": {
-          "page": 0,
-          "pageSize": 20,
-          "fields": [
-            "adapters",
-            "specific_data.data.hostname",
-            "specific_data.data.name",
-            "specific_data.data.os.type",
-            "specific_data.data.network_interfaces.ips",
-            "specific_data.data.network_interfaces.mac",
-            "labels"
-          ],
-          "coloumnSizes": [],
-          "query": {
-            "filter": "adapters == \"eset_adapter\"",
-            "expressions": [
-              {
-                "logicOp": "",
-                "not": false,
-                "leftBracket": false,
-                "field": "adapters",
-                "compOp": "equals",
-                "value": "eset_adapter",
-                "rightBracket": false,
-                "i": 0
-              }
-            ]
-          },
-          "sort": {
-            "field": "",
-            "desc": true
-          }
-        },
-        "query_type": "saved"
-      }
-    },
-    "View_view": {
-      "properties": {
-        "page": {
-          "type": "integer"
-        },
-        "pageSize": {
-          "type": "integer"
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "query": {
-          "type": "object",
-          "properties": {}
-        }
-      }
-    }
-  }
-}
+---
+swagger: "2.0"
+info:
+  description: "This API Gives Access to Axonius Data"
+  version: "1.0.0"
+  title: "Axonius API"
+  termsOfService: "http://swagger.io/terms/"
+  contact:
+    email: "support@axonius.com"
+basePath: "/api/V1"
+tags:
+- name: "Devices"
+  description: "Device Entities Found By Axonious"
+- name: "Users"
+  description: "User Entities Found By Axonious"
+- name: "Alerts"
+  description: "Alerts configured on Axonious"
+- name: "Actions"
+  description: "Actions to execute on Axonius entities."
+schemes:
+- "https"
+paths:
+  /devices:
+    get:
+      tags:
+      - "Devices"
+      summary: "Query devices"
+      description: ""
+      operationId: "getDevices"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "skip"
+        in: "query"
+        description: "How many devices to skip (0 means none and bring devices from\
+          \ the start)."
+        required: true
+        type: "integer"
+      - name: "limit"
+        in: "query"
+        description: "How many devices to return (pagination)."
+        required: true
+        type: "string"
+      - name: "fields"
+        in: "query"
+        description: "The fields to return back for each device."
+        required: false
+        type: "string"
+        items:
+          type: "string"
+      - name: "filter"
+        in: "query"
+        description: "The filter to get devices by."
+        required: true
+        type: "string"
+      - name: "sort"
+        in: "query"
+        description: "The field to sort the devices by."
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "Returns a list of device objects that contains the requested\
+            \ fields, sorted by the the requested field that fits the filter."
+      security:
+      - axonius_api_auth: []
+  /devices/{device_id}:
+    get:
+      tags:
+      - "Devices"
+      summary: "Get device by ID"
+      description: "Returns a single device"
+      operationId: "getDeviceById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "device_id"
+        in: "path"
+        description: "ID of device to return"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+        401:
+          description: "Unauthorized"
+        404:
+          description: "Entity ID wasn't found"
+      security:
+      - axonius_api_auth: []
+  /users:
+    get:
+      tags:
+      - "Users"
+      summary: "Query users"
+      description: ""
+      operationId: "getUsers"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "skip"
+        in: "query"
+        description: "How many devices to skip (0 means none and bring devices from\
+          \ the start)."
+        required: true
+        type: "integer"
+      - name: "limit"
+        in: "query"
+        description: "How many users to return (pagination)."
+        required: true
+        type: "integer"
+      - name: "fields"
+        in: "query"
+        description: "The fields to return back for each user."
+        required: false
+        type: "array"
+        items:
+          type: "string"
+      - name: "sort"
+        in: "query"
+        description: "The field to sort the users by."
+        required: false
+        type: "string"
+      - name: "filter"
+        in: "query"
+        description: "The filter to get devices by."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Returns a list of users objects that contains the requested\
+            \ fields, sorted by the the requested field that fits the filter."
+      security:
+      - axonius_api_auth: []
+  /users/{user_id}:
+    get:
+      tags:
+      - "Users"
+      summary: "Get user by ID"
+      description: "Returns a single user"
+      operationId: "getUserById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "user_id"
+        in: "path"
+        description: "ID of user to return"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Successful operation"
+        401:
+          description: "Unauthorized"
+        404:
+          description: "Entity ID wasn't found"
+      security:
+      - axonius_api_auth: []
+  /alerts:
+    get:
+      tags:
+      - "Alerts"
+      summary: "Get configured alerts"
+      description: ""
+      operationId: "getAlerts"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "skip"
+        in: "query"
+        description: "How many devices to skip (0 means none and bring devices from\
+          \ the start)."
+        required: true
+        type: "integer"
+      - name: "limit"
+        in: "query"
+        description: "How many devices to return (pagination)."
+        required: true
+        type: "integer"
+      - name: "fields"
+        in: "query"
+        description: "The fields to return back for each device."
+        required: false
+        type: "array"
+        items:
+          type: "string"
+      - name: "filter"
+        in: "query"
+        description: "The filter to get devices by."
+        required: true
+        type: "string"
+      - name: "sort"
+        in: "query"
+        description: "The field to sort the devices by."
+        required: false
+        type: "string"
+      responses:
+        405:
+          description: "Invalid input"
+      security:
+      - axonius_api_auth: []
+    put:
+      tags:
+      - "Alerts"
+      summary: "Create a new alert"
+      operationId: "createAlert"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "New alert object"
+        required: true
+        schema:
+          $ref: "#/definitions/Alert"
+      responses:
+        201:
+          description: "Created a new alert"
+        400:
+          description: "Invalid user supplied"
+        404:
+          description: "User not found"
+  /alerts/{alert_id}:
+    delete:
+      tags:
+      - "Alerts"
+      summary: "Updated user"
+      description: "This can only be done by the logged in user."
+      operationId: "deleteAlert"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "alert_id"
+        in: "path"
+        description: "ID of alert to delete"
+        required: true
+        type: "integer"
+        format: "int64"
+      responses:
+        400:
+          description: "Invalid user supplied"
+        404:
+          description: "User not found"
+  /devices/views:
+    get:
+      tags:
+      - "Devices"
+      summary: "Gets all saved queries"
+      description: ""
+      operationId: "getDevicesViews"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "A view filter to add to the system"
+        required: true
+        schema:
+          $ref: "#/definitions/View"
+      - name: "filter"
+        in: "query"
+        description: "The filter to get devices by."
+        required: true
+        type: "string"
+      responses:
+        405:
+          description: "Invalid input"
+      security:
+      - axonius_api_auth: []
+    post:
+      tags:
+      - "Devices"
+      summary: "Saves a new query"
+      description: "This can only be done by the logged in user."
+      operationId: "createDevicesView"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "view"
+        description: "name that need to be updated"
+        required: true
+        schema:
+          $ref: "#/definitions/View"
+      responses:
+        400:
+          description: "Invalid user supplied"
+        404:
+          description: "User not found"
+    delete:
+      tags:
+      - "Devices"
+      summary: "Deletes a saved query"
+      description: "This can only be done by the logged in user."
+      operationId: "deleteDevicesView"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Updated user object"
+        required: true
+        schema:
+          $ref: "#/definitions/View"
+      responses:
+        400:
+          description: "Invalid user supplied"
+        404:
+          description: "User not found"
+  /users/views:
+    get:
+      tags:
+      - "Users"
+      summary: "Add a new view filter to the system"
+      description: ""
+      operationId: "getUsersViews"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "view"
+        description: "A view filter to add to the system"
+        required: true
+        schema:
+          $ref: "#/definitions/Alert"
+      - name: "filter"
+        in: "query"
+        description: "The filter to get devices by."
+        required: true
+        type: "string"
+      responses:
+        405:
+          description: "Invalid input"
+      security:
+      - axonius_api_auth: []
+    post:
+      tags:
+      - "Users"
+      summary: "Create a new user view filter"
+      description: "This can only be done by the logged in user."
+      operationId: "createUserView"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Updated user object"
+        required: true
+        schema:
+          $ref: "#/definitions/View"
+      responses:
+        400:
+          description: "Invalid user supplied"
+        404:
+          description: "User not found"
+      security:
+      - axonius_api_auth: []
+    delete:
+      tags:
+      - "Users"
+      summary: "Updated user"
+      description: "This can only be done by the logged in user."
+      operationId: "deleteUserView"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Updated user object"
+        required: true
+        schema:
+          $ref: "#/definitions/View"
+      responses:
+        400:
+          description: "Invalid user supplied"
+        404:
+          description: "User not found"
+  /actions:
+    get:
+      tags:
+      - "Actions"
+      summary: "Get a list of available actions"
+      description: ""
+      operationId: "getAvailableActions"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "List of available actions"
+      security:
+      - axonius_api_auth: []
+  /actions/{action_type}:
+    post:
+      tags:
+      - "Actions"
+      summary: "Execute action."
+      description: "Execute an action on a list of entities"
+      operationId: "runAction"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "body"
+        in: "body"
+        description: "The action paramaters"
+        required: true
+      responses:
+        200:
+          description: "The action executed successfully on all the devices."
+securityDefinitions:
+  axonius_api_auth:
+    type: "basic"
+definitions:
+  Alert:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        default: "new"
+      name:
+        type: "string"
+      triggers:
+        type: "object"
+        example:
+          increase: false
+          decrease: false
+          no_change: true
+          above: 0
+          below: 0
+        properties: {}
+      actions:
+        type: "array"
+        example:
+        - type: "create_notification"
+        items:
+          type: "object"
+          properties: {}
+      view:
+        type: "string"
+        description: "Name of View"
+      viewEntity:
+        type: "string"
+        enum:
+        - "devices"
+        - "users"
+      severity:
+        type: "string"
+        enum:
+        - "info"
+        - "warning"
+        - "error"
+    example:
+      severity: "info"
+      view: "view"
+      viewEntity: "devices"
+      name: "name"
+      id: "new"
+      triggers:
+        increase: false
+        decrease: false
+        no_change: true
+        above: 0
+        below: 0
+      actions:
+      - type: "create_notification"
+  View:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+      view:
+        $ref: "#/definitions/View_view"
+      query_type:
+        type: "string"
+        default: "saved"
+    example:
+      name: "test"
+      view:
+        page: 0
+        pageSize: 20
+        fields:
+        - "adapters"
+        - "specific_data.data.hostname"
+        - "specific_data.data.name"
+        - "specific_data.data.os.type"
+        - "specific_data.data.network_interfaces.ips"
+        - "specific_data.data.network_interfaces.mac"
+        - "labels"
+        coloumnSizes: []
+        query:
+          filter: "adapters == \"eset_adapter\""
+          expressions:
+          - logicOp: ""
+            not: false
+            leftBracket: false
+            field: "adapters"
+            compOp: "equals"
+            value: "eset_adapter"
+            rightBracket: false
+            i: 0
+        sort:
+          field: ""
+          desc: true
+      query_type: "saved"
+  View_view:
+    properties:
+      page:
+        type: "integer"
+      pageSize:
+        type: "integer"
+      fields:
+        type: "array"
+        items:
+          type: "string"
+      query:
+        type: "object"
+        properties: {}

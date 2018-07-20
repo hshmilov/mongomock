@@ -606,3 +606,37 @@ def put_alert():
     requests.put(f"{AXONIUS_API}/alerts", data=data, auth=(USERNAME, PASSWORD))
 
     # Response is status code: 201 (Created).
+
+
+def get_actions_to_run():
+    requests.get(f"{AXONIUS_API}/actions", auth=(USERNAME, PASSWORD))
+
+    # Response is status code: 200 and a list of actions that can be executed.
+    # [
+    #     "deploy",
+    #     "shell"
+    # ]
+
+
+def run_actions():
+    # data = { ...this.deploy.data, internal_axon_ids: this.devices}
+    data = {
+        "internal_axon_ids": ['8b45e72e83a1451785630501bdcda95b'],  # The device
+        "action_name": 'Put File',
+        "command": "echo 'Touched by axonius' > /home/ubuntu/axonius_file"
+    }
+
+    requests.post(f"{AXONIUS_API}/actions/shell", data=data, auth=(USERNAME, PASSWORD))
+
+    # Response is status code: 200. The command will run on the requested device.
+
+    with open('./script_file_to_run', 'r') as file_to_run:
+        data = {
+            "internal_axon_ids": ['8b45e72e83a1451785630501bdcda95b'],  # The device
+            "action_name": 'Run Script File',
+            "binary": file_to_run.read()
+        }
+
+        requests.post(f"{AXONIUS_API}/actions/deploy", data=data, auth=(USERNAME, PASSWORD))
+
+    # Response is status code: 200. The script file was deployed and ran on the devices.
