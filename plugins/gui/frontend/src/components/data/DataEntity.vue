@@ -256,7 +256,7 @@
                     .object {
                         width: calc(100% - 24px);
                     }
-                    >.x-array-view >.array-container >.array {
+                    >.x-array-view >.array {
                         display: grid;
                         grid-template-columns: 50% 50%;
                         grid-gap: 4px 0;
@@ -268,9 +268,9 @@
                 }
                 .specific .schema-list {
                     height: calc(100% - 36px);
-                    > .x-array-view > .array-container > .array {
+                    > .x-array-view > .array {
                         display: block;
-                        > .item > .object > .x-array-view > .array-container > .array {
+                        > .item-container > .item > .object > .x-array-view > .array {
                             overflow-wrap: break-word;
                             display: grid;
                             grid-template-columns: 50% 50%;

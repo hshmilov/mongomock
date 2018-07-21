@@ -5,17 +5,19 @@
             <div @click="toggleCollapsed" class="x-btn link expander">{{ collapsed? '+': '-'}}</div>
             <label :title="schema.description || ''" class="label">{{ schema.title }}</label>
         </template>
-        <div class="array-container">
-            <div v-if="!collapsed" class="array" :class="{ 'growing-y': collapsable}" ref="items">
-                <div v-for="item in schemaItems" class="item" v-if="!empty(data[item.name])">
+        <div class="array">
+            <div v-for="item, index in schemaItems" v-if="!empty(data[item.name]) && (!collapsed || !index)" class="item-container">
+                <!-- In collapsed mode, only first item is revealed -->
+                <div ref="item" class="item" :class="{ 'growing-y': collapsable}">
                     <div v-if="typeof item.name === 'number'" class="index">{{item.name + 1}}.</div>
                     <x-type-wrap v-bind="item" :required="true">
                         <component :is="item.type" :schema="item" :value="data[item.name]" :ref="item.type" />
                     </x-type-wrap>
                 </div>
             </div>
-            <div class="placeholder" v-else>...</div>
         </div>
+        <!-- Indication for more data for this item -->
+        <div class="placeholder" v-if="collapsed && schemaItems.length > 1">...</div>
     </div>
 </template>
 
@@ -45,7 +47,10 @@
 				if (!collapsed) {
 					this.collapsed = false
 				} else if (!this.collapsed) {
-					this.$refs.items.classList.add('shrinking-y')
+					this.$refs.item.forEach((item, index) => {
+						// Exit animation for items to be collapsed (all but first)
+						if (index) item.classList.add('shrinking-y')
+					})
 					setTimeout(() => this.collapsed = true, 1000)
 				}
 			},
@@ -63,7 +68,8 @@
             }
         },
         created() {
-			if (this.collapsable) {
+			if (this.collapsable && !Array.isArray(this.schema.items)) {
+				// Collapsed by default, only for real lists (not an object with ordered fields)
 				this.collapsed = true
             }
         }
@@ -84,13 +90,13 @@
             width: 20px;
             text-align: left;
         }
-        .array-container {
+        .item-container {
             overflow: hidden;
-            .placeholder {
-                margin-left: 20px;
-                color: $grey-3;
-                font-weight: 500;
-            }
+        }
+        .placeholder {
+            margin-left: 20px;
+            color: $grey-3;
+            font-weight: 500;
         }
         .label, .index {
             font-weight: 500;
