@@ -121,6 +121,8 @@ class TenableIoAdapter(ScannerAdapterBase):
                     ipv4_raw = device_raw.get("ipv4s", [])
                     ipv6_raw = device_raw.get("ipv6s", [])
                     mac_addresses_raw = device_raw.get("mac_addresses", [])
+                    if mac_addresses_raw == []:
+                        device.add_nic(None, ipv4_raw + ipv6_raw)
                     for mac_item in mac_addresses_raw:
                         try:
                             device.add_nic(mac_item, ipv4_raw + ipv6_raw)
