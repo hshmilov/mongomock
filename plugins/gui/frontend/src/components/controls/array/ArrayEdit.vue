@@ -1,8 +1,9 @@
 <template>
     <div class="array">
-        <h4 v-if="schema.title" :title="schema.description || ''" class="header grid-span2" :id="schema.name">
-            {{ schema.title }}
-        </h4>
+        <div class="grid-span2">
+            <h4 v-if="schema.title" :title="schema.description || ''" class="array-header"
+                :id="schema.name">{{ schema.title }}</h4>
+        </div>
         <div v-for="item in shownSchemaItems" class="item">
             <x-type-wrap :name="item.name" :type="item.type" :title="item.title" :description="item.description"
                          :required="item.required">
@@ -72,8 +73,10 @@
 
 <style lang="scss">
     .array {
-        .header {
+        .array-header {
             margin-bottom: 0;
+            display: inline-block;
+            min-width: 200px;
         }
         .item {
             .index {

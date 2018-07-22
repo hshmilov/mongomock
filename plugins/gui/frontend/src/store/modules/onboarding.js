@@ -479,7 +479,7 @@ export const onboarding = {
 					]
 				},
 				'lifecycleRate': {
-					id: 'research_rate', title: 'DISCOVERY RUN FREQUENCY', align: 'bottom',
+					id: 'discovery_settings', title: 'DISCOVERY RUN FREQUENCY', align: 'top',
 					content: 'Set the number of hours between discovery runs.',
 					actions: [
 						{ title: 'Next', state: 'lifecycleRun' }
@@ -497,35 +497,35 @@ export const onboarding = {
 					content: 'Configure execution and notification settings here.'
 				},
 				'global-settings-tab': {
-					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'right',
+					id: 'syslog_settings', title: 'SYSLOG SERVER CONFIG', align: 'top',
 					content: 'Enable and provide syslog credentials here for alerts.',
 					actions: [
 						{ title: 'Next', state: 'serviceNow' }
 					]
 				},
 				'serviceNow': {
-					id: 'service_now_settings', title: 'ServiceNow SERVER CONFIG', align: 'right',
+					id: 'service_now_settings', title: 'ServiceNow SERVER CONFIG', align: 'top',
 					content: 'Enable and provide ServiceNow credentials here, or use the Adapter (if it is connected) for alerts.',
 					actions: [
 						{ title: 'Next', state: 'mail' }
 					]
 				},
 				'mail': {
-					id: 'email_settings', title: 'MAIL SERVER CONFIG', align: 'right',
+					id: 'email_settings', title: 'MAIL SERVER CONFIG', align: 'top',
 					content: 'Enable and provide mail server credentials for alerts.',
 					actions: [
 						{ title: 'Next', state: 'execution' }
 					]
 				},
 				'execution': {
-					id: 'execution_settings', title: 'EXECUTION CONFIG', align: 'right',
+					id: 'execution_settings', title: 'EXECUTION CONFIG', align: 'top',
 					content: 'Enable Axonius to collect information directly from devices in addition to what is collected from Adapters.',
 					actions: [
 						{ title: 'Next', state: 'maintenance' }
 					]
 				},
 				'maintenance': {
-					id: 'maintenance_settings', title: 'MAINTENANCE CONFIG', align: 'right',
+					id: 'maintenance_settings', title: 'MAINTENANCE CONFIG', align: 'top',
 					content: 'Enable Axonius to anonymously save analytics info or troubleshoot remotely',
 					actions: [
 						{ title: 'Next', state: 'settingsGUI' }
@@ -536,21 +536,21 @@ export const onboarding = {
 					content: 'Configure settings related to the system interface.'
 				},
 				'gui-settings-tab': {
-					id: 'system_settings', title: 'DATA TABLES', align: 'right',
+					id: 'system_settings', title: 'DATA TABLES', align: 'top',
 					content: 'Configure how frequently devices and users are collected, and determine the default sorting.',
 					actions: [
 						{ title: 'Next', state: 'okta' }
 					]
 				},
 				'okta': {
-					id: 'okta_login_settings', title: 'LOGIN WITH OKTA', align: 'right',
+					id: 'okta_login_settings', title: 'LOGIN WITH OKTA', align: 'top',
 					content: 'If you use Okta, you can log in to Axonius by entering Okta details.',
 					actions: [
 						{ title: 'Next', state: 'ldap' }
 					]
 				},
 				'ldap': {
-					id: 'ldap_login_settings', title: 'LOGIN WITH LDAP', align: 'right',
+					id: 'ldap_login_settings', title: 'LOGIN WITH LDAP', align: 'top',
 					content: 'If you use LDAP, you can log in to Axonius by entering LDAP user details.',
 					actions: [
 						{ title: 'Next', state: 'dashboard' }

@@ -100,7 +100,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                     "required": True
                 }
             ],
-            "pretty_name": "Scheduler Configuration",
+            "name": "discovery_settings",
             "title": "Discovery Settings",
             "type": "array"
         }

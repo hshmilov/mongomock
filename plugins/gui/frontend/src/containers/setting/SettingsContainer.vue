@@ -320,9 +320,6 @@
         .research-settings-tab .tab-settings .schema-form > .array {
             display: grid;
         }
-        #research_rate {
-            width: 80px;
-        }
         input.cov-datepicker {
             width: 100%;
         }
