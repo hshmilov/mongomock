@@ -69,7 +69,12 @@
             onFocusout() {
         		this.validate(false)
             }
-        }
+        },
+		destroyed() {
+			this.valid = true
+			this.error = ''
+			this.validate(true)
+		}
     }
 </script>
 

@@ -1851,6 +1851,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         recent_report = self._get_collection("reports").find_one({'filename': 'most_recent_report'})
         if recent_report is not None:
             return jsonify(recent_report['time'])
+        return ''
 
     @gui_helpers.add_rule_unauthenticated("research_phase", methods=['POST'])
     def schedule_research_phase(self):
@@ -2004,26 +2005,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 # Uploads the report to the db and returns a uuid to retrieve it
                 uuid = self._upload_report(report_data)
                 logger.info(f"Report was saved to the db {uuid}")
-            # Stores the uuid in the db in the "reports" collection
-            self._get_collection("reports").replace_one(
-                {'filename': 'most_recent_report'},
-                {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
-            )
+                # Stores the uuid in the db in the "reports" collection
+                self._get_collection("reports").replace_one(
+                    {'filename': 'most_recent_report'},
+                    {'uuid': uuid, 'filename': 'most_recent_report', 'time': datetime.now()}, True
+                )
             return "Success"
-        except Exception as e:
-            logger.exception('Failed to generate report.')
-            return return_error(f'Problem generating report:\n{str(e.args[0]) if e.args else e}', 400)
-
-    @gui_helpers.add_rule_unauthenticated('generate_new_report', methods=['POST'])
-    def generate_new_report(self):
-        '''
-        Calls local method that generates a new version of the report as a PDF file and saves it to the db.
-
-        :return: "Success" if successful, error if there is an error
-        '''
-
-        try:
-            return self.generate_new_report_offline()
         except Exception as e:
             logger.exception('Failed to generate report.')
             return return_error(f'Problem generating report:\n{str(e.args[0]) if e.args else e}', 400)
@@ -2075,20 +2062,21 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
         :return:
         """
+        report_path = self._get_existing_executive_report()
+        return send_file(report_path, mimetype='application/pdf', as_attachment=True,
+                         attachment_filename=report_path)
+
+    def _get_existing_executive_report(self):
         with self._get_db_connection() as db_connection:
             schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
             if schemas['config']['generate_report'] is False:
                 self.generate_new_report_offline()
 
-        uuid = self._get_collection("reports").find_one({'filename': 'most_recent_report'})['uuid']
-        with self._get_db_connection() as db_connection:
-            timestamp = datetime.now()
-            report_pdf = f'/tmp/axonius-report_{timestamp}.pdf'
-            with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_file:
-                file = open(report_pdf, 'wb')
-                file.write(report_file.read())
-                return send_file(report_pdf, mimetype='application/pdf', as_attachment=True,
-                                 attachment_filename=report_pdf)
+            uuid = self._get_collection("reports").find_one({'filename': 'most_recent_report'})['uuid']
+            report_path = f'/tmp/axonius-report_{datetime.now()}.pdf'
+            with gridfs.GridFS(db_connection[GUI_NAME]).get(ObjectId(uuid)) as report_content:
+                open(report_path, 'wb').write(report_content.read())
+                return report_path
 
     def generate_report(self):
         """
@@ -2205,10 +2193,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 exec_report = self.exec_report_collection.find_one()
                 if exec_report:
                     recipients = exec_report.get('recipients', [])
-            report_path = self.generate_report()
-            mail_sender = self.mail_sender
-            if mail_sender:
-                email = mail_sender.new_email(EXEC_REPORT_TITLE, recipients)
+            report_path = self._get_existing_executive_report()
+            if self.mail_sender:
+                email = self.mail_sender.new_email(EXEC_REPORT_TITLE, recipients)
                 with open(report_path, 'rb') as report_file:
                     email.add_pdf(EXEC_REPORT_FILE_NAME, bytes(report_file.read()))
                 email.send(EXEC_REPORT_EMAIL_CONTENT)

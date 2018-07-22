@@ -2,7 +2,7 @@
     <x-page title="Reporting">
         <x-box class="x-report">
             <div class="x-report-download">
-                <a class="x-btn great" @click="startDownload" :class="{disabled: canDownloadReport}" id="reports_download">
+                <a class="x-btn great" @click="startDownload" :class="{disabled: disableDownloadReport}" id="reports_download">
                     <template v-if="downloading">DOWNLOADING...</template>
                     <template v-else>Download Now</template>
                 </a>
@@ -26,12 +26,13 @@
                 </div>
                 <div class="x-section" id="reports_mails">
                     <h4>Email List</h4>
-                    <vm-select v-model="execReportSettings.recipients" multiple filterable allow-create placeholder=""
-                               no-data-text="Type mail addresses..." :default-first-option="true"/>
+                    <vm-select v-model="execReportSettings.recipients" multiple filterable allow-create
+                               placeholder="" no-data-text="Type mail addresses..." :default-first-option="true"/>
                 </div>
                 <div class="x-section x-btn-container">
-                    <a class="x-btn" :class="{disabled: !valid}" @click="schedule_exec_report">Save</a>
-                    <a class="x-btn inverse" :class="{disabled: !valid}" @click="test_exec_report">Test Now</a>
+                    <a class="x-btn" :class="{disabled: !valid}" @click="scheduleExecReport">Save</a>
+                    <a class="x-btn inverse" :class="{ disabled: !hasRecipients || disableDownloadReport }"
+                       @click="testExecReport">Test Now</a>
                 </div>
             </div>
         </x-box>
@@ -54,9 +55,12 @@
         components: { xPage, xBox, xToast },
         computed: {
         	valid() {
-        		return this.execReportSettings.recipients.length > 0 && this.execReportSettings.period
+        		return this.execReportSettings.period
             },
-            canDownloadReport() {
+            hasRecipients() {
+        		return this.execReportSettings.recipients && this.execReportSettings.recipients.length
+            },
+            disableDownloadReport() {
         	    return this.downloading || !this.isLatestReport
             }
         },
@@ -76,7 +80,7 @@
             ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
             ...mapActions({ downloadReport: DOWNLOAD_REPORT, fetchData: REQUEST_API }),
             startDownload() {
-                if (this.canDownloadReport) return
+                if (this.disableDownloadReport) return
                 this.downloading = true
                 this.downloadReport().then((response) => {
                     this.downloading = false
@@ -94,27 +98,26 @@
                     this.message = error.response.data.message
                 })
             },
-            test_exec_report() {
-            	if (!this.execReportSettings.recipients.length) {
-            		return
-                }
+            testExecReport() {
+            	if (!this.hasRecipients) return
+
                 this.fetchData({
                     rule: `test_exec_report`,
                     method: 'POST',
                     data: this.execReportSettings.recipients
-                }).then(() => this.message = '').catch(error => this.message = error.response.data.message)
+                }).then(() => this.message = 'Email with executive report was sent.')
+                    .catch(error => this.message = error.response.data.message)
             },
-            schedule_exec_report() {
-				if (!this.valid) {
-					return
-				}
+            scheduleExecReport() {
+				if (!this.valid) return
+
                 this.fetchData({
                     rule: `exec_report`,
                     method: 'POST',
                     data: this.execReportSettings
                 }).then((response) => {
                     if (response.status === 200) {
-                        this.message = 'Saved Successfully.'
+                        this.message = 'Executive report periodic email setting saved.'
                     }
                 })
             },
@@ -126,7 +129,7 @@
             this.fetchData({
                 rule: `exec_report`,
             }).then((response) => {
-                if (response.data && response.data.recipients) this.execReportSettings = response.data
+                if (response.data) this.execReportSettings = { recipients: [], ...response.data }
             })
             this.changeState({ name: 'reportsSchedule' })
             this.fetchData({
@@ -134,8 +137,8 @@
                 method: 'GET',
             }).then((response) => {
                 if (response.data) {
-                    this.latestReportDate = "Last generated: " + response.data;
-                    this.isLatestReport = true;
+                    this.latestReportDate = "Last generated: " + response.data
+                    this.isLatestReport = true
                 }
             })
         }
