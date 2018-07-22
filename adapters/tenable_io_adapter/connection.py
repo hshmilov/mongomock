@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.clients.rest.exception import RESTException
 import time
+from axonius.utils.parsing import make_dict_from_csv
 
 
 class TenableIoConnection(RESTConnection):
@@ -49,56 +50,13 @@ class TenableIoConnection(RESTConnection):
         else:
             self._get('scans')
 
-    def _get_export_data(self, export_type):
-        export_uuid = self._post(f"{export_type}/export",
-                                 body_params={"chunk_size": consts.DEVICES_PER_PAGE})["export_uuid"]
-        available_chunks = set()
-        response = self._get(f"{export_type}/export/{export_uuid}/status")
-        available_chunks.update(response.get("chunks_available", []))
-        number_of_sleeps = 0
-        while response.get("status") != "FINISHED" and number_of_sleeps < consts.NUMBER_OF_SLEEPS:
-            try:
-                response = self._get(f"{export_type}/export/{export_uuid}/status")
-                available_chunks.update(response.get("chunks_available"))
-            except Exception:
-                logger.exception(f"Problem with getting chunks for {export_uuid}")
-            time.sleep(consts.TIME_TO_SLEEP)
-            number_of_sleeps += 1
-        export_list = []
-        for chunk_id in available_chunks:
-            try:
-                export_list.extend(self._get(f"{export_type}/export/{export_uuid}/chunks/{chunk_id}"))
-            except Exception:
-                logger.exception(f"Problem in getting specific chunk {chunk_id} from {export_uuid} type {export_type}")
-        return export_list
-
     def get_device_list(self):
-        assets_list = self._get_export_data("assets")
-        assets_list_dict = dict()
-        # Creating dict out of assets_list
-        for asset in assets_list:
-            try:
-                asset_id = asset.get("id", "")
-                if asset_id is None or asset_id == "":
-                    logger.warning(f"Got asset with no id. Asset raw data: {asset}")
-                    continue
-                assets_list_dict[asset_id] = asset
-                assets_list_dict[asset_id]["vulns_info"] = []
-            except Exception:
-                logger.exception(f"Problem with asset {asset}")
-        try:
-            vulns_list = self._get_export_data("vulns")
-        except Exception:
-            vulns_list = []
-            logger.exception("General error while getting vulnerabilities")
-        for vuln_raw in vulns_list:
-            try:
-                # Trying to find the correct asset for all vulnerability line in the array
-                asset_id_for_vuln = vuln_raw.get("asset", {}).get("uuid", "")
-                if asset_id_for_vuln is None or asset_id_for_vuln == "":
-                    logger.warning(f"No id for vuln {vuln_raw}")
-                    continue
-                assets_list_dict[asset_id_for_vuln]["vulns_info"].append(vuln_raw)
-            except Exception:
-                logger.exception(f"Problem with vuln raw {vuln_raw}")
-        yield from assets_list_dict.values()
+        file_id = self._get("workbenches/export", url_params={'format': 'csv', 'report': 'vulnerabilities', 'chapter': 'vuln_by_asset',
+                                                              'date_range': consts.DAYS_FOR_VULNS_IN_CSV})["file"]
+        status = self._get(f"workbenches/export/{file_id}/status")["status"]
+        sleep_times = 0
+        while status != 'ready' and sleep_times < consts.NUMBER_OF_SLEEPS:
+            time.sleep(consts.TIME_TO_SLEEP)
+            status = self._get(f"workbenches/export/{file_id}/status")["status"]
+            sleep_times += 1
+        return make_dict_from_csv(self._get(f"workbenches/export/{file_id}/download", use_json_in_response=False).decode('utf-8'))

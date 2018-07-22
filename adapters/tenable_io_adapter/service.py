@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger(f"axonius.{__name__}")
+from collections import defaultdict
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -11,12 +12,11 @@ from axonius.utils.parsing import parse_date
 from axonius.devices.device_adapter import DeviceAdapter
 
 
-class TenableIoAdapter(ScannerAdapterBase):
+class TenableIoAdapter(AdapterBase):
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = None
 
     class MyDeviceAdapter(DeviceAdapter):
-        has_agent = Field(bool, "Has Agent")
-        plugin_and_severity = ListField(str, "Plugin and severity")
+        risk_and_name_list = ListField(str, "Vulnerability Details")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -54,7 +54,7 @@ class TenableIoAdapter(ScannerAdapterBase):
         """
         try:
             client_data.connect()
-            yield from client_data.get_device_list()
+            return client_data.get_device_list()
         finally:
             client_data.close()
 
@@ -109,56 +109,79 @@ class TenableIoAdapter(ScannerAdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        assets_dict = defaultdict(list)
+
+        def get_csv_value_filtered(d, n):
+            try:
+                value = d.get(n)
+                if value is not None:
+                    if str(value).strip().lower() not in ["", "none", "0"]:
+                        return str(value).strip()
+            except Exception:
+                pass
+
+            return None
+
         for device_raw in devices_raw_data:
             try:
+                uuid = get_csv_value_filtered(device_raw, "Asset UUID")
+                host = get_csv_value_filtered(device_raw, "Host")
+
+                if uuid is None or host is None:
+                    logger.warning(f"Bad asset {device_raw}, continuing")
+                    continue
+                assets_dict[uuid].append(device_raw)
+            except Exception:
+                logger.exception(f"Problem with fetching TenableIO Device {device_raw}")
+        for asset_id, asset_id_values in assets_dict.items():
+            try:
                 device = self._new_device_adapter()
-                device.has_agent = bool(device_raw.get("has_agent"))
+                device.id = asset_id
+
+                first_asset = asset_id_values[0]
                 try:
-                    device.last_seen = parse_date(device_raw.get("last_seen", ""))
+                    device.last_seen = parse_date(get_csv_value_filtered(first_asset, "Host End"))
                 except Exception:
-                    logger.exception(f"Problem with last seen for {device_raw}")
-                try:
-                    ipv4_raw = device_raw.get("ipv4s", [])
-                    ipv6_raw = device_raw.get("ipv6s", [])
-                    mac_addresses_raw = device_raw.get("mac_addresses", [])
-                    if mac_addresses_raw == []:
-                        device.add_nic(None, ipv4_raw + ipv6_raw)
-                    for mac_item in mac_addresses_raw:
-                        try:
-                            device.add_nic(mac_item, ipv4_raw + ipv6_raw)
-                        except Exception:
-                            logger.exception(f"Problem adding nice to {device_raw}")
-                except Exception:
-                    logger.exception(f"Problem with IP at {device_raw}")
-                try:
-                    os_list = device_raw.get("operating_systems")
-                    if len(os_list) > 0:
-                        device.figure_os(str(os_list[0]))
-                except Exception:
-                    logger.exception(f"Problem getting OS for {device_raw}")
-                fqdns = device_raw.get("fqdns", [])
-                hostnames = device_raw.get("hostnames", [])
-                netbios = device_raw.get("netbios_names", [])
-                if len(fqdns) > 0 and fqdns[0] != "":
-                    device.hostname = fqdns[0]
-                elif len(hostnames) > 0 and hostnames[0] != "":
-                    device.hostname = hostnames[0]
-                elif len(netbios) > 0 and netbios[0] != "":
-                    device.hostname = netbios[0]
-                device.plugin_and_severity = []
-                vulns_info = device_raw.get("vulns_info", [])
-                for vuln_raw in vulns_info:
-                    try:
-                        severity = vuln_raw.get("severity", "")
-                        plugin_name = vuln_raw.get("plugin", {}).get("name", "")
-                        if f"{plugin_name}__{severity}" not in device.plugin_and_severity:
-                            device.plugin_and_severity.append(f"{plugin_name}__{severity}")
-                    except Exception:
-                        logger.exception(f"Problem getting vuln raw {vuln_raw}")
-                device.set_raw(device_raw)
+                    logger.exception(f"Problem getting last seen for {str(first_asset)}")
+                ip_addresses = get_csv_value_filtered(first_asset, "IP Address")
+                mac_addresses = get_csv_value_filtered(first_asset, "MAC Address")
+
+                # Turn to lists
+                ip_addresses = ip_addresses.split(",") if ip_addresses is not None else []
+                mac_addresses = mac_addresses.split(",") if mac_addresses is not None else []
+
+                if mac_addresses == [] and ip_addresses != []:
+                    device.add_nic(None, ip_addresses)
+
+                else:
+                    for mac_address in mac_addresses:
+                        device.add_nic(mac_address, ip_addresses)
+
+                fqdn = get_csv_value_filtered(first_asset, "FQDN")
+                netbios = get_csv_value_filtered(first_asset, "NetBios")
+
+                if fqdn is not None:
+                    device.hostname = fqdn
+                else:
+                    device.hostname = netbios
+
+                os = get_csv_value_filtered(first_asset, "OS")
+                device.figure_os(os)
+
+                risk_and_name_list = []
+                for vuln_i in asset_id_values:
+                    vrisk = get_csv_value_filtered(vuln_i, "Risk")
+                    vname = get_csv_value_filtered(vuln_i, "Name")
+                    if vrisk and vname:
+                        risk_and_name_list.append(f"{vrisk} - {vname}")
+
+                if len(risk_and_name_list) > 0:
+                    device.risk_and_name_list = risk_and_name_list
+                first_asset["risk_and_name_list"] = risk_and_name_list
+                device.set_raw(first_asset)
                 yield device
             except Exception:
-                logger.exception("Problem with fetching TenableIO Device")
+                logger.exception(f"Problem with asset id {asset_id} and values {asset_id_values}")
 
     @classmethod
     def adapter_properties(cls):
