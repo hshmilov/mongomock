@@ -37,8 +37,6 @@ def test_deployment():
     make_installation()
     super_clean()
     install_first_time()
-    start_services()
-    start_adapters()
     first = check_is_up()
     insert_credentials()
     upgrade()
@@ -77,18 +75,6 @@ def install_first_time():
     print_state('Stage: Install --first-time')
     # no need for venv when installing using our installer
     subprocess.check_call(['python', INSTALLER_PATH, '--first-time'], cwd=DEPLOY_DIR)
-
-
-def start_services():
-    print_state(f'Stage: Start services {SERVICES}')
-    for service in SERVICES:
-        subprocess.check_call(safe_run_bash([AXONIUS_SH_PATH, 'service', service, 'up']))
-
-
-def start_adapters():
-    print_state(f'Stage: Start adapters {ADAPTERS}')
-    for adapter in ADAPTERS:
-        subprocess.check_call(safe_run_bash([AXONIUS_SH_PATH, 'adapter', adapter, 'up']))
 
 
 def check_is_up():
