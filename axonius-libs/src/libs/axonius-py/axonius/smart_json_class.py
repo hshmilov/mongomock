@@ -118,6 +118,8 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                 item['title'] = field.title
             if field.description:
                 item['description'] = field.description
+            if field.format is not None:
+                item['format'] = field.format.name.replace('_', '-')
             if issubclass(field.type, SmartJsonClass):
                 field_type = list(field.type._get_fields_info())
                 if isinstance(field, ListField):
@@ -131,8 +133,6 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
                     if field.format is not None:
                         item['items']['format'] = field.format.name.replace('_', '-')
                     field_type = 'array'
-                if field.format is not None:
-                    item['format'] = field.format.name.replace('_', '-')
                 if field.min is not None:
                     item['minimum'] = field.min
                 if field.max is not None:

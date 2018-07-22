@@ -562,6 +562,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     if adapter_matches and list(filter(lambda x: x not in fielded_plugins, adapter_matches)):
                         return False
                 return True
+
             # Fetching views according to parameters given to the method
             all_views = entity_views_collection.find(mongo_filter).sort([('timestamp', pymongo.DESCENDING)]).skip(
                 skip).limit(limit)
@@ -867,7 +868,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         with self._get_db_connection() as db_connection:
             return self._query_client_for_devices(adapter_unique_name)
 
-    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>", methods=['PUT', 'DELETE'])
+    @gui_helpers.add_rule_unauthenticated("adapters/<adapter_unique_name>/clients/<client_id>",
+                                          methods=['PUT', 'DELETE'])
     def adapters_clients_update(self, adapter_unique_name, client_id=None):
         """
         Create or delete credential sets (clients) in the adapter
@@ -1257,7 +1259,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         with self._get_db_connection() as db:
             notification_collection = db['core']['notifications']
-            return jsonify(gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
+            return jsonify(
+                gui_helpers.beautify_db_entry(notification_collection.find_one({'_id': ObjectId(notification_id)})))
 
     @add_rule("get_login_options", should_authenticate=False)
     def get_login_options(self):
@@ -1585,6 +1588,29 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error("Card doesn't exist")
         return jsonify({x['name']: x for x in self.__get_saved_view_result_from_views(card['views'],
                                                                                       from_given_date, to_given_date)})
+
+    @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_name>/min", methods=['GET'])
+    def saved_card_results_min(self, card_name: str):
+
+        card = self._get_collection('dashboard').find_one({'name': card_name})
+        if not card:
+            return return_error("Card doesn't exist")
+        module_name = None
+        minimum_date = datetime.now()
+        for view in card['views']:
+            module_name = view.get('module')
+            view_name = view.get('name')
+            if not module_name or not view_name:
+                continue
+            min_result = list(self.gui.entity_views_results_db_map[EntityType(module_name)].aggregate(
+                [{'$match': {'view': view_name}},
+                 {'$group': {'_id': '$view', 'min_date': {'$min': '$accurate_for_datetime'}}}]))
+            if not min_result:
+                continue
+            if min_result[0].get('min_date') and min_result[0]['min_date'] < minimum_date:
+                minimum_date = min_result[0]['min_date']
+
+        return jsonify(minimum_date)
 
     @gui_helpers.add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
     def get_dashboard(self):

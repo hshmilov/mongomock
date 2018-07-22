@@ -118,7 +118,7 @@
                             }
                         }
                         .day.checked {
-                            background-color: $theme-white !important;
+                            background-color: $theme-orange !important;
                         }
                     }
                 }

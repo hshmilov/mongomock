@@ -16,9 +16,10 @@
                 </x-card>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <div v-if="chart.type == 'compare'" class="timeline">Showing for
+                    <div v-if="chart.type === 'compare'" class="timeline">Showing for
                         <x-date-edit @input="confirmPickDate(chartsCurrentlyShowing[chart.name], chart.name)"
-                                     placeholder="latest" v-model="chartsCurrentlyShowing[chart.name]" :show-time="false"/>
+                                     placeholder="latest" v-model="chartsCurrentlyShowing[chart.name]" :show-time="false"
+                                     :limit="[{ type: 'fromto', from: cardHistoricalMin[chart.name], to: new Date()}]"/>
                         <a v-if="chart.showingHistorical" class="link" @click="clearDate(chart.name)">clear</a>
                     </div>
                     <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
@@ -55,7 +56,8 @@
     import xToast from '../../components/popover/Toast.vue'
 
     import {
-        FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD, FETCH_HISTORICAL_SAVED_CARD
+        FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
+        FETCH_HISTORICAL_SAVED_CARD, FETCH_HISTORICAL_SAVED_CARD_MIN
     } from '../../store/modules/dashboard'
     import {FETCH_ADAPTERS} from '../../store/modules/adapter'
     import {CLEAR_DATA_CONTENT, UPDATE_DATA_VIEW} from '../../store/mutations'
@@ -79,6 +81,12 @@
                     return state.dashboard.charts.data.map(x => {
                         var x = {...x}
                         x.data.forEach(data => data.name = typeof(data.name) == 'string' ? data.name : data.name.join(' + '))
+                        if (x.type === 'compare') {
+							this.fetchHistoricalCardMin({ cardName: x.name }).then(response => {
+							    this.cardHistoricalMin[x.name] = new Date(response.data)
+								this.cardHistoricalMin[x.name].setDate(this.cardHistoricalMin[x.name].getDate() - 1)
+                            })
+                        }
                         x.showingHistorical = this.dateChosen[x.name]
                         if (this.cardHistoricalData[x.name]) {
                             var currentHistorical = this.cardHistoricalData[x.name]
@@ -151,30 +159,12 @@
                 dateChosen: {},
                 pendingDateChosen: null,
                 cardHistoricalData: {},
-                message: '',
-                chartsCurrentlyShowing: {}
+                cardHistoricalMin: {},
+                chartsCurrentlyShowing: {},
+                message: ''
             }
         },
         watch: {
-            adapterDevicesCount(newCount) {
-                if (newCount.length) {
-                    let adapter = newCount.find((item) => !item.name.includes('active_directory'))
-                    let name = ''
-                    let filter = ''
-                    if (adapter) {
-                        name = adapter.name.split('_').join(' ')
-                        filter = `adapters == '${adapter.name}'`
-                    } else {
-                        name = 'Windows 10'
-                        filter = 'specific_data.data.os.distribution == "10"'
-                    }
-                    this.saveView({
-                        name: `DEMO - ${name}`, module: 'devices', view: {
-                            ...this.devicesView, query: {filter}
-                        }
-                    })
-                }
-            },
             charts(newCharts, oldCharts) {
                 if (newCharts && newCharts.length && (!oldCharts || oldCharts.length < newCharts.length)) {
                     this.newChart = this.getId(newCharts[newCharts.length - 1].name)
@@ -188,8 +178,9 @@
             }),
             ...mapActions({
                 fetchAdapterDevices: FETCH_ADAPTER_DEVICES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
-                fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD, fetchAdapters: FETCH_ADAPTERS,
-                saveView: SAVE_VIEW, fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD
+                fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
+                fetchAdapters: FETCH_ADAPTERS, saveView: SAVE_VIEW,
+                fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD, fetchHistoricalCardMin: FETCH_HISTORICAL_SAVED_CARD_MIN
             }),
             runAdapterFilter(index) {
                 this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')
@@ -239,8 +230,7 @@
                     if (_.isEmpty(response.data)) {
                         this.message = `Can't gather any data from ${pendingDateChosen} for '${cardName}'`
                         this.clearDate(cardName)
-                    }
-                    else {
+                    } else {
                         this.dateChosen = {...this.dateChosen, [[cardName]]: pendingDateChosen}
                         this.cardHistoricalData = {...this.cardHistoricalData, [cardName]: response.data}
                     }

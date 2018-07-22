@@ -76,8 +76,13 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             return
 
         # reschedule
+        # Saving next_run in order to restore it after 'reschedule_job' overrides this value. We want to restore
+        # this value because updating schedule rate should't change the next scheduled time
+        next_run = self._research_phase_scheduler.get_job(
+            scheduler_consts.RESEARCH_THREAD_ID).next_run_time
         scheduler.reschedule_job(
             scheduler_consts.RESEARCH_THREAD_ID, trigger=IntervalTrigger(hours=self.__system_research_rate))
+        self._schedule_research_phase(next_run)
 
     @classmethod
     def _db_config_schema(cls) -> dict:
@@ -171,7 +176,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
     def _schedule_research_phase(self, time_to_run):
         """
-        Makes the apscheduler schedule a research phase right now.
+        Makes the apscheduler schedule a research phase on the wanted time.
         :return:
         """
         research_job = self._research_phase_scheduler.get_job(scheduler_consts.RESEARCH_THREAD_ID)

@@ -116,7 +116,7 @@
             }),
             limit() {
             	let now = new Date()
-                // now.setDate(now.getDate() - 1)
+                now.setDate(now.getDate() - 1)
                 return [{
                     type: 'fromto',
                     from: now
@@ -167,10 +167,14 @@
 				return true
             },
             scheduleResearch(scheduleDate) {
+				scheduleDate = new Date(scheduleDate)
+				scheduleDate.setMinutes(scheduleDate.getMinutes() + scheduleDate.getTimezoneOffset())
                 this.fetchData({
                     rule: `research_phase`,
                     method: 'POST',
-                    data: {timestamp: scheduleDate}
+                    data: {
+                    	timestamp: `${scheduleDate.toLocaleDateString()} ${scheduleDate.toLocaleTimeString()}`
+                    }
                 }).then((response) => {
                 	this.createToast(response)
 				})
