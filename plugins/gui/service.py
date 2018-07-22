@@ -929,13 +929,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     def run_actions(self, action_data):
         # The format of data is defined in device_control\service.py::run_shell
+        action_type = action_data['action_type']
         try:
             response = self.request_remote_plugin('run_action', self.device_control_plugin, 'post', json=action_data)
             if response.status_code != 200:
                 logger.error(
-                    f"Execute of {action_data['action_type']} returned {response.status_code}. Reason: {str(response.content)}")
+                    f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
                 raise ValueError(
-                    f"Execute of {action_data['action_type']} returned {response.status_code}. Reason: {str(response.content)}")
+                    f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
             return '', 200
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)
@@ -944,7 +945,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def actions_run(self, action_type):
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
-        return self.run_actions(action_type)
+        return self.run_actions(action_data)
 
     @gui_helpers.add_rule_unauthenticated("actions/upload_file", methods=['POST'])
     def actions_upload_file(self):
