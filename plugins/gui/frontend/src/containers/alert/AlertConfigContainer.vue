@@ -39,20 +39,15 @@
                     <div class="content">
                         <x-checkbox label="Increased" v-model="alert.triggers.increase" id="alert_increased"
                                     @change="tour('alertAbove')" />
-                        <div class="form-inline">
-                            <template v-if="alert.triggers.increase">
-                                <label for="alert_above">Above:</label>
-                                <input id="alert_above" type="number" v-model="alert.triggers.above" min="0"
-                                       @input="tour('alertAction')">
-                            </template>
-                        </div>
+                        <div class="form-inline" v-show="alert.triggers.increase">
+                            <label for="alert_above">Above:</label>
+                            <input id="alert_above" type="number" v-model="alert.triggers.above" min="0" @input="tour('alertAction')">
+                        </div><div v-if="!alert.triggers.increase"></div>
                         <x-checkbox label="Decreased" v-model="alert.triggers.decrease" />
-                        <div class="form-inline">
-                            <template  v-if="alert.triggers.decrease">
-                                <label for="TriggerBelow">Below:</label>
-                                <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0" >
-                            </template>
-                        </div>
+                        <div class="form-inline" v-show="alert.triggers.decrease">
+                            <label for="TriggerBelow">Below:</label>
+                            <input id="TriggerBelow" type="number" v-model="alert.triggers.below" min="0" >
+                        </div><div v-if="!alert.triggers.decrease"></div>
                         <x-checkbox class="grid-span2" label="Not Changed" v-model="alert.triggers.no_change"/>
                     </div>
                 </div>
@@ -83,8 +78,8 @@
                 <div class="configuration">
                     <div class="header">Action</div>
                     <div class="content">
-                        <x-checkbox label="Push a system notification" id="alert_notification" class="grid-span2"
-                                    v-model="actions.notification" @change="tour('alertSave')" />
+                        <x-checkbox label="Push a system notification" id="alert_notification"
+                                    v-model="actions.notification" @change="tour('alertSave')" /><div></div>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Incident" v-model="actions.servicenowIncident"/>
                         <x-checkbox class="grid-span2" label="Create ServiceNow Computer" v-model="actions.servicenowComputer"/>
                         <!-- SYSLOG -->

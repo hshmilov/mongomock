@@ -1,8 +1,6 @@
 <template>
     <x-page title="axonius dashboard">
-        <template v-if="isEmptySystem === null">
-
-        </template>
+        <template v-if="isEmptySystem === null"></template>
         <template v-else-if="isEmptySystem">
             <x-empty-system/>
         </template>
@@ -259,7 +257,7 @@
                     .then(() => this.timer = setTimeout(getDashboardData, 10000))
             }
             getDashboardData().then(() => {
-            	this.nextState('dashboard')
+            	if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count
 				if (this.adapterDevicesCount && this.adapterDevicesCount.length) {

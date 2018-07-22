@@ -63,7 +63,11 @@
             updateDeviceState(deviceId) {
 				if (!this.tourDevices || !this.tourDevices.length) return
 				if (this.tourDevices[0] === 'bestDevice') {
-				    this.changeState({ name: 'bestDevice', id: deviceId })
+					if (!deviceId) {
+						this.changeState({ name: '' })
+                    } else {
+                        this.changeState({ name: 'bestDevice', id: deviceId })
+                    }
                 } else {
 			        this.changeState({name: this.tourDevices[0]})
                 }
