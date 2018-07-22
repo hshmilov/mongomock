@@ -124,6 +124,11 @@
             			this.$emit('data')
                     }
                 }
+            },
+            refresh(newRefresh) {
+				if (newRefresh) {
+					this.startRefreshTimeout()
+				}
             }
         },
         methods: {
@@ -176,6 +181,12 @@
             },
             updateModuleView(view) {
             	this.updateView({module: this.module, view})
+            },
+            startRefreshTimeout() {
+				const fetchAuto = () => {
+					this.fetchContentPages().then(() => this.timer = setTimeout(fetchAuto, this.refresh * 1000))
+				}
+				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
             }
         },
 		created() {
@@ -185,10 +196,7 @@
 				this.loading = false
             }
             if (this.refresh) {
-                const fetchAuto = () => {
-					this.fetchContentPages().then(() => this.timer = setTimeout(fetchAuto, this.refresh * 1000))
-                }
-				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
+                this.startRefreshTimeout()
             }
 		},
         beforeDestroy() {
