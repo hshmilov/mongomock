@@ -102,7 +102,7 @@
                 border-right: 2px solid $grey-1;
                 overflow: auto;
                 margin-left: -12px;
-                width: 160px;
+                width: 200px;
                 .header-tab {
                     padding: 24px;
                     background: $theme-white;
@@ -121,7 +121,7 @@
             .body {
                 flex: 1 0 auto;
                 height: calc(100% - 24px);
-                width: calc(100% - 160px);
+                width: calc(100% - 200px);
             }
         }
     }

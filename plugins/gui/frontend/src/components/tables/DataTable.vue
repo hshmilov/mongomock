@@ -40,7 +40,7 @@
 	export default {
 		name: 'x-data-table',
         components: { xActionableTable, xTable },
-        props: {module: {required: true}, idField: {default: 'id'}, value: {}, title: {}},
+        props: { module: {required: true}, idField: {default: 'id'}, value: {}, title: {} },
         data() {
 			return {
 				loading: true
@@ -160,6 +160,7 @@
             	if (page === this.view.page) return
                 if (page < 0 || page > this.pageCount) return
 				this.updateModuleView({ page: page })
+                this.$emit('input', [])
             },
             onClickSort(fieldName) {
             	let sort = { ...this.view.sort }
