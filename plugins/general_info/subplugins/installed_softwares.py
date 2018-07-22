@@ -1,3 +1,5 @@
+import threading
+import time
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_query_commands, smb_shell_commands, is_wmi_answer_ok
 from general_info.utils.nvd_nist.nvd_search import NVDSearcher
@@ -5,8 +7,10 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
-import threading
 from datetime import datetime, timedelta
+
+import logging
+basic_logger = logging.getLogger(f"axonius.{__name__}")
 
 
 GET_INSTALLED_SOFTWARE_COMMANDS = [
@@ -38,11 +42,13 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         try:
             with GetInstalledSoftwares.nvd_objects_lock:
                 if GetInstalledSoftwares.nvd_searcher is None:
-                    self.logger.info("Initializing NVDSearcher")
+                    basic_logger.info("Initializing NVDSearcher")
+                    start_time = time.time()
                     GetInstalledSoftwares.nvd_searcher = NVDSearcher()
+                    basic_logger.info(f"Init of NVDSearcher done in {time.time() - start_time} seconds")
 
                 if GetInstalledSoftwares.nvd_updater_scheduler is None:
-                    self.logger.info("Initializing background scheduler for updating nvd nist")
+                    basic_logger.info("Initializing background scheduler for updating nvd nist")
                     executors = {'default': ThreadPoolExecutor(1)}
                     GetInstalledSoftwares.nvd_updater_scheduler = LoggedBackgroundScheduler(executors=executors)
 
@@ -57,7 +63,7 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
 
                     GetInstalledSoftwares.nvd_updater_scheduler.start()
         except Exception:
-            self.logger.exception("An error occured while initializing NVDSearcher! Not using it")
+            basic_logger.exception("An error occured while initializing NVDSearcher! Not using it")
 
     def _update_nvd_db(self):
         """
@@ -65,15 +71,15 @@ class GetInstalledSoftwares(GeneralInfoSubplugin):
         :return:
         """
         try:
-            self.logger.info("Trying to update the nvd db..")
+            basic_logger.info("Trying to update the nvd db..")
             with GetInstalledSoftwares.nvd_objects_lock:
                 if GetInstalledSoftwares.nvd_searcher is not None:
                     GetInstalledSoftwares.nvd_searcher.update()
-                    self.logger.info("Successfully updated nvd db")
+                    basic_logger.info("Successfully updated nvd db")
                 else:
-                    self.logger.error("NVDSearcher is not initialized! Not updating")
+                    basic_logger.error("NVDSearcher is not initialized! Not updating")
         except Exception:
-            self.logger.exception("Failure while updating nvd_searcher, bypassing")
+            basic_logger.exception("Failure while updating nvd_searcher, bypassing")
 
     @staticmethod
     def get_wmi_smb_commands():

@@ -71,3 +71,4 @@ duo-client==3.3.0
 junos-eznc==2.1.8
 apache-libcloud==2.3.0
 passlib==1.7.1
+psutil==5.4.6

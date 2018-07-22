@@ -15,6 +15,7 @@ from gui.okta_login import try_connecting_using_okta
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterProperty
 
+from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file, create_temp_file
 from axonius.utils.datetime import next_weekday
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
@@ -1973,18 +1974,22 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")
         return views_data
 
+    @stoppable
+    def _on_trigger(self):
+        self._run_queries_phase()
+        with self._get_db_connection() as db_connection:
+            schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
+            if schemas['config']['generate_report'] is True:
+                return self.generate_new_report_offline()
+            else:
+                return
+
     def _triggered(self, job_name: str, post_json: dict, *args):
         if job_name != 'execute':
             logger.error(f"Got bad trigger request for non-existent job: {job_name}")
             return return_error("Got bad trigger request for non-existent job", 400)
         else:
-            self._run_queries_phase()
-            with self._get_db_connection() as db_connection:
-                schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
-                if schemas['config']['generate_report'] is True:
-                    return self.generate_new_report_offline()
-                else:
-                    return
+            return self._on_trigger()
 
     def generate_new_report_offline(self):
         '''

@@ -93,7 +93,12 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             assert is_wmi_answer_ok(win32_bios), "WMI Answer has an exception"
             win32_bios = win32_bios["data"][0]
             adapterdata_device.bios_version = win32_bios.get('SMBIOSBIOSVersion')
-            adapterdata_device.bios_serial = win32_bios.get('SerialNumber')
+
+            serial_number = win32_bios.get('SerialNumber')
+            if serial_number is not None:
+                serial_number = str(serial_number).strip().lower()
+                if serial_number not in ["none", "", "0", "invalid"]:
+                    adapterdata_device.bios_serial = serial_number
         except Exception:
             self.logger.exception(f"Win32_BIOS {win32_bios}")
 
@@ -136,9 +141,9 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             assert is_wmi_answer_ok(win32_baseboard), "WMI Answer has an exception"
             if len(win32_baseboard["data"]) > 0:
                 sn = win32_baseboard["data"][0].get("SerialNumber")
-                if (sn is not None) and (sn != "None") and (sn.upper().strip() != "INVALID") and (sn.strip() != ""):
+                if (sn is not None) and (str(sn).lower().strip() not in ["invalid", "none", "", "0"]):
                     # Yep, it happens. Sometimes wmi returns "None" as a string.
-                    adapterdata_device.device_serial = sn
+                    adapterdata_device.device_serial = str(sn)
         except Exception:
             self.logger.exception(f"Can't use Win32_BaseBoard {win32_baseboard}")
 
