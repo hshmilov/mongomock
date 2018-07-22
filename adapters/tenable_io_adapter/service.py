@@ -12,6 +12,8 @@ from axonius.devices.device_adapter import DeviceAdapter
 
 
 class TenableIoAdapter(ScannerAdapterBase):
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = None
+
     class MyDeviceAdapter(DeviceAdapter):
         has_agent = Field(bool, "Has Agent")
         plugin_and_severity = ListField(str, "Plugin and severity")

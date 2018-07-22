@@ -103,11 +103,14 @@ class EnsiloAdapter(AdapterBase):
         for device_raw in devices_raw_data:
             try:
                 device = self._new_device_adapter()
-                device.id = str(device_raw.get("name")) + str(device_raw.get("macAddresses"))
-                if device.id is None:
+                host_name = device_raw.get("name")
+                if host_name is None or host_name == "":
+                    logger.error(f"Bad device with no Id {device_raw}")
                     continue
+                device.id = str(device_raw.get("name")) + str(device_raw.get("operatingSystem", "")) + \
+                    str(device_raw.get("version", ""))
                 device.state = device_raw.get("state")
-                device.hostname = device_raw.get("name")
+                device.hostname = host_name
                 device.figure_os(device_raw.get("operatingSystem", ""))
                 try:
                     mac_addresses = list(device_raw.get("macAddresses", []))

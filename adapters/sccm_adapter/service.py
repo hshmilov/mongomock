@@ -13,8 +13,6 @@ import sccm_adapter.consts as consts
 
 
 class SccmAdapter(AdapterBase):
-    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 720
-    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 720
 
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         pass
@@ -95,51 +93,55 @@ class SccmAdapter(AdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
-            device_id = device_raw.get('Distinguished_Name0')
-            if not device_id:
-                logger.error(f'Got a device with no distinguished name {device_raw}')
-                continue
-            device = self._new_device_adapter()
-            device.id = device_id
-            device.organizational_unit = get_organizational_units_from_dn(device_id)
-            domain = device_raw.get('Full_Domain_Name0')
-            device.hostname = device_raw.get('Netbios_Name0')
-            if domain and device.hostname:
-                device.hostname += '.' + domain
-                device.part_of_domain = True
-                device.domain = domain
-            device.figure_os((device_raw.get('Caption0') or '') + (device_raw.get("Operating_System_Name_and0") or ''))
-            for nic in (device_raw.get('Network Interfaces') or '').split(';'):
-                try:
-                    if nic == '':
-                        continue  # We dont need empty nics of course
-                    mac, ips = nic.split('@')
-                    device.add_nic(mac, ips.split(', '))
-                except Exception:
-                    logger.warning(f"Caught weird NIC {nic} for device id {device.id}")
-                    pass
-            free_physical_memory = device_raw.get('FreePhysicalMemory0')
-            device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None
-            total_physical_memory = device_raw.get('TotalPhysicalMemory0')
-            device.total_physical_memory = float(device_raw.get('TotalPhysicalMemory0')) \
-                if total_physical_memory else None
-            if total_physical_memory and free_physical_memory:
-                device.physical_memory_percentage = 100 * \
-                    (1 - device.free_physical_memory / device.total_physical_memory)
+            try:
+                device_id = device_raw.get('Distinguished_Name0')
+                if not device_id:
+                    logger.error(f'Got a device with no distinguished name {device_raw}')
+                    continue
+                device = self._new_device_adapter()
+                device.id = device_id
+                device.organizational_unit = get_organizational_units_from_dn(device_id)
+                domain = device_raw.get('Full_Domain_Name0')
+                device.hostname = device_raw.get('Netbios_Name0')
+                if domain and device.hostname:
+                    device.hostname += '.' + domain
+                    device.part_of_domain = True
+                    device.domain = domain
+                device.figure_os((device_raw.get('Caption0') or '') +
+                                 (device_raw.get("Operating_System_Name_and0") or ''))
+                for nic in (device_raw.get('Network Interfaces') or '').split(';'):
+                    try:
+                        if nic == '':
+                            continue  # We dont need empty nics of course
+                        mac, ips = nic.split('@')
+                        device.add_nic(mac, ips.split(', '))
+                    except Exception:
+                        logger.warning(f"Caught weird NIC {nic} for device id {device.id}")
+                        pass
+                free_physical_memory = device_raw.get('FreePhysicalMemory0')
+                device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None
+                total_physical_memory = device_raw.get('TotalPhysicalMemory0')
+                device.total_physical_memory = float(device_raw.get('TotalPhysicalMemory0')) \
+                    if total_physical_memory else None
+                if total_physical_memory and free_physical_memory:
+                    device.physical_memory_percentage = 100 * \
+                        (1 - device.free_physical_memory / device.total_physical_memory)
 
-            device.device_model = device_raw.get('Model0')
-            device.device_manufacturer = device_raw.get('Manufacturer0')
-            processes = device_raw.get('NumberOfProcesses0')
-            device.number_of_processes = int(processes) if processes else None
-            processors = device_raw.get('NumberOfProcessors0')
-            device.total_number_of_physical_processors = int(processors) if processors else None
+                device.device_model = device_raw.get('Model0')
+                device.device_manufacturer = device_raw.get('Manufacturer0')
+                processes = device_raw.get('NumberOfProcesses0')
+                device.number_of_processes = int(processes) if processes else None
+                processors = device_raw.get('NumberOfProcessors0')
+                device.total_number_of_physical_processors = int(processors) if processors else None
 
-            device.current_logged_user = device_raw.get('UserName0') or device_raw.get('User_Name0')
-            device.time_zone = device_raw.get('CurrentTimeZone0')
-            device.boot_time = device_raw.get('LastBootUpTime0')
-            device.last_seen = device_raw.get('Last Seen')
-            device.set_raw(device_raw)
-            yield device
+                device.current_logged_user = device_raw.get('UserName0') or device_raw.get('User_Name0')
+                device.time_zone = device_raw.get('CurrentTimeZone0')
+                device.boot_time = device_raw.get('LastBootUpTime0')
+                device.last_seen = device_raw.get('Last Seen')
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f"Problem with device: {device_raw}")
 
     def _correlation_cmds(self):
         logger.error("correlation_cmds is not implemented for sccm adapter")

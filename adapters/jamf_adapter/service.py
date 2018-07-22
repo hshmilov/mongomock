@@ -28,8 +28,6 @@ class JamfProfile(SmartJsonClass):
 
 
 class JamfAdapter(AdapterBase):
-    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 720
-    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 720
 
     class MyDeviceAdapter(DeviceAdapter):
         public_ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)

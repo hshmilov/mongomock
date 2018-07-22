@@ -191,6 +191,14 @@ export const pluginMeta = {
         title: 'OpenStack',
         description: 'OpenStack is an open source software solution for creating private and public clouds.'
     },
+    tanium_adapter: {
+        title: 'Tanium',
+        description: 'Tanium for IT Asset Visibility discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
+    },
+    aruba_adapter: {
+        title: 'Aruba',
+        description: 'The Aruba Adapter connects to Cisco switches and routers.'
+    },
     infoblox_adapter: {
         title: 'Infoblox DDI',
         description: 'Infoblox DDI consolidates DNS, DHCP, IP address management, and other core network services into a single platform, managed from a common console.'

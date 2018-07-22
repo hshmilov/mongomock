@@ -14,8 +14,6 @@ import symantec_altiris_adapter.consts as consts
 
 
 class SymantecAltirisAdapter(AdapterBase):
-    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 720
-    DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 720
 
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         pass

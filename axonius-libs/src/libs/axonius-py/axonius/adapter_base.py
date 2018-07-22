@@ -72,7 +72,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         "Available Device" - A device that the adapter source knows and reports its existence.
                              Doesn't necessary means that the device is turned on or connected.
     """
-    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 30
+    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 365 * 5
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24 * 2
     DEFAULT_USER_LAST_SEEN = None
     DEFAULT_USER_LAST_FETCHED = None
