@@ -2,12 +2,16 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.parsing import parse_date, parse_bool_from_raw
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, \
-    smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, reg_view_parse_int
+    smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, \
+    reg_view_parse_int, is_wmi_answer_invalid_query, smb_getfile_commands
 
 
 BAD_CONFIGURATIONS_COMMANDS = [
     r'reg query HKLM\SYSTEM\CurrentControlSet\Control\Lsa\ '
+
 ]
+
+HOSTS_FILE_ABSOLUTE_PATH = r"System32\Drivers\Etc\Hosts"     # Relative to ADMIN$
 
 
 class GetBasicComputerInfo(GeneralInfoSubplugin):
@@ -37,7 +41,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             "select SerialNumber from Win32_BaseBoard",
             "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration"
         ]
-        ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS)
+        ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS) + smb_getfile_commands([HOSTS_FILE_ABSOLUTE_PATH])
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
@@ -53,6 +57,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         win32_baseboard = result[8]
         win32_networkadapterconfiguration = result[9]
         bad_configuration_lsa = result[10]
+        hosts_file = result[11]
 
         # Win32_Processor
         try:
@@ -76,7 +81,12 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                     ghz=max_clock_speed_ghz
                 )
         except Exception:
-            self.logger.exception(f"Couldn't handle Win32_Processor: {win32_processor}")
+            # This tends to fail a lot since win32_processor isn't supported on everything.
+            if is_wmi_answer_invalid_query(win32_processor):
+                self.logger.warning(f"win32_processor query answer returned WBEM_E_INVALID_QUERY - might "
+                                    f"be unsupported on this device")
+            else:
+                self.logger.exception(f"Couldn't handle Win32_Processor: {win32_processor}")
 
         try:
             # Bios
@@ -261,7 +271,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
                         10: "Undefined",
                         11: "Partially Charged"}.get(battery_status)
 
-                battery_percentage = adapterdata_device.get("EstimatedChargeRemaining")
+                battery_percentage = battery.get("EstimatedChargeRemaining")
                 if battery_percentage is not None:
                     battery_percentage = int(battery_percentage)
 
@@ -308,5 +318,11 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         except Exception:
             self.logger.exception(f"bad_configuration_lsa is not ok: {bad_configuration_lsa}")
+
+        try:
+            assert is_wmi_answer_ok(hosts_file), "Host file request exception"
+            adapterdata_device.hosts_file = str(hosts_file["data"])
+        except Exception:
+            self.logger.excetion(f"Bad hosts file answer: {hosts_file}")
 
         return True

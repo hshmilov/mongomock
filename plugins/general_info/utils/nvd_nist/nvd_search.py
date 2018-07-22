@@ -165,14 +165,26 @@ class NVDSearcher(object):
         :param product_version:
         :return:
         """
+        # Sanitize our input
+        vendor_name = str(vendor_name).strip().lower()
+        product_name = str(product_name).strip().lower()
+        product_version = str(product_version).strip().lower()
+
+        empty_strings = ["", "0"]
+        if vendor_name in empty_strings or product_name in empty_strings or product_version in empty_strings:
+            logger.error(f"Error, got an empty string. "
+                         f"Software details - vendor: {str(vendor_name)} "
+                         f"product {str(product_name)} version {str(product_version)}")
+            return []
+
         with self.use_lock:
             for db_vendor_name, db_vendor_products in self.products_db.items():
                 # we have to replace all '_' with spaces from now on.
-                if db_vendor_name in vendor_name.lower():
+                if str(db_vendor_name).lower() in vendor_name:
                     for db_vendor_product, db_vendor_product_versions in db_vendor_products.items():
-                        if db_vendor_product in product_name.lower():
+                        if str(db_vendor_product).lower() in product_name:
                             for db_version, db_version_cves in db_vendor_product_versions.items():
-                                if db_version == product_version:
+                                if str(db_version).lower() == product_version:
                                     return [self.cve_db[v] for v in db_version_cves]
 
         return []

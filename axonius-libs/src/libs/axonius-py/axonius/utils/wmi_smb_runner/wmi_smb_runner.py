@@ -41,7 +41,11 @@ MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 2  # The amount of seconds we wait 
 # each request gets this amount of seconds to return. If one returns, the timer of all the rest resets.
 TIMER_RESET_FOR_EACH_REQUEST_IN_SECONDS = 180
 TIME_TO_SLEEP_BETWEEN_EACH_ANSWER_CHECK_IN_SECONDS = 2
-DEFAULT_SHARE = "ADMIN$"    # A writeable share from which we will be grabbing shell output. TODO: Check IPC$
+
+# A writeable share from which we will be grabbing shell output. TODO: Check IPC$
+# Note! ADMIN$ usually points to %windir% so we can have relative paths across the entire code.
+# If you change it, change all usages across the entire code!
+DEFAULT_SHARE = "ADMIN$"
 
 __global_counter = 0
 __global_counter_lock = threading.Lock()

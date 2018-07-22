@@ -52,7 +52,7 @@ class GetUserLogons(GeneralInfoSubplugin):
                     self.logger.debug(f"enriching sids_to_users: {sid} -> {username}")
                     GetUserLogons.users_to_sids[sid] = {"username": username, "is_local": False}
 
-                    GetUserLogons.users_to_sids_last_query = datetime.datetime.now()
+                GetUserLogons.users_to_sids_last_query = datetime.datetime.now()
 
             return GetUserLogons.users_to_sids.copy()
 
@@ -142,11 +142,13 @@ class GetUserLogons(GeneralInfoSubplugin):
 
             # For some reason last_use_time is sometimes 0....
             try:
-                if last_use_time is not None:
+                if last_use_time is not None and str(last_use_time) != "0":
                     last_use_time = wmi_date_to_datetime(last_use_time)
+                else:
+                    last_use_time = None
             except Exception:
                 self.logger.exception(f"Error parsing LastUseTime ({last_use_time}). Continuing")
-                continue
+                last_use_time = None
 
             # we have an sid which can be local or remote. Lets try to get it, but in case we don't have any translation
             # which usually occurs if a user is deleted and then we have its profile but no data about it, put unknown.
@@ -157,11 +159,12 @@ class GetUserLogons(GeneralInfoSubplugin):
                                          "is_disabled": False
                                      }
                                      )
-            last_used_time_arr.append(
-                {"Sid": sid,
-                 "User": user["username"],
-                 "Is Local": user.get("is_local", False),
-                 "Last Use": last_use_time})
+            if last_use_time is not None:
+                last_used_time_arr.append(
+                    {"Sid": sid,
+                     "User": user["username"],
+                     "Is Local": user.get("is_local", False),
+                     "Last Use": last_use_time})
 
             # Add these users. In case the user exists (Local User), we just add a last_use_date to it.
             # But if its a remote domain then we add it for the first time.
@@ -222,6 +225,8 @@ class GetUserLogons(GeneralInfoSubplugin):
                 raise
 
         else:
-            self.logger.error("Did not find any users_to_sids. That is very weird and should not happen.")
+            self.logger.error(f"Did not find any users_to_sids. That is very weird and should not happen."
+                              f"sids_to_users {sids_to_users}, user_accounts {user_accounts_data}, "
+                              f"user_profiles {user_profiles_data}")
 
         return False

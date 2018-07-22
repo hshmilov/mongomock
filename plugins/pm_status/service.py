@@ -156,8 +156,10 @@ class PmStatusService(PluginBase, Triggerable):
         # The following query should run on all windows devices but since Axonius does not support
         # any type of execution other than AD this is an AD-HOC solution we put here to be faster.
         # It should be {"adapters.data.os.type": "Windows"}
+        # Also, we query for devices that have SOME network interfaces somehow (not necessarily from active directory)
+        # If it doesn't have then clearly we would not have any way of interacting with it.
         windows_devices = self.devices_db.find(
-            {"adapters.plugin_name": "active_directory_adapter"},
+            {"adapters.plugin_name": "active_directory_adapter", "adapters.data.network_interfaces": {"$exists": True}},
             projection={'internal_axon_id': True,
                         'adapters.data.id': True,
                         'adapters.plugin_unique_name': True,

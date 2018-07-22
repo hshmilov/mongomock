@@ -430,8 +430,7 @@ class PluginBase(Configurable, Feature):
             self.execution_monitor_scheduler.start()
 
         self._update_schema()
-        self.renew_config_from_db()
-        self.__renew_global_settings_from_db()
+        self._update_config_inner()
 
         # Finished, Writing some log
         logger.info("Plugin {0}:{1} with axonius-libs:{2} started successfully. ".format(self.plugin_unique_name,
@@ -836,7 +835,13 @@ class PluginBase(Configurable, Feature):
                                             method='POST',
                                             data=json.dumps(data))
 
-        action_id = result.json()['action_id']
+        try:
+            result.raise_for_status()
+            action_id = result.json()['action_id']
+        except Exception as e:
+            err_msg = f"Failed to request remote plugin, got response {result.status_code}: {result.content}"
+            logger.exception(err_msg)
+            raise ValueError(f"{err_msg}. Exception is {e}")
 
         promise_for_action = Promise()
 
@@ -1303,6 +1308,9 @@ class PluginBase(Configurable, Feature):
 
     @add_rule("update_config", methods=['POST'], should_authenticate=False)
     def update_config(self):
+        return self._update_config_inner()
+
+    def _update_config_inner(self):
         self.renew_config_from_db()
         self.__renew_global_settings_from_db()
         return ""

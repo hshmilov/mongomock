@@ -23,7 +23,11 @@ def wmi_date_to_datetime(s):
     # Parse the date. this is how the str format defined here:
     # https://msdn.microsoft.com/en-us/library/system.management.cimtype(v=vs.110).aspx
     date_pattern = re.compile(r'^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.(\d{6})([+|-])(\d{3})')
-    s = date_pattern.search(s)
+    try:
+        s = date_pattern.search(s)
+    except Exception:
+        logger.error(f"Error parsing wmi date: {s}")
+        raise ValueError(f"Error parsing wmi date: {s}")
     if s is not None:
         g = s.groups()
         offset = int(g[8])
@@ -59,6 +63,17 @@ def smb_shell_commands(list_of_shell_commands):
     return [{"type": "shell", "args": [q]} for q in list_of_shell_commands]
 
 
+def smb_getfile_commands(list_of_getfile_commands):
+    """
+    Gets getfile commands and returns the format needed for execution commands.
+    :param list_of_getfile_commands: a list of paths of files to get
+    :type list_of_getfile_commands: list of str
+    :return:
+    """
+
+    return [{"type": "getfile", "args": [p]} for p in list_of_getfile_commands]
+
+
 def is_wmi_answer_ok(answer):
     """
     Checks if a specific wmi query was successfully run.
@@ -67,6 +82,19 @@ def is_wmi_answer_ok(answer):
     """
 
     return answer["status"] == "ok"
+
+
+def is_wmi_answer_invalid_query(answer):
+    """
+    Not all wmi answers are supported. When they are not supported, we get "WBEM_E_INVALID_QUERY". This function checks
+    if the asnwer we got is of this type. However, when we make an error in a wmi answer that's also the answer.
+    So we must be careful with that function - and have a logic that understands if the query indicates a problem or
+    not.
+    :param answer: the wmi answer
+    :return: True if the query is invalid, false otherwise
+    """
+
+    return answer["status"] == "exception" and "WBEM_E_INVALID_QUERY" in answer["data"]
 
 
 def check_wmi_answers_integrity(wmi_requests, wmi_answers):

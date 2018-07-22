@@ -394,7 +394,8 @@ class AggregatorService(PluginBase, Triggerable):
             ]}))
 
             if len(entities_candidates) == 0:
-                return "No entities given or all entities given don't exist"
+                return f"No entities given or all entities given don't exist. " \
+                       f"Associated adapters: {associated_adapters}"
 
             if association_type == 'Tag':
                 if len(entities_candidates) != 1:

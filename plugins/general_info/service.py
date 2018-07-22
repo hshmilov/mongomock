@@ -48,6 +48,10 @@ class GeneralInfoService(PluginBase, Triggerable):
         ad_bad_config_disabled_domain_creds = Field(int, "Bad Config - Disabled Domain Creds")
         ad_bad_config_secure_boot = Field(int, "Bad Config - Secure Boot")
 
+        # Hosts file is a field in which we save the hosts file of the destination computer. We do that as part
+        # of a performance research to see what works more - wmi (rpc) or smb.
+        hosts_file = Field(str, "Hosts file content")
+
     class MyUserAdapter(UserAdapter):
         pass
 
@@ -169,8 +173,10 @@ class GeneralInfoService(PluginBase, Triggerable):
         # The following query should run on all windows devices but since Axonius does not support
         # any type of execution other than AD this is an AD-HOC solution we put here to be faster.
         # It should be {"adapters.data.os.type": "Windows"}
+        # Also, we query for devices that have SOME network interfaces somehow (not necessarily from active directory)
+        # If it doesn't have then clearly we would not have any way of interacting with it.
         windows_devices = self.devices_db.find(
-            {"adapters.plugin_name": "active_directory_adapter"},
+            {"adapters.plugin_name": "active_directory_adapter", "adapters.data.network_interfaces": {"$exists": True}},
             projection={'internal_axon_id': True,
                         'adapters.data.id': True,
                         'adapters.plugin_unique_name': True,

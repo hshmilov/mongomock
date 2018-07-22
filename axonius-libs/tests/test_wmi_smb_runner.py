@@ -114,6 +114,27 @@ def test_pm():
     assert "[Update Start]" in response[0]["data"]
 
 
+def test_getfile():
+    # When we have relative paths, then it is concated to the default share we define.
+    # Currently, its 'ADMIN$'. In case it changes, we have to change the relative paths across the entire
+    # code.
+    commands = [{"type": "getfile", "args": [r"System32\Drivers\Etc\Hosts"]}]
+
+    p = subprocess.Popen(get_basic_wmi_smb_command(address=WMI_QUERIES_DEVICE) + [json.dumps(commands)],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, stderr = p.communicate(timeout=MAX_TIME_FOR_WMI_OPERATIONS)
+
+    assert stderr == b""
+    assert p.returncode == 0
+    response = json.loads(stdout)
+    assert len(response) == len(commands)
+
+    r = response[0]
+    assert r["status"] == "ok", f"Error, status is not ok. response: {r['status']}"
+    assert "127.0.0.1" in r["data"], f"Error, hosts file does not contain 127.0.0.1: {r['data']}"
+
+
 def test_wmi():
     commands = [
         {"type": "shell", "args": ["dir"]},
