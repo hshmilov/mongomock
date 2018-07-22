@@ -190,24 +190,24 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
         if sort:
             desc, field = next(iter(sort.items()))
             mongo_sort = {'desc': desc, 'field': field}
-            db_connection.replace_one(
-                {'name': {'$exists': False}, 'view.query.filter': view_filter},
-                {
-                    'view': {
-                        'page': 0,
-                        'pageSize': limit,
-                        'fields': list((projection or {}).keys()),
-                        'coloumnSizes': [],
-                        'query': {
-                            'filter': view_filter,
-                            'expressions': json.loads(request.args.get('expressions', '{}'))
-                        },
-                        'sort': mongo_sort
+        db_connection.replace_one(
+            {'name': {'$exists': False}, 'view.query.filter': view_filter},
+            {
+                'view': {
+                    'page': 0,
+                    'pageSize': limit,
+                    'fields': list((projection or {}).keys()),
+                    'coloumnSizes': [],
+                    'query': {
+                        'filter': view_filter,
+                        'expressions': json.loads(request.args.get('expressions', '[]'))
                     },
-                    'query_type': 'history',
-                    'timestamp': datetime.now()
+                    'sort': mongo_sort
                 },
-                upsert=True)
+                'query_type': 'history',
+                'timestamp': datetime.now()
+            },
+            upsert=True)
     if not projection:
         return [beautify_db_entry(entity) for entity in data_list]
     return [parse_entity_fields(entity, projection.keys()) for entity in data_list]

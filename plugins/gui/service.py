@@ -52,6 +52,7 @@ from bson import ObjectId
 import json
 from axonius.utils.parsing import parse_filter, bytes_image_to_base64
 from urllib3.util.url import parse_url
+import re
 
 
 # Caution! These decorators must come BEFORE @add_rule
@@ -540,17 +541,33 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     )]
         return entitydisabelables_adapters, entities_ids_by_adapters
 
-    def _entity_views(self, method, entity_type: EntityType, limit, skip, filter):
+    def _entity_views(self, method, entity_type: EntityType, limit, skip, mongo_filter):
         """
         Save or fetch views over the entities db
         :return:
         """
         entity_views_collection = self.gui.entity_query_views_db_map[entity_type]
         if method == 'GET':
-            mongo_filter = filter_archived(filter)
-            return jsonify(gui_helpers.beautify_db_entry(entry) for entry in
-                           entity_views_collection.find(mongo_filter).sort([('timestamp', pymongo.DESCENDING)])
-                           .skip(skip).limit(limit))
+            mongo_filter = filter_archived(mongo_filter)
+            fielded_plugins = []
+            for plugin in requests.get(self.core_address + '/register').json().values():
+                # From registered plugins, saving those that have a 'fields' DB for given entity_type
+                if self._get_collection(f'{entity_type.value}_fields', plugin[PLUGIN_UNIQUE_NAME]).count():
+                    fielded_plugins.append(plugin[PLUGIN_NAME])
+
+            def _validate_adapters_used(view):
+                for expression in view['view']['query'].get('expressions', []):
+                    adapter_matches = re.findall('adapters_data\.(\w*)\.', expression.get('field', ''))
+                    if adapter_matches and list(filter(lambda x: x not in fielded_plugins, adapter_matches)):
+                        return False
+                return True
+            # Fetching views according to parameters given to the method
+            all_views = entity_views_collection.find(mongo_filter).sort([('timestamp', pymongo.DESCENDING)]).skip(
+                skip).limit(limit)
+            logger.info('Filtering views that use fields from plugins without persisted fields schema')
+            logger.info(f'Remaining plugins include: {fielded_plugins}')
+            # Returning only the views that do not contain fields whose plugin has no field schema saved
+            return jsonify(gui_helpers.beautify_db_entry(entry) for entry in filter(_validate_adapters_used, all_views))
 
         if method == 'POST':
             view_data = self.get_request_data_as_object()
