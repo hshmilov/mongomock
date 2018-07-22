@@ -38,4 +38,4 @@ class GSuiteAdminConnection:
         Get all groups that a user is in
         :param userKey: The ID of the user to query
         """
-        return self._connection.groups().list(userKey=userKey).execute()['groups']
+        return self._connection.groups().list(userKey=userKey).execute().get('groups', [])

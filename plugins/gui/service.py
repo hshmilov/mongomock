@@ -1416,7 +1416,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }
             return ""
         except ValueError:
+            logger.exception("Invalid token")
             return return_error("Invalid token")
+        except Exception:
+            logger.exception("Unknown exception")
+            return return_error("Error logging in, please try again")
 
     @gui_helpers.add_rule_unauthenticated("logout", methods=['GET'])
     def logout(self):
