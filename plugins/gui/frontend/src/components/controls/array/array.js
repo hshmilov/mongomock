@@ -13,10 +13,13 @@ export default {
 		'schema': {required: true}, 'value': {required: true}, 'apiUpload': {}
 	},
 	computed: {
+		isOrderedObject() {
+			return Array.isArray(this.schema.items)
+		},
 		schemaItems () {
 			let schemaItems = []
 			// Process schema to create list of items which Array components can present
-			if (Array.isArray(this.schema.items)) {
+			if (this.isOrderedObject) {
 				// schema.items contains explicit definition for each type of contained children
 				// Filter those without a 'title' property since they are not for presentation
 				schemaItems = this.schema.items.filter(item => item.title)

@@ -254,7 +254,7 @@
                     height: 100%;
                     overflow: auto;
                     .object {
-                        width: calc(100% - 24px);
+                        width: calc(100% - 36px);
                     }
                     >.x-array-view >.array {
                         display: grid;
