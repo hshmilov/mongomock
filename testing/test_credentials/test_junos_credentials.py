@@ -5,4 +5,4 @@ client_details = {
     'port': 22
 }
 
-SOME_DEVICE_ID = '90:6c:ac:fe:5b:bc'
+SOME_DEVICE_ID = 'JUINPER_ARP_90:6c:ac:fe:5b:bc_192.168.10.201'

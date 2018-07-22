@@ -1,13 +1,8 @@
 ''' client module for junos devices '''
-import logging
 from jnpr.junos import Device
-from jnpr.junos.op.arp import ArpTable
-import json
-
-logger = logging.getLogger(f"axonius.{__name__}")
 
 
-class JunOSClient(object):
+class JunOSClient:
     ''' client to fetch data from junos devices '''
 
     def __init__(self, host, username, password, port):
@@ -15,6 +10,7 @@ class JunOSClient(object):
         self._username = username
         self._password = password
         self._port = port
+
         self._dev = None
 
     def __enter__(self):
@@ -29,6 +25,8 @@ class JunOSClient(object):
 
     def query_arp_table(self):
         """ query the arp table and return neighbors """
-        arp_table = ArpTable(self._dev)
-        raw_table_data = list(arp_table.get())
-        return raw_table_data
+        return self._dev.rpc.get_arp_table_information()
+
+    def query_fdb_table(self):
+        """ query the fdb table and return data """
+        return self._dev.rpc.get_ethernet_switching_table_information()

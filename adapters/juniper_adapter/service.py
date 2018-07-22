@@ -1,15 +1,20 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+
+from collections import defaultdict
 import xml.etree.ElementTree as ET
 
+from juniper_adapter import consts
+from juniper_adapter.client import JuniperClient
+
+from axonius.clients.juniper import rpc
+from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import AdapterException, ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter, format_ip, JsonStringFormat
 from axonius.utils.files import get_local_config_file
-from juniper_adapter import consts
-from juniper_adapter.client import JuniperClient
 from axonius.fields import Field, ListField
-from collections import defaultdict
+
+logger = logging.getLogger(f"axonius.{__name__}")
 
 
 class JuniperAdapter(AdapterBase):
@@ -17,10 +22,7 @@ class JuniperAdapter(AdapterBase):
     Connects axonius to Juniper devices
     """
 
-    class MyDeviceAdapter(DeviceAdapter):
-        interfaces = ListField(str, 'Interface')
-        device_type = Field(str, 'Device Type')
-        juniper_device_name = Field(str, "Juniper Device Name")
+    MyDeviceAdapter = JuniperDeviceAdapter
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -54,7 +56,7 @@ class JuniperAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, raw_data):
-        raw_arp_devices = {}
+        others = defaultdict(list)
         for device_type, juno_device in raw_data:
             if device_type == 'Juniper Device':
                 try:
@@ -73,83 +75,21 @@ class JuniperAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f"Got problems with {juno_device.name}")
 
-            elif device_type == 'Arp Device':
-                try:
-                    rpc_data, juniper_device_name = juno_device
-                    xml_prefix_string = "<rpc-reply>"
-                    xml_suffix_string = "</rpc-reply>"
-                    xml_text_raw = rpc_data.text
-                    xml_text_location = xml_text_raw.find(xml_prefix_string)
-                    xml_text_end_location = xml_text_raw.find(xml_suffix_string) + len(xml_suffix_string)
-                    xml_text = xml_text_raw[xml_text_location:xml_text_end_location]
-                    xml_juno_device = ET.fromstring(xml_text)
-                    if 'rpc-reply' not in xml_juno_device.tag or 'arp-table-information' not in xml_juno_device[0].tag:
-                        logger.error(f"Bad rpc reply from {juno_device}")
-                        continue
-                    for xml_arp_item in xml_juno_device[0]:
-                        try:
-                            if 'arp-table-entry' not in xml_arp_item.tag:
-                                continue
-                            mac_address = None
-                            ip_address = None
-                            name = None
-                            interface = None
-                            for xml_arp_property in xml_arp_item:
-                                stripped_text = xml_arp_property.text.strip()
-                                if 'mac-address' in xml_arp_property.tag:
-                                    mac_address = stripped_text
-                                if 'ip-address' in xml_arp_property.tag:
-                                    ip_address = stripped_text
-                                if 'hostname' in xml_arp_property.tag:
-                                    name = stripped_text
-                                if 'interface-name' in xml_arp_property.tag:
-                                    interface = stripped_text
-                            if mac_address is None:
-                                continue
-                            if mac_address not in raw_arp_devices:
-                                raw_arp_devices[mac_address] = defaultdict(set)
-                            raw_arp_devices[mac_address]["juniper_device_name"] = juniper_device_name
-                            raw_arp_devices[mac_address]['mac_address'] = mac_address
-                            if ip_address is not None:
-                                raw_arp_devices[mac_address]['related_ips'].add(ip_address.str)
-                            if interface is not None:
-                                raw_arp_devices[mac_address]['interface'].add(interface)
-                            if name is not None:
-                                raw_arp_devices[mac_address]['name'].add(name)
-                        except Exception:
-                            logger.exception(f"Got bad arp item with missing data in {arp_item}")
-                except Exception:
-                    logger.exception(f"Problem with arp device")
-        for raw_arp_device in raw_arp_devices.values():
+            else:
+                others[device_type].append(juno_device)
+
+        # Now handle rpc
+        for key, value in others.items():
             try:
-                device = self._new_device_adapter()
-                device.id = raw_arp_device['mac_address']
-                device.add_nic(raw_arp_device['mac_address'], None)
-                device.juniper_device_name = raw_arp_device.get("juniper_device_name")
-                device.device_type = 'Arp Device'
-                try:
-                    device.set_related_ips(list(raw_arp_device['related_ips']))
-                except Exception:
-                    logger.exception(f"Problem getting IPs in {raw_arp_device}")
-                try:
-                    device.interfaces = list(raw_arp_device['interface'])
-                except Exception:
-                    logger.exception(f"Problem getting interface in {raw_arp_device}")
-                try:
-                    device.set_raw({'mac': raw_arp_device['mac_address'],
-                                    'names': list(raw_arp_device['names']),
-                                    'interfaces': list(raw_arp_device['interface']),
-                                    'ips': list(raw_arp_device['related_ips'])})
-                except Exception:
-                    logger.exception(f"Problem setting raw in {raw_arp_device}")
-                    device.set_raw({})
-                yield device
+                raw_data = rpc.parse_device(key, value)
+                yield from create_device(self._new_device_adapter, key, raw_data)
             except Exception:
-                logger.exception(f"Problem with pasrsing arp device {raw_arp_device}")
+                logger.exception(f'Error in handling {value}')
+                continue
 
     def _query_devices_by_client(self, client_name, client_data):
+        assert isinstance(client_data, JuniperClient)
         try:
-            assert isinstance(client_data, JuniperClient)
             return client_data.get_all_devices()
         except Exception:
             logger.exception(f'Failed to get all the devices from the client: {client_data[consts.JUNIPER_HOST]}')

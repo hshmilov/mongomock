@@ -1,7 +1,7 @@
 from services.adapters.junos_service import JunosService, junos_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_junos_credentials import *
-from junos_adapter.service import JunosAdapter
+from junos_adapter.client_id import get_client_id
 import pytest
 
 
@@ -12,7 +12,7 @@ class TestJunosAdapter(AdapterTestBase):
 
     @property
     def some_client_id(self):
-        return JunosAdapter._get_client_id(None, client_details)
+        return get_client_id(client_details)
 
     @property
     def some_client_details(self):

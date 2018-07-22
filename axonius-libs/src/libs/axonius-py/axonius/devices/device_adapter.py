@@ -82,6 +82,8 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
                         converter=format_ip_raw)
 
+    vlans = ListField(str, 'Vlans', description='A list of vlans in this interface')
+
 
 class DeviceAdapterRelatedIps(DeviceAdapterNetworkInterface):
     pass
