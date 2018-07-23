@@ -19,3 +19,5 @@ DIRS_EXCLUDE_GLOBAL = ['venv',
                        'plugins/gui/frontend/node_modules',
                        'plugins/gui/frontend/dist',
                        'testing/test_credentials']
+
+CURRENT_STATE_FILE_VERSION = 1.1

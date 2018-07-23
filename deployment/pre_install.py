@@ -10,6 +10,7 @@ from axonius.consts import plugin_consts
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 from utils import AutoOutputFlush, get_service, print_state, get_mongo_client
 from axonius.utils.json import to_json
+from lists import CURRENT_STATE_FILE_VERSION
 
 
 def main():
@@ -34,11 +35,10 @@ def generate_key():
 
 def save_state(path, key):
     print_state(f'Saving state to {path}')
-    current_state_file_version = 1
     mongo_client = get_mongo_client()
     axonius_system = get_service()
     state = {
-        'version': current_state_file_version,
+        'version': CURRENT_STATE_FILE_VERSION,
         'providers': get_all_providers(mongo_client),
         'queries': get_all_queries(axonius_system, mongo_client),
         'views': get_all_views(axonius_system, mongo_client),

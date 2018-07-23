@@ -1,10 +1,17 @@
 from enum import Enum, auto
 
 
+class ChartMetrics(Enum):
+    """
+    Possible scales of data to represent using a chart
+    """
+    query = auto()
+    field = auto()
+
+
 class ChartTypes(Enum):
     """
-    Possible phases of the system.
-    Currently may be Research, meaning fetch and calculate are running, or Stable, meaning nothing is being changed.
+    Possible representations for charts
     """
     compare = auto()
     intersect = auto()

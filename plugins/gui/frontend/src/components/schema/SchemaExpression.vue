@@ -8,11 +8,7 @@
             <input type="checkbox" v-model="expression.leftBracket">(</label>
         <label class="x-btn light checkbox-label" :class="{active: expression.not, disabled: disableNot}">
             <input type="checkbox" v-model="expression.not">NOT</label>
-        <div class="expression-field">
-            <x-select-symbol :options="fields" v-model="fieldSpace" />
-            <x-select :options="currentFields" v-model="expression.field" placeholder="field..." :searchable="true"
-                      class="field-select" :id="first? 'query_field': undefined" />
-        </div>
+        <x-select-typed-field :fields="fields" v-model="expression.field" :id="first? 'query_field': undefined" />
         <!-- Choice of function to compare by and value to compare, according to chosen field -->
         <template v-if="fieldSchema.type">
             <x-select :options="fieldOpsList" v-model="expression.compOp" v-if="fieldOpsList.length"
@@ -37,7 +33,7 @@
 
 <script>
     import xSelect from '../inputs/Select.vue'
-    import xSelectSymbol from '../inputs/SelectSymbol.vue'
+    import xSelectTypedField from '../inputs/SelectTypedField.vue'
 	import string from '../controls/string/StringEdit.vue'
 	import number from '../controls/numerical/NumberEdit.vue'
 	import integer from '../controls/numerical/IntegerEdit.vue'
@@ -51,7 +47,7 @@
 
 	export default {
 		components: {
-			xSelect, xSelectSymbol, string, number, integer, bool, array,
+			xSelect, xSelectTypedField, string, number, integer, bool, array,
 		},
 		name: 'x-schema-expression',
 		props: {
@@ -116,26 +112,19 @@
 			},
             disableNot() {
 				return this.expression.field && this.expression.format === 'predefined'
-            },
-            currentFields() {
-				if (!this.fields || !this.fields.length) return []
-                if (!this.fieldSpace) return this.fields[0].fields
-				return this.fields.filter(item => item.name === this.fieldSpace)[0].fields
             }
 		},
 		data () {
 			return {
 				expression: { ...this.value },
 				processedValue: '',
-                newExpression: false,
-                fieldSpace: 'axonius'
+                newExpression: false
 			}
 		},
 		watch: {
 			value (newValue) {
                 if (newValue.field !== this.expression.field) {
                 	this.expression = { ...newValue }
-					this.updateFieldSpace()
 					this.newExpression = true
                 }
             },
@@ -145,13 +134,7 @@
 					this.expression.value = null
 				}
 				this.newExpression = false
-			},
-            currentFields(newCurrenFields) {
-				if (!this.expression.field) return
-                if (!newCurrenFields.filter(field => field.name === this.expression.field).length) {
-					this.expression.field = ''
-                }
-            }
+			}
 		},
 		methods: {
             ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
@@ -208,8 +191,7 @@
 				})
 			},
 			compileExpression () {
-				if (!this.expression.field && this.fieldSpace !== '' && this.fieldSpace !== 'axonius') {
-					this.expression.field = `adapters_data.${this.fieldSpace}.id`
+				if (!this.expression.compOp && !this.expression.value && this.expression.field.includes('id')) {
                     this.expression.compOp = 'exists'
                 }
 				this.$emit('input', this.expression)
@@ -234,15 +216,7 @@
                     bracketWeight += 1
                 }
 				this.$emit('change', {filter: filterStack.join(''), bracketWeight})
-			},
-            updateFieldSpace() {
-				let fieldSpaceMatch = /adapters_data\.(\w+_adapter)\./.exec(this.expression.field)
-				if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
-					this.fieldSpace = fieldSpaceMatch[1]
-				} else {
-					this.fieldSpace = 'axonius'
-                }
-            }
+			}
 		},
 		updated () {
 			this.compileExpression()
@@ -253,14 +227,7 @@
 					this.changeState({ name: 'queryOp' })
                 }
             }
-		},
-        created() {
-			if (this.expression.field) {
-				// Need to update the field space, since it is not saved in the expression
-				this.updateFieldSpace()
-                this.compileExpression()
-            }
-        }
+		}
 	}
 </script>
 
@@ -294,26 +261,6 @@
         }
         .link {
             margin: auto;
-        }
-        .expression-field {
-            display: flex;
-            width: 100%;
-            .x-select-symbol {
-                border-bottom-right-radius: 0;
-                border-top-right-radius: 0;
-            }
-            .field-select {
-                flex: 1 0 auto;
-                margin-left: -2px;
-                border-bottom-left-radius: 0;
-                border-top-left-radius: 0;
-                width: 180px;
-            }
-        }
-        .x-select-trigger {
-            .logo-text {
-                display: none;
-            }
         }
     }
 </style>

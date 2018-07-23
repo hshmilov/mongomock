@@ -64,6 +64,7 @@
 
 .theme-fill-gray-light {
   fill: $grey-2;
+  background-color: $grey-2;
 }
 
 
@@ -130,6 +131,7 @@ ul {
 @for $i from 1 through length($indicator-colours) {
   .indicator-fill-#{$i} {
     fill: nth($indicator-colours, $i);
+    background-color: nth($indicator-colours, $i);
   }
   .indicator-border-#{$i} {
     border-color: nth($indicator-colours, $i);
@@ -158,6 +160,7 @@ ul {
   }
   .extra-fill-#{$i} {
     fill: nth($extra-colours, $i);
+    background-color: nth($extra-colours, $i);
   }
   .extra-stop-#{$i} {
     stop-color: nth($extra-colours, $i);

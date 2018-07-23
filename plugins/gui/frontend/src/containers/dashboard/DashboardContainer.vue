@@ -16,7 +16,7 @@
                 </x-card>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <div v-if="chart.type === 'compare'" class="timeline">Showing for
+                    <div v-if="chart.metric === 'query' && chart.type === 'compare'" class="timeline">Showing for
                         <x-date-edit @input="confirmPickDate(chartsCurrentlyShowing[chart.name], chart.name)"
                                      placeholder="latest" v-model="chartsCurrentlyShowing[chart.name]" :show-time="false"
                                      :limit="[{ type: 'fromto', from: cardHistoricalMin[chart.name], to: new Date()}]"/>
@@ -68,9 +68,8 @@
     export default {
         name: 'x-dashboard',
         components: {
-            xPage, xCard, xCoverageCard, xCounterChart, xHistogramChart,
-            compare, intersect, xCycleChart, DashboardWizardContainer, xEmptySystem,
-            Modal, xDateEdit, xToast
+            xPage, xCard, xCoverageCard, xCounterChart, xHistogramChart, compare, intersect,
+            xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xDateEdit, xToast
         },
         computed: {
             ...mapState({
@@ -78,28 +77,26 @@
                     return state.dashboard
                 },
                 charts(state) {
-                    return state.dashboard.charts.data.map(x => {
-                        var x = {...x}
-                        x.data.forEach(data => data.name = typeof(data.name) == 'string' ? data.name : data.name.join(' + '))
-                        if (x.type === 'compare') {
-							this.fetchHistoricalCardMin({ cardName: x.name }).then(response => {
-							    this.cardHistoricalMin[x.name] = new Date(response.data)
-								this.cardHistoricalMin[x.name].setDate(this.cardHistoricalMin[x.name].getDate() - 1)
+                    return state.dashboard.charts.data.map(chart => {
+						if (chart.metric === 'query' && chart.type === 'compare') {
+							this.fetchHistoricalCardMin({ cardName: chart.name }).then(response => {
+								this.cardHistoricalMin[chart.name] = new Date(response.data)
+								this.cardHistoricalMin[chart.name].setDate(this.cardHistoricalMin[chart.name].getDate() - 1)
+							})
+						}
+                    	return {
+                            ...chart, showingHistorical: this.dateChosen[chart.name],
+                            data: chart.data.map(item => {
+								if (this.cardHistoricalData[chart.name]) {
+									if (!this.cardHistoricalData[chart.name][item.name]) return item
+									return { ...item,
+                                        count: this.cardHistoricalData[chart.name][item.name].count,
+                                        showingHistorical: this.cardHistoricalData[chart.name][item.name].accurate_for_datetime
+                                    }
+								}
+								return item
                             })
                         }
-                        x.showingHistorical = this.dateChosen[x.name]
-                        if (this.cardHistoricalData[x.name]) {
-                            var currentHistorical = this.cardHistoricalData[x.name]
-                            x.data = x.data.map(data => {
-                                return currentHistorical[data.name] ?
-                                    {
-                                        ...data,
-                                        count: currentHistorical[data.name].count,
-                                        showingHistorical: currentHistorical[data.name].accurate_for_datetime
-                                    } : data
-                            })
-                        }
-                        return x
                     })
                 },
                 adapterList(state) {

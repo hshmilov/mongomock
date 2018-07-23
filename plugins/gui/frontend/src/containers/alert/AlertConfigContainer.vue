@@ -225,7 +225,7 @@
                 setAlert: SET_ALERT, updateEmptyState: UPDATE_EMPTY_STATE, changeState: CHANGE_TOUR_STATE
             }),
             ...mapActions({
-                fetchView: FETCH_DATA_VIEWS, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
+                fetchViews: FETCH_DATA_VIEWS, updateAlert: UPDATE_ALERT, fetchAlerts: FETCH_ALERTS
             }),
             fillAlert(alert) {
                 alert.actions.forEach((action) => {
@@ -338,8 +338,8 @@
             this.tour('alertName')
 
             /* Fetch all saved queries for offering user to base alert upon */
-            Promise.all([this.fetchView({module: 'devices', type: 'saved'}),
-                this.fetchView({module: 'users', type: 'saved'})]).then(() => {
+            Promise.all([this.fetchViews({module: 'devices', type: 'saved'}),
+                this.fetchViews({module: 'users', type: 'saved'})]).then(() => {
                     if (this.alertData.view) {
                         let matching = this.currentQueryOptions.filter(item =>
                             (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.view)

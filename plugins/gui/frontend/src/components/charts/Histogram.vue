@@ -10,7 +10,7 @@
             </div>
             <div v-if="type ==='text'" class="item-title" :title="item.name">{{item.name}}</div>
         </div>
-        <div v-if="data.length > limit" class="remainder">+{{data.length - limit}}</div>
+        <div v-if="data.length > limit" class="remainder">Top {{ limit }} of {{ data.length }}</div>
     </div>
 </template>
 
@@ -18,7 +18,7 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: {data: {required: true}, limit: {default: 9}, type: {default: 'text'}},
+		props: { data: { required: true }, limit: { default: 9 }, type: { default: 'text' } },
 		computed: {
 			limitedData () {
 				return this.data.slice(0, this.limit)
@@ -82,10 +82,10 @@
         }
         .remainder {
             position: absolute;
-            bottom: 0;
+            bottom: 24px;
             right: 0;
             font-size: 14px;
-            color: $indicator-info;
+            color: $grey-3;
         }
     }
 

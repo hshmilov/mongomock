@@ -12,6 +12,7 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 from axonius.devices import deep_merge_only_dict
 from utils import AutoOutputFlush, get_service, print_state, get_mongo_client
 from axonius.utils.json import from_json
+from lists import CURRENT_STATE_FILE_VERSION
 
 
 def main():
@@ -34,9 +35,8 @@ def load_state(path, key):
         print_state('  File not found - skipping')
         return
     state = from_json(decrypt(open(path, 'rb').read(), key))
-    supported_state_file_version = 1
 
-    while state['version'] < supported_state_file_version:
+    while state['version'] < CURRENT_STATE_FILE_VERSION:
         state = upgrade_state(state)
 
     axonius_system = get_service()
@@ -69,7 +69,17 @@ def upgrade_state(state):
     # switch on state.version and "fix" compatibility
     # set version to new version number
     # return new state object
-    raise NotImplementedError()
+
+    def _update_state_1_to_1_1():
+        # Update structure of dashboard panel to include the metric and have the 'views' under 'config'
+        state['panels'] = list(map(lambda panel: panel if panel.get('metric') else {
+            'name': panel['name'], 'metric': 'query', 'type': panel['type'], 'config': {'views': panel.get('views', [])}
+        }, state['panels']))
+        state['version'] = 1.1
+
+    if state['version'] == 1:
+        _update_state_1_to_1_1()
+    return state
 
 
 def load_gui_users(mongo_client, users_state):

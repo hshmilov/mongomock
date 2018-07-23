@@ -25,7 +25,7 @@ from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAM
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
     METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
-from gui.consts import ChartTypes, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
+from gui.consts import ChartTypes, ChartMetrics, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, \
     EXEC_REPORT_EMAIL_CONTENT
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
@@ -243,7 +243,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_dashboard_chart(name, data['type'], json.loads(data['views']))
+                    self._insert_dashboard_chart(name, data['metric'], data['type'], json.loads(data['config']))
                 except Exception as e:
                     logger.exception(f'Error adding default dashboard chart {name}. Reason: {repr(e)}')
         except Exception as e:
@@ -274,7 +274,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         result = reports_collection.insert_one({'name': name, 'adapters': json.loads(report['adapters'])})
         logger.info(f'Added report {name} id: {result.inserted_id}')
 
-    def _insert_dashboard_chart(self, dashboard_name, dashboard_type, dashboard_views):
+    def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_type, dashboard_data):
         dashboard_collection = self._get_collection("dashboard")
         existed_dashboard_chart = dashboard_collection.find_one({'name': dashboard_name})
         if existed_dashboard_chart is not None and not existed_dashboard_chart.get('archived'):
@@ -282,8 +282,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return
 
         result = dashboard_collection.insert_one({'name': dashboard_name,
+                                                  'metric': dashboard_metric,
                                                   'type': dashboard_type,
-                                                  'views': dashboard_views})
+                                                  'config': dashboard_data})
 
         logger.info(f'Added report {dashboard_name} id: {result.inserted_id}')
 
@@ -1586,7 +1587,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         card = self._get_collection('dashboard').find_one({'name': card_name})
         if not card:
             return return_error("Card doesn't exist")
-        return jsonify({x['name']: x for x in self.__get_saved_view_result_from_views(card['views'],
+        return jsonify({x['name']: x for x in self.__get_saved_view_result_from_views(card['config']['views'],
                                                                                       from_given_date, to_given_date)})
 
     @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_name>/min", methods=['GET'])
@@ -1597,7 +1598,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return return_error("Card doesn't exist")
         module_name = None
         minimum_date = datetime.now()
-        for view in card['views']:
+        for view in card['config']['views']:
             module_name = view.get('module')
             view_name = view.get('name')
             if not module_name or not view_name:
@@ -1621,7 +1622,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         dashboard_data = self.get_request_data_as_object()
         if not dashboard_data.get('name'):
             return return_error('Name required in order to save Dashboard Chart', 400)
-        if not dashboard_data.get('views'):
+        if not dashboard_data.get('config'):
             return return_error('At least one query required in order to save Dashboard Chart', 400)
         update_result = self._get_collection('dashboard').replace_one(
             {'name': dashboard_data['name']}, dashboard_data, upsert=True)
@@ -1643,22 +1644,26 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         for dashboard in self._get_collection('dashboard').find(filter_archived()):
             if not dashboard.get('name'):
                 logger.info(f'No name for dashboard {dashboard["_id"]}')
-            elif not dashboard.get('views'):
-                logger.info(f'No views found for dashboard {dashboard.get("name")}')
+            elif not dashboard.get('config'):
+                logger.info(f'No config found for dashboard {dashboard.get("name")}')
             else:
                 # Let's fetch and execute them query filters, depending on the chart's type
                 try:
-                    if dashboard['type'] == ChartTypes.compare.name:
-                        dashboard['data'] = self._fetch_data_for_chart_compare(dashboard['views'])
-                    elif dashboard['type'] == ChartTypes.intersect.name:
-                        dashboard['data'] = self._fetch_data_for_chart_intersect(dashboard['views'])
+                    if dashboard['metric'] == ChartMetrics.query.name:
+                        if dashboard['type'] == ChartTypes.compare.name:
+                            dashboard['data'] = self._fetch_data_for_query_compare(dashboard['config']['views'])
+                        elif dashboard['type'] == ChartTypes.intersect.name:
+                            dashboard['data'] = self._fetch_data_for_query_intersect(dashboard['config']['views'])
+                    elif dashboard['metric'] == ChartMetrics.field.name:
+                        dashboard['data'] = self._fetch_data_for_field_chart(dashboard['type'], **dashboard['config'])
+
                     yield gui_helpers.beautify_db_entry(dashboard)
                 except Exception as e:
                     # Since there is no data, not adding this chart to the list
                     logger.exception(
                         f'Error fetching data for chart {dashboard["name"]} ({dashboard["_id"]}). Reason: {e}')
 
-    def _fetch_data_for_chart_compare(self, dashboard_views):
+    def _fetch_data_for_query_compare(self, dashboard_views):
         """
         Iterate given views, fetch each one's filter from the appropriate query collection, according to its module,
         and execute the filter on the appropriate entity collection.
@@ -1680,11 +1685,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             data.append({'name': view_object['name'], 'filter': view_object['view']['query']['filter'],
                          'module': module,
                          'count': self._entity_views_db_map[entity].find(
-                             parse_filter(view_object['view']['query']['filter']),
-                             {'_id': 1}).count()})
+                             parse_filter(view_object['view']['query']['filter']), {'_id': 1}).count()})
+
+        def count(element):
+            return element.get('count', 0)
+
+        data.sort(key=count, reverse=True)
         return data
 
-    def _fetch_data_for_chart_intersect(self, dashboard_views):
+    def _fetch_data_for_query_intersect(self, dashboard_views):
         """
         This chart shows intersection of 1 or 2 'Child' views with a 'Parent' (expected not to be a subset of them).
         Module to be queried is defined by the parent query.
@@ -1698,8 +1707,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         if not dashboard_views or len(dashboard_views) < 2:
             raise Exception('Pie chart requires at least two views')
-        entity = EntityType(dashboard_views[0]['module']) if dashboard_views[0].get(
-            'module') else EntityType.Devices
+        entity = EntityType(dashboard_views[0]['module']) if dashboard_views[0].get('module') else EntityType.Devices
         # Query and data collections according to given parent's module
         views_collection = self.gui.entity_query_views_db_map[entity]
         data_collection = self._entity_views_db_map[entity]
@@ -1708,7 +1716,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         parent_filter = {}
         if parent_name:
             parent_filter = parse_filter(views_collection.find_one({'name': parent_name})['view']['query']['filter'])
-        data = [{'name': parent_name, 'count': data_collection.find(parent_filter, {'_id': 1}).count()}]
+        data = [{'name': parent_name or 'ALL', 'count': data_collection.find(parent_filter, {'_id': 1}).count()}]
 
         child_name_1 = dashboard_views[1]['name']
         child_filter_1 = parse_filter(views_collection.find_one({'name': child_name_1})['view']['query']['filter'])
@@ -1729,12 +1737,32 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                          'count': data_collection.find({'$and': [parent_filter, child_filter_1, not_intersection]},
                                                        {'_id': 1}).count()})
             # Intersection
-            data.append({'name': [child_name_1, child_name_2], 'count': intersection_cursor.count()})
+            data.append(
+                {'name': [child_name_1, child_name_2], 'count': intersection_cursor.count(), 'intersection': True})
             # Child2 + Parent - Intersection
             data.append({'name': child_name_2,
                          'count': data_collection.find({'$and': [parent_filter, child_filter_2, not_intersection]},
                                                        {'_id': 1}).count()})
         return data
+
+    def _fetch_data_for_field_chart(self, type, module, view, field):
+        # Query and data collections according to given module
+        views_collection = self.gui.entity_query_views_db_map[EntityType(module)]
+        data_collection = self._entity_views_db_map[EntityType(module)]
+        match = {}
+        if view:
+            match = parse_filter(views_collection.find_one({'name': view})['view']['query']['filter'])
+        base = []
+        if type == ChartTypes.intersect.name:
+            base.append({'name': view or 'ALL', 'count': data_collection.count(match)})
+        return base + list(data_collection.aggregate([
+            {'$match': match},
+            {'$group': {
+                '_id': {'$arrayElemAt': [{'$filter': {'input': '$' + field, 'cond': {'$ne': ['$$this', '']}}}, 0]},
+                'count': {'$sum': 1}}},
+            {'$project': {'count': 1, 'name': {'$ifNull': ['$_id', 'No Value']}}},
+            {'$sort': {'count': -1}}
+        ]))
 
     @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
     def remove_dashboard(self, dashboard_id):
