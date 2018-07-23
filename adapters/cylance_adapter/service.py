@@ -98,7 +98,7 @@ class CylanceAdapter(AdapterBase):
                     continue
                 device.id = device_id
                 device.hostname = device_raw.get("host_name")
-                device.figure_os(device_raw.get("operatingSystem", ""))
+                device.figure_os((device_raw.get("operatingSystem") or "") + " " + (device_raw.get("os_version") or ""))
                 try:
                     mac_addresses = device_raw.get('mac_addresses')
                     ip_addresses = device_raw.get("ip_addresses")
