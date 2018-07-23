@@ -1,26 +1,25 @@
-import inspect
-import subprocess
-from datetime import datetime, timedelta
-import importlib
-import time
 import glob
+import importlib
+import inspect
 import os
+import subprocess
+import time
+from datetime import datetime, timedelta
 
-from axonius.plugin_base import EntityType
-
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, CONFIGURABLE_CONFIGS
+from axonius.consts.plugin_consts import (CONFIGURABLE_CONFIGS,
+                                          PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
-from services import adapters
-from services import plugins
-from services.plugins.execution_service import ExecutionService
-from services.plugins.aggregator_service import AggregatorService
+from axonius.plugin_base import EntityType
+from services import adapters, plugins
 from services.axon_service import TimeoutException
+from services.plugins.aggregator_service import AggregatorService
 from services.plugins.core_service import CoreService
+from services.plugins.execution_service import ExecutionService
 from services.plugins.gui_service import GuiService
+from services.plugins.mongo_service import MongoService
 from services.plugins.reports_service import ReportsService
 from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
-from services.plugins.mongo_service import MongoService
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
 
@@ -29,7 +28,7 @@ def get_service():
     return AxoniusService()
 
 
-class AxoniusService(object):
+class AxoniusService():
     _NETWORK_NAME = 'axonius'
 
     def __init__(self):

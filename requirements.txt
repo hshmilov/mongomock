@@ -71,3 +71,6 @@ duo-client==3.3.0
 junos-eznc==2.1.8
 apache-libcloud==2.3.0
 passlib==1.7.1
+pylint==2.0.0
+pylint_quotes==0.1.9
+isort==4.3.4

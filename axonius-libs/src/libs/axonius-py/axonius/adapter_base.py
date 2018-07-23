@@ -2,35 +2,34 @@
 AdapterBase is an abstract class all adapters should inherit from.
 It implements API calls that are expected to be present in all adapters.
 """
-import logging
-
-logger = logging.getLogger(f"axonius.{__name__}")
-
-from axonius.thread_stopper import stoppable
-from axonius.mixins.configurable import Configurable
-from axonius.users.user_adapter import UserAdapter
-import threading
-from abc import ABC, abstractmethod
-
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME
-from bson import ObjectId
-from datetime import datetime, timedelta, timezone, date
-from enum import Enum, auto
-from flask import jsonify, request
 import json
+import logging
 import sys
-from threading import RLock, Thread, Event
-from typing import Iterable, Tuple, List
+from abc import ABC, abstractmethod
+from datetime import date, datetime, timedelta, timezone
+from enum import Enum, auto
+from threading import Event, RLock, Thread
+from typing import Iterable, List, Tuple
+
+from bson import ObjectId
+from flask import jsonify, request
 
 from axonius import adapter_exceptions
 from axonius.config_reader import AdapterConfig
 from axonius.consts import adapter_consts
-from axonius.devices.device_adapter import DeviceAdapter, LAST_SEEN_FIELD
+from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME, PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME)
+from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
-from axonius.utils.parsing import get_exception_string
-from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
+from axonius.plugin_base import EntityType, PluginBase, add_rule, return_error
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.thread_stopper import stoppable
+from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
+from axonius.utils.parsing import get_exception_string
+
+logger = logging.getLogger(f"axonius.{__name__}")
 
 
 def is_plugin_adapter(plugin_type: str) -> bool:
@@ -83,7 +82,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         self._clients_lock = RLock()
         self._clients = {}
 
-        self._index_lock = threading.RLock()
+        self._index_lock = RLock()
         self._index = 0
 
         self._send_reset_to_ec()
@@ -627,8 +626,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :param **kwargs: Another parameters needed for this specific action (retrieved from the request body)
         """
         # Sending update that this action has started
-        self._update_action_data(action_id, status="started", output={
-                                 "result": "In Progress", "product": "In Progress"})
+        self._update_action_data(action_id,
+                                 status="started",
+                                 output={"result": "In Progress", "product": "In Progress"})
 
         try:
             # Running the function, it should block until action is finished
@@ -1014,8 +1014,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                                    replacement={
                                        'adapter_name': self.plugin_unique_name,
                                        'adapter_version': self.version,
-                                       'schema': schema
-            }, upsert=True)
+                                       'schema': schema},
+                                   upsert=True)
 
     def _create_axonius_entity(self, client_name, data, entity_type: EntityType):
         """
