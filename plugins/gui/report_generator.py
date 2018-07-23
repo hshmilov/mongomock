@@ -3,6 +3,7 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from datetime import datetime
 from math import pi, cos, sin, floor, ceil
+import uuid
 
 from weasyprint import HTML, CSS
 from jinja2 import Environment, FileSystemLoader
@@ -120,7 +121,7 @@ class ReportGenerator(object):
         if self.report_data.get('covered_devices'):
             # Adding cards with coverage of network roles
             for coverage_data in self.report_data['covered_devices']:
-                coverage_pie_filename = f'{self.output_path}{"_".join(coverage_data["title"].split(" "))}.png'
+                coverage_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
                 svg2png(bytestring=self._create_coverage_pie(coverage_data['portion']), write_to=coverage_pie_filename)
                 summary_content.append(self.templates['card'].render({
                     'title': f'{coverage_data["title"]} Coverage',
@@ -147,7 +148,7 @@ class ReportGenerator(object):
                     if custom_chart['type'] == ChartTypes.compare.name:
                         content = self._create_query_histogram(custom_chart['data'])
                     elif custom_chart['type'] == ChartTypes.intersect.name:
-                        query_pie_filename = f'{self.output_path}{"_".join(title.split(" "))}.png'
+                        query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
                         byte_string = self._create_query_pie(custom_chart['data'])
                         if byte_string == '':
                             continue

@@ -1984,7 +1984,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     view = view_doc.get('view')
                     if view:
                         field_list = view.get('fields', [])
-                        logger.info(field_list)
                         views_data.append({
                             'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
