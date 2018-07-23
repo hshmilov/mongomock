@@ -25,7 +25,7 @@ class MongoService(DockerService):
 
     @property
     def image(self):
-        return 'mongo:3.6'
+        return 'mongo:4.0'
 
     @property
     def volumes(self):
