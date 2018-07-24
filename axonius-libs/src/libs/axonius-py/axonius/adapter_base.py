@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum, auto
 from threading import Event, RLock, Thread
-from typing import Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 from bson import ObjectId
 from flask import jsonify, request
@@ -922,7 +922,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         _update_client_status("success", '')
         return [], parsed_data  # AD-HOC: Not returning any raw values
 
-    def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[str, str]]:
+    def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[Any, Dict[str, Any]]]:
         """
         Synchronously returns all available data types (devices/users) from all clients.
         """

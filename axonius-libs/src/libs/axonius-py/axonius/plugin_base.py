@@ -1,63 +1,67 @@
 """PluginBase.py: Implementation of the base class to be inherited by other plugins."""
 
+import concurrent
+import concurrent.futures
+import configparser
+import functools
+import json
 import logging
 import logging.handlers
-from concurrent.futures import ALL_COMPLETED
-from funcy import chunks
-from namedlist import namedtuple
-
-from axonius.email_server import EmailServer
-from axonius.utils.json_encoders import IteratorJSONEncoder
-
-logger = logging.getLogger(f"axonius.{__name__}")
-from axonius.mixins.configurable import Configurable
-import json
-from datetime import datetime, timedelta
-import sys
-import traceback
-
-import requests
-import configparser
+import multiprocessing
 import os
-import threading
-import functools
 import socket
 import ssl
-import pymongo
-import concurrent
+import sys
+import threading
+import traceback
 import uuid
-import multiprocessing
-
-from axonius.consts.adapter_consts import IGNORE_DEVICE
-from axonius.utils.threading import run_in_executor_helper, LazyMultiLocker
-from axonius.utils.parsing import get_exception_string
-from flask import Flask, request, jsonify
-from bson import json_util
-from pymongo import MongoClient
-# bson is requirement of mongo and its not recommended to install it manually
-from bson import ObjectId
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.executors.pool import ThreadPoolExecutor
-import concurrent.futures
-from retrying import retry
+from datetime import datetime, timedelta
 from pathlib import Path
-from promise import Promise
 from typing import Iterable
 
+import pymongo
+import requests
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.triggers.interval import IntervalTrigger
+# bson is requirement of mongo and its not recommended to install it manually
+from bson import ObjectId, json_util
+from flask import Flask, jsonify, request
+from funcy import chunks
+from namedlist import namedtuple
+from promise import Promise
+from pymongo import MongoClient
+from retrying import retry
+
 import axonius.entities
-from axonius.entities import EntityType
 from axonius import plugin_exceptions
 from axonius.adapter_exceptions import TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, VOLATILE_CONFIG_PATH, AGGREGATOR_PLUGIN_NAME, \
-    ADAPTERS_LIST_LENGTH, CORE_UNIQUE_NAME, GUI_NAME, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.users.user_adapter import UserAdapter
-from axonius.logging.logger import create_logger
-from axonius.mixins.feature import Feature
-from axonius.thread_stopper import StopThreadException, ThreadStopper, stoppable
-from axonius.utils.debug import is_debug_attached
 from axonius.clients.service_now.connection import ServiceNowConnection
+from axonius.consts.adapter_consts import IGNORE_DEVICE
+from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
+                                          AGGREGATOR_PLUGIN_NAME,
+                                          ANALYTICS_SETTING,
+                                          CONFIGURABLE_CONFIGS,
+                                          CORE_UNIQUE_NAME, GUI_NAME,
+                                          PLUGIN_UNIQUE_NAME,
+                                          TROUBLESHOOTING_SETTING,
+                                          VOLATILE_CONFIG_PATH)
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.email_server import EmailServer
+from axonius.entities import EntityType
+from axonius.logging.logger import create_logger
+from axonius.mixins.configurable import Configurable
+from axonius.mixins.feature import Feature
+from axonius.thread_stopper import (StopThreadException, ThreadStopper,
+                                    stoppable)
+from axonius.users.user_adapter import UserAdapter
+from axonius.utils.debug import is_debug_attached
+from axonius.utils.json_encoders import IteratorJSONEncoder
+from axonius.utils.parsing import get_exception_string
+from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper
+
+logger = logging.getLogger(f"axonius.{__name__}")
+
 
 MAINTENANCE_SETTINGS = 'maintenance_settings'
 

@@ -110,14 +110,14 @@ def description_action(filename: str, adapter_name: str):
         adapter_name, )
 
     filename = os.path.join(get_cortex_dir(), filename)
-    data = open(filename, 'r', encoding='utf-8').readlines()
+    lines = open(filename, 'r', encoding='utf-8').readlines()
 
-    for i, line in enumerate(data):
+    for i, line in enumerate(lines):
         # Start of dict should be 'pluginMeta = {dict}'
         if 'pluginMeta =' in line:
             # Found dict, now insert AUTOADAPTER placeholder
-            data.insert(i + 1, new_description)
-            data = ''.join(data)
+            lines.insert(i + 1, new_description)
+            data = ''.join(lines)
 
             with open(filename, 'w') as file_:
                 file_.write(data)
@@ -306,11 +306,11 @@ def ports_action(filename: str, adapter_name: str):
     regex = r".*'(.*?)':.*(\D.*?),.*"
 
     filename = os.path.join(get_cortex_dir(), filename)
-    data = open(filename, 'r').readlines()
+    lines = open(filename, 'r').readlines()
     mongoline = None
     highest_port = 0
 
-    for i, line in enumerate(data):
+    for i, line in enumerate(lines):
         match = re.match(regex, line)
         if not match:
             continue
@@ -325,8 +325,8 @@ def ports_action(filename: str, adapter_name: str):
         raise ActionError('Unable to find highst port')
 
     template = f"    '{adapter_name.replace('_', '-')}-adapter':".ljust(40) + f"{highest_port+1},\n"
-    data.insert(mongoline, template)
-    data = ''.join(data)
+    lines.insert(mongoline, template)
+    data = ''.join(lines)
 
     with open(filename, 'w') as file_:
         file_.write(data)

@@ -74,3 +74,4 @@ passlib==1.7.1
 pylint==2.0.0
 pylint_quotes==0.1.9
 isort==4.3.4
+mypy==0.620
