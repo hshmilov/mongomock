@@ -1,38 +1,46 @@
 <template>
     <div class="x-schema-calendar">
-        <div @click="decCurrentWeek" class="x-btn link">&lt;</div>
-        <div v-for="day in currentWeekDays" class="day">
-            <div class="day-title">
-                <div>{{day.name}}</div>
-                <div>{{day.date.toDate().toLocaleDateString()}}</div>
-            </div>
-            <div class="day-body">
-                <div class="day-list">
-                    <div v-for="dose, index in day.instance_details" class="day-slot">
-                        <div v-if="index" class="slot-link"></div>
-                        <div @click="selectData(index, day.name)" class="slot-dose" :class="{
-                                selected: selectedDataByDay[day.name] === index
-                             }">
-                            <div>
-                                <x-dose :percentage="dose.percentage_of_volume_infused * 100"
-                                        :placeholder="dose.instance_state === 'Upcoming'" />
-                                <x-cross v-if="dose.instance_state === 'Missed'" />
-                                <div v-if="dose.instance_state === 'Missing Record'" class="unknown">?</div>
-                            </div>
-                            <div class="dose-summary" v-if="dose.instance_state === 'Taken'">
-                                <div>{{dose.vi}} {{dose.vi_units}}</div>
-                                <div class="dose-time">{{formatShortTime(dose.start_ts)}} - {{formatShortTime(dose.end_ts)}}</div>
+        <div class="calendar-details">
+            <img :src="`/src/assets/images/logos/${details.image}.png`" height="48" />
+            <div>{{ details.name }}</div>
+            <div>{{ details.volume }}</div>
+            <div>{{ details.type }}</div>
+        </div>
+        <div class="calendar-view">
+            <div @click="decCurrentWeek" class="x-btn link">&lt;</div>
+            <div v-for="day in currentWeekDays" class="day">
+                <div class="day-title">
+                    <div>{{day.name}}</div>
+                    <div>{{day.date.toDate().toLocaleDateString()}}</div>
+                </div>
+                <div class="day-body">
+                    <div class="day-list">
+                        <div v-for="dose, index in day.instance_details" class="day-slot">
+                            <div v-if="index" class="slot-link"></div>
+                            <div @click="selectData(index, day.name)" class="slot-dose" :class="{
+                                    selected: selectedDataByDay[day.name] === index
+                                 }">
+                                <div>
+                                    <x-dose :percentage="dose.percentage_of_volume_infused * 100"
+                                            :placeholder="dose.instance_state === 'Upcoming'" />
+                                    <x-cross v-if="dose.instance_state === 'Missed'" />
+                                    <div v-if="dose.instance_state === 'Missing Record'" class="unknown">?</div>
+                                </div>
+                                <div class="dose-summary" v-if="dose.instance_state === 'Taken'">
+                                    <div>{{dose.vi}} {{dose.vi_units}}</div>
+                                    <div class="dose-time">{{formatShortTime(dose.start_ts)}} - {{formatShortTime(dose.end_ts)}}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="day-details">
-                    <x-array-view v-if="selectedDataByDay[day.name] !== null" class="growing-y"
-                                  :value="day.instance_details[selectedDataByDay[day.name]]" :schema="detailsSchema" />
+                    <div class="day-details">
+                        <x-array-view v-if="selectedDataByDay[day.name] !== null" class="growing-y"
+                                      :value="day.instance_details[selectedDataByDay[day.name]]" :schema="detailsSchema" />
+                    </div>
                 </div>
             </div>
+            <div @click="incCurrentWeek" class="x-btn link">&gt;</div>
         </div>
-        <div @click="incCurrentWeek" class="x-btn link">&gt;</div>
     </div>
 </template>
 
@@ -45,10 +53,18 @@
 	export default {
 		name: 'x-schema-calendar',
         components: { xCross, xArrayView, xDose },
-        props: { data: { required: true }, schema: { required: true } },
+        props: { data: { required: true }, schema: { } },
         computed: {
+			calendar() {
+				if (!this.data) return {}
+				return this.data.calendar
+            },
+            details() {
+				if (!this.data) return {}
+				return this.data.prescription_program
+            },
 			dataWeeks() {
-				return Object.keys(this.data)
+				return Object.keys(this.calendar)
             },
             currentDays() {
             	/* List of dates to present, according to currently selected week */
@@ -68,7 +84,7 @@
 				return this.currentDate.clone().startOf('isoWeek')
             },
             currentWeekData() {
-				return this.data[`${this.currentYear}_${this.currentWeek}`]
+				return this.calendar[`${this.currentYear}_${this.currentWeek}`]
             },
             currentWeekDays() {
 				let dataIndex = 0
@@ -154,89 +170,101 @@
 
 <style lang="scss">
     .x-schema-calendar {
+        display: flex;
+        flex-direction: row;
         height: 100%;
-        display: grid;
-        grid-template-columns: 1fr repeat(7, 4fr) 1fr;
-        .x-btn.link {
-            padding: 0 8px;
-            font-size: 24px;
-        }
-        .day {
-            display: flex;
-            flex-direction: column;
-            .day-title {
-                font-weight: 400;
-                color: $grey-4;
-                text-align: center;
-                border-bottom: 2px dotted $grey-2;
+        .calendar-details {
+            margin-right: 24px;
+            .custom-data {
+                display: block;
             }
-            .day-body {
-                border-right: 2px solid $grey-2;
-                flex: 1 0 auto;
-                padding: 12px;
+        }
+        .calendar-view {
+            flex: auto 1 0;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr repeat(7, 4fr) 1fr;
+            .x-btn.link {
+                padding: 0 8px;
+                font-size: 24px;
+            }
+            .day {
                 display: flex;
                 flex-direction: column;
-                .day-list {
+                .day-title {
+                    font-weight: 400;
+                    color: $grey-4;
+                    text-align: center;
+                    border-bottom: 2px dotted $grey-2;
+                }
+                .day-body {
+                    border-right: 2px solid $grey-2;
                     flex: 1 0 auto;
-                    .day-slot {
-                        margin: -12px;
-                        padding: 12px;
-                        &:nth-child(odd) {
-                            background-color: rgba($grey-1, 0.6);
-                        }
-                        .slot-link {
-                            height: 24px;
-                            width: 2px;
-                            background-color: $theme-blue;
-                            margin-left: 14px;
-                            margin-top: -12px;
-                        }
-                        .slot-dose {
-                            cursor: pointer;
-                            border-radius: 4px;
-                            opacity: 0.6;
-                            height: 48px;
-                            position: relative;
-                            display: flex;
-                            flex-direction: row;
-                            &:hover, &.selected {
-                                opacity: 1;
+                    padding: 12px;
+                    display: flex;
+                    flex-direction: column;
+                    .day-list {
+                        flex: 1 0 auto;
+                        .day-slot {
+                            margin: -12px;
+                            padding: 12px;
+                            &:nth-child(odd) {
+                                background-color: rgba($grey-1, 0.6);
                             }
-                            .cross {
-                                position: absolute;
-                                top: 10px;
-                                left: 6px;
+                            .slot-link {
+                                height: 24px;
+                                width: 2px;
+                                background-color: $theme-blue;
+                                margin-left: 14px;
+                                margin-top: -12px;
                             }
-                            .unknown {
-                                font-size: 24px;
-                                position: absolute;
-                                top: 0px;
-                                left: 6px;
-                            }
-                            .dose-summary {
-                                flex: 1 0 auto;
-                                margin-left: 8px;
-                                .dose-time {
-                                    font-size: 12px;
+                            .slot-dose {
+                                cursor: pointer;
+                                border-radius: 4px;
+                                opacity: 0.6;
+                                height: 48px;
+                                position: relative;
+                                display: flex;
+                                flex-direction: row;
+                                &:hover, &.selected {
+                                    opacity: 1;
+                                }
+                                .cross {
+                                    position: absolute;
+                                    top: 10px;
+                                    left: 6px;
+                                }
+                                .unknown {
+                                    font-size: 24px;
+                                    position: absolute;
+                                    top: 0px;
+                                    left: 6px;
+                                }
+                                .dose-summary {
+                                    flex: 1 0 auto;
+                                    margin-left: 8px;
+                                    .dose-time {
+                                        font-size: 12px;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                .day-details {
-                    padding-top: 12px;
-                    border-top: 1px solid $theme-orange;
-                    overflow: hidden;
-                    height: 200px;
-                    .x-array-view {
-                        overflow: auto;
-                        height: 100%;
-                        font-size: 12px;
+                    .day-details {
+                        padding-top: 12px;
+                        border-top: 1px solid $theme-orange;
+                        overflow: hidden;
+                        height: 200px;
+                        .x-array-view {
+                            overflow: auto;
+                            height: 100%;
+                            font-size: 12px;
+                        }
                     }
                 }
-            }
-            &:nth-child(2) .day-body {
-                border-left: 2px solid $grey-2;
+                &:nth-child(2) .day-body {
+                    border-left: 2px solid $grey-2;
+                }
             }
         }
     }

@@ -21,15 +21,16 @@
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
                         <x-schema-list :data="basicInfoData" :schema="basicInfoSchema"/>
                     </tab>
-                    <tab v-for="item, i in entityGenericAdvanced" :title="item.title" :id="item.name" :key="item.name">
+                    <tab v-for="item, i in entityGenericAdvancedRegular" :title="item.title" :id="item.name" :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
                         <x-schema-table v-if="tableView && item.schema.format && item.schema.format === 'table'"
                                  :data="item.data" :fields="item.schema.items.items" />
-                        <x-schema-calendar v-else-if="item.schema.format && item.schema.format === 'calendar'"
-                                           :data="item.data" :schema="item.schema" />
                         <x-schema-list :data="item.data" :schema="item.schema" v-else />
                     </tab>
                 </tabs>
+            </tab>
+            <tab v-for="item in entityGenericAdvancedSpecial" :title="item.title" :id="item.name" :key="item.name">
+                <x-schema-calendar v-if="item.schema.format && item.schema.format === 'calendar'" :data="item.data" />
             </tab>
             <tab title="Extended Data" id="extended" key="extended" v-if="entity.generic.data.length">
                 <tabs :vertical="true">
@@ -137,6 +138,12 @@
                         }
                     })
 			},
+			entityGenericAdvancedRegular() {
+				return this.entityGenericAdvanced.filter(item => item.schema.format !== 'calendar')
+            },
+            entityGenericAdvancedSpecial() {
+            	return this.entityGenericAdvanced.filter(item => item.schema.format === 'calendar')
+            },
 			sortedSpecificData () {
 				if (!this.entity.specific) return []
 				let lastSeen = new Set()
