@@ -2,7 +2,7 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 import dateutil.parser
 
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.scanner_adapter_base import ScannerAdapterBase
@@ -38,6 +38,7 @@ VM_HOST_OUTPUT = 'HOST_LIST_VM_DETECTION_OUTPUT'
 class QualysScansAdapter(ScannerAdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_scan_id = Field(str, 'Scan ID given by Qualys')
+        severity_results = ListField(str, "Severity and Results")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -67,16 +68,16 @@ class QualysScansAdapter(ScannerAdapterBase):
             client_list = []
             devices_count = 0
             while params:
-                logger.info(f"Got {devices_count*1000} devices so far")
-                devices_count += 1
-                response = client_data.get(url + '?' + params, auth=client_data.auth, headers=client_data.headers)
-                current_clients_page = Xml2Json(response.text).result
                 try:
+                    logger.info(f"Got {devices_count*1000} devices so far")
+                    devices_count += 1
+                    response = client_data.get(url + '?' + params, auth=client_data.auth, headers=client_data.headers)
+                    current_clients_page = Xml2Json(response.text).result
                     # if there's no response field - there are no clients
                     response_json = current_clients_page[output_key]['RESPONSE']
                     client_list.extend(response_json.get('HOST_LIST', {}).get('HOST'))
                 except KeyError:
-                    logger.warn(f"No devices found: {response.text}")
+                    logger.warning(f"No devices found: {response.text}")
                     return client_list
                 params = response_json.get('WARNING', {}).get('URL', "?").split("?")[1]
             return client_list
@@ -91,15 +92,29 @@ class QualysScansAdapter(ScannerAdapterBase):
         :return: A json with all the attributes returned from the QualysScans Server
         """
         logger.info(f"Getting all qualys scannable hosts")
-        all_hosts = {device['ID']: device for device in self._get_qualys_scan_results(client_data, url=ALL_HOSTS_URL,
-                                                                                      params=ALL_HOSTS_PARAMS,
-                                                                                      output_key=ALL_HOSTS_OUTPUT)}
+        all_hosts = dict()
+        for device in self._get_qualys_scan_results(client_data, url=ALL_HOSTS_URL, params=ALL_HOSTS_PARAMS, output_key=ALL_HOSTS_OUTPUT):
+            try:
+                device_id = device.get("ID")
+                if device_id is None or device_id == "":
+                    logger.warning(f"Bad device without id {str(device)}")
+                    continue
+                all_hosts[device_id] = device
+            except Exception:
+                logger.exception(f"Problem getting ID for {str(device)}")
         logger.info(f"Getting all vulnerable hosts")
-        vm_hosts = self._get_qualys_scan_results(client_data, url=VM_HOST_URL,
-                                                 params=VM_HOST_PARAMS, output_key=VM_HOST_OUTPUT)
+        try:
+            vm_hosts = self._get_qualys_scan_results(client_data, url=VM_HOST_URL,
+                                                     params=VM_HOST_PARAMS, output_key=VM_HOST_OUTPUT)
+        except Exception:
+            logger.exception(f"Problem getting detection lists")
+            vm_hosts = []
 
         for device in vm_hosts:
-            all_hosts[device['ID']]['DETECTION_LIST'] = device.get('DETECTION_LIST', {})
+            try:
+                all_hosts[device['ID']]['DETECTION_LIST'] = device.get('DETECTION_LIST', {})
+            except Exception:
+                logger.exception(f"Problem add detection list to {device}")
         return all_hosts.values()
 
     def _clients_schema(self):
@@ -151,16 +166,28 @@ class QualysScansAdapter(ScannerAdapterBase):
             except Exception:
                 logger.exception("An Exception was raised while getting and parsing the last_seen field.")
                 continue
+            try:
+                device = self._new_device_adapter()
+                device.hostname = device_raw.get('DNS', device_raw.get('NETBIOS', ''))
+                device.figure_os(device_raw.get('OS', ''))
+                device.last_seen = last_seen
+                if 'IP' in device_raw:
+                    device.add_nic('', [device_raw['IP']])
+                device.qualys_scan_id = device_raw.get('ID')
+                try:
+                    device.severity_results = []
+                    vulns_list = device_raw.get("DETECTION_LIST", {}).get("DETECTION", [])
+                    for vuln in vulns_list:
+                        severity = vuln.get("SEVERITY") or ""
+                        results = vuln.get("RESULTS") or ""
+                        device.severity_results.append(f"{severity}_{results}")
 
-            device = self._new_device_adapter()
-            device.hostname = device_raw.get('DNS', device_raw.get('NETBIOS', ''))
-            device.figure_os(device_raw.get('OS', ''))
-            device.last_seen = last_seen
-            if 'IP' in device_raw:
-                device.add_nic('', [device_raw['IP']])
-            device.qualys_scan_id = device_raw.get('ID')
-            device.set_raw(device_raw)
-            yield device
+                except Exception:
+                    logger.exception(f"Problem adding scans to {device_raw}")
+                device.set_raw(device_raw)
+                yield device
+            except Exception:
+                logger.exception(f"Problem with device {device_raw}")
 
         if no_timestamp_count != 0:
             logger.warning(f"Got {no_timestamp_count} with no timestamp while parsing data")
