@@ -72,10 +72,6 @@ class ReportGenerator(object):
                 sections.append(self.templates['section'].render(
                     {'title': adapter['name'], 'content': self._create_adapter(adapter['queries'], adapter['views'])}))
                 logger.info(f'Report Generator, Adapter Section: Added {adapter["name"]} section')
-        # Add section for all saved queries
-        if self.report_data.get('views_data'):
-            sections.append(self.templates['section'].render(
-                {'title': 'Saved Views', 'content': self._create_data_views()}))
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
             {'date': current_time.strftime("%d/%m/%Y"), 'content': '\n'.join(sections)})

@@ -29,7 +29,7 @@
                         </div>
                         <div class="grid-span2">
                             <input id="EveryPhasePeriod" type="radio" value="all" v-model="alert.period">
-                            <label for="EveryPhasePeriod" class="ml-2">Every Research Phase</label>
+                            <label for="EveryPhasePeriod" class="ml-2">Every Discovery Phase</label>
                         </div>
                     </div>
                 </div>

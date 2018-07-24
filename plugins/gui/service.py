@@ -1986,6 +1986,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     def _get_saved_views_data(self):
         """
+        *** Currently this function is unused ***
         For each entity in system, fetch all saved views.
         For each view, fetch first page of entities - filtered, projected, sorted_endpoint according to it's definition.
 
@@ -2146,7 +2147,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'adapter_devices': self._adapter_devices(),
             'covered_devices': self._get_dashboard_coverage(),
             'custom_charts': list(self._get_dashboard()),
-            'views_data': self._get_saved_views_data()
+            'views_data': []
         }
         report = self._get_collection('reports_config').find_one({'name': 'Main Report'})
         if report.get('adapters'):
