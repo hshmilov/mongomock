@@ -1,7 +1,7 @@
 <template>
     <div class="cross">
-        <div class="top"></div>
-        <div class="bottom"></div>
+        <div class="first"></div>
+        <div class="second"></div>
     </div>
 </template>
 
@@ -13,27 +13,20 @@
 
 <style lang="scss">
     .cross {
-        display: flex;
-        flex-direction: column;
-        .top, .bottom {
-            width: 6px;
-            height: 6px;
-            border-top: 1px solid;
+        position: relative;
+        .first, .second {
+            width: 2px;
+            height: 20px;
             border-left: 1px solid;
+            position: absolute;
+            top: 0;
+            left: 8px;
         }
-        .top {
-            -webkit-transform: rotate(225deg);
-            -moz-transform: rotate(225deg);
-            -ms-transform: rotate(225deg);
-            -o-transform: rotate(225deg);
-            transform: rotate(225deg);
+        .first {
+            transform: rotate(135deg);
+            left: 7px;
         }
-        .bottom {
-            margin-top: 2px;
-            -webkit-transform: rotate(45deg);
-            -moz-transform: rotate(45deg);
-            -ms-transform: rotate(45deg);
-            -o-transform: rotate(45deg);
+        .second {
             transform: rotate(45deg);
         }
     }

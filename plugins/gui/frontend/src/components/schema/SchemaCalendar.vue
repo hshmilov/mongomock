@@ -8,20 +8,23 @@
             </div>
             <div class="day-body">
                 <div class="day-list">
-                    <template v-for="dose, index in day.instance_details">
-                        <div v-if="index" class="dose-link"></div>
-                        <div @click="selectData(index, day.name)" class="dose" :class="{
-                                success: dose.percentage_of_volume_infused === 1,
-                                percent: dose.instance_state === 'Taken',
-                                placeholder: dose.instance_state === 'Upcoming',
-                                error: dose.instance_state === 'Missed',
+                    <div v-for="dose, index in day.instance_details" class="day-slot">
+                        <div v-if="index" class="slot-link"></div>
+                        <div @click="selectData(index, day.name)" class="slot-dose" :class="{
                                 selected: selectedDataByDay[day.name] === index
                              }">
-                            <div v-if="dose.instance_state === 'Taken'" class="dose-fill"
-                                 :style="{height: dose.percentage_of_volume_infused * 100 + '%'}"></div>
-                            <x-cross v-else-if="dose.instance_state === 'Missed'" />
+                            <div>
+                                <x-dose :percentage="dose.percentage_of_volume_infused * 100"
+                                        :placeholder="dose.instance_state === 'Upcoming'" />
+                                <x-cross v-if="dose.instance_state === 'Missed'" />
+                                <div v-if="dose.instance_state === 'Missing Record'" class="unknown">?</div>
+                            </div>
+                            <div class="dose-summary" v-if="dose.instance_state === 'Taken'">
+                                <div>{{dose.vi}} {{dose.vi_units}}</div>
+                                <div class="dose-time">{{formatShortTime(dose.start_ts)}} - {{formatShortTime(dose.end_ts)}}</div>
+                            </div>
                         </div>
-                    </template>
+                    </div>
                 </div>
                 <div class="day-details">
                     <x-array-view v-if="selectedDataByDay[day.name] !== null" class="growing-y"
@@ -36,11 +39,12 @@
 <script>
     import xCross from '../patterns/Cross.vue'
     import xArrayView from '../controls/array/ArrayView.vue'
+    import xDose from '../patterns/Dose.vue'
     import moment from 'moment'
 
 	export default {
 		name: 'x-schema-calendar',
-        components: { xCross, xArrayView },
+        components: { xCross, xArrayView, xDose },
         props: { data: { required: true }, schema: { required: true } },
         computed: {
 			dataWeeks() {
@@ -85,9 +89,7 @@
 					type: 'array', items: [
                         { type: 'string', title: 'Dose Number', name: 'dose_number' },
                         { type: 'string', title: 'Dose State', name: 'instance_state' },
-                        { type: 'string', title: 'Start Time', name: 'start_ts', format: 'time' },
-                        { type: 'string', title: 'End Time', name: 'end_ts', format: 'time' },
-                        { type: 'string', title: 'Volume Infused', name: 'vi' }
+                        { type: 'number', title: 'Percentage Infused', name: 'percentage_of_volume_infused', format: 'percentage' }
                     ]
                 }
             }
@@ -121,6 +123,13 @@
             	this.selectedDataByDay = {
 					'Mon': null, 'Tue': null, 'Wed': null, 'Thu': null, 'Fri': null, 'Sat': null, 'Sun': null
 				}
+            },
+            formatShortTime(timestamp) {
+            	let date = new Date(timestamp)
+                return `${this.padZero(date.getHours())}:${this.padZero(date.getSeconds())}`
+            },
+            padZero(number) {
+            	return ("0" + number).slice(-2)
             }
         },
         created() {
@@ -159,7 +168,7 @@
                 font-weight: 400;
                 color: $grey-4;
                 text-align: center;
-                border-bottom: 1px solid $theme-orange;
+                border-bottom: 2px dotted $grey-2;
             }
             .day-body {
                 border-right: 2px solid $grey-2;
@@ -169,53 +178,46 @@
                 flex-direction: column;
                 .day-list {
                     flex: 1 0 auto;
-                    .dose-link {
-                        height: 24px;
-                        width: 12px;
-                        background-color: $grey-2;
-                        margin: auto;
-                    }
-                    .dose {
-                        cursor: pointer;
-                        height: 36px;
-                        width: 36px;
-                        border-radius: 4px;
-                        margin: auto;
-                        opacity: 0.6;
-                        &:hover, &.selected {
-                            opacity: 1;
+                    .day-slot {
+                        margin: -12px;
+                        padding: 12px;
+                        &:nth-child(odd) {
+                            background-color: rgba($grey-1, 0.6);
                         }
-                        &.percent {
-                            border: 1px solid $indicator-warning;
+                        .slot-link {
+                            height: 24px;
+                            width: 2px;
+                            background-color: $theme-blue;
+                            margin-left: 14px;
+                            margin-top: -12px;
+                        }
+                        .slot-dose {
+                            cursor: pointer;
+                            border-radius: 4px;
+                            opacity: 0.6;
+                            height: 48px;
+                            position: relative;
                             display: flex;
-                            align-items: flex-end;
-                            .dose-fill {
-                                background-color: $indicator-warning;
-                                flex: auto;
+                            flex-direction: row;
+                            &:hover, &.selected {
+                                opacity: 1;
                             }
-                            &.success {
-                                border: 1px solid $indicator-success;
-                                .dose-fill {
-                                    background-color: $indicator-success;
-                                }
-
-                            }
-                        }
-                        &.placeholder {
-                            border: 1px dashed $grey-3;
-                        }
-                        &.error {
-                            border: 1px solid $indicator-error;
                             .cross {
-                                height: 100%;
-                                .top, .bottom {
-                                    margin: auto;
-                                }
-                                .top {
-                                    margin-bottom: 0;
-                                }
-                                .bottom {
-                                    margin-top: 2px;
+                                position: absolute;
+                                top: 10px;
+                                left: 6px;
+                            }
+                            .unknown {
+                                font-size: 24px;
+                                position: absolute;
+                                top: 0px;
+                                left: 6px;
+                            }
+                            .dose-summary {
+                                flex: 1 0 auto;
+                                margin-left: 8px;
+                                .dose-time {
+                                    font-size: 12px;
                                 }
                             }
                         }
