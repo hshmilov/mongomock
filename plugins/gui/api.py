@@ -53,7 +53,7 @@ class API:
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     self.gui.entity_query_views_db_map[EntityType.Devices],
+                                     self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
                                      self._entity_views_db_map[EntityType.Devices], EntityType.Devices, True,
                                      default_sort=self._system_settings['defaultSort']))
 
@@ -76,7 +76,7 @@ class API:
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     self.gui.entity_query_views_db_map[EntityType.Users],
+                                     self.gui_dbs.entity_query_views_db_map[EntityType.Users],
                                      self._entity_views_db_map[EntityType.Users], EntityType.Users, True,
                                      default_sort=self._system_settings['defaultSort']))
 

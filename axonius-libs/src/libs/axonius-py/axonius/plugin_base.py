@@ -191,10 +191,8 @@ def return_error(error_message, http_status=500, additional_data=None):
 
 
 """
-entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
-entity_views_results_db_map - map between EntityType and results collection from GUI (e.g. user_view_results) 
-"""
-GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map', 'entity_views_results_db_map'])
+entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)"""
+GUI_DBs = namedtuple("GUI_DBs", ['entity_query_views_db_map'])
 
 
 class PluginBase(Configurable, Feature):
@@ -360,6 +358,8 @@ class PluginBase(Configurable, Feature):
         self.users_db = self.aggregator_db_connection['users_db']
         self.devices_db_view = self.aggregator_db_connection['devices_db_view']
         self.users_db_view = self.aggregator_db_connection['users_db_view']
+        self.historical_devices_db_view = self.aggregator_db_connection['historical_devices_db_view']
+        self.historical_users_db_view = self.aggregator_db_connection['historical_users_db_view']
 
         self._entity_db_map = {
             EntityType.Users: self.users_db,
@@ -368,6 +368,11 @@ class PluginBase(Configurable, Feature):
         self._entity_views_db_map = {
             EntityType.Users: self.users_db_view,
             EntityType.Devices: self.devices_db_view,
+        }
+
+        self._historical_entity_views_db_map = {
+            EntityType.Users: self.historical_users_db_view,
+            EntityType.Devices: self.historical_devices_db_view,
         }
 
         self._my_adapters_map = {
@@ -385,15 +390,7 @@ class PluginBase(Configurable, Feature):
             EntityType.Devices: device_view,
         }
 
-        user_view_results = gui_db_connection["user_view_results"]
-        device_view_results = gui_db_connection["device_view_results"]
-
-        entity_views_results_db_map = {
-            EntityType.Users: user_view_results,
-            EntityType.Devices: device_view_results
-        }
-
-        self.gui = GUI_DBs(entity_query_views_db_map, entity_views_results_db_map)
+        self.gui_dbs = GUI_DBs(entity_query_views_db_map)
 
         # Namespaces
         self.devices = axonius.entities.DevicesNamespace(self)

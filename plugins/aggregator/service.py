@@ -1,5 +1,7 @@
 import logging
 
+from funcy import chunks
+
 logger = logging.getLogger(f"axonius.{__name__}")
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
@@ -85,8 +87,22 @@ class AggregatorService(PluginBase, Triggerable):
         :return: None
         """
 
-        # The following creates a view that has all adapters and tags
-        # of type "adapterdata" inside one (unsorted!) array.
+        for entity_type in EntityType:
+            db = self._historical_entity_views_db_map[entity_type]
+            # used for querying by it directly
+            db.create_index([('internal_axon_id', pymongo.ASCENDING)])
+            # used as a trick to split all devices by it relatively equally
+            # this will always be a single char, 1-9a-f (hex)
+            # then you can split the whole db using it to hack mongo
+            # into using multiple cores when aggregating
+            # https://axonius.atlassian.net/wiki/spaces/AX/pages/740229240/Implementing+and+integrating+historical+views
+            db.create_index([('short_axon_id', pymongo.ASCENDING)])
+            # those used for querying by it
+            db.create_index([('specific_data.data.id', pymongo.ASCENDING)])
+            db.create_index([(f'specific_data.{PLUGIN_NAME}', pymongo.ASCENDING)])
+            db.create_index([(f'specific_data.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)])
+            # this is used for when you want to see a single snapshot in time
+            db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)])
 
         self.devices_db.create_index([
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
@@ -100,6 +116,9 @@ class AggregatorService(PluginBase, Triggerable):
         ], unique=True)
         self.users_db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
 
+        # The following creates a view that has all adapters and tags
+        # of type "adapterdata" inside one (unsorted!) array.
+        # also hides 'pending_delete" entities
         for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
             try:
                 self.aggregator_db_connection.command({
@@ -212,6 +231,64 @@ class AggregatorService(PluginBase, Triggerable):
                 continue
             yield (client_name, from_json(data.content))
 
+    def _save_entity_views_to_historical_db(self, entity_type: EntityType):
+        from_db = self._entity_views_db_map[entity_type]
+        to_db = self._historical_entity_views_db_map[entity_type]
+
+        # using a tmp collection because $out can write with a lot of constraints
+        # https://docs.mongodb.com/manual/reference/operator/aggregation/out/
+        # > You cannot specify a sharded collection as the output collection.
+        # > The $out operator cannot write results to a capped collection. (Not using - but we might)
+        # > [...] $out stage atomically replaces the existing collection with the new results collection
+        # The last one means that if we use $out we replace everything in the output collection,
+        # while we actually just want to add.
+        # So - why are we even using $out altogether?
+        # $out makes sure we get a consistent view of the DB so if something happens here it won't be affected
+        # it is also an easy way for some modifications without involving python code
+        # benchmark: 1-2k/sec devices (docker, mongo 3.6) - 100k devices ~ a minute
+
+        tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
+        now = datetime.now()
+
+        val = to_db.find_one(filter={},
+                             sort=[('accurate_for_datetime', -1)],
+                             projection={
+                                 'accurate_for_datetime': 1
+        })
+        if val:
+            val = val['accurate_for_datetime']
+            if val.date() == now.date():
+                logger.info(f"For {entity_type} not saving history: save only once a day - last saved at {val}")
+                return
+
+        from_db.aggregate([
+            {
+                "$project": {
+                    "_id": 0
+                }
+            },
+            {
+                "$addFields": {
+                    "accurate_for_datetime": {
+                        "$literal": now
+                    },
+                    "short_axon_id": {
+                        "$substrCP": [
+                            "$internal_axon_id", 0, 1
+                        ]
+                    }
+                }
+            },
+            {
+                "$out": tmp_collection.name
+            }
+        ])
+
+        for chunk in chunks(10000, tmp_collection.find({})):
+            to_db.insert_many(chunk)
+
+        tmp_collection.drop()
+
     def _triggered(self, job_name, post_json, *args):
         def _filter_adapters_by_parameter(adapter_filter, adapters):
             filtered_adapters = list(adapters.values())
@@ -234,6 +311,10 @@ class AggregatorService(PluginBase, Triggerable):
             return self._clean_db_devices_from_adapters(job_name, adapters.values())
         elif job_name == 'fetch_filtered_adapters':
             adapters = _filter_adapters_by_parameter(post_json, adapters)
+        elif job_name == 'save_history':
+            for entity_type in EntityType:
+                self._save_entity_views_to_historical_db(entity_type)
+            return
         else:
             adapters = [adapter for adapter in adapters.values()
                         if adapter[PLUGIN_UNIQUE_NAME] == job_name]

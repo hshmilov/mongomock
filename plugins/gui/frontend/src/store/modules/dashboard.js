@@ -120,12 +120,12 @@ export const dashboard = {
 		},
 		[ FETCH_HISTORICAL_SAVED_CARD ] ({ dispatch }, payload) {
 			return dispatch(REQUEST_API, {
-				rule: `saved_card_results/${encodeURI(payload.cardName)}?date_to=${encodeURI(payload.date)} 23:59:59&date_from=${encodeURI(payload.date)}`,
+				rule: `saved_card_results/${encodeURI(payload.cardUuid)}?date_to=${encodeURI(payload.date)} 23:59:59&date_from=${encodeURI(payload.date)}`,
 			})
 		},
-		[ FETCH_HISTORICAL_SAVED_CARD_MIN ] ({ dispatch }, payload) {
+		[ FETCH_HISTORICAL_SAVED_CARD_MIN ] ({ dispatch }) {
 			return dispatch(REQUEST_API, {
-				rule: `saved_card_results/${encodeURIComponent(payload.cardName)}/min`
+				rule: `first_historical_date`
 			})
 		}
 	}

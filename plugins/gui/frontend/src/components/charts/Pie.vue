@@ -68,6 +68,7 @@
 				})
 			},
 			hoverDetails () {
+			    if (!this.data || this.data.length == 0) return {}
 				if (this.inHover === -1) return {}
 				let percentage = Math.round(this.completeData[this.inHover].portion * 100)
 				if (percentage < 0) {

@@ -10,7 +10,7 @@ from retrying import retry
 from concurrent.futures import ALL_COMPLETED, wait
 import threading
 import dateutil.parser
-from datetime import datetime, timezone
+from datetime import datetime
 import time
 import requests
 from contextlib import contextmanager
@@ -226,7 +226,13 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins('Post-Correlation')
 
-            logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfuly.")
+            logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfully.")
+
+            # Save history.
+            _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
+            self._run_historical_phase()
+
+            logger.info(f"Finished {scheduler_consts.Phases.Save_Historical.name} Phase Successfully.")
 
     def _get_plugins(self, plugin_subtype):
         """
@@ -264,6 +270,13 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :return:
         """
         self._run_blocking_request('trigger/clean_db', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post')
+
+    def _run_historical_phase(self):
+        """
+        Trigger saving history
+        :return:
+        """
+        self._run_blocking_request('trigger/save_history', plugin_consts.AGGREGATOR_PLUGIN_NAME, 'post')
 
     def _run_aggregator_phase(self, plugin_subtype):
         """

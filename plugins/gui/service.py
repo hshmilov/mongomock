@@ -40,7 +40,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse as parse_date
 from flask import jsonify, request, session, after_this_request, make_response, send_file, redirect
@@ -140,6 +140,15 @@ def filter_archived(additional_filter=None):
     return base_non_archived
 
 
+def find_query_from_collection_by_name(view_collection, name):
+    if not name:
+        return None
+    res = view_collection.find_one({'name': name})
+    if res:
+        res = parse_filter(res['view']['query']['filter'])
+    return res
+
+
 class GuiService(PluginBase, Triggerable, Configurable, API):
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
 
@@ -210,7 +219,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
-                    self._insert_view(self.gui.entity_query_views_db_map[entity_type], name, json.loads(view['view']))
+                    self._insert_view(
+                        self.gui_dbs.entity_query_views_db_map[entity_type], name, json.loads(view['view']))
                 except Exception:
                     logger.exception(f'Error adding default view {name}')
         except Exception:
@@ -306,7 +316,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         logger.info("Generating csv")
         string_output = io.StringIO()
         entities = gui_helpers.get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
-                                            self.gui.entity_query_views_db_map[entity_type],
+                                            self.gui_dbs.entity_query_views_db_map[entity_type],
                                             self._entity_views_db_map[entity_type], entity_type,
                                             default_sort=self._system_settings['defaultSort'])
         output = ''
@@ -548,7 +558,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Save or fetch views over the entities db
         :return:
         """
-        entity_views_collection = self.gui.entity_query_views_db_map[entity_type]
+        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
         if method == 'GET':
             mongo_filter = filter_archived(mongo_filter)
             fielded_plugins = []
@@ -651,7 +661,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return self.__delete_entities_by_internal_axon_id(EntityType.Devices, to_delete)
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     self.gui.entity_query_views_db_map[EntityType.Devices],
+                                     self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
                                      self._entity_views_db_map[EntityType.Devices], EntityType.Devices, True,
                                      default_sort=self._system_settings['defaultSort']))
 
@@ -710,7 +720,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return self.__delete_entities_by_internal_axon_id(EntityType.Users, to_delete)
         return jsonify(
             gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                     self.gui.entity_query_views_db_map[EntityType.Users],
+                                     self.gui_dbs.entity_query_views_db_map[EntityType.Users],
                                      self._entity_views_db_map[EntityType.Users], EntityType.Users, True,
                                      default_sort=self._system_settings['defaultSort']))
 
@@ -969,7 +979,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def put_alert(self, report_to_add):
         view_name = report_to_add['view']
         entity = EntityType(report_to_add['viewEntity'])
-        views_collection = self.gui.entity_query_views_db_map[entity]
+        views_collection = self.gui_dbs.entity_query_views_db_map[entity]
         if views_collection.find_one({'name': view_name}) is None:
             return return_error(f"Missing view {view_name} requested for creating alert")
         response = self.request_remote_plugin("reports", "reports", method='put', json=report_to_add)
@@ -1025,7 +1035,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         view_name = alert_to_update['view']
         view_entity = alert_to_update['viewEntity']
         assert view_entity in [x.value for x in EntityType.__members__.values()]
-        views = self.gui.entity_query_views_db_map[EntityType(view_entity)]
+        views = self.gui_dbs.entity_query_views_db_map[EntityType(view_entity)]
         if views.find_one({'name': view_name}) is None:
             return return_error(f"Missing view {view_name} requested for updating alert")
 
@@ -1533,42 +1543,217 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DASHBOARD #
     #############
 
-    def __get_saved_view_result_from_views(self, views, from_given_date, to_given_date):
+    def __get_historical_results_for_intersection(self, views, from_given_date, to_given_date):
+        module_name = views[0].get('module')
+        if not module_name:
+            return
+        entity_type = EntityType(module_name)
+        queries_db = self.gui_dbs.entity_query_views_db_map[entity_type]
+        historical_db = self._historical_entity_views_db_map[entity_type]
+        latest_date = historical_db.find_one({
+            'accurate_for_datetime': {
+                '$lt': to_given_date,
+                '$gt': from_given_date,
+            }
+        }, sort=[('accurate_for_datetime', -1)], projection=['accurate_for_datetime'])
+        if not latest_date:
+            return
+        latest_date = latest_date['accurate_for_datetime']
+
+        base_query_name = views[0].get('name') or ""
+        if base_query_name:
+            base_query_query = find_query_from_collection_by_name(queries_db, base_query_name)
+        else:
+            base_query_query = None
+
+        yield {
+            "name": base_query_name,
+            "count": historical_db.count({
+                "$and": [{
+                    'accurate_for_datetime': latest_date
+                },
+                    *([base_query_query] if base_query_query else [])
+                ]
+            }),
+            "accurate_for_datetime": latest_date
+        }
+
+        if len(views) == 2:
+            single_view = views[1]
+            yield {
+                "name": single_view['name'],
+                "count": historical_db.count({
+                    "$and": [{
+                        'accurate_for_datetime': latest_date
+                    },
+                        *([base_query_query] if base_query_query else []),
+                        find_query_from_collection_by_name(queries_db, single_view['name'])
+                    ]
+                }),
+                "accurate_for_datetime": latest_date
+            }
+        elif len(views) == 3:
+            first_view = views[1]
+            second_view = views[2]
+
+            first_view_query = find_query_from_collection_by_name(queries_db, first_view['name'])
+            second_view_query = find_query_from_collection_by_name(queries_db, second_view['name'])
+            yield {
+                "name": first_view['name'],
+                "count": historical_db.count({
+                    "$and": [{
+                        'accurate_for_datetime': latest_date
+                    },
+                        *([base_query_query] if base_query_query else []),
+                        first_view_query,
+                        {
+                            "$nor": [second_view_query]
+                    }
+                    ]
+                }),
+                "accurate_for_datetime": latest_date
+            }
+            yield {
+                "name": second_view['name'],
+                "count": historical_db.count({
+                    "$and": [{
+                        'accurate_for_datetime': latest_date
+                    },
+                        *([base_query_query] if base_query_query else []),
+                        second_view_query,
+                        {
+                            "$nor": [first_view_query]
+                    }
+                    ]
+                }),
+                "accurate_for_datetime": latest_date
+            }
+            yield {
+                "name": first_view['name'] + ' + ' + second_view['name'],
+                "count": historical_db.count({
+                    "$and": [{
+                        'accurate_for_datetime': latest_date
+                    },
+                        *([base_query_query] if base_query_query else []),
+                        second_view_query,
+                        first_view_query
+                    ]
+                }),
+                "accurate_for_datetime": latest_date
+            }
+
+    def __get_historical_results_for_views(self, views, from_given_date, to_given_date):
         """
         Finds the latest saved result from the given view list (from card) that are in the given date range
         """
-        module_name = None
         for view in views:
             view_name = view.get('name')
-            # pie charts don't save the `module` for all views, so we can just 'use' the last one
-            module_name = view.get('module') or module_name
+            module_name = view.get('module')
             if not module_name or not view_name:
                 continue
             try:
-                saved_result = self.gui.entity_views_results_db_map[EntityType(module_name)].find_one(
-                    {
-                        'view': view_name,
-                        'accurate_for_datetime': {
-                            '$lt': to_given_date,
-                            '$gt': from_given_date,
-                        }
-                    },
-                    sort=[
-                        ['accurate_for_datetime', -1]
-                    ]
-                )
-                if not saved_result:
+                entity_type = EntityType(module_name)
+                parsed_view_filter = find_query_from_collection_by_name(
+                    self.gui_dbs.entity_query_views_db_map[entity_type],
+                    view_name)
+                if not parsed_view_filter:
                     continue
+                latest_date = self._historical_entity_views_db_map[entity_type].find_one({
+                    'accurate_for_datetime': {
+                        '$lt': to_given_date,
+                        '$gt': from_given_date,
+                    }
+                }, sort=[('accurate_for_datetime', -1)], projection=['accurate_for_datetime'])
+                if not latest_date:
+                    continue
+                latest_date = latest_date['accurate_for_datetime']
+
+                saved_result = self._historical_entity_views_db_map[entity_type].count(
+                    {
+                        "$and":
+                            [parsed_view_filter,
+                             {
+                                 'accurate_for_datetime': latest_date
+                             }]
+                    }
+                )
                 yield {
                     'name': view_name,
-                    'count': saved_result['count'],
-                    'accurate_for_datetime': saved_result['accurate_for_datetime']
+                    'count': saved_result,
+                    'accurate_for_datetime': latest_date
                 }
             except Exception:
                 logger.exception(f"When dealing with {view_name} and {module_name}")
+                return []
 
-    @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_name>", methods=['GET'])
-    def saved_card_results(self, card_name: str):
+    def __get_historical_results_for_field(self, card, from_given_date, to_given_date):
+        """
+        Get historical data for card of metric 'field'
+        """
+        entity_type = EntityType(card['config']['module'])
+        chart_type = card['type']
+        view = find_query_from_collection_by_name(self.gui_dbs.entity_query_views_db_map[entity_type],
+                                                  card['config'].get('view'))
+        field = card['config']['field']
+
+        historical = self._historical_entity_views_db_map[entity_type]
+
+        latest_date = historical.find_one({
+            'accurate_for_datetime': {
+                '$lt': to_given_date,
+                '$gt': from_given_date,
+            }
+        }, sort=[('accurate_for_datetime', -1)], projection=['accurate_for_datetime'])
+        if not latest_date:
+            return
+        latest_date = latest_date['accurate_for_datetime']
+
+        base = []
+        match_query = {
+            "$and": [
+                *([view] if view else []),
+                {
+                    'accurate_for_datetime': latest_date
+                }
+            ]}
+        if chart_type == ChartTypes.intersect.name:
+            base.append({
+                'name': view or 'ALL',
+                'count': historical.count_documents(match_query),
+                'accurate_for_datetime': latest_date
+            })
+        return base + [
+            {**res, **{'accurate_for_datetime': latest_date}}
+            for res
+            in historical.aggregate([
+                {'$match': match_query},
+                {
+                    '$group':
+                        {
+                            '_id': {
+                                '$arrayElemAt': [
+                                    {
+                                        '$filter': {
+                                            'input': '$' + field,
+                                            'cond': {
+                                                '$ne': ['$$this', '']
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            'count': {
+                                '$sum': 1
+                            },
+                        }
+                },
+                {'$project': {'count': 1, 'name': {'$ifNull': ['$_id', 'No Value']}}},
+                {'$sort': {'count': -1}}
+            ])]
+
+    @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_uuid>", methods=['GET'])
+    def saved_card_results(self, card_uuid: str):
         """
         Saved results for cards, i.e. the mechanism used to show the user the results
         of some "card" (collection of views) in the past
@@ -1584,33 +1769,37 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             to_given_date = parse_date(to_given_date)
         except Exception:
             return return_error("Given date is invalid")
-        card = self._get_collection('dashboard').find_one({'name': card_name})
+        card = self._get_collection('dashboard').find_one({'_id': ObjectId(card_uuid)})
         if not card:
             return return_error("Card doesn't exist")
-        return jsonify({x['name']: x for x in self.__get_saved_view_result_from_views(card['config']['views'],
-                                                                                      from_given_date, to_given_date)})
 
-    @gui_helpers.add_rule_unauthenticated("saved_card_results/<card_name>/min", methods=['GET'])
-    def saved_card_results_min(self, card_name: str):
+        res = None
+        if card['metric'] == 'query':
+            if card['type'] == 'compare':
+                res = self.__get_historical_results_for_views(card['config']['views'],
+                                                              from_given_date, to_given_date)
+            elif card['type'] == 'intersect':
+                res = self.__get_historical_results_for_intersection(card['config']['views'],
+                                                                     from_given_date, to_given_date)
+        elif card['metric'] == 'field':
+            res = self.__get_historical_results_for_field(card, from_given_date, to_given_date)
 
-        card = self._get_collection('dashboard').find_one({'name': card_name})
-        if not card:
-            return return_error("Card doesn't exist")
-        module_name = None
-        minimum_date = datetime.now()
-        for view in card['config']['views']:
-            module_name = view.get('module')
-            view_name = view.get('name')
-            if not module_name or not view_name:
-                continue
-            min_result = list(self.gui.entity_views_results_db_map[EntityType(module_name)].aggregate(
-                [{'$match': {'view': view_name}},
-                 {'$group': {'_id': '$view', 'min_date': {'$min': '$accurate_for_datetime'}}}]))
-            if not min_result:
-                continue
-            if min_result[0].get('min_date') and min_result[0]['min_date'] < minimum_date:
-                minimum_date = min_result[0]['min_date']
+        if res is None:
+            logger.error(f"Unexpected card found - {card} {card['type']}")
+            return return_error("Unexpected error")
 
+        return jsonify({x['name']: x for x in res})
+
+    @gui_helpers.add_rule_unauthenticated("first_historical_date", methods=['GET'])
+    def saved_card_results_min(self):
+        dates = [self._historical_entity_views_db_map[entity_type].find_one({},
+                                                                            sort=[('accurate_for_datetime', 1)],
+                                                                            projection=['accurate_for_datetime'])
+                 for entity_type in EntityType]
+        minimum_date = min(
+            (d['accurate_for_datetime']
+             for d in dates
+             if d), default=None)
         return jsonify(minimum_date)
 
     @gui_helpers.add_rule_unauthenticated("dashboard", methods=['POST', 'GET'])
@@ -1679,7 +1868,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             # But since list is very short the simpler and more readable implementation is fine
             module = view.get('module', EntityType.Devices.value)
             entity = EntityType(module)
-            view_object = self.gui.entity_query_views_db_map[entity].find_one({'name': view['name']})
+            view_object = self.gui_dbs.entity_query_views_db_map[entity].find_one({'name': view['name']})
             if not view_object:
                 raise Exception(f'No filter found for query {view["name"]}')
             data.append({'name': view_object['name'], 'filter': view_object['view']['query']['filter'],
@@ -1709,24 +1898,24 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             raise Exception('Pie chart requires at least two views')
         entity = EntityType(dashboard_views[0]['module']) if dashboard_views[0].get('module') else EntityType.Devices
         # Query and data collections according to given parent's module
-        views_collection = self.gui.entity_query_views_db_map[entity]
+        views_collection = self.gui_dbs.entity_query_views_db_map[entity]
         data_collection = self._entity_views_db_map[entity]
 
         parent_name = dashboard_views[0]['name']
         parent_filter = {}
         if parent_name:
-            parent_filter = parse_filter(views_collection.find_one({'name': parent_name})['view']['query']['filter'])
+            parent_filter = find_query_from_collection_by_name(views_collection, parent_name)
         data = [{'name': parent_name or 'ALL', 'count': data_collection.find(parent_filter, {'_id': 1}).count()}]
 
         child_name_1 = dashboard_views[1]['name']
-        child_filter_1 = parse_filter(views_collection.find_one({'name': child_name_1})['view']['query']['filter'])
+        child_filter_1 = find_query_from_collection_by_name(views_collection, child_name_1)
         if len(dashboard_views) == 2:
             # Fetch the only child, intersecting with parent
             data.append({'name': child_name_1,
                          'count': data_collection.find({'$and': [parent_filter, child_filter_1]}, {'_id': 1}).count()})
         else:
             child_name_2 = dashboard_views[2]['name']
-            child_filter_2 = parse_filter(views_collection.find_one({'name': child_name_2})['view']['query']['filter'])
+            child_filter_2 = find_query_from_collection_by_name(views_collection, child_name_2)
 
             # Fetch the intersection of parent and 2 children and create match to exclude their _IDs
             intersection_cursor = data_collection.find({'$and': [parent_filter, child_filter_1, child_filter_2]},
@@ -1745,21 +1934,39 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                        {'_id': 1}).count()})
         return data
 
-    def _fetch_data_for_field_chart(self, type, module, view, field):
+    def _fetch_data_for_field_chart(self, chart_type, module, view, field):
         # Query and data collections according to given module
-        views_collection = self.gui.entity_query_views_db_map[EntityType(module)]
+        views_collection = self.gui_dbs.entity_query_views_db_map[EntityType(module)]
         data_collection = self._entity_views_db_map[EntityType(module)]
         match = {}
         if view:
             match = parse_filter(views_collection.find_one({'name': view})['view']['query']['filter'])
         base = []
-        if type == ChartTypes.intersect.name:
+        if chart_type == ChartTypes.intersect.name:
             base.append({'name': view or 'ALL', 'count': data_collection.count(match)})
         return base + list(data_collection.aggregate([
             {'$match': match},
-            {'$group': {
-                '_id': {'$arrayElemAt': [{'$filter': {'input': '$' + field, 'cond': {'$ne': ['$$this', '']}}}, 0]},
-                'count': {'$sum': 1}}},
+            {
+                '$group':
+                    {
+                        '_id': {
+                            '$arrayElemAt': [
+                                {
+                                    '$filter': {
+                                        'input': '$' + field,
+                                        'cond': {
+                                            '$ne': ['$$this', '']
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
+                        'count': {
+                            '$sum': 1
+                        }
+                    }
+            },
             {'$project': {'count': 1, 'name': {'$ifNull': ['$_id', 'No Value']}}},
             {'$sort': {'count': -1}}
         ]))
@@ -1964,13 +2171,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if not query.get('name') or not query.get('entity'):
                     continue
                 entity = EntityType(query['entity'])
-                view = self.gui.entity_query_views_db_map[entity].find_one({'name': query['name']})
-                if view:
-                    view_filter = view['view']['query']['filter']
+                view_filter = find_query_from_collection_by_name(self.gui_dbs.entity_query_views_db_map[entity],
+                                                                 query['name'])
+                if view_filter:
                     logger.info(f'Executing filter {view_filter} on entity {entity.name}')
                     views.append({
                         **query,
-                        'count': self._entity_views_db_map[entity].find(parse_filter(view_filter), {'_id': 1}).count()
+                        'count': self._entity_views_db_map[entity].find(view_filter, {'_id': 1}).count()
                     })
             adapter_clients_report = {}
             try:
@@ -2007,7 +2214,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         views_data = []
         for entity in EntityType:
             field_to_title = _get_field_titles(entity)
-            saved_views = self.gui.entity_query_views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
+            saved_views = self.gui_dbs.entity_query_views_db_map[entity].find(filter_archived({'query_type': 'saved'}))
             for i, view_doc in enumerate(saved_views):
                 try:
                     view = view_doc.get('view')
@@ -2020,7 +2227,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                              parse_filter(view.get('query', {}).get('filter', '')),
                                                              gui_helpers.get_sort(
                                                                  view), {field: 1 for field in field_list},
-                                                             self.gui.entity_query_views_db_map[entity],
+                                                             self.gui_dbs.entity_query_views_db_map[entity],
                                                              self._entity_views_db_map[entity], entity,
                                                              default_sort=self._system_settings['defaultSort'])
                         })
@@ -2030,7 +2237,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @stoppable
     def _on_trigger(self):
-        self._run_queries_phase()
         with self._get_db_connection() as db_connection:
             schemas = dict(db_connection['system_scheduler']['configurable_configs'].find_one())
             if schemas['config']['generate_report'] is True:
@@ -2156,24 +2362,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         server_name = system_config.get('server_name', 'localhost')
         logger.info(f'All data for report gathered - about to generate for server {server_name}')
         return ReportGenerator(report_data, 'gui/templates/report/', host=server_name).render_html(datetime.now())
-
-    def _run_queries_phase(self):
-        """
-        Run all saved queries (i.e. views) and save the result count in the DB
-        """
-        for entity_type in EntityType:
-            views = self.gui.entity_query_views_db_map[entity_type].find({'query_type': 'saved'})
-            for view in views:
-                try:
-                    parsed_view_filter = parse_filter(view['view']['query']['filter'])
-                    count = self._entity_views_db_map[entity_type].count(parsed_view_filter)
-                    self.gui.entity_views_results_db_map[entity_type].insert_one({
-                        "view": view['name'],
-                        "count": count,
-                        "accurate_for_datetime": datetime.now(tz=timezone.utc)
-                    })
-                except Exception:
-                    logger.exception(f"Exception on running view {view}")
 
     @gui_helpers.add_rule_unauthenticated('test_exec_report', methods=['POST'])
     def test_exec_report(self):

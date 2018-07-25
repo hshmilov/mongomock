@@ -16,11 +16,11 @@
                 </x-card>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
-                    <div v-if="chart.metric === 'query' && chart.type === 'compare'" class="timeline">Showing for
-                        <x-date-edit @input="confirmPickDate(chartsCurrentlyShowing[chart.name], chart.name)"
-                                     placeholder="latest" v-model="chartsCurrentlyShowing[chart.name]" :show-time="false"
-                                     :limit="[{ type: 'fromto', from: cardHistoricalMin[chart.name], to: new Date()}]"/>
-                        <a v-if="chart.showingHistorical" class="link" @click="clearDate(chart.name)">clear</a>
+                    <div class="timeline">Showing for
+                        <x-date-edit @input="confirmPickDate(chart.uuid, chart.name)"
+                                     placeholder="latest" v-model="chartsCurrentlyShowing[chart.uuid]" :show-time="false"
+                                     :limit="[{ type: 'fromto', from: cardHistoricalMin, to: new Date()}]"/>
+                        <a v-if="chart.showingHistorical" class="link" @click="clearDate(chart.uuid)">clear</a>
                     </div>
                     <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
                 </x-card>
@@ -78,20 +78,14 @@
                 },
                 charts(state) {
                     return state.dashboard.charts.data.map(chart => {
-						if (chart.metric === 'query' && chart.type === 'compare') {
-							this.fetchHistoricalCardMin({ cardName: chart.name }).then(response => {
-								this.cardHistoricalMin[chart.name] = new Date(response.data)
-								this.cardHistoricalMin[chart.name].setDate(this.cardHistoricalMin[chart.name].getDate() - 1)
-							})
-						}
                     	return {
-                            ...chart, showingHistorical: this.dateChosen[chart.name],
+                            ...chart, showingHistorical: this.dateChosen[chart.uuid],
                             data: chart.data.map(item => {
-								if (this.cardHistoricalData[chart.name]) {
-									if (!this.cardHistoricalData[chart.name][item.name]) return item
+								if (this.cardHistoricalData[chart.uuid]) {
+									if (!this.cardHistoricalData[chart.uuid][item.name]) return item
 									return { ...item,
-                                        count: this.cardHistoricalData[chart.name][item.name].count,
-                                        showingHistorical: this.cardHistoricalData[chart.name][item.name].accurate_for_datetime
+                                        count: this.cardHistoricalData[chart.uuid][item.name].count,
+                                        showingHistorical: this.cardHistoricalData[chart.uuid][item.name].accurate_for_datetime
                                     }
 								}
 								return item
@@ -156,7 +150,7 @@
                 dateChosen: {},
                 pendingDateChosen: null,
                 cardHistoricalData: {},
-                cardHistoricalMin: {},
+                cardHistoricalMin: null,
                 chartsCurrentlyShowing: {},
                 message: ''
             }
@@ -214,22 +208,23 @@
             getId(name) {
                 return name.split(' ').join('_').toLowerCase()
             },
-            clearDate(cardName) {
-                this.dateChosen = {...this.dateChosen, [[cardName]]: null}
-                this.cardHistoricalData = {...this.cardHistoricalData, [cardName]: null}
-                this.chartsCurrentlyShowing[cardName] = undefined
+            clearDate(cardUuid) {
+                this.dateChosen = {...this.dateChosen, [cardUuid]: null}
+                this.cardHistoricalData = {...this.cardHistoricalData, [cardUuid]: null}
+                this.chartsCurrentlyShowing[cardUuid] = undefined
             },
-            confirmPickDate(pendingDateChosen, cardName) {
+            confirmPickDate(cardUuid, cardName) {
+                var pendingDateChosen = this.chartsCurrentlyShowing[cardUuid]
                 this.fetchHistoricalCard({
-                    cardName: cardName,
+                    cardUuid: cardUuid,
                     date: pendingDateChosen
                 }).then(response => {
                     if (_.isEmpty(response.data)) {
                         this.message = `Can't gather any data from ${pendingDateChosen} for '${cardName}'`
-                        this.clearDate(cardName)
+                        this.clearDate(cardUuid)
                     } else {
-                        this.dateChosen = {...this.dateChosen, [[cardName]]: pendingDateChosen}
-                        this.cardHistoricalData = {...this.cardHistoricalData, [cardName]: response.data}
+                        this.dateChosen = {...this.dateChosen, [cardUuid]: pendingDateChosen}
+                        this.cardHistoricalData = {...this.cardHistoricalData, [cardUuid]: response.data}
                     }
                 })
             },
@@ -267,6 +262,10 @@
 					})
 				}
 			})
+            this.fetchHistoricalCardMin().then((response) => {
+                this.cardHistoricalMin = new Date(response.data)
+                this.cardHistoricalMin.setDate(this.cardHistoricalMin.getDate() - 1);
+            })
 		},
         updated() {
             if (this.wizardActivated && this.newChart) {

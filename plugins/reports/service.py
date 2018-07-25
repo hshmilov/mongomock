@@ -176,7 +176,7 @@ class ReportsService(PluginBase, Triggerable):
         :param view_entity: The query entity type name.
         :return: The results of the query.
         """
-        query = self.gui.entity_query_views_db_map[view_entity].find_one({'name': view_name})
+        query = self.gui_dbs.entity_query_views_db_map[view_entity].find_one({'name': view_name})
         if query is None:
             raise ValueError(f'Missing query "{view_name}"')
         parsed_query_filter = parse_filter(query['view']['query']['filter'])
@@ -376,14 +376,14 @@ class ReportsService(PluginBase, Triggerable):
         self.send_syslog_message(log_message, report_data['severity'])
 
         if action_data:
-            query = self.gui.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
+            query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
                 'name': report_data['view']})
             parsed_query_filter = parse_filter(query['view']['query']['filter'])
             field_list = query['view'].get('fields', [])
             all_gui_entities = list(gui_helpers.get_entities(query['view'].get('pageSize', 20), 0, parsed_query_filter,
                                                              gui_helpers.get_sort(query['view']),
                                                              {field: 1 for field in field_list},
-                                                             self.gui.entity_query_views_db_map[EntityType(
+                                                             self.gui_dbs.entity_query_views_db_map[EntityType(
                                                                  report_data['view_entity'])],
                                                              self._entity_views_db_map[EntityType(report_data['view_entity'])
                                                                                        ], EntityType(report_data['view_entity']),
