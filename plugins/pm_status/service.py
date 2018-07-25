@@ -13,6 +13,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.mixins.triggerable import Triggerable
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.files import get_local_config_file
+from axonius.utils.db import find_and_sort_by_first_element_of_list
 from axonius.fields import Field
 from datetime import datetime
 
@@ -113,11 +114,11 @@ class PmStatusService(PluginBase, Triggerable):
         Runs rpc queries on windows devices to understand the patch management status.
         """
         if not self._execution_enabled:
-            logger.error("Execution is not enabled, going on")
+            logger.info(f"Execution is disabled, not continuing")
             return []
 
         if not self._pm_rpc_enabled and not self._pm_smb_enabled:
-            logger.error("PM Status Failure: rpc and smb settings are false (Global Settings)")
+            logger.info("PM Status Failure: rpc and smb settings are false (Global Settings)")
             return []
 
         logger.info("Get PM Status started (before lock).")
@@ -155,19 +156,33 @@ class PmStatusService(PluginBase, Triggerable):
         # The following query should run on all windows devices but since Axonius does not support
         # any type of execution other than AD this is an AD-HOC solution we put here to be faster.
         # It should be {"adapters.data.os.type": "Windows"}
-        # Also, we query for devices that have SOME network interfaces somehow (not necessarily from active directory)
-        # If it doesn't have then clearly we would not have any way of interacting with it.
-        windows_devices = self.devices_db.find(
-            {"adapters.plugin_name": "active_directory_adapter", "adapters.data.network_interfaces": {"$exists": True}},
-            projection={'internal_axon_id': True,
-                        'adapters.data.id': True,
-                        'adapters.plugin_unique_name': True,
-                        'adapters.client_used': True,
-                        'adapters.data.hostname': True,
-                        'adapters.data.name': True,
-                        'tags': True})
+        # We also make sure that we query only for active directory devices which are Windows and that have any sort
+        # of ip address.
+        windows_devices, windows_devices_count = find_and_sort_by_first_element_of_list(
+            self.devices_db,
+            {
+                "adapters":
+                    {
+                        "$elemMatch":
+                            {
+                                "plugin_name": "active_directory_adapter",
+                                "data.os.type": "Windows",
+                                "data.network_interfaces.ips": {"$exists": True}
+                            }
+                    }
+            },
+            {
+                'internal_axon_id': True,
+                'adapters.data.id': True,
+                'adapters.plugin_unique_name': True,
+                'adapters.client_used': True,
+                'adapters.data.hostname': True,
+                'adapters.data.name': True,
+                'tags': True
+            },
+            "tags.data.pm_last_execution_success"
+        )
 
-        windows_devices_count = windows_devices.count()
         logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
         # Lets make some better logging

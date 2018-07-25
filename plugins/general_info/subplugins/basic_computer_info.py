@@ -328,6 +328,6 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             assert is_wmi_answer_ok(hosts_file), "Host file request exception"
             adapterdata_device.hosts_file = str(hosts_file["data"])
         except Exception:
-            self.logger.excetion(f"Bad hosts file answer: {hosts_file}")
+            self.logger.exception(f"Bad hosts file answer: {hosts_file}")
 
         return True

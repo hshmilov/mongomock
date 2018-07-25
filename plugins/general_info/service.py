@@ -13,6 +13,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.mixins.triggerable import Triggerable
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.files import get_local_config_file
+from axonius.utils.db import find_and_sort_by_first_element_of_list
 from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares
 from general_info.subplugins.user_logons import GetUserLogons
@@ -129,6 +130,7 @@ class GeneralInfoService(PluginBase, Triggerable):
         Afterwards, adds more information to users.
         """
         if not self._execution_enabled:
+            logger.info(f"Execution is disabled, not continuing")
             return []
         logger.info("Gathering General info started.")
         acquired = False
@@ -173,19 +175,32 @@ class GeneralInfoService(PluginBase, Triggerable):
         # The following query should run on all windows devices but since Axonius does not support
         # any type of execution other than AD this is an AD-HOC solution we put here to be faster.
         # It should be {"adapters.data.os.type": "Windows"}
-        # Also, we query for devices that have SOME network interfaces somehow (not necessarily from active directory)
-        # If it doesn't have then clearly we would not have any way of interacting with it.
-        windows_devices = self.devices_db.find(
-            {"adapters.plugin_name": "active_directory_adapter", "adapters.data.network_interfaces": {"$exists": True}},
-            projection={'internal_axon_id': True,
-                        'adapters.data.id': True,
-                        'adapters.plugin_unique_name': True,
-                        'adapters.client_used': True,
-                        'adapters.data.hostname': True,
-                        'adapters.data.name': True,
-                        'tags': True})
-
-        windows_devices_count = windows_devices.count()
+        # We also make sure that we query only for active directory devices which are Windows and that have any sort
+        # of ip address.
+        windows_devices, windows_devices_count = find_and_sort_by_first_element_of_list(
+            self.devices_db,
+            {
+                "adapters":
+                    {
+                        "$elemMatch":
+                            {
+                                "plugin_name": "active_directory_adapter",
+                                "data.os.type": "Windows",
+                                "data.network_interfaces.ips": {"$exists": True}
+                            }
+                    }
+            },
+            {
+                'internal_axon_id': True,
+                'adapters.data.id': True,
+                'adapters.plugin_unique_name': True,
+                'adapters.client_used': True,
+                'adapters.data.hostname': True,
+                'adapters.data.name': True,
+                'tags': True
+            },
+            "tags.data.general_info_last_success_execution"
+        )
         logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
         # Lets make some better logging
@@ -263,7 +278,7 @@ class GeneralInfoService(PluginBase, Triggerable):
 
     def _associate_users_with_devices(self):
         """
-        Assuming devices were assocaited with users, now we associate users with devices.
+        Assuming devices were associated with users, now we associate users with devices.
         :return:
         """
         logger.info("Associating users with devices")
