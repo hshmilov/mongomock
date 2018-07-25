@@ -77,7 +77,6 @@
 </script>
 
 <style lang="scss">
-    @import '../assets/plugins/fonts/icons/style.css';
     @import '../scss/app';
     @import '../scss/styles';
 

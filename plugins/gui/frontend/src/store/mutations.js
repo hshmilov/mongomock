@@ -1,5 +1,5 @@
 import { validModule } from './actions'
-import { pluginMeta } from '../static'
+import { pluginMeta } from '../constants/plugin_meta'
 
 export const TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
 export const toggleSidebar = (state) => {

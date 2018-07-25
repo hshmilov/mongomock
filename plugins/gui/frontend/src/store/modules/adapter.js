@@ -1,5 +1,5 @@
 import {REQUEST_API} from '../actions'
-import { pluginMeta } from '../../static.js'
+import { pluginMeta } from '../../constants/plugin_meta.js'
 
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS'
 export const UPDATE_ADAPTERS = 'UPDATE_ADAPTERS'

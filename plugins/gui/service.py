@@ -2490,7 +2490,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     "type": "array"
                 }
             ],
-            "pretty_name": "GUI Configuration",
             "type": "array"
         }
 

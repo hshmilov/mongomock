@@ -6,7 +6,7 @@
 </template>
 
 <script>
-    import { pluginMeta } from '../../static'
+    import { pluginMeta } from '../../constants/plugin_meta'
 
 	export default {
 		name: 'x-logo-name',

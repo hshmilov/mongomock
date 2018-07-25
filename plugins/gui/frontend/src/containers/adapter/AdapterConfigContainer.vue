@@ -73,7 +73,7 @@
 	import {
 		FETCH_ADAPTERS, UPDATE_CURRENT_ADAPTER, SAVE_ADAPTER_SERVER, ARCHIVE_SERVER
 	} from '../../store/modules/adapter'
-    import { pluginMeta } from '../../static.js'
+    import { pluginMeta } from '../../constants/plugin_meta.js'
     import { SAVE_PLUGIN_CONFIG } from "../../store/modules/configurable"
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
 

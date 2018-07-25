@@ -1,4 +1,4 @@
-import { pluginMeta } from '../static.js'
+import { pluginMeta } from '../constants/plugin_meta.js'
 import { SINGLE_ADAPTER } from './modules/configurable'
 
 export const GET_DATA_FIELD_BY_PLUGIN = 'GET_DATA_FIELD_BY_PLUGIN'
