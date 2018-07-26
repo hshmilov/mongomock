@@ -53,7 +53,8 @@ class AxoniusService():
     def create_network(cls):
         if cls.get_is_network_exists():
             return
-        subprocess.check_call(['docker', 'network', 'create', cls._NETWORK_NAME], stdout=subprocess.PIPE)
+        subprocess.check_call(['docker', 'network', 'create', '--subnet=171.17.0.0/16', cls._NETWORK_NAME],
+                              stdout=subprocess.PIPE)
 
     @classmethod
     def delete_network(cls):
@@ -321,7 +322,9 @@ class AxoniusService():
             return image_name
         runner = ParallelRunner()
         if metadata is None:
-            with open(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', '__build_metadata')), 'w') as metadata_file:
+            with open(os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', '__build_metadata')),
+                    'w') as metadata_file:
                 runner.append_single('metadata', ['install/metadata.sh', version],
                                      cwd=os.path.abspath(
                                          os.path.join(os.path.dirname(__file__), '..', '..')), stdout=metadata_file)

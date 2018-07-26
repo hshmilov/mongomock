@@ -9,7 +9,7 @@ source testing/test_credentials/docker_login.sh
 time docker pull axonius/axonius-base-image
 
 echo "Creating network"
-docker network create axonius
+docker network create --subnet=171.17.0.0/16 axonius
 
 # Note! prepare_setup.py should be the last thing in the script, since the return value
 # of the whole script will be its return value. The CI uses this return value to know if
