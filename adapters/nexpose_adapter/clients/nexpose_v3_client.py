@@ -98,5 +98,15 @@ class NexposeV3Client(NexposeClient):
                 device.risk_score = float(risk_score)
             except Exception:
                 logger.exception("Cant get risk score")
+        try:
+            vulnerabilities_raw = device_raw.get("vulnerabilities", {})
+            device.vulnerabilities_critical = vulnerabilities_raw.get("critical")
+            device.vulnerabilities_exploits = vulnerabilities_raw.get("exploits")
+            device.vulnerabilities_malwareKits = vulnerabilities_raw.get("malwareKits")
+            device.vulnerabilities_moderate = vulnerabilities_raw.get("moderate")
+            device.vulnerabilities_severe = vulnerabilities_raw.get("severe")
+            device.vulnerabilities_total = vulnerabilities_raw.get("total")
+        except Exception:
+            logger.exception(f"Problem getting vulns for {device_raw}")
         device.set_raw(device_raw)
         return device

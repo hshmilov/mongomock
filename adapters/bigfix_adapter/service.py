@@ -136,8 +136,22 @@ class BigfixAdapter(AdapterBase):
 
                 device.figure_os(device_raw.get("OS", ""))
                 try:
-                    device.add_nic(None, device_raw.get("IP Address", "").split(",") +
-                                   device_raw.get("IPv6 Address", "").split(","))
+                    try:
+                        for key_raw in device_raw.keys():
+                            if "mac addresses" in key_raw.lower():
+                                mac_key = key_raw
+                                break
+                        mac_addresses = device_raw[mac_key].split(",")
+                    except Exception:
+                        mac_addresses = []
+                        logger.exception(f"Problem getting mac for {device_raw}")
+                    if not mac_addresses:
+                        device.add_nic(None, device_raw.get("IP Address", "").split(",") +
+                                       device_raw.get("IPv6 Address", "").split(","))
+                    else:
+                        for mac_address in mac_addresses:
+                            device.add_nic(mac_address, device_raw.get("IP Address", "").split(",") +
+                                           device_raw.get("IPv6 Address", "").split(","))
                 except Exception:
                     logger.exception("Problem adding nic to Bigfix")
                 device.agent_version = device_raw.get("Agent Version", "")
@@ -152,7 +166,7 @@ class BigfixAdapter(AdapterBase):
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception("Problem with fetching Bigfix Device")
+                logger.exception(f"Problem with fetching Bigfix Device {device_raw}")
 
     @classmethod
     def adapter_properties(cls):

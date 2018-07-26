@@ -53,6 +53,12 @@ class NexposeAdapter(ScannerAdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
         risk_score = Field(float, 'Risk score')
+        vulnerabilities_critical = Field(int, "Critical Vulnerabiliies")
+        vulnerabilities_exploits = Field(int, "Exploits Vulnerabiliies")
+        vulnerabilities_malwareKits = Field(int, "MalwareKits Vulnerabiliies")
+        vulnerabilities_moderate = Field(int, "Moderate Vulnerabiliies")
+        vulnerabilities_severe = Field(int, "Severe Vulnerabiliies")
+        vulnerabilities_total = Field(int, "Total Vulnerabiliies")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
