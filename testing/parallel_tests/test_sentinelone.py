@@ -20,7 +20,3 @@ class TestSentinelOneAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("No test environment.")
-    def test_fetch_devices(self):
-        pass

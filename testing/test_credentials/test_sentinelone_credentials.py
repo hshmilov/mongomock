@@ -1,8 +1,8 @@
 
 client_details = {
-    "domain": "axonius.sentinelone.net",
-    "username": "ofri",
-    "password": "ulcLZ54vVyHam11s7JHV"
+    "domain": "euce1-100.sentinelone.net",
+    "token": "402432213647832544ywxDVoMzUaXroSZ3tKoHxgrOTDGPLSonYZWGPMlA",
+    'verify_ssl': True
 }
 
-SOME_DEVICE_ID = ''
+SOME_DEVICE_ID = '411342508395494613'

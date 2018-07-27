@@ -20,7 +20,3 @@ class TestCarbonblackProtectionAdapter(AdapterTestBase):
     @property
     def some_device_id(self):
         return SOME_DEVICE_ID
-
-    @pytest.mark.skip("Dont work, ofri should fix")
-    def test_fetch_devices(self):
-        pass

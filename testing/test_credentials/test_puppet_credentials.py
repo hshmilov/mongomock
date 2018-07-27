@@ -124,4 +124,4 @@ wShL47IDG469xFo8ynBiLioWgAgD+BdpochiB4ogr1uuyfuUm4rgaWjfEvFE
 -----END RSA PRIVATE KEY-----''')
 }
 
-SOME_DEVICE_ID = 'puppet.axonius.lan'
+SOME_DEVICE_ID = 'ip-10-0-2-28.axonius.local'
