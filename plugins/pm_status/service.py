@@ -435,3 +435,7 @@ class PmStatusService(PluginBase, Triggerable):
     @add_rule('run', methods=['POST'], should_authenticate=False)
     def run_now(self):
         self._get_pm_status_async()
+
+    @property
+    def plugin_subtype(self):
+        return "Post-Correlation"

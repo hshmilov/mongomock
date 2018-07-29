@@ -524,3 +524,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             self.scheduler.wakeup()
 
         return ""
+
+    @property
+    def plugin_subtype(self):
+        return "Post-Correlation"
