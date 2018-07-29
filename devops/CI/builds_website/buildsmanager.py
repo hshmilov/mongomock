@@ -186,11 +186,14 @@ class BuildsManager(object):
 
         return len(deleted) > 0
 
-    def getExports(self, key=None):
+    def getExports(self, status=None):
         """Return all vm exports we have on our s3 bucket."""
-        completed_exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0})
+        if status is None:
+            exports = self.db.exports.find({'status': {"$nin": ["InProgress", "deleted"]}}, {"_id": 0})
+        else:
+            exports = self.db.exports.find({'status': {"$in": status}}, {"_id": 0})
 
-        return list(completed_exports)
+        return list(exports)
 
     def getExportManifest(self, key):
         """ Returns the stored manifest of a specific key. """
@@ -418,6 +421,15 @@ class BuildsManager(object):
         ssh.connect(AXONIUS_EXPORTS_SERVER, username='ubuntu', password='Password2')
         transport = ssh.get_transport()
         channel = transport.open_session()
+
+        # Check if there are any currently running exports
+        running_exports = self.getExports(status=["InProgress"])
+
+        # If none are running delete all the previous exports.
+        if len(running_exports) == 0:
+            channel.exec_command(
+                "rm -f /home/ubuntu/packer_image_creator/*.py; rm -rf /home/ubuntu/packer_image_creator/output-axonius-*")
+
         export_id = ObjectId()
         commands = [
             "cd /home/ubuntu/packer_image_creator/",
