@@ -10,6 +10,7 @@ from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from libcloud.compute.types import Provider, NodeState
+from axonius.fields import ListField
 from libcloud.compute.providers import get_driver
 
 POWER_STATE_MAP = {
@@ -26,7 +27,7 @@ POWER_STATE_MAP = {
 
 class GceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
-        pass
+        public_ips = ListField(str, "Public IPs")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -73,30 +74,30 @@ class GceAdapter(AdapterBase):
             device.power_state = POWER_STATE_MAP.get(raw_device_data.state,
                                                      DeviceRunningState.Unknown)
         except Exception:
-            pass
+            logger.exception(f"Coudn't get power state for {str(raw_device_data)}")
         try:
             device.figure_os(raw_device_data.image)
         except Exception:
-            pass
+            logger.exception(f"Coudn't get os for {str(raw_device_data)}")
         try:
             device.name = raw_device_data.name
         except Exception:
-            pass
+            logger.exception(f"Coudn't get name for {str(raw_device_data)}")
         try:
             device.add_nic(ips=raw_device_data.private_ips)
         except Exception:
-            pass
+            logger.exception(f"Coudn't get ips for {str(raw_device_data)}")
         try:
-            device.add_nic(ips=raw_device_data.public_ips)
+            device.public_ips = list(raw_device_data.public_ips)
         except Exception:
-            pass
+            logger.exception(f"Problem getting public IP for {str(raw_device_data)}")
         try:
             # some fields might not be basic types
             # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
             # will pass a JSON encode later by mongo
             device.set_raw(json.loads(json.dumps(raw_device_data.__dict__, cls=IgnoreErrorJSONEncoder)))
         except Exception:
-            logger.exception(f"Can't set raw for {device.id}")
+            logger.exception(f"Can't set raw for {str(device.id)}")
         return device
 
     def _parse_raw_data(self, raw_data):

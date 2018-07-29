@@ -124,14 +124,15 @@ class ChefAdapter(AdapterBase):
                 try:
                     device.last_seen = datetime.datetime.fromtimestamp(device_raw_automatic['ohai_time'])
                 except Exception:
-                    logger.warn("something is really wrong with the device - chef doesn't have a last check-in for it")
+                    logger.exception(f"something is really wrong with the device"
+                                     f" - chef doesn't have a last check-in for it {device_raw}")
                 device.time_zone = (device_raw_automatic.get('time') or {}).get('timezone')
                 try:
                     if device.time_zone:
                         device.last_seen = pytz.timezone(device.time_zone).localize(device.last_seen).astimezone(
                             pytz.UTC)
                 except Exception:
-                    logger.warning(f'Error adjusting timezone {device.time_zone}')
+                    logger.exception(f'Error adjusting timezone {device_raw}')
                 # domain assign won't work for cloud clients (but hostname will contain the domain)
                 device.domain = device_raw_automatic.get('domain')
                 try:
@@ -140,42 +141,48 @@ class ChefAdapter(AdapterBase):
                                                       version=' '.join([(software_params.get('version') or ''),
                                                                         (software_params.get('release') or '')]))
                 except Exception:
-                    logger.exception("Problem with adding software to Chef client")
+                    logger.exception(f"Problem with adding software to Chef client {device_raw}")
                 try:
                     for software_name, software_params in (device_raw_automatic.get("chef_packages") or {}).items():
                         device.add_installed_software(name=software_name,
                                                       vendor='chef',
                                                       version=(software_params.get('version') or ''))
                 except Exception:
-                    logger.exception("Problem with adding software to Chef client")
+                    logger.exception(f"Problem with adding software on chef pachages to Chef client {device_raw}")
                 dmi = device_raw_automatic.get('dmi') or {}
                 systeminfo = dmi.get('system')
                 device.device_manufacturer = systeminfo.get('manufacturer')
                 device.device_model = systeminfo.get('product_name')
                 device.device_model_family = systeminfo.get('family')
                 device.device_serial = systeminfo.get('serial_number')
-                cpus = device_raw_automatic.get('cpu') or {}
-                device.total_number_of_cores = cpus.get('total')
-                device.total_number_of_physical_processors = cpus.get('real')
+                try:
+                    cpus = device_raw_automatic.get('cpu') or {}
+                    device.total_number_of_cores = cpus.get('total')
+                    device.total_number_of_physical_processors = cpus.get('real')
+                except Exception:
+                    logger.exception(f"Problem getting CPUs for {device_raw}")
                 try:
                     for cpu in (cpus or {}).items():
                         if 'core_id' in cpu:
                             device.add_cpu(name=cpu.get('model_name'),
                                            ghz=float(cpu.get('mhz') or 0) / 1024.0)
                 except Exception:
-                    logger.exception("Problem with adding CPU to Chef client")
-                device.boot_time = device.last_seen - \
-                    datetime.timedelta(seconds=(device_raw_automatic.get('uptime_seconds') or 0))
-                biosinfo = dmi.get('bios') or {}
-                device.bios_version = ', '.join(['Vendor: ' + (biosinfo.get('vendor') or ''),
-                                                 'Version: ' + (biosinfo.get('version') or ''),
-                                                 'BIOS Revision: ' + (biosinfo.get('bios_revision') or ''),
-                                                 'Firmware Revision: ' + (biosinfo.get('firmware_revision') or '')])
-                memory = device_raw_automatic.get('memory') or {}
-                device.total_physical_memory = float((memory.get('total') or '0kb')[:-2]) / 1024.0 / 1024.0
-                device.free_physical_memory = float((memory.get('free') or '0kb')[:-2]) / 1024.0 / 1024.0
-                if device.total_physical_memory:
-                    device.physical_memory_percentage = 100 * device.free_physical_memory / device.total_physical_memory
+                    logger.exception(f"Problem with adding CPU to Chef client {device_raw}")
+                try:
+                    device.boot_time = device.last_seen - \
+                        datetime.timedelta(seconds=(device_raw_automatic.get('uptime_seconds') or 0))
+                    biosinfo = dmi.get('bios') or {}
+                    device.bios_version = ', '.join(['Vendor: ' + (biosinfo.get('vendor') or ''),
+                                                     'Version: ' + (biosinfo.get('version') or ''),
+                                                     'BIOS Revision: ' + (biosinfo.get('bios_revision') or ''),
+                                                     'Firmware Revision: ' + (biosinfo.get('firmware_revision') or '')])
+                    memory = device_raw_automatic.get('memory') or {}
+                    device.total_physical_memory = float((memory.get('total') or '0kb')[:-2]) / 1024.0 / 1024.0
+                    device.free_physical_memory = float((memory.get('free') or '0kb')[:-2]) / 1024.0 / 1024.0
+                    if device.total_physical_memory:
+                        device.physical_memory_percentage = 100 * device.free_physical_memory / device.total_physical_memory
+                except Exception:
+                    logger.exception(f"Problem getting memory or boot time for chef device {device_raw}")
                 try:
                     for name, iface in ((device_raw_automatic.get('network') or {}).get('interfaces') or {}).items():
                         ip_addrs = []
@@ -187,16 +194,19 @@ class ChefAdapter(AdapterBase):
                                 mac = format_mac(addr)
                         device.add_nic(mac=mac, ips=ip_addrs)
                 except Exception:
-                    logger.exception("Problem with adding nic to Chef client")
+                    logger.exception(f"Problem with adding nic to Chef client {device_raw}")
 
                 # MongoDB can only store up to 8-byte ints :(
-                ((device_raw.get('automatic') or {}).get('sysconf') or {}).pop('ULONG_MAX')
+                try:
+                    ((device_raw.get('automatic') or {}).get('sysconf') or {}).pop('ULONG_MAX')
+                except Exception:
+                    logger.exception(f"Problem with pop of sys conf at {device_raw}")
 
                 try:
                     device.public_ip = device_raw['automatic']['public_ip']['data']['ip']
                     device.chef_tags = device_raw['normal']['tags']
-                except BaseException:
-                    pass
+                except Exception:
+                    logger.exception(f"Problem adding public ips or tage for {device_raw}")
 
                 device.set_raw(device_raw)
 

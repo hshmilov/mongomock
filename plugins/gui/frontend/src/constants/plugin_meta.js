@@ -20,7 +20,7 @@ export const pluginMeta = {
         description: 'Google Mobile Management is an MDM solution for G Suite customers for Android, iOS, Windows and other smartphones.'
     },
     tenable_security_center_adapter: {
-        title: 'Tenable Security Center',
+        title: 'Tenable SecurityCenter',
         description: 'SecurityCenter consolidates and evaluates vulnerability data across your organization, prioritizing security risks and providing a clear view of your security posture.'
     },
     active_directory_adapter: {

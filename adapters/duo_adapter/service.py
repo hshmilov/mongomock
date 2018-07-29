@@ -79,7 +79,7 @@ class DuoAdapter(AdapterBase):
             try:
                 user.last_logon = datetime.fromtimestamp(last_logon_raw)
             except Exception:
-                pass
+                logger.exception(f"Couldn't get last logon for {raw_user_data}")
         return user
 
     def _parse_users_raw_data(self, raw_data):

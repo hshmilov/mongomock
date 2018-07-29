@@ -22,17 +22,25 @@ class AirwatchConnection(RESTConnection):
         devices_search_raw = self._get(
             "mdm/devices/search", url_params={"pagesize": consts.PAGE_SIZE, "page": 0}, do_basic_auth=True)
         devices_raw_list += devices_search_raw.get("Devices", [])
-        total_count = devices_search_raw.get("Total", 1)
+        total_count = min(devices_search_raw.get("Total", 1), consts.MAX_DEVICES_NUMBER)
         pages_count = 1
-        while total_count > pages_count * 500:
-            devices_search_raw = self._get(
-                "mdm/devices/search", url_params={"pagesize": consts.PAGE_SIZE, "page": pages_count}, do_basic_auth=True)
-            devices_raw_list += devices_search_raw.get("Devices", [])
+        while total_count > pages_count * consts.PAGE_SIZE:
+            try:
+                devices_search_raw = self._get(
+                    "mdm/devices/search", url_params={"pagesize": consts.PAGE_SIZE, "page": pages_count}, do_basic_auth=True)
+                devices_raw_list += devices_search_raw.get("Devices", [])
+            except Exception:
+                logger.exception(f"Got problem fetching page {pages_count}")
             pages_count += 1
 
         for device_raw in devices_raw_list:
-            device_id = device_raw.get("Id", {}).get("Value", 0)
-            if device_id == 0:
+            try:
+                device_id = device_raw.get("Id", {}).get("Value", 0)
+                if device_id == 0:
+                    logger.exception(f"No id for device {device_raw}")
+                    continue
+            except Exception:
+                logger.exception(f"Problem getting id for {device_raw}")
                 continue
             try:
                 device_raw["Network"] = self._get(f"mdm/devices/{str(device_id)}/network", do_basic_auth=True)
@@ -41,14 +49,19 @@ class AirwatchConnection(RESTConnection):
             try:
                 device_apps_list = []
                 apps_search_raw = self._get(
-                    f"mdm/devices/{str(device_id)}/apps", url_params={"pagesize": consts.PAGE_SIZE, "page": 0}, do_basic_auth=True)
+                    f"mdm/devices/{str(device_id)}/apps", url_params={"pagesize": consts.PAGE_SIZE, "page": 0},
+                    do_basic_auth=True)
                 device_apps_list += apps_search_raw.get("DeviceApps", [])
-                total_count = devices_search_raw.get("Total", 1)
+                total_count = min(apps_search_raw.get("Total", 1), consts.MAX_APPS_NUMBER)
                 pages_count = 1
-                while total_count > pages_count * 500:
-                    apps_search_raw = self._get(
-                        f"mdm/devices/{str(device_id)}/apps", url_params={"pagesize": consts.PAGE_SIZE, "page": pages_count}, do_basic_auth=True)
-                    device_apps_list += apps_search_raw.get("DeviceApps", [])
+                while total_count > pages_count * consts.PAGE_SIZE:
+                    try:
+                        apps_search_raw = self._get(
+                            f"mdm/devices/{str(device_id)}/apps", url_params={"pagesize": consts.PAGE_SIZE,
+                                                                              "page": pages_count}, do_basic_auth=True)
+                        device_apps_list += apps_search_raw.get("DeviceApps", [])
+                    except Exception:
+                        logger.exception(f"Got problem fetching app for {device_raw} in page {pages_count}")
                     pages_count += 1
                 device_raw["DeviceApps"] = device_apps_list
             except Exception:

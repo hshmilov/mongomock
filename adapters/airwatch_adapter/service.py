@@ -115,10 +115,10 @@ class AirwatchAdapter(AdapterBase):
                     continue
                 else:
                     device.id = str(device_raw.get("Id").get("Value"))
-                device.imei = device_raw.get("Imei", "")
+                device.imei = device_raw.get("Imei")
                 device.last_seen = parse_date(str(device_raw.get("LastSeen", "")))
-                device.figure_os(device_raw.get("Platform", "") + " " + device_raw.get("OperatingSystem", ""))
-                device.phone_number = device_raw.get("PhoneNumber", "")
+                device.figure_os((device_raw.get("Platform") or "") + " " + (device_raw.get("OperatingSystem") or ""))
+                device.phone_number = device_raw.get("PhoneNumber")
                 try:
                     network_raw = device_raw.get("Network", {})
                     wifi_info = network_raw.get("WifiInfo", {})
@@ -139,17 +139,17 @@ class AirwatchAdapter(AdapterBase):
                 device.udid = device_raw.get("Udid")
 
                 device.friendly_name = device_raw.get("DeviceFriendlyName")
-                device.last_used_users = device_raw.get("UserName", "").split(",")
+                device.last_used_users = (device_raw.get("UserName") or "").split(",")
                 try:
                     for app_raw in device_raw.get("DeviceApps", []):
                         device.add_installed_software(name=app_raw.get("ApplicationName"),
                                                       version=app_raw.get("Version"))
                 except Exception:
-                    logger.exception("Problem adding software to Airwatch")
+                    logger.exception(f"Problem adding software to Airwatch {device_raw}")
                 device.set_raw(device_raw)
                 yield device
             except Exception:
-                logger.exception("Problem with fetching Airwatch Device")
+                logger.exception(f"Problem with fetching Airwatch Device {device_raw}")
 
     @classmethod
     def adapter_properties(cls):

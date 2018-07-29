@@ -27,8 +27,6 @@ class TenableIoAdapter(AdapterBase):
     def _connect_client(self, client_config):
         try:
             connection = TenableIoConnection(domain=client_config["domain"], verify_ssl=client_config["verify_ssl"],
-                                             username=client_config.get("username"),
-                                             password=client_config.get("password"),
                                              url_base_prefix="/", headers={'Content-Type': 'application/json',
                                                                            'Accept': 'application/json'},
                                              access_key=client_config.get('access_key'),
@@ -72,17 +70,6 @@ class TenableIoAdapter(AdapterBase):
                     "type": "string"
                 },
                 {
-                    "name": "username",
-                    "title": "User Name",
-                    "type": "string"
-                },
-                {
-                    "name": "password",
-                    "title": "Password",
-                    "type": "string",
-                    "format": "password"
-                },
-                {
                     "name": "verify_ssl",
                     "title": "Verify SSL",
                     "type": "bool"
@@ -103,7 +90,9 @@ class TenableIoAdapter(AdapterBase):
             ],
             "required": [
                 "domain",
-                "verify_ssl"
+                "verify_ssl",
+                "access_key",
+                "secret_key"
             ],
             "type": "array"
         }

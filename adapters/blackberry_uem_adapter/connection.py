@@ -18,7 +18,7 @@ class BlackberryUemConnection(RESTConnection):
             if self._username_domain is None:
                 auth_dict['provider'] = "LOCAL"
             else:
-                auth_dict["domain"] = self.username_domain
+                auth_dict["domain"] = self._username_domain
                 auth_dict["provider"] = "AD"
             try:
                 response = self._session.post(self._get_url_request('util/authorization'), json=auth_dict,

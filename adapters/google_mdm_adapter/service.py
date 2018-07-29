@@ -80,7 +80,7 @@ class GoogleMdmAdapter(AdapterBase):
         device = self._new_device_adapter()
         device.id = raw_device_data.get('deviceId')
         if not device.id:
-            logger.warning(f"Device {raw_data} has no id")
+            logger.warning(f"Device {str(raw_device_data)} has no id")
             return
         device.set_raw(raw_device_data)
         device.figure_os(raw_device_data.get('os'))
@@ -113,7 +113,7 @@ class GoogleMdmAdapter(AdapterBase):
             user.last_logon = parse_date(raw_user_data['lastLoginTime'])
         except Exception:
             # invalid date or something
-            pass
+            logger.exception(f"Couldn't get lst login time for {raw_user_data}")
         raw_name = raw_user_data.get('name')
         if raw_name:
             user.first_name = raw_name.get('givenName')
