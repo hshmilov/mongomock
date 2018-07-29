@@ -103,9 +103,12 @@ class ObserveitAdapter(AdapterBase):
                 domain = device_raw.get("SrvCurrentDomainName")
                 device.domain = domain
                 hostname = device_raw.get("SrvName")
-                if hostname is not None and hostname != "":
-                    if domain is not None and domain.strip() != "" and domain.lower() != "local" and\
-                            domain.lower() != "workgroup" and domain.lower() != "n/a":
+                if (hostname is not None) and (hostname != ""):
+                    if (domain is not None) and (domain.strip() != "") and (domain.strip().lower() != "local") and\
+                            (domain.strip().lower() != "workgroup") and (domain.strip().lower() != "n/a") and \
+                            (domain.strip().lower() != hostname.strip().lower()) and \
+                            (domain.strip().lower() != "localhost") and \
+                            (not hostname.strip().lower().startswith(domain.strip().lower())):
                         device.hostname = f"{hostname}.{domain}"
                     else:
                         device.hostname = hostname

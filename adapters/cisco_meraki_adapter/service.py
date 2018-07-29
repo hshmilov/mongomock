@@ -2,26 +2,30 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, SmartJsonClass
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field
-
+from axonius.fields import Field, ListField
+from collections import defaultdict
 from cisco_meraki_adapter.connection import CiscoMerakiConnection
 from cisco_meraki_adapter.exceptions import CiscoMerakiException
 from axonius.utils.parsing import parse_date
 
 
+class AssociatedDeviceAdapter(SmartJsonClass):
+    switch_port = Field(str, "Switch Port")
+    associated_device = Field(str, "Associated Device")
+
+
 class CiscoMerakiAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
-        device_type = Field(str, "Device Type")
+        device_type = Field(str, "Device Type", enum=["Client Device", "Cisco Device"])
         network_id = Field(str, "Network Name")
         lng = Field(str, "Lng")
         lat = Field(str, "Lat")
         address = Field(str, "Address")
-        switch_port = Field(str, "Switch Port")
         dns_name = Field(str, "DNS Name")
-        associated_device = Field(str, "Associated Device")
+        associated_devices = ListField(AssociatedDeviceAdapter, "Associated Devices")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -105,11 +109,11 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.device_model = device_raw.get("model")
                 device.name = device_raw.get('name')
                 ip_addresses = []
-                if device_raw.get("lanIp", "") != "":
-                    ip_addresses.append(device_raw.get("lanIp", ""))
-                if device_raw.get("wan1Ip", "") != "":
-                    ip_addresses.append(device_raw.get("wan1Ip", ""))
-                if device_raw.get("wan12p", "") != "":
+                if (device_raw.get("lanIp") or "") != "":
+                    ip_addresses.append(device_raw.get("lanIp"))
+                if (device_raw.get("wan1Ip") or "") != "":
+                    ip_addresses.append(device_raw.get("wan1Ip"))
+                if (device_raw.get("wan12p") or "") != "":
                     ip_addresses.append(device_raw.get("wan12p", ""))
                 if ip_addresses == []:
                     ip_addresses = None
@@ -124,33 +128,63 @@ class CiscoMerakiAdapter(AdapterBase):
             except Exception:
                 logger.exception("Problem with fetching CiscoMeraki Device")
 
+        clients_id_dict = dict()
         for client_raw in clients_raw_date:
             try:
                 for key in client_raw:
                     if client_raw[key] is not None:
                         client_raw[key] = str(client_raw[key])
-                device = self._new_device_adapter()
-                mac_address = client_raw.get('mac', "")
-                device.id = client_raw.get("id", "")
-                if device.id == "":
+                device_id = client_raw.get("id") or ""
+                if device_id == "":
                     logger.info(f"No ID for device: {client_raw}")
                     continue
+
+                # fix ips
+                if 'ip' in client_raw and client_raw['ip']:
+                    client_raw['ip'] = set(client_raw['ip'].split(","))
+                else:
+                    client_raw['ip'] = set()
+
+                if device_id not in clients_id_dict:
+                    clients_id_dict[device_id] = client_raw
+                    clients_id_dict[device_id]['associated_devices'] = set()
+                clients_id_dict[device_id]['ip'].union(client_raw['ip'])
+                clients_id_dict[device_id]['associated_devices'].add(
+                    (client_raw.get('associated_device'), client_raw.get('switchport')))
+
+            except Exception:
+                logger.exception(f"Problem with fetching CiscoMeraki Client {client_raw}")
+        for client_id, client_raw in clients_id_dict.items():
+            try:
+                client_raw["associated_devices"] = list(client_raw["associated_devices"])
+                client_raw["ip"] = list(filter(lambda ip: isinstance(ip, str), client_raw["ip"]))
+                device = self._new_device_adapter()
+                device.id = client_id
                 device.device_type = "Client Device"
+                mac_address = client_raw.get('mac') or ""
                 device.hostname = client_raw.get('dhcpHostname')
                 try:
-                    ip_address = client_raw.get("ip", "")
-                    if ip_address != "" or mac_address != "":
-                        device.add_nic(mac_address, ip_address.split(","))
+                    ip_addresses = list(client_raw.get("ip"))
+                    if ip_addresses != [] or mac_address != "":
+                        device.add_nic(mac_address, ip_addresses)
                 except Exception:
                     logger.exception(f"Problem with fetching NIC in CiscoMeraki Client {client_raw}")
                 device.description = client_raw.get("description")
-                device.switch_port = client_raw.get("switchport")
                 device.dns_name = client_raw.get("mdnsName")
-                device.associated_device = client_raw.get("associated_device")
+                device.associated_devices = []
+                for associated_device, switch_port in client_raw["associated_devices"]:
+                    try:
+                        associated_device_object = AssociatedDeviceAdapter()
+                        associated_device_object.switch_port = switch_port
+                        associated_device_object.associated_device = associated_device
+                        device.associated_devices.append(associated_device_object)
+                    except Exception:
+                        logger.exception(f"Problem adding associated device"
+                                         f" {str(associated_device)} with port {str(switch_port)}")
                 device.set_raw(client_raw)
                 yield device
             except Exception:
-                logger.exception(f"Problem with fetching CiscoMeraki Client {client_raw}")
+                logger.exception(f"Problem with fetching CiscoMeraki Client {str(client_raw)}")
 
     @classmethod
     def adapter_properties(cls):
