@@ -39,7 +39,7 @@ extension-pkg-whitelist=lxml
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=E1103,W0141,W0311,W0312,W0612,W0613,W0614,R0901,R0903,R0904,C0111,C0322,C0323,C0324,F0401,W0201,C1001,assign-to-new-keyword,no-init
+disable=E1103,W0141,W0311,W0312,W0612,W0613,W0614,R0901,R0903,R0904,C0111,C0322,C0323,C0324,F0401,W0201,C1001,W1203,assign-to-new-keyword,no-init
 
 # E1103: %s %r has no %r member. Caused probably by wxPython.
 # W0613: unused arg -> solve somewhere here using event
