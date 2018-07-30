@@ -4,4 +4,4 @@ client_details = {
     "client_secret": "ruRLcOuCCvqFOWSysO/he2A7HunuImPyvvf36fyfe2cK"
 }
 
-SOME_DEVICE_ID = 'EC2AMAZ-61GTBER'
+SOME_DEVICE_ID = 'EC2AMAZ-NMTG74E'
