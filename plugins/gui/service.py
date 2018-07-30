@@ -390,7 +390,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: Number of devices
         """
         data_collection = self._entity_views_db_map[entity_type]
-        return str(data_collection.count(filter))
+        return str(data_collection.count_documents(filter))
 
     def _flatten_fields(self, schema, name='', exclude=[], branched=False):
         def _merge_title(schema, title):
@@ -560,7 +560,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             fielded_plugins = []
             for plugin in requests.get(self.core_address + '/register').json().values():
                 # From registered plugins, saving those that have a 'fields' DB for given entity_type
-                if self._get_collection(f'{entity_type.value}_fields', plugin[PLUGIN_UNIQUE_NAME]).count():
+                if self._get_collection(f'{entity_type.value}_fields', plugin[PLUGIN_UNIQUE_NAME]).\
+                        count_documents({}, limit=1):
                     fielded_plugins.append(plugin[PLUGIN_NAME])
 
             def _validate_adapters_used(view):
@@ -799,7 +800,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     client['client_config'] = clear_passwords_fields(client['client_config'], schema)
                 status = ''
                 if len(clients):
-                    clients_connected = clients_collection.find({'status': 'success'}, projection={'_id': 1}).count()
+                    clients_connected = clients_collection.count_documents({'status': 'success'})
                     status = 'success' if len(clients) == clients_connected else 'warning'
 
                 adapters_to_return.append({'plugin_name': adapter['plugin_name'],
@@ -1018,7 +1019,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     def alert_count(self, mongo_filter):
         with self._get_db_connection() as db_connection:
             report_service = self.get_plugin_by_name('reports')[PLUGIN_UNIQUE_NAME]
-            return jsonify(db_connection[report_service]['reports'].find(mongo_filter).count())
+            return jsonify(db_connection[report_service]['reports'].count_documents(mongo_filter))
 
     @gui_helpers.add_rule_unauthenticated("alert/<alert_id>", methods=['POST'])
     def alerts_update(self, alert_id):
@@ -1255,7 +1256,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         with self._get_db_connection() as db:
             notification_collection = db['core']['notifications']
-            return str(notification_collection.find(mongo_filter).count())
+            return str(notification_collection.count_documents(mongo_filter))
 
     @gui_helpers.add_rule_unauthenticated("notifications/<notification_id>", methods=['GET'])
     def notifications_by_id(self, notification_id):
@@ -1753,7 +1754,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'value': 0
             }
             if view.get('history'):
-                data_item['value'] = self._historical_entity_views_db_map[entity].count(
+                data_item['value'] = self._historical_entity_views_db_map[entity].count_documents(
                     {
                         '$and': [
                             parse_filter(view_filter), {
@@ -1763,7 +1764,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     })
                 data_item['accurate_for_datetime'] = view['for_date']
             else:
-                data_item['value'] = self._entity_views_db_map[entity].count(parse_filter(view_filter))
+                data_item['value'] = self._entity_views_db_map[entity].count_documents(parse_filter(view_filter))
             data.append(data_item)
             total += data_item['value']
 
@@ -1807,7 +1808,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             base_parsed = {'$and': [base_parsed, history_filter]} if base else history_filter
 
         data = []
-        total = data_collection.count(base_parsed)
+        total = data_collection.count_documents(base_parsed)
         remainder = total
 
         child1_filter = self._find_filter_by_name(entity, intersecting[0])
@@ -1821,7 +1822,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         return_filter = f'({base_filter}) and ' if base_filter else ''
         if len(intersecting) == 1:
             # Fetch the only child, intersecting with parent
-            current_count = data_collection.count({
+            current_count = data_collection.count_documents({
                 '$and': [
                     base_parsed, child1_parsed
                 ]
@@ -1839,7 +1840,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     ]
                 }
             # Child1 + Parent - Intersection
-            current_count = data_collection.count({
+            current_count = data_collection.count_documents({
                 '$and': [
                     base_parsed, child1_parsed, {
                         '$nor': [child2_parsed]
@@ -1850,7 +1851,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             data.append({'name': intersecting[0], 'value': current_count / total, 'module': entity.value,
                          'filter': f'{return_filter}({child1_filter}) and NOT [{child2_filter}]'})
             # Intersection
-            current_count = data_collection.count({
+            current_count = data_collection.count_documents({
                 '$and': [
                     base_parsed, child1_parsed, child2_parsed
                 ]
@@ -1859,7 +1860,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             data.append({'name': ' + '.join(intersecting), 'value': current_count / total, 'intersection': True,
                          'filter': f'{return_filter}({child1_filter}) and ({child2_filter})', 'module': entity.value})
             # Child2 + Parent - Intersection
-            current_count = data_collection.count({
+            current_count = data_collection.count_documents({
                 '$and': [
                     base_parsed, child2_parsed, {
                         '$nor': [child1_parsed]
@@ -1959,7 +1960,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                          'filter': f'{base_filter}{field} == {field_value}'})
 
         if chart_view == ChartViews.pie:
-            total = data_collection.count(base_parsed)
+            total = data_collection.count_documents(base_parsed)
             return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]
         return data
 
@@ -2087,13 +2088,14 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         plugins_available = requests.get(self.core_address + '/register').json()
         adapter_devices = {'total_gross': 0, 'adapter_count': []}
         with self._get_db_connection() as db_connection:
-            adapter_devices['total_net'] = self.devices_db.count()
+            adapter_devices['total_net'] = self.devices_db.count_documents({})
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
             for adapter in adapters_from_db:
                 if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
-                devices_count = self.devices_db_view.count({'specific_data.plugin_name': adapter['plugin_name']})
+                devices_count = self.devices_db_view.count_documents(
+                    {'specific_data.plugin_name': adapter['plugin_name']})
                 if not devices_count:
                     # No need to document since adapter has no devices
                     continue
@@ -2117,7 +2119,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return:
         """
         logger.info("Getting dashboard coverage")
-        devices_total = self.devices_db_view.count()
+        devices_total = self.devices_db_view.count_documents({})
         if not devices_total:
             return []
         coverage_list = [
@@ -2132,13 +2134,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
              'description': 'Add uncovered devices to the next scheduled vulnerability assessment scan.'}
         ]
         for item in coverage_list:
-            devices_property = self.devices_db_view.count({
+            devices_property = self.devices_db_view.count_documents({
                 'specific_data.adapter_properties':
                     {'$in': item['properties']}
             })
             # Update the count, in case we are in the middle of lifecycle and devices are being added
             # Otherwise, count of devices for properties may be larger than total devices
-            devices_total = self.devices_db_view.count()
+            devices_total = self.devices_db_view.count_documents({})
             item['portion'] = devices_property / devices_total
         return coverage_list
 
@@ -2214,7 +2216,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     logger.info(f'Executing filter {view_filter} on entity {entity.value}')
                     views.append({
                         **query,
-                        'count': self._entity_views_db_map[entity].count(parse_filter(view_filter))
+                        'count': self._entity_views_db_map[entity].count_documents(parse_filter(view_filter))
                     })
             adapter_clients_report = {}
             try:

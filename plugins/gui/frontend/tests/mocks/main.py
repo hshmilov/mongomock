@@ -223,18 +223,18 @@ def plugins_configuration(plugin_id):
         all_devices = client_collection.find({'$or': [{'adapters.qcore_adapter.plugin_name': 'qcore_adapter'},
                                                       {
                                                           'adapters.splunk_adapter.data.raw.report_issuer': 'q-core device'}]})
-        qcore_devices = all_devices.count()
+        qcore_devices = all_devices.count_documents({})
         all_devices = client_collection.find({'$and': [{'$or': [{'adapters.qcore_adapter.plugin_name': 'qcore_adapter'},
                                                                 {
                                                                     'adapters.splunk_adapter.data.raw.report_issuer': 'q-core device'}]},
                                                        {'adapters.checkpoint_adapter.data.raw.status': 'Blocked'}]})
-        blocked_devices = all_devices.count()
+        blocked_devices = all_devices.count_documents({})
 
         all_devices = client_collection.find({'$and': [{'$or': [{'adapters.qcore_adapter.plugin_name': 'qcore_adapter'},
                                                                 {
                                                                     'adapters.splunk_adapter.data.raw.report_issuer': 'q-core device'}]},
                                                        {'adapters.checkpoint_adapter.data.raw.status': 'Unblocked'}]})
-        unblocked_devices = all_devices.count()
+        unblocked_devices = all_devices.count_documents({})
 
         to_return['data'] = {'qcore_devices': qcore_devices - blocked_devices,
                              'blocked_devices': blocked_devices,

@@ -92,7 +92,7 @@ class MongoService(DockerService):
         return self.client[db_name][collection_name]
 
     def get_databases(self):
-        return self.client.database_names()
+        return self.client.list_database_names()
 
     def get_entity_db(self, entity_type: EntityType):
         if entity_type == EntityType.Users:

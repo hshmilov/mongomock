@@ -170,7 +170,7 @@ class AdapterTestBase(object):
             })
             cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
             assert cleaned_count == 1  # the entity added is old and should be deleted
-            assert entity_db.count({'internal_axon_id': deleted_entity_id}) == 0
+            assert entity_db.count_documents({'internal_axon_id': deleted_entity_id}) == 0
 
             deleted_entity_id = "5-" + uuid.uuid4().hex
             deleted_adapter_entity_id = "6-" + uuid.uuid4().hex
@@ -210,9 +210,9 @@ class AdapterTestBase(object):
             cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
             assert cleaned_count == 1  # the entity added is old and should be deleted
             # only one of the adapter_entitys should be removed, so the axonius entity should stay
-            assert entity_db.count({'adapters.data.id': not_deleted_adapter_entity_id}) == 1
+            assert entity_db.count_documents({'adapters.data.id': not_deleted_adapter_entity_id}) == 1
             # verify our entity is deleted
-            assert entity_db.count({'adapters.data.id': deleted_adapter_entity_id}) == 0
+            assert entity_db.count_documents({'adapters.data.id': deleted_adapter_entity_id}) == 0
 
         if last_seen:
             # this is a fake entity from a "long time ago" according to `last_seen`
@@ -239,7 +239,7 @@ class AdapterTestBase(object):
             })
             cleaned_count = self.adapter_service.trigger_clean_db()[entity_type.value]
             assert cleaned_count == 1
-            assert entity_db.count({'internal_axon_id': deleted_entity_id}) == 0
+            assert entity_db.count_documents({'internal_axon_id': deleted_entity_id}) == 0
 
     def test_restart(self):
         service = self.adapter_service

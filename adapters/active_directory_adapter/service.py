@@ -42,7 +42,6 @@ from axonius.utils.parsing import parse_date, bytes_image_to_base64, ad_integer8
     is_date_real, get_exception_string, convert_ldap_searchpath_to_domain_name, format_ip, \
     get_organizational_units_from_dn, get_member_of_list_from_memberof, get_first_object_from_dn, parse_bool_from_raw
 
-
 TEMP_FILES_FOLDER = "/home/axonius/temp_dir/"
 
 LDAP_DONT_EXPIRE_PASSWORD = 0x10000
@@ -52,7 +51,7 @@ LDAP_PASSWORD_NOT_REQUIRED = 0x0020
 # In case its the execution we might leave some files on the target machine which is a bad idea.
 # For exactly this reason we have another mechanism to reject execution promises on the execution-requester side.
 # This value should be for times we are really really sure there is a problem.
-MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60 * 1     # 1 hour
+MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS = 60 * 60 * 1  # 1 hour
 
 
 # TODO ofir: Change the return values protocol
@@ -134,6 +133,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                            )
 
         self._background_scheduler.start()
+
+        self.__devices_data_db = self._get_collection(DEVICES_DATA)
 
         # create temp files dir
         os.makedirs(TEMP_FILES_FOLDER, exist_ok=True)
@@ -491,7 +492,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         user_raw.get("thumbnailLogo")
                     if thumbnail_photo is not None:
                         if type(thumbnail_photo) == list:
-                            thumbnail_photo = thumbnail_photo[0]        # I think this can happen from some reason..
+                            thumbnail_photo = thumbnail_photo[0]  # I think this can happen from some reason..
                         user.image = bytes_image_to_base64(thumbnail_photo)
                 except Exception:
                     logger.exception(f"Exception while setting thumbnailPhoto for user {user.id}.")
@@ -520,7 +521,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                                                 {"dns_name": dns_name,
                                                                  "dc_name": dc_name})
                 ips = [ip for ip, _ in ips_and_dns_servers]
-                ips = list(set(ips))    # make it unique
+                ips = list(set(ips))  # make it unique
 
                 current_resolved_host[IPS_FIELDNAME] = ips
                 current_resolved_host[DNS_RESOLVE_STATUS] = DNSResolveStatus.Resolved.name
@@ -567,14 +568,16 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         This thread will try to resolve IP's of known devices.
         """
         with self._resolving_thread_lock:
-            hosts = self._get_collection(DEVICES_DATA).find({DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name},
-                                                            projection={'_id': True,
-                                                                        'id': True,
-                                                                        'AXON_DNS_ADDR': True,
-                                                                        'AXON_DC_ADDR': True,
-                                                                        'hostname': True})
+            pending_filter = {DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name}
+            hosts_count = self.__devices_data_db.count_documents(pending_filter)
+            hosts = self.__devices_data_db.find(pending_filter,
+                                                projection={'_id': True,
+                                                            'id': True,
+                                                            'AXON_DNS_ADDR': True,
+                                                            'AXON_DC_ADDR': True,
+                                                            'hostname': True})
 
-            logger.debug(f"Going to resolve for {hosts.count()} hosts")
+            logger.debug(f"Going to resolve for {hosts_count} hosts")
 
             did_one_resolved = False
 
@@ -582,7 +585,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 if resolved_host.get(IPS_FIELDNAME) is not None:
                     if resolved_host[DNS_RESOLVE_STATUS] == DNSResolveStatus.Resolved.name:
                         did_one_resolved = True
-                    self._get_collection(DEVICES_DATA).update_one(
+                    self.__devices_data_db.update_one(
                         {"_id": resolved_host["_id"]},
                         {'$set':
                          {IPS_FIELDNAME: resolved_host[IPS_FIELDNAME],
@@ -590,7 +593,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                          }
                     )
 
-            if not did_one_resolved and hosts.count() != 0:
+            if not did_one_resolved and hosts_count != 0:
                 # Raise log message only if no host could get resolved
                 logger.debug("Couldn't resolve IP's. Maybe dns is incorrect?")
             return
@@ -599,11 +602,11 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         """ This thread is responsible for restarting the name resolving process
         """
         with self._resolving_thread_lock:
-            hosts = self._get_collection(DEVICES_DATA).find({DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name},
-                                                            limit=2)
-            if hosts.count() == 0:
-                self._get_collection(DEVICES_DATA).update_many({}, {'$set': {DNS_RESOLVE_STATUS:
-                                                                             DNSResolveStatus.Pending.name}})
+            hosts_count = self.__devices_data_db.count_documents({DNS_RESOLVE_STATUS: DNSResolveStatus.Pending.name},
+                                                                 limit=2)
+            if hosts_count == 0:
+                self.__devices_data_db.update_many({}, {'$set': {DNS_RESOLVE_STATUS:
+                                                                 DNSResolveStatus.Pending.name}})
             return
 
     @add_rule('resolve_ip', methods=['POST'], should_authenticate=False)
@@ -743,7 +746,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         printers_raw_dict = self.__parse_printers(extended_devices_list['printers'])
 
         # DNS Resolving - active thread
-        dns_resolved_devices_collection = self._get_collection(DEVICES_DATA)
+        dns_resolved_devices_collection = self.__devices_data_db
         dns_resolved_devices_db = dns_resolved_devices_collection.find(
             {},
             projection={'_id': False, 'id': True, IPS_FIELDNAME: True, DNS_RESOLVE_STATUS: True}
@@ -783,10 +786,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                 device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
                 device.part_of_domain = True
                 device.organizational_unit = get_organizational_units_from_dn(device.id)
-                service_principal_name = device_raw.get("servicePrincipalName")   # only for devices
+                service_principal_name = device_raw.get("servicePrincipalName")  # only for devices
                 if not isinstance(service_principal_name, list):
                     service_principal_name = [str(service_principal_name)]
-                device.ad_service_principal_name = service_principal_name   # only for devices
+                device.ad_service_principal_name = service_principal_name  # only for devices
 
                 # OS. we must change device.os only after figure_os which initializes it
                 device.figure_os(device_raw.get('operatingSystem', ''))
@@ -1209,7 +1212,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                         hostname_on_ad = hostname_on_ad.lower()
                         if not (hostname_on_device.startswith(hostname_on_ad) or
                                 hostname_on_ad.startswith(hostname_on_device)):
-
                             logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
                                            f"of {hostname_on_device}! Adding tags and failing")
 

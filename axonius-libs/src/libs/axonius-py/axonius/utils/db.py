@@ -47,4 +47,4 @@ def find_and_sort_by_first_element_of_list(collection, match, project, sort_var_
             }
         ],
         allowDiskUse=True
-    ), collection.find(match).count()
+    ), collection.count_documents(match)
