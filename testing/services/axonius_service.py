@@ -62,11 +62,11 @@ class AxoniusService():
             return
         subprocess.check_call(['docker', 'network', 'rm', cls._NETWORK_NAME], stdout=subprocess.PIPE)
 
-    def stop(self, should_delete, remove_image=False):
+    def stop(self, **kwargs):
         # Not critical but lets stop in reverse order
         async_items = []
         for service in self.axonius_services[::-1]:
-            current = iter(service.stop_async(should_delete=should_delete, remove_image=remove_image))
+            current = iter(service.stop_async(**kwargs))
             next(current)  # actual stop call
             async_items.append(current)
         # stop_async is a generator that yields just after the first exec, that is why we run next(current) before
@@ -209,22 +209,16 @@ class AxoniusService():
         return cls._get_docker_service('adapters', name)
 
     def start_plugins(self, adapter_names, plugin_names, mode='', allow_restart=False, rebuild=False, hard=False,
-                      skip=False, show_print=True, exclude_restart=None):
+                      skip=False, show_print=True):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
-        if exclude_restart is None:
-            exclude_restart = []
+
         if allow_restart:
             for plugin in plugins:
-                if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
-                    continue
                 plugin.remove_container()
         for plugin in plugins:
             plugin.take_process_ownership()
             if plugin.get_is_container_up():
                 if skip:
-                    continue
-                elif self.get_plugin_short_name(plugin) in exclude_restart:
-                    print(f'Ignoring - {self.get_plugin_short_name(plugin)}')
                     continue
             plugin.start(mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print)
         timeout = 60
@@ -244,17 +238,13 @@ class AxoniusService():
                 plugin.stop(should_delete=True)
             raise TimeoutException(repr([plugin.container_name for plugin in plugins]))
 
-    def stop_plugins(self, adapter_names, plugin_names, should_delete, remove_image=False, exclude_restart=None):
+    def stop_plugins(self, adapter_names, plugin_names, **kwargs):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
-        if exclude_restart is None:
-            exclude_restart = []
 
         async_items = []
         for plugin in plugins:
-            if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
-                continue
             plugin.take_process_ownership()
-            current = iter(plugin.stop_async(should_delete=should_delete, remove_image=remove_image))
+            current = iter(plugin.stop_async(**kwargs))
             next(current)  # actual stop call
             async_items.append(current)
         # stop_async is a generator that yields just after the first exec, that is why we run next(current) before
@@ -264,14 +254,10 @@ class AxoniusService():
             for _ in async_item:
                 pass
 
-    def remove_plugin_containers(self, adapter_names, plugin_names, exclude_restart=None):
+    def remove_plugin_containers(self, adapter_names, plugin_names):
         plugins = [self.get_adapter(name) for name in adapter_names] + [self.get_plugin(name) for name in plugin_names]
 
-        if exclude_restart is None:
-            exclude_restart = []
         for plugin in plugins:
-            if self.get_plugin_short_name(plugin) in exclude_restart and plugin.get_is_container_up():
-                continue
             plugin.remove_container()
 
     def _get_all_docker_services(self, type_name, obj):

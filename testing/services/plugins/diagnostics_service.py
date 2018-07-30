@@ -46,11 +46,11 @@ class DiagnosticsService(DockerService):
     def docker_network(self):
         return 'host'
 
-    def stop_async(self, should_delete=False, remove_image=False):
+    def stop_async(self, **kwargs):
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         # just kill the ssh server
         subprocess.Popen(['docker', 'kill', self.container_name], cwd=self.service_dir,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        return super().stop_async(should_delete=should_delete, remove_image=remove_image)
+        return super().stop_async(**kwargs)

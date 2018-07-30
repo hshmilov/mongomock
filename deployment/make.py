@@ -21,7 +21,8 @@ import zipfile
 from pathlib import Path
 
 import lists
-from utils import AutoOutputFlush, CORTEX_PATH, SOURCES_FOLDER_NAME, print_state, get_service
+from services.axonius_service import get_service
+from utils import AutoOutputFlush, CORTEX_PATH, SOURCES_FOLDER_NAME, print_state
 
 if pip.__version__.startswith('9.'):
     import pip.pep425tags as pip_pep425tags

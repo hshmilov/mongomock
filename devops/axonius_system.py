@@ -4,24 +4,10 @@ import argparse
 import os
 import sys
 
-
-try:
-    import axonius
-except (ModuleNotFoundError, ImportError):
-    # if not in path...
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'axonius-libs',
-                                                 'src', 'libs', 'axonius-py')))
+from services.axonius_service import get_service
 
 
-try:
-    from services.axonius_service import get_service
-except (ModuleNotFoundError, ImportError):
-    # if not in path...
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'testing')))
-    from services.axonius_service import get_service
-
-
-def main():
+def main(command):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} [-h] {system,adapter,service} [<args>]
        {name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
@@ -32,13 +18,13 @@ def main():
     parser.add_argument('target', choices=['system', 'adapter', 'service', 'ls'])
 
     try:
-        args = parser.parse_args(sys.argv[1:2])
+        args = parser.parse_args(command[0:1])
     except AttributeError:
         print(parser.usage())
         sys.exit(1)
 
     if args.target == 'system':
-        system_entry_point(sys.argv[2:])
+        system_entry_point(command[1:])
     elif args.target == 'ls':
         axonius_system = get_service()
         print('Core Services:')
@@ -52,7 +38,7 @@ def main():
         for name, _ in axonius_system.get_all_adapters():
             print(f'    {name}')
     else:
-        service_entry_point(args.target, sys.argv[2:])
+        service_entry_point(args.target, command[1:])
 
 
 class ExtendAction(argparse.Action):
@@ -119,17 +105,15 @@ def system_entry_point(args):
         print(f'Starting system and {args.adapters + args.services}')
         axonius_system.create_network()
         mode = 'prod' if args.prod else ''
-        exclude_restart = (['diagnostics'] if args.all and args.restart and not args.hard else [])
         if args.restart:
             # clear old containers if exists...
-            axonius_system.remove_plugin_containers(args.adapters, args.services, exclude_restart=exclude_restart)
+            axonius_system.remove_plugin_containers(args.adapters, args.services)
 
         # Optimization - async build first
         axonius_system.build(True, args.adapters, args.services, 'prod' if args.prod else '', args.rebuild)
 
         axonius_system.start_and_wait(mode, args.restart, hard=args.hard, skip=args.skip, expose_db=args.expose_db)
-        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip,
-                                     exclude_restart=exclude_restart)
+        axonius_system.start_plugins(args.adapters, args.services, mode, args.restart, hard=args.hard, skip=args.skip)
     elif args.mode == 'down':
         assert not args.restart and not args.rebuild and not args.skip and not args.prod
         print(f'Stopping system and {args.adapters + args.services}')
@@ -207,4 +191,4 @@ class AutoFlush(object):
 
 if __name__ == '__main__':
     with AutoFlush():
-        main()
+        main(sys.argv[1:])

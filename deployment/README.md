@@ -24,17 +24,12 @@ axonius_install.py
 ```
 
 the install script will:
-* call pre_install.py (from the old sources) and save the providers credentials, queries, views, panels, alerts...
-* call destroy.py (from the old sources) - will stop the system + remove all images and volumes
+* move the old source aside, extract the new sources, create venv and initialize python dependencies. 
+From this step on - we can use our regular python env
+* call stop old system, remove images but keeps volumes
+* load new images docker images
+* start axonius
 * archive the old source folder
-* load new images
-* load new source folder
-* create a new venv
-* install requirements
-* call create.py (from the new sources) - will start the system
-* call post_install.py (from the new sources) - will reinsert the old providers, queries, views, panels, alerts...
-
-FIY: venv_wrapper.sh is a simple wrapper around calling the python from current venv with a provided script and arguments.
 
 example:
 ```bash

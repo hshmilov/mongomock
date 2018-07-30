@@ -201,11 +201,11 @@ else:
         subprocess.call(['docker', 'rmi', self.image, '--force'], cwd=self.service_dir,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    def stop(self, should_delete=False, remove_image=False):
-        for _ in self.stop_async(should_delete=should_delete, remove_image=remove_image):
+    def stop(self, **kwargs):
+        for _ in self.stop_async(**kwargs):
             pass
 
-    def stop_async(self, should_delete=False, remove_image=False):
+    def stop_async(self, should_delete=False, remove_image=False, remove_volume=False):
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
         # killing the container is faster than down. but killing it will make some apps not flush their data
@@ -214,11 +214,11 @@ else:
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         yield process
         process.wait()
-        self.remove_container(remove_volumes=should_delete)
+        self.remove_container(remove_volumes=remove_volume)
         if remove_image:
-            # remove also named volumes:
-            self.remove_volume()
             self.remove_image()
+        if remove_volume:
+            self.remove_volume()
 
     def remove_container(self, remove_volumes=False):
         # --volumes will remove only non-named volumes

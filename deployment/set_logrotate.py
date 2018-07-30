@@ -3,11 +3,10 @@ import os
 import subprocess
 import sys
 
-
 CORTEX_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
-def main():
+def set_logrotate(args):
     if sys.platform.startswith('win'):
         print('Skipping logrotation on Windows platform')
         return
@@ -16,7 +15,7 @@ def main():
     parser.add_argument('--root-pass', type=str, help='Root admin password', required=False, default=None)
 
     try:
-        args = parser.parse_args()
+        args = parser.parse_args(args)
     except AttributeError:
         print(parser.usage())
         sys.exit(1)
@@ -78,4 +77,4 @@ def write_logrotate(path, path_regex, with_su=False):
 
 
 if __name__ == '__main__':
-    main()
+    set_logrotate(sys.argv[1:])

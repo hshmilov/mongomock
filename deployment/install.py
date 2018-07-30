@@ -13,16 +13,17 @@ import stat
 import sys
 import time
 import zipfile
-from subprocess import CalledProcessError
 
-from utils import AutoOutputFlush, AXONIUS_DEPLOYMENT_PATH, SOURCES_FOLDER_NAME, zip_loader, print_state, \
-    current_file_system_path, safe_run_bash, AXONIUS_OLD_ARCHIVE_PATH
+from utils import AutoOutputFlush, AXONIUS_DEPLOYMENT_PATH, SOURCES_FOLDER_NAME, print_state, \
+    current_file_system_path, AXONIUS_OLD_ARCHIVE_PATH
+
+timestamp = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
 DEPLOYMENT_FOLDER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment')
-DESTROY_SCRIPT_PATH = os.path.join(DEPLOYMENT_FOLDER_PATH, 'destroy.py')
-VENV_WRAPPER = os.path.join(DEPLOYMENT_FOLDER_PATH, 'venv_wrapper.sh')
 VENV_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'venv')
 STATE_OUTPUT_PATH = os.path.join(os.path.dirname(current_file_system_path), 'encrypted.state')
+ARCHIVE_PATH = AXONIUS_OLD_ARCHIVE_PATH.format(timestamp)
+TEMPORAL_PATH = f'{AXONIUS_DEPLOYMENT_PATH}_TEMP_{timestamp}'
 
 
 def main():
@@ -42,69 +43,53 @@ def main():
 
 
 def install(just_install=False, root_pass=None):
-    assert zip_loader is not None
-    key = None
     if not just_install:
         validate_old_state()
-        key = pre_install()
-        print(f'  Providers credentials file key: {key}')
-        stop_old(True)
-        archive_old_source()
-        remove_old_source()
-    load_images()
+        os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
+
     load_new_source()
     create_venv()
-    set_logrotate(root_pass)
     install_requirements()
-    create_system()
-    if key is not None:
-        post_install(key)
+
+    print('Activating venv!')
+    activate_this_file = os.path.join(VENV_PATH, 'bin', 'activate_this.py')
+    exec(open(activate_this_file).read(), dict(__file__=activate_this_file))
+    print('Venv activated!')
+    # from this line on - we can use venv!
+
+    if not just_install:
+        stop_old(keep_diag=True)
+
+    load_images()
+
+    set_logrotate(root_pass)
+    start_axonius()
+
+    if not just_install:
+        archive_old_source()
+        shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
 
 def validate_old_state():
-    """ Validates the presence of DESTROY_SCRIPT_PATH """
-    if not os.path.isfile(DESTROY_SCRIPT_PATH):
-        if not os.path.isdir(AXONIUS_DEPLOYMENT_PATH):
-            name = os.path.basename(AXONIUS_DEPLOYMENT_PATH)
-            raise Exception(f"{name} folder wasn't found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)")
-        raise Exception(f"destroy script wasn't found at {DESTROY_SCRIPT_PATH}")
+    if not os.path.isdir(AXONIUS_DEPLOYMENT_PATH):
+        name = os.path.basename(AXONIUS_DEPLOYMENT_PATH)
+        print(f"{name} folder wasn't found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)")
+        sys.exit(-1)
 
 
-def pre_install():
-    print_state('Running pre install script')
-    pre_script_path = os.path.join(DEPLOYMENT_FOLDER_PATH, 'pre_install.py')
-    args = safe_run_bash([VENV_WRAPPER, pre_script_path, '--out', STATE_OUTPUT_PATH])
-    ret = subprocess.run(args, stderr=subprocess.PIPE)
-    if ret.returncode:
-        stderr = ret.stderr.decode('utf-8')
-        print(stderr)
-        raise CalledProcessError(ret.returncode, args[0], stderr=stderr)
-    key = ret.stderr.decode('utf-8').split('\n')[0]
-    return key
-
-
-def stop_old(keep_logs=False, keep_diag=True):
+def stop_old(keep_diag=True):
     print_state('Stopping old containers, and removing old <containers + volumes + images> [except diagnostics]')
-    args = safe_run_bash([VENV_WRAPPER, DESTROY_SCRIPT_PATH])
-    if keep_logs:
-        args.append('--keep-logs')
-    if keep_diag:
-        args.append('--keep-diag')
-    subprocess.check_call(args)
+    from destroy import destroy
+    destroy(keep_diag=keep_diag)
 
 
 def archive_old_source():
     if sys.platform.startswith('win'):
         print_state(f'[SKIPPING] Archiving old source folder - not supported on windows')
         return
-    archive_path = AXONIUS_OLD_ARCHIVE_PATH.format(datetime.datetime.now().strftime('%y%m%d-%H%M'))
-    print_state(f'Archiving old source folder to: {archive_path}')
-    subprocess.check_output(['tar', '-zcvf', archive_path, AXONIUS_DEPLOYMENT_PATH])
 
-
-def remove_old_source():
-    print_state('Removing old source folder')
-    shutil.rmtree(AXONIUS_DEPLOYMENT_PATH, ignore_errors=True)
+    print_state(f'Archiving old source folder to: {ARCHIVE_PATH}')
+    subprocess.check_output(['tar', '-zcvf', ARCHIVE_PATH, TEMPORAL_PATH])
 
 
 def load_images():
@@ -132,6 +117,9 @@ def load_images():
 
 
 def load_new_source():
+    from utils import zip_loader
+    assert zip_loader is not None
+
     print_state('Loading new source folder')
     zip_folder_source_path = f'{SOURCES_FOLDER_NAME}/'
     os.makedirs(AXONIUS_DEPLOYMENT_PATH, exist_ok=True)
@@ -157,16 +145,19 @@ def create_venv():
     print_state('Creating python venv')
     args = f'python3 -m virtualenv --python=python3 --clear {VENV_PATH} --never-download'.split(' ')
     subprocess.check_call(args)
+
+    # running this script as executable because can't easily import in at this stage
     create_pth = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops', 'create_pth.py')
     subprocess.check_call(['python3', create_pth])
 
 
 def set_logrotate(root_pass):
     print_state('Setting logrotate on both docker logs and cortex logs')
-    args = safe_run_bash([VENV_WRAPPER, os.path.join(DEPLOYMENT_FOLDER_PATH, 'set_logrotate.py')])
+    args = list()
     if root_pass is not None:
         args.extend(['--root-pass', root_pass])
-    subprocess.check_call(args)
+    from set_logrotate import set_logrotate
+    set_logrotate(args)
 
 
 def install_requirements():
@@ -184,18 +175,11 @@ def install_requirements():
     subprocess.check_call(args)
 
 
-def create_system():
+def start_axonius():
     print_state('Starting up axonius system')
-    create_script_path = os.path.join(DEPLOYMENT_FOLDER_PATH, 'create.py')
-    args = safe_run_bash([VENV_WRAPPER, create_script_path, '--all', '--prod', '--exclude', 'diagnostics'])
-    subprocess.check_call(args)
-
-
-def post_install(key):
-    print_state('Running post install script')
-    post_script_path = os.path.join(DEPLOYMENT_FOLDER_PATH, 'post_install.py')
-    args = safe_run_bash([VENV_WRAPPER, post_script_path, '-f', STATE_OUTPUT_PATH, '--key', key])
-    subprocess.check_call(args)
+    from devops.axonius_system import main
+    main('system up --all --prod --exclude diagnostics'.split())
+    print_state('System is up')
 
 
 if __name__ == '__main__':

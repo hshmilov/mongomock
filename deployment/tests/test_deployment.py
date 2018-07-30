@@ -4,9 +4,11 @@ import shutil
 import subprocess
 import sys
 
+from services.axonius_service import get_service
+
 sys.path.append(os.path.join(os.path.abspath(__file__), '..'))
 
-from utils import CORTEX_PATH, safe_run_bash, get_service
+from utils import CORTEX_PATH
 from services.plugin_service import PluginService
 
 DEPLOYMENT_FOLDER_PATH = os.path.join(CORTEX_PATH, 'deployment')
@@ -15,8 +17,20 @@ DEPLOY_DIR = os.path.abspath(os.path.join(CORTEX_PATH, 'deploy_artifacts'))
 INSTALLER_PATH = os.path.join(DEPLOY_DIR, 'installer.py')
 DEPLOY_CORTEX_DIR = os.path.join(DEPLOY_DIR, 'cortex')
 AXONIUS_SH_PATH = os.path.join(DEPLOY_CORTEX_DIR, 'axonius.sh')
-ADAPTERS = ['ad']
-SERVICES = ['diagnostics']
+ADAPTERS = ['ad', 'aws']
+SERVICES = ['core', 'static-correlator', 'gui']
+
+
+def safe_run_bash(args):
+    assert args[0].endswith('.sh')
+    if sys.platform.startswith('win'):
+        bash_path = r'C:\Program Files\Git\git-bash.exe'
+        assert os.path.isfile(bash_path)
+        name = args[0]
+        if name.startswith('./'):
+            name = name[2:]
+        args = [bash_path, name] + args[1:]
+    return args
 
 
 def test_deployment():
