@@ -20,3 +20,5 @@ ANALYTICS_SETTING = 'analytics'
 TROUBLESHOOTING_SETTING = 'troubleshooting'
 
 CONFIGURABLE_CONFIGS = 'configurable_configs'
+DASHBOARD_COLLECTION = 'dashboard'
+VERSION_COLLECTION = 'version'

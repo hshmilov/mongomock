@@ -2,6 +2,7 @@ import requests
 import json
 import os
 
+from axonius.consts.plugin_consts import (DASHBOARD_COLLECTION, VERSION_COLLECTION)
 from services.plugin_service import PluginService
 
 
@@ -10,6 +11,50 @@ class GuiService(PluginService):
         super().__init__('gui')
         self._session = requests.Session()
         self.override_exposed_port = True
+
+    def start_and_wait(self, *args, **kwargs):
+        super().start_and_wait(*args, **kwargs)
+
+        version = self._get_schema_version()
+        if version < 1:
+            self._update_schema_version_1()
+        self.wait_for_service()
+
+    def _get_schema_version(self):
+        schema_doc = self.db.get_collection(self.unique_name, VERSION_COLLECTION).find_one({'name': 'schema'})
+        if schema_doc:
+            return schema_doc.get('version', 0)
+        return 0
+
+    def _update_schema_version(self, version):
+        self.db.get_collection(self.unique_name, VERSION_COLLECTION).replace_one({'name': 'schema'},
+                                                                                 {'name': 'schema', 'version': version},
+                                                                                 upsert=True)
+
+    def _update_schema_version_1(self):
+        previous_charts = self._get_all_dashboard()
+        preceding_charts = list(map(lambda chart: chart if chart.get('metric') else {
+            'name': chart['name'],
+            'metric': chart['type'],
+            'view': 'pie' if chart['type'] == 'intersect' else 'histogram',
+            'config': {
+                'entity': chart['views'][0]['module'],
+                'base': chart['views'][0]['name'],
+                'intersecting': [x['name'] for x in chart['views'][1:]]
+            } if chart['type'] == 'intersect' else {
+                'views': chart.get('views', [])
+            }
+        }, previous_charts))
+        self._replace_all_dashboard(preceding_charts)
+        self._update_schema_version(1)
+
+    def _get_all_dashboard(self):
+        return self.db.get_collection(self.unique_name, DASHBOARD_COLLECTION).find({})
+
+    def _replace_all_dashboard(self, dashboard_list):
+        dashboard = self.db.get_collection(self.unique_name, DASHBOARD_COLLECTION)
+        dashboard.delete_many({})
+        dashboard.insert(dashboard_list)
 
     @property
     def exposed_ports(self):

@@ -13,7 +13,7 @@
                     <div>{{day.name}}</div>
                     <div>{{day.date.toDate().toLocaleDateString()}}</div>
                 </div>
-                <component :is="details.program_type" :data="day" class="day-body" />
+                <component v-if="day.instance_details" :is="details.program_type" :data="day" class="day-body" />
             </div>
             <div @click="incCurrentWeek" class="x-btn link">&gt;</div>
         </div>

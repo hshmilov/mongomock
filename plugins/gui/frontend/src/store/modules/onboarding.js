@@ -580,26 +580,26 @@ export const onboarding = {
 					content: 'Click to launch the new chart wizard.'
 				},
 				'wizardIntersect': {
-					id: 'intersect', title: 'CHART TYPE', align: 'top', fixed: true,
-					content: 'Click to create a pie chart showing the intersection of 2-3 query results.'
+					id: 'metric', title: 'CHART METRIC', align: 'top', fixed: true,
+					content: 'Click to choose a metric to base the chart on. Select \'Query Intersection\' for a pie chart showing the intersection between 2-3 queries.'
 				},
 				'wizardModule': {
 					id: 'module', title: 'CHART MODULE', align: 'right', fixed: true,
 					content: 'Click to select which data to show. For example, select \'Devices\'.'
 				},
 				'wizardMain': {
-					id: 'parent', title: 'CHART TOTAL', align: 'right', fixed: true,
+					id: 'baseQuery', title: 'CHART TOTAL', align: 'right', fixed: true,
 					content: 'Click to select which query to use for the total. You can leave this empty.',
 					actions: [
 						{ title: 'Next', state: 'wizardFirst' }
 					]
 				},
 				'wizardFirst': {
-					id: 'child0', title: 'CHART FIRST SUBSET', align: 'right', fixed: true,
+					id: 'intersectingFirst', title: 'CHART FIRST SUBSET', align: 'right', fixed: true,
 					content: 'Click to select a query for one subset of the graph. For example, select a query you saved.'
 				},
 				'wizardSecond': {
-					id: 'child1', title: 'CHART SECOND SUBSET', align: 'right', fixed: true,
+					id: 'intersectingSecond', title: 'CHART SECOND SUBSET', align: 'right', fixed: true,
 					content: 'Click to select a query for another subset of the graph. For example, select the \'DEMO\' query.'
 				},
 				'wizardName': {

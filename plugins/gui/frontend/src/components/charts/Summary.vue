@@ -1,15 +1,15 @@
 <template>
-    <div class="x-grid counter" :class="{updating: enumerating}">
+    <div class="x-summary-chart" :class="{updating: enumerating}">
         <template v-for="item in displayData">
-            <div class="count" :class="{highlight: item.highlight}">{{ item.count }}</div>
-            <div class="title">{{ item.title }}</div>
+            <div class="summary" :class="{highlight: item.highlight}">{{ item.value }}</div>
+            <div class="title">{{ item.name }}</div>
         </template>
     </div>
 </template>
 
 <script>
 	export default {
-		name: 'x-counter-chart',
+		name: 'x-summary-chart',
         props: { data: {required: true}},
         data() {
 			return {
@@ -27,14 +27,14 @@
             setTimeout(() => {
                 this.enumerating = false
                 this.displayData = this.displayData.map((item, index) => {
-                    let jumpValue = Math.max(10, Math.ceil(this.data[index].count / 200))
-                    if (item.count === this.data[index].count) return item
+                    let jumpValue = Math.max(10, Math.ceil(this.data[index].value / 200))
+                    if (item.value === this.data[index].value) return item
                     this.enumerating = true
-                    if (this.data[index].count > item.count) {
-                        return { ...item, count: Math.min(item.count + jumpValue,  this.data[index].count)}
+                    if (this.data[index].value > item.value) {
+                        return { ...item, value: Math.min(item.value + jumpValue,  this.data[index].value)}
                     }
                     // Smaller - need to subtract
-					return { ...item, count: Math.max(item.count - jumpValue,  this.data[index].count)}
+					return { ...item, value: Math.max(item.value - jumpValue,  this.data[index].value)}
                 })
             }, 10)
         }
@@ -42,9 +42,10 @@
 </script>
 
 <style lang="scss">
-    .counter {
+    .x-summary-chart {
+        display: grid;
         grid-template-columns: 1fr 2fr;
-        .count {
+        .summary {
             font-size: 60px;
             display: inline;
             color: $theme-blue;

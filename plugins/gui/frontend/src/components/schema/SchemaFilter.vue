@@ -13,7 +13,7 @@
 
 <script>
 	import xSchemaExpression from './SchemaExpression.vue'
-    import { expression } from '../../mixins/filter'
+    import { expression } from '../../constants/filter'
 
 	export default {
 		name: 'x-schema-filter',

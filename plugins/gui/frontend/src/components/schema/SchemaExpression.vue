@@ -40,7 +40,7 @@
 	import bool from '../controls/boolean/BooleanEdit.vue'
 	import array from '../controls/array/ArrayFilter.vue'
 	import IP from 'ip'
-	import { compOps } from '../../mixins/filter'
+	import { compOps } from '../../constants/filter'
 
     import { mapMutations } from 'vuex'
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
@@ -180,7 +180,10 @@
 					this.expression.compOp = ''
 					this.expression.value = ''
 					return ''
-				}
+				} else if (this.fieldSchema.format === 'predefined' && this.expression.not) {
+					// Expression with some existing query is negated by a preceding NOT
+					cond = `NOT [{val}]`
+                }
 
 				let val = this.processedValue ? this.processedValue : this.expression.value
 				let iVal = Array.isArray(val) ? -1 : undefined

@@ -28,7 +28,7 @@
             <div class="tooltip-content" v-for="component in hoverDetails.components">
                 <div class="tooltip-legend">
                     <div class="legend round" :class="component.class"></div>
-                    {{ component.title }}
+                    {{ component.name }}
                 </div>
             </div>
         </div>
@@ -40,49 +40,50 @@
 		name: 'x-pie-chart',
 		props: {data: {required: true}, id: {}},
 		computed: {
-			completeData () {
-				let sumPortions = this.data.reduce((sum, item) => {
-					return sum + item.portion
-				}, 0)
-				if (sumPortions === 1) return this.data
-				return [{
-					portion: 1 - sumPortions, class: 'theme-fill-gray-light'
-				}, ...this.data]
+			processedData () {
+				return this.data.map((item, index) => {
+                    if (item.remainder) {
+					    return { class: 'theme-fill-gray-light', ...item}
+                    } else if (item.intersection) {
+						return { class: `fill-intersection-${index - 1}-${index}`, ...item}
+                    }
+					return { class: `extra-fill-${(index % 6) || 6}`, ...item}
+                })
 			},
 			slices () {
 				let cumulativePortion = 0
-				return this.completeData.map((slice) => {
+				return this.processedData.map((slice) => {
 					// Starting slice at the end of previous one, and ending after percentage defined for item
 					const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion)
-					cumulativePortion += slice.portion / 2
-					cumulativePortion += slice.portion / 2
+					cumulativePortion += slice.value / 2
+					cumulativePortion += slice.value / 2
 					const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
 					return {
 						...slice,
 						path: [
 							`M ${startX} ${startY}`, // Move
-							`A 1 1 0 ${slice.portion > .5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
+							`A 1 1 0 ${slice.value > .5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
 							`L 0 0`, // Line
 						].join(' ')
 					}
 				})
 			},
 			hoverDetails () {
-			    if (!this.data || this.data.length == 0) return {}
+			    if (!this.data || this.data.length === 0) return {}
 				if (this.inHover === -1) return {}
-				let percentage = Math.round(this.completeData[this.inHover].portion * 100)
+				let percentage = Math.round(this.processedData[this.inHover].value * 100)
 				if (percentage < 0) {
 					percentage = 100 + percentage
 				}
-				let title = this.completeData[this.inHover].title
+				let title = this.processedData[this.inHover].name
 				let components = []
 				if (Array.isArray(title)) {
 					title = 'Intersection'
-					components.push({...this.completeData[this.inHover - 1]})
-					components.push({...this.completeData[this.inHover + 1]})
+					components.push({...this.processedData[this.inHover - 1]})
+					components.push({...this.processedData[this.inHover + 1]})
 				}
 				return {
-					parentTitle: this.data[0].title, title, percentage, class: this.completeData[this.inHover].class,
+					parentTitle: this.data[0].name, title, percentage, class: this.processedData[this.inHover].class,
 					components
 				}
 			}
@@ -153,6 +154,7 @@
             .tooltip-legend {
                 margin-right: 12px;
                 flex: 1 0 auto;
+                max-width: 200px;
                 .legend {
                     display: inline-block;
                     height: 16px;

@@ -24,12 +24,12 @@
             },
 			pieSlices() {
                 return [{
-                	portion: 0, title: `${this.data.title} Coverage`
+                	value: 0, name: `${this.data.title} Coverage`
                 }, {
-                	portion: 1 - this.data.portion,  title: 'Uncovered Devices', class: 'theme-fill-gray-light',
+                	value: 1 - this.data.portion,  name: 'Uncovered Devices', class: 'theme-fill-gray-light',
                     description: this.data.description
                 }, {
-                	portion: this.data.portion, title: this.quarterMessage, class: `indicator-fill-${this.quarter}`
+                	value: this.data.portion, name: this.quarterMessage, class: `indicator-fill-${this.quarter}`
                 }]
 			}
         }

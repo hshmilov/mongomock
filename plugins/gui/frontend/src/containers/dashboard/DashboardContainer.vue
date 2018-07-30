@@ -9,10 +9,10 @@
                 <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title" :data="item"
                                  @click-one="runCoverageFilter(item.properties, $event)"/>
                 <x-card title="Data Discovery">
-                    <x-counter-chart :data="adapterDevicesCounterData"/>
+                    <x-summary :data="adapterDevicesCounterData"/>
                 </x-card>
                 <x-card title="Devices per Adapter">
-                    <x-histogram-chart :data="adapterDevicesCount" @click-one="runAdapterFilter" type="logo"/>
+                    <x-histogram :data="adapterDevicesCount" @click-one="runAdapterFilter" type="logo" :limit="9" />
                 </x-card>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
@@ -22,7 +22,7 @@
                                      :limit="[{ type: 'fromto', from: cardHistoricalMin, to: new Date()}]"/>
                         <a v-if="chart.showingHistorical" class="link" @click="clearDate(chart.uuid)">clear</a>
                     </div>
-                    <components :is="chart.type" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
+                    <components :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
                 </x-card>
                 <x-card title="System Lifecycle" class="chart-lifecycle print-exclude">
                     <x-cycle-chart :data="lifecycle.subPhases"/>
@@ -44,12 +44,11 @@
     import xPage from '../../components/layout/Page.vue'
     import xCard from '../../components/cards/Card.vue'
     import xCoverageCard from '../../components/cards/CoverageCard.vue'
-    import xCounterChart from '../../components/charts/Counter.vue'
-    import xHistogramChart from '../../components/charts/Histogram.vue'
-    import compare from '../../components/charts/customized/Compare.vue'
-    import intersect from '../../components/charts/customized/Intersect.vue'
+    import xHistogram from '../../components/charts/Histogram.vue'
+    import xPie from '../../components/charts/Pie.vue'
+    import xSummary from '../../components/charts/Summary.vue'
     import xCycleChart from '../../components/charts/Cycle.vue'
-    import DashboardWizardContainer from './DashboardWizardContainer.vue'
+    import DashboardWizardContainer from './wizard/DashboardWizardContainer.vue'
     import xEmptySystem from '../../components/onboard/empty_states/EmptySystem.vue'
     import Modal from '../../components/popover/Modal.vue'
     import xDateEdit from '../../components/controls/string/DateEdit.vue'
@@ -68,7 +67,7 @@
     export default {
         name: 'x-dashboard',
         components: {
-            xPage, xCard, xCoverageCard, xCounterChart, xHistogramChart, compare, intersect,
+            xPage, xCard, xCoverageCard, xHistogram, xPie, xSummary,
             xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xDateEdit, xToast
         },
         computed: {
@@ -84,7 +83,7 @@
 								if (this.cardHistoricalData[chart.uuid]) {
 									if (!this.cardHistoricalData[chart.uuid][item.name]) return item
 									return { ...item,
-                                        count: this.cardHistoricalData[chart.uuid][item.name].count,
+                                        value: this.cardHistoricalData[chart.uuid][item.name].value,
                                         showingHistorical: this.cardHistoricalData[chart.uuid][item.name].accurate_for_datetime
                                     }
 								}
@@ -113,13 +112,13 @@
             },
             adapterDevicesCount() {
                 if (!this.adapterDevices || !this.adapterDevices.adapter_count) return []
-                return this.adapterDevices.adapter_count.sort((first, second) => second.count - first.count)
+                return this.adapterDevices.adapter_count.sort((first, second) => second.value - first.value)
             },
             adapterDevicesCounterData() {
                 let totalSeen = this.adapterDevices.total_gross || 0
                 return [
-                    {count: totalSeen, title: 'Seen Devices', highlight: true},
-                    {count: Math.min(this.adapterDevices.total_net || 0, totalSeen), title: 'Unique Devices'},
+                    {value: totalSeen, name: 'Seen Devices', highlight: true},
+                    {value: Math.min(this.adapterDevices.total_net || 0, totalSeen), name: 'Unique Devices'},
                 ]
             },
             nextRunTime() {
@@ -188,7 +187,7 @@
             },
             runChartFilter(chartInd, queryInd) {
                 let query = this.dashboard.charts.data[chartInd].data[queryInd]
-                if (!query.filter) return
+                if (query.filter === undefined || query.filter === null) return
                 this.runFilter(query.filter, query.module)
             },
             runFilter(filter, module) {

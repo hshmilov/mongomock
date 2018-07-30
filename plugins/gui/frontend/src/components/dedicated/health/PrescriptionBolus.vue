@@ -1,7 +1,7 @@
 <template>
     <div class="x-prescription-bolus">
         <x-array-view :schema="detailsSchema" :value="details" />
-        <x-trend :value="details.trend" />
+        <x-trend v-if="details.trend" :value="details.trend" />
     </div>
 </template>
 

@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint.fonts import FontConfiguration
 from cairosvg import svg2png
 
-from gui.consts import ChartTypes
+from gui.consts import ChartViews
 
 GREY_COLOUR = '#DEDEDE'
 
@@ -137,13 +137,13 @@ class ReportGenerator(object):
         if self.report_data.get('custom_charts'):
             charts_added = 0
             for i, custom_chart in enumerate(self.report_data['custom_charts']):
-                if not custom_chart.get('type') or not custom_chart.get('data'):
+                if not custom_chart.get('metric') or not custom_chart.get('data'):
                     continue
                 title = custom_chart.get('name', f'Custom Chart {i}')
                 try:
-                    if custom_chart['type'] == ChartTypes.compare.name:
+                    if custom_chart['view'] == ChartViews.histogram.name:
                         content = self._create_query_histogram(custom_chart['data'])
-                    elif custom_chart['type'] == ChartTypes.intersect.name:
+                    elif custom_chart['view'] == ChartViews.pie.name:
                         query_pie_filename = f'{self.output_path}{uuid.uuid4().hex}.png'
                         byte_string = self._create_query_pie(custom_chart['data'])
                         if byte_string == '':
@@ -218,7 +218,7 @@ class ReportGenerator(object):
         :return:
         """
         adapters = self.report_data['adapter_devices']['adapter_count']
-        adapters.sort(key=lambda x: x['count'], reverse=True)
+        adapters.sort(key=lambda x: x['value'], reverse=True)
         return self._create_histogram(adapters, 6)
 
     def _create_query_histogram(self, queries_data):
@@ -235,14 +235,14 @@ class ReportGenerator(object):
         :return:
         """
         bars = []
-        max = data[0].get('count', 1)
+        max = data[0].get('value', 1)
         for item in data[1:]:
-            if item.get('count', 1) > max:
-                max = item['count']
+            if item.get('value', 1) > max:
+                max = item['value']
         for item in data[:limit]:
             if not item.get('name'):
                 continue
-            count = item.get('count', 0)
+            count = item.get('value', 0)
             width = ((180 * count) / max)
             parameters = {'quantity': count, 'width': width, 'name': item['name']}
             if textual:
@@ -262,13 +262,9 @@ class ReportGenerator(object):
         :param queries_data:
         :return:
         """
-        total = queries_data[0].get('count', 1)
-        portions = []
-        for item in queries_data[1:]:
-            if item.get('count'):
-                portions.append(item['count'] / total)
-                queries_data[0]['count'] = queries_data[0]['count'] - item['count']
-        portions.insert(0, queries_data[0]['count'] / total)
+        queries_data = [item for item in queries_data[1:] if item.get('value')]
+        queries_data.insert(0, queries_data[0])
+        portions = [item['value'] for item in queries_data]
 
         colours = [GREY_COLOUR, '#15C59E', '#15ACB2', '#1593C5', '#B932BB', '#8A32BB', '#5A32BB']
         slices = []

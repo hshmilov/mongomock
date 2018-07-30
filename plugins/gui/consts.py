@@ -5,16 +5,27 @@ class ChartMetrics(Enum):
     """
     Possible scales of data to represent using a chart
     """
-    query = auto()
-    field = auto()
+    compare = auto()
+    intersect = auto()
+    segment = auto()
+    abstract = auto()
 
 
-class ChartTypes(Enum):
+class ChartViews(Enum):
     """
     Possible representations for charts
     """
-    compare = auto()
-    intersect = auto()
+    histogram = auto()
+    pie = auto()
+    summary = auto()
+
+
+class ChartFuncs(Enum):
+    """
+    Possible functions to run on a field list of values, as returned from some query
+    """
+    average = auto()
+    count = auto()
 
 # Exec report consts
 

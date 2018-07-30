@@ -71,7 +71,7 @@
 	import { UPDATE_DATA_VIEW } from '../../store/mutations'
     import { FETCH_DATA_VIEWS, SAVE_DATA_VIEW } from '../../store/actions'
 	import { CHANGE_TOUR_STATE } from '../../store/modules/onboarding'
-	import { expression } from '../../mixins/filter'
+	import { expression } from '../../constants/filter'
 
 	export default {
 		name: 'x-data-query',

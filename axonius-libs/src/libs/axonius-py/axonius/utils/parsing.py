@@ -668,25 +668,60 @@ def and_function(*functions) -> FunctionType:
 
 def parse_filter(filter_str):
     """
-    Translates a string representing
-    :param filter_str:
+    Translates a string representing of a filter to a valid MongoDB query
+
+    Special filter examples:
+
+    last_seen > NOW - 5d
+    ==> {'last_seen': ISODate(<date right now minus 5 days>)}
+
+    NOT [adapters == 'active_directory_adapter'] and os_type == 'Windows'
+    ==> {'$and': [{'$nor': [{'adapters': 'active_directory_adapter'}]}, {'os_type': 'Windows'}]}
+
+    :param filter_str: A string in AQL language
     :return:
     """
     if filter_str is None or filter_str == '':
         return {}
 
+    # Handle predefined sequence representing a range of some time units from now back
     matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
     while matches:
-        # Handle predefined sequence that should be replaced before translation
         computed_date = datetime.datetime.now()
+        # Create the start date intended
         if matches.group(2) == 'h':
             computed_date -= datetime.timedelta(hours=int(matches.group(1)))
         elif matches.group(2) == 'd':
             computed_date -= datetime.timedelta(days=int(matches.group(1)))
         elif matches.group(2) == 'w':
             computed_date -= datetime.timedelta(days=int(matches.group(1)) * 7)
+        # Remove the predefined sequence
         filter_str = filter_str.replace(matches.group(0), computed_date.strftime("%m/%d/%Y %I:%M %p"))
+        # Find next sequence
         matches = re.search('NOW\s*-\s*(\d+)([hdw])', filter_str)
+
+    # Handle predefined sequence representing negation of a complete filter, expected to be inside []
+    matches = re.search('NOT\s*\[(.*)\]', filter_str)
+    nor_queries = []
+    while matches:
+        # Parse and add the filter to a list that will be negated
+        nor_queries.append(pql.find(matches.group(1)))
+        # Remove it from the filter
+        filter_str = filter_str.replace(matches.group(0), '')
+        matches = re.search('NOT\s*\[(.*)\]', filter_str)
+    if nor_queries:
+        if not filter_str:
+            # Return only the negation of list of queries
+            return {'$nor': nor_queries}
+        # Remove redundant 'and' in the beginning or end of the remaining filter
+        leading_and = re.match(r'^\s*and\s*', filter_str)
+        if leading_and:
+            filter_str = filter_str.replace(leading_and.group(0), '')
+        trailing_and = re.match(r'(.*)\s+and\s*$', filter_str)
+        if trailing_and:
+            filter_str = trailing_and.group(1)
+        # Return query combining the remaining query as well as negation of list of queries
+        return {'$and': [pql.find(filter_str), {'$nor': nor_queries}]}
 
     return pql.find(filter_str)
 

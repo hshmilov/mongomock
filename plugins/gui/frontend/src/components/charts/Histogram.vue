@@ -3,10 +3,10 @@
         <div v-for="item, index in limitedData" class="histogram-item" @click="$emit('click-one', index)">
             <div class="item-bar">
                 <img v-if="type === 'logo'" :src="`/src/assets/images/logos/${item.name}.png`" width="16">
-                <div :style="{width: calculateBarHeight(item.count) + 'px'}">
+                <div :style="{width: calculateBarHeight(item.value) + 'px'}">
                     <div class="bar growing-x" :title="item.name"></div>
                 </div>
-                <div class="quantity">{{item.count}}</div>
+                <div class="quantity">{{item.value}}</div>
             </div>
             <div v-if="type ==='text'" class="item-title" :title="item.name">{{item.name}}</div>
         </div>
@@ -18,16 +18,16 @@
 
 	export default {
 		name: 'x-histogram-chart',
-		props: { data: { required: true }, limit: { default: 9 }, type: { default: 'text' } },
+		props: { data: { required: true }, limit: { default: 5 }, type: { default: 'text' } },
 		computed: {
 			limitedData () {
 				return this.data.slice(0, this.limit)
 			},
 			maxQuantity () {
-				let max = this.data[0].count
+				let max = this.data[0].value
                 this.data.slice(1).forEach((item) => {
-                	if (item.count > max) {
-                		max = item.count
+                	if (item.value > max) {
+                		max = item.value
 					}
                 })
 				return max
@@ -82,7 +82,7 @@
         }
         .remainder {
             position: absolute;
-            bottom: 24px;
+            bottom: -4px;
             right: 0;
             font-size: 14px;
             color: $grey-3;
