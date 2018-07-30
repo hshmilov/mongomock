@@ -11,13 +11,15 @@ EXCLUDE_PATHS = [
     'logs',
     'venv',
     'usr',
-    '.idea'
+    '.idea',
+    '.git'
 ]
 ACTUAL_PARENT_FOLDER = os.path.realpath(os.path.dirname(__file__))
 BASE_PATH = os.path.realpath(os.path.dirname(os.path.dirname(ACTUAL_PARENT_FOLDER)))
 PYLINT_EXEMPT_FILE_NAME = os.path.join(ACTUAL_PARENT_FOLDER, 'pylint_exempt_list.txt')
 PYLINTRC_FILE = os.path.join(BASE_PATH, 'pylintrc.txt')
 PERFECT_PYLINT_MESSAGE = 'Your code has been rated at 10.00/10'
+PYLINT_EMPTY_FILE = '0 statements analysed.'
 
 
 def _file_name_in_excluded_paths(base_path, file_name):
@@ -49,7 +51,9 @@ def _is_pylint_ok(file_name):
         [pylint_path, '--rcfile', PYLINTRC_FILE, file_name],
         stdout=subprocess.PIPE)
     stdout, stderr = child.communicate()
-    good_file = child.returncode == GOOD_EXIT_CODE and PERFECT_PYLINT_MESSAGE in stdout.decode('utf-8')
+    decoded = stdout.decode('utf-8')
+    good_file = child.returncode == GOOD_EXIT_CODE and \
+        any(report in decoded for report in (PERFECT_PYLINT_MESSAGE, PYLINT_EMPTY_FILE))
     return file_name, good_file
 
 
@@ -63,7 +67,7 @@ def _get_all_pylint_files():
         file_name
         for file_name
         in _get_all_files()
-        if not file_name.startswith('/usr/lib')  # for the CI
+        if not file_name.startswith('/usr/lib') and 'splunklib' not in file_name
     ]
 
 
