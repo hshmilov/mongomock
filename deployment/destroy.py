@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+
 import docker
 
 
@@ -29,7 +30,7 @@ def destroy(keep_diag=True):
     # docker is a bad boy. If there is some kind of dependency you should try to remove all images twice
     for x in range(1, 5):
         for image in client.images.list():
-            tags = ",".join(image.tags)
+            tags = ','.join(image.tags)
 
             if 'ubuntu:trusty' in tags:
                 # currently we can't upgrade ubuntu base image because diagnostics relies on it
@@ -46,7 +47,7 @@ def destroy(keep_diag=True):
                 print(f'Error while stopping Image {image} {e}')
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--keep-diag', action='store_true', default=True)
 
@@ -57,3 +58,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     destroy(keep_diag=args.keep_diag)
+
+
+if __name__ == '__main__':
+    main()

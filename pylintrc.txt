@@ -174,8 +174,8 @@ max-module-lines=1200
 indent-string='    '
 
 # pylint-quotes
-string-quote=double
-triple-quote=double
+string-quote=single
+triple-quote=single
 docstring-quote=double
 
 

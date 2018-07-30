@@ -7,17 +7,17 @@ import sys
 NUMBER_OF_PROCESSES = 12
 GOOD_EXIT_CODE = 0
 EXCLUDE_PATHS = [
-    "devops",
-    "logs",
-    "venv",
-    "usr",
-    ".idea"
+    'devops',
+    'logs',
+    'venv',
+    'usr',
+    '.idea'
 ]
 ACTUAL_PARENT_FOLDER = os.path.realpath(os.path.dirname(__file__))
 BASE_PATH = os.path.realpath(os.path.dirname(os.path.dirname(ACTUAL_PARENT_FOLDER)))
-PYLINT_EXEMPT_FILE_NAME = os.path.join(ACTUAL_PARENT_FOLDER, "pylint_exempt_list.txt")
-PYLINTRC_FILE = os.path.join(BASE_PATH, "pylintrc.txt")
-PERFECT_PYLINT_MESSAGE = "Your code has been rated at 10.00/10"
+PYLINT_EXEMPT_FILE_NAME = os.path.join(ACTUAL_PARENT_FOLDER, 'pylint_exempt_list.txt')
+PYLINTRC_FILE = os.path.join(BASE_PATH, 'pylintrc.txt')
+PERFECT_PYLINT_MESSAGE = 'Your code has been rated at 10.00/10'
 
 
 def _file_name_in_excluded_paths(base_path, file_name):
@@ -32,29 +32,29 @@ def _get_all_files():
             fullname = os.path.realpath(os.path.join(path, name))
             if _file_name_in_excluded_paths(BASE_PATH, fullname):
                 continue
-            if name.endswith(".py"):
+            if name.endswith('.py'):
                 yield fullname
 
 
 def _get_pylint_path():
-    which_command = "which"
-    if sys.platform == "win32":
-        which_command = "where"
-    return subprocess.Popen([which_command, "pylint"], stdout=subprocess.PIPE).communicate()[0].decode("utf-8").strip()
+    which_command = 'which'
+    if sys.platform == 'win32':
+        which_command = 'where'
+    return subprocess.Popen([which_command, 'pylint'], stdout=subprocess.PIPE).communicate()[0].decode('utf-8').strip()
 
 
 def _is_pylint_ok(file_name):
     pylint_path = _get_pylint_path()
     child = subprocess.Popen(
-        [pylint_path, "--rcfile", PYLINTRC_FILE, file_name],
+        [pylint_path, '--rcfile', PYLINTRC_FILE, file_name],
         stdout=subprocess.PIPE)
     stdout, stderr = child.communicate()
-    good_file = child.returncode == GOOD_EXIT_CODE and PERFECT_PYLINT_MESSAGE in stdout.decode("utf-8")
+    good_file = child.returncode == GOOD_EXIT_CODE and PERFECT_PYLINT_MESSAGE in stdout.decode('utf-8')
     return file_name, good_file
 
 
 def _get_file_content(file_name):
-    with open(file_name, "rb") as file_handler:
+    with open(file_name, 'rb') as file_handler:
         return file_handler.read()
 
 
@@ -63,17 +63,17 @@ def _get_all_pylint_files():
         file_name
         for file_name
         in _get_all_files()
-        if not file_name.startswith("/usr/lib")  # for the CI
+        if not file_name.startswith('/usr/lib')  # for the CI
     ]
 
 
 def _get_single_exempt_path(file_name):
-    path = os.path.join(BASE_PATH, file_name.decode("utf-8").rstrip())
+    path = os.path.join(BASE_PATH, file_name.decode('utf-8').rstrip())
     return os.path.realpath(path)
 
 
 def _get_pylint_exempt():
-    with open(PYLINT_EXEMPT_FILE_NAME, "rb") as f:
+    with open(PYLINT_EXEMPT_FILE_NAME, 'rb') as f:
         return [
             _get_single_exempt_path(file_name)
             for file_name
@@ -98,7 +98,7 @@ def _get_unexpected_pylint_state(is_success_expected):
     except KeyboardInterrupt:
         process_pool.terminate()
         process_pool.join()
-        raise AssertionError("manually terminated")
+        raise AssertionError('manually terminated')
 
     process_pool.close()
     process_pool.join()
@@ -112,11 +112,11 @@ class TestCode:
         """Test that every file besides the ones in the exempt list pass pylint"""
         broken_files = _get_unexpected_pylint_state(is_success_expected=True)
         invalid_files = bool(broken_files)
-        assert not invalid_files, "Broken files found: {}".format("\n".join(broken_files))
+        assert not invalid_files, 'Broken files found: {}'.format('\n'.join(broken_files))
 
     @staticmethod
     def test_no_proper_files_in_exempt_list():
         """Test that every file in the exempt list does not pass pylint"""
         exempted_proper_files = _get_unexpected_pylint_state(is_success_expected=False)
         invalid_files = bool(exempted_proper_files)
-        assert not invalid_files, "Proper files found in exempt list: {}".format("\n".join(exempted_proper_files))
+        assert not invalid_files, 'Proper files found in exempt list: {}'.format('\n'.join(exempted_proper_files))

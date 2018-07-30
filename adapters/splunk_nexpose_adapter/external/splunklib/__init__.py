@@ -17,4 +17,4 @@
 from __future__ import absolute_import
 from six.moves import map
 __version_info__ = (1, 6, 2)
-__version__ = ".".join(map(str, __version_info__))
+__version__ = '.'.join(map(str, __version_info__))

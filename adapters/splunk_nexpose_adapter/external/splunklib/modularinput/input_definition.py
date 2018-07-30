@@ -53,9 +53,9 @@ class InputDefinition:
         root = ET.parse(stream).getroot()
 
         for node in root:
-            if node.tag == "configuration":
+            if node.tag == 'configuration':
                 # get config for each stanza
-                definition.inputs = parse_xml_data(node, "stanza")
+                definition.inputs = parse_xml_data(node, 'stanza')
             else:
                 definition.metadata[node.tag] = node.text
 

@@ -36,4 +36,4 @@ class AxonService(ABC):
                 time.sleep(0.25)
 
         if not success:
-            raise TimeoutException("Service failed to start")
+            raise TimeoutException('Service failed to start')

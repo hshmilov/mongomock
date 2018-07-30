@@ -77,7 +77,6 @@ adapters/fireeye_hx_adapter/__init__.py
 adapters/forcepoint_csv_adapter/service.py
 adapters/forcepoint_csv_adapter/__init__.py
 adapters/fortigate_adapter/client.py
-adapters/fortigate_adapter/consts.py
 adapters/fortigate_adapter/service.py
 adapters/fortigate_adapter/__init__.py
 adapters/gce_adapter/service.py
@@ -98,14 +97,12 @@ adapters/infoblox_adapter/connection.py
 adapters/infoblox_adapter/service.py
 adapters/infoblox_adapter/__init__.py
 adapters/jamf_adapter/connection.py
-adapters/jamf_adapter/consts.py
 adapters/jamf_adapter/exceptions.py
 adapters/jamf_adapter/service.py
 adapters/jamf_adapter/__init__.py
 adapters/json_file_adapter/service.py
 adapters/json_file_adapter/__init__.py
 adapters/juniper_adapter/client.py
-adapters/juniper_adapter/consts.py
 adapters/juniper_adapter/service.py
 adapters/juniper_adapter/__init__.py
 adapters/juniper_adapter/py-space-platform/setup.py
@@ -117,7 +114,6 @@ adapters/juniper_adapter/py-space-platform/examples/get_devices_in_domains.py
 adapters/juniper_adapter/py-space-platform/examples/get_role_details.py
 adapters/juniper_adapter/py-space-platform/examples/tag_by_location.py
 adapters/juniper_adapter/py-space-platform/examples/__init__.py
-adapters/juniper_adapter/py-space-platform/jnpr/__init__.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/application.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/async.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/base.py
@@ -163,9 +159,7 @@ adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_sn_device_groups
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_software_management.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_tag_1.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_user_management.py
-adapters/juniper_adapter/py-space-platform/jnpr/space/test/__init__.py
 adapters/junos_adapter/client.py
-adapters/junos_adapter/client_id.py
 adapters/junos_adapter/service.py
 adapters/junos_adapter/__init__.py
 adapters/kaseya_adapter/connection.py
@@ -190,7 +184,6 @@ adapters/nexpose_adapter/clients/nexpose_base_client.py
 adapters/nexpose_adapter/clients/nexpose_v2_client.py
 adapters/nexpose_adapter/clients/nexpose_v3_client.py
 adapters/nexpose_adapter/clients/__init__.py
-adapters/observeit_adapter/consts.py
 adapters/observeit_adapter/service.py
 adapters/observeit_adapter/__init__.py
 adapters/okta_adapter/connection.py
@@ -210,7 +203,6 @@ adapters/puppet_adapter/__init__.py
 adapters/qcore_adapter/qcore_mongo.py
 adapters/qcore_adapter/service.py
 adapters/qcore_adapter/__init__.py
-adapters/qcore_adapter/protocol/consts.py
 adapters/qcore_adapter/protocol/exceptions.py
 adapters/qcore_adapter/protocol/parse_util.py
 adapters/qcore_adapter/protocol/__init__.py
@@ -262,16 +254,13 @@ adapters/qcore_adapter/protocol/qtp/qsu/qsu_validate_crc_request.py
 adapters/qcore_adapter/protocol/qtp/qsu/qsu_write_data_request.py
 adapters/qcore_adapter/protocol/qtp/qsu/qsu_write_response.py
 adapters/qcore_adapter/protocol/qtp/qsu/__init__.py
-adapters/qcore_adapter/server/bins.py
 adapters/qcore_adapter/server/consts.py
 adapters/qcore_adapter/server/mediator_server.py
 adapters/qcore_adapter/server/pump_connection.py
 adapters/qcore_adapter/server/pump_state.py
 adapters/qcore_adapter/server/__init__.py
 adapters/qcore_adapter/tests/generate_pumpsim_scripts.py
-adapters/qcore_adapter/tests/run_all_qcore_unitests.py
 adapters/qcore_adapter/tests/protocol/cap_file_reader.py
-adapters/qcore_adapter/tests/protocol/test_construct_dict.py
 adapters/qcore_adapter/tests/protocol/test_response_builder.py
 adapters/qcore_adapter/tests/protocol/qtp/test_qtp_message.py
 adapters/qcore_adapter/tests/protocol/qtp/qca/test_qca_message.py
@@ -317,7 +306,6 @@ adapters/solarwinds_orion_adapter/service.py
 adapters/solarwinds_orion_adapter/__init__.py
 adapters/splunk_nexpose_adapter/connection.py
 adapters/splunk_nexpose_adapter/service.py
-adapters/splunk_nexpose_adapter/__init__.py
 adapters/splunk_nexpose_adapter/external/splunklib/binding.py
 adapters/splunk_nexpose_adapter/external/splunklib/client.py
 adapters/splunk_nexpose_adapter/external/splunklib/data.py
@@ -344,7 +332,6 @@ adapters/splunk_nexpose_adapter/external/splunklib/searchcommands/__init__.py
 adapters/splunk_symantec_adapter/connection.py
 adapters/splunk_symantec_adapter/plugins.py
 adapters/splunk_symantec_adapter/service.py
-adapters/splunk_symantec_adapter/__init__.py
 adapters/splunk_symantec_adapter/external/splunklib/binding.py
 adapters/splunk_symantec_adapter/external/splunklib/client.py
 adapters/splunk_symantec_adapter/external/splunklib/data.py
@@ -375,7 +362,6 @@ adapters/stresstest_scanner_adapter/__init__.py
 adapters/symantec_adapter/connection.py
 adapters/symantec_adapter/service.py
 adapters/symantec_adapter/__init__.py
-adapters/symantec_altiris_adapter/consts.py
 adapters/symantec_altiris_adapter/service.py
 adapters/symantec_altiris_adapter/__init__.py
 adapters/tenable_io_adapter/connection.py
@@ -407,8 +393,6 @@ axonius-libs/src/libs/axonius-py/axonius/smart_json_class.py
 axonius-libs/src/libs/axonius-py/axonius/thread_pool_executor.py
 axonius-libs/src/libs/axonius-py/axonius/thread_stopper.py
 axonius-libs/src/libs/axonius-py/axonius/__init__.py
-axonius-libs/src/libs/axonius-py/axonius/async/utils.py
-axonius-libs/src/libs/axonius-py/axonius/clients/g_suite_admin_connection.py
 axonius-libs/src/libs/axonius-py/axonius/clients/__init__.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/abstract.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/console.py
@@ -427,17 +411,13 @@ axonius-libs/src/libs/axonius-py/axonius/clients/rest/connection.py
 axonius-libs/src/libs/axonius-py/axonius/clients/rest/exception.py
 axonius-libs/src/libs/axonius-py/axonius/clients/rest/__init__.py
 axonius-libs/src/libs/axonius-py/axonius/clients/service_now/connection.py
-axonius-libs/src/libs/axonius-py/axonius/clients/service_now/consts.py
 axonius-libs/src/libs/axonius-py/axonius/clients/service_now/__init__.py
 axonius-libs/src/libs/axonius-py/axonius/consts/adapter_consts.py
 axonius-libs/src/libs/axonius-py/axonius/consts/email_consts.py
-axonius-libs/src/libs/axonius-py/axonius/consts/plugin_consts.py
 axonius-libs/src/libs/axonius-py/axonius/consts/report_consts.py
-axonius-libs/src/libs/axonius-py/axonius/consts/scheduler_consts.py
 axonius-libs/src/libs/axonius-py/axonius/consts/__init__.py
 axonius-libs/src/libs/axonius-py/axonius/devices/ad_entity.py
 axonius-libs/src/libs/axonius-py/axonius/devices/device_adapter.py
-axonius-libs/src/libs/axonius-py/axonius/devices/dns_resolvable.py
 axonius-libs/src/libs/axonius-py/axonius/logging/customised_json_formatter.py
 axonius-libs/src/libs/axonius-py/axonius/logging/logger.py
 axonius-libs/src/libs/axonius-py/axonius/logging/logger_wrapper.py
@@ -446,7 +426,6 @@ axonius-libs/src/libs/axonius-py/axonius/logging/__init__.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/activatable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/configurable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/devicedisabelable.py
-axonius-libs/src/libs/axonius-py/axonius/mixins/feature.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/triggerable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/userdisabelable.py
 axonius-libs/src/libs/axonius-py/axonius/mixins/__init__.py
@@ -460,7 +439,6 @@ axonius-libs/src/libs/axonius-py/axonius/utils/files.py
 axonius-libs/src/libs/axonius-py/axonius/utils/gui_helpers.py
 axonius-libs/src/libs/axonius-py/axonius/utils/json.py
 axonius-libs/src/libs/axonius-py/axonius/utils/json_encoders.py
-axonius-libs/src/libs/axonius-py/axonius/utils/mongo_escaping.py
 axonius-libs/src/libs/axonius-py/axonius/utils/parsing.py
 axonius-libs/src/libs/axonius-py/axonius/utils/server.py
 axonius-libs/src/libs/axonius-py/axonius/utils/threading.py
@@ -475,13 +453,10 @@ axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/handlers/__init__.
 axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/utils/com_helper.py
 axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/utils/__init__.py
 axonius-libs/tests/mongo_escaping_test.py
-axonius-libs/tests/test_axonius_libs.py
 axonius-libs/tests/test_triggerable.py
 axonius-libs/tests/test_wmi_smb_runner.py
 deployment/create.py
-deployment/destroy.py
 deployment/install.py
-deployment/lists.py
 deployment/make.py
 deployment/post_install.py
 deployment/pre_install.py
@@ -502,7 +477,6 @@ plugins/core/__init__.py
 plugins/device_control/service.py
 plugins/device_control/__init__.py
 plugins/execution/service.py
-plugins/execution_correlator/service.py
 plugins/execution_correlator/__init__.py
 plugins/execution_correlator/tests/test_execution_correlator.py
 plugins/general_info/service.py
@@ -606,13 +580,11 @@ testing/parallel_tests/test_tenable_io.py
 testing/parallel_tests/test_tenable_security_center.py
 testing/parallel_tests/test_traiana_lab_machines.py
 testing/parallel_tests/__init__.py
-testing/services/activateable_service.py
 testing/services/axonius_service.py
 testing/services/debug_template.py
 testing/services/docker_service.py
 testing/services/plugin_service.py
 testing/services/ports.py
-testing/services/triggerable_service.py
 testing/services/__init__.py
 testing/services/adapters/ad_service.py
 testing/services/adapters/airwatch_service.py
@@ -727,7 +699,6 @@ testing/test_credentials/test_fortigate_credentials.py
 testing/test_credentials/test_gce_credentials.py
 testing/test_credentials/test_google_mdm_credentials.py
 testing/test_credentials/test_gotoassist_credentials.py
-testing/test_credentials/test_gui_credentials.py
 testing/test_credentials/test_hyper_v_credentials.py
 testing/test_credentials/test_infinite_sleep_credentials.py
 testing/test_credentials/test_infoblox_credentials.py
@@ -765,7 +736,6 @@ testing/test_credentials/test_traiana_lab_machines_credentials.py
 testing/test_credentials/__init__.py
 testing/test_helpers/adapter_test_base.py
 testing/test_helpers/device_helper.py
-testing/test_helpers/machines.py
 testing/test_helpers/parallel_runner.py
 testing/test_helpers/qcore_fake_pump.py
 testing/test_helpers/user_helper.py

@@ -2,7 +2,7 @@ import pytest
 from services.axonius_service import get_service
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def axonius_fixture(request):
     axonius_system = get_service()
 

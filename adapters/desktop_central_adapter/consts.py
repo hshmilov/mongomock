@@ -1,5 +1,5 @@
 DEFAULT_PORT = 8020
-LOCAL_AUTHENTICATION = "local_authentication"
-DOMAIN_AUTHENTICATION = "ad_authentication"
+LOCAL_AUTHENTICATION = 'local_authentication'
+DOMAIN_AUTHENTICATION = 'ad_authentication'
 DEVICES_PER_PAGE = 200
 PAGES_MAX = 5000

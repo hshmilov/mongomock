@@ -12,22 +12,22 @@ def generate_correlated_by_ip_mac(key):
     :return:
     """
     return {
-        "_id": str(random.getrandbits(256)),
-        "internal_axon_id": str(random.getrandbits(256)),
-        "accurate_for_datetime": datetime.datetime.now().isoformat(),
-        "adapters": [
+        '_id': str(random.getrandbits(256)),
+        'internal_axon_id': str(random.getrandbits(256)),
+        'accurate_for_datetime': datetime.datetime.now().isoformat(),
+        'adapters': [
             {
-                "client_used": "10.0.2.119:22",
-                "plugin_type": "Adapter",
-                "plugin_name": "cisco_adapter",
-                "plugin_unique_name": "cisco_adapter_42687",
-                "accurate_for_datetime": datetime.datetime.now().isoformat(),
-                "data": {
-                    "id": str(random.getrandbits(256)),
+                'client_used': '10.0.2.119:22',
+                'plugin_type': 'Adapter',
+                'plugin_name': 'cisco_adapter',
+                'plugin_unique_name': 'cisco_adapter_42687',
+                'accurate_for_datetime': datetime.datetime.now().isoformat(),
+                'data': {
+                    'id': str(random.getrandbits(256)),
                     NETWORK_INTERFACES_FIELD: [
                         {
                             IPS_FIELD: [
-                                "10.0.2.1", str(ipaddress.ip_address(key % 0xffffffff))
+                                '10.0.2.1', str(ipaddress.ip_address(key % 0xffffffff))
                             ],
                             MAC_FIELD: str(netaddr.EUI(key))
                         }
@@ -35,7 +35,7 @@ def generate_correlated_by_ip_mac(key):
                 }
             }
         ],
-        "tags": []
+        'tags': []
     }
 
 
@@ -45,23 +45,23 @@ def generate_correlated_serial(key):
     :return:
     """
     return {
-        "_id": str(random.getrandbits(256)),
-        "internal_axon_id": str(random.getrandbits(256)),
-        "accurate_for_datetime": datetime.datetime.now().isoformat(),
-        "adapters": [
+        '_id': str(random.getrandbits(256)),
+        'internal_axon_id': str(random.getrandbits(256)),
+        'accurate_for_datetime': datetime.datetime.now().isoformat(),
+        'adapters': [
             {
-                "client_used": "10.0.2.119:22",
-                "plugin_type": "Adapter",
-                "plugin_name": "cisco_adapter",
-                "plugin_unique_name": "cisco_adapter_42687",
-                "accurate_for_datetime": datetime.datetime.now().isoformat(),
-                "data": {
-                    "id": str(random.getrandbits(256)),
-                    "device_serial": str(key)
+                'client_used': '10.0.2.119:22',
+                'plugin_type': 'Adapter',
+                'plugin_name': 'cisco_adapter',
+                'plugin_unique_name': 'cisco_adapter_42687',
+                'accurate_for_datetime': datetime.datetime.now().isoformat(),
+                'data': {
+                    'id': str(random.getrandbits(256)),
+                    'device_serial': str(key)
                 }
             }
         ],
-        "tags": []
+        'tags': []
     }
 
 
@@ -71,23 +71,23 @@ def generate_correlated_hostname_ip(key):
     :return:
     """
     return {
-        "_id": str(random.getrandbits(256)),
-        "internal_axon_id": str(random.getrandbits(256)),
-        "accurate_for_datetime": datetime.datetime.now().isoformat(),
-        "adapters": [
+        '_id': str(random.getrandbits(256)),
+        'internal_axon_id': str(random.getrandbits(256)),
+        'accurate_for_datetime': datetime.datetime.now().isoformat(),
+        'adapters': [
             {
-                "client_used": "10.0.2.119:22",
-                "plugin_type": "Adapter",
-                "plugin_name": "cisco_adapter",
-                "plugin_unique_name": "cisco_adapter_42687",
-                "accurate_for_datetime": datetime.datetime.now().isoformat(),
-                "data": {
-                    "id": str(random.getrandbits(256)),
-                    "hostname": str(key),
+                'client_used': '10.0.2.119:22',
+                'plugin_type': 'Adapter',
+                'plugin_name': 'cisco_adapter',
+                'plugin_unique_name': 'cisco_adapter_42687',
+                'accurate_for_datetime': datetime.datetime.now().isoformat(),
+                'data': {
+                    'id': str(random.getrandbits(256)),
+                    'hostname': str(key),
                     NETWORK_INTERFACES_FIELD: [
                         {
                             IPS_FIELD: [
-                                "10.0.2.1", str(ipaddress.ip_address(key % 0xffffffff))
+                                '10.0.2.1', str(ipaddress.ip_address(key % 0xffffffff))
                             ],
                             MAC_FIELD: str(netaddr.EUI(key))
                         }
@@ -95,5 +95,5 @@ def generate_correlated_hostname_ip(key):
                 }
             }
         ],
-        "tags": []
+        'tags': []
     }

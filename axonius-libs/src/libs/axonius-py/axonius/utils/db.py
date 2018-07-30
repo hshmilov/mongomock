@@ -14,35 +14,35 @@ def find_and_sort_by_first_element_of_list(collection, match, project, sort_var_
     :param collection: mongodb collection
     :param match: a match criteria (what you would give to collection.find([THIS]))
     :param project: project criteria (what you would give to collection.find({}, project=[THIS])
-    :param sort_var_path: what to sort by (must be a list), e.g. "tags.data.general_info_last_success_execution"
+    :param sort_var_path: what to sort by (must be a list), e.g. 'tags.data.general_info_last_success_execution'
     :return: a mongodb cursor and its length (cursor, length)
     """
 
     return collection.aggregate(
         [
             {
-                "$match": match
+                '$match': match
             },
             {
-                "$project": project
+                '$project': project
             },
             {
-                "$addFields":
+                '$addFields':
                     {
-                        "sort_criteria":
+                        'sort_criteria':
                             {
-                                "$arrayElemAt":
+                                '$arrayElemAt':
                                     [
-                                        f"${sort_var_path}",
+                                        f'${sort_var_path}',
                                         0
                                     ]
                             }
                     }
             },
             {
-                "$sort":
+                '$sort':
                     {
-                        "sort_criteria": 1
+                        'sort_criteria': 1
                     }
             }
         ],
