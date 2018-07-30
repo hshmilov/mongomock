@@ -306,6 +306,7 @@ deployment/packages/
 deployment/state.json
 env_autogen.sh
 deploy_artifacts/*
+shared_readonly_files/__build_metadata
 axonius-libs/__build_metadata
 *.json.zip
 nvd_current_state.json

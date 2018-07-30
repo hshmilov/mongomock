@@ -298,7 +298,7 @@ class AxoniusService():
         assert runner.wait_for_all() == 0
         return base_image
 
-    def build_libs(self, rebuild=False, show_print=True, metadata=None, version=''):
+    def build_libs(self, rebuild=False, show_print=True):
         image_name = 'axonius/axonius-libs'
         output = subprocess.check_output(['docker', 'images', image_name]).decode('utf-8')
         image_exists = image_name in output
@@ -307,14 +307,6 @@ class AxoniusService():
                 print('Image axonius-libs already built - skipping build step')
             return image_name
         runner = ParallelRunner()
-        if metadata is None:
-            with open(os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', '__build_metadata')),
-                    'w') as metadata_file:
-                runner.append_single('metadata', ['install/metadata.sh', version],
-                                     cwd=os.path.abspath(
-                                         os.path.join(os.path.dirname(__file__), '..', '..')), stdout=metadata_file)
-                assert runner.wait_for_all() == 0
         runner.append_single('axonius-libs', ['docker', 'build', '.', '-t', image_name],
                              cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs')))
         assert runner.wait_for_all() == 0

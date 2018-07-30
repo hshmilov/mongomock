@@ -36,3 +36,5 @@ else
   echo "Could not download artifacts"
   exit 1
 fi
+
+install/metadata.sh >> shared_readonly_files/__build_metadata

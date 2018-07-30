@@ -7,7 +7,6 @@ The final installer zip is comprised of:
     + python required packages
 """
 import argparse
-import datetime
 import imp
 import inspect
 import pip
@@ -23,6 +22,7 @@ from pathlib import Path
 import lists
 from services.axonius_service import get_service
 from utils import AutoOutputFlush, CORTEX_PATH, SOURCES_FOLDER_NAME, print_state
+from devops.axonius_system import get_metadata
 
 if pip.__version__.startswith('9.'):
     import pip.pep425tags as pip_pep425tags
@@ -91,16 +91,17 @@ with AutoOutputFlush():
     main()
 """
     # main_template = 'from IPython import embed\nembed()\n'  # helper template for debugging
-    metadata = get_metadata()
+    metadata = get_metadata(version=version)
     download_artifacts()
     download_packages(winpip)
-    images_tar = get_images_tar(pull, rebuild, exclude, prod, metadata, version)
+    images_tar = get_images_tar(pull, rebuild, exclude, prod)
     try:
         with open(output_path, 'wb') as output_file:
             output_file.write(b'#!/usr/bin/env python3\n')
             with zipfile.ZipFile(output_file, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
                 zip_file.writestr('__main__.py', main_template.encode('utf-8'))
-                zip_file.writestr(f'{SOURCES_FOLDER_NAME}/__build_metadata', metadata.encode('utf-8'))
+                zip_file.writestr(f'{SOURCES_FOLDER_NAME}/shared_readonly_files/__build_metadata',
+                                  metadata.encode('utf-8'))
                 add_source_folder(zip_file, exclude)
                 zip_file.write(images_tar, 'images.tar')
                 print_state('Closing zip file')
@@ -109,9 +110,9 @@ with AutoOutputFlush():
     print_state(f'Done, took {int(time.time() - start)} seconds - saved to {output_path}')
 
 
-def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True, metadata=None, version=''):
+def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True):
     images_tar = tempfile.mktemp(prefix='axonius_images_')
-    images = build_images(pull, rebuild, exclude, prod, version=version)
+    images = build_images(pull, rebuild, exclude, prod)
     print_state(f'Compiling {len(images)} images')
     print('  ' + '\n  '.join(images))
     print_state('  Saving images to temp file')
@@ -128,7 +129,7 @@ def get_images_tar(pull=False, rebuild=False, exclude=None, prod=True, metadata=
         raise
 
 
-def build_images(pull=False, rebuild=False, exclude=None, prod=True, metadata=None, version=None):
+def build_images(pull=False, rebuild=False, exclude=None, prod=True):
     axonius_system = get_service()
     axonius_system.take_process_ownership()
     images = []
@@ -141,7 +142,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, metadata=No
         rebuild = True
     images.append(axonius_system.pull_base_image(pull, show_print=False))
     print_state(f'Building all images')
-    images.append(axonius_system.build_libs(rebuild, show_print=False, metadata=metadata, version=version))
+    images.append(axonius_system.build_libs(rebuild, show_print=False))
     services = [name for name, variable in axonius_system.get_all_plugins()]
     adapters = [name for name, variable in axonius_system.get_all_adapters()]
     if exclude:
@@ -153,19 +154,6 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, metadata=No
     images.extend(axonius_system.build(True, adapters, services, 'prod' if prod else '', rebuild))
     images.sort()
     return images
-
-
-def get_metadata():
-    template = "{{\"build_date\": \"{date}\", \"hash\": \"{hash}\", \"ref_name\": \"{names}\", \"commit_date\": \"{commit_date}\", \"commit_subject\": \"{commit_subject}\"}}"
-    git_hash = subprocess.check_output('git log --oneline -1 --format=%H'.split(' '), cwd=CORTEX_PATH)
-    names = subprocess.check_output('git log --oneline -1 --format=%D'.split(' '), cwd=CORTEX_PATH)
-    commit_date = subprocess.check_output('git log --oneline -1 --format=%ci'.split(' '), cwd=CORTEX_PATH)
-    commit_subject = subprocess.check_output('git log --oneline -1 --format=%s'.split(' '), cwd=CORTEX_PATH)
-    return template.format(date=datetime.datetime.now().ctime(),
-                           hash=git_hash.decode('utf-8')[:-1],
-                           names=names.decode('utf-8')[:-1],
-                           commit_date=commit_date.decode('utf-8')[:-1],
-                           commit_subject=commit_subject.decode('utf-8')[:-1])
 
 
 def add_source_folder(zip_file, exclude=None):

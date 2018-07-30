@@ -78,7 +78,7 @@ def validate_old_state():
 
 
 def stop_old(keep_diag=True):
-    print_state('Stopping old containers, and removing old <containers + volumes + images> [except diagnostics]')
+    print_state('Stopping old containers, and removing old <containers + images> [except diagnostics]')
     from destroy import destroy
     destroy(keep_diag=keep_diag)
 
@@ -118,6 +118,7 @@ def load_images():
 
 def load_new_source():
     from utils import zip_loader
+    # this code run from _axonius.py zip, and assumes that zip loader exist
     assert zip_loader is not None
 
     print_state('Loading new source folder')

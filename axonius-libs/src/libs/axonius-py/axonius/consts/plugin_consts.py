@@ -13,7 +13,7 @@ ADAPTERS_LIST_LENGTH = 'adapter_list_length'
 
 GUI_SYSTEM_CONFIG_COLLECTION = 'system_config'
 
-METADATA_PATH = '/home/axonius/__build_metadata'
+METADATA_PATH = '/home/axonius/shared_readonly_files/__build_metadata'
 
 SYSTEM_SETTINGS = 'system_settings'
 ANALYTICS_SETTING = 'analytics'

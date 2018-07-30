@@ -18,14 +18,19 @@ def destroy(keep_diag=True):
 
     for container in client.containers.list():
         if keep_diag and container.name == 'diagnostics':
+            print(f'Skipping {container.name}')
             continue
 
         try:
             print(f'Stopping {container.name}')
             container.stop(timeout=3)
-            container.remove()
+            container.remove(force=True)
         except Exception as e:
             print(f'Error while removing container {container.name}: {e}')
+
+    # remove gui volume
+    print(f'Removing gui volume')
+    client.volumes.get('gui_data').remove(force=True)
 
     # docker is a bad boy. If there is some kind of dependency you should try to remove all images twice
     for x in range(1, 5):
@@ -34,9 +39,11 @@ def destroy(keep_diag=True):
 
             if 'ubuntu:trusty' in tags:
                 # currently we can't upgrade ubuntu base image because diagnostics relies on it
+                print(f'Skipping {image}')
                 continue
 
             if keep_diag and 'diagnostics' in tags:
+                print(f'Skipping {image}')
                 continue
 
             try:

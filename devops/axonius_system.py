@@ -5,6 +5,9 @@ import os
 import sys
 
 from services.axonius_service import get_service
+import subprocess
+
+CORTEX_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 
 
 def main(command):
@@ -65,7 +68,8 @@ def system_entry_point(args):
     parser.add_argument('--skip', action='store_true', default=False, help='Skip already up containers')
     parser.add_argument('--services', metavar='N', type=str, nargs='*', help='Services to activate', default=[])
     parser.add_argument('--adapters', metavar='N', type=str, nargs='*', help='Adapters to activate', default=[])
-    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction, help='Adapters and Services to exclude',
+    parser.add_argument('--exclude', metavar='N', type=str, nargs='*', action=ExtendAction,
+                        help='Adapters and Services to exclude',
                         default=[])
     parser.add_argument('--expose-db', action='store_true', default=False,
                         help='Expose db port outside of this machine.')
@@ -77,6 +81,12 @@ def system_entry_point(args):
     except AttributeError:
         print(parser.usage())
         sys.exit(1)
+
+    metadata_path = os.path.join(CORTEX_PATH, 'shared_readonly_files', '__build_metadata')
+
+    if not os.path.isfile(metadata_path):
+        with open(metadata_path, 'wb') as f:
+            f.write(get_metadata('none').encode())
 
     axonius_system = get_service()
     if args.all:
@@ -100,7 +110,7 @@ def system_entry_point(args):
         args.rebuild = True
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image)
-        axonius_system.build_libs(args.hard, version=args.version_name)
+        axonius_system.build_libs(args.hard)
     if args.mode == 'up':
         print(f'Starting system and {args.adapters + args.services}')
         axonius_system.create_network()
@@ -155,7 +165,7 @@ def service_entry_point(target, args):
     axonius_system = get_service()
     if args.build_libs:
         assert args.mode in ('up', 'build')
-        axonius_system.build_libs(True, version=args.version_name if 'version_name' in args else '')
+        axonius_system.build_libs(rebuild=True)
         args.hard = True
     if args.hard:
         assert args.mode in ('up', 'build')
@@ -187,6 +197,11 @@ class AutoFlush(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout.write = self._write
+
+
+def get_metadata(version):
+    cmd = f'{CORTEX_PATH}/install/metadata.sh {version}'
+    return subprocess.check_output(cmd.split()).decode()
 
 
 if __name__ == '__main__':
