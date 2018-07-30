@@ -34,13 +34,15 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: true
+        required: false
+        default: 0
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many devices to return (pagination)."
-        required: true
-        type: "string"
+        required: false
+        default: 2000
+        type: "integer"
       - name: "fields"
         in: "query"
         description: "The fields to return back for each device."
@@ -60,8 +62,8 @@ paths:
         type: "string"
       responses:
         200:
-          description: "Returns a list of device objects that contains the requested\
-            \ fields, sorted by the the requested field that fits the filter."
+          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
+          assets - The list of assets that were queried with the specified fields (if any)."
       security:
       - axonius_api_auth: []
   /devices/{device_id}:
@@ -104,12 +106,14 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: true
+        required: false
+        default: 0
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many users to return (pagination)."
-        required: true
+        required: false
+        default: 2000
         type: "integer"
       - name: "fields"
         in: "query"
@@ -130,8 +134,8 @@ paths:
         type: "string"
       responses:
         200:
-          description: "Returns a list of users objects that contains the requested\
-            \ fields, sorted by the the requested field that fits the filter."
+          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
+          assets - The list of assets that were queried with the specified fields (if any)."
       security:
       - axonius_api_auth: []
   /users/{user_id}:
@@ -174,12 +178,14 @@ paths:
         in: "query"
         description: "How many devices to skip (0 means none and bring devices from\
           \ the start)."
-        required: true
+        required: false
+        default: 0
         type: "integer"
       - name: "limit"
         in: "query"
         description: "How many devices to return (pagination)."
-        required: true
+        required: false
+        default: 2000
         type: "integer"
       - name: "fields"
         in: "query"
@@ -199,6 +205,9 @@ paths:
         required: false
         type: "string"
       responses:
+        200:
+          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
+          assets - The list of assets that were queried with the specified fields (if any)."
         405:
           description: "Invalid input"
       security:
@@ -257,18 +266,28 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        description: "A view filter to add to the system"
-        required: true
-        schema:
-          $ref: "#/definitions/View"
+      - name: "skip"
+        in: "query"
+        description: "How many devices to skip (0 means none and bring devices from\
+          \ the start)."
+        required: false
+        default: 0
+        type: "integer"
+      - name: "limit"
+        in: "query"
+        description: "How many users to return (pagination)."
+        required: false
+        default: 2000
+        type: "integer"
       - name: "filter"
         in: "query"
         description: "The filter to get devices by."
         required: true
         type: "string"
       responses:
+        200:
+          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
+          assets - The list of assets that were queried with the specified fields (if any)."
         405:
           description: "Invalid input"
       security:
@@ -325,18 +344,28 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - in: "body"
-        name: "view"
-        description: "A view filter to add to the system"
-        required: true
-        schema:
-          $ref: "#/definitions/Alert"
+      - name: "skip"
+        in: "query"
+        description: "How many devices to skip (0 means none and bring devices from\
+          \ the start)."
+        required: false
+        default: 0
+        type: "integer"
+      - name: "limit"
+        in: "query"
+        description: "How many users to return (pagination)."
+        required: false
+        default: 2000
+        type: "integer"
       - name: "filter"
         in: "query"
-        description: "The filter to get devices by."
+        description: "The filter to get views by."
         required: true
         type: "string"
       responses:
+        200:
+          description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
+          assets - The list of assets that were queried with the specified fields (if any)."
         405:
           description: "Invalid input"
       security:
@@ -407,10 +436,17 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - name: "body"
-        in: "body"
-        description: "The action paramaters"
+      - in: "body"
+        name: "body"
+        description: "Action data object"
         required: true
+        schema:
+          $ref: "#/definitions/Action"
+      - name: "action_type"
+        in: "path"
+        description: "action to execute"
+        required: true
+        type: "string"
       responses:
         200:
           description: "The action executed successfully on all the devices."
@@ -509,6 +545,16 @@ definitions:
           field: ""
           desc: true
       query_type: "saved"
+  Action:
+     properties:
+      internal_axon_ids:
+       type: "array"
+       items:
+          type: "string"
+      action_name:
+        type: "string"
+      commmand:
+        type: "string"
   View_view:
     properties:
       page:

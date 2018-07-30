@@ -580,7 +580,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.info('Filtering views that use fields from plugins without persisted fields schema')
             logger.info(f'Remaining plugins include: {fielded_plugins}')
             # Returning only the views that do not contain fields whose plugin has no field schema saved
-            return jsonify(gui_helpers.beautify_db_entry(entry) for entry in filter(_validate_adapters_used, all_views))
+            return [gui_helpers.beautify_db_entry(entry) for entry in filter(_validate_adapters_used, all_views)]
 
         if method == 'POST':
             view_data = self.get_request_data_as_object()
@@ -695,7 +695,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         Save or fetch views over the devices db
         :return:
         """
-        return self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter)
+        return jsonify(self._entity_views(request.method, EntityType.Devices, limit, skip, mongo_filter))
 
     @gui_helpers.add_rule_unauthenticated("devices/labels", methods=['GET', 'POST', 'DELETE'])
     def device_labels(self):
@@ -752,7 +752,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.add_rule_unauthenticated("users/views", methods=['GET', 'POST', 'DELETE'])
     def user_views(self, limit, skip, mongo_filter):
-        return self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter)
+        return jsonify(self._entity_views(request.method, EntityType.Users, limit, skip, mongo_filter))
 
     @gui_helpers.add_rule_unauthenticated("users/labels", methods=['GET', 'POST', 'DELETE'])
     def user_labels(self):
