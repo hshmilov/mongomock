@@ -1,5 +1,5 @@
 <template>
-    <div :class="severity">{{ processedData }}{{ isPercentage? '%': ''}}</div>
+    <div :class="severity">{{ processedData }}{{ isPercentage && processedData? '%': ''}}</div>
 </template>
 
 <script>

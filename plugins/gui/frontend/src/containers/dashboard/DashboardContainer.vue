@@ -187,8 +187,13 @@
             },
             runChartFilter(chartInd, queryInd) {
                 let query = this.dashboard.charts.data[chartInd].data[queryInd]
-                if (query.filter === undefined || query.filter === null) return
-                this.runFilter(query.filter, query.module)
+                if (query.view === undefined || query.view === null
+                    || query.module === undefined || query.module === null) return
+				this.updateView({
+					module: query.module, view: query.view
+				})
+				// this.clearDataContent({module: query.module})
+				this.$router.push({path: query.module})
             },
             runFilter(filter, module) {
                 this.updateView({

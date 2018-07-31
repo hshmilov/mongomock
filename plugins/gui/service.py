@@ -1596,7 +1596,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         if not view_doc:
             logger.info(f'No record found for view {name}')
             return None
-        return view_doc['view']['query']['filter']
+        return view_doc['view']
 
     def _fetch_chart_compare(self, chart_view: ChartViews, views):
         """
@@ -1614,13 +1614,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             # But since list is very short the simpler and more readable implementation is fine
             entity_name = view.get('entity', EntityType.Devices.value)
             entity = EntityType(entity_name)
-            view_filter = self._find_filter_by_name(entity, view["name"])
-            if not view_filter:
+            view_dict = self._find_filter_by_name(entity, view["name"])
+            if not view_dict:
                 continue
 
             data_item = {
                 'name': view['name'],
-                'filter': view_filter,
+                'view': view_dict,
                 'module': entity_name,
                 'value': 0
             }
@@ -1628,14 +1628,15 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 data_item['value'] = self._historical_entity_views_db_map[entity].count_documents(
                     {
                         '$and': [
-                            parse_filter(view_filter), {
+                            parse_filter(view_dict['query']['filter']), {
                                 'accurate_for_datetime': view['for_date']
                             }
                         ]
                     })
                 data_item['accurate_for_datetime'] = view['for_date']
             else:
-                data_item['value'] = self._entity_views_db_map[entity].count_documents(parse_filter(view_filter))
+                data_item['value'] = self._entity_views_db_map[entity].count_documents(
+                    parse_filter(view_dict['query']['filter']))
             data.append(data_item)
             total += data_item['value']
 
@@ -1666,84 +1667,71 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         # Query and data collections according to given parent's module
         data_collection = self._entity_views_db_map[entity]
 
-        base_filter = ''
-        base_parsed = {}
+        base_view = {'query': {'filter': '', 'expressions': []}}
+        base_queries = []
         if base:
-            base_filter = self._find_filter_by_name(entity, base)
-            base_parsed = parse_filter(base_filter)
+            base_view = self._find_filter_by_name(entity, base)
+            base_queries = [parse_filter(base_view['query']['filter'])]
 
         if for_date:
             # If history requested, fetch from appropriate historical db
             data_collection = self._historical_entity_views_db_map[entity]
-            history_filter = {'accurate_for_datetime': for_date}
-            base_parsed = {'$and': [base_parsed, history_filter]} if base else history_filter
+            base_queries.append({
+                'accurate_for_datetime': for_date
+            })
 
         data = []
-        total = data_collection.count_documents(base_parsed)
-        remainder = total
-
-        child1_filter = self._find_filter_by_name(entity, intersecting[0])
-        child1_parsed = parse_filter(child1_filter)
-        if for_date:
-            child1_parsed = {
-                '$and': [
-                    child1_parsed, history_filter
-                ]
-            }
-        return_filter = f'({base_filter}) and ' if base_filter else ''
+        total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
+        child1_view = self._find_filter_by_name(entity, intersecting[0])
+        child1_filter = child1_view['query']['filter']
+        child1_query = parse_filter(child1_filter)
+        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view["query"]["filter"] else ''
         if len(intersecting) == 1:
             # Fetch the only child, intersecting with parent
-            current_count = data_collection.count_documents({
-                '$and': [
-                    base_parsed, child1_parsed
-                ]
-            })
-            remainder -= current_count
-            data.append({'name': intersecting[0], 'value': current_count / total,
-                         'filter': f'{return_filter}({child1_filter})', 'module': entity.value})
+            child1_view['filter'] = f'{base_filter}({child1_filter})'
+            data.append({'name': intersecting[0], 'view': child1_view, 'module': entity.value,
+                         'value': data_collection.count_documents({
+                             '$and': base_queries + [child1_query]
+                         }) / total})
         else:
-            child2_filter = self._find_filter_by_name(entity, intersecting[1])
-            child2_parsed = parse_filter(child2_filter)
-            if for_date:
-                child2_parsed = {
-                    '$and': [
-                        child2_parsed, history_filter
-                    ]
-                }
-            # Child1 + Parent - Intersection
-            current_count = data_collection.count_documents({
-                '$and': [
-                    base_parsed, child1_parsed, {
-                        '$nor': [child2_parsed]
-                    }
-                ]
-            })
-            remainder -= current_count
-            data.append({'name': intersecting[0], 'value': current_count / total, 'module': entity.value,
-                         'filter': f'{return_filter}({child1_filter}) and NOT [{child2_filter}]'})
-            # Intersection
-            current_count = data_collection.count_documents({
-                '$and': [
-                    base_parsed, child1_parsed, child2_parsed
-                ]
-            })
-            remainder -= current_count
-            data.append({'name': ' + '.join(intersecting), 'value': current_count / total, 'intersection': True,
-                         'filter': f'{return_filter}({child1_filter}) and ({child2_filter})', 'module': entity.value})
-            # Child2 + Parent - Intersection
-            current_count = data_collection.count_documents({
-                '$and': [
-                    base_parsed, child2_parsed, {
-                        '$nor': [child1_parsed]
-                    }
-                ]
-            })
-            remainder -= current_count
-            data.append({'name': intersecting[1], 'value': current_count / total, 'module': entity.value,
-                         'filter': f'{return_filter}({child2_filter}) and NOT [{child1_filter}]'})
+            child2_view = self._find_filter_by_name(entity, intersecting[1])
+            child2_filter = child2_view['query']['filter']
+            child2_query = parse_filter(child2_filter)
 
+            # Child1 + Parent - Intersection
+            child1_view['filter'] = f'{base_filter}({child1_filter}) and NOT [{child2_filter}]'
+            data.append({'name': intersecting[0], 'value': data_collection.count_documents({
+                '$and': base_queries + [
+                    child1_query,
+                    {
+                        '$nor': [child2_query]
+                    }
+                ]
+            }) / total, 'module': entity.value, 'view': child1_view})
+
+            # Intersection
+            data.append({'name': ' + '.join(intersecting), 'intersection': True, 'value': data_collection.count_documents({
+                '$and': base_queries + [
+                    child1_query, child2_query
+                ]
+            }) / total, 'view': {**base_view,
+                                 'query': {'filter': f'{base_filter}({child1_filter}) and ({child2_filter})'}},
+                'module': entity.value})
+
+            # Child2 + Parent - Intersection
+            child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and NOT [{child1_filter}]'
+            data.append({'name': intersecting[1], 'value': data_collection.count_documents({
+                '$and': base_queries + [
+                    child2_query,
+                    {
+                        '$nor': [child1_query]
+                    }
+                ]
+            }) / total, 'module': entity.value, 'view': child2_view})
+
+        remainder = total - sum([x['value'] for x in data])
         return [{'name': base or 'ALL', 'value': remainder / total, 'remainder': True,
-                 'filter': base_filter, 'module': entity.value}, *data]
+                 'view': {**base_view, 'query': {'filter': base_filter}}, 'module': entity.value}, *data]
 
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
         """
@@ -1757,29 +1745,23 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         # Query and data collections according to given module
         data_collection = self._entity_views_db_map[entity]
-        base_filter = ''
-        base_parsed = {}
+        base_view = {'query': {'filter': '', 'expressions': []}}
+        base_queries = []
         if view:
-            base_filter = self._find_filter_by_name(entity, view)
-            base_parsed = parse_filter(base_filter)
+            base_view = self._find_filter_by_name(entity, view)
+            base_queries.append(parse_filter(base_view['query']['filter']))
         if for_date:
             # If history requested, fetch from appropriate historical db
             data_collection = self._historical_entity_views_db_map[entity]
-            if base_parsed:
-                base_parsed = {
-                    '$and': [
-                        base_parsed, {
-                            'accurate_for_datetime': for_date
-                        }
-                    ]
-                }
-            else:
-                base_parsed = {
-                    'accurate_for_datetime': for_date
-                }
+            base_queries.append({
+                'accurate_for_datetime': for_date
+            })
+        base_query = {
+            '$and': base_queries
+        } if base_queries else {}
         aggregate_results = data_collection.aggregate([
             {
-                '$match': base_parsed
+                '$match': base_query
             },
             {
                 '$group': {
@@ -1816,7 +1798,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 }
             }
         ])
-        base_filter = f'({base_filter}) and ' if base_filter else ''
+        base_filter = f'({base_view["query"]["filter"]}) and ' if base_view["query"]["filter"] else ''
         data = []
         for item in aggregate_results:
             field_value = item["name"]
@@ -1828,10 +1810,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if (isinstance(field_value, bool)):
                     field_value = str(field_value).lower()
             data.append({'name': item["name"], 'value': item["value"], 'module': entity.value,
-                         'filter': f'{base_filter}{field} == {field_value}'})
+                         'view': {**base_view, 'query': {'filter': f'{base_filter}{field} == {field_value}'}}})
 
         if chart_view == ChartViews.pie:
-            total = data_collection.count_documents(base_parsed)
+            total = data_collection.count_documents(base_query)
             return [{'name': view or 'ALL', 'value': 0}, *[{**x, 'value': x['value'] / total} for x in data]]
         return data
 
@@ -1868,7 +1850,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         for item in results:
             field_values = gui_helpers.find_entity_field(item, field)
             if field_values:
-                logger.info(f'HEY {type(field_values)}')
                 if isinstance(field_values, list):
                     count += len(field_values)
                     sigma += sum(field_values)
