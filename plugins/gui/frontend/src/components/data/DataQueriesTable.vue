@@ -1,8 +1,8 @@
 <template>
     <x-actionable-table title="Queries" :count="queries.length" :loading="loading">
         <template slot="actions">
-            <div v-if="selected.length === 1" class="link" @click="createAlert">+ New Alert</div>
-            <div class="link" @click="removeQuery">Remove</div>
+            <div v-if="selected.length === 1" class="x-btn link" @click="createAlert">+ New Alert</div>
+            <div class="x-btn link" @click="removeQuery">Remove</div>
         </template>
         <x-table slot="table" id-field="uuid" :data="queries" :fields="fields" v-model="selected"
                  :click-row-handler="runQuery"/>

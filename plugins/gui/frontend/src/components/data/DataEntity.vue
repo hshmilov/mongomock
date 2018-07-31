@@ -45,7 +45,7 @@
                 <div class="x-grid x-grid-col-2 w-lg">
                     <template v-for="label in entity.labels">
                         <div>{{ label }}</div>
-                        <div class="link" @click="removeTag(label)">Remove</div>
+                        <div class="x-btn link" @click="removeTag(label)">Remove</div>
                     </template>
                 </div>
             </tab>

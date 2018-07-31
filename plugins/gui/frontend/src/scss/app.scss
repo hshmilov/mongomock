@@ -118,14 +118,6 @@ Formatting
   font-weight: 500;
 }
 
-.link {
-  color: $theme-blue;
-  cursor: pointer;
-  &:hover {
-    color: $theme-orange;
-  }
-}
-
 .invalid {
   border: 1px solid $background-color-error;
 }

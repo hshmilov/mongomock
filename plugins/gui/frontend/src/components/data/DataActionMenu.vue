@@ -1,7 +1,7 @@
 <template>
     <div>
         <triggerable-dropdown size="sm" align="right" :arrow="false">
-            <div slot="trigger" class="link">Actions</div>
+            <div slot="trigger" class="x-btn link">Actions</div>
             <nested-menu slot="content">
                 <nested-menu-item v-for="item in $children" v-if="item.title" :key="item.title"
                                   :title="item.title" @click="activate(item)"/>

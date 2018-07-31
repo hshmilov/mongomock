@@ -7,8 +7,8 @@
                 <x-data-action-menu v-show="selectedUsers && selectedUsers.length" :module="module"
                                     :selected="selectedUsers" @done="updateUsers" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
-                <x-data-field-menu :module="module" class="link" />
-                <div class="link" @click="exportCSV">Export csv</div>
+                <x-data-field-menu :module="module" class="x-btn link" />
+                <div class="x-btn link" @click="exportCSV">Export csv</div>
             </template>
         </x-data-table>
     </x-page>

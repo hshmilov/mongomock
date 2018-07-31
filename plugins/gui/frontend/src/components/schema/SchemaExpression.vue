@@ -27,7 +27,7 @@
         <!-- Option to add ')' and to remove the expression -->
         <label class="x-btn light checkbox-label" :class="{'active': expression.rightBracket}">
             <input type="checkbox" v-model="expression.rightBracket">)</label>
-        <div class="link" @click="$emit('remove')">x</div>
+        <div class="x-btn link" @click="$emit('remove')">x</div>
     </div>
 </template>
 

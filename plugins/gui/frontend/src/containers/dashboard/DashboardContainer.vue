@@ -20,7 +20,7 @@
                         <x-date-edit @input="confirmPickDate(chart.uuid, chart.name)"
                                      placeholder="latest" v-model="chartsCurrentlyShowing[chart.uuid]" :show-time="false"
                                      :limit="[{ type: 'fromto', from: cardHistoricalMin, to: new Date()}]"/>
-                        <a v-if="chart.showingHistorical" class="link" @click="clearDate(chart.uuid)">clear</a>
+                        <a v-if="chart.showingHistorical" class="x-btn link" @click="clearDate(chart.uuid)">clear</a>
                     </div>
                     <components :is="`x-${chart.view}`" :data="chart.data" @click-one="runChartFilter(chartInd, $event)"/>
                 </x-card>
@@ -30,7 +30,7 @@
                     </div>
                 </x-card>
                 <x-card title="New Chart" class="chart-new print-exclude">
-                    <div class="link" @click="createNewDashboard" id="dashboard_wizard">+</div>
+                    <div class="x-btn link" @click="createNewDashboard" id="dashboard_wizard">+</div>
                 </x-card>
             </div>
             <dashboard-wizard-container ref="wizard"/>

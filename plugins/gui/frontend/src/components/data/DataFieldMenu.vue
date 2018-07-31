@@ -1,6 +1,6 @@
 <template>
     <div class="x-data-field-menu">
-        <div @click="isActive = true" class="link">Edit Columns</div>
+        <div @click="isActive = true" class="x-btn link">Edit Columns</div>
         <modal v-if="isActive" @close="isActive = false">
             <template slot="body">
                 <div class="x-field-menu-filter">

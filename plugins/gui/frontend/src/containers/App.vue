@@ -79,6 +79,7 @@
 <style lang="scss">
     @import '../scss/app';
     @import '../scss/styles';
+    @import '../scss/custom_styles';
 
     #app {
         height: 100vh;

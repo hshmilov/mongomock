@@ -5,7 +5,7 @@
     ]" class="adapter-config">
         <x-table-actions title="Add or Edit Servers" :loading="loading">
             <template slot="actions">
-                <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="x-btn">Remove</div>
+                <div v-if="selectedServers && selectedServers.length" @click="removeServers" class="x-btn link">Remove</div>
                 <div @click="configServer('new')" id="new_server" class="x-btn">+ New Server</div>
             </template>
             <x-table slot="table" :fields="tableFields" :data="adapterClients" :click-row-handler="configServer"

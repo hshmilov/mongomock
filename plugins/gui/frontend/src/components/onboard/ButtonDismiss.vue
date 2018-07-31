@@ -1,5 +1,5 @@
 <template>
-    <div class="link">GOT IT</div>
+    <div class="x-btn link">GOT IT</div>
 </template>
 
 <script>

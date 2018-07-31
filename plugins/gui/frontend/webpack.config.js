@@ -40,6 +40,12 @@ module.exports = {
 									options: {
 										resources: path.resolve(__dirname, './src/scss/config.scss')
 									},
+								},
+								{
+									loader: 'sass-resources-loader',
+									options: {
+										resources: path.resolve(__dirname, './src/scss/custom_config.scss')
+									},
 								}
 							],
 							fallback: 'vue-style-loader'
