@@ -1,18 +1,46 @@
 <template>
-    <div>{{ processedData }}</div>
+    <div :class="severity">{{ processedData }}{{ isPercentage && processedData? '%': ''}}</div>
 </template>
 
 <script>
+	import { mapState } from 'vuex'
+    
 	export default {
 		name: 'x-number-view',
         props: ['schema', 'value'],
         computed: {
+			...mapState({
+				percentageThresholds(state) {
+					if (!state.configurable.gui.GuiService || !state.configurable.gui.GuiService.config.system_settings) {
+						return []
+					}
+					return state.configurable.gui.GuiService.config.system_settings.percentageThresholds
+				}
+			}),
 			processedData() {
                 if (Array.isArray(this.value)) {
                 	return this.value.map(item => this.format(item)).join(', ')
                 }
                 return this.format(this.value)
-            }
+            },
+			isPercentage() {
+				return this.schema.format && this.schema.format === 'percentage'
+			},
+			severity() {
+				if (this.value === undefined || this.value === null || !this.isPercentage) return ''
+
+                let minDiff = 101
+                let minSeverity = ''
+				Object.keys(this.percentageThresholds).forEach(thresholdName => {
+					if (this.percentageThresholds[thresholdName] < this.value) return
+					let diff = this.percentageThresholds[thresholdName] - this.value
+					if (diff < minDiff) {
+						minDiff = diff
+                        minSeverity = thresholdName
+                    }
+				})
+                return minSeverity
+			}
         },
         methods: {
 			format(value) {

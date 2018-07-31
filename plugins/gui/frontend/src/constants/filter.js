@@ -84,6 +84,7 @@ export const compOps = {
 		'true': {pattern: '{field} == true', notPattern: '{field} == false'},
 		'false': {pattern: '{field} == false', notPattern: '{field} == true'}
 	},
+	'percentage': numerical,
 	'number': numerical,
 	'integer': numerical
 }

@@ -2412,26 +2412,26 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         },
                         {
                             "name": "percentageThresholds",
-                            "title": "Percentage Fields Severity Ranges",
+                            "title": "Percentage Fields Severity Scopes",
                             "type": "array",
                             "items": [
                                 {
                                     "name": "error",
-                                    "title": "Poor:",
-                                    "type": "range"
+                                    "title": "Poor under:",
+                                    "type": "integer"
                                 },
                                 {
                                     "name": "warning",
-                                    "title": "Average:",
-                                    "type": "range"
+                                    "title": "Average under:",
+                                    "type": "integer"
                                 },
                                 {
                                     "name": "success",
-                                    "title": "Good:",
-                                    "type": "range"
+                                    "title": "Good under:",
+                                    "type": "integer"
                                 }
                             ],
-                            "required": ["poor", "average", "good"]
+                            "required": ["error", "warning", "success"]
                         },
                         {
                             "name": "tableView",
@@ -2607,9 +2607,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 "multiLine": False,
                 "defaultSort": True,
                 "percentageThresholds": {
-                    "error": {"lte": 40, "gte": 0},
-                    "warning": {"lte": 60, "gte": 41},
-                    "success": {"lte": 100, "gte": 61},
+                    "error": 40,
+                    "warning": 60,
+                    "success": 100,
                 },
                 "tableView": True
             }
