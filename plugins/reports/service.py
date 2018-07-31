@@ -403,8 +403,31 @@ class ReportsService(PluginBase, Triggerable):
         """
         mail_sender = self.mail_sender
         if mail_sender:
-            mail_sender.new_email(report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']), action_data) \
-                .send(report_consts.REPORT_CONTENT_HTML.format(
+            if action_data.get("sendDeviceCSV", False):
+                query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
+                    'name': report_data['view']})
+                parsed_query_filter = parse_filter(query['view']['query']['filter'])
+                field_list = query['view'].get('fields', [])
+                with self._get_db_connection() as db_connection:
+                    csv_string = gui_helpers.get_csv(parsed_query_filter,
+                                                     gui_helpers.get_sort(query['view']),
+                                                     {field: 1 for field in field_list},
+                                                     self.gui_dbs.entity_query_views_db_map[EntityType(
+                                                         report_data['view_entity'])],
+                                                     self._entity_views_db_map[EntityType(report_data['view_entity'])
+                                                                               ],
+                                                     self.core_address,
+                                                     db_connection,
+                                                     EntityType(report_data['view_entity']),
+                                                     default_sort=True)
+
+                email = mail_sender.new_email(
+                    report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']),
+                    action_data.get("emailList", []))
+
+                email.add_attachment("Axonius Entity Data.csv", csv_string.getvalue().encode('utf-8'), "text/csv")
+
+                email.send(report_consts.REPORT_CONTENT_HTML.format(
                     name=report_data['name'], query=report_data['view'], num_of_triggers=report_data['triggered'],
                     trigger_message=self._parse_action_content(report_data['triggers'], triggered),
                     num_of_current_devices=current_num_of_devices, severity=report_data['severity'],

@@ -1,13 +1,22 @@
-import logging
-logger = logging.getLogger(f"axonius.{__name__}")
-from axonius.plugin_base import add_rule, return_error
-from flask import request, session
-from axonius.utils.parsing import parse_filter
-import pymongo
+import csv
+import io
 import json
-from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
-from axonius.plugin_base import EntityType, GUI_DBs
+import logging
 from datetime import datetime
+
+import pymongo
+import requests
+from flask import make_response, request, session
+
+from axonius.adapter_base import AdapterProperty
+from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
+                                          PLUGIN_UNIQUE_NAME)
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.plugin_base import EntityType, add_rule, return_error
+from axonius.users.user_adapter import UserAdapter
+from axonius.utils.parsing import parse_filter
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # the maximal amount of data a pagination query will give
@@ -23,7 +32,7 @@ def session_connection(func):
     def wrapper(self, *args, **kwargs):
         user = session.get('user')
         if user is None:
-            return return_error("You're not connected", 401)
+            return return_error('You are not connected', 401)
         return func(self, *args, **kwargs)
 
     return wrapper
@@ -47,7 +56,7 @@ def add_rule_unauthenticated(rule, auth_method=session_connection, *args, **kwar
 # Caution! These decorators must come BEFORE @add_rule
 def filtered():
     """
-    Decorator stating that the view supports ?filter='adapters == "active_directory_adapter"'
+    Decorator stating that the view supports ?filter='adapters == 'active_directory_adapter''
     """
 
     def wrap(func):
@@ -55,11 +64,11 @@ def filtered():
             filter_obj = dict()
             try:
                 filter_expr = request.args.get('filter')
-                if filter_expr and filter_expr != "":
-                    logger.debug("Parsing filter: {0}".format(filter_expr))
+                if filter_expr and filter_expr != '':
+                    logger.debug(f'Parsing filter: {filter_expr}')
                     filter_obj = parse_filter(filter_expr)
             except Exception as e:
-                return return_error("Could not create mongo filter. Details: {0}".format(e), 400)
+                return return_error('Could not create mongo filter. Details: {0}'.format(e), 400)
             return func(self, mongo_filter=filter_obj, *args, **kwargs)
 
         return actual_wrapper
@@ -84,7 +93,7 @@ def sorted_endpoint():
                     logger.info(f'Parsing sort: {sort_param}')
                     sort_obj[sort_param] = pymongo.DESCENDING if desc_param == '1' else pymongo.ASCENDING
             except Exception as e:
-                return return_error("Could not create mongo sort. Details: {0}".format(e), 400)
+                return return_error('Could not create mongo sort. Details: {0}'.format(e), 400)
             return func(self, mongo_sort=sort_obj, *args, **kwargs)
 
         return actual_wrapper
@@ -95,7 +104,7 @@ def sorted_endpoint():
 # Caution! These decorators must come BEFORE @add_rule
 def projected():
     """
-    Decorator stating that the view supports ?fields=["name","hostname",["os_type":"OS.type"]]
+    Decorator stating that the view supports ?fields=['name','hostname',['os_type':'OS.type']]
     """
 
     def wrap(func):
@@ -105,7 +114,7 @@ def projected():
             if fields:
                 try:
                     mongo_fields = {}
-                    for field in fields.split(","):
+                    for field in fields.split(','):
                         mongo_fields[field] = 1
                 except json.JSONDecodeError:
                     pass
@@ -119,7 +128,7 @@ def projected():
 # Caution! These decorators must come BEFORE @add_rule
 def paginated(limit_max=PAGINATION_LIMIT_MAX):
     """
-    Decorator stating that the view supports "?limit=X&start=Y" for pagination
+    Decorator stating that the view supports '?limit=X&start=Y' for pagination
     """
 
     def wrap(func):
@@ -127,12 +136,12 @@ def paginated(limit_max=PAGINATION_LIMIT_MAX):
             # it's fine to raise here - an exception will be nicely JSONly displayed by add_rule
             limit = request.args.get('limit', limit_max, int)
             if limit < 0:
-                raise ValueError("Limit mustn't be negative")
+                raise ValueError('Limit must not be negative')
             if limit > limit_max:
                 limit = limit_max
             skip = int(request.args.get('skip', 0, int))
             if skip < 0:
-                raise ValueError("start mustn't be negative")
+                raise ValueError('start must not be negative')
             return func(self, limit=limit, skip=skip, *args, **kwargs)
 
         return actual_wrapper
@@ -153,7 +162,8 @@ def beautify_db_entry(entry):
     return tmp
 
 
-def get_entities(limit, skip, view_filter, sort, projection, db_connection, entity_views_db_map, entity_type: EntityType,
+def get_entities(limit, skip, view_filter, sort, projection, db_connection, entity_views_db_map,
+                 entity_type: EntityType,
                  include_history=False, default_sort=True, run_over_projection=True):
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
@@ -229,7 +239,7 @@ def find_entity_field(entity_data, field_path):
         # Return value corresponding with given path
         return entity_data
 
-    if type(entity_data) != list:
+    if not isinstance(entity_data, list):
         first_dot = field_path.find('.')
         if first_dot == -1:
             # Return value of last key in the chain
@@ -255,20 +265,20 @@ def find_entity_field(entity_data, field_path):
                 """
 
                 def same_string(x, y):
-                    if type(x) != str:
+                    if not isinstance(x, str):
                         return False
                     x = x.lower()
                     y = y.lower()
                     return x in y or y in x
 
-                if type(value) == str:
+                if isinstance(value, str):
                     return len([child for child in children if same_string(child, value)]) == 0
-                if type(value) == int:
+                if isinstance(value, int):
                     return value not in children
-                if type(value) == dict:
+                if isinstance(value, dict):
                     # For a dict, check if there is an element of whom all keys are identical to value's keys
-                    return len([item for item in children if len([key for key in item.keys()
-                                                                  if same_string(item[key], value[key])]) > 0]) == 0
+                    return not [item for item in children if
+                                len([key for key in item.keys() if same_string(item[key], value[key])]) > 0]
                 return True
 
             if type(child_value) == list:
@@ -301,3 +311,151 @@ def get_sort(view):
     if sort_def and sort_def.get('field'):
         sort_obj[sort_def['field']] = pymongo.DESCENDING if (sort_def['desc']) else pymongo.ASCENDING
     return sort_obj
+
+
+def entity_fields(entity_type: EntityType, core_address, db_connection):
+    """
+    Get generic fields schema as well as adapter-specific parsed fields schema.
+    Together these are all fields that any device may have data for and should be presented in UI accordingly.
+
+    :return:
+    """
+
+    def _get_generic_fields():
+        if entity_type == EntityType.Devices:
+            return DeviceAdapter.get_fields_info()
+        elif entity_type == EntityType.Users:
+            return UserAdapter.get_fields_info()
+        return dict()
+
+    all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
+
+    generic_fields = _get_generic_fields()
+    fields = {
+        'schema': {'generic': generic_fields, 'specific': {}},
+        'generic': [{
+            'name': 'adapters', 'title': 'Adapters', 'type': 'array', 'items': {
+                'type': 'string', 'format': 'logo', 'enum': []
+            }}, {
+                'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
+                'enum': all_supported_properties
+        }] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [{
+            'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
+        }],
+        'specific': {}
+    }
+    plugins_available = requests.get(core_address + '/register').json()
+    exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
+    plugins_from_db = list(db_connection['core']['configs'].find({}).
+                           sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
+    for plugin in plugins_from_db:
+        if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
+            continue
+        plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
+        if not plugin_fields:
+            continue
+        plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
+        if not plugin_fields_record:
+            continue
+        fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
+            'type': plugin_fields_record['schema']['type'],
+            'required': plugin_fields_record['schema'].get('required', []),
+            'items': filter(lambda x: x['name'] not in exclude_specific_schema,
+                            plugin_fields_record['schema'].get('items', []))
+        }
+        fields['specific'][plugin[PLUGIN_NAME]] = flatten_fields(
+            plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
+
+    return fields
+
+
+def get_csv(mongo_filter, mongo_sort, mongo_projection, db_connection, entity_views_db_map, core_address,
+            basic_db_connection, entity_type: EntityType, default_sort=True):
+    """
+    Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
+    The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
+
+    :param mongo_filter:
+    :param mongo_sort:
+    :param mongo_projection:
+    :param entity_type:
+    :return:
+    """
+    logger.info('Generating csv')
+    string_output = io.StringIO()
+    entities = get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
+                            db_connection,
+                            entity_views_db_map, entity_type,
+                            default_sort=default_sort)
+    output = ''
+    if len(entities) > 0:
+        # Beautifying the resulting csv.
+        del mongo_projection['internal_axon_id']
+        del mongo_projection['unique_adapter_names']
+        del mongo_projection[ADAPTERS_LIST_LENGTH]
+        # Getting pretty titles for all generic fields as well as specific
+        current_entity_fields = entity_fields(entity_type, core_address, basic_db_connection)
+        for field in current_entity_fields['generic']:
+            if field['name'] in mongo_projection:
+                mongo_projection[field['name']] = field['title']
+        for type in current_entity_fields['specific']:
+            for field in current_entity_fields['specific'][type]:
+                if field['name'] in mongo_projection:
+                    mongo_projection[field['name']] = f"{' '.join(type.split('_')).capitalize()}: {field['title']}"
+        for current_entity in entities:
+            del current_entity['internal_axon_id']
+            del current_entity['unique_adapter_names']
+            del current_entity[ADAPTERS_LIST_LENGTH]
+            for field in mongo_projection.keys():
+                # Replace field paths with their pretty titles
+                if field in current_entity:
+                    current_entity[mongo_projection[field]] = current_entity[field]
+                    del current_entity[field]
+                    if isinstance(current_entity[mongo_projection[field]], list):
+                        canonized_values = [str(val) for val in current_entity[mongo_projection[field]]]
+                        current_entity[mongo_projection[field]] = ','.join(canonized_values)
+        dw = csv.DictWriter(string_output, mongo_projection.values())
+        dw.writeheader()
+        dw.writerows(entities)
+
+    return string_output
+
+
+def flatten_fields(schema, name='', exclude=[], branched=False):
+    def _merge_title(schema, title):
+        """
+        If exists, add given title before that of given schema or set it if none existing
+        :param schema:
+        :param title:
+        :return:
+        """
+        new_schema = {**schema}
+        if title:
+            new_schema['title'] = f"{title}: {new_schema['title']}" if new_schema.get('title') else title
+        return new_schema
+
+    if schema.get('name'):
+        if schema['name'] in exclude:
+            return []
+        name = f"{name}.{schema['name']}" if name else schema['name']
+
+    if schema['type'] == 'array' and schema.get('items'):
+        if type(schema['items']) == list:
+            children = []
+            for item in schema['items']:
+                if not item.get('title'):
+                    continue
+                children = children + flatten_fields(_merge_title(item, schema.get('title')), name, exclude, branched)
+            return children
+
+        if schema['items']['type'] != 'array':
+            if not schema.get('title'):
+                return []
+            return [{**schema, 'name': name}]
+        return flatten_fields(_merge_title(schema['items'], schema.get('title')), name, exclude)
+
+    if not schema.get('title'):
+        return []
+    if branched:
+        schema['branched'] = True
+    return [{**schema, 'name': name}]

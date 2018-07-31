@@ -89,6 +89,7 @@
                         <!-- SYSLOG -->
                         <!-- MAIL -->
                         <x-checkbox label="Send an Email" v-model="actions.mail" @change="checkMailSettings"/>
+                        <x-checkbox v-if="actions.mail" label="Attach Entity Data CSV" v-model="sendDevicesCSVToEmail"/>
                         <vm-select v-if="actions.mail" v-model="mailList" no-data-text="Type mail addresses..."
                                    placeholder="" multiple filterable allow-create :default-first-option="true" />
                         <div v-if="!actions.mail"></div>
@@ -198,6 +199,7 @@
                 mailList: [],
                 tagName: '',
                 sendAllDevicesToSyslog: false,
+                sendDevicesCSVToEmail: false,
                 error: '',
                 emptySettings: {
                     'mail': false,
@@ -235,7 +237,8 @@
                             break
                         case 'send_emails':
                             this.actions.mail = true
-                            this.mailList = action.data
+                            this.mailList = action.data.emailList
+                            this.sendDevicesCSVToEmail = action.data.sendDeviceCSV
                             break
                         case 'tag_entities':
                             this.actions.tag = true
@@ -269,7 +272,7 @@
                 }
                 if (this.actions.mail) {
                     this.alert.actions.push({
-                        type: 'send_emails', data: this.mailList
+                        type: 'send_emails', data: { emailList: this.mailList, sendDeviceCSV: this.sendDevicesCSVToEmail}
                     })
                 }
                 if (this.actions.tag) {

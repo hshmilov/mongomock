@@ -1,4 +1,3 @@
-import csv
 import logging
 import threading
 from typing import Iterable
@@ -19,8 +18,6 @@ from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file, create_temp_file
 from axonius.utils.datetime import next_weekday
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.users.user_adapter import UserAdapter
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
     METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
@@ -295,59 +292,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     # DATA #
     ########
 
-    def _get_csv(self, mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType):
-        """
-        Given a entity_type, retrieve it's entities, according to given filter, sort and requested fields.
-        The resulting list is processed into csv format and returned as a file content, to be downloaded by browser.
-
-        :param mongo_filter:
-        :param mongo_sort:
-        :param mongo_projection:
-        :param entity_type:
-        :return:
-        """
-        logger.info("Generating csv")
-        string_output = io.StringIO()
-        entities = gui_helpers.get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
-                                            self.gui_dbs.entity_query_views_db_map[entity_type],
-                                            self._entity_views_db_map[entity_type], entity_type,
-                                            default_sort=self._system_settings['defaultSort'])
-        output = ''
-        if len(entities) > 0:
-            # Beautifying the resulting csv.
-            del mongo_projection['internal_axon_id']
-            del mongo_projection['unique_adapter_names']
-            del mongo_projection[ADAPTERS_LIST_LENGTH]
-            # Getting pretty titles for all generic fields as well as specific
-            entity_fields = self._entity_fields(entity_type)
-            for field in entity_fields['generic']:
-                if field['name'] in mongo_projection:
-                    mongo_projection[field['name']] = field['title']
-            for type in entity_fields['specific']:
-                for field in entity_fields['specific'][type]:
-                    if field['name'] in mongo_projection:
-                        mongo_projection[field['name']] = f'{" ".join(type.split("_")).capitalize()}: {field["title"]}'
-            for current_entity in entities:
-                del current_entity['internal_axon_id']
-                del current_entity['unique_adapter_names']
-                del current_entity[ADAPTERS_LIST_LENGTH]
-                for field in mongo_projection.keys():
-                    # Replace field paths with their pretty titles
-                    if field in current_entity:
-                        current_entity[mongo_projection[field]] = current_entity[field]
-                        del current_entity[field]
-                        if isinstance(current_entity[mongo_projection[field]], list):
-                            canonized_values = [str(val) for val in current_entity[mongo_projection[field]]]
-                            current_entity[mongo_projection[field]] = ','.join(canonized_values)
-            dw = csv.DictWriter(string_output, mongo_projection.values())
-            dw.writeheader()
-            dw.writerows(entities)
-            output = make_response(string_output.getvalue().encode('utf-8'))
-            timestamp = datetime.now().strftime("%d%m%Y-%H%M%S")
-            output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
-            output.headers['Content-type'] = 'text/csv'
-        return output
-
     def _entity_by_id(self, entity_type: EntityType, entity_id, advanced_fields=[]):
         """
         Retrieve or delete device by the given id, from current devices DB or update it
@@ -356,8 +300,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
 
         def _basic_generic_field_names():
-            generic_field_names = list(map(lambda field: field.get(
-                'name'), self._entity_fields(entity_type)['generic']))
+            with self._get_db_connection() as db_connection:
+                generic_field_names = list(map(lambda field: field.get(
+                    'name'), gui_helpers.entity_fields(entity_type, self.core_address, db_connection)['generic']))
             return filter(
                 lambda field: field != 'adapters' and field != 'labels' and
                 len([category for category in advanced_fields if category in field]) == 0,
@@ -391,102 +336,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         data_collection = self._entity_views_db_map[entity_type]
         return str(data_collection.count_documents(filter))
-
-    def _flatten_fields(self, schema, name='', exclude=[], branched=False):
-        def _merge_title(schema, title):
-            """
-            If exists, add given title before that of given schema or set it if none existing
-            :param schema:
-            :param title:
-            :return:
-            """
-            new_schema = {**schema}
-            if title:
-                new_schema['title'] = f'{title}: {new_schema["title"]}' if new_schema.get('title') else title
-            return new_schema
-
-        if (schema.get('name')):
-            if schema['name'] in exclude:
-                return []
-            name = f'{name}.{schema["name"]}' if name else schema['name']
-
-        if schema['type'] == 'array' and schema.get('items'):
-            if type(schema['items']) == list:
-                children = []
-                for item in schema['items']:
-                    if not item.get('title'):
-                        continue
-                    children = children + self._flatten_fields(_merge_title(item, schema.get('title')),
-                                                               name, exclude, branched)
-                return children
-
-            if schema['items']['type'] != 'array':
-                if not schema.get('title'):
-                    return []
-                return [{**schema, 'name': name}]
-            return self._flatten_fields(_merge_title(schema['items'], schema.get('title')), name, exclude, True)
-
-        if not schema.get('title'):
-            return []
-        if branched:
-            schema['branched'] = True
-        return [{**schema, 'name': name}]
-
-    def _entity_fields(self, entity_type: EntityType):
-        """
-        Get generic fields schema as well as adapter-specific parsed fields schema.
-        Together these are all fields that any device may have data for and should be presented in UI accordingly.
-
-        :return:
-        """
-
-        def _get_generic_fields():
-            if entity_type == EntityType.Devices:
-                return DeviceAdapter.get_fields_info()
-            elif entity_type == EntityType.Users:
-                return UserAdapter.get_fields_info()
-            return dict()
-
-        all_supported_properties = [x.name for x in AdapterProperty.__members__.values()]
-
-        generic_fields = _get_generic_fields()
-        fields = {
-            'schema': {'generic': generic_fields, 'specific': {}},
-            'generic': [{
-                'name': 'adapters', 'title': 'Adapters', 'type': 'array', 'items': {
-                    'type': 'string', 'format': 'logo', 'enum': []
-                }}, {
-                'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
-                'enum': all_supported_properties
-            }] + self._flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [{
-                'name': 'labels', 'title': 'Tags', 'type': 'array', 'items': {'type': 'string', 'format': 'tag'}
-            }],
-            'specific': {}
-        }
-        plugins_available = requests.get(self.core_address + '/register').json()
-        exclude_specific_schema = [item['name'] for item in generic_fields.get('items', [])]
-        with self._get_db_connection() as db_connection:
-            plugins_from_db = list(db_connection['core']['configs'].find({}).
-                                   sort([(PLUGIN_UNIQUE_NAME, pymongo.ASCENDING)]))
-            for plugin in plugins_from_db:
-                if not plugin[PLUGIN_UNIQUE_NAME] in plugins_available:
-                    continue
-                plugin_fields = db_connection[plugin[PLUGIN_UNIQUE_NAME]][f'{entity_type.value}_fields']
-                if not plugin_fields:
-                    continue
-                plugin_fields_record = plugin_fields.find_one({'name': 'parsed'}, projection={'schema': 1})
-                if not plugin_fields_record:
-                    continue
-                fields['schema']['specific'][plugin[PLUGIN_NAME]] = {
-                    'type': plugin_fields_record['schema']['type'],
-                    'required': plugin_fields_record['schema'].get('required', []),
-                    'items': filter(lambda x: x['name'] not in exclude_specific_schema,
-                                    plugin_fields_record['schema'].get('items', []))
-                }
-                fields['specific'][plugin[PLUGIN_NAME]] = self._flatten_fields(
-                    plugin_fields_record['schema'], f'adapters_data.{plugin[PLUGIN_NAME]}', ['scanner'])
-
-        return fields
 
     def _disable_entity(self, entity_type: EntityType):
         entity_map = {
@@ -667,7 +516,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.projected()
     @gui_helpers.add_rule_unauthenticated("devices/csv")
     def get_devices_csv(self, mongo_filter, mongo_sort, mongo_projection):
-        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Devices)
+        with self._get_db_connection() as db_connection:
+            csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
+                                             self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
+                                             self._entity_views_db_map[EntityType.Devices], self.core_address,
+                                             db_connection, EntityType.Devices,
+                                             default_sort=self._system_settings['defaultSort'])
+            output = make_response(csv_string.getvalue().encode('utf-8'))
+            timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+            output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
+            output.headers['Content-type'] = 'text/csv'
+            return output
 
     @gui_helpers.add_rule_unauthenticated("devices/<device_id>", methods=['GET'])
     def device_by_id(self, device_id):
@@ -682,7 +541,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @gui_helpers.add_rule_unauthenticated("devices/fields")
     def device_fields(self):
-        return jsonify(self._entity_fields(EntityType.Devices))
+        with self._get_db_connection() as db_connection:
+            return jsonify(gui_helpers.entity_fields(EntityType.Devices, self.core_address, db_connection))
 
     @gui_helpers.paginated()
     @gui_helpers.filtered()
@@ -726,7 +586,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.projected()
     @gui_helpers.add_rule_unauthenticated("users/csv")
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
-        return self._get_csv(mongo_filter, mongo_sort, mongo_projection, EntityType.Users)
+        with self._get_db_connection() as db_connection:
+            csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
+                                             self.gui_dbs.entity_query_views_db_map[EntityType.Users],
+                                             self._entity_views_db_map[EntityType.Users], self.core_address,
+                                             db_connection, EntityType.Users,
+                                             default_sort=self._system_settings['defaultSort'])
+            output = make_response(csv_string.getvalue().encode('utf-8'))
+            timestamp = datetime.now().strftime('%d%m%Y-%H%M%S')
+            output.headers['Content-Disposition'] = f'attachment; filename=axonius-data_{timestamp}.csv'
+            output.headers['Content-type'] = 'text/csv'
+            return output
 
     @gui_helpers.add_rule_unauthenticated("users/<user_id>", methods=['GET'])
     def user_by_id(self, user_id):
@@ -739,7 +609,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
     @gui_helpers.add_rule_unauthenticated("users/fields")
     def user_fields(self):
-        return jsonify(self._entity_fields(EntityType.Users))
+        with self._get_db_connection() as db_connection:
+            return jsonify(gui_helpers.entity_fields(EntityType.Users, self.core_address, db_connection))
 
     @gui_helpers.add_rule_unauthenticated("users/disable", methods=['POST'])
     def disable_user(self):
@@ -2240,12 +2111,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
 
         def _get_field_titles(entity):
-            entity_fields = self._entity_fields(entity)
+            with self._get_db_connection() as db_connection:
+                current_entity_fields = gui_helpers.entity_fields(entity, self.core_address, db_connection)
             name_to_title = {}
-            for field in entity_fields['generic']:
+            for field in current_entity_fields['generic']:
                 name_to_title[field['name']] = field['title']
-            for type in entity_fields['specific']:
-                for field in entity_fields['specific'][type]:
+            for type in current_entity_fields['specific']:
+                for field in current_entity_fields['specific'][type]:
                     name_to_title[field['name']] = field['title']
             return name_to_title
 
