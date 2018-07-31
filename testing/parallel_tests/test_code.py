@@ -12,7 +12,8 @@ EXCLUDE_PATHS = [
     'venv',
     'usr',
     '.idea',
-    '.git'
+    '.git',
+    '.venv',
 ]
 ACTUAL_PARENT_FOLDER = os.path.realpath(os.path.dirname(__file__))
 BASE_PATH = os.path.realpath(os.path.dirname(os.path.dirname(ACTUAL_PARENT_FOLDER)))
@@ -121,6 +122,8 @@ class TestCode:
     @staticmethod
     def test_no_proper_files_in_exempt_list():
         """Test that every file in the exempt list does not pass pylint"""
-        exempted_proper_files = _get_unexpected_pylint_state(is_success_expected=False)
+        exempted_proper_files = _get_unexpected_pylint_state(
+            is_success_expected=False)
         invalid_files = bool(exempted_proper_files)
-        assert not invalid_files, 'Proper files found in exempt list: {}'.format('\n'.join(exempted_proper_files))
+        assert not invalid_files, 'Proper files found in exempt list: Please remove {} from {}'.format(
+            '\n'.join(exempted_proper_files), PYLINT_EXEMPT_FILE_NAME)

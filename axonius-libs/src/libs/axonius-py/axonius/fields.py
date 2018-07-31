@@ -80,6 +80,7 @@ class Field(object):
         self._pattern = pattern
         if enum is not None:
             assert isinstance(enum, list) or issubclass(enum, Enum)
+            assert len(set(map(lambda item: item.lower() if isinstance(item, str) else item, enum))) == len(enum)
         elif issubclass(field_type, Enum):
             enum = field_type
         self._enum = enum
@@ -198,8 +199,16 @@ class Field(object):
                 # If still its not...
                 if not isinstance(value, field_type):
                     raise TypeError(f'{name} expected to be {field_type}, got {value} of {type(value)} instead')
+
                 if field_instance._enum:
-                    if value not in field_instance._enum:
+                    for item in field_instance._enum:
+                        if isinstance(value, str) and isinstance(item, str) and value.lower() == item.lower():
+                            value = item
+                            break
+                        elif value == item:
+                            value = item
+                            break
+                    else:
                         raise ValueError(f'Unexpected enum value {value}, '
                                          f'expected one of {field_instance.enum} values')
                 if field_instance._min and value < field_instance._min:

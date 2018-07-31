@@ -119,7 +119,6 @@ adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_sn_device_groups
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_software_management.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_tag_1.py
 adapters/juniper_adapter/py-space-platform/jnpr/space/test/test_user_management.py
-adapters/junos_adapter/client.py
 adapters/junos_adapter/service.py
 adapters/kaseya_adapter/connection.py
 adapters/kaseya_adapter/exceptions.py
@@ -315,7 +314,6 @@ axonius-libs/src/libs/axonius-py/axonius/clients/cisco/abstract.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/console.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/snmp.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/snmp_parser.py
-axonius-libs/src/libs/axonius-py/axonius/clients/juniper/device.py
 axonius-libs/src/libs/axonius-py/axonius/clients/juniper/rpc.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/exceptions.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/ldap.py

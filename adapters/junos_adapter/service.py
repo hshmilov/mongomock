@@ -11,7 +11,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from junos_adapter.client import JunOSClient
 from junos_adapter.client_id import get_client_id
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class JunosAdapter(AdapterBase):
@@ -28,8 +28,8 @@ class JunosAdapter(AdapterBase):
             with JunOSClient(**client_config) as client:
                 return client
         except Exception as e:
-            logger.error('Failed to connect to client {0}'.format(
-                self._get_client_id(client_config)))
+            logger.error('Failed to connect to client %s',
+                         self._get_client_id(client_config))
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client):
@@ -37,9 +37,13 @@ class JunosAdapter(AdapterBase):
             for type_, func in [
                     ('ARP Device', client.query_arp_table),
                     ('FDB Device', client.query_fdb_table),
+                    ('Juniper Device', client.query_basic_info),
             ]:
                 try:
-                    yield (type_, (client._host, func()))
+                    if type_ == 'Juniper Device':
+                        yield (type_, func())
+                    else:
+                        yield (type_, (client._host, func()))
                 except (RPCError, RpcError) as e:
                     logger.error(f'Failed to execute RPC Command: {str(e)}')
                 except Exception:
@@ -47,44 +51,47 @@ class JunosAdapter(AdapterBase):
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 {
-                    "name": 'host',
-                    "title": 'Host Name',
-                    "type": 'string'
+                    'name': 'host',
+                    'title': 'Host Name',
+                    'type': 'string'
                 },
                 {
-                    "name": 'username',
-                    "title": 'User Name',
-                    "type": 'string',
-                    "description": "Username for SSH"
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string',
+                    'description': 'Username for SSH'
                 },
                 {
-                    "name": 'password',
-                    "title": "Password",
-                    "type": 'string',
-                    "format": 'password',
-                    "description": "Password for SSH"
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password',
+                    'description': 'Password for SSH'
                 },
                 {
-                    "name": 'port',
-                    "title": 'Protocol port',
-                    "type": 'integer',
-                    "description": "SSH Port (Default: 22)"
+                    'name': 'port',
+                    'title': 'Protocol port',
+                    'type': 'integer',
+                    'description': 'SSH Port (Default: 22)'
                 },
             ],
-            "required": [
-                "username",
-                "password",
-                "host",
+            'required': [
+                'username',
+                'password',
+                'host',
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     def _parse_raw_data(self, raw_datas):
         for type_, raw_data in raw_datas:
             try:
-                raw_data = rpc.parse_device(type_, [raw_data])
+                if type_ != 'Juniper Device':
+                    raw_data = [raw_data]
+
+                raw_data = rpc.parse_device(type_, raw_data)
                 yield from create_device(self._new_device_adapter, type_, raw_data)
             except Exception:
                 logger.exception(f'Error in handling {raw_data}')

@@ -71,6 +71,13 @@ class DeviceAdapterOS(SmartJsonClass):
     minor = Field(int, 'Minor')
 
 
+class DeviceAdapterVlan(SmartJsonClass):
+    """ A definition for the json-scheme for a vlan """
+    name = Field(str, 'Vlan Name')
+    tagid = Field(int, 'Tag ID')
+    tagness = Field(str, 'Vlan Tagness', enum=['Tagged', 'Untagged'])
+
+
 class DeviceAdapterNetworkInterface(SmartJsonClass):
     """ A definition for the json-scheme for a network interface """
     name = Field(str, 'Iface Name')
@@ -82,10 +89,20 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     ips_raw = ListField(str, description='Number representation of the IP, useful for filtering by range',
                         converter=format_ip_raw)
 
-    vlans = ListField(str, 'Vlans', description='A list of vlans in this interface')
+    vlan_list = ListField(DeviceAdapterVlan, 'Vlans', description='A list of vlans in this interface')
+
+    # Operational status enum from cisco reference, which is industry standart.
+    operational_status = Field(str, "Operational Status", enum=["Up", "Down", "Testing", "Unknown",
+                                                                "Dormant", "Nonpresent", "LowerLayerDown"])
+    admin_status = Field(str, "Admin Status", enum=["Up", "Down"])
+
+    speed = Field(str, "Interface Speed", description="Interface max speed per Second")
+    port_type = Field(str, "Port Type", enum=["Access", "Trunk"])
+    mtu = Field(str, "MTU", description="Interface Maximum transmission unit")
 
 
 class DeviceAdapterRelatedIps(DeviceAdapterNetworkInterface):
+    """ A definition for the json-scheme for a related ips """
     pass
 
 
@@ -310,7 +327,9 @@ class DeviceAdapter(SmartJsonClass):
                         logger.exception(f'Invalid subnet: {repr(subnet)}')
         return obj
 
-    def add_nic(self, mac=None, ips=None, subnets=None, name=None):
+    def add_nic(self, mac=None, ips=None, subnets=None, name=None,
+                speed=None, mtu=None, operational_status=None, admin_status=None,
+                vlans=None, port_type=None):
         """
         Add a new network interface card to this device.
         :param mac: the mac
@@ -336,7 +355,55 @@ class DeviceAdapter(SmartJsonClass):
             except (ValueError, TypeError):
                 if logger is None:
                     raise
-                logger.exception(f'Invalid name : {repr(name)}')
+                logger.exception(f'Invalid name: {repr(name)}')
+
+        if mtu is not None:
+            try:
+                nic.mtu = int(mtu)
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid mtu: {repr(mtu)}')
+
+        if speed is not None:
+            try:
+                nic.speed = speed
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid speed: {repr(speed)}')
+
+        if operational_status is not None:
+            try:
+                nic.operational_status = operational_status
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid operational_status: {repr(operational_status)}')
+
+        if admin_status is not None:
+            try:
+                nic.admin_status = admin_status
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid admin_status: {repr(admin_status)}')
+
+        if port_type is not None:
+            try:
+                nic.port_type = port_type
+            except (ValueError, TypeError):
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid port_type: {repr(port_type)}')
+
+        if vlans is not None:
+            try:
+                nic.vlan_list = vlans
+            except Exception:
+                if logger is None:
+                    raise
+                logger.exception(f'Invalid vlans: {repr(vlans)}')
 
         self.network_interfaces.append(nic)
 

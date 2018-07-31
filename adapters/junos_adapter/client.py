@@ -1,9 +1,16 @@
-''' client module for junos devices '''
+""" client module for junos devices """
+import logging
+
+
+from ncclient.operations.rpc import RPCError
+from jnpr.junos.exception import RpcError
 from jnpr.junos import Device
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class JunOSClient:
-    ''' client to fetch data from junos devices '''
+    """ client to fetch data from junos devices """
 
     def __init__(self, host, username, password, port):
         self._host = host
@@ -30,3 +37,20 @@ class JunOSClient:
     def query_fdb_table(self):
         """ query the fdb table and return data """
         return self._dev.rpc.get_ethernet_switching_table_information()
+
+    def query_basic_info(self):
+        """ query the basic info xmls and return data """
+        results = []
+        for name, action in [
+                ('interface list', self._dev.rpc.get_interface_information),
+                ('hardware', self._dev.rpc.get_chassis_inventory),
+                ('version', self._dev.rpc.get_software_information),
+                ('vlans', lambda: self._dev.rpc.get_ethernet_switching_interface_information(detail=True)),
+        ]:
+            try:
+                results.append((name, action()))
+            except (RPCError, RpcError) as e:
+                logger.error(f'Failed to execute RPC Command: {str(e)}')
+            except Exception:
+                logger.exception('Failed to execute query')
+        return results
