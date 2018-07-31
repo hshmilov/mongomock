@@ -177,7 +177,7 @@
             },
             runCoverageFilter(properties, covered) {
                 if (!properties || !properties.length) return
-                if (covered) {
+                if (covered === 2) {
                     this.runFilter(`specific_data.adapter_properties in ['${properties.join("','")}']`, 'devices')
                 } else {
                     this.runFilter(properties.map((property) => {
@@ -192,7 +192,7 @@
 				this.updateView({
 					module: query.module, view: query.view
 				})
-				// this.clearDataContent({module: query.module})
+				this.clearDataContent({module: query.module})
 				this.$router.push({path: query.module})
             },
             runFilter(filter, module) {
