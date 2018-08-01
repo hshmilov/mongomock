@@ -229,7 +229,8 @@ class ConsoleArpCiscoData(ArpCiscoData):
         for entry in self._raw_data:
             try:
                 entry = entry.split()
-                mac, ip, iface = format_mac(entry[3]), entry[1], entry[5]
+                mac, ip = format_mac(entry[3]), entry[1]
+                iface = entry[5] if len(entry) > 5 else ""
                 yield {'mac': mac, 'ip': ip, 'iface': iface}
             except Exception:
                 logger.exception('Exception while paring arp line')
