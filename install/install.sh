@@ -7,7 +7,7 @@ optional_parameters=$1
 
 echo "Appending Metadata"
 (
-install/metadata.sh >> shared_readonly_files/__build_metadata
+install/metadata.sh > shared_readonly_files/__build_metadata
 )
 
 echo "Building all..."

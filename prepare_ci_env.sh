@@ -37,4 +37,4 @@ else
   exit 1
 fi
 
-install/metadata.sh >> shared_readonly_files/__build_metadata
+install/metadata.sh > shared_readonly_files/__build_metadata

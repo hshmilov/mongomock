@@ -187,7 +187,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     metadata_bytes = metadata_file.read()[:-1].replace('\\', '\\\\')
                     return json.loads(metadata_bytes)
         except Exception:
-            logger.exception("Bad __build_metadata file.")
+            logger.exception(f"Bad __build_metadata file {metadata_bytes}")
             return ''
 
     def add_default_views(self, entity_type: EntityType, default_views_ini_path):
