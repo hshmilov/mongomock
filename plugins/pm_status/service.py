@@ -185,6 +185,9 @@ class PmStatusService(PluginBase, Triggerable):
 
         logger.info(f"Found {windows_devices_count} Windows devices to run queries on.")
 
+        # AX-1592 Temp Fix until we fix it generically
+        windows_devices = list(windows_devices)
+
         # Lets make some better logging
         if windows_devices_count > 10000:
             log_message_device_count_threshold = 1000
@@ -236,6 +239,7 @@ class PmStatusService(PluginBase, Triggerable):
 
             # shoot another one!
             self.number_of_active_execution_requests = self.number_of_active_execution_requests + 1
+            # Caution! If we had correlation up to this point, we will have serious problems.
             internal_axon_id = device["internal_axon_id"]
 
             logger.debug(f"Going to request action on {internal_axon_id}")

@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(f"axonius.{__name__}")
 
 # NVD Information is available from 2002. But we don't necessarily want all of it.
-NVD_DIST_EARLIEST_YEAR = 2010
+NVD_DIST_EARLIEST_YEAR = 2015
 NVD_DIST_URL = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-{version}.{ext}"
 MAX_RETRY_FOR_INTERNET_OPERATIONS = 3
 TIMEOUT_FOR_REQUESTS_IN_SECONDS = 7

@@ -111,6 +111,14 @@ class GetUserLogons(GeneralInfoSubplugin):
 
             if caption is None or sid is None:
                 self.logger.error(f"Couldn't find Caption/SID in user_accounts_data: {user} not enriching")
+            elif str(sid) in sids_to_users:
+                # This can happen if a user is a domain user but also exists as a local one. In these circumstances,
+                # the local one would have a caption like "user@TESTDOMAIN" while the AD one will
+                # have "user@TestDomain.test". We prefer the AD one from two reasons:
+                # 1. Its more good looking
+                # 2. An AD user already exists, we shouldn't create a new user here. Using the local user
+                #    can cause us to create a new user (if the id is username and not sid)
+                self.logger.debug(f"sid {sid} already exists from the db we get in AD, bypassing")
             else:
                 local_hostname, local_username = caption.split("\\")
                 user_object = {
