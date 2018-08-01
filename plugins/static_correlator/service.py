@@ -59,7 +59,8 @@ class StaticCorrelatorService(CorrelatorBase):
                                     'id': '$$adapter.data.id',
                                     OS_FIELD: '$$adapter.data.os',
                                     'hostname': '$$adapter.data.hostname',
-                                    NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces'
+                                    NETWORK_INTERFACES_FIELD: '$$adapter.data.network_interfaces',
+                                    'device_serial': '$$adapter.data.device_serial'
                                 }
                             }
                         }

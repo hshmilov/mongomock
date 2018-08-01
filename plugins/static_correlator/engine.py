@@ -135,6 +135,10 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, devices):
+        # WARNING WARNING WARNING
+        # Adding or changing any type of correlation here might require changing the appropriate logic
+        # at static_correlator/engine
+
         # since this operation is extremely costly, we normalize the adapter_devices:
         # 1. adding 2 fields to the root - NORMALIZED_IPS and NORMALIZED_MACS to allow easy access to the ips and macs
         #    of all the NICs
