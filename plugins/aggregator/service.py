@@ -330,8 +330,8 @@ class AggregatorService(PluginBase, Triggerable):
         """
         response = self.request_remote_plugin(f'clean_devices', plugin_unique_name, method='POST')
         if response.status_code != 200:
-            logger.warn(f"Failed cleaning db with adapter {plugin_unique_name}. " +
-                        f"Reason: {str(devices.content)}")
+            logger.warning(f"Failed cleaning db with adapter {plugin_unique_name}. " +
+                           f"Reason: {str(response.content)}")
             return None
         return from_json(response.content)
 

@@ -234,14 +234,12 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
             _change_subphase(scheduler_consts.ResearchPhases.Post_Correlation)
             self._run_plugins('Post-Correlation')
 
-            logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfully.")
-
             if self.__save_history:
                 # Save history.
                 _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
                 self._run_historical_phase()
 
-                logger.info(f"Finished {scheduler_consts.Phases.Save_Historical.name} Phase Successfully.")
+            logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfully.")
 
     def _get_plugins(self, plugin_subtype):
         """

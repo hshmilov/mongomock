@@ -826,7 +826,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             if should_check_for_unique_ids:
                 parsed_device_id = parsed_device.id  # we must have an id (its definitely not a scanner)
                 if parsed_device_id in devices_ids:
-                    logger.critical(f"Error! device with id {parsed_device_id} already yielded! skipping")
+                    logger.error(f"Error! device with id {parsed_device_id} already yielded! skipping")
                     continue
                 devices_ids.append(parsed_device_id)
 

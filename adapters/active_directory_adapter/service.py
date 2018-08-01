@@ -104,6 +104,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         self._resolving_thread_lock = threading.RLock()
 
+        self.__devices_data_db = self._get_collection(DEVICES_DATA)
+
         executors = {'default': ThreadPoolExecutor(3)}
         self._background_scheduler = LoggedBackgroundScheduler(executors=executors)
 
@@ -133,8 +135,6 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
                                            )
 
         self._background_scheduler.start()
-
-        self.__devices_data_db = self._get_collection(DEVICES_DATA)
 
         # create temp files dir
         os.makedirs(TEMP_FILES_FOLDER, exist_ok=True)
