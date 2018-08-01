@@ -22,11 +22,18 @@
         },
         methods: {
 			format(value) {
-				if (this.schema.format === 'date-time') {
+				if (!this.schema.format) return value
+				if (this.schema.format.includes('date') || this.schema.format.includes('time')) {
 					if (!value) return ''
 					let dateTime = new Date(value)
 					if (dateTime === 'Invalid Date') return value
 
+                    if (this.schema.format === 'date') {
+						return dateTime.toLocaleDateString()
+                    }
+					if (this.schema.format === 'time') {
+						return dateTime.toLocaleTimeString()
+					}
 					return `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`
 				} else if (this.schema.format === 'time') {
 					if (!value) return ''

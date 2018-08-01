@@ -22,6 +22,8 @@ class JsonFormat(Enum):
 class JsonStringFormat(JsonFormat):
     """ see https://spacetelescope.github.io/understanding-json-schema/reference/string.html#format """
     date_time = auto()
+    date = auto()
+    time = auto()
     email = auto()
     hostname = auto()
     ip = auto()
