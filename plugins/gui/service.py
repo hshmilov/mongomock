@@ -1435,7 +1435,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 latest_date = self._fetch_latest_date(EntityType(view['entity']), from_given_date, to_given_date)
                 if not latest_date:
                     continue
-                historical_views.append({'for_date': latest_date['accurate_for_datetime'], **view})
+                historical_views.append({'for_date': latest_date, **view})
 
             except Exception:
                 logger.exception(f"When dealing with {view_name} and {view['entity']}")
