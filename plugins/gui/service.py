@@ -260,8 +260,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'query_type': 'saved',
             'timestamp': datetime.now()
         }, upsert=True)
-        logger.info(f'Added view {name} id: {result.inserted_id}')
-        return result.inserted_id
+        logger.info(f'Added view {name} id: {result.upserted_id}')
+        return result.upserted_id
 
     def _insert_report_config(self, name, report):
         reports_collection = self._get_collection("reports_config")
@@ -272,7 +272,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         result = reports_collection.replace_one({'name': name},
                                                 {'name': name, 'adapters': json.loads(report['adapters'])}, upsert=True)
-        logger.info(f'Added report {name} id: {result.inserted_id}')
+        logger.info(f'Added report {name} id: {result.upserted_id}')
 
     def _insert_dashboard_chart(self, dashboard_name, dashboard_metric, dashboard_view, dashboard_data):
         dashboard_collection = self._get_collection("dashboard")
@@ -286,7 +286,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                                    'metric': dashboard_metric,
                                                    'view': dashboard_view,
                                                    'config': dashboard_data}, upsert=True)
-        logger.info(f'Added report {dashboard_name} id: {result.inserted_id}')
+        logger.info(f'Added report {dashboard_name} id: {result.upserted_id}')
 
     ########
     # DATA #
@@ -1729,8 +1729,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 ]
             }) / total, 'module': entity.value, 'view': child2_view})
 
-        remainder = total - sum([x['value'] for x in data])
-        return [{'name': base or 'ALL', 'value': remainder / total, 'remainder': True,
+        remainder = 1 - sum([x['value'] for x in data])
+        return [{'name': base or 'ALL', 'value': remainder, 'remainder': True,
                  'view': {**base_view, 'query': {'filter': base_filter}}, 'module': entity.value}, *data]
 
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):

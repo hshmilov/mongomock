@@ -14,6 +14,8 @@
             <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)"
                :id="getId(index)">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
+                <text v-if="slice.value > 0.04" class="scaling" text-anchor="middle"
+                      :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.value * 100)}}%</text>
             </g>
         </svg>
         <div v-show="hoverDetails.title" ref="tooltip" class="pie-tooltip">
@@ -56,6 +58,7 @@
 					// Starting slice at the end of previous one, and ending after percentage defined for item
 					const [startX, startY] = this.getCoordinatesForPercent(cumulativePortion)
 					cumulativePortion += slice.value / 2
+					const [middleX, middleY] = this.getCoordinatesForPercent(cumulativePortion)
 					cumulativePortion += slice.value / 2
 					const [endX, endY] = this.getCoordinatesForPercent(cumulativePortion)
 					return {
@@ -64,7 +67,8 @@
 							`M ${startX} ${startY}`, // Move
 							`A 1 1 0 ${slice.value > .5 ? 1 : 0} 1 ${endX} ${endY}`, // Arc
 							`L 0 0`, // Line
-						].join(' ')
+						].join(' '),
+						middle: { x: middleX * 0.7, y: middleY * (middleY > 0? 0.8: 0.5) }
 					}
 				})
 			},

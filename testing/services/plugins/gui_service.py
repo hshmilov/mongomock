@@ -53,7 +53,8 @@ class GuiService(PluginService):
     def _replace_all_dashboard(self, dashboard_list):
         dashboard = self.db.get_collection(self.unique_name, DASHBOARD_COLLECTION)
         dashboard.delete_many({})
-        dashboard.insert(dashboard_list)
+        if len(dashboard_list) > 0:
+            dashboard.insert(dashboard_list)
 
     @property
     def exposed_ports(self):
