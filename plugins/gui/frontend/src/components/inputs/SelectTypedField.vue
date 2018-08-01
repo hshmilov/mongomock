@@ -41,7 +41,7 @@
         },
         methods: {
 			updateFieldSpace() {
-				let fieldSpaceMatch = /adapters_data\.(\w+_adapter)\./.exec(this.value)
+				let fieldSpaceMatch = /adapters_data\.(\w+)\./.exec(this.value)
 				if (fieldSpaceMatch && fieldSpaceMatch.length > 1) {
 					this.fieldType = fieldSpaceMatch[1]
 				} else {

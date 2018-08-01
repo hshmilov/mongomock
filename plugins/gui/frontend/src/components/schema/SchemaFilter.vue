@@ -82,11 +82,8 @@
 				this.expressions.splice(index, 1)
 				this.filters.splice(index, 1)
                 this.bracketWeights.splice(index, 1)
-				if (!index && this.expressions.length) {
-					this.expressions[index].logicOp = ''
-					if (this.filters.length) {
-						this.filters[index] = this.filters[index].split(' ').splice(1).join(' ')
-					}
+				if (this.expressions.length) {
+                    this.expressions[index].i = index
 				}
 				if (!this.validateBrackets()) return
 				this.$emit('change', this.filters.join(' '))

@@ -194,6 +194,9 @@
 				})
 			},
 			compileExpression () {
+            	if (!this.expression.i) {
+            		this.expression.logicOp = ''
+                }
 				if (!this.expression.compOp && !this.expression.value && this.expression.field.includes('id')) {
                     this.expression.compOp = 'exists'
                 }
@@ -230,7 +233,12 @@
 					this.changeState({ name: 'queryOp' })
                 }
             }
-		}
+		},
+        created() {
+			if (this.expression.field) {
+				this.compileExpression()
+            }
+        }
 	}
 </script>
 

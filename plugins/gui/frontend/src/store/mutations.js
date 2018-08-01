@@ -82,6 +82,7 @@ export const updateDataFields = (state, payload) => {
 			fields.data.specific[name] = payload.data.specific[name]
 			fields.data.generic[0].items.enum.push({name, title: pluginMeta[name].title})
 		})
+		fields.data.generic[0].items.enum.sort((first, second) => (first.title < second.title) ? -1 : 1)
 	}
 }
 
