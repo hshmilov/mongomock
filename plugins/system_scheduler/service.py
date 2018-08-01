@@ -70,6 +70,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         self.__system_research_rate = float(config['system_research_rate'])
         logger.info(f"Setting research rate to: {self.__system_research_rate}")
         scheduler = getattr(self, '_research_phase_scheduler', None)
+        self.__save_history = bool(config['save_history'])
 
         # first config load, no reschedule
         if not scheduler:
@@ -98,6 +99,12 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                     "title": "Automatically Generate Report after Discovery Phase - Warning: turning off this feature can result in very long download times for executive reports.",
                     "type": "bool",
                     "required": True
+                },
+                {
+                    "name": "save_history",
+                    "title": "Should history be gathered",
+                    "type": "bool",
+                    "required": True
                 }
             ],
             "name": "discovery_settings",
@@ -109,7 +116,8 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
     def _db_config_default(cls):
         return {
             "system_research_rate": 12,
-            "generate_report": True
+            "generate_report": True,
+            "save_history": True
         }
 
     @add_rule('sub_phase_update', ['POST'])
@@ -228,11 +236,12 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
 
             logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfully.")
 
-            # Save history.
-            _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
-            self._run_historical_phase()
+            if self.__save_history:
+                # Save history.
+                _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
+                self._run_historical_phase()
 
-            logger.info(f"Finished {scheduler_consts.Phases.Save_Historical.name} Phase Successfully.")
+                logger.info(f"Finished {scheduler_consts.Phases.Save_Historical.name} Phase Successfully.")
 
     def _get_plugins(self, plugin_subtype):
         """
