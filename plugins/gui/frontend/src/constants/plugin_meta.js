@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    claroty_adapter: {
+        title: 'Claroty',
+        description: 'Claroty’s integrated ICS suite protects the safety of people, assets, and critical processes from cyberattacks.'
+    },
     solarwinds_orion_adapter: {
         title: 'Solarwinds Network Performance Manager',
         description: 'Solarwinds is a unified IT system management system that tracks the performance of networks, applications, systems, and databases on-premises, in a hyrbid environment, or in the cloud.'

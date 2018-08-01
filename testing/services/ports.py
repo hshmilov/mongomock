@@ -26,6 +26,7 @@ DOCKER_PORTS = {
     'bomgar-adapter':                   5115,
     'infinite-sleep-adapter':           5116,
     'service-now-adapter':              5117,
+    'claroty-adapter':                  5123,
     'cisco-meraki-adapter':             5130,
     'tenable-io-adapter':               5141,
     'gotoassist-adapter':               5200,
