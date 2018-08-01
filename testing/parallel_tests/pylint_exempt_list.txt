@@ -403,6 +403,7 @@ testing/run_tests.py
 testing/benchmarks/benchmark_correlation.py
 testing/parallel_tests/test_ad.py
 testing/parallel_tests/test_airwatch.py
+testing/parallel_tests/test_aruba.py
 testing/parallel_tests/test_aws.py
 testing/parallel_tests/test_azure.py
 testing/parallel_tests/test_bigfix.py
@@ -473,6 +474,7 @@ testing/services/ports.py
 testing/services/adapters/ad_service.py
 testing/services/adapters/airwatch_service.py
 testing/services/adapters/aws_service.py
+testing/services/adapters/aruba_service.py
 testing/services/adapters/azure_service.py
 testing/services/adapters/bigfix_service.py
 testing/services/adapters/blackberry_uem_service.py
