@@ -386,13 +386,13 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, db_connection, entity_vi
     entities = get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
                             db_connection,
                             entity_views_db_map, entity_type,
-                            default_sort=default_sort)
+                            default_sort=default_sort, run_over_projection=False)
     output = ''
     if len(entities) > 0:
         # Beautifying the resulting csv.
-        del mongo_projection['internal_axon_id']
-        del mongo_projection['unique_adapter_names']
-        del mongo_projection[ADAPTERS_LIST_LENGTH]
+        mongo_projection.pop('internal_axon_id', None)
+        mongo_projection.pop('unique_adapter_names', None)
+        mongo_projection.pop(ADAPTERS_LIST_LENGTH, None)
         # Getting pretty titles for all generic fields as well as specific
         current_entity_fields = entity_fields(entity_type, core_address, basic_db_connection)
         for field in current_entity_fields['generic']:
@@ -403,9 +403,9 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, db_connection, entity_vi
                 if field['name'] in mongo_projection:
                     mongo_projection[field['name']] = f"{' '.join(type.split('_')).capitalize()}: {field['title']}"
         for current_entity in entities:
-            del current_entity['internal_axon_id']
-            del current_entity['unique_adapter_names']
-            del current_entity[ADAPTERS_LIST_LENGTH]
+            current_entity.pop('internal_axon_id', None)
+            current_entity.pop('unique_adapter_names', None)
+            current_entity.pop(ADAPTERS_LIST_LENGTH, None)
             for field in mongo_projection.keys():
                 # Replace field paths with their pretty titles
                 if field in current_entity:
