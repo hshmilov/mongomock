@@ -10,8 +10,9 @@ from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from libcloud.compute.types import Provider, NodeState
-from axonius.fields import ListField
 from libcloud.compute.providers import get_driver
+from axonius.fields import Field, ListField
+
 
 POWER_STATE_MAP = {
     NodeState.STOPPED: DeviceRunningState.TurnedOff,
@@ -28,6 +29,12 @@ POWER_STATE_MAP = {
 class GceAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         public_ips = ListField(str, "Public IPs")
+        image = Field(str, "Device image")
+        size = Field(str, "Google Device Size")
+        creation_time_stamp = Field(str, "Creation Time Stamp")
+        cluster_name = Field(str, "GCE Cluster Name")
+        cluster_uid = Field(str, "GCE Cluster Unique ID")
+        cluster_location = Field(str, "GCE Cluster Location")
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -91,6 +98,29 @@ class GceAdapter(AdapterBase):
             device.public_ips = list(raw_device_data.public_ips)
         except Exception:
             logger.exception(f"Problem getting public IP for {str(raw_device_data)}")
+        try:
+            device.image = raw_device_data.image
+        except Exception:
+            logger.exception(f"Problem getting image for {str(raw_device_data)}")
+        try:
+            device.size = raw_device_data.size
+        except Exception:
+            logger.exception(f"Problem getting data size for {str(raw_device_data)}")
+        try:
+            device.creation_time_stamp = raw_device_data.extra.get('creationTimestamp')
+        except Exception:
+            logger.exception(f"Problem getting creation time for {str(raw_device_data)}")
+        try:
+            for item in raw_device_data.extra.get('metadata').get('items'):
+                if item.get('key') == 'cluster-name':
+                    device.cluster_name = item.get('value')
+                elif item.get('key') == 'cluster-uid':
+                    device.cluster_uid = item.get('value')
+                elif item.get('key') == 'cluster-location':
+                    device.cluster_location = item.get('value')
+        except Exception:
+            logger.exception(f"Problem getting cluster info for {str(raw_device_data)}")
+
         try:
             # some fields might not be basic types
             # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
