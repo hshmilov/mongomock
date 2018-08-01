@@ -1,7 +1,7 @@
 <template>
     <div class="x-chart-metric">
         <x-select-symbol :options="entities" v-model="config.entity" type="icon" placeholder="module..."/>
-        <x-select :options="views[config.entity] || []" v-model="config.view" placeholder="query..." />
+        <x-select :options="views[config.entity] || []" v-model="config.view" placeholder="query (or empty for all)" />
         <div></div><div></div>
         <x-select-typed-field :fields="fieldOptions" v-model="config.field" />
         <div></div><div></div>

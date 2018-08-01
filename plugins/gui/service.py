@@ -1826,25 +1826,25 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         # Query and data collections according to given module
         data_collection = self._entity_views_db_map[entity]
-        base_parsed = {}
+        base_query = {}
         if view:
-            base_parsed = parse_filter(self._find_filter_by_name(entity, view))
+            base_query = parse_filter(self._find_filter_by_name(entity, view)['query']['filter'])
         if for_date:
             # If history requested, fetch from appropriate historical db
             data_collection = self._historical_entity_views_db_map[entity]
-            if base_parsed:
-                base_parsed = {
+            if base_query:
+                base_query = {
                     '$and': [
-                        base_parsed, {
+                        base_query, {
                             'accurate_for_datetime': for_date
                         }
                     ]
                 }
             else:
-                base_parsed = {
+                base_query = {
                     'accurate_for_datetime': for_date
                 }
-        results = data_collection.find(base_parsed, projection={field: 1})
+        results = data_collection.find(base_query, projection={field: 1})
         count = 0
         sigma = 0
         for item in results:
@@ -1858,9 +1858,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     sigma += field_values
         if not count:
             return [{'name': view, 'value': 0}]
-        if ChartFuncs.average.name == func:
-            return [{'name': f'{field.split(".")[-1]} of {view or "ALL"}', 'value': '%.2f' % (sigma / count)}]
-        return [{'name': f'{field.split(".")[-1]} of {view or "ALL"}', 'value': count}]
+        name = f'{func} of {" ".join(field.split(".")[-1].split("_")).title()} from {view or "ALL"}'
+        if ChartFuncs[func] == ChartFuncs.average:
+            return [{'name': name, 'value': '%.2f' % (sigma / count)}]
+        return [{'name': name, 'value': count}]
 
     @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
     def remove_dashboard(self, dashboard_id):
