@@ -43,7 +43,7 @@ def parse_basic_info(xmls: List[Tuple[str, str]]):
 
 def _parse_interface_entry(dict_, tag, text):
     if tag in ['name', 'speed', 'current-physical-address', 'mtu',
-               'admin-status', 'oper-status']:
+               'admin-status', 'oper-status', 'address-family-name']:
         dict_[tag] = text
 
     if tag == 'ifa-local':
@@ -148,11 +148,11 @@ def parse_version(xml):
     return entry
 
 
-def parse_vlans(xml):
-    """ parse get-ethernet-switching-interface-information detail """
+def parse_switching_interface(xml):
+    """ parse get-ethernet-switching-interface-information detail version 1"""
     result = []
     if gettag(xml.tag) != 'switching-interface-information':
-        raise ValueError(f'switching-interface-information not foung got {gettag(xml.tag)}')
+        raise ValueError(f'switching-interface-information not found got {gettag(xml.tag)}')
 
     for interface in xml:
         entry = {'vlans': []}
@@ -175,6 +175,24 @@ def parse_vlans(xml):
                             vlan[tag] = text
                     entry['vlans'].append(vlan)
         result.append(entry)
+    return result
+
+
+def parse_l2ald_interface(xml):
+    """ parse get-ethernet-l2ng-l2ald-iff-interface-information detail version 1"""
+    result = []
+    if gettag(xml.tag) != 'l2ng-l2ald-iff-interface-information':
+        raise ValueError(f'l2ng-l2ald-iff-interface-information not found got {gettag(xml.tag)}')
+    raise NotImplementedError()
+
+
+def parse_vlans(xml):
+    if gettag(xml.tag) == 'switching-interface-information':
+        result = parse_switching_interface(xml)
+    elif gettag(xml.tag) == 'l2ng-l2ald-iff-interface-information':
+        parse_l2ald_interface(xml)
+    else:
+        raise ValueError(f'parse vlans got {gettag(xml.tag)}')
     return result
 
 

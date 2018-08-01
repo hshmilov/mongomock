@@ -2,8 +2,8 @@
 #pylint: disable=E0611
 import logging
 
-from jnpr.space import rest, async
 from collections import defaultdict
+from jnpr.space import rest, async
 
 import axonius.adapter_exceptions
 
@@ -53,7 +53,8 @@ class JuniperClient:
                 for action_name, action_cmd in actions:
                     try:
                         logger.info(
-                            f'Getting from {current_device.name}, {current_device.ipAddr}, {current_device.platform}')
+                            f'Getting {action_name} from'
+                            f' {current_device.name}, {current_device.ipAddr}, {current_device.platform}')
                         result = current_device.exec_rpc_async.post(
                             task_monitor=tm,
                             rpcCommand=action_cmd
@@ -113,7 +114,7 @@ class JuniperClient:
         devices = list(final_devices.values())
 
         for current_device in devices:
-            yield ('Juniper Device', current_device)
+            yield ('Juniper Space Device', current_device)
 
         actions = [
             ('ARP Device', '<get-arp-table-information/>'),

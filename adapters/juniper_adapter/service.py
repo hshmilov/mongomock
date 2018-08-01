@@ -58,7 +58,7 @@ class JuniperAdapter(AdapterBase):
     def _parse_raw_data(self, raw_data):
         others = defaultdict(list)
         for device_type, juno_device in raw_data:
-            if device_type == 'Juniper Device':
+            if device_type == 'Juniper Space Device':
                 try:
                     device = self._new_device_adapter()
                     device.device_type = device_type
@@ -75,6 +75,9 @@ class JuniperAdapter(AdapterBase):
                 except Exception:
                     logger.exception(f"Got problems with {juno_device.name}")
 
+            elif device_type == "Juniper Device":
+                raw_data = rpc.parse_device(device_type, juno_device)
+                yield from create_device(self._new_device_adapter, device_type, raw_data)
             else:
                 others[device_type].append(juno_device)
 

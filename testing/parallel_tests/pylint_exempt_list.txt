@@ -69,7 +69,6 @@ adapters/jamf_adapter/connection.py
 adapters/jamf_adapter/exceptions.py
 adapters/jamf_adapter/service.py
 adapters/json_file_adapter/service.py
-adapters/juniper_adapter/client.py
 adapters/juniper_adapter/service.py
 adapters/juniper_adapter/py-space-platform/setup.py
 adapters/juniper_adapter/py-space-platform/apidocs/source/conf.py

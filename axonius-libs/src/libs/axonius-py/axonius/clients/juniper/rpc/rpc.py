@@ -9,8 +9,8 @@ from axonius.clients.juniper.rpc.utils import prepare, gettext, gettag
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # We are parsing xml, it makes sense that we will have many nested loops
-#pylint: disable=R1702
-#pylint: disable=R0912
+# pylint: disable=R1702
+# pylint: disable=R0912
 
 
 def parse_arps(xmls: list):

@@ -7,6 +7,7 @@ from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, \
     ips_do_not_contradict, get_normalized_ip, compare_device_normalized_hostname, \
     normalize_adapter_devices, get_serial, NORMALIZED_MACS, compare_macs, hostnames_do_not_contradict
 from axonius.correlator_base import has_mac, has_hostname, has_serial, CorrelationReason
+from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -74,8 +75,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                     if mac and mac != '000000000000':
                         mac_indexed.setdefault(mac, []).append(adapter)
 
-        # find contradicting hostnames with the same mac to eliminate macs
+        # find contradicting hostnames with the same mac to eliminate macs. Also using predefined blacklist of known macs.
         mac_blacklist = set()
+        mac_blacklist = mac_blacklist.union(JUNIPER_NON_UNIQUE_MACS)
         for mac, matches in mac_indexed.items():
             for x, y in combinations(matches, 2):
                 if not hostnames_do_not_contradict(x, y):
@@ -83,7 +85,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                     break
 
         for mac in mac_blacklist:
-            del mac_indexed[mac]
+            if mac in mac_indexed:
+                del mac_indexed[mac]
 
         for matches in mac_indexed.values():
             if len(matches) >= 2:
@@ -137,7 +140,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _raw_correlate(self, devices):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
-        # at static_correlator/engine
+        # at static_correlator/service
 
         # since this operation is extremely costly, we normalize the adapter_devices:
         # 1. adding 2 fields to the root - NORMALIZED_IPS and NORMALIZED_MACS to allow easy access to the ips and macs

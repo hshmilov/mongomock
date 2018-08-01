@@ -1,9 +1,10 @@
-import logging
 
+import logging
 from axonius.devices.device_adapter import (DeviceAdapter,
                                             DeviceAdapterNetworkInterface,
                                             DeviceAdapterVlan, SmartJsonClass)
 from axonius.fields import Field, ListField
+from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -14,7 +15,7 @@ class LinkedDevicesAdapter(SmartJsonClass):
 
 
 class JuniperDeviceAdapter(DeviceAdapter):
-    device_type = Field(str, 'Device Type', enum=['ARP Device', 'FDB Device', 'Juniper Device'])
+    device_type = Field(str, 'Device Type', enum=['ARP Device', 'FDB Device', 'Juniper Device', 'Juniper Space Device'])
     linked_devices = ListField(LinkedDevicesAdapter, 'Linked Devices')
 
 
@@ -22,6 +23,15 @@ def create_arp_device(create_device_func, raw_device):
 
     for arp_raw_device in raw_device.values():
         try:
+
+            if arp_raw_device['mac_address'].lower() in ['*', 'unspecified']:
+                logger.debug(f'Ignoring mac {arp_raw_device["mac_address"]}')
+                continue
+
+            if arp_raw_device['mac_address'] in JUNIPER_NON_UNIQUE_MACS:
+                logger.debug('Non unique mac {arp_raw_device["mac_address"]}')
+                continue
+
             device = create_device_func()
             names = '_'.join(sorted(list(arp_raw_device['linked_devices'].keys())))
             device.id = '_'.join(['JUINPER_ARP', arp_raw_device['mac_address'], names])
@@ -59,9 +69,17 @@ def create_arp_device(create_device_func, raw_device):
                 f'Problem with pasrsing arp device {arp_raw_device}')
 
 
+# pylint: disable=R1702
+# pylint: disable=R0912
+
+
 def _create_fdb_device(create_device_func, mac, fdb_raw_device):
-    if mac == '*':
-        logger.debug('Ignoring mac *')
+    if mac.lower() in ['*', 'unspecified']:
+        logger.debug(f'Ignoring mac {mac}')
+        return None
+
+    if mac in JUNIPER_NON_UNIQUE_MACS:
+        logger.debug(f'Non unique mac {mac}')
         return None
 
     device = create_device_func()
@@ -86,13 +104,25 @@ def _create_fdb_device(create_device_func, mac, fdb_raw_device):
                     if entry.get('flags') not in ['D', 'Learn']:
                         logger.debug(f'ignoring {entry}')
                         continue
-                    vlan_name = entry.get('vlan-name', '')
-                    vlanid = entry.get('vlanid', '')
-                    if vlanid != '':
-                        vlan_name = f'{vlan_name} ({vlanid})'
-                    interface.vlan_list.append(vlan_name)
 
-                if not interface.vlans:
+                    vlan_name = entry.get('vlan-name', '')
+                    vlan_id = entry.get('vlanid', '')
+
+                    if not vlan_name and not vlan_id:
+                        logger.warning('empty vlan continue')
+                        continue
+
+                    new_vlan = DeviceAdapterVlan()
+                    new_vlan.name = vlan_name
+                    try:
+                        if vlan_id:
+                            new_vlan.tagid = int(vlan_id)
+                    except ValueError:
+                        logger.error(f'Invalid vlan_id {vlan_id}')
+
+                    interface.vlan_list.append(new_vlan)
+
+                if not interface.vlan_list:
                     # We didn't get any Learn entires - ignore iface
                     logger.debug('Ignoring empty iface')
                     continue
@@ -145,7 +175,7 @@ def _get_id_for_juniper(raw_device):
 
 def _get_vlans_for_iface(raw_device, iface_name):
     if not all([field in raw_device for field in ['interface list', 'vlans']]):
-        logger.error('Missing required field')
+        logger.debug('Missing required field')
         return None
 
     vlans = list(filter(lambda vlan: vlan.get('interface-name') == iface_name, raw_device['vlans']))
@@ -172,15 +202,31 @@ def _juniper_add_nic(device, raw_device):
                     new_vlan = DeviceAdapterVlan()
                     new_vlan.name = raw_vlan.get('interface-vlan-name', '')
                     new_vlan.tagness = raw_vlan.get('interface-vlan-member-tagness', '')
-                    new_vlan.tagid = raw_vlan.get('interface-vlan-member-tagid', '')
+                    vlan_id = raw_vlan.get('interface-vlan-member-tagid', '')
+                    try:
+                        if vlan_id:
+                            new_vlan.tagid = int(vlan_id)
+                    except ValueError:
+                        logger.error(f'Invalid vlan_id {vlan_id}')
+
                     vlan_list.append(new_vlan)
 
             admin_status = interface.get('admin-status')
             operational_status = interface.get('oper-status')
             mac = interface.get('current-physical-address')
+
+            # Ignore weird macs
+            if mac.lower() in ['unspecified', '*']:
+                mac = None
+
             name = interface.get('name')
             speed = interface.get('speed')
             mtu = interface.get('mtu')
+
+            # For now set mtu to zero on unlimited
+            if mtu.lower() == 'unlimited':
+                mtu = 0
+
             ips = interface.get('ips')
             subnets = interface.get('subnets')
 
@@ -204,12 +250,14 @@ def create_juniper_device(create_device_func, raw_device):
 
         device.id = 'JUNIPER_' + id_
         if 'version' in raw_device:
-            device.hostname = raw_device['version'].get('hostname', '')
+            device.hostname = raw_device['version'].get('host-name', '')
             device.os.build = raw_device['version'].get('version', '')
 
-            # product model and description should be the same, but sometimes we dont have hardware
-            device.device_model = raw_device.get('hardware', {}).get('description', '') \
-                or raw_device['version'].get('product-model', '')
+        # product model and hardware description should be the same,
+        # but sometimes we dont have hardware and sometimes the description is virtual
+        # chassis (which means multiple models for now we take hardware whenever we can
+        device.device_model = raw_device.get('hardware', {}).get('description') or \
+            raw_device.get('version', {}).get('product-model', '')
 
         device.device_serial = raw_device.get('hardware', {}).get('serial-number', '')
         _juniper_add_nic(device, raw_device)

@@ -17,6 +17,7 @@ import pql
 import csv
 import axonius
 import os
+import string
 
 osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
 osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
@@ -299,6 +300,10 @@ def format_mac(mac: str):
         return None
     mac = re.sub('[.:-]', '', mac).lower()  # remove delimiters and convert to lower case
     mac = ''.join(mac.split())  # remove whitespaces
+
+    if len(mac) != 12 or any(map(lambda char: char not in string.hexdigits, mac)):
+        raise ValueError(f'Invalid mac {mac}')
+
     # convert mac in canonical form (eg. 00:80:41:ae:fd:7e)
     mac = ":".join(["%s" % (mac[i:i + 2]) for i in range(0, 12, 2)])
     return mac.upper()

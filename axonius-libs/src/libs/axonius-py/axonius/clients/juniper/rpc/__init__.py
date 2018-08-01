@@ -1,4 +1,4 @@
-#pylint: disable=W0401
+# pylint: disable=W0401
 from axonius.clients.juniper.rpc.rpc import *
 from axonius.clients.juniper.rpc.basic_info import *
 
