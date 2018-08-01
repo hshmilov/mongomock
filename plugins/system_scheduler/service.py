@@ -344,7 +344,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         def _stop_plugin(plugin):
             try:
                 logger.debug(f'stopping {plugin}')
-                response = self.request_remote_plugin('stop_plugin', plugin)
+                response = self.request_remote_plugin('stop_plugin', plugin, timeout=20)
                 if response.status_code != 204:
                     logger.error(f"{plugin} didn't stop properly, returned: {response.content}")
             except Exception:
