@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 """
 This script installs the system from scratch (using --first-time) or as an upgrade.
     * no parameters necessary...
@@ -13,9 +13,10 @@ import stat
 import sys
 import time
 import zipfile
+import getpass
 
 from utils import AutoOutputFlush, AXONIUS_DEPLOYMENT_PATH, SOURCES_FOLDER_NAME, print_state, \
-    current_file_system_path, AXONIUS_OLD_ARCHIVE_PATH
+    current_file_system_path, AXONIUS_OLD_ARCHIVE_PATH, VENV_WRAPPER
 
 timestamp = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
@@ -29,7 +30,7 @@ TEMPORAL_PATH = f'{AXONIUS_DEPLOYMENT_PATH}_TEMP_{timestamp}'
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
-    parser.add_argument('--root-pass', type=str, help='Root admin password', required=False, default=None)
+    parser.add_argument('--root-pass', action='store_true', default='', help='Sudo password')
 
     try:
         args = parser.parse_args()
@@ -38,13 +39,19 @@ def main():
         sys.exit(1)
 
     start = time.time()
-    install(args.first_time, args.root_pass)
+    root_pass = args.root_pass
+
+    if root_pass == '' and os.geteuid() != 0:
+        # we are not root, and don't have root password :(
+        root_pass = getpass.getpass('sudo password: ')
+
+    install(args.first_time, root_pass)
     print_state(f'Done, took {int(time.time() - start)} seconds')
 
 
-def install(just_install=False, root_pass=None):
-    if not just_install:
-        validate_old_state()
+def install(first_time, root_pass):
+    if not first_time:
+        validate_old_state(root_pass)
         os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
 
     load_new_source()
@@ -57,24 +64,34 @@ def install(just_install=False, root_pass=None):
     print('Venv activated!')
     # from this line on - we can use venv!
 
-    if not just_install:
+    if not first_time:
         stop_old(keep_diag=True)
 
     load_images()
 
-    set_logrotate(root_pass)
     start_axonius()
+    set_logrotate(root_pass)
 
-    if not just_install:
+    if not first_time:
         archive_old_source()
+        chown_folder(root_pass, TEMPORAL_PATH)
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
+    chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)  # new sources
 
-def validate_old_state():
+
+def validate_old_state(root_pass):
     if not os.path.isdir(AXONIUS_DEPLOYMENT_PATH):
         name = os.path.basename(AXONIUS_DEPLOYMENT_PATH)
         print(f"{name} folder wasn't found at {AXONIUS_DEPLOYMENT_PATH} (missing --first-time ?)")
         sys.exit(-1)
+    else:
+        chown_folder(root_pass, AXONIUS_DEPLOYMENT_PATH)
+
+
+def chown_folder(root_pass, path):
+    cmd = f'chown -R ubuntu:ubuntu {path}'
+    run_as_root(cmd.split(), root_pass)
 
 
 def stop_old(keep_diag=True):
@@ -152,13 +169,19 @@ def create_venv():
     subprocess.check_call(['python3', create_pth])
 
 
+def run_as_root(args, passwd):
+    sudo = f'sudo -S' if passwd != '' else 'sudo'
+    print(" ".join(sudo.split() + args).replace(passwd, "***"))
+    proc = subprocess.Popen(sudo.split() + args, stdin=subprocess.PIPE)
+    proc.communicate(passwd.encode() + b'\n')
+
+
 def set_logrotate(root_pass):
     print_state('Setting logrotate on both docker logs and cortex logs')
-    args = list()
-    if root_pass is not None:
-        args.extend(['--root-pass', root_pass])
-    from set_logrotate import set_logrotate
-    set_logrotate(args)
+
+    script = f'{DEPLOYMENT_FOLDER_PATH}/set_logrotate.py --cortex-path {AXONIUS_DEPLOYMENT_PATH}'
+    cmd = f'{VENV_WRAPPER} {script}'
+    run_as_root(cmd.split(), root_pass)
 
 
 def install_requirements():

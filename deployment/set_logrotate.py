@@ -1,32 +1,25 @@
 import argparse
 import os
-import subprocess
 import sys
-
-CORTEX_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 
 def set_logrotate(args):
-    if sys.platform.startswith('win'):
-        print('Skipping logrotation on Windows platform')
-        return
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('--root-pass', type=str, help='Root admin password', required=False, default=None)
+    parser.add_argument('--cortex-path', type=str, help='Cortex path', required=True)
 
     try:
         args = parser.parse_args(args)
     except AttributeError:
         print(parser.usage())
-        sys.exit(1)
+        return
 
-    os.makedirs(os.path.join(CORTEX_PATH, 'logs'), exist_ok=True)
+    cortex_path = args.cortex_path
 
-    ops = []
+    ops = list()
     # docker logs
     ops.append(write_logrotate('/etc/logrotate.d/docker-container', '/var/lib/docker/containers/*/*.log'))
     # our logs
-    ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(CORTEX_PATH, 'logs', '*', '*.log')))
+    ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(cortex_path, 'logs', '*', '*.log')))
 
     # Check if we need to update the files, if not, skip elevation (prompt for root password...)
     commit_ops = []
@@ -40,16 +33,6 @@ def set_logrotate(args):
             commit_ops.append(i)
     if len(commit_ops) == 0:
         return
-
-    if os.getuid() != 0:  # needs elevation
-        sudo_args = ['sudo']
-        if args.root_pass is not None:
-            sudo_args.append('-S')
-        sudo_args.append(sys.executable)
-        sudo_args.extend(sys.argv)
-        process = subprocess.Popen(sudo_args, stdin=subprocess.PIPE)
-        process.communicate(args.root_pass)
-        sys.exit(process.wait())
 
     # Actually update the files
     for op in commit_ops:

@@ -17,4 +17,4 @@ fi
 # wrapper for venv's python
 source ${ACTIVATE}
 
-python3 $*
+python3.6 $*

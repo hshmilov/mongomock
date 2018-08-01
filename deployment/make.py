@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 """
 This script pulls & build all the images and creates a single installer for the entire system.
 The final installer zip is comprised of:
@@ -97,7 +97,7 @@ with AutoOutputFlush():
     images_tar = get_images_tar(pull, rebuild, exclude, prod)
     try:
         with open(output_path, 'wb') as output_file:
-            output_file.write(b'#!/usr/bin/env python3\n')
+            output_file.write(b'#!/usr/bin/env python3.6\n')
             with zipfile.ZipFile(output_file, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
                 zip_file.writestr('__main__.py', main_template.encode('utf-8'))
                 zip_file.writestr(f'{SOURCES_FOLDER_NAME}/shared_readonly_files/__build_metadata',

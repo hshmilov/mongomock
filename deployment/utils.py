@@ -55,5 +55,7 @@ def print_state(text):
 CORTEX_PATH, current_file_system_path, zip_loader = get_resources()
 CWD = os.path.abspath(os.getcwd())
 AXONIUS_DEPLOYMENT_PATH = os.path.join(CWD, 'cortex')
+DEPLOYMENT_FOLDER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment')
 AXONIUS_OLD_ARCHIVE_PATH = os.path.join(CWD, 'old-cortex-archive-{0}.tar.gz')
 SOURCES_FOLDER_NAME = 'sources'
+VENV_WRAPPER = os.path.join(DEPLOYMENT_FOLDER_PATH, 'venv_wrapper.sh')
