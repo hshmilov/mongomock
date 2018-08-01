@@ -26,8 +26,7 @@ def set_logrotate(args):
     # docker logs
     ops.append(write_logrotate('/etc/logrotate.d/docker-container', '/var/lib/docker/containers/*/*.log'))
     # our logs
-    ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(CORTEX_PATH, 'logs', '*', '*.docker.log'),
-                               as_ubuntu=True))
+    ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(CORTEX_PATH, 'logs', '*', '*.log')))
 
     # Check if we need to update the files, if not, skip elevation (prompt for root password...)
     commit_ops = []
