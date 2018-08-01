@@ -20,12 +20,14 @@ def set_logrotate(args):
         print(parser.usage())
         sys.exit(1)
 
+    os.makedirs(os.path.join(CORTEX_PATH, 'logs'), exist_ok=True)
+
     ops = []
     # docker logs
     ops.append(write_logrotate('/etc/logrotate.d/docker-container', '/var/lib/docker/containers/*/*.log'))
     # our logs
     ops.append(write_logrotate('/etc/logrotate.d/axonius', os.path.join(CORTEX_PATH, 'logs', '*', '*.docker.log'),
-                               True))
+                               as_ubuntu=True))
 
     # Check if we need to update the files, if not, skip elevation (prompt for root password...)
     commit_ops = []
@@ -58,7 +60,7 @@ def set_logrotate(args):
             pass
 
 
-def write_logrotate(path, path_regex, with_su=False):
+def write_logrotate(path, path_regex, as_ubuntu=False):
     # see https://sandro-keil.de/blog/2015/03/11/logrotate-for-docker-container/
     data = """path_regex {
   rotate 7
@@ -69,7 +71,7 @@ def write_logrotate(path, path_regex, with_su=False):
   delaycompress
   copytruncate
   with_su
-}""".replace('path_regex', path_regex).replace('with_su', 'su' if with_su else '')
+}""".replace('path_regex', path_regex).replace('with_su', 'su ubuntu ubuntu' if as_ubuntu else '')
     if os.path.isfile(path) and open(path, 'r').read() == data:
         return
     yield

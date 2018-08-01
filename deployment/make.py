@@ -102,6 +102,10 @@ with AutoOutputFlush():
                 zip_file.writestr('__main__.py', main_template.encode('utf-8'))
                 zip_file.writestr(f'{SOURCES_FOLDER_NAME}/shared_readonly_files/__build_metadata',
                                   metadata.encode('utf-8'))
+
+                # placeholder for logs dir
+                zip_file.writestr(f'{SOURCES_FOLDER_NAME}/logs/nonce', ''.encode('utf-8'))
+
                 add_source_folder(zip_file, exclude)
                 zip_file.write(images_tar, 'images.tar')
                 print_state('Closing zip file')
