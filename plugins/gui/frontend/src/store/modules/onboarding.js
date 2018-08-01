@@ -644,7 +644,10 @@ export const onboarding = {
 				},
 				'reportsDownload': {
 					id: 'reports_download', title: 'DOWNLOAD REPORT', align: 'right',
-					content: 'Click to generate and download a report now.'
+					content: 'Click to download a report now.\nThe report is generated at the end of each discovery cycle.',
+					actions: [
+						{ title: 'SKIP', state: 'tourFinale'}
+					]
 				},
 				'tourFinale': {
 					title: 'JUST THE BEGINNING', align: 'center',
