@@ -2,7 +2,7 @@
         <input v-if="inputType" :id="schema.name" :type="inputType" v-model="processedData" :class="{'error-border': error}"
            @input="input" @focusout.stop="focusout"/>
         <!-- Date Picker -->
-    <x-date-edit v-else-if="schema.format === 'date-time'" v-model="data" @input="input" />
+    <x-date-edit v-else-if="schema.format === 'date-time' || schema.format === 'date'" v-model="data" @input="input" />
     <!-- Select from enum values -->
     <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..."
               @input="input" @focusout.stop="validate" :class="{'error-border': error}" />
@@ -27,12 +27,12 @@
                 }
             },
 		    isUnchangedPassword() {
-		        return this.inputType == 'password' && this.data && this.data[0] == 'unchanged'
+		        return this.inputType === 'password' && this.data && this.data[0] === 'unchanged'
             },
             inputType() {
 				if (this.schema.format && this.schema.format === 'password') {
 					return 'password'
-                } else if ((this.schema.format && this.schema.format === 'date-time') || this.schema.enum) {
+                } else if ((this.schema.format === 'date-time' || this.schema.format === 'date') || this.schema.enum) {
 					return ''
                 }
                 return 'text'

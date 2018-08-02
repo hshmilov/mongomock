@@ -25,6 +25,14 @@ const numerical = {
 	'<': {pattern: '{field} < {val}', notPattern: '{field} >= {val}'},
 	'>': {pattern: '{field} > {val}', notPattern: '{field} <= {val}'}
 }
+const date = {
+	'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
+	'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' },
+	'days': {
+		pattern: '{field} >= date("NOW - {val}d")',
+		notPattern: '{field} < date("NOW - {val}d")'
+	}
+}
 export const compOps = {
 	'array': {
 		'size': {
@@ -37,12 +45,13 @@ export const compOps = {
 		}
 	},
 	'date-time': {
-		'<': { pattern: '{field} < date("{val}")', notPattern: '{field} >= date("{val}")' },
-		'>': { pattern: '{field} > date("{val}")', notPattern: '{field} <= date("{val}")' },
-		'days': {
-			pattern: '{field} >= date("NOW - {val}d")',
-			notPattern: '{field} < date("NOW - {val}d")'
-		}
+		...date
+	},
+	'date': {
+		...date
+	},
+	'time': {
+		exists
 	},
 	'ip': {
 		'subnet': {
