@@ -127,7 +127,12 @@ class JamfAdapter(AdapterBase):
                     continue
                 device.id = udid
 
-                device.hostname = general_info.get('name', '')
+                device.name = general_info.get('name', '')
+                hostname = None
+                # Ofri: Sometimes name is also the hostname. I saw that if we have one of these fields it can't be the host name.
+                if not any(elem in device.name for elem in ['\'', ' ', '.']):
+                    hostname = device.name
+                    device.hostname = hostname
                 device.public_ip = general_info.get('ip_address')
                 try:
                     site = general_info.get('site')
@@ -211,15 +216,18 @@ class JamfAdapter(AdapterBase):
                     drives = [drives] if type(drives) != list else drives
                     for drive in drives:
                         try:
-                            partition = drive.get('partition')
-                            total_size = partition.get('partition_capacity_mb')
-                            if total_size:
-                                total_size = int(total_size) / 1024.0
-                            free_size = partition.get('boot_drive_available_mb')
-                            if free_size:
-                                free_size = int(free_size) / 1024.0
-                            if any([free_size, total_size]):
-                                device.add_hd(total_size=total_size, free_size=free_size)
+                            partitions = drive.get('partition')
+                            if not isinstance(partitions, list):
+                                partitions = [partitions]
+                            for partition in partitions:
+                                total_size = partition.get('partition_capacity_mb')
+                                if total_size:
+                                    total_size = int(total_size) / 1024.0
+                                free_size = partition.get('boot_drive_available_mb')
+                                if free_size:
+                                    free_size = int(free_size) / 1024.0
+                                if any([free_size, total_size]):
+                                    device.add_hd(total_size=total_size, free_size=free_size)
                         except Exception:
                             logger.exception(f"couldn't parse drive: {drive}")
                     active_directory_status = hardware.get("active_directory_status", "Not Bound")
@@ -231,8 +239,8 @@ class JamfAdapter(AdapterBase):
                         # hostname can be none or empty. if it is this could crash or make unwanted results
                         try:
                             # This could raise an exception if hostname was not set or was set to ''.
-                            if len(device.hostname) > 0:
-                                device.hostname += "." + active_directory_status
+                            if hostname is not None and len(hostname) > 0:
+                                device.hostname = hostname + "." + active_directory_status
                         except Exception:
                             logger.exception(f"Problem adding active directory status to device")
 
