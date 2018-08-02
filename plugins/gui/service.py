@@ -1856,10 +1856,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             if field_values:
                 if isinstance(field_values, list):
                     count += len(field_values)
-                    sigma += sum(field_values)
+                    if ChartFuncs[func] == ChartFuncs.average:
+                        sigma += sum(field_values)
                 else:
                     count += 1
-                    sigma += field_values
+                    if ChartFuncs[func] == ChartFuncs.average:
+                        sigma += field_values
         if not count:
             return [{'name': view, 'value': 0}]
         name = f'{func} of {" ".join(field.split(".")[-1].split("_")).title()} from {view or "ALL"}'

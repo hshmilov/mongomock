@@ -83,7 +83,10 @@
         created() {
 			const loadNotifications = () => {
 				Promise.all([this.fetchAggregateNotifications(), this.fetchNotificationsUnseenCount({})])
-                    .then(() => this.timer = setTimeout(loadNotifications, 9000))
+                    .then(() => {
+						if (this._isDestroyed) return
+                    	this.timer = setTimeout(loadNotifications, 9000)
+					})
             }
             loadNotifications()
         },

@@ -240,7 +240,10 @@
             this.fetchAdapters()
             const getDashboardData = () => {
                 return Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
-                    .then(() => this.timer = setTimeout(getDashboardData, 10000))
+                    .then(() => {
+                        if (this._isDestroyed) return
+                    	this.timer = setTimeout(getDashboardData, 10000)
+					})
             }
             getDashboardData().then(() => {
             	if (!this.isEmptySystem) this.nextState('dashboard')
@@ -278,7 +281,7 @@
             }
         },
         beforeDestroy() {
-            clearTimeout(this.timer)
+        	clearTimeout(this.timer)
         }
     }
 </script>

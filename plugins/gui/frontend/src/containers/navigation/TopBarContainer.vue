@@ -138,6 +138,7 @@
 		created () {
 			const updateLifecycle = () => {
 				this.fetchLifecycle().then(() => {
+					if (this._isDestroyed) return
 					this.runningResearch = this.lifecycle.reduce(
 						(sum, item) => sum + item.status, 0) !== this.lifecycle.length
                     this.timer = setTimeout(updateLifecycle, 3000)

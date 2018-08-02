@@ -184,7 +184,10 @@
             },
             startRefreshTimeout() {
 				const fetchAuto = () => {
-					this.fetchContentPages().then(() => this.timer = setTimeout(fetchAuto, this.refresh * 1000))
+					this.fetchContentPages().then(() => {
+						if (this._isDestroyed) return
+						this.timer = setTimeout(fetchAuto, this.refresh * 1000)
+					})
 				}
 				this.timer = setTimeout(fetchAuto, this.refresh * 1000)
             }
