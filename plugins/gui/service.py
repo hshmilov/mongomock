@@ -1662,8 +1662,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                 Second and third represent each Child intersecting with Parent, excluding Intersection.
                                 Fourth represents Intersection.
         """
-        if not intersecting or len(intersecting) < 2:
-            raise Exception('Pie chart requires at least two views')
+        if not intersecting or len(intersecting) < 1:
+            raise Exception('Pie chart requires at least one views')
         # Query and data collections according to given parent's module
         data_collection = self._entity_views_db_map[entity]
 

@@ -80,15 +80,17 @@
                     	return {
                             ...chart, showingHistorical: this.dateChosen[chart.uuid],
                             data: chart.data.map(item => {
-								if (this.cardHistoricalData[chart.uuid]) {
-									if (!this.cardHistoricalData[chart.uuid][item.name]) return item
+                                var historical_card = this.cardHistoricalData[chart.uuid]
+								if (historical_card) {
+                                    var historical_card_view = historical_card[item.name]
+									if (!historical_card_view) return null
 									return { ...item,
-                                        value: this.cardHistoricalData[chart.uuid][item.name].value,
-                                        showingHistorical: this.cardHistoricalData[chart.uuid][item.name].accurate_for_datetime
+                                        value: historical_card[item.name].value,
+                                        showingHistorical: historical_card[item.name].accurate_for_datetime
                                     }
 								}
 								return item
-                            })
+                            }).filter(x => x)
                         }
                     })
                 },
