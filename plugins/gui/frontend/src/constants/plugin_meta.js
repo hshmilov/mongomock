@@ -204,7 +204,7 @@ export const pluginMeta = {
         description: 'The Aruba Adapter connects to Cisco switches and routers.'
     },
     infoblox_adapter: {
-        title: 'Infoblox DDI',
+        title: 'Infoblox DDI - BETA',
         description: 'Infoblox DDI consolidates DNS, DHCP, IP address management, and other core network services into a single platform, managed from a common console.'
     },
     chef_adapter: {

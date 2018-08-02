@@ -126,22 +126,26 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         # Thread for inserting reports. Start in 30 minutes to allow the system to initialize
         # and especially the clients themselves -> it might take a couple of seconds to connect.
-        self._background_scheduler.add_job(func=self.generate_report,
-                                           trigger=IntervalTrigger(minutes=self.__report_generation_interval),
-                                           next_run_time=datetime.now() + timedelta(seconds=30),
-                                           name='report_generation_thread',
-                                           id='report_generation_thread',
-                                           max_instances=1
-                                           )
+
+        # Currently the reports from AD are disabled.
+        #  self._background_scheduler.add_job(func=self.generate_report,
+        #                                   trigger=IntervalTrigger(minutes=self.__report_generation_interval),
+        #                                   next_run_time=datetime.now() + timedelta(seconds=30),
+        #                                   name='report_generation_thread',
+        #                                   id='report_generation_thread',
+        #                                   max_instances=1
+        #                                   )
 
         self._background_scheduler.start()
 
         # create temp files dir
         os.makedirs(TEMP_FILES_FOLDER, exist_ok=True)
-        # TODO: Weiss: Ask why not using tempfile to creage dir.
+        # TODO: Weiss: Ask why not using temp file to create dir.
 
     @add_rule('generate_report_now', methods=['POST'], should_authenticate=False)
     def generate_report_now(self):
+        # Currently we do not want the AD report to be shown in the executive report
+        return ''
         jobs = self._background_scheduler.get_jobs()
         report_generation_thread_job = next(job for job in jobs if job.name == 'report_generation_thread')
         report_generation_thread_job.modify(next_run_time=datetime.now())

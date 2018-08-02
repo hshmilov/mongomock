@@ -1,9 +1,9 @@
+import time
+import pytest
 from retrying import retry
-
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.utils import try_until_not_thrown
 from test_credentials.test_ad_credentials import *
-import time
 
 # These might look like we don't use them but in fact we do. once they are imported, a module-level fixture is run.
 from services.adapters.ad_service import AdService, ad_fixture
@@ -114,6 +114,7 @@ class TestAdAdapter(AdapterTestBase):
 
         try_until_not_thrown(50, 5, assert_ip_resolved)
 
+    @pytest.mark.skip("report generation for AD is disabled")
     def test_report_generator(self):
         self.adapter_service.generate_report()
 
