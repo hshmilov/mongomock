@@ -201,7 +201,7 @@ export const pluginMeta = {
     },
     aruba_adapter: {
         title: 'Aruba',
-        description: 'The Aruba Adapter connects to Cisco switches and routers.'
+        description: 'The Aruba Adapter connects to Aruba switches and routers.'
     },
     infoblox_adapter: {
         title: 'Infoblox DDI - BETA',
