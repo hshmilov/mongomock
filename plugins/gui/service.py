@@ -1442,7 +1442,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 continue
         if not historical_views:
             return []
-        return self._fetch_chart_compare(card['view'], historical_views)
+        return self._fetch_chart_compare(ChartViews[card['view']], historical_views)
 
     def _fetch_historical_chart_segment(self, card, from_given_date, to_given_date):
         """
@@ -1682,6 +1682,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         data = []
         total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
+        if not total:
+            return [{'name': base or 'ALL', 'value': 0, 'remainder': True,
+                     'view': {**base_view, 'query': {'filter': base_view["query"]["filter"]}}, 'module': entity.value}]
+
         child1_view = self._find_filter_by_name(entity, intersecting[0])
         child1_filter = child1_view['query']['filter']
         child1_query = parse_filter(child1_filter)
@@ -2067,9 +2071,10 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 view_filter = self._find_filter_by_name(entity, query['name'])
                 if view_filter:
                     logger.info(f'Executing filter {view_filter} on entity {entity.value}')
+                    view_parsed = parse_filter(view_filter['query']['filter'])
                     views.append({
                         **query,
-                        'count': self._entity_views_db_map[entity].count_documents(parse_filter(view_filter))
+                        'count': self._entity_views_db_map[entity].count_documents(view_parsed)
                     })
             adapter_clients_report = {}
             try:

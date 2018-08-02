@@ -262,15 +262,15 @@ class ReportGenerator(object):
         :param queries_data:
         :return:
         """
-        queries_data = [item for item in queries_data[1:] if item.get('value')]
-        queries_data.insert(0, queries_data[0])
-        portions = [item['value'] for item in queries_data]
+        queries = [item for item in queries_data[1:] if item.get('value')]
+        queries.insert(0, queries_data[0])
+        portions = [item['value'] for item in queries]
 
         colours = [GREY_COLOUR, '#15C59E', '#15ACB2', '#1593C5', '#B932BB', '#8A32BB', '#5A32BB']
         slices = []
         for i, slice_def in enumerate(self._calculate_pie_slices(portions)):
             parameters = {'path': slice_def['path'],
-                          'colour': 'url(#intersection)' if queries_data[i].get('intersection') else colours[i]}
+                          'colour': 'url(#intersection)' if queries[i].get('intersection') else colours[i]}
             if i:
                 parameters['text'] = f'{round(portions[i] * 100)}%' if i else ''
                 parameters['x'] = slice_def['text_x']
