@@ -1624,7 +1624,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'module': entity_name,
                 'value': 0
             }
-            if view.get('history'):
+            if view.get('for_date'):
                 data_item['value'] = self._historical_entity_views_db_map[entity].count_documents(
                     {
                         '$and': [
