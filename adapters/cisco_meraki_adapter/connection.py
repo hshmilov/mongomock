@@ -119,6 +119,8 @@ class CiscoMerakiConnection(object):
                 clients_device_raw = self._get("devices/" + str(serial) + "/clients?timespan=" + str(86400 * 2))
                 for client_raw in clients_device_raw:
                     client_raw["associated_device"] = serial
+                    client_raw["address"] = device.get("address")
+                    client_raw["network_name"] = device.get("network_name")
                 clients.extend(clients_device_raw)
             except Exception:
                 logger.exception(f"Problem getting clients for device {str(device)}")
