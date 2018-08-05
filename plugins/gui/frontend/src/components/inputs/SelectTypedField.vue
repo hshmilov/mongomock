@@ -19,11 +19,15 @@
 				if (!this.fields || !this.fields.length) return []
 				if (!this.fieldType) return this.fields[0].fields
 				return this.fields.filter(item => item.name === this.fieldType)[0].fields
-			}
+			},
+            firstType() {
+				if (!this.fields || !this.fields.length) return 'axonius'
+				return this.fields[0].name
+            }
         },
         data() {
 			return {
-				fieldType: 'axonius'
+				fieldType: ''
             }
         },
         watch: {
@@ -37,7 +41,10 @@
 				if (!newCurrenFields.filter(field => field.name === this.value).length) {
 					this.$emit('input', '')
 				}
-			}
+			},
+            firstType(newFirstType) {
+				this.fieldType = newFirstType
+            }
         },
         methods: {
 			updateFieldSpace() {
@@ -49,12 +56,13 @@
 				}
 			},
             updateAutoField() {
-				if (!this.value && this.fieldType !== '' && this.fieldType !== 'axonius') {
+				if (this.fieldType !== '' && this.fieldType !== 'axonius') {
 					this.$emit('input', `adapters_data.${this.fieldType}.id`)
                 }
             }
         },
         created() {
+			this.fieldType = this.firstType
 			if (this.value) {
 				this.updateFieldSpace()
                 this.$emit('input', this.value)

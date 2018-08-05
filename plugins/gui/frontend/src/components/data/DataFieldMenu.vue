@@ -4,7 +4,7 @@
         <modal v-if="isActive" @close="isActive = false">
             <template slot="body">
                 <div class="x-field-menu-filter">
-                    <x-select-symbol :options="schema" v-model="fieldSpace" :tabindex="1" />
+                    <x-select-symbol :options="schema" v-model="fieldType" :tabindex="1" />
                     <search-input v-model="searchValue" :tabindex="2" />
                 </div>
                 <x-checkbox-list :items="currentFields" v-model="selectedFields"/>
@@ -52,24 +52,36 @@
 			},
 			currentFields() {
 				if (!this.schema || !this.schema.length) return []
-				if (!this.fieldSpace) return this.schema[0].fields
-				return this.schema.filter(item => item.name === this.fieldSpace)[0].fields.filter((field) => {
+				if (!this.fieldType) return this.schema[0].fields
+                let fieldSchema = this.schema.find(item => item.name === this.fieldType)
+                if (!fieldSchema) return []
+				return fieldSchema.fields.filter((field) => {
 					return field.title.toLowerCase().includes(this.searchValue.toLowerCase())
                 })
-			}
+			},
+            firstType() {
+				if (!this.schema || !this.schema.length) return 'axonius'
+				return this.schema[0].name
+            }
         },
         data() {
 			return {
 				isActive: false,
-                fieldSpace: 'axonius',
+                fieldType: '',
                 searchValue: ''
             }
+        },
+        watch: {
+			firstType(newFirstType) {
+				this.fieldType = newFirstType
+			}
         },
         methods: {
             ...mapMutations({ updateView: UPDATE_DATA_VIEW }),
             ...mapActions({ fetchFields: FETCH_DATA_FIELDS })
         },
         created() {
+			this.fieldType = this.firstType
 			this.fetchFields({ module: this.module })
         }
 	}

@@ -19,7 +19,7 @@
             <tab title="General Data" id="generic" key="generic" :selected="singleAdapter">
                 <tabs :vertical="true">
                     <tab title="Basic Info" id="basic" key="basic" :selected="true">
-                        <x-schema-list :data="basicInfoData" :schema="basicInfoSchema"/>
+                        <x-schema-list :data="entity.generic.basic" :schema="{ type: 'array', items: fields.generic }"/>
                     </tab>
                     <tab v-for="item, i in entityGenericAdvancedRegular" :title="item.title" :id="item.name" :key="item.name">
                         <!-- For tabs representing a list of objects, show as a table -->
@@ -103,28 +103,6 @@
             ...mapGetters({ singleAdapter: SINGLE_ADAPTER }),
             entityId() {
 				return this.$route.params.id
-            },
-            advancedFields() {
-            	// Get list of the advanced fields names (data designated for separate tabs)
-            	return this.entity.generic.advanced.map(item => item.name)
-            },
-            basicInfoData() {
-            	// Which data to show in the 'Basic Info' tab? Depends whether singleAdapter mode is on
-            	if (!this.singleAdapter) {
-					return this.entity.generic.basic
-                }
-                // If so, show the data of the first adapter, after filtering the fields defined as advanced
-                let data = this.entity.specific[0].data
-				return Object.keys(data).filter( key => !this.advancedFields.includes(key) )
-					.reduce( (res, key) => Object.assign(res, { [key]: data[key] }), {} )
-            },
-            basicInfoSchema() {
-            	// Which schema to use for the 'Basic Info' tab? Depends whether singleAdapter mode is on
-            	if (!this.singleAdapter) {
-            		return { type: 'array', items: this.fields.generic }
-				}
-				// If so, take the schema of the first adapter
-				return this.adapterSchema(this.entity.specific[0].plugin_name, true)
             },
 			entityGenericAdvanced() {
 				if (!this.entity.generic || !this.entity.generic.advanced) return []
