@@ -6,8 +6,8 @@
         </template>
         <template v-else>
             <div class="dashboard-charts">
-                <x-coverage-card v-for="item in dashboard.coverage.data" :key="item.title" :data="item"
-                                 @click-one="runCoverageFilter(item.properties, $event)"/>
+                <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
+                                 :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
                 <x-card title="Data Discovery">
                     <x-summary :data="adapterDevicesCounterData"/>
                 </x-card>

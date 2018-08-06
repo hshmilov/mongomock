@@ -14,7 +14,7 @@
             <g v-for="slice, index in slices" @click="$emit('click-one', index)" @mouseover="onHover($event, index)"
                :id="getId(index)">
                 <path :d="slice.path" :class="`filling ${slice.class} ${inHover === index? 'in-hover' : ''}`"></path>
-                <text v-if="slice.value > 0.04" class="scaling" text-anchor="middle"
+                <text v-if="showPercentageText(slice.value)" class="scaling" text-anchor="middle"
                       :x="slice.middle.x" :y="slice.middle.y">{{Math.round(slice.value * 100)}}%</text>
             </g>
         </svg>
@@ -40,7 +40,7 @@
 <script>
 	export default {
 		name: 'x-pie-chart',
-		props: {data: {required: true}, id: {}},
+		props: {data: {required: true}, id: {}, forceText: {default: false}},
 		computed: {
 			processedData () {
 				return this.data.map((item, index) => {
@@ -111,6 +111,9 @@
 				if (!this.id) return undefined
 
 				return `${this.id}_${name}`
+			},
+			showPercentageText(val) {
+				return (this.forceText && val > 0) || val > 0.04
 			}
 		}
 	}

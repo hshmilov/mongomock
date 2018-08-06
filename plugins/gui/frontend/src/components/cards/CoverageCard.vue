@@ -1,6 +1,6 @@
 <template>
     <x-card :title="`${data.title} Coverage`" class="coverage">
-        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" :id="data.name" />
+        <x-pie-chart :data="pieSlices" @click-one="$emit('click-one', $event)" :id="data.name" :force-text="true" />
     </x-card>
 </template>
 
