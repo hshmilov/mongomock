@@ -5,7 +5,7 @@ you should use `grep -R "AUTOADAPTER . | grep -v create_adapter.py` in order to 
 
 Basically we do the following things:
 
--> add description to plugins/gui/frontend/src/static.js
+-> add description to plugins/gui/frontend/src/constants/plugin_meta.js
     -> AUTOADAPTER - add description
 
 -> create plugins/gui/frontend/src/assets/images/logos/<adapter_name>_adapter.png
@@ -58,7 +58,7 @@ def get_action_table(adapter_name: str) -> OrderedDict:
     ''' returns table for each adapter file -> (validator, action) '''
 
     return OrderedDict({
-        f'plugins/gui/frontend/src/static.js': (description_validator, description_action),
+        f'plugins/gui/frontend/src/constants/plugin_meta.js': (description_validator, description_action),
         f'plugins/gui/frontend/src/assets/images/logos/{adapter_name}_adapter.png': (not_exists_validator, image_action),
         f'adapters/{adapter_name}_adapter': (not_exists_validator, adapter_dir_action),
         f'adapters/{adapter_name}_adapter/__init__.py': (not_exists_validator, adapter_init_action),
