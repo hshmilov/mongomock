@@ -76,3 +76,5 @@ pylint_quotes==0.1.9
 isort==4.3.4
 docker==3.4.1
 mypy==0.620
+aliyun-python-sdk-core-v3==2.9.0
+aliyun-python-sdk-ecs==4.9.5
