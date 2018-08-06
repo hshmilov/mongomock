@@ -781,13 +781,18 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
                 device = self._new_device_adapter()
                 self._parse_generic_ad_raw_data(device, device_raw)
-                device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
                 device.description = device_raw.get('description')
                 device.network_interfaces = []
                 device.last_seen = last_seen
                 device.dns_resolve_status = DNSResolveStatus.Pending
                 device.id = device_raw['distinguishedName']
                 device.domain = convert_ldap_searchpath_to_domain_name(device_raw['distinguishedName'])
+                if device.domain:
+                    # If we do not have dNSHostName than we would like to create it using name and domain.
+                    device.hostname = device_raw.get('dNSHostName',
+                                                     f"{device_raw.get('name', '')}.{str(device.domain)}")
+                else:
+                    device.hostname = device_raw.get('dNSHostName', device_raw.get('name', ''))
                 device.part_of_domain = True
                 device.organizational_unit = get_organizational_units_from_dn(device.id)
                 service_principal_name = device_raw.get("servicePrincipalName")  # only for devices

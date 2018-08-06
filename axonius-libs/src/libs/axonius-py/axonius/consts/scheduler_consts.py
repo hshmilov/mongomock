@@ -16,10 +16,10 @@ class ResearchPhases(Enum):
     """
     Fetch_Devices = auto()
     Fetch_Scanners = auto()
+    Clean_Devices = auto()
     Pre_Correlation = auto()
     Run_Correlations = auto()
     Post_Correlation = auto()
-    Clean_Devices = auto()
     Run_Queries = auto()
     Save_Historical = auto()
 

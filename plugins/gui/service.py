@@ -2123,13 +2123,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         views_data.append({
                             'name': view_doc.get('name', f'View {i}'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in field_list],
-                            'data': gui_helpers.get_entities(view.get('pageSize', 20), 0,
-                                                             parse_filter(view.get('query', {}).get('filter', '')),
-                                                             gui_helpers.get_sort(
-                                                                 view), {field: 1 for field in field_list},
-                                                             self.gui_dbs.entity_query_views_db_map[entity],
-                                                             self._entity_views_db_map[entity], entity,
-                                                             default_sort=self._system_settings['defaultSort'])
+                            'data': list(gui_helpers.get_entities(view.get('pageSize', 20), 0,
+                                                                  parse_filter(view.get('query', {}).get('filter', '')),
+                                                                  gui_helpers.get_sort(
+                                view), {field: 1 for field in field_list},
+                                self.gui_dbs.entity_query_views_db_map[entity],
+                                self._entity_views_db_map[entity], entity,
+                                default_sort=self._system_settings['defaultSort']))
                         })
                 except Exception:
                     logger.exception(f"Problem with View {str(i)} ViewDoc {str(view_doc)}")

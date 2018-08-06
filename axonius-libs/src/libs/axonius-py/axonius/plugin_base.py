@@ -309,6 +309,10 @@ class PluginBase(Configurable, Feature):
         # Creating logger
         create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, self.log_path)
 
+        # Initializing syslog help variables
+        self.current_syslog_host = None
+        self.current_syslog_port = None
+
         # Adding rules to flask
         for routed in ROUTED_FUNCTIONS:
             (wanted_function, rule, wanted_methods) = routed
@@ -1369,16 +1373,28 @@ class PluginBase(Configurable, Feature):
     def send_syslog_message(self, message, log_level):
         syslog_settings = self._syslog_settings
         if syslog_settings['enabled'] is True:
-            temp_logger = logging.getLogger("axonius.syslog")
-            syslog_hdlr = logging.handlers.SysLogHandler(address=(
-                syslog_settings['syslogHost'], syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)),
-                facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-            syslog_hdlr.setLevel(logging.INFO)
-            temp_logger.addHandler(syslog_hdlr)
+            syslog_logger = logging.getLogger("axonius.syslog")
+            if self.current_syslog_host is None or \
+                    self.current_syslog_port is None or \
+                    self.current_syslog_host != syslog_settings['syslogHost'] or \
+                    self.current_syslog_port != syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT):
+                # No syslog handler defined yet or settings changed.
+                # We should replace the current handler with a new one.
+                logger.info("Initializing new handler to syslog logger (deleting old if exist)")
+                syslog_logger.handlers = []  # Removing all previous handlers
+                # Making a new handler with most up to date settings
+                syslog_handler = logging.handlers.SysLogHandler(address=(
+                    syslog_settings['syslogHost'], syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)),
+                    facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+                syslog_handler.setLevel(logging.INFO)
+                syslog_logger.addHandler(syslog_handler)
+                # Saving the values used
+                self.current_syslog_host = syslog_settings['syslogHost']
+                self.current_syslog_port = syslog_settings.get('syslogPort', logging.handlers.SYSLOG_UDP_PORT)
 
             # Starting the messages with the tag Axonius
             formatted_message = f"Axonius:{message}"
-            getattr(temp_logger, log_level)(formatted_message)
+            getattr(syslog_logger, log_level)(formatted_message)
 
     @property
     def mail_sender(self):

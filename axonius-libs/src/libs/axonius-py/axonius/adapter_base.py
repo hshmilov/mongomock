@@ -369,7 +369,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             # There is no such thing as scanners for users, so we always check for id here.
             parsed_user_id = parsed_user.id  # we must have an id
             if parsed_user_id in users_ids:
-                logger.critical(f"Error! user with id {parsed_user_id} already yielded! skipping")
+                logger.error(f"Error! user with id {parsed_user_id} already yielded! skipping")
                 continue
             users_ids.append(parsed_user_id)
 

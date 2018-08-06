@@ -218,9 +218,11 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
                 'timestamp': datetime.now()
             },
             upsert=True)
-    if not projection:
-        return [beautify_db_entry(entity) for entity in data_list]
-    return [parse_entity_fields(entity, projection.keys()) for entity in data_list]
+    for entity in data_list:
+        if not projection:
+            yield beautify_db_entry(entity)
+        else:
+            yield parse_entity_fields(entity, projection.keys())
 
 
 def find_entity_field(entity_data, field_path):
@@ -383,10 +385,10 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, db_connection, entity_vi
     """
     logger.info('Generating csv')
     string_output = io.StringIO()
-    entities = get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
-                            db_connection,
-                            entity_views_db_map, entity_type,
-                            default_sort=default_sort, run_over_projection=False)
+    entities = list(get_entities(None, None, mongo_filter, mongo_sort, mongo_projection,
+                                 db_connection,
+                                 entity_views_db_map, entity_type,
+                                 default_sort=default_sort, run_over_projection=False))
     output = ''
     if len(entities) > 0:
         # Beautifying the resulting csv.

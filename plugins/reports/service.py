@@ -380,14 +380,15 @@ class ReportsService(PluginBase, Triggerable):
                 'name': report_data['view']})
             parsed_query_filter = parse_filter(query['view']['query']['filter'])
             field_list = query['view'].get('fields', [])
-            all_gui_entities = list(gui_helpers.get_entities(query['view'].get('pageSize', 20), 0, parsed_query_filter,
-                                                             gui_helpers.get_sort(query['view']),
-                                                             {field: 1 for field in field_list},
-                                                             self.gui_dbs.entity_query_views_db_map[EntityType(
-                                                                 report_data['view_entity'])],
-                                                             self._entity_views_db_map[EntityType(report_data['view_entity'])
-                                                                                       ], EntityType(report_data['view_entity']),
-                                                             default_sort=True))
+            all_gui_entities = gui_helpers.get_entities(None, None, parsed_query_filter,
+                                                        gui_helpers.get_sort(query['view']),
+                                                        {field: 1 for field in field_list},
+                                                        self.gui_dbs.entity_query_views_db_map[EntityType(
+                                                            report_data['view_entity'])],
+                                                        self._entity_views_db_map[EntityType(
+                                                            report_data['view_entity'])],
+                                                        EntityType(report_data['view_entity']),
+                                                        default_sort=True)
 
             for entity in all_gui_entities:
                 self.send_syslog_message(json.dumps(entity),  report_data['severity'])
