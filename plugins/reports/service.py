@@ -20,6 +20,7 @@ from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_filter
 from axonius.utils import gui_helpers
+from axonius.utils.json import to_json
 
 
 class ReportsService(PluginBase, Triggerable):
@@ -391,7 +392,7 @@ class ReportsService(PluginBase, Triggerable):
                                                         default_sort=True)
 
             for entity in all_gui_entities:
-                self.send_syslog_message(json.dumps(entity),  report_data['severity'])
+                self.send_syslog_message(to_json(entity), report_data['severity'])
 
     def _handle_action_send_emails(self, report_data, triggered, trigger_data, current_num_of_devices,
                                    action_data=None):
