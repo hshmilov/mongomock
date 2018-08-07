@@ -16,6 +16,7 @@ class AssociatedDeviceAdapter(SmartJsonClass):
     associated_device = Field(str, "Associated Device")
     address = Field(str, "Address")
     network_name = Field(str, "Network Name")
+    vlan = Field(str, "Vlan")
 
 
 class CiscoMerakiAdapter(AdapterBase):
@@ -153,7 +154,8 @@ class CiscoMerakiAdapter(AdapterBase):
                 clients_id_dict[device_id]['ip'].union(client_raw['ip'])
                 clients_id_dict[device_id]['associated_devices'].add(
                     (client_raw.get('associated_device'), client_raw.get('switchport'),
-                     client_raw.get('address'), client_raw.get('network_name')))
+                     client_raw.get('address'), client_raw.get('network_name'),
+                     client_raw.get('vlan')))
 
             except Exception:
                 logger.exception(f"Problem with fetching CiscoMeraki Client {client_raw}")
@@ -175,13 +177,14 @@ class CiscoMerakiAdapter(AdapterBase):
                 device.description = client_raw.get("description")
                 device.dns_name = client_raw.get("mdnsName")
                 device.associated_devices = []
-                for associated_device, switch_port, address, network_name in client_raw["associated_devices"]:
+                for associated_device, switch_port, address, network_name, vlan in client_raw["associated_devices"]:
                     try:
                         associated_device_object = AssociatedDeviceAdapter()
                         associated_device_object.switch_port = switch_port
                         associated_device_object.associated_device = associated_device
                         associated_device_object.address = address
                         associated_device_object.network_name = network_name
+                        associated_device_object.vlan = vlan
                         device.associated_devices.append(associated_device_object)
                     except Exception:
                         logger.exception(f"Problem adding associated device"
