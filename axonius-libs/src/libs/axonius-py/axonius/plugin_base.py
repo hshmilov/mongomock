@@ -303,11 +303,10 @@ class PluginBase(Configurable, Feature):
         self.db_user = core_data['db_user']
         self.db_password = core_data['db_password']
 
-        self.log_path = LOG_PATH + '/' + self.plugin_unique_name + '_axonius.log'
         self.log_level = logging.INFO
 
         # Creating logger
-        create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, self.log_path)
+        create_logger(self.plugin_unique_name, self.log_level, self.logstash_host, LOG_PATH)
 
         # Initializing syslog help variables
         self.current_syslog_host = None

@@ -22,6 +22,7 @@ from axonius.utils.files import get_local_config_file
 from core.exceptions import PluginNotFoundError
 
 CHUNK_SIZE = 1024
+MAX_INSTANCES_OF_SAME_PLUGIN = 100
 
 
 class CoreService(PluginBase, Configurable):
@@ -254,14 +255,17 @@ class CoreService(PluginBase, Configurable):
                             del self.online_plugins[plugin_unique_name]
 
             else:
-                # New plugin
-                while True:
-                    # Trying to generate a random name
+                # New plugin. First, start with a name with no unique identifier. Then, continue to
+                # ongoing numbers.
+                for unique_name_suffix in [f"_{i}" for i in range(MAX_INSTANCES_OF_SAME_PLUGIN)]:
+                    # Try generating a unique name
                     # TODO: Check that this name is also not in the DB
-                    random_bits = random.getrandbits(16)
-                    plugin_unique_name = plugin_name + "_" + str(random_bits)
+                    plugin_unique_name = f"{plugin_name}{unique_name_suffix}"
                     if not self._get_config(plugin_unique_name) and plugin_unique_name not in self.online_plugins:
                         break
+                else:
+                    # Looped through the whole for and couldn't hit the break..
+                    raise ValueError(f"Error, couldn't find a unique name for plugin {plugin_name}!")
             if not relevant_doc:
                 # Create a new plugin line
                 # TODO: Ask the gui for permission to register this new plugin

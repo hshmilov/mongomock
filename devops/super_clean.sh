@@ -19,7 +19,7 @@ if [ "$AVAILABLE_VOLUMES" != "" ]; then
 fi
 AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
 if [ "$AVAILABLE_IMAGES" != "" ]; then
-    docker rmi ${AVAILABLE_IMAGES}
+    docker rmi -f ${AVAILABLE_IMAGES}
     AVAILABLE_IMAGES=$( docker images -q --filter=reference='axonius/*' )
     if [ "$AVAILABLE_IMAGES" != "" ]; then
         exit 1
