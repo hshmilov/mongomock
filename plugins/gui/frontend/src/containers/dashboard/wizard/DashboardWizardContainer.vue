@@ -183,6 +183,9 @@
                     .svg-fill {
                         fill: $grey-4;
                     }
+                    .svg-stroke {
+                        stroke: $grey-4;
+                    }
                 }
                 &:hover {
                     .svg-fill {

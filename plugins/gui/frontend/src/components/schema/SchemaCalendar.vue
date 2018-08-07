@@ -2,9 +2,7 @@
     <div class="x-schema-calendar">
         <div class="calendar-details" v-if="details">
             <img :src="`/src/assets/images/logos/${details.image}.png`" height="48" />
-            <div>{{ details.name }}</div>
-            <div>{{ details.volume }}</div>
-            <div>{{ details.type }}</div>
+            <div v-for="field in details.fields">{{ field }}</div>
         </div>
         <div class="calendar-view">
             <div @click="decCurrentWeek" class="x-btn link">&lt;</div>
@@ -119,8 +117,11 @@
         flex-direction: row;
         height: 100%;
         .calendar-details {
-            margin-right: 24px;
+            margin-left: 24px;
+            margin-top: 84px;
             width: 200px;
+            font-weight: 500;
+            font-size: 16px;
             .custom-data {
                 display: block;
             }

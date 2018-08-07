@@ -17,11 +17,9 @@
 			detailsSchema() {
 				return {
 					type: 'array', items: [
-                        { type: 'number', name: 'bolus_volume', title: 'Bolus Volume' },
-						{ type: 'integer', name: 'number_of_boluses_exists', title: 'No. of Existing Boluses' },
-						{ type: 'integer', name: 'requested_boluses', title: 'No. of Requested Boluses' },
-						{ type: 'integer', name: 'given_boluses', title: 'No. of Given Boluses' },
-						{ type: 'string', name: 'instance_state', title: 'Bolus State' },
+                        { type: 'number', name: 'total_bolus_amount_given', title: 'Bolus Amount Given (mg)' },
+						{ type: 'integer', name: 'requested_boluses', title: 'Requested Boluses' },
+						{ type: 'integer', name: 'given_boluses', title: 'Given Boluses' }
                     ]
                 }
 			},

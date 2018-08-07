@@ -5,13 +5,12 @@
                 <div v-if="index" class="dose-link"></div>
                 <div @click="selectData(index)" class="dose-container" :class="{selected: selectedData === index}">
                     <div>
-                        <x-dose :percentage="dose.percentage_of_volume_infused * 100"
-                                :placeholder="dose.instance_state === 'Upcoming'" />
+                        <x-dose :percentage="dose.percentage_of_volume_infused" :placeholder="isPlaceholder(dose)" />
                         <x-cross v-if="dose.instance_state === 'Missed'" />
                         <div v-if="dose.instance_state === 'Missing Record'" class="unknown">?</div>
                     </div>
                     <div class="dose-summary" v-if="dose.instance_state === 'Taken'">
-                        <div>{{dose.vi}} {{dose.vi_units}}</div>
+                        <div>{{dose.vi}}mL</div>
                         <div class="dose-time">{{formatShortTime(dose.start_ts)}} - {{formatShortTime(dose.end_ts)}}</div>
                     </div>
                 </div>
@@ -38,7 +37,7 @@
                 return {
                     type: 'array', items: [
                         { type: 'string', title: 'Dose Number', name: 'dose_number' },
-                        { type: 'string', title: 'Dose State', name: 'instance_state' },
+                        { type: 'string', title: 'Dose Status', name: 'instance_state' },
                         { type: 'number', title: 'Percentage Infused', name: 'percentage_of_volume_infused', format: 'percentage' }
                     ]
                 }
@@ -58,6 +57,9 @@
             }
         },
         methods: {
+			isPlaceholder(dose) {
+				return dose.instance_state === 'Upcoming'
+            },
 			selectData(dataItem, day) {
 				this.selectedData = null
 				setTimeout(() => this.selectedData = dataItem, 100)

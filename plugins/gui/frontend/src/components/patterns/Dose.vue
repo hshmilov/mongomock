@@ -2,7 +2,7 @@
     <svg height="48px" viewBox="0 0 512 820" class="x-dose" :class="{placeholder: placeholder}">
         <defs>
             <linearGradient y2="0%" x2="0%" y1="100%" x1="0%" :id="`fill-${percentage}`">
-                <stop class="svg-stop" :offset="`${percentage}%`" />
+                <stop class="svg-stop" :offset="`${percentage}%`" v-if="percentage" />
                 <stop stop-color="#FFFFFF" offset="0%" />
             </linearGradient>
         </defs>
