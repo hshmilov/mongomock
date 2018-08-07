@@ -588,10 +588,10 @@ class AggregatorService(PluginBase, Triggerable):
             if candidate is not None and candidate == adapter_entity['data']['id']:
                 new_axonius_entity['adapters'].append(adapter_entity)
         for tag in axonius_entity_to_split['tags']:
-            (tag_plugin_unique_name, tag_adapter_id), = tag['associated_adapters']
-            candidate = get_entity_id_for_plugin_name(associated_adapters, tag_plugin_unique_name)
-            if candidate is not None and candidate == tag_adapter_id:
-                new_axonius_entity['tags'].append(tag)
+            for tag_plugin_unique_name, tag_adapter_id in tag['associated_adapters']:
+                candidate = get_entity_id_for_plugin_name(associated_adapters, tag_plugin_unique_name)
+                if candidate is not None and candidate == tag_adapter_id:
+                    new_axonius_entity['tags'].append(tag)
         for adapter_to_remove_from_old in new_axonius_entity['adapters']:
             entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
                                     {
@@ -606,17 +606,16 @@ class AggregatorService(PluginBase, Triggerable):
                                             ADAPTERS_LIST_LENGTH: -1
                                         }
             })
-        for tag_to_remove_from_old in new_axonius_entity['tags']:
-            (tag_plugin_unique_name,
-             tag_adapter_id), = tag_to_remove_from_old['associated_adapters']
-            entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
-                                    {
-                                        "$pull": {
-                                            'tags': {
-                                                f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
-                                            }
-                                        }})
-            new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(new_axonius_entity["adapters"])
+        entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
+                                {
+                                    "$pull": {
+                                        'tags': {
+                                            f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
+                                            for tag_to_remove_from_old in new_axonius_entity['tags']
+                                            for tag_plugin_unique_name, tag_adapter_id in tag_to_remove_from_old['associated_adapters']
+                                        }
+                                    }})
+        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(new_axonius_entity["adapters"])
         entities_db.insert_one(new_axonius_entity)
 
     def _link_entities(self, entities_candidates, entities_db):

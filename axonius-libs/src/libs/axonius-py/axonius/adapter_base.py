@@ -286,10 +286,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         Unlinks devices first if necessary.
         :return: Amount of deleted devices
         """
-        if not (self._last_seen_timedelta or self._last_fetched_timedelta or
-                self.__user_last_fetched_timedelta or self.__user_last_seen_timedelta):
-            return 0
-
         device_age_cutoff = self.__device_time_cutoff()
         user_age_cutoff = self.__user_time_cutoff()
         logger.info(f"Cleaning devices and users that are before {device_age_cutoff}, {user_age_cutoff}")
