@@ -232,8 +232,7 @@ def get_install_demo_script():
         exclude = [current_adapter[:-len('_adapter')] for current_adapter in exclude.split(',')]
         opt_params = "'--exclude {0}'".format(' '.join(exclude))
     elif include != '':
-        include = [current_adapter[:-len('_adapter')] for current_adapter in include.split(',')]
-        opt_params = "'{0}'".format(' '.join(include))
+        opt_params = "'{0}'".format(' '.join(include.split(',')))
     elif include == '' and exclude == '':
         opt_params = "'--exclude'"
 
