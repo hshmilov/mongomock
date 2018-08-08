@@ -555,7 +555,7 @@ def get_users():
     # This a url encoded filter that brings all the not local users.
     # specific_data.data.is_local%20==%20false
     params["filter"] = 'specific_data.data.is_local == false'
-    requests.get(f"{AXONIUS_API}/users", auth=(USERNAME, PASSWORD))
+    requests.get(f"{AXONIUS_API}/users", params=params, auth=(USERNAME, PASSWORD))
     # https://localhost/api/V1/users?skip=0&limit=20&fields=specific_data.data.image,specific_data.data.username,specific_data.data.domain,specific_data.data.last_seen,specific_data.data.is_admin&filter=specific_data.data.is_local%20==%20false
 
     # An example response would look like this:
@@ -663,7 +663,7 @@ def get_users_view():
 
     params["filter"] = "query_type=='saved'"
 
-    requests.get(f"{AXONIUS_API}/users/views", auth=(USERNAME, PASSWORD))
+    requests.get(f"{AXONIUS_API}/users/views", params=params, auth=(USERNAME, PASSWORD))
     # https://localhost/api/users/views?limit=1000&skip=0&filter=query_type==%27saved%27
 
     # Response would look like:
