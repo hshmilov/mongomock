@@ -81,11 +81,10 @@
             }
         }
         .remainder {
-            position: absolute;
-            bottom: -4px;
-            right: 0;
-            font-size: 14px;
+            font-size: 12px;
             color: $grey-3;
+            width: 100%;
+            text-align: right;
         }
     }
 

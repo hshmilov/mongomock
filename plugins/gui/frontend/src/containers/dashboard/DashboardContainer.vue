@@ -6,14 +6,9 @@
         </template>
         <template v-else>
             <div class="dashboard-charts">
+                <x-data-discovery-card :data="adapterDevices" module="devices" :filter="runFilter" />
                 <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
                                  :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
-                <x-card title="Data Discovery">
-                    <x-summary :data="adapterDevicesCounterData"/>
-                </x-card>
-                <x-card title="Devices per Adapter">
-                    <x-histogram :data="adapterDevicesCount" @click-one="runAdapterFilter" type="logo" :limit="9" />
-                </x-card>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
                         :removable="true" @remove="removeDashboard(chart.uuid)" :id="getId(chart.name)">
                     <div class="timeline">Showing for
@@ -44,6 +39,7 @@
     import xPage from '../../components/layout/Page.vue'
     import xCard from '../../components/cards/Card.vue'
     import xCoverageCard from '../../components/cards/CoverageCard.vue'
+	import xDataDiscoveryCard from '../../components/cards/DataDiscoveryCard.vue'
     import xHistogram from '../../components/charts/Histogram.vue'
     import xPie from '../../components/charts/Pie.vue'
     import xSummary from '../../components/charts/Summary.vue'
@@ -67,7 +63,7 @@
     export default {
         name: 'x-dashboard',
         components: {
-            xPage, xCard, xCoverageCard, xHistogram, xPie, xSummary,
+            xPage, xCard, xCoverageCard, xDataDiscoveryCard, xHistogram, xPie, xSummary,
             xCycleChart, DashboardWizardContainer, xEmptySystem, Modal, xDateEdit, xToast
         },
         computed: {
@@ -109,19 +105,10 @@
                 return this.dashboard.lifecycle.data
             },
             adapterDevices() {
-                if (!this.dashboard.adapterDevices.data) return {}
-                return this.dashboard.adapterDevices.data
+            	return this.dashboard.adapterDevices.data
             },
-            adapterDevicesCount() {
-                if (!this.adapterDevices || !this.adapterDevices.adapter_count) return []
-                return this.adapterDevices.adapter_count.sort((first, second) => second.value - first.value)
-            },
-            adapterDevicesCounterData() {
-                let totalSeen = this.adapterDevices.total_gross || 0
-                return [
-                    {value: totalSeen, name: 'Seen Devices', highlight: true},
-                    {value: Math.min(this.adapterDevices.total_net || 0, totalSeen), name: 'Unique Devices'},
-                ]
+            seenDevices() {
+            	return (this.adapterDevices && this.adapterDevices.total_gross)
             },
             nextRunTime() {
                 let leftToRun = new Date(parseInt(this.lifecycle.nextRunTime) * 1000) - Date.now()
@@ -135,9 +122,9 @@
                 return `${Math.round(leftToRun / thresholds[thresholds.length])} ${units[units.length]}`
             },
             isEmptySystem() {
-                if (!this.adapterDevicesCount || !this.adapterList.length) return null
+                if (!this.seenDevices) return null
 
-                if (this.adapterDevicesCount.length || this.adapterList.some(item => item.status !== '')) {
+                if (this.adapterList.some(item => item.status !== '')) {
                     return false
                 }
 
@@ -174,9 +161,6 @@
                 fetchAdapters: FETCH_ADAPTERS, saveView: SAVE_VIEW,
                 fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD, fetchHistoricalCardMin: FETCH_HISTORICAL_SAVED_CARD_MIN
             }),
-            runAdapterFilter(index) {
-                this.runFilter(`adapters == '${this.adapterDevicesCount[index].name}'`, 'devices')
-            },
             runCoverageFilter(properties, covered) {
                 if (!properties || !properties.length) return
                 if (covered === 2) {
@@ -251,8 +235,8 @@
             	if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count
-				if (this.adapterDevicesCount && this.adapterDevicesCount.length) {
-					let adapter = this.adapterDevicesCount.find((item) => !item.name.includes('active_directory'))
+				if (this.seenDevices) {
+					let adapter = this.adapterDevices.adapter_count.find((item) => !item.name.includes('active_directory'))
 					let name = ''
 					let filter = ''
 					if (adapter) {
@@ -297,8 +281,6 @@
         grid-gap: 12px;
         width: 100%;
         .x-card {
-            width: 320px;
-            height: 320px;
             .timeline {
                 font-size: 12px;
                 color: $grey-4;
