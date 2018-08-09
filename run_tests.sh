@@ -37,6 +37,9 @@ if [ "$AVAILABLE_VOLUMES" != "" ]; then
     docker volume rm ${AVAILABLE_VOLUMES}
 fi
 
+echo "Running rest mock server"
+python3 ./testing/mocks/rest_server.py &> ./logs/mock_server.log &
+
 echo "Running unitests"
 pytest -vv -s --ignore=testing --ignore=deployment --ignore=plugins/gui/src/frontend --ignore=adapters/juniper_adapter/py-space-platform --junitxml=testing/reporting/ut_report.xml
 if [ $? -ne 0 ]

@@ -1,11 +1,14 @@
-import logging
-logger = logging.getLogger(f"axonius.{__name__}")
-from cylance_adapter import consts
-import jwt
-import uuid
 import datetime
-from axonius.clients.rest.exception import RESTException
+import logging
+import uuid
+
+import jwt
+
 from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.exception import RESTException
+from cylance_adapter import consts
+
+logger = logging.getLogger(f"axonius.{__name__}")
 
 
 class CylanceConnection(RESTConnection):
@@ -61,11 +64,17 @@ class CylanceConnection(RESTConnection):
             except Exception:
                 logger.exception(f"Problem fetching page number {str(page_num)}")
         self._create_token_for_scopre('device:read')
+
+        # Now use asyncio to get all of these requests
+        async_requests = []
         for device_id in devices_ids:
             try:
                 if device_id is None or device_id == "":
                     logger.warning(f"Bad device {basic_device}")
                     continue
-                yield self._get(f"devices/v2/{device_id}")
+
+                async_requests.append({"name": f"devices/v2/{device_id}"})
             except Exception:
                 logger.exception(f"Got problem with id {device_id}")
+
+        yield from self._async_get_only_good_response(async_requests)

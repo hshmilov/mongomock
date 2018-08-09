@@ -35,14 +35,37 @@ class BlackberryUemConnection(RESTConnection):
 
     def get_device_list(self):
         devices_raw = self._get('devices')["devices"]
+        async_requests = []
+        async_requests_devices = []
+
         for device_raw in devices_raw:
             try:
                 device_links = device_raw.get("links")
                 for link in device_links:
                     if link["rel"] == "userDevice":
-                        user_device_url = link["href"]
-                device_raw["applications"] = self._get(
-                    user_device_url + "/applications", force_full_url=True)["deviceApplications"]
+                        if link.get("href") is not None:
+                            user_device_url = link["href"]
+                            async_requests.append(
+                                {
+                                    "name": f"{user_device_url}/applications",
+                                    "force_full_url": True
+                                }
+                            )
+                            async_requests_devices.append(device_raw)
+
+                        else:
+                            logger.error(f"Error, device {device_raw} does not have a href, can't get apps. yielding "
+                                         f"it without apps")
+                            yield device_raw
             except Exception:
                 logger.exception(f"Problem getting applications for device : {device_raw}")
+
+        for device_raw, device_apps_response in zip(async_requests_devices, self._async_get(async_requests)):
+            if self._is_async_response_good(device_apps_response):
+                device_apps_response = device_apps_response.get("deviceApplications")
+                if device_apps_response is not None:
+                    device_raw["applications"] = device_apps_response
+            else:
+                logger.error(f"error fetching devices apps for some device, "
+                             f"response is {device_apps_response} and devices is {device_raw}")
             yield device_raw

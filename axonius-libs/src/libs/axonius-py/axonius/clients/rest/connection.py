@@ -5,10 +5,20 @@ logger = logging.getLogger(f"axonius.{__name__}")
 from urllib3.util.url import parse_url
 import uritools
 import requests
+import aiohttp
+import math
+import json
+
 from axonius.clients.rest import consts
 from axonius.clients.rest.exception import *
 from abc import ABC, abstractmethod
 from json.decoder import JSONDecodeError
+from axonius.async.utils import async_request
+from axonius.utils.json import from_json
+
+
+ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE = 50
+MAX_REQUESTS_PER_MINUTE = 1000
 
 
 class RESTConnection(ABC):
@@ -105,8 +115,32 @@ class RESTConnection(ABC):
     def _get(self, *args, **kwargs):
         return self._do_request("GET", *args, **kwargs)
 
+    @staticmethod
+    def _is_async_response_good(response):
+        return not isinstance(response, Exception)
+
+    def _async_get(self, list_of_requests,
+                   chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
+                   max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
+        return self._do_async_request("GET", list_of_requests, chunks, max_requests_per_minute)
+
+    def _async_get_only_good_response(self, list_of_requests,
+                                      chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
+                                      max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
+
+        for response in self._async_get(list_of_requests, chunks, max_requests_per_minute):
+            if self._is_async_response_good(response):
+                yield response
+            else:
+                logger.error(f"Async response returned bad, its {response}")
+
     def _post(self, *args, **kwargs):
         return self._do_request("POST", *args, **kwargs)
+
+    def _async_post(self, list_of_requests,
+                    chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
+                    max_requests_per_minute=MAX_REQUESTS_PER_MINUTE):
+        return self._do_async_request("POST", list_of_requests, chunks, max_requests_per_minute)
 
     def _delete(self, *args, **kwargs):
         return self._do_request("DELETE", *args, **kwargs)
@@ -131,6 +165,9 @@ class RESTConnection(ABC):
         :return: the response
         :rtype: dict
         """
+        #
+        #   Remember to change _do_async_request when adding/removing functionality here!
+        #
         if not self._is_connected:
             raise RESTNotConnected()
         try:
@@ -182,9 +219,115 @@ class RESTConnection(ABC):
         else:
             return response.content
 
+    def _do_async_request(self, method, list_of_requests, chunks, max_requests_per_minute):
+        """
+        makes requests asynchronously. list_of_requests is a dict of parameters you would normally pass to _do_request.
+        :param method:
+        :param list_of_requests:
+        :param chunks: the amount of chunks to send in parallel. If the total amount of requests is over, chunks will be
+                       used. e.g., if chunks=100 and we have 150 requests, 100 will be parallel (asyncio) and then 50.
+        :param max_requests_per_minute: the maximum of requests we can do per minute. if we pass it, time.sleep will
+                                        wait a minute. unused
+        :return:
+        """
+        #
+        #   Remember to change _do_request when adding/removing functionality here!
+        #
+        if not self._is_connected:
+            raise RESTNotConnected()
+
+        # Transform regular to aio requests
+        aio_requests = []
+
+        for req in list_of_requests:
+            aio_req = dict()
+            aio_req['method'] = method
+
+            # Build url
+            if req.get('force_full_url', False) is True:
+                aio_req['url'] = req['name']
+            else:
+                aio_req['url'] = self._get_url_request(req['name'])
+
+            # Take care of url params
+            url_params = req.get('url_params')
+            if url_params is not None:
+                aio_req['params'] = url_params
+
+            # Take care of body params
+            body_params = req.get('body_params')
+            if body_params is not None:
+                if req.get('use_json_in_body', True) is True:
+                    aio_req['json'] = body_params
+                else:
+                    aio_req['data'] = body_params
+
+            # Take care of auth
+            if req.get('do_basic_auth', False) is True:
+                aio_req['auth'] = (self._username, self._password)
+            if req.get('do_digest_auth') is not None:
+                raise ValueError(f"Async requests do not support digest auth")
+
+            # Take care of headers, timeout and ssl verification
+            aio_req['headers'] = self._permanent_headers.copy()
+            aio_req['headers'].update(self._session_headers)
+            aio_req['timeout'] = self._session_timeout
+            if self._verify_ssl is False:
+                aio_req['ssl'] = False
+
+            # Take care of proxy. aiohttp doesn't allow us to try both proxies, we need to prefer one of them.
+            if self._proxies.get('https') is not None:
+                aio_req['proxy'] = self._proxies['https']
+            elif self._proxies.get('http') is not None:
+                aio_req['proxy'] = self._proxies['http']
+
+            logger.info(aio_req)
+            aio_requests.append(aio_req)
+
+        # Now that we have built the new requests, try to asynchronously get them.
+        for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
+            logger.info(f"Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}")
+            all_answers = async_request(aio_requests[chunks * chunk_id: chunks * (chunk_id + 1)])
+
+            # We got the requests, time to check if they are valid and transform them to what the user wanted.
+            for i, raw_answer in enumerate(all_answers):
+                # The answer could be an exception
+                if isinstance(raw_answer, Exception):
+                    yield raw_answer
+
+                # Or, it can be the actual response
+                elif isinstance(raw_answer, tuple) and \
+                        isinstance(raw_answer[0], str) and isinstance(raw_answer[1], aiohttp.ClientResponse):
+                    try:
+                        answer_text = raw_answer[0]
+                        response_object = raw_answer[1]
+
+                        response_object.raise_for_status()
+                        if list_of_requests[(chunk_id * chunks) + i].get("return_response_raw", False) is True:
+                            yield response_object
+                        elif list_of_requests[(chunk_id * chunks) + i].get("use_json_in_response", True) is True:
+                            yield from_json(answer_text)    # from_json also handles datetime with json.loads doesn't
+                        else:
+                            yield answer_text
+                    except aiohttp.ClientResponseError as e:
+                        try:
+                            rp = from_json(answer_text)     # from_json also handles datetime with json.loads doesn't
+                        except Exception:
+                            rp = str(answer_text)
+                        yield RESTRequestException(f"async error code {e.status} on "
+                                                   f"url {list_of_requests[i]['name']} - {rp}")
+                    except Exception as e:
+                        logger.exception(f"Exception while parsing async response for text {answer_text}")
+                        yield e
+                else:
+                    msg = f"Got an async response which is not exception or ClientResponse. " \
+                          f"This should never happen! response is {raw_answer}"
+                    logger.error(msg)
+                    yield ValueError(msg)
+
     def __enter__(self):
         self.connect()
         return self
 
-    def __exit__(self, type, value, tb):
+    def __exit__(self, _type, value, tb):
         self.close()

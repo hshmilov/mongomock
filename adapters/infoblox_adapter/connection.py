@@ -14,6 +14,7 @@ class InfobloxConnection(RESTConnection):
 
     def get_device_list(self):
         # These are the reasonable numbers of cidrs in networks
+        networks = []
         for cidr in range(8, 28):
             try:
                 networks.extend([network_raw["network"] for network_raw in

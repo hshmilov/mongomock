@@ -69,6 +69,7 @@ flasgger==0.9.0
 python-dateutil==2.7.3
 duo-client==3.3.0
 junos-eznc==2.1.8
+aiohttp==3.3.2
 apache-libcloud==2.3.0
 passlib==1.7.1
 pylint==2.0.0
