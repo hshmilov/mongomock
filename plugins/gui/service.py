@@ -1703,7 +1703,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             child2_query = parse_filter(child2_filter)
 
             # Child1 + Parent - Intersection
-            child1_view['filter'] = f'{base_filter}({child1_filter}) and NOT [{child2_filter}]'
+            child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and NOT [{child2_filter}]'
             data.append({'name': intersecting[0], 'value': data_collection.count_documents({
                 '$and': base_queries + [
                     child1_query,
@@ -1734,8 +1734,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }) / total, 'module': entity.value, 'view': child2_view})
 
         remainder = 1 - sum([x['value'] for x in data])
-        return [{'name': base or 'ALL', 'value': remainder, 'remainder': True,
-                 'view': {**base_view, 'query': {'filter': base_filter}}, 'module': entity.value}, *data]
+        return [{'name': base or 'ALL', 'value': remainder, 'remainder': True, 'view': {
+            **base_view, 'query': {'filter': f'{base_filter}NOT [({child1_filter}) or ({child2_filter})]'}
+        }, 'module': entity.value}, *data]
 
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
         """
