@@ -106,24 +106,26 @@ class NexposeAdapter(ScannerAdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         # We do not use data with no timestamp.
-        if len(devices_raw_data) is not 0:
-            failed_to_parse = 0
+        failed_to_parse = 0
+        api_client_class = None
+        for device_raw in devices_raw_data:
+            try:
+                if api_client_class is None:
+                    api_client_class = getattr(nexpose_clients, f"NexposeV{device_raw['API']}Client")
+                yield api_client_class.parse_raw_device(device_raw, self._new_device_adapter)
+            except Exception as err:
+                logger.exception(
+                    f"Caught exception from parsing using the API version: "
+                    f"{api_client_class.__name__ if api_client_class is not None else ''}. for device {device_raw}")
 
-            api_client_class = getattr(nexpose_clients, f"NexposeV{devices_raw_data[0]['API']}Client")
+                failed_to_parse += 1
 
-            for device_raw in devices_raw_data:
-                try:
-                    yield api_client_class.parse_raw_device(device_raw, self._new_device_adapter)
-                except Exception as err:
-                    logger.exception(f"Caught exception from parsing using the {api_client_class.__name__}.")
-                    failed_to_parse += 1
-
-            if failed_to_parse != 0:
-                logger.warning(f"Failed to parse {failed_to_parse} devices.")
+        if failed_to_parse != 0:
+            logger.warning(f"Failed to parse {failed_to_parse} devices.")
 
     def _query_devices_by_client(self, client_name, client_data):
         if isinstance(client_data, nexpose_clients.NexposeClient):
-            return client_data.get_all_devices()
+            yield from client_data.get_all_devices()
 
     def _get_client_id(self, client_config):
         return client_config[NEXPOSE_HOST]

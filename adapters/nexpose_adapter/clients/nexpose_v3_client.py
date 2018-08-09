@@ -11,7 +11,6 @@ from nexpose_adapter.clients.nexpose_base_client import NexposeClient
 
 class NexposeV3Client(NexposeClient):
     def get_all_devices(self):
-        devices = []
 
         try:
             num_of_asset_pages = 1
@@ -23,7 +22,10 @@ class NexposeV3Client(NexposeClient):
                     current_page_num += 1
                     current_page_response_as_json = self._send_get_request(
                         'assets', {'page': current_page_num, 'size': self.num_of_simultaneous_devices})
-                    devices.extend(current_page_response_as_json.get('resources', []))
+                    devices = current_page_response_as_json.get('resources', [])
+                    for item in devices:
+                        item.update({"API": '3'})
+                        yield item
                     num_of_asset_pages = current_page_response_as_json.get('page', {}).get('totalPages')
                 except Exception:
                     logger.exception(f"Got exception while fetching page {current_page_num+1} "
@@ -37,12 +39,6 @@ class NexposeV3Client(NexposeClient):
                         f"Got {current_page_num} out of {num_of_asset_pages} pages. "
                         f"({(current_page_num / max(num_of_asset_pages, 1)) * 100}% of device pages).")
 
-            for item in devices:
-                item.update({"API": '3'})
-                item.get('osFingerprint', {}).get('cpe', {}).pop('v2.2', None)
-                item.get('osFingerprint', {}).get('cpe', {}).pop('v2.3', None)
-
-            return devices
         except Exception as err:
             logger.exception("Error getting the nexpose devices.")
             raise GetDevicesError("Error getting the nexpose devices.")

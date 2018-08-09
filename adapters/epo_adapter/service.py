@@ -183,6 +183,7 @@ class EpoAdapter(AdapterBase):
                     ghz=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
                     name=device_raw.get("EPOComputerProperties.CPUType")
                 )
+
             except Exception:
                 logger.exception("Couldn't set some epo info")
             device.set_raw(device_raw)
