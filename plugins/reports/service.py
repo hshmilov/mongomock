@@ -558,9 +558,9 @@ class ReportsService(PluginBase, Triggerable):
             report_period = report_data.get('period', 'all')
             if report_period != 'all':
                 if 'last_triggered' in report_data and report_data['last_triggered'] is not None:
-                    if report_period == 'weekly' and report_data['last_triggered'] + datetime.timedelta(days=7) <= datetime.datetime.now():
+                    if report_period == 'weekly' and report_data['last_triggered'] + datetime.timedelta(days=7) >= datetime.datetime.now():
                         return
-                    elif report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(days=1) <= datetime.datetime.now():
+                    elif report_period == 'daily' and report_data['last_triggered'] + datetime.timedelta(days=1) >= datetime.datetime.now():
                         return
 
             current_result = self.get_view_results(report_data['view'], EntityType(report_data['view_entity']))
