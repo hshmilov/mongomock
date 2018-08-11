@@ -13,5 +13,6 @@ def parse_device(type_, raw_datas):
 PARSE_DEVICE_CALLBACKS = {
     'ARP Device': parse_arps,
     'FDB Device': parse_fdbs,
+    'LLDP Device': parse_lldp,
     'Juniper Device': parse_basic_info,
 }

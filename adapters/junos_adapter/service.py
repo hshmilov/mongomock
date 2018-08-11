@@ -37,6 +37,7 @@ class JunosAdapter(AdapterBase):
             for type_, func in [
                     ('ARP Device', client.query_arp_table),
                     ('FDB Device', client.query_fdb_table),
+                    ('LLDP Device', client.query_lldp_neighbors),
                     ('Juniper Device', client.query_basic_info),
             ]:
                 try:

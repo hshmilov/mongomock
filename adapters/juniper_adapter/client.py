@@ -117,6 +117,7 @@ class JuniperClient:
             yield ('Juniper Space Device', current_device)
 
         actions = [
+            ('LLDP Device', '<get-lldp-neighbors-information/>'),
             ('ARP Device', '<get-arp-table-information/>'),
             ('FDB Device', '<get-ethernet-switching-table-information/>'),
             ('interface list', '<get-interface-information/>'),

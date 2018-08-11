@@ -1,4 +1,3 @@
-
 import logging
 from axonius.devices.device_adapter import (DeviceAdapter,
                                             DeviceAdapterNetworkInterface,
@@ -14,9 +13,87 @@ class LinkedDevicesAdapter(SmartJsonClass):
     interfaces = ListField(DeviceAdapterNetworkInterface, 'interfaces')
 
 
+class ConnectedDeviceAdapter(SmartJsonClass):
+    local_iface = Field(str, 'Local Interface')
+    remote_name = Field(str, 'Remote Device Name')
+    remote_iface = Field(str, 'Remote Device Iface')
+
+
 class JuniperDeviceAdapter(DeviceAdapter):
-    device_type = Field(str, 'Device Type', enum=['ARP Device', 'FDB Device', 'Juniper Device', 'Juniper Space Device'])
+    device_type = Field(str, 'Device Type', enum=['LLDP Device', 'ARP Device',
+                                                  'FDB Device', 'Juniper Device', 'Juniper Space Device'])
     linked_devices = ListField(LinkedDevicesAdapter, 'Linked Devices')
+    connected_devices = ListField(ConnectedDeviceAdapter, 'Connected Devices')
+
+
+def _get_lldp_id(lldp_raw_device):
+    """ The id field is a little bit messy becuse we want the device id
+        to refer to all the different mac addresses """
+    macs = []
+
+    for _, entry in lldp_raw_device:
+        if entry.get('lldp-remote-chassis-id-subtype') == 'Mac address':
+            macs.append(entry.get('lldp-remote-chassis-id'))
+
+    # filter empty and None macs
+    macs = sorted(list(filter(bool, macs)))
+    if not macs:
+        raise ValueError('Unable to create id for device')
+
+    return '_'.join(['JUNIPER_LLDP'] + macs)
+
+
+def create_lldp_device(create_device_func, raw_device):
+    for device_name, lldp_raw_device in raw_device.items():
+        # XXX: handle empty device name
+        try:
+            id_ = _get_lldp_id(lldp_raw_device)
+            device = create_device_func()
+            device.id = id_
+            device.device_type = 'LLDP Device'
+            all_macs = []
+            for connected_device_name, entry in lldp_raw_device:
+                mac = ''
+                iface_name = ''
+
+                chassis_subtype = entry.get('lldp-remote-chassis-id-subtype')
+                port_subtype = entry.get('lldp-remote-port-id-subtype')
+                if chassis_subtype == 'Mac address':
+                    mac = entry.get('lldp-remote-chassis-id', '')
+                else:
+                    logger.warning(f'unknown id-subtype {chassis_subtype}')
+
+                if port_subtype == 'Interface name':
+                    iface_name = entry.get('lldp-remote-port-id', '')
+                else:
+                    logger.warning(f'unknown port-subtype {port_subtype}')
+
+                # The following field changed in juniper models, try to fetch both
+                connected_iface_name = entry.get(
+                    'lldp-local-port-id', '') or entry.get('lldp-local-interface', '')
+
+                device.name = device_name
+
+                if mac not in all_macs:
+                    # New mac - add new nic
+                    try:
+                        device.add_nic(name=iface_name, mac=mac)
+                    except Exception:
+                        logger.error('Failed to add nic for device')
+
+                # Add connection TODO: This connection should be bi-directonal -> we want the data
+                # to bee seen both from local device, and remote device in the gui
+                connected_device = ConnectedDeviceAdapter()
+                connected_device.local_iface = iface_name
+                connected_device.remote_iface = connected_iface_name
+                connected_device.remote_name = connected_device_name
+
+                device.connected_devices.append(connected_device)
+            device.set_raw(dict(lldp_raw_device))
+            yield device
+        except Exception:
+            logger.exception(
+                f'Problem with pasrsing lldp device {lldp_raw_device}')
 
 
 def create_arp_device(create_device_func, raw_device):
@@ -28,7 +105,7 @@ def create_arp_device(create_device_func, raw_device):
                 logger.debug(f'Ignoring mac {arp_raw_device["mac_address"]}')
                 continue
 
-            if arp_raw_device['mac_address'] in JUNIPER_NON_UNIQUE_MACS:
+            if arp_raw_device['mac_address'].upper() in JUNIPER_NON_UNIQUE_MACS:
                 logger.debug('Non unique mac {arp_raw_device["mac_address"]}')
                 continue
 
@@ -78,7 +155,7 @@ def _create_fdb_device(create_device_func, mac, fdb_raw_device):
         logger.debug(f'Ignoring mac {mac}')
         return None
 
-    if mac in JUNIPER_NON_UNIQUE_MACS:
+    if mac.upper() in JUNIPER_NON_UNIQUE_MACS:
         logger.debug(f'Non unique mac {mac}')
         return None
 
@@ -277,5 +354,6 @@ def create_device(create_device_func, type_, raw_device):
 CREATE_DEVICE_CALLBACKS = {
     'ARP Device': create_arp_device,
     'FDB Device': create_fdb_device,
+    'LLDP Device': create_lldp_device,
     'Juniper Device': create_juniper_device,
 }

@@ -4040,6 +4040,67 @@ VERSION_MOCK2 = '''<multi-routing-engine-results><multi-routing-engine-item><re-
 </multi-routing-engine-item></multi-routing-engine-results>
 '''
 
+LLDP_MOCK = '''<rpc-reply xmlns:junos="http://xml.juniper.net/junos/13.3R6/junos">
+    <lldp-neighbors-information junos:style="brief">
+        <lldp-neighbor-information>
+            <lldp-local-port-id>xe-0/1/1</lldp-local-port-id>
+            <lldp-local-parent-interface-name>ae7</lldp-local-parent-interface-name>
+            <lldp-remote-chassis-id-subtype>Mac address</lldp-remote-chassis-id-subtype>
+            <lldp-remote-chassis-id>00:1c:73:ee:c0:46</lldp-remote-chassis-id>
+            <lldp-remote-port-id-subtype>Interface name</lldp-remote-port-id-subtype>
+            <lldp-remote-port-id>Ethernet3/29/1</lldp-remote-port-id>
+            <lldp-remote-system-name>core01.sjc01</lldp-remote-system-name>
+        </lldp-neighbor-information>
+        <lldp-neighbor-information>
+            <lldp-local-port-id>xe-0/3/3</lldp-local-port-id>
+            <lldp-local-parent-interface-name>ae7</lldp-local-parent-interface-name>
+            <lldp-remote-chassis-id-subtype>Mac address</lldp-remote-chassis-id-subtype>
+            <lldp-remote-chassis-id>00:1c:73:ee:c0:46</lldp-remote-chassis-id>
+            <lldp-remote-port-id-subtype>Interface name</lldp-remote-port-id-subtype>
+            <lldp-remote-port-id>Ethernet3/29/2</lldp-remote-port-id>
+            <lldp-remote-system-name>core01.sjc01</lldp-remote-system-name>
+        </lldp-neighbor-information>
+        <lldp-neighbor-information>
+            <lldp-local-port-id>xe-2/0/5</lldp-local-port-id>
+            <lldp-local-parent-interface-name>ae7</lldp-local-parent-interface-name>
+            <lldp-remote-chassis-id-subtype>Mac address</lldp-remote-chassis-id-subtype>
+            <lldp-remote-chassis-id>00:1c:73:ee:c0:46</lldp-remote-chassis-id>
+            <lldp-remote-port-id-subtype>Interface name</lldp-remote-port-id-subtype>
+            <lldp-remote-port-id>Ethernet3/29/3</lldp-remote-port-id>
+            <lldp-remote-system-name>core01.sjc01</lldp-remote-system-name>
+        </lldp-neighbor-information>
+    </lldp-neighbors-information>
+    <cli>
+        <banner>{master}</banner>
+    </cli>
+</rpc-reply>'''
+
+LLDP_MOCK2 = '''<rpc-reply xmlns:junos="http://xml.juniper.net/junos/13.3R6/junos">
+    <lldp-neighbors-information junos:style="brief">
+        <lldp-neighbor-information>
+            <lldp-local-port-id>xe-0/1/1</lldp-local-port-id>
+            <lldp-local-parent-interface-name>ae7</lldp-local-parent-interface-name>
+            <lldp-remote-chassis-id-subtype>Mac address</lldp-remote-chassis-id-subtype>
+            <lldp-remote-chassis-id>00:1c:73:ee:c1:46</lldp-remote-chassis-id>
+            <lldp-remote-port-id-subtype>Interface name</lldp-remote-port-id-subtype>
+            <lldp-remote-port-id>Ethernet3/42/1</lldp-remote-port-id>
+            <lldp-remote-system-name>core01.sjc01</lldp-remote-system-name>
+        </lldp-neighbor-information>
+        <lldp-neighbor-information>
+            <lldp-local-port-id>xe-2/0/5</lldp-local-port-id>
+            <lldp-local-parent-interface-name>ae7</lldp-local-parent-interface-name>
+            <lldp-remote-chassis-id-subtype>Mac address</lldp-remote-chassis-id-subtype>
+            <lldp-remote-chassis-id>00:1c:73:ee:c0:46</lldp-remote-chassis-id>
+            <lldp-remote-port-id-subtype>Interface name</lldp-remote-port-id-subtype>
+            <lldp-remote-port-id>Ethernet3/29/3</lldp-remote-port-id>
+            <lldp-remote-system-name>leaf42.sjc01</lldp-remote-system-name>
+        </lldp-neighbor-information>
+    </lldp-neighbors-information>
+    <cli>
+        <banner>{master}</banner>
+    </cli>
+</rpc-reply>'''
+
 
 def mock_query_basic_info():
     return [

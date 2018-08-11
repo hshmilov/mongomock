@@ -1,13 +1,19 @@
 import logging
 from itertools import combinations
 
-logger = logging.getLogger(f"axonius.{__name__}")
-from axonius.correlator_engine_base import CorrelatorEngineBase
-from axonius.utils.parsing import get_hostname, compare_hostname, is_from_ad, \
-    ips_do_not_contradict, get_normalized_ip, compare_device_normalized_hostname, \
-    normalize_adapter_devices, get_serial, NORMALIZED_MACS, compare_macs, hostnames_do_not_contradict
-from axonius.correlator_base import has_mac, has_hostname, has_serial, CorrelationReason
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
+from axonius.correlator_base import (CorrelationReason, has_hostname, has_mac,
+                                     has_serial)
+from axonius.correlator_engine_base import CorrelatorEngineBase
+from axonius.utils.parsing import (NORMALIZED_MACS,
+                                   compare_device_normalized_hostname,
+                                   compare_hostname, compare_macs,
+                                   get_hostname, get_normalized_ip, get_serial,
+                                   hostnames_do_not_contradict,
+                                   ips_do_not_contradict, is_from_ad,
+                                   normalize_adapter_devices, normalize_mac)
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class StaticCorrelatorEngine(CorrelatorEngineBase):
@@ -61,12 +67,12 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         4.  [is_different_plugin, compare_macs, _compare_ips] - the list of comparators to use on a pair from the
                 bucket - a pair that has made it through this list is considered a correlation so choose wisely!
 
-        5.  {'Reason': 'They have the same MAC and IPs don\'t contradict'} - the reason for the correlation - try to make it as
-                descriptive as possible please
+        5.  {'Reason': 'They have the same MAC and IPs don\'t contradict'} - the reason for the correlation -
+                try to make it as descriptive as possible please
 
         6. CorrelationReason.StaticAnalysis - the analysis used to discover the correlation
         """
-        logger.info("Starting to correlate on MAC")
+        logger.info('Starting to correlate on MAC')
         mac_indexed = {}
         for adapter in adapters_to_correlate:
             macs = adapter.get(NORMALIZED_MACS)
@@ -75,9 +81,10 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                     if mac and mac != '000000000000':
                         mac_indexed.setdefault(mac, []).append(adapter)
 
-        # find contradicting hostnames with the same mac to eliminate macs. Also using predefined blacklist of known macs.
+        # find contradicting hostnames with the same mac to eliminate macs.
+        # Also using predefined blacklist of known macs.
         mac_blacklist = set()
-        mac_blacklist = mac_blacklist.union(JUNIPER_NON_UNIQUE_MACS)
+        mac_blacklist = mac_blacklist.union(map(normalize_mac, JUNIPER_NON_UNIQUE_MACS))
         for mac, matches in mac_indexed.items():
             for x, y in combinations(matches, 2):
                 if not hostnames_do_not_contradict(x, y):
@@ -99,7 +106,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   CorrelationReason.StaticAnalysis)
 
     def _correlate_hostname_ip(self, adapters_to_correlate):
-        logger.info("Starting to correlate on Hostname-IP")
+        logger.info('Starting to correlate on Hostname-IP')
         filtered_adapters_list = filter(get_hostname,
                                         filter(get_normalized_ip, adapters_to_correlate))
         return self._bucket_correlate(list(filtered_adapters_list),
@@ -111,7 +118,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_serial(self, adapters_to_correlate):
-        logger.info("Starting to correlate on Serial")
+        logger.info('Starting to correlate on Serial')
         filtered_adapters_list = filter(get_serial, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_serial],
@@ -127,7 +134,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         AD correlation is a little more loose - we allow correlation based on hostname alone.
         In order to lower the false positive rate we don't use the normalized hostname but rather the full one
         """
-        logger.info("Starting to correlate on Hostname-AD")
+        logger.info('Starting to correlate on Hostname-AD')
         filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_hostname],
@@ -166,6 +173,6 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                 # this means that some logic in the correlator logic is wrong, because
                 # such correlations should have reason == "Logic"
                 logger.error(
-                    f"{first_name} correlated to itself, id: '{first_id}' and '{second_id}' via static analysis")
+                    f'{first_name} correlated to itself, id: \'{first_id}\' and \'{second_id}\' via static analysis')
                 return False
         return True

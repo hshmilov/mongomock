@@ -38,6 +38,10 @@ class JunOSClient:
         """ query the fdb table and return data """
         return self._dev.rpc.get_ethernet_switching_table_information()
 
+    def query_lldp_neighbors(self):
+        """ query lldp neighbors and return data """
+        return self._dev.rpc.get_lldp_neighbors_information()
+
     def query_basic_info(self):
         """ query the basic info xmls and return data """
         results = []

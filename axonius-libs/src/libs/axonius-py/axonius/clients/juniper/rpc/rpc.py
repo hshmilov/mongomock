@@ -5,7 +5,7 @@ import logging
 from collections import defaultdict
 
 from axonius.clients.juniper.rpc.utils import prepare, gettext, gettag
-
+from axonius.utils.xml2json_parser import Xml2Json
 logger = logging.getLogger(f'axonius.{__name__}')
 
 # We are parsing xml, it makes sense that we will have many nested loops
@@ -201,3 +201,29 @@ def parse_ethernet_switching(xml):
 
             entries.append(new_entry)
     return entries
+
+
+def parse_lldp(xmls):
+    results = defaultdict(list)
+
+    for juniper_device_name, xml in xmls:
+        try:
+            xml = prepare(xml)
+            json = Xml2Json(xml).result
+            if 'lldp-neighbors-information' not in json:
+                logger.warning(
+                    'neighbors not found , got %s', list(json.keys()))
+                continue
+
+            json = json['lldp-neighbors-information']
+
+            for neighbor in json.get('lldp-neighbor-information', []):
+                # In order to perform as many as possible internal correlations We try to correlate the devices by Name.
+                # We save for each name the lldp entry, and the device that saw him.
+                # Note that lldp neighbor may be different equipment,
+                # for example mikrotik or ubiquity or any unix machine.
+                # if the name is empty, we will handle it later on.
+                results[neighbor.get('lldp-remote-system-name', '')].append((juniper_device_name, neighbor))
+        except Exception:
+            logger.exception(f'Failed to parse lldp device {xml}')
+    return results

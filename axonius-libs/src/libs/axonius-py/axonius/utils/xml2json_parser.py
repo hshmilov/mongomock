@@ -1,4 +1,5 @@
 from xml.parsers.expat import ParserCreate
+from xml.etree import ElementTree
 
 
 class Xml2Json:
@@ -15,12 +16,15 @@ class Xml2Json:
             self.close()
 
     def feed(self, data):
+        if isinstance(data, ElementTree.Element):
+            data = ElementTree.tostring(data)
+
         self._stack = []
         self._data = ''
         self._parser.Parse(data, 0)
 
     def close(self):
-        self._parser.Parse("", 1)
+        self._parser.Parse('', 1)
         del self._parser
 
     def start(self, tag, attrs):
@@ -43,7 +47,7 @@ class Xml2Json:
                         data[k] = v
                     else:
                         el = data[k]
-                        if type(el) is not list:
+                        if not isinstance(el, list):
                             data[k] = [el, v]
                         else:
                             el.append(v)

@@ -346,7 +346,6 @@ axonius-libs/src/libs/axonius-py/axonius/utils/json_encoders.py
 axonius-libs/src/libs/axonius-py/axonius/utils/parsing.py
 axonius-libs/src/libs/axonius-py/axonius/utils/server.py
 axonius-libs/src/libs/axonius-py/axonius/utils/threading.py
-axonius-libs/src/libs/axonius-py/axonius/utils/xml2json_parser.py
 axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/wmi_smb_runner.py
 axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/com_interfaces/idispatch.py
 axonius-libs/src/libs/axonius-py/axonius/utils/wmi_smb_runner/handlers/remotewua.py
@@ -393,7 +392,6 @@ plugins/gui/frontend/tests/mocks/main.py
 plugins/gui/frontend/tests/mocks/database/CreateFakeData.py
 plugins/pm_status/service.py
 plugins/reports/service.py
-plugins/static_correlator/engine.py
 plugins/static_correlator/service.py
 plugins/static_correlator/tests/test_static_correlator.py
 plugins/system_scheduler/service.py
