@@ -1,6 +1,5 @@
 import json
 import subprocess
-import time
 import pytest
 import os
 
@@ -89,7 +88,7 @@ def test_pm_online_rpc_and_fallback_smb():
     _test_pm_online("rpc_and_fallback_smb")
 
 
-@pytest.mark.skip("file pm is temporairly disabled due to time")
+@pytest.mark.skip("file pm is temporarily disabled due to time")
 def test_pm():
     commands = [
         {"type": "pm", "args": []}
@@ -133,6 +132,71 @@ def test_getfile():
     r = response[0]
     assert r["status"] == "ok", f"Error, status is not ok. response: {r['status']}"
     assert "127.0.0.1" in r["data"], f"Error, hosts file does not contain 127.0.0.1: {r['data']}"
+
+
+def test_axr():
+    axr_queries = [
+        {'type': 'query', 'args': ['select SID,LastUseTime from Win32_UserProfile']},
+        {'type': 'query', 'args': ['select SID,Caption,LocalAccount,Disabled from Win32_UserAccount']},
+        {'type': 'query', 'args': ['select GroupComponent, PartComponent from Win32_GroupUser']},
+        {'type': 'query', 'args': ['select Vendor, Name, Version, InstallState from Win32_Product']},
+        {'type': 'shell', 'args': [
+            'reg query HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ /reg:32 /s']},
+        {'type': 'shell', 'args': [
+            'reg query HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ /reg:64 /s']},
+        {'type': 'shell', 'args': [
+            'reg query HKLM\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ /reg:32 /s']},
+        {'type': 'shell', 'args': [
+            'reg query HKLM\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ /reg:64 /s']},
+        {'type': 'shell', 'args': [
+            'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:64 /s)']},
+        {'type': 'shell', 'args': [
+            'for /f %a in (\'reg query hku\') do (reg query "%a\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" /reg:32 /s)']},
+        {'type': 'query', 'args': [
+            'select Name, AddressWidth, NumberOfCores, LoadPercentage, Architecture, MaxClockSpeed from Win32_Processor']},
+        {'type': 'query', 'args': ['select SMBIOSBIOSVersion, SerialNumber from Win32_BIOS']},
+        {'type': 'query', 'args': [
+            'select Caption, Description, Version, BuildNumber, InstallDate, TotalVisibleMemorySize, FreePhysicalMemory, NumberOfProcesses, LastBootUpTime from Win32_OperatingSystem']},
+        {'type': 'query', 'args': ['select Name, FileSystem, Size, FreeSpace from Win32_LogicalDisk']},
+        {'type': 'query', 'args': ['select HotFixID, InstalledOn from Win32_QuickFixEngineering']},
+        {'type': 'query', 'args': ['select * from Win32_ComputerSystem']},
+        {'type': 'query', 'args': ['select Description, EstimatedChargeRemaining, BatteryStatus from Win32_Battery']},
+        {'type': 'query', 'args': ['select Caption from Win32_TimeZone']},
+        {'type': 'query', 'args': ['select SerialNumber from Win32_BaseBoard']},
+        {'type': 'query', 'args': ['select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration']},
+        {'type': 'shell', 'args': ['reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\ ']},
+        {'type': 'query', 'args': ['select DeviceID, Name, Manufacturer from Win32_PnPEntity']},
+        {'type': 'pmonline', 'args': []},
+        {'type': 'shell', 'args': ["type c:\\windows\\system32\\drivers\\etc\\hosts"]}
+    ]
+    commands = [
+        {"type": "axr", "args": [axr_queries]},
+    ]
+
+    p = subprocess.Popen(get_basic_wmi_smb_command(address=AXR_DEVICE) + [json.dumps(commands)],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, stderr = p.communicate(timeout=MAX_TIME_FOR_WMI_OPERATIONS)
+
+    assert stderr == b""
+    assert p.returncode == 0
+    response = json.loads(stdout)
+
+    assert response[0]['status'] == 'ok', "Failed: {response}"
+
+    axr_response = response[0]['data']
+    assert axr_response['status'] == 'ok'
+    assert axr_response['hostname'] == 'dcny1'
+
+    assert axr_response['data'][15]['data'][0]['DNSHostName'] == 'dcny1'
+    assert "127.0.0.1" in axr_response['data'][23]['data']
+
+    # Check pm
+    titles = []
+    for p in axr_response['data'][22]['data']:
+        titles.append(p["Title"])
+
+    assert "2018-05 Cumulative Update for Windows Server 2016 for x64-based Systems (KB4103720)" in titles
 
 
 def test_wmi():

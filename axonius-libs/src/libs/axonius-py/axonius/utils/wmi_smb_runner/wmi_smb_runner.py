@@ -18,6 +18,7 @@ import json
 import time
 import socket
 import threading
+import base64
 
 from impacket.dcerpc.v5.dtypes import NULL
 from impacket.dcerpc.v5.dcom import wmi
@@ -31,12 +32,13 @@ from contextlib import contextmanager
 from handlers.remotewua import RemoteWUAHandler
 
 
-MAX_NUM_OF_CONSECUTIVE_QUERY_FAILURES = 3    # Maximum number of times we can fail with not even one success
-MAX_NUM_OF_TRIES_PER_CONNECT = 3    # Maximum number of tries to connect.
+MAX_NUM_OF_CONSECUTIVE_QUERY_FAILURES = 2    # Maximum number of times we can fail with not even one success
+MAX_NUM_OF_TRIES_PER_CONNECT = 2    # Maximum number of tries to connect.
 TIME_TO_REST_BETWEEN_CONNECT_RETRY = 3 * 1000   # 3 seconds.
 SMB_CONNECTION_TIMEOUT = 60 * 30  # 30 min timeout. Change that for even larger files
 MAX_SHARING_VIOLATION_TIMES = 5  # Maximum legitimate error we can have in smb connection
-MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 2  # The amount of seconds we wait for the created shell process to finish
+# The maximum amount of seconds we wait for the created shell process to finish before bailing out
+MAX_TIMEOUT_FOR_CREATED_SHELL_PROCESS = 60 * 5
 
 # each request gets this amount of seconds to return. If one returns, the timer of all the rest resets.
 TIMER_RESET_FOR_EACH_REQUEST_IN_SECONDS = 180
@@ -77,6 +79,12 @@ AXPM_BINARY_LOCATION = os.path.abspath(
 
 WSUSSCN2_BINARY_LOCATION = os.path.abspath(
     os.path.join(SHARED_READONLY_FILES, "AXPM", "wsusscn2", "wsusscn2.cab"))
+
+AXR_BINARY_LOCATION = os.path.abspath(
+    os.path.join(SHARED_READONLY_FILES, "AXR", "axr.exe"))
+
+AXR_CONFIG_BINARY_LOCATION = os.path.abspath(
+    os.path.join(SHARED_READONLY_FILES, "AXR", "axr.exe.config"))
 
 
 def get_global_counter():
@@ -284,18 +292,26 @@ class WmiSmbRunner(object):
 
         return True
 
-    def _exec_generic(self, binary_path, binary_params):
+    def _exec_generic(self, binary_path,
+                      binary_params,
+                      optional_output_name=None):
         """
         Executes a binary and returns its output.
         :param str binary_path: the path of the binary to run
         :param str binary_params: the parameters to pass to the binary, as a cmd string.
+        :param str optional_output_name: an optional string representing the output file.
         :return str: the output.
         """
 
         win32_process, _ = self.iWbemServices.GetObject("Win32_Process")
-        output_filename = "axonius_output_{0}_{1}.txt".format(get_global_counter(), str(time.time()), )
+        if optional_output_name is not None:
+            output_filename = optional_output_name
+        else:
+            output_filename = "axonius_output_{0}_{1}.txt".format(get_global_counter(), str(time.time()), )
+
         command_to_run = r"{0} {1} 1> \\127.0.0.1\{2}\{3} 2>&1".format(
             binary_path, binary_params, DEFAULT_SHARE, output_filename)
+
         is_process_created = False
 
         try:
@@ -361,14 +377,16 @@ class WmiSmbRunner(object):
                 # terminate the process...
                 self.deletefile(output_filename)
 
-    def execshell(self, shell_command):
+    def execshell(self, shell_command, optional_output_name=None):
         """
         Executes a shell command and returns its output.
         :param str shell_command: the command, as you would type it in cmd.
+        :param optional_output_name: look at exec_generic
         :return str: the output.
         """
 
-        return self._exec_generic("cmd.exe", "/Q /c {0}".format(shell_command))
+        return self._exec_generic("cmd.exe", "/Q /c {0}".format(shell_command),
+                                  optional_output_name=optional_output_name)
 
     def execbinary(self, binary_file_path, binary_params):
         """
@@ -442,6 +460,47 @@ class WmiSmbRunner(object):
 
         iEnumWbemClassObject.RemRelease()
         return minimize(records)
+
+    def execaxr(self, arguments):
+        """
+        Sends axr.exe and axr.exe.config and runs it with the arguments
+        :param arguments: a json object of the arguments
+        :return: a json response
+        """
+
+        assert os.path.exists(AXR_BINARY_LOCATION), "{0} doesn't exist!".format(AXR_BINARY_LOCATION)
+        assert os.path.exists(AXR_CONFIG_BINARY_LOCATION), "{0} doesn't exist!".format(AXR_CONFIG_BINARY_LOCATION)
+
+        with open(AXR_BINARY_LOCATION, "rb") as f:
+            exe_binary_file = f.read()
+            exe_binary_path = "axonius_axr.exe"
+
+        with open(AXR_CONFIG_BINARY_LOCATION, "rb") as f:
+            config_binary_file = f.read()
+            config_binary_path = "{0}.config".format(exe_binary_path)
+
+        did_put_exe_file = False
+        did_put_config_file = False
+
+        try:
+            # Transfer both files
+            did_put_config_file = self.putfile(config_binary_path, config_binary_file)
+            did_put_exe_file = self.putfile(exe_binary_path, exe_binary_file)
+
+            # Escaping some json.dumps outputs is extremely hard, so we move this with base64.
+            output = self.execshell(r"{0} {1}".format(exe_binary_path, base64.b64encode(json.dumps(arguments))),
+                                    optional_output_name="axonius_axr_output.txt")
+            try:
+                return json.loads(output)
+            except Exception:
+                # The program must have had an error
+                raise ValueError, "AXR Returned an invalid json: {0}".format(output)
+        finally:
+            if did_put_config_file is True:
+                self.deletefile(config_binary_path)
+
+            if did_put_exe_file is True:
+                self.deletefile(exe_binary_path)
 
     def execpm(self, exe_filepath, wsusscn2_file_path):
         """
@@ -678,6 +737,9 @@ def run_command(w, command_type, command_args):
 
         elif command_type == "pmonline":
             result = w.exec_pm_online(*command_args)
+
+        elif command_type == "axr":
+            result = w.execaxr(*command_args)
 
         else:
             raise ValueError("command type {0} does not exist".format(command_type))

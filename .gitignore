@@ -252,8 +252,11 @@ cmake-build-debug/
 /adapters/active_directory/ExecuteSvc/Payload/Debug/*
 /adapters/active_directory/ExecuteSvc/Payload/x64/*
 
-/adapters/active_directory_adapter/utils/AXPM/AXPM/*/Debug/*
-/adapters/active_directory_adapter/utils/AXPM/*/Debug/*
+/runners/AXR/AXR/bin/*
+/runners/AXR/AXR/obj/*
+
+# Visual Studio cache/options directory
+.vs/
 
 # Visual C++ files
 ipch/
