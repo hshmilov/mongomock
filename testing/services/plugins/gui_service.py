@@ -31,21 +31,35 @@ class GuiService(PluginService):
                                                                                  upsert=True)
 
     def _update_schema_version_1(self):
-        previous_charts = self._get_all_dashboard()
-        preceding_charts = list(map(lambda chart: chart if chart.get('metric') else {
-            'name': chart['name'],
-            'metric': chart['type'],
-            'view': 'pie' if chart['type'] == 'intersect' else 'histogram',
-            'config': {
-                'entity': chart['views'][0]['module'],
-                'base': chart['views'][0]['name'],
-                'intersecting': [x['name'] for x in chart['views'][1:]]
-            } if chart['type'] == 'intersect' else {
-                'views': chart.get('views', [])
-            }
-        }, previous_charts))
-        self._replace_all_dashboard(preceding_charts)
-        self._update_schema_version(1)
+        try:
+            preceding_charts = []
+            for chart in self._get_all_dashboard():
+                # Discard chart if does not comply with new or old structure
+                if not chart.get('name') or (
+                        (not chart.get('type') or not chart.get('views')) and not chart.get('metric')):
+                    continue
+                try:
+                    if chart.get('metric'):
+                        preceding_charts.append(chart)
+                    else:
+                        preceding_charts.append({
+                            'name': chart['name'],
+                            'metric': chart['type'],
+                            'view': 'pie' if chart['type'] == 'intersect' else 'histogram',
+                            'config': {
+                                'entity': chart['views'][0]['module'],
+                                'base': chart['views'][0]['name'],
+                                'intersecting': [x['name'] for x in chart['views'][1:]]
+                            } if chart['type'] == 'intersect' else {
+                                'views': chart['views']
+                            }
+                        })
+                except Exception as e:
+                    print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
+            self._replace_all_dashboard(preceding_charts)
+            self._update_schema_version(1)
+        except Exception as e:
+            print(f'Could not upgrade gui db to version 1. Details: {e}')
 
     def _get_all_dashboard(self):
         return self.db.get_collection(self.unique_name, DASHBOARD_COLLECTION).find({})
