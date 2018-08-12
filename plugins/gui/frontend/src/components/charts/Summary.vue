@@ -1,15 +1,22 @@
 <template>
     <div class="x-summary-chart" :class="{updating: enumerating}">
         <template v-for="item in displayData">
-            <div class="summary" :class="{highlight: item.highlight}">{{ item.value }}</div>
+            <component v-if="item.schema" :is="processType(item.schema)" :schema="item.schema" :value="item.value"
+                       class="summary" />
+            <div v-else class="summary" :class="{highlight: item.highlight}">{{ item.value }}</div>
             <div class="title">{{ item.name }}</div>
         </template>
     </div>
 </template>
 
 <script>
+    import string from '../controls/string/StringView.vue'
+    import number from '../controls/numerical/NumberView.vue'
+	import integer from '../controls/numerical/IntegerView.vue'
+
 	export default {
 		name: 'x-summary-chart',
+        components: { string, number, integer },
         props: { data: {required: true}},
         data() {
 			return {
@@ -20,6 +27,14 @@
         watch: {
 			data() {
                 this.enumerating = true
+            }
+        },
+        methods: {
+			processType(schema) {
+				if (schema.format && schema.format === 'percentage') {
+					return 'integer'
+                }
+                return schema.type
             }
         },
         updated() {
@@ -52,6 +67,15 @@
             &.highlight {
                 color: $theme-orange;
             }
+            &.success {
+                color: $indicator-success;
+            }
+            &.warning {
+                color: $indicator-warning;
+            }
+            &.error {
+                color: $indicator-error;
+            }
         }
         .title {
             display: inline-block;
@@ -59,6 +83,7 @@
             text-align: left;
             margin: auto;
             margin-left: 12px;
+            text-transform: capitalize;
         }
     }
 </style>

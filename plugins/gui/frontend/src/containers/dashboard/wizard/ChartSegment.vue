@@ -4,7 +4,7 @@
         <x-select :options="views[config.entity] || []" :searchable="true" v-model="config.view"
                   placeholder="query (or empty for all)" />
         <div></div><div></div>
-        <x-select-typed-field :fields="fieldOptions" v-model="config.field" />
+        <x-select-typed-field :fields="fieldOptions" :value="config.field.name" @input="updateField" />
         <div></div>
     </div>
 </template>
@@ -28,16 +28,31 @@
                     	    return !field.branched && field.type !== 'array'
                         })}
                 })
-            }
+            },
+			fieldMap() {
+				return this.fieldOptions.reduce((map, item) => {
+					if (item.fields) {
+						item.fields.forEach((field) => {
+							map[field.name] = field
+						})
+					} else {
+						map[item.name] = item
+					}
+					return map
+				}, {})
+			}
         },
 		data() {
 			return {
-				config: { entity: '', view: '', field: '' }
+				config: { entity: '', view: '', field: { name: '' } }
 			}
 		},
         methods: {
+			updateField(fieldName) {
+				this.config.field = this.fieldMap[fieldName]
+			},
 			validate() {
-				this.$emit('validate', this.config.field)
+				this.$emit('validate', this.config.field.name)
             }
         }
 	}

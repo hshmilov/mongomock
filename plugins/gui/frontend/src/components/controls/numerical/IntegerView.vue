@@ -27,12 +27,19 @@
             	return this.schema.format && this.schema.format === 'percentage'
             },
 			severity() {
-				if (!this.isPercentage) return ''
+				if (this.value === undefined || this.value === null || !this.isPercentage) return ''
 
-				return Object.keys(this.percentageThresholds).find(thresholdName => {
-					return (this.percentageThresholds[thresholdName].gte <= this.processedData
-						&& this.percentageThresholds[thresholdName].lte >= this.processedData)
+				let minDiff = 101
+				let minSeverity = ''
+				Object.keys(this.percentageThresholds).forEach(thresholdName => {
+					if (this.percentageThresholds[thresholdName] < this.value) return
+					let diff = this.percentageThresholds[thresholdName] - this.value
+					if (diff < minDiff) {
+						minDiff = diff
+						minSeverity = thresholdName
+					}
 				})
+				return minSeverity
 			}
 		},
 		methods: {

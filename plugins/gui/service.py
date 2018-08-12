@@ -35,6 +35,7 @@ from gui.api import API
 import tarfile
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.fields import JsonStringFormat, JsonNumericFormat
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
@@ -1774,7 +1775,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         '$arrayElemAt': [
                             {
                                 '$filter': {
-                                    'input': '$' + field,
+                                    'input': '$' + field['name'],
                                     'cond': {
                                         '$ne': ['$$this', '']
                                     }
@@ -1815,7 +1816,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 if (isinstance(field_value, bool)):
                     field_value = str(field_value).lower()
             data.append({'name': item["name"], 'value': item["value"], 'module': entity.value,
-                         'view': {**base_view, 'query': {'filter': f'{base_filter}{field} == {field_value}'}}})
+                         'view': {**base_view, 'query': {'filter': f'{base_filter}{field["name"]} == {field_value}'}}})
 
         if chart_view == ChartViews.pie:
             total = data_collection.count_documents(base_query)
@@ -1849,11 +1850,11 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 base_query = {
                     'accurate_for_datetime': for_date
                 }
-        results = data_collection.find(base_query, projection={field: 1})
+        results = data_collection.find(base_query, projection={field['name']: 1})
         count = 0
         sigma = 0
         for item in results:
-            field_values = gui_helpers.find_entity_field(item, field)
+            field_values = gui_helpers.find_entity_field(item, field['name'])
             if field_values:
                 if isinstance(field_values, list):
                     count += len(field_values)
@@ -1865,9 +1866,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         sigma += field_values
         if not count:
             return [{'name': view, 'value': 0}]
-        name = f'{func} of {" ".join(field.split(".")[-1].split("_")).title()} from {view or "ALL"}'
+        name = f'{func} of {field["title"]} on {view or "ALL"} results'
         if ChartFuncs[func] == ChartFuncs.average:
-            return [{'name': name, 'value': '%.2f' % (sigma / count)}]
+            return [{'name': name, 'value': (sigma / count), 'schema': field}]  # f'%.2f{suffix}' % (sigma / count)}]
         return [{'name': name, 'value': count}]
 
     @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])

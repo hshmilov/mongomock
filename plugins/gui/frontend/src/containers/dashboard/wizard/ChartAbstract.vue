@@ -4,7 +4,7 @@
         <x-select :options="views[config.entity] || []" :searchable="true" v-model="config.view"
                   placeholder="query (or empty for all)" />
         <div></div><div></div>
-        <x-select-typed-field :fields="fieldOptions" v-model="config.field" />
+        <x-select-typed-field :fields="fieldOptions" :value="config.field.name" @input="updateField" />
         <div></div><div></div>
         <x-select :options="funcOptions" v-model="config.func" placeholder="function..." />
     </div>
@@ -36,16 +36,31 @@
                             (this.config.func !== 'average' || field.type === 'number' || field.type === 'integer')
 					})}
 				})
-			}
+			},
+            fieldMap() {
+				return this.fieldOptions.reduce((map, item) => {
+					if (item.fields) {
+						item.fields.forEach((field) => {
+							map[field.name] = field
+						})
+					} else {
+						map[item.name] = item
+					}
+					return map
+				}, {})
+            }
         },
 		data() {
 			return {
-				config: { entity: '', view: '', field: '', func: '' }
+				config: { entity: '', view: '', field: { name: '' }, func: '' }
 			}
 		},
         methods: {
+			updateField(fieldName) {
+				this.config.field = this.fieldMap[fieldName]
+            },
 			validate() {
-				this.$emit('validate', this.config.field && this.config.func)
+				this.$emit('validate', this.config.field.name && this.config.func)
             }
         }
 	}
