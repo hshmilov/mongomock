@@ -95,7 +95,14 @@ else:
     def docker_network(self):
         return 'axonius'
 
-    def start(self, mode='', allow_restart=False, rebuild=False, hard=False, show_print=True, expose_port=False):
+    def start(self,
+              mode='',
+              allow_restart=False,
+              rebuild=False,
+              hard=False,
+              show_print=True,
+              expose_port=False,
+              extra_flags=None):
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
@@ -121,6 +128,9 @@ else:
         for env in self.environment:
             docker_up.extend(['--env', env])
         docker_up.extend(['--env', "DOCKER=true"])
+
+        if extra_flags:
+            docker_up.extend(extra_flags)
 
         docker_up.append(self.image)
 

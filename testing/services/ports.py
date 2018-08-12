@@ -1,5 +1,6 @@
 DOCKER_PORTS = {
     'gui':                              443,
+    'selenium-hub':                     4444,
     'execution':                        4999,
     'aggregator':                       5000,
     'active-directory-adapter':         5001,
@@ -58,6 +59,7 @@ DOCKER_PORTS = {
     'qualys-scans-adapter':             5777,
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,
+    'selenium-vnc':                     5900,
     'cisco-adapter':                    6001,
     'minerva-adapter':                  6010,
     'bigfix-adapter':                   6012,

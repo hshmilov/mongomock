@@ -317,3 +317,6 @@ nvd_current_state.json
 
 # Git
 *.orig
+
+# Selenium
+*chromedriver.exe
