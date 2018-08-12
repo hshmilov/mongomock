@@ -1,21 +1,20 @@
 <template>
     <transition name="modal" @after-enter="$emit('enter')" @after-leave="$emit('leave')">
-        <div class="modal-mask" @click.stop="$emit('close')" @keyup.esc="$emit('close')">
-            <div class="modal-wrapper">
-                <div :class="`modal-container w-${size}`" @click.stop="">
-                    <div class="modal-body">
-                        <slot name="body" @submit="$emit('confirm')">
-                            Are you sure?
-                        </slot>
-                    </div>
-                    <div class="modal-footer">
-                        <slot name="footer">
-                            <button class="x-btn link" @click="$emit('close')">{{dismissText}}</button>
-                            <button class="x-btn" :class="{disabled}" @click="onApprove" :id="approveId">{{approveText}}</button>
-                        </slot>
-                    </div>
+        <div class="modal-wrapper">
+            <div :class="`modal-container w-${size}`">
+                <div class="modal-body">
+                    <slot name="body" @submit="$emit('confirm')">
+                        Are you sure?
+                    </slot>
+                </div>
+                <div class="modal-footer">
+                    <slot name="footer">
+                        <button class="x-btn link" @click="$emit('close')">{{dismissText}}</button>
+                        <button class="x-btn" :class="{disabled}" @click="onApprove" :id="approveId">{{approveText}}</button>
+                    </slot>
                 </div>
             </div>
+            <div class="modal-overlay" @click.stop="$emit('close')" @keyup.esc="$emit('close')"></div>
         </div>
     </transition>
 </template>
@@ -40,39 +39,46 @@
 </script>
 
 <style lang="scss">
-    .modal-mask {
+    .modal-wrapper {
         position: fixed;
-        z-index: 1001;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, .5);
-        display: table;
-        transition: opacity .3s ease;
-        .modal-wrapper {
-            display: table-cell;
-            vertical-align: middle;
-            .modal-container {
-                margin: 0 auto;
-                padding: 24px;
-                background-color: $theme-white;
-                border-radius: 2px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
-                transition: all .3s ease;
-                .modal-body {
-                    padding: 0;
-                    margin-bottom: 24px;
-                    .form-group:last-of-type {
-                        margin-bottom: 0;
-                    }
-                }
-                .modal-footer {
-                    border: 0;
-                    padding: 0;
-                    text-align: right;
+        z-index: 1001;
+        .modal-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+            padding: 24px;
+            background-color: $theme-white;
+            border-radius: 2px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
+            z-index: 1001;
+            .modal-body {
+                padding: 0;
+                margin-bottom: 24px;
+                .form-group:last-of-type {
+                    margin-bottom: 0;
                 }
             }
+            .modal-footer {
+                border: 0;
+                padding: 0;
+                text-align: right;
+            }
+        }
+        .modal-overlay {
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, .5);
+            transition: opacity .3s ease;
         }
     }
 

@@ -5,16 +5,16 @@
                          @input="$emit('state')" class="grid-span2" />
 
         <label>Base Query:</label>
-        <x-select :options="views[config.entity]" v-model="config.base" placeholder="query (or empty for all)"
-                  size="md" id="baseQuery" class="grid-span2" />
+        <x-select :options="views[config.entity]" :searchable="true" v-model="config.base"
+                  placeholder="query (or empty for all)" id="baseQuery" class="grid-span2" />
 
         <label>Intersecting Query:</label>
-        <x-select :options="views[config.entity]" v-model="config.intersecting[0]" placeholder="query..." size="md"
-                  id="intersectingFirst" @input="$emit('state')" class="grid-span2" />
+        <x-select :options="views[config.entity]" :searchable="true" v-model="config.intersecting[0]"
+                  placeholder="query..." id="intersectingFirst" @input="$emit('state')" class="grid-span2" />
         <template v-if="config.intersecting.length > 1">
             <label>Intersecting Query:</label>
-            <x-select :options="views[config.entity]" v-model="config.intersecting[1]" placeholder="query..." size="md"
-                      id="intersectingSecond" @input="$emit('state')" />
+            <x-select :options="views[config.entity]" :searchable="true" v-model="config.intersecting[1]"
+                      placeholder="query..." id="intersectingSecond" @input="$emit('state')" />
             <div @click="removeIntersecting(1)" class="link">x</div>
         </template>
         <a @click="addIntersecting" class="x-btn light grid-span3" :class="{disabled: hasMaxViews}" :title="addBtnTitle">+</a>

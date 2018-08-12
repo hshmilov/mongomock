@@ -3,7 +3,7 @@
         <h5 class="grid-span3">Select up to {{ max }} queries for comparison:</h5>
         <template v-for="view, index in config.views">
             <x-select-symbol :options="entities" v-model="view.entity" type="icon" placeholder="module..."/>
-            <x-select :options="views[view.entity] || []" v-model="view.name" placeholder="query..." />
+            <x-select :options="views[view.entity] || []" :searchable="true" v-model="view.name" placeholder="query..." />
             <div @click="removeView(index)" class="link" v-if="index > 1">x</div><div v-else></div>
         </template>
         <a @click="addView" class="x-btn light grid-span3" :class="{disabled: hasMaxViews}" :title="addBtnTitle">+</a>
