@@ -22,6 +22,7 @@ TEST_BINARY_LOCATION = os.path.abspath(
 # Timeout in seconds for subprocesses
 MAX_TIME_FOR_PM_ONLINE_OPERATIONS = 60 * 7
 MAX_TIME_FOR_WMI_OPERATIONS = 60 * 5
+MAX_TRIES_SHARING_VIOLATION = 5
 
 
 def pretty(d, indent=0):
@@ -173,16 +174,22 @@ def test_axr():
         {"type": "axr", "args": [axr_queries]},
     ]
 
-    p = subprocess.Popen(get_basic_wmi_smb_command(address=AXR_DEVICE) + [json.dumps(commands)],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for i in range(MAX_TRIES_SHARING_VIOLATION):  # 5 tries
+        p = subprocess.Popen(get_basic_wmi_smb_command(address=AXR_DEVICE) + [json.dumps(commands)],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    stdout, stderr = p.communicate(timeout=MAX_TIME_FOR_WMI_OPERATIONS)
+        stdout, stderr = p.communicate(timeout=MAX_TIME_FOR_WMI_OPERATIONS)
 
-    assert stderr == b""
-    assert p.returncode == 0
-    response = json.loads(stdout)
+        assert stderr == b""
+        assert p.returncode == 0
+        response = json.loads(stdout)
 
-    assert response[0]['status'] == 'ok', f"Failed: {response}"
+        if response[0]['status'] == 'ok':
+            break  # Success
+        if 'STATUS_SHARING_VIOLATION' in response[0]['data']:
+            print(f"Got STATUS_SHARING_VIOLATION error. Attempt {i} out of {MAX_TRIES_SHARING_VIOLATION}")
+
+    assert response[0]['status'] == 'ok', f'Failed after 5 times {response}'
 
     axr_response = response[0]['data']
     assert axr_response['status'] == 'ok'
