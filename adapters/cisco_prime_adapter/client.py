@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
-from collections import defaultdict
-import requests
-from urllib.parse import urljoin
 import socket
 import struct
-from axonius.utils import json
+from collections import defaultdict
+from urllib.parse import urljoin
+
+import requests
+
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils import json
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def cidr_to_netmask(cidr):
@@ -62,10 +64,15 @@ class CiscoPrimeClient:
             raise ClientConnectionException(str(e))
         logger.debug(f'Connected to cisco prime {self._url}')
 
+    def disconnect(self):
+        self._sess.close()
+        self._sess = None
+
     def _get_devices(self, first_result=0, max_results=100):
         try:
             response = self.get(
-                f'/webacs/api/v3/data/InventoryDetails.json?.full=true&.firstResult={first_result}&.maxResults={max_results}').json()
+                f'/webacs/api/v3/data/InventoryDetails.json'
+                f'?.full=true&.firstResult={first_result}&.maxResults={max_results}').json()
         except Exception as e:
             logger.exception(f'Got exception while getting devices {first_result} {max_results}')
             return {}
@@ -109,9 +116,9 @@ class CiscoPrimeClient:
             # Parse number of devices only if we in  the first response
             if first_result == 0:
                 total_devices = int(response['@count'])
-                logger.info(f"total number of devices = {total_devices}")
+                logger.info(f'total number of devices = {total_devices}')
 
-            if len(response['entity']) == 0:
+            if not response['entity']:
                 logger.error('Got empty entity list - giving up')
                 break
 
@@ -126,7 +133,7 @@ class CiscoPrimeClient:
 
     @staticmethod
     def get_nics(device):
-        """ 
+        """
         Extract mac, list((ip, subnet), ...) from device json
         :return: json that conatins the ifaces
         """
@@ -141,8 +148,8 @@ class CiscoPrimeClient:
         ethernet_interfaces = device['ethernetInterfaces']['ethernetInterface']
         ip_interfaces = device['ipInterfaces']['ipInterface']
 
-        # TODO: for now we only get interface that has ip
-        # TODO: The algorithem complexity is O(nm) we can do much better by sorting creating dict of ether by name.
+        # XXX: for now we only get interface that has ip
+        # XXX: The algorithem complexity is O(nm) we can do much better by sorting creating dict of ether by name.
         try:
             result = defaultdict(list)
             for ipiface in ip_interfaces:
@@ -165,7 +172,7 @@ class CiscoPrimeClient:
         return result
 
     def _get_credentials(self, device):
-        """ 
+        """
         request (snmp, ssh, etc) creds for given device
         :return: json that conatins creds
         """
@@ -179,7 +186,7 @@ class CiscoPrimeClient:
             resp = self.get(f'/webacs/api/v1/op/cm/credentials.json?id={id_}')
             resp = resp.json()
         except Exception as e:
-            logger.exception(f'Got exception while getting creds {creds}')
+            logger.exception(f'Got exception while getting creds {id_}')
             return {}
 
         return resp
@@ -194,7 +201,9 @@ class CiscoPrimeClient:
         if creds == {}:
             return {}
 
-        if not json.is_valid(creds, {'mgmtResponse': {'credentialDTO': {'credentialList': {'credentialList': ['propertyName', 'stringValue']}}}}):
+        validator = \
+            {'mgmtResponse': {'credentialDTO': {'credentialList': {'credentialList': ['propertyName', 'stringValue']}}}}
+        if not json.is_valid(creds, validator):
             logger.warning(f'Got invalid cred {creds} json for device {device}')
             return {}
 
@@ -206,25 +215,27 @@ class CiscoPrimeClient:
 
 
 # Simple tests
-if __name__ == "__main__":
-    import axonius.clients.cisco.snmp as snmp
-    from pprint import pprint
-    from test_credentials.test_cisco_prime_credentials import client_details
+if __name__ == '__main__':
+    def main():
+        from axonius.clients.cisco import snmp
+        from pprint import pprint
+        from test_credentials.test_cisco_prime_credentials import client_details
 
-    logging.basicConfig(level=logging.DEBUG)
-    client = CiscoPrimeClient(**client_details)
-    client.connect()
+        logging.basicConfig(level=logging.DEBUG)
+        client = CiscoPrimeClient(**client_details)
+        client.connect()
 
-    devices = list(client.get_devices())
-    for device in devices:
-        # pprint(device)
-        # pprint(client.get_nics(device))
-        # for mac, iplist in client.get_nics(device).items():
-        #    print(f'{mac}: {list(map(lambda x: x[0], iplist))}')
-        # pprint(client.get_credentials(device))
-        pass
-    creds = client.get_credentials(devices[2])
-    if creds:
-        pprint(creds)
-        a = snmp.CiscoSnmpClient(creds['snmp_read_cs'], creds['MANAGEMENT_ADDRESS'], creds['snmp_port'])
-        pprint(list(a.query_arp_table()))
+        devices = list(client.get_devices())
+        for device in devices:
+            # pprint(device)
+            # pprint(client.get_nics(device))
+            # for mac, iplist in client.get_nics(device).items():
+            #    print(f'{mac}: {list(map(lambda x: x[0], iplist))}')
+            # pprint(client.get_credentials(device))
+            pass
+        creds = client.get_credentials(devices[2])
+        if creds:
+            pprint(creds)
+            a = snmp.CiscoSnmpClient(creds['snmp_read_cs'], creds['MANAGEMENT_ADDRESS'], creds['snmp_port'])
+            pprint(list(a.query_arp_table()))
+    main()

@@ -1,13 +1,14 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.cisco import snmp
+from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
+from axonius.utils import json
 from axonius.utils.files import get_local_config_file
 from cisco_prime_adapter.client import CiscoPrimeClient
-from axonius.adapter_exceptions import ClientConnectionException
-from axonius.utils import json
-from axonius.clients.cisco import snmp
-from axonius.clients.cisco.abstract import InstanceParser, CiscoDevice
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CiscoPrimeAdapter(AdapterBase):
@@ -24,6 +25,7 @@ class CiscoPrimeAdapter(AdapterBase):
         try:
             client = CiscoPrimeClient(**client_config)
             client.connect()
+            client.disconnect()
             return client
         except ClientConnectionException as err:
             logger.error('Failed to connect to client {0} using config: {1}'.format(
@@ -33,7 +35,7 @@ class CiscoPrimeAdapter(AdapterBase):
     def _get_snmp_creds(self, device, session):
         creds = session.get_credentials(device)
 
-        # TODO: we aren't handling snmpv3
+        # XXX: we aren't handling snmpv3
 
         # missing snmp data
         if not json.is_valid(creds, 'snmp_read_cs', 'MANAGEMENT_ADDRESS', 'snmp_port'):
@@ -49,58 +51,64 @@ class CiscoPrimeAdapter(AdapterBase):
         community, ip, port = self._get_snmp_creds(raw_device, session)
         if community is not None:
             return snmp.CiscoSnmpClient(community=community, host=ip, port=port).get_tasks()
+        return None
 
     def _query_devices_by_client(self, client_name, session):
         raw_devices = []
         arp_table = []
         tasks = []
-        for device in session.get_devices():
-            type_, raw_device = ('cisco', device)
-            yield (type_, raw_device)
-            raw_devices.append(raw_device)
 
-        for raw_device in raw_devices:
+        session.connect()
+        try:
+            for device in session.get_devices():
+                type_, raw_device = ('cisco', device)
+                yield (type_, raw_device)
+                raw_devices.append(raw_device)
+
+            for raw_device in raw_devices:
+                try:
+                    new_tasks = self.get_cisco_tasks(raw_device, session)
+                    if new_tasks:
+                        tasks += new_tasks
+                except Exception as e:
+                    logger.exception(f'Got exception while getting arp_table: {raw_device}')
+
             try:
-                new_tasks = self.get_cisco_tasks(raw_device, session)
-                if new_tasks:
-                    tasks += new_tasks
+                for entry in snmp.run_event_loop(tasks):
+                    yield ('neighbor', entry)
             except Exception as e:
                 logger.exception(f'Got exception while getting arp_table: {raw_device}')
-
-        try:
-            for entry in snmp.run_event_loop(tasks):
-                yield ('neighbor', entry)
-        except Exception as e:
-            logger.exception(f'Got exception while getting arp_table: {raw_device}')
+        finally:
+            session.disconnect()
 
     def _clients_schema(self):
         return {
-            "items": [
+            'items': [
                 {
-                    "name": "url",
-                    "title": "url",
-                    "type": "string",
-                    "description": "Cisco Prime Infrastructure url"
+                    'name': 'url',
+                    'title': 'url',
+                    'type': 'string',
+                    'description': 'Cisco Prime Infrastructure url'
                 },
                 {
-                    "name": "username",
-                    "title": "User Name",
-                    "type": "string"
+                    'name': 'username',
+                    'title': 'User Name',
+                    'type': 'string'
                 },
                 {
-                    "name": "password",
-                    "title": "Password",
-                    "type": "string",
-                    "format": "password"
+                    'name': 'password',
+                    'title': 'Password',
+                    'type': 'string',
+                    'format': 'password'
                 },
 
             ],
-            "required": [
-                "url",
-                "username",
-                "password",
+            'required': [
+                'url',
+                'username',
+                'password',
             ],
-            "type": "array"
+            'type': 'array'
         }
 
     def create_cisco_device(self, raw_device):
@@ -123,7 +131,7 @@ class CiscoPrimeAdapter(AdapterBase):
         device.device_model_family = raw_device['summary'].get('ProductFamily', '')
         device.reachability = raw_device['summary'].get('reachability', '')
 
-        # TODO: Figure os dosen't support .build field detection. it very
+        # XXX: Figure os dosen't support .build field detection. it very
         # ugly to use figure os, since we dosen't really figuring out the os
         # (we pass static string 'cisco')
 

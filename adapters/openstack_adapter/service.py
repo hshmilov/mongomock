@@ -26,6 +26,7 @@ class OpenstackAdapter(AdapterBase):
         try:
             client = OpenStackClient(**client_config)
             client.connect()
+            client.disconnect()
             return client
         except ClientConnectionException as err:
             logger.error('Failed to connect to client {0} using config: {1}'.format(
@@ -33,10 +34,14 @@ class OpenstackAdapter(AdapterBase):
             raise
 
     def _query_devices_by_client(self, client_name, session):
-        for device in session.get_devices():
-            flavor = session.get_flavor(device)
-            image = session.get_image(device)
-            yield (device, flavor, image)
+        session.connect()
+        try:
+            for device in session.get_devices():
+                flavor = session.get_flavor(device)
+                image = session.get_image(device)
+                yield (device, flavor, image)
+        finally:
+            session.disconnect()
 
     def _clients_schema(self):
         return {

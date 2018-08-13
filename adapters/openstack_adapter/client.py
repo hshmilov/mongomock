@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
-from openstack.connection import Connection
 from collections import defaultdict
+
 from axonius.adapter_exceptions import ClientConnectionException
+from openstack.connection import Connection
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class OpenstackException(Exception):
@@ -32,7 +33,7 @@ class OpenStackClient:
         try:
             self._sess.authorize()
         except Exception as e:
-            raise ClientConnectionException(e)
+            raise ClientConnectionException(str(e))
 
     def get_devices(self):
         """
@@ -74,7 +75,7 @@ class OpenStackClient:
 
     @staticmethod
     def get_nics(device):
-        """ 
+        """
         Extract mac, list(ips) from device json
         :return: json that conatins the ifaces
         """
@@ -84,3 +85,9 @@ class OpenStackClient:
             for network in networks:
                 result[network['OS-EXT-IPS-MAC:mac_addr']].append(network['addr'])
         return result
+
+    def disconnect(self):
+        """
+        close session
+        """
+        self._sess = None

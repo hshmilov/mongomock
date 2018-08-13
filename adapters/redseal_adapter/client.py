@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
 
+import asyncio
+import copy
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin, urlparse
 
-import logging
-import copy
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-import aiohttp
 import requests
 
-from axonius.utils import json
+import aiohttp
 from axonius.adapter_exceptions import ClientConnectionException
-
+from axonius.utils import json
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -67,7 +65,7 @@ class RedSealClient:
         except Exception as exc:
             exception_data = response.content if 'response' in locals() else ''
             logger.exception(f'Exception in check connection response: {exception_data}')
-            raise ClientConnectionException(f"Error connecting to server: {str(exc)}")
+            raise ClientConnectionException(f'Error connecting to server: {str(exc)}')
 
     @staticmethod
     def reassemble_application_json(response):
@@ -85,6 +83,8 @@ class RedSealClient:
                 response['list'][0][key] = [value, ]
         return response
 
+# pylint: disable=R0912
+# This function has too many branches becuse redseal json is wierd
     @staticmethod
     def reassemble_device_json(response):
         """
@@ -147,7 +147,7 @@ class RedSealClient:
             logging.debug(f'handling {key}')
             for tree in value:
                 if 'URL' not in tree:
-                    logger.error(f"tree {tree} is missing 'url'")
+                    logger.error(f'tree {tree} is missing "url"')
                     continue
                 yield tree['URL']
 
