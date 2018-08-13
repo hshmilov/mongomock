@@ -4,6 +4,8 @@
     	{ title: (alertData.name? alertData.name : 'new alert')}
     ]">
         <x-box class="alert-config">
+            <div class="v-spinner-bg" v-if="loading"></div>
+            <pulse-loader :loading="loading" color="#FF7D46" />
             <form @keyup.enter="saveAlert">
                 <!-- Section for alert name and query to run by -->
                 <div class="x-grid">
@@ -122,6 +124,7 @@
     import xBox from '../../components/layout/Box.vue'
     import xCheckbox from '../../components/inputs/Checkbox.vue'
     import Modal from '../../components/popover/Modal.vue'
+	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
     import {mapState, mapMutations, mapActions} from 'vuex'
     import {FETCH_DATA_VIEWS} from '../../store/actions'
@@ -132,7 +135,7 @@
     export default {
         name: 'alert-config-container',
         components: {
-            xSelect, xPage, xBox, xCheckbox, Modal
+            xSelect, xPage, xBox, xCheckbox, Modal, PulseLoader
         },
         computed: {
             ...mapState({
@@ -142,7 +145,7 @@
                     let queries = [...state.devices.views.saved.data.map((item) => {
                         return {...item, entity: 'devices'}
                     }), ...state.users.views.saved.data.map((item) => {
-                        return {...item, entity: 'users'}
+                        return { ...item, entity: 'users' }
                     })]
                     if (!queries || !queries.length) return []
                     if (this.alert && this.alert.view) {
@@ -182,7 +185,10 @@
             },
 			triggerBelow() {
 				return this.alert.triggers.below
-			}
+			},
+            loading() {
+            	return this.fetching.alert || this.fetching.views
+            }
 		},
         data() {
             return {
@@ -204,6 +210,9 @@
                 emptySettings: {
                     'mail': false,
                     'syslog': false
+                },
+                fetching: {
+                	alert: false, views: false
                 }
             }
         },
@@ -260,6 +269,19 @@
                     triggers: { ...alert.triggers },
                     actions: []
                 }
+            },
+            fillView() {
+				if (this.alertData.view) {
+					let matching = this.currentQueryOptions.filter(item =>
+						(this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.view)
+					if (matching.length) {
+						this.currentQuery = matching[0].name
+						this.alert.view = this.currentQuery
+						this.alert.viewEntity = this.selectedOption.entity
+					} else {
+						this.alert.view = ''
+					}
+				}
             },
             saveAlert() {
                 /* Validation */
@@ -332,8 +354,10 @@
                 Otherwise, if alert from controls source has correct id, update local alert controls with its values
              */
             if (!this.alerts.length || !this.alertData || !this.alertData.id || (this.$route.params.id !== this.alertData.id)) {
+            	this.fetching.alert = true
                 this.fetchAlerts({}).then(() => {
                     this.setAlert(this.$route.params.id)
+                    this.fetching.alert = false
                 })
             } else {
                 this.fillAlert(this.alertData)
@@ -341,27 +365,24 @@
             this.tour('alertName')
 
             /* Fetch all saved queries for offering user to base alert upon */
-            Promise.all([this.fetchViews({module: 'devices', type: 'saved'}),
-                this.fetchViews({module: 'users', type: 'saved'})]).then(() => {
-                    if (this.alertData.view) {
-                        let matching = this.currentQueryOptions.filter(item =>
-                            (this.alertData.id === 'new' ? item.uuid : item.name) === this.alertData.view)
-                        if (matching.length) {
-                            this.currentQuery = matching[0].name
-                            this.alert.view = this.currentQuery
-                            this.alert.viewEntity = this.selectedOption.entity
-                        } else {
-                            this.alert.view = ''
-                        }
+            if (!this.currentQueryOptions.length) {
+                this.fetching.views = true
+                Promise.all([this.fetchViews({module: 'devices', type: 'saved'}),
+                    this.fetchViews({module: 'users', type: 'saved'})]).then(() => {
+                        this.fillView()
+                        this.fetching.views = false
                     }
-                }
-            )
+                )
+            } else {
+            	this.fillView()
+            }
         }
     }
 </script>
 
 <style lang="scss">
     .alert-config {
+        position: relative;
         .x-grid {
             width: 600px;
             grid-template-columns: 1fr 2fr;

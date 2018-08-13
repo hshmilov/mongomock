@@ -1,6 +1,8 @@
 <template>
     <x-page title="Reporting">
         <x-box class="x-report">
+            <div class="v-spinner-bg" v-if="loading"></div>
+            <pulse-loader :loading="loading" color="#FF7D46" />
             <div class="x-report-download">
                 <a class="x-btn great" @click="startDownload" :class="{disabled: disableDownloadReport}" id="reports_download">
                     <template v-if="downloading">DOWNLOADING...</template>
@@ -44,6 +46,7 @@
     import xPage from '../../components/layout/Page.vue'
     import xBox from '../../components/layout/Box.vue'
     import xToast from '../../components/popover/Toast.vue'
+	import PulseLoader from 'vue-spinner/src/PulseLoader.vue'
 
     import { mapMutations, mapActions } from 'vuex'
     import { DOWNLOAD_REPORT } from '../../store/modules/report'
@@ -52,7 +55,7 @@
 
     export default {
         name: 'report-container',
-        components: { xPage, xBox, xToast },
+        components: { xPage, xBox, xToast, PulseLoader },
         computed: {
         	valid() {
         		return this.execReportSettings.period
@@ -62,6 +65,9 @@
             },
             disableDownloadReport() {
         	    return this.downloading || !this.isLatestReport
+            },
+            loading() {
+        		return this.fetching.lastGenerated || this.fetching.schedule
             }
         },
         data() {
@@ -73,7 +79,10 @@
                 downloading: false,
                 latestReportDate: 'No report generated. Press \"Discover Now\" to generate',
                 isLatestReport: false,
-                message: ''
+                message: '',
+                fetching: {
+                	lastGenerated: false, schedule: false
+                }
             }
         },
         methods: {
@@ -126,16 +135,20 @@
             }
         },
         created() {
+        	this.fetching.schedule = true
             this.fetchData({
                 rule: `exec_report`,
             }).then((response) => {
+				this.fetching.schedule = false
                 if (response.data) this.execReportSettings = { recipients: [], ...response.data }
             })
             this.changeState({ name: 'reportsSchedule' })
+            this.fetching.lastGenerated = true
             this.fetchData({
                 rule: `get_latest_report_date`,
                 method: 'GET',
             }).then((response) => {
+				this.fetching.lastGenerated = false
                 if (response.data) {
                     this.latestReportDate = "Last generated: " + response.data
                     this.isLatestReport = true
@@ -147,6 +160,7 @@
 
 <style lang="scss">
     .x-report {
+        position: relative;
         width: 60vw;
         .x-report-download {
             margin-bottom: 24px;
