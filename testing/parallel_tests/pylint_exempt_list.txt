@@ -311,7 +311,6 @@ axonius-libs/src/libs/axonius-py/axonius/thread_pool_executor.py
 axonius-libs/src/libs/axonius-py/axonius/thread_stopper.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/abstract.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/console.py
-axonius-libs/src/libs/axonius-py/axonius/clients/cisco/snmp.py
 axonius-libs/src/libs/axonius-py/axonius/clients/cisco/snmp_parser.py
 axonius-libs/src/libs/axonius-py/axonius/clients/juniper/rpc.py
 axonius-libs/src/libs/axonius-py/axonius/clients/ldap/exceptions.py

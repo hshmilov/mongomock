@@ -1,20 +1,20 @@
-import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
-from axonius.clients.cisco.abstract import *
-from axonius.clients.cisco import snmp_parser
-
 import asyncio
-from pysnmp.hlapi.asyncio import bulkCmd
-from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
-from pysnmp.hlapi.asyncio import ObjectType, ObjectIdentity, CommunityData, ContextData, SnmpEngine
-from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
-from pyasn1.type.univ import Null
-
-import itertools
-
+import logging
 from collections import defaultdict
+
+from pyasn1.type.univ import Null
+from pysnmp.hlapi.asyncio import (CommunityData, ContextData, ObjectIdentity,
+                                  ObjectType, SnmpEngine)
+from pysnmp.hlapi.asyncio import UdpTransportTarget as AsyncUdpTransportTarget
+from pysnmp.hlapi.asyncio import bulkCmd
+from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
+
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.cisco import snmp_parser
+from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
+                                            BasicInfoData, CdpCiscoData)
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # snmp OID (object identifires) we use to query data
@@ -45,18 +45,18 @@ async def asyncio_next(engine, community, ip, port, oid):
     initialVars = CommandGeneratorVarBinds().makeVarBinds(engine, [ObjectType(ObjectIdentity(oid))])[0]
 
     while True:
-        # TODO: fallback to nextCmd
+        # XXX: fallback to nextCmd
         (errorIndication,
          errorStatus,
          errorIndex,
          varBindTable) = await bulkCmd(
-            engine,
-            CommunityData(community),
-            AsyncUdpTransportTarget((ip, port)),
-            ContextData(),
-            0, 500,
-            *varBinds,
-            lookupMib=False)
+             engine,
+             CommunityData(community),
+             AsyncUdpTransportTarget((ip, port)),
+             ContextData(),
+             0, 500,
+             *varBinds,
+             lookupMib=False)
 
         if errorIndication:
             results.append((errorIndication, errorStatus, errorIndex, varBindTable))
@@ -94,18 +94,17 @@ class CiscoSnmpClient(AbstractCiscoClient):
         self._community = kwargs['community']
         self._ip = kwargs['host']
         self._port = kwargs['port']
-        self._engine = None
 
     def _next_cmd(self, oid):
         return run_event_loop([self._async_next_cmd(oid)])
 
     async def _async_next_cmd(self, oid):
-        self._engine = SnmpEngine()
-        return await asyncio_next(self._engine,
-                                  self._community,
+        engine = SnmpEngine()
+        data = await asyncio_next(engine, self._community,
                                   self._ip, self._port,
                                   oid)
-        self._engine.transportDispatcher.closeDispatcher()
+        engine.transportDispatcher.closeDispatcher()
+        return data
 
     def __enter__(self):
         """ Snmp is a connection-less protocol.
@@ -135,7 +134,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
         return SnmpArpCiscoData(results)
 
     async def _query_basic_info(self):
-        ''' query basic information about the device itself '''
+        """ query basic information about the device itself """
         data = await self._async_next_cmd(SYSTEM_DESCRIPTION_OID)
         errors = list(map(lambda x: x[0], data))
         results = [('info', list(map(lambda x: x[3], data)))]
@@ -154,7 +153,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
 
         return SnmpBasicInfoCiscoData(results)
 
-    # TODO: move to CdpCiscoData
+    # XXX: move to CdpCiscoData
     @staticmethod
     def _group_cdp(results):
         groups = defaultdict(list)
@@ -201,7 +200,8 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
             except Exception:
                 logger.exception('Exception while parsing basic info')
 
-    def _group_iface(self, entries):
+    @staticmethod
+    def _group_iface(entries):
         groups = defaultdict(list)
         for result in entries:
             oid = result[0][0]
@@ -246,11 +246,11 @@ class SnmpBasicInfoCiscoData(BasicInfoData):
     def _parse(self):
         self.result = {'device_mode': 'cisco'}
         for type_, entries in self._raw_data:
-            if type_ == "info":
+            if type_ == 'info':
                 self._parse_basic_info(entries)
-            if type_ == "iface":
+            if type_ == 'iface':
                 self._parse_iface(entries)
-            if type_ == "ip":
+            if type_ == 'ip':
                 self._parse_ip(entries)
 
         yield self.result
@@ -308,13 +308,13 @@ class SystemDescriptionTable(snmp_parser.SnmpTable):
 class IfaceTable(snmp_parser.SnmpTable):
     table = {
         1: (snmp_parser.parse_str, 'index'),
-        2: (snmp_parser.parse_str, 'descritption'),
+        2: (snmp_parser.parse_str, 'description'),
         3: (snmp_parser.parse_str, 'type'),
         4: (snmp_parser.parse_str, 'mtu'),
         5: (snmp_parser.parse_str, 'speed'),
         6: (snmp_parser.parse_mac, 'mac'),
-        7: (snmp_parser.parse_str, 'admin-status'),
-        8: (snmp_parser.parse_str, 'operation-status'),
+        7: (snmp_parser.parse_admin, 'admin-status'),
+        8: (snmp_parser.parse_operational, 'operation-status'),
     }
     index = -2
 
@@ -328,16 +328,14 @@ class IPTable(snmp_parser.SnmpTable):
     index = -1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import pprint
-    import logging
-    from logging import info, warning, debug, error
 
-    logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
-    a = CiscoSnmpClient(host='xxx', community='public', port=161)
-    with a:
+    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
+    CLIENT = CiscoSnmpClient(host='192.168.20.35', community='public', port=161)
+    with CLIENT:
         pass
-    with a:
+    with CLIENT:
         pass
-    c = list(a.query_all())
-    print(c)
+    LIST_ = list(CLIENT.query_all())
+    pprint.pprint(LIST_)

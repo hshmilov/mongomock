@@ -2,6 +2,7 @@ import logging
 logger = logging.getLogger(f'axonius.{__name__}')
 
 import socket
+from axonius.devices.device_adapter import DeviceAdapterNetworkInterface
 
 
 def unpack_mac(value):
@@ -17,6 +18,29 @@ def extract_ip_from_mib(mib):
 def parse_unhandled(oid, value):
     # this function is a callback so it must have the same api as the above functions
     logger.warning(f'Unhandled oid: {oid} value: {value}')
+
+
+def parse_admin(oid, value):
+    admin_enum = [x for x in DeviceAdapterNetworkInterface.fields_info if x == 'admin_status'][0].enum
+
+    value = int(value) - 1
+
+    if value not in range(len(admin_enum)):
+        raise ValueError(f'Invalid value {value}')
+
+    return admin_enum[value]
+
+
+def parse_operational(oid, value):
+    operational_enum = \
+        [x for x in DeviceAdapterNetworkInterface.fields_info if x == 'operational_status'][0].enum
+
+    value = int(value) - 1
+
+    if value not in range(len(operational_enum)):
+        raise ValueError(f'Invalid value {value + 1}')
+
+    return operational_enum[value]
 
 
 def parse_ip(oid, value):

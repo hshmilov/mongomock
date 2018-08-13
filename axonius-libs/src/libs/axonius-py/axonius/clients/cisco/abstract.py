@@ -1,44 +1,46 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
-from axonius.devices.device_adapter import DeviceAdapter, Field, ListField, format_ip, JsonStringFormat
 import itertools
 
 from collections import defaultdict
 
+from axonius.devices.device_adapter import DeviceAdapter, Field
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
 
 class CiscoDevice(DeviceAdapter):
-    # Fetch protocol refers to the way we discover new devices (by querying arp, cdp, dhcp tables, or by adding the client itself).
-    fetch_proto = Field(str, "Fetch Protocol", enum=['ARP', 'CDP', 'DHCP', 'CLIENT'])
-    reachability = Field(str, "Reachability")
+    # Fetch protocol refers to the way we discover new devices
+    # (by querying arp, cdp, dhcp tables, or by adding the client itself).
+    fetch_proto = Field(str, 'Fetch Protocol', enum=['ARP', 'CDP', 'DHCP', 'CLIENT'])
+    reachability = Field(str, 'Reachability')
 
 
-class AbstractCiscoClient(object):
-    ''' Abstract class for cisco's clients. 
-        each function must raise ClientConnectionException for creds errors '''
+class AbstractCiscoClient:
+    """ Abstract class for cisco's clients.
+        each function must raise ClientConnectionException for creds errors """
 
     def __init__(self):
         self._in_context = False
 
     def __enter__(self):
-        ''' entry that connect to the cisco device. '''
+        """ entry that connect to the cisco device. """
         self._in_context = True
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        ''' exit that to the cisco device. '''
+        """ exit that to the cisco device. """
         self._in_context = False
 
     def _query_arp_table(self):
-        ''' This function should be overwritten by heir.'''
+        """ This function should be overwritten by heir."""
         raise NotImplementedError()
 
     def _query_dhcp_leases(self):
-        ''' This function should be overwritten by heir.'''
+        """ This function should be overwritten by heir."""
         raise NotImplementedError()
 
     def _query_cdp_table(self):
-        ''' This function should be overwritten by heir.'''
+        """ This function should be overwritten by heir."""
         raise NotImplementedError()
 
     def query_arp_table(self):
@@ -69,11 +71,11 @@ class AbstractCiscoClient(object):
                 logger.exception(f'Exception while querying {callback}')
 
 
-class AbstractCiscoData(object):
-    '''Abstract class for cisco data. 
-        each cisco client query should return CiscoData class, 
+class AbstractCiscoData:
+    """Abstract class for cisco data.
+        each cisco client query should return CiscoData class,
         that will be yielded in _query_device_by_client.
-        then in _parse_raw_data we can call get_devices '''
+        then in _parse_raw_data we can call get_devices """
 
     def __init__(self, raw_data):
         self._raw_data = raw_data
@@ -87,13 +89,16 @@ class AbstractCiscoData(object):
             self.parsed_data = list(self._parse())
         return self.parsed_data
 
-    def _get_id(self, instance):
+    @staticmethod
+    def _get_id(instance):
         return instance.get('mac')
 
     def _get_devices(self, instance: dict, create_device_callback):
-        """ This function gets instances (dicts that hold the "raw data") from _parse implemenataion of each CiscoData class
+        """ This function gets instances (dicts that hold the "raw data")
+            from _parse implemenataion of each CiscoData class
             and convert them to axonius devices.
-            Each instance might hold different fields, so we assume that some or all fields might be missing.
+            Each instance might hold different fields,
+            so we assume that some or all fields might be missing.
             This function defines the instance structure.
         """
 
@@ -106,14 +111,12 @@ class AbstractCiscoData(object):
 
         new_device.id = id_
 
-        # TODO: we don't need ifaces and iface, there is duplication in the structure
+        # XXX: we don't need ifaces and iface, there is duplication in the structure
         if any(['ip' in instance, 'mac' in instance, 'iface' in instance]):
             ips = [instance.get('ip')] if instance.get('ip') else []
             new_device.add_nic(mac=instance.get('mac'), name=instance.get('iface'), ips=ips)
 
         if 'ifaces' in instance:
-            # TODO: add mtu, speed, state and etc to add_nic
-            # TODO: validate that the length of ip list is equal to net-mask
             for iface in instance['ifaces'].values():
                 ip_list = []
                 netmask_list = []
@@ -121,10 +124,19 @@ class AbstractCiscoData(object):
                 if 'ips' in iface:
                     ip_list = list(filter(bool, map(lambda x: x.get('address'), iface['ips'])))
                     netmask_list = filter(bool, map(lambda x: x.get('net-mask'), iface['ips']))
-                    netmask_list = list(map(lambda x: '/'.join(x), zip(ip_list, netmask_list)))
+                    netmask_list = list(map('/'.join, zip(ip_list, netmask_list)))
+
+                name = iface.get('description')
+                operational_status = iface.get('operation-status')
+                admin_status = iface.get('admin-status')
+                mac = iface.get('mac')
+                speed = iface.get('speed')
+                mtu = iface.get('mtu')
 
                 new_device.add_nic(mac=iface.get('mac'), name=iface.get(
-                    'descritption'), ips=ip_list, subnets=netmask_list)
+                    'description'), operational_status=operational_status,
+                    admin_status=admin_status, speed=speed, mtu=mtu,
+                    ips=ip_list, subnets=netmask_list)
 
         new_device.hostname = instance.get('hostname')
         new_device.device_model = instance.get('device_model')
@@ -135,7 +147,7 @@ class AbstractCiscoData(object):
         if 'related_ips' in instance:
             new_device.set_related_ips(instance['related_ips'])
 
-        # TODO: the real raw data is self._raw_data
+        # XXX: the real raw data is self._raw_data
         # but it isn't a dict so for now we only save the instance - which must be a dict
         new_device.set_raw(instance)
         return new_device
@@ -152,9 +164,12 @@ class AbstractCiscoData(object):
 
 
 class BasicInfoData(AbstractCiscoData):
+    def _parse(self) -> dict:
+        raise NotImplementedError()
+
     def _get_id(self, instance):
         id_ = '_'.join(['basic_info', instance.get('hostname', '')])
-        if id_ == "basic_info":
+        if id_ == 'basic_info':
             return None
         return id_
 
@@ -166,8 +181,8 @@ class BasicInfoData(AbstractCiscoData):
 
 
 class ArpCiscoData(AbstractCiscoData):
-    def __init__(self, raw_data):
-        super().__init__(raw_data)
+    def _parse(self) -> dict:
+        raise NotImplementedError()
 
     def _get_id(self, instance):
         return 'arp_' + instance.get('mac') if instance.get('mac') else None
@@ -180,8 +195,8 @@ class ArpCiscoData(AbstractCiscoData):
 
 
 class DhcpCiscoData(AbstractCiscoData):
-    def __init__(self, raw_data):
-        super().__init__(raw_data)
+    def _parse(self) -> dict:
+        raise NotImplementedError()
 
     def _get_id(self, instance):
         mac = instance.get('mac')
@@ -189,7 +204,7 @@ class DhcpCiscoData(AbstractCiscoData):
         id_ = 'dhcp'
 
         if not mac:
-            return
+            return None
 
         id_ += '_' + mac
 
@@ -206,8 +221,8 @@ class DhcpCiscoData(AbstractCiscoData):
 
 
 class CdpCiscoData(AbstractCiscoData):
-    def __init__(self, raw_data):
-        super().__init__(raw_data)
+    def _parse(self) -> dict:
+        raise NotImplementedError()
 
     def _get_id(self, instance):
         mac = instance.get('mac')
@@ -215,7 +230,7 @@ class CdpCiscoData(AbstractCiscoData):
         id_ = 'cdp'
 
         if not mac:
-            return
+            return None
 
         id_ += '_' + mac
 
@@ -231,10 +246,10 @@ class CdpCiscoData(AbstractCiscoData):
         return device
 
 
-class InstanceParser(object):
-    ''' parse multiple instances of CiscoData, correlate and return devices 
-        This class exists because we need some way to correlate between arp table 
-        and cdp table '''
+class InstanceParser:
+    """ parse multiple instances of CiscoData, correlate and return devices
+        This class exists because we need some way to correlate between arp table
+        and cdp table """
 
     def __init__(self, instances):
         self._instances = list(filter(lambda x: x is not None, instances))
@@ -243,18 +258,20 @@ class InstanceParser(object):
         cdp_instance = list(filter(lambda x: isinstance(x, CdpCiscoData), self._instances))
         arp_instance = list(filter(lambda x: isinstance(x, ArpCiscoData), self._instances))
 
-        # For each cdp device - check if we also see it in any other table (arp and dhcp) if we do - copy mac for correlation
+        # For each cdp device - check if we also see it in any other table (arp and dhcp)
+        # if we do - copy mac for correlation
         if cdp_instance:
             cdp_instance = cdp_instance[0]
 
-            # TODO: arp throws iface
-            # TODO: cdp neighbors doesn't correlate when one have empty ip
+            # XXX: arp throws iface
+            # XXX: cdp neighbors doesn't correlate when one have empty ip
             for cdp_data in cdp_instance.get_parsed_data():
                 try:
                     if cdp_data.get('mac'):
                         continue
 
-                    for other_data in sum(list(map(lambda x: x.get_parsed_data(), filter(lambda x: not isinstance(x, CdpCiscoData), self._instances))), []):
+                    filtered = filter(lambda x: not isinstance(x, CdpCiscoData), self._instances)
+                    for other_data in sum(list(map(lambda x: x.get_parsed_data(), filtered)), []):
                         if cdp_data.get('ip') == other_data.get('ip'):
                             cdp_data['mac'] = other_data.get('mac')
                             break
@@ -284,7 +301,10 @@ class InstanceParser(object):
 
                     ip = arp_data['related_ips'][0]
 
-                    if not ip in map(lambda x: x.get('ip'), sum(map(lambda x: x.get_parsed_data(), filter(lambda x: not isinstance(x, ArpCiscoData), self._instances)), [])):
+                    sum_ = sum(map(lambda x: x.get_parsed_data(),
+                                   filter(lambda x: not isinstance(x, ArpCiscoData),
+                                          self._instances)), [])
+                    if not ip in map(lambda x: x.get('ip'), sum_):
                         continue
 
                     # found colrreation
