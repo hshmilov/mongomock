@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius import thread_stopper
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor

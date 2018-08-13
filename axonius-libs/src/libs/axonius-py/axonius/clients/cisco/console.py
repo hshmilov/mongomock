@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from netmiko import ConnectHandler
 import re
 

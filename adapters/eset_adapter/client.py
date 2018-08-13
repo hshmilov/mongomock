@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import ctypes
 import json
 from contextlib import contextmanager

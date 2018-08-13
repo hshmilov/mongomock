@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class LoggedThreadPoolExecutor(ThreadPoolExecutor):

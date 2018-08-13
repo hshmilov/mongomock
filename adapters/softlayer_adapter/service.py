@@ -6,7 +6,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.parsing import parse_date
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from datetime import datetime
 
 from axonius.adapter_base import AdapterBase, AdapterProperty

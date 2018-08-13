@@ -29,7 +29,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.json import to_json
 from axonius.utils.parsing import get_exception_string
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def is_plugin_adapter(plugin_type: str) -> bool:

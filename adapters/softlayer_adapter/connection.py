@@ -4,7 +4,7 @@ from concurrent.futures import wait, ThreadPoolExecutor, ALL_COMPLETED
 
 from axonius.thread_stopper import stoppable
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from urllib3.util.url import parse_url
 import SoftLayer
 from softlayer_adapter.exceptions import SoftlayerConnectionError, SoftlayerRequestException

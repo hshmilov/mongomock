@@ -7,7 +7,7 @@ from axonius.utils.threading import LazyMultiLocker
 
 from axonius.mixins.feature import Feature
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class Userdisabelable(Feature, ABC):

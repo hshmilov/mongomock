@@ -14,7 +14,7 @@ from axonius.devices.device_adapter import DeviceAdapter, format_ip, JsonStringF
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class JuniperAdapter(AdapterBase):

@@ -1,7 +1,7 @@
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from symantec_adapter import consts
 
 

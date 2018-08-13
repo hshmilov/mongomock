@@ -5,7 +5,7 @@ import logging
 from axonius.utils.parsing import get_exception_string
 from axonius.adapter_exceptions import GetDevicesError
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 WMI_NAMESPACE = "root\\virtualization\\v2"
 

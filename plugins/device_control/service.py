@@ -7,7 +7,7 @@ from axonius.utils.files import get_local_config_file, get_random_uploaded_path_
 from axonius.utils.parsing import get_exception_string
 from axonius.entities import AxoniusDevice
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 MAX_TRIES_FOR_EXECUTION_REQUEST = 3
 SLEEP_BETWEEN_EXECUTION_TRIES_IN_SECONDS = 120

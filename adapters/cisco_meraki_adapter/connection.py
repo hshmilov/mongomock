@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import requests
 
 from cisco_meraki_adapter.exceptions import CiscoMerakiAlreadyConnected, CiscoMerakiConnectionError, CiscoMerakiNotConnected, \

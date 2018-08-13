@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty

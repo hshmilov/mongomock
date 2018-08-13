@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from retrying import retry

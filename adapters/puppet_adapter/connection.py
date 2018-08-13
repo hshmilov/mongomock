@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import requests
 import puppet_adapter.consts as consts
 from axonius.utils.files import create_temp_file

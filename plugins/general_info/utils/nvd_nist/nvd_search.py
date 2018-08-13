@@ -10,7 +10,7 @@ import requests.exceptions
 from general_info.utils.nvd_nist import nvd_update
 from axonius.utils.parsing import get_exception_string
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 ARTIFACT_FOLDER = os.path.join(CURRENT_DIR, "artifacts")

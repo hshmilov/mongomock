@@ -3,7 +3,7 @@ from typing import Tuple
 
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class EntityFinder(object):

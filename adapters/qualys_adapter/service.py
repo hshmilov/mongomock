@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from itertools import groupby
 
 from axonius.adapter_base import AdapterBase, AdapterProperty

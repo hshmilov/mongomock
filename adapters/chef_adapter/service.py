@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import datetime
 import pytz
 

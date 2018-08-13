@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 # coding=utf-8
 #
 # Copyright © 2011-2015 Splunk, Inc.

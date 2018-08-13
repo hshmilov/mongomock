@@ -10,7 +10,7 @@ import json
 from retrying import retry
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 # NVD Information is available from 2002. But we don't necessarily want all of it.
 NVD_DIST_EARLIEST_YEAR = 2015

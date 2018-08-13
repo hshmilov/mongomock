@@ -11,7 +11,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.types.ssl_state import SSLState
 from gui.okta_login import try_connecting_using_okta
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterProperty
 
 from axonius.thread_stopper import stoppable

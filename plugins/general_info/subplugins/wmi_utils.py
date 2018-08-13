@@ -1,7 +1,7 @@
 
 # A help class for dealing with CIMTYPE_DateTime (returning from wmi...)
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import re
 from datetime import tzinfo, datetime, timedelta
 

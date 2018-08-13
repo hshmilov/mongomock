@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 """
 ExecutionCorrelationEngineBase.py: A base class that implements execution based correlation
 """
@@ -104,9 +104,9 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
         # way to correlate the devices and so it won't be added to adapters_to_correlate
         return [figure_actual_os]
 
-    def _raw_correlate(self, devices):
+    def _raw_correlate(self, entities):
         # refer to https://axonius.atlassian.net/wiki/spaces/AX/pages/90472522/Correlation+Implementation
-        all_adapter_devices = [adapter for adapters in devices for adapter in adapters['adapters']]
+        all_adapter_devices = [adapter for adapters in entities for adapter in adapters['adapters']]
 
         # Stage (3):
         # Build plugin -> cmd dict
@@ -124,7 +124,7 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
         # Stage (4):
         promises = {}
 
-        for i, device in enumerate(devices):
+        for i, device in enumerate(entities):
             # this will not be None and not raise
             # because CorrelatorBase won't allow such devices to pass
             os_type = figure_actual_os(device['adapters'])
@@ -195,12 +195,12 @@ class ExecutionCorrelatorEngineBase(CorrelatorEngineBase):
                                                                                        v is not None}
 
         # find contradictions, report them and remove offending devices
-        yield from _find_contradictions(devices, devices_execution_results)
+        yield from _find_contradictions(entities, devices_execution_results)
 
         # actually produce correlations according to the data
         for axon_device_idx, (responder_plugin_unique_name, execution_results) in \
                 devices_execution_results.items():
-            associated_device = devices[axon_device_idx]
+            associated_device = entities[axon_device_idx]
 
             for correlation_plugin_name, response_id in execution_results.items():
                 # on most cases that aren't first-run for devices that were already correlated,

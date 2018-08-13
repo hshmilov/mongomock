@@ -1,7 +1,7 @@
 from threading import RLock
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.thread_stopper import StopThreadException
 
 

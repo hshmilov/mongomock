@@ -2,7 +2,7 @@ import logging
 
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from typing import Tuple, Dict, Iterable
 
 

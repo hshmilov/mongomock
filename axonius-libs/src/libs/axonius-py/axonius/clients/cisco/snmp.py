@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.clients.cisco.abstract import *
 from axonius.clients.cisco import snmp_parser

@@ -2,7 +2,7 @@ import logging
 
 from funcy import chunks
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 """

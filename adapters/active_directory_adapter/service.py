@@ -11,7 +11,7 @@ from axonius.mixins.devicedisabelable import Devicedisabelable
 from axonius.mixins.userdisabelable import Userdisabelable
 from axonius.types.ssl_state import SSLState
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from axonius.fields import Field, JsonStringFormat, ListField

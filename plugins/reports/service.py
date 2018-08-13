@@ -1,7 +1,7 @@
 import json
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 # Standard modules
 import concurrent.futures
 from collections import Iterable

@@ -365,7 +365,6 @@ deployment/tests/test_deployment.py
 plugins/debug_main.py
 plugins/aggregator/service.py
 plugins/careful_execution_correlator/engine.py
-plugins/careful_execution_correlator/service.py
 plugins/careful_execution_correlator/tests/test_careful_execution_correlator.py
 plugins/core/exceptions.py
 plugins/core/service.py
@@ -536,7 +535,6 @@ testing/services/adapters/tenable_io_service.py
 testing/services/adapters/tenable_security_center_service.py
 testing/services/adapters/traiana_lab_machines_service.py
 testing/services/plugins/aggregator_service.py
-testing/services/plugins/careful_execution_correlator_service.py
 testing/services/plugins/core_service.py
 testing/services/plugins/device_control_service.py
 testing/services/plugins/diagnostics_service.py
@@ -545,8 +543,6 @@ testing/services/plugins/general_info_service.py
 testing/services/plugins/gui_service.py
 testing/services/plugins/mongo_service.py
 testing/services/plugins/pm_status_service.py
-testing/services/plugins/reports_service.py
-testing/services/plugins/static_correlator_service.py
 testing/services/plugins/system_scheduler_service.py
 testing/tests/test_aggregator_link_unlink.py
 testing/tests/test_reports.py

@@ -1,7 +1,7 @@
 import logging
 from typing import Tuple
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from urllib3.util.url import parse_url
 import uritools
 import requests

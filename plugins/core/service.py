@@ -2,7 +2,7 @@ import logging
 
 from axonius.mixins.configurable import Configurable
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 import configparser

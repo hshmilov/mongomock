@@ -83,12 +83,6 @@ class PluginService(DockerService):
         except Exception:
             pass
 
-    def logger(self):
-        raise NotImplementedError("TBD!")
-
-    def action_update(self, action_id):
-        raise NotImplementedError("TBD!")
-
     def is_plugin_registered(self, core_service):
         unique_name = self.unique_name
         result = core_service.register(self.api_key, unique_name)

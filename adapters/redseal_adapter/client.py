@@ -15,7 +15,7 @@ from axonius.utils import json
 from axonius.adapter_exceptions import ClientConnectionException
 
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class RedSealException(Exception):

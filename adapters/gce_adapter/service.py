@@ -3,7 +3,7 @@ import logging
 
 from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState

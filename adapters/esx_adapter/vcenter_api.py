@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from pyVim import connect
 from pyVmomi.VmomiSupport import Enum as pyVmomiEnum
 from retrying import retry

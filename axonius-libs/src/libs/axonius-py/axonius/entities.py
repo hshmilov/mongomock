@@ -2,7 +2,7 @@
 Axonius entities class wrappers. Implement methods to be used on devices/users from the db.
 """
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 import functools
 import ipaddress

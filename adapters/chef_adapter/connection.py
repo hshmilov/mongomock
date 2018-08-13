@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from urllib3.util.url import parse_url
 import chef
 from chef_adapter.exceptions import ChefConnectionError, ChefRequestException

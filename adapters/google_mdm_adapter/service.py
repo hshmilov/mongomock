@@ -7,7 +7,7 @@ from axonius.clients.g_suite_admin_connection import GSuiteAdminConnection
 from axonius.fields import Field, ListField
 from axonius.users.user_adapter import UserAdapter
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter

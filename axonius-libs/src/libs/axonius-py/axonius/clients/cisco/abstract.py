@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.devices.device_adapter import DeviceAdapter, Field, ListField, format_ip, JsonStringFormat
 import itertools

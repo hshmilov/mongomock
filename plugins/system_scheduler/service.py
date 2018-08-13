@@ -4,7 +4,7 @@ from axonius.entities import EntityType
 from axonius.mixins.configurable import Configurable
 from axonius.utils.parsing import parse_filter
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import concurrent.futures
 from retrying import retry
 from concurrent.futures import ALL_COMPLETED, wait

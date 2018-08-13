@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from datetime import datetime
 from math import pi, cos, sin, floor, ceil
 import uuid

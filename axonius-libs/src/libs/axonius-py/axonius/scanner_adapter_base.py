@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 """
 ScannerAdapterBase is an abstract class all scanner adapters should inherit from.
 See https://axonius.atlassian.net/wiki/spaces/AX/pages/415858710/ScannerAdapter+Design

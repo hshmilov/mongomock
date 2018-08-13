@@ -1,6 +1,6 @@
 import requests
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from carbonblack_protection_adapter.exceptions import CarbonblackProtectionAlreadyConnected, CarbonblackProtectionConnectionError,\
     CarbonblackProtectionNotConnected, \

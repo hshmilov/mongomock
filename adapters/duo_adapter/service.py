@@ -4,7 +4,7 @@ import duo_client
 
 from axonius.users.user_adapter import UserAdapter
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file

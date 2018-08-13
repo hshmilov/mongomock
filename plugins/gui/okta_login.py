@@ -9,7 +9,7 @@ import logging
 
 public_key_cache = {}
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def fetch_jwk_for(okta_config, id_token=None):

@@ -144,7 +144,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 
-    def _raw_correlate(self, devices):
+    def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
         # at static_correlator/service
@@ -154,7 +154,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         #    of all the NICs
         # 2. uppering every field we might sort by - currently hostname and os type
         # 3. splitting the hostname into a list in order to be able to compare hostnames without depending on the domain
-        adapters_to_correlate = list(normalize_adapter_devices(devices))
+        adapters_to_correlate = list(normalize_adapter_devices(entities))
 
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)

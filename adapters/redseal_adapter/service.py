@@ -11,7 +11,7 @@ from axonius.smart_json_class import SmartJsonClass
 from redseal_adapter.client import RedSealClient
 from redseal_adapter.client_id import get_client_id
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def is_ipaddr(string):

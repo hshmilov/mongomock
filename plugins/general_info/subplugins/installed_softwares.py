@@ -10,7 +10,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime, timedelta
 
 import logging
-basic_logger = logging.getLogger(f"axonius.{__name__}")
+basic_logger = logging.getLogger(f'axonius.{__name__}')
 
 
 GET_INSTALLED_SOFTWARE_COMMANDS = [

@@ -60,7 +60,7 @@ from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.parsing import get_exception_string
 from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 MAINTENANCE_SETTINGS = 'maintenance_settings'

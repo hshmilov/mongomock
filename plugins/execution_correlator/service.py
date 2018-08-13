@@ -1,4 +1,5 @@
 from axonius.correlator_base import CorrelatorBase
+from axonius.entities import EntityType
 from axonius.utils.files import get_local_config_file
 from execution_correlator.engine import ExecutionCorrelatorEngine
 
@@ -22,7 +23,11 @@ class ExecutionCorrelatorService(CorrelatorBase):
 
         self.trigger_activate_if_needed()
 
-    def _correlate(self, devices: list):
+    def _correlate(self, entities: list):
         if not self._execution_enabled:
             return []
-        return self._correlation_engine.correlate(devices)
+        return self._correlation_engine.correlate(entities)
+
+    @property
+    def _entity_to_correlate(self) -> EntityType:
+        return EntityType.Devices

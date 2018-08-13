@@ -6,7 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.users.user_adapter import UserAdapter
 from okta_adapter.connection import OktaConnection
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter

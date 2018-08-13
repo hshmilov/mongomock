@@ -7,7 +7,7 @@ from passlib.hash import bcrypt
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils import gui_helpers
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 API_VERSION = "1"
 

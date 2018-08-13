@@ -1,5 +1,4 @@
 import logging
-
 import xml.etree.ElementTree as ET
 
 from axonius.clients.rest.exception import RESTException

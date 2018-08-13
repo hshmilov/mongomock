@@ -1,7 +1,7 @@
 from axonius.clients.rest.connection import RESTConnection
 from minerva_adapter import consts
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.clients.rest.exception import RESTException
 
 

@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 import time
 
 from splunk_symantec_adapter.plugins import splunk_split_symantec_win, splunk_split_symantec_mac

@@ -3,7 +3,7 @@ import logging
 import random
 import hashlib
 import base64
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 
 from kaseya_adapter.exceptions import KaseyaAlreadyConnected, KaseyaConnectionError, KaseyaNotConnected, \
     KaseyaRequestException

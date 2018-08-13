@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from typing import List, NewType, Tuple, Iterable
 from abc import ABC, abstractmethod
 
@@ -13,6 +13,8 @@ from axonius.utils.parsing import pair_comparator, parameter_function
 
 adapter_device = NewType('adapter_device', dict)
 device_pair = NewType('DevicePair', Tuple)
+
+# This whole file is generic across all entities, the language still uses "devices" but rest assured it works
 
 
 def _create_correlation_result(device1, device2, data_dict, reason) -> CorrelationResult:
@@ -237,7 +239,7 @@ class CorrelatorEngineBase(ABC):
         return True
 
     @abstractmethod
-    def _raw_correlate(self, devices):
+    def _raw_correlate(self, entities):
         """
         Perform correlation over the online devices provided.
         This does no validation over correlations: it doesn't check that correlations made are consistent, but
@@ -307,6 +309,10 @@ class CorrelatorEngineBase(ABC):
                 second_axonius_device, second_adapter_device = \
                     plugin_unique_name_to_axonius_device.get((second_name, second_id), (None, None))
 
+            if first_adapter_device.get('pending_delete'):
+                logger.log(f"Found adapter with pending delete - {first_adapter_device}")
+                continue
+
             if not second_axonius_device:
                 # this means that the correlation was with a device that we don't see
                 # e.g. if we ran the AD code to figure out the AD-ID on a device seen by AWS
@@ -320,6 +326,10 @@ class CorrelatorEngineBase(ABC):
 
             if first_axonius_device == second_axonius_device:
                 # self correlations are obvious :)
+                continue
+
+            if second_adapter_device.get('pending_delete'):
+                logger.log(f"Found adapter with pending delete - {second_adapter_device}")
                 continue
 
             # fix the second adapter - it might be plugin_name or unique_plugin_name according to "Reason"

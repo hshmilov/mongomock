@@ -1,7 +1,7 @@
 import threading
 import ctypes
 import logging
-logger = logging.getLogger(f"axonius.{__name__}")
+logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.parsing import format_mac, parse_date
 from axonius.devices.device_adapter import DeviceAdapter
