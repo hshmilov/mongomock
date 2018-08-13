@@ -182,7 +182,7 @@ def test_axr():
     assert p.returncode == 0
     response = json.loads(stdout)
 
-    assert response[0]['status'] == 'ok', "Failed: {response}"
+    assert response[0]['status'] == 'ok', f"Failed: {response}"
 
     axr_response = response[0]['data']
     assert axr_response['status'] == 'ok'

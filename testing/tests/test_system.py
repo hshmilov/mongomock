@@ -47,9 +47,9 @@ def test_restart_data_persistency(axonius_fixture):
 
 
 def test_system_is_up(axonius_fixture):
-    assert axonius_fixture.db.is_up()
-    assert axonius_fixture.core.is_up()
-    assert axonius_fixture.aggregator.is_up()
+    # Waiting to see that all services are up before doing this check
+    for service in axonius_fixture.axonius_services:
+        service.wait_for_service()
 
 
 def test_stop_research(axonius_fixture, infinite_sleep_fixture):
@@ -59,11 +59,6 @@ def test_stop_research(axonius_fixture, infinite_sleep_fixture):
         return (state[StateLevels.Phase.name] == Phases.Stable.name) == cond
 
     scheduler = axonius_fixture.scheduler
-    core = axonius_fixture.core
-    aggregator = axonius_fixture.aggregator
-    assert scheduler.is_up()
-    assert aggregator.is_up()
-    assert infinite_sleep_fixture.is_up()
     infinite_sleep_fixture.add_client(test_infinite_sleep_credentials.client_details)
     assert len(infinite_sleep_fixture.clients()) > 0
     scheduler.start_research()
