@@ -4,10 +4,10 @@
             <x-histogram :data="dataCounters" @click-one="runAdaptersFilter" type="logo" :limit="15" />
             <div class="discovery-summary">
                 <div class="summary-row">
-                    <div class="title">Total seen {{ module }}</div>
+                    <div class="title">Total {{ module }} seen</div>
                     <div class="quantity">{{ dataSeen }}</div>
                 </div>
-                <div class="arrow">Axonius Correlation Process</div>
+                <div class="arrow">Axonius {{ singularModule }} Correlation</div>
                 <div class="summary-row">
                     <div class="title">Total unique {{ module }}</div>
                     <div class="quantity">{{ dataUnique }}</div>
@@ -26,18 +26,21 @@
         components: { xCard, xHistogram },
         props: { data: { required: true }, module: { required: true }, filter: { } },
         computed: {
+			singularModule() {
+				return this.module.slice(0, this.module.length - 1)
+            },
 			title() {
-				return `${this.module} Discovery`
+				return `${this.singularModule} Discovery`
             },
             dataCounters() {
-				if (!this.data || !this.data.adapter_count) return []
-				return [ ...this.data.adapter_count ].sort((first, second) => second.value - first.value)
+				if (!this.data || !this.data.counters) return []
+				return [ ...this.data.counters ].sort((first, second) => second.value - first.value)
             },
             dataSeen() {
-				return this.data.total_gross || 0
+				return this.data.seen || 0
             },
             dataUnique() {
-				return Math.min(this.data.total_net || 0, this.dataSeen)
+				return Math.min(this.data.unique || 0, this.dataSeen)
             }
         },
         methods: {
@@ -61,7 +64,7 @@
             display: flex;
             flex-direction: column;
             .discovery-summary {
-                border-top: 1px solid $theme-orange;
+                border-top: 2px dashed $grey-2;
                 padding-top: 12px;
                 margin-top: 12px;
                 .summary-row {
@@ -78,7 +81,7 @@
                     margin: auto;
                     margin-top: 8px;
                     margin-bottom: 16px;
-                    padding: 8px;
+                    padding: 4px 0;
                     width: 180px;
                     position: relative;
                     text-align: center;
@@ -86,14 +89,15 @@
                     border-radius: 4px;
                     font-size: 12px;
                     font-weight: 400;
+                    text-transform: capitalize;
                     &:after {
                         content: '';
                         position: absolute;
-                        border-right: 98px solid transparent;
-                        border-top: 8px solid $theme-orange;
-                        border-left: 98px solid transparent;
+                        border-right: 90px solid transparent;
+                        border-top: 12px solid $theme-orange;
+                        border-left: 90px solid transparent;
                         left: 0;
-                        bottom: -8px;
+                        bottom: -12px;
                     }
                 }
             }

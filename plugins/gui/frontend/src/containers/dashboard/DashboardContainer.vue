@@ -6,7 +6,8 @@
         </template>
         <template v-else>
             <div class="dashboard-charts">
-                <x-data-discovery-card :data="adapterDevices" module="devices" :filter="runFilter" />
+                <x-data-discovery-card :data="deviceDiscovery" module="devices" :filter="runFilter" />
+                <x-data-discovery-card :data="dashboard.dataDiscovery.users.data" module="users" :filter="runFilter" />
                 <x-coverage-card v-for="item in dashboard.coverage.data" v-if="item.portion" :key="item.title"
                                  :data="item" @click-one="runCoverageFilter(item.properties, $event)"/>
                 <x-card v-for="chart, chartInd in charts" v-if="chart.data" :key="chart.name" :title="chart.name"
@@ -51,7 +52,7 @@
     import xToast from '../../components/popover/Toast.vue'
 
     import {
-        FETCH_ADAPTER_DEVICES, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
+        FETCH_DISCOVERY_DATA, FETCH_DASHBOARD_COVERAGE, FETCH_DASHBOARD, REMOVE_DASHBOARD,
         FETCH_HISTORICAL_SAVED_CARD, FETCH_HISTORICAL_SAVED_CARD_MIN
     } from '../../store/modules/dashboard'
     import {FETCH_ADAPTERS} from '../../store/modules/adapter'
@@ -104,11 +105,11 @@
                 if (!this.dashboard.lifecycle.data) return {}
                 return this.dashboard.lifecycle.data
             },
-            adapterDevices() {
-            	return this.dashboard.adapterDevices.data
+            deviceDiscovery() {
+            	return this.dashboard.dataDiscovery.devices.data
             },
             seenDevices() {
-            	return (this.adapterDevices && this.adapterDevices.total_gross)
+            	return (this.deviceDiscovery && this.deviceDiscovery.seen)
             },
             nextRunTime() {
                 let leftToRun = new Date(parseInt(this.lifecycle.nextRunTime) * 1000) - Date.now()
@@ -156,7 +157,7 @@
                 changeState: CHANGE_TOUR_STATE, nextState: NEXT_TOUR_STATE
             }),
             ...mapActions({
-                fetchAdapterDevices: FETCH_ADAPTER_DEVICES, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
+                fetchDiscoveryData: FETCH_DISCOVERY_DATA, fetchDashboardCoverage: FETCH_DASHBOARD_COVERAGE,
                 fetchDashboard: FETCH_DASHBOARD, removeDashboard: REMOVE_DASHBOARD,
                 fetchAdapters: FETCH_ADAPTERS, saveView: SAVE_VIEW,
                 fetchHistoricalCard: FETCH_HISTORICAL_SAVED_CARD, fetchHistoricalCardMin: FETCH_HISTORICAL_SAVED_CARD_MIN
@@ -225,18 +226,20 @@
         created() {
             this.fetchAdapters()
             const getDashboardData = () => {
-                return Promise.all([this.fetchAdapterDevices(), this.fetchDashboard(), this.fetchDashboardCoverage()])
-                    .then(() => {
-                        if (this._isDestroyed) return
-                    	this.timer = setTimeout(getDashboardData, 10000)
-					})
+                return Promise.all([
+                	this.fetchDiscoveryData({module: 'devices'}), this.fetchDiscoveryData({module: 'users'}),
+                    this.fetchDashboard(), this.fetchDashboardCoverage()
+                ]).then(() => {
+                    if (this._isDestroyed) return
+                    this.timer = setTimeout(getDashboardData, 10000)
+                })
             }
             getDashboardData().then(() => {
             	if (!this.isEmptySystem) this.nextState('dashboard')
                 if (this.devicesViewsList && this.devicesViewsList.find((item) => item.name.includes('DEMO'))) return
                 // If DEMO view was not yet added, add it now, according to the adapters' devices count
 				if (this.seenDevices) {
-					let adapter = this.adapterDevices.adapter_count.find((item) => !item.name.includes('active_directory'))
+					let adapter = this.deviceDiscovery.counters.find((item) => !item.name.includes('active_directory'))
 					let name = ''
 					let filter = ''
 					if (adapter) {

@@ -1691,6 +1691,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         child1_filter = child1_view['query']['filter']
         child1_query = parse_filter(child1_filter)
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view["query"]["filter"] else ''
+        child2_filter = ''
         if len(intersecting) == 1:
             # Fetch the only child, intersecting with parent
             child1_view['filter'] = f'{base_filter}({child1_filter})'
@@ -1735,8 +1736,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             }) / total, 'module': entity.value, 'view': child2_view})
 
         remainder = 1 - sum([x['value'] for x in data])
+        child2_or = f' or ({child2_filter})' if child2_filter else ''
         return [{'name': base or 'ALL', 'value': remainder, 'remainder': True, 'view': {
-            **base_view, 'query': {'filter': f'{base_filter}NOT [({child1_filter}) or ({child2_filter})]'}
+            **base_view, 'query': {'filter': f'{base_filter}NOT [({child1_filter}){child2_or}]'}
         }, 'module': entity.value}, *data]
 
     def _fetch_chart_segment(self, chart_view: ChartViews, entity: EntityType, view, field, for_date=None):
@@ -1943,34 +1945,43 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.info(f"response code: {response.status_code} response crap: {response.content}")
             return ''
 
-    def _adapter_devices(self):
+    def _adapter_data(self, entity_type: EntityType):
         """
         For each adapter currently registered in system, count how many devices it fetched.
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
-        logger.info("Getting adapter devices")
+        logger.info(f'Getting adapter data for entity {entity_type.name}')
         plugins_available = requests.get(self.core_address + '/register').json()
-        adapter_devices = {'total_gross': 0, 'adapter_count': []}
+        adapter_entities = {'seen': 0, 'counters': []}
+        entity_collection = self._entity_db_map[entity_type]
         with self._get_db_connection() as db_connection:
-            adapter_devices['total_net'] = self.devices_db.count_documents({})
+            adapter_entities['unique'] = entity_collection.count_documents({})
             adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
             for adapter in adapters_from_db:
                 if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
                     continue
-                devices_count = self.devices_db_view.count_documents(
-                    {'specific_data.plugin_name': adapter['plugin_name']})
-                if not devices_count:
+                entities_count = entity_collection.count_documents({
+                    'adapters.plugin_name': adapter[PLUGIN_NAME]
+                })
+                if not entities_count:
                     # No need to document since adapter has no devices
                     continue
-                adapter_devices['adapter_count'].append({'name': adapter['plugin_name'], 'value': devices_count})
-                adapter_devices['total_gross'] = adapter_devices['total_gross'] + devices_count
-        return adapter_devices
+                adapter_entities['counters'].append({'name': adapter[PLUGIN_NAME], 'value': entities_count})
+                adapter_entities['seen'] += entities_count
+        return adapter_entities
 
-    @gui_helpers.add_rule_unauthenticated("dashboard/adapter_devices", methods=['GET'])
-    def get_adapter_devices(self):
-        return jsonify(self._adapter_devices())
+    @gui_helpers.add_rule_unauthenticated("dashboard/adapter_data/<entity_name>", methods=['GET'])
+    def get_adapter_data(self, entity_name):
+        try:
+            return jsonify(self._adapter_data(EntityType(entity_name)))
+        except KeyError:
+            error = f'No such entity {entity_name}'
+        except Exception:
+            error = f'Could not get adapter data for entity {entity_name}'
+        logger.exception(error)
+        return return_error(error, 400)
 
     def _get_dashboard_coverage(self):
         """
@@ -2091,7 +2102,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 adapter_reports_db = self._get_db_connection()[adapter_unique_name]
                 adapter_clients_report = adapter_reports_db['report'].find_one({"name": "report"}).get('data', {})
             except Exception:
-                logger.exception("Error contacting the report db for adapter {adapter_unique_name}")
+                logger.exception(f"Error contacting the report db for adapter {adapter_unique_name}")
 
             adapter_data.append({'name': adapter['title'], 'queries': views, 'views': adapter_clients_report})
         return adapter_data
@@ -2256,7 +2267,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         logger.info("Starting to generate report")
         report_data = {
-            'adapter_devices': self._adapter_devices(),
+            'adapter_devices': self._adapter_data(EntityType.Devices),
+            'adapter_users': self._adapter_data(EntityType.Users),
             'covered_devices': self._get_dashboard_coverage(),
             'custom_charts': list(self._get_dashboard()),
             'views_data': []

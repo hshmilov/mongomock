@@ -100,7 +100,8 @@
             font-weight: 500;
         }
         .label, .index {
-            font-weight: 500;
+            font-weight: 400;
+            line-height: 20px;
         }
         .index {
             margin-right: 4px;

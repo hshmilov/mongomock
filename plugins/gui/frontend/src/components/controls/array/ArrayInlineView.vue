@@ -1,7 +1,7 @@
 <template>
     <div class="array inline" :title="allItems">
-        <div class="item" v-for="item in limitedItems" v-if="!empty(data[item.name])">
-            <component :is="item.type" :schema="item" :value="data[item.name]"/>
+        <div class="item" v-for="item in limitedItems" v-if="!empty(processedData[item.name])">
+            <component :is="item.type" :schema="item" :value="processedData[item.name]"/>
         </div>
         <div class="item" v-if="limit && schemaItems.length > limit"
         >+{{schemaItems.length - limit}}</div>
@@ -21,8 +21,25 @@
 		name: 'array',
 		mixins: [ArrayMixin],
 		components: { string, number, integer, bool, file },
-		props: { limit: {} },
+		props: { },
         computed: {
+			limit() {
+				if (this.schemaItems.length && this.schemaItems[0].format === 'logo') {
+					return 5
+                }
+                return 2
+            },
+            processedData() {
+				if (this.isOrderedObject) return this.data
+				let items = Object.values(this.data)
+                if (this.schema.sort) {
+					items.sort()
+                }
+                if (this.schema.unique) {
+					items = Array.from(new Set(items))
+                }
+                return { ...items }
+            },
 			limitedItems() {
 				if (!this.schemaItems || !this.limit || (this.schemaItems.length <= this.limit)) {
 					return this.schemaItems
@@ -30,8 +47,8 @@
                 return this.schemaItems.slice(0, this.limit)
             },
             allItems() {
-				if (Array.isArray(this.data)) return this.data.join(',')
-				return Object.values(this.data).join(',')
+				if (Array.isArray(this.processedData)) return this.processedData.join(',')
+				return Object.values(this.processedData).join(',')
             }
         }
 	}

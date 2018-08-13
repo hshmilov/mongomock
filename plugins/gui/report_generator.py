@@ -33,6 +33,7 @@ class ReportGenerator(object):
             'report': self._get_template('axonius_report'),
             'section': self._get_template('report_section'),
             'card': self._get_template('report_card'),
+            'discovery': self._get_template('summary/data_discovery'),
             'pie': self._get_template('summary/pie_chart'),
             'pie_slice': self._get_template('summary/pie_slice'),
             'pie_gradient': self._get_template('summary/pie_gradient'),
@@ -101,19 +102,20 @@ class ReportGenerator(object):
         """
         logger.info('Report Generator, Summary Section: Begin')
         summary_content = []
-        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('total_gross') \
-                and self.report_data['adapter_devices'].get('total_net'):
-            # Adding main summary card - the data discovery
-            data_discovery_template = self._get_template('summary/data_discovery')
+        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('counters'):
+            # Adding card with histogram comparing amount of devices from each adapter
             summary_content.append(self.templates['card'].render({
-                'title': 'Data Discovery',
-                'class': 'full',
-                'content': data_discovery_template.render({
-                    'seen_count': self.report_data['adapter_devices']['total_gross'],
-                    'unique_count': self.report_data['adapter_devices']['total_net']
-                })}))
-            logger.info('Report Generator, Summary Section: Added Data Discovery Panel')
-
+                'title': 'Device Discovery',
+                'content': self._create_adapter_discovery(self.report_data['adapter_devices'], 'devices')
+            }))
+            logger.info('Report Generator, Summary Section: Added Adapter Devices Discovery Panel')
+            if self.report_data.get('adapter_users') and self.report_data['adapter_users'].get('counters'):
+                # Adding card with histogram comparing amount of devices from each adapter
+                summary_content.append(self.templates['card'].render({
+                    'title': 'User Discovery',
+                    'content': self._create_adapter_discovery(self.report_data['adapter_users'], 'users')
+                }))
+                logger.info('Report Generator, Summary Section: Added Adapter Users Discovery Panel')
         if self.report_data.get('covered_devices'):
             # Adding cards with coverage of network roles
             for coverage_data in self.report_data['covered_devices']:
@@ -125,14 +127,6 @@ class ReportGenerator(object):
                 }))
             logger.info(
                 f'Report Generator, Summary Section: Added {len(self.report_data["covered_devices"])} Coverage Panels')
-
-        if self.report_data.get('adapter_devices') and self.report_data['adapter_devices'].get('adapter_count'):
-            # Adding card with histogram comparing amount of devices from each adapter
-            summary_content.append(self.templates['card'].render({
-                'title': 'Devices per Adapter',
-                'content': self._create_adapter_histogram()
-            }))
-            logger.info('Report Generator, Summary Section: Added Adapter Devices Histogram Panel')
 
         if self.report_data.get('custom_charts'):
             charts_added = 0
@@ -210,16 +204,20 @@ class ReportGenerator(object):
         """
         return (cos(2 * pi * portion), sin(2 * pi * portion))
 
-    def _create_adapter_histogram(self):
+    def _create_adapter_discovery(self, discovery_data, entity_name):
         """
         Sort the adapters found in the report data by descending size and create a histogram for them
 
         :param adapter_count:
         :return:
         """
-        adapters = self.report_data['adapter_devices']['adapter_count']
+        adapters = discovery_data['counters']
         adapters.sort(key=lambda x: x['value'], reverse=True)
-        return self._create_histogram(adapters, 6)
+        return self.templates['discovery'].render({
+            'entities': entity_name, 'entity': entity_name[:-1],
+            'histogram': self._create_histogram(adapters, 6),
+            'seen': discovery_data['seen'], 'unique': discovery_data['unique']
+        })
 
     def _create_query_histogram(self, queries_data):
         return self._create_histogram(queries_data, 4, True)

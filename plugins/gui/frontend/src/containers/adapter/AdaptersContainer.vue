@@ -1,6 +1,9 @@
 <template>
     <x-page title="adapters" class="adapters">
-        <div class="table-adapters">
+        <div class="adapters-search">
+            <x-search v-model="searchText" placeholder="Search Adapters..." />
+        </div>
+        <div class="adapters-table">
             <table class="table">
                 <thead>
                     <tr class="table-row">
@@ -17,11 +20,11 @@
                             </div>
                             <div class="marker" :class="`indicator-bg-${item['status'] || 'void'}`"></div>
                         </td>
-                        <td class="row-data" :id="item['plugin_name']">
-                            <x-logo-name :name="item['plugin_name']"/>
+                        <td class="row-data" :id="item.plugin_name">
+                            <x-logo-name :name="item.plugin_name"/>
                         </td>
                         <td class="row-data">
-                            <div class="content">{{item['description']}}</div>
+                            <div class="content">{{ item.description }}</div>
                         </td>
                     </tr>
                 </tbody>
@@ -34,6 +37,7 @@
 <script>
 	import xPage from '../../components/layout/Page.vue'
     import xLogoName from '../../components/titles/LogoName.vue'
+    import xSearch from '../../components/inputs/SearchInput.vue'
 
 	import { mapState, mapMutations, mapActions } from 'vuex'
     import { FETCH_ADAPTERS } from '../../store/modules/adapter'
@@ -41,16 +45,23 @@
 
     export default {
         name: 'adapters-container',
-        components: { xPage, xLogoName },
+        components: { xPage, xLogoName, xSearch },
         computed: {
             ...mapState({
                 adaptersData(state) {
-                	return state.adapter.adapterList.data
+                	return state.adapter.adapterList.data.filter(adapter => {
+                		return adapter.title.toLowerCase().includes(this.searchText.toLowerCase())
+                    })
                 },
                 tourAdapters(state) {
                 	return state.onboarding.tourStates.queues.adapters
                 }
             })
+        },
+        data() {
+        	return {
+        		searchText: ''
+            }
         },
         methods: {
             ...mapMutations({ changeState: CHANGE_TOUR_STATE }),
@@ -74,8 +85,11 @@
 
 <style lang="scss">
     .adapters {
-        .table-adapters {
-            height: calc(100vh - 170px);
+        .adapters-search {
+            margin-bottom: 12px;
+        }
+        .adapters-table {
+            height: calc(100vh - 212px);
             overflow: auto;
             .table {
                 border-collapse: separate;

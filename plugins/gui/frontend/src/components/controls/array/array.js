@@ -59,7 +59,7 @@ export default {
 	},
 	watch: {
 		value(newValue) {
-			this.data = {...newValue}
+			this.data = { ...newValue }
 		}
 	},
 	methods: {

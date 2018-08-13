@@ -338,7 +338,7 @@ def entity_fields(entity_type: EntityType, core_address, db_connection):
         'generic': [{
             'name': 'adapters', 'title': 'Adapters', 'type': 'array', 'items': {
                 'type': 'string', 'format': 'logo', 'enum': []
-            }}, {
+            }, 'sort': True, 'unique': True}, {
                 'name': 'specific_data.adapter_properties', 'title': 'Adapter Properties', 'type': 'string',
                 'enum': all_supported_properties
         }] + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) + [{

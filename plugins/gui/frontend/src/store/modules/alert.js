@@ -1,4 +1,5 @@
-import { REQUEST_API } from '../actions'
+import { fetchDataContent, REQUEST_API } from '../actions'
+import { FETCH_DATA_CONTENT } from '../actions'
 
 export const FETCH_ALERTS = 'FETCH_ALERTS'
 export const UPDATE_ALERTS = 'UPDATE_ALERTS'
@@ -6,7 +7,6 @@ export const SET_ALERT = 'SET_ALERT'
 export const ARCHIVE_ALERTS = 'ARCHIVE_ALERTS'
 export const REMOVE_ALERTS = 'REMOVE_ALERTS'
 export const UPDATE_ALERT = 'UPDATE_ALERT'
-export const ADD_ALERT = 'ADD_ALERT'
 export const SAVE_ALERT = 'SAVE_ALERT'
 export const UPDATE_ALERT_VIEW = 'UPDATE_ALERT_VIEW'
 
@@ -102,15 +102,7 @@ export const alert = {
 			state.content.data = [ ...state.content.data ].filter(function(alert) {
 				return !alertIds.includes(alert.uuid)
 			})
-		},
-		[ ADD_ALERT ] (state, payload) {
-			/*
-				Add given payload as an object in the beginning of the current alert list
-			 */
-			state.content.data = [{
-				...payload, 'timestamp': new Date().getTime(),
-				type: 'User defined by: Administrator'
-			}, ...state.content.data ]
+			state.count.data = state.content.data.length
 		},
 		[ SAVE_ALERT ] (state, payload) {
 			state.content.data = state.content.data.map((alert) => {
@@ -187,9 +179,7 @@ export const alert = {
 				rule: rule,
 				method: method,
 				data: payload
-			}).then(() => {
-				dispatch(FETCH_ALERTS, {skip: 0, limit: 50})
-			})
+			}).then(() => dispatch(FETCH_DATA_CONTENT, { module: 'alert', skip: 0 }))
 		}
 	}
 }

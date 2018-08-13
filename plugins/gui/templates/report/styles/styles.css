@@ -271,3 +271,40 @@ a {
 .table-striped tr th {
     vertical-align: bottom;
 }
+
+.summary {
+    border-top: 2px dashed #DEDEDE;
+    padding-top: 12px;
+    margin-top: 12px;
+}
+.summary .row {
+    position: relative;
+}
+.summary .row .quantity {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+.summary .arrow {
+    margin: auto;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    padding: 4px 0;
+    width: 180px;
+    position: relative;
+    text-align: center;
+    background-color: #FF7D46;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: capitalize;
+}
+.summary .arrow:after {
+    content: '';
+    position: absolute;
+    border-right: 90px solid transparent;
+    border-top: 12px solid #FF7D46;
+    border-left: 90px solid transparent;
+    left: 0;
+    bottom: -12px;
+}

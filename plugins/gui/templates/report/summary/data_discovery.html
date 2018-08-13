@@ -1,9 +1,14 @@
-<div class="d-inline-block">
-    <div class="f-72 lh-72 c-orange">{{seen_count}}</div>
-    <div class="f-18">Seen Devices</div>
-</div>
-<div class="d-inline-block va-top m-8-12"><img src="icons/arrow.svg" class="h-48"></div>
-<div class="d-inline-block">
-    <div class="f-72 lh-72 c-blue">{{unique_count}}</div>
-    <div class="f-18">Unique Devices</div>
+<div>
+    {{histogram}}
+    <div class="summary">
+        <div class="row">
+            <div>Total seen {{entities}}</div>
+            <div class="quantity">{{seen}}</div>
+        </div>
+        <div class="arrow">Axonius {{entity}} Correlation</div>
+        <div class="row">
+            <div>Total unique {{entities}}</div>
+            <div class="quantity">{{unique}}</div>
+        </div>
+    </div>
 </div>

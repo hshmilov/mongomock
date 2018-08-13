@@ -1,9 +1,3 @@
-/* eslint-disable no-undef */
-import { REQUEST_API } from '../actions'
-
-export const FETCH_DEVICE = 'FETCH_DEVICE'
-export const UPDATE_DEVICE = 'UPDATE_DEVICE'
-
 
 export const devices = {
 	state: {
@@ -23,24 +17,5 @@ export const devices = {
 		labels: { data: [], fetching: false, error: ''},
 
 		current: {fetching: false, data: {}, error: ''}
-	},
-	getters: {},
-	mutations: {
-		[ UPDATE_DEVICE ] (state, payload) {
-			state.current.fetching = payload.fetching
-			state.current.error = payload.error
-			if (payload.data) {
-				state.current.data = payload.data
-			}
-		}
-	},
-	actions: {
-		[ FETCH_DEVICE ] ({dispatch}, deviceId) {
-			if (!deviceId) { return }
-			dispatch(REQUEST_API, {
-				rule: `device/${deviceId}`,
-				type: UPDATE_DEVICE
-			})
-		}
 	}
 }

@@ -5,8 +5,8 @@ export const UPDATE_LIFECYCLE = 'UPDATE_LIFECYCLE'
 
 export const UPDATE_LIFECYCLE_RATE = 'UPDATE_LIFECYCLE_RATE'
 
-export const FETCH_ADAPTER_DEVICES = 'FETCH_ADAPTER_DEVICES'
-export const UPDATE_ADAPTER_DEVICES = 'UPDATE_ADAPTER_DEVICES'
+export const FETCH_DISCOVERY_DATA = 'FETCH_DISCOVERY_DATA'
+export const UPDATE_DISCOVERY_DATA = 'UPDATE_DISCOVERY_DATA'
 
 export const FETCH_DASHBOARD = 'FETCH_DASHBOARD'
 export const UPDATE_DASHBOARD = 'UPDATE_DASHBOARD'
@@ -24,7 +24,10 @@ export const FETCH_HISTORICAL_SAVED_CARD_MIN = 'FETCH_HISTORICAL_SAVED_CARD_MIN'
 export const dashboard = {
 	state: {
 		lifecycle: { data: {}, fetching: false, error: '' },
-		adapterDevices: { data: {}, fetching: false, error: '' },
+		dataDiscovery: {
+			devices: {data: {}, fetching: false, error: ''},
+			users: {data: {}, fetching: false, error: ''}
+		},
 		charts: { data: [], fetching: false, error: ''},
 		coverage: { data: {}, fetching: false, error: ''}
 	},
@@ -39,11 +42,12 @@ export const dashboard = {
 				}
 			}
 		},
-		[ UPDATE_ADAPTER_DEVICES] (state, payload) {
-			state.adapterDevices.fetching = payload.fetching
-			state.adapterDevices.error = payload.error
+		[ UPDATE_DISCOVERY_DATA] (state, payload) {
+			if (!payload || !payload.module || !state.dataDiscovery[payload.module]) return
+			state.dataDiscovery[payload.module].fetching = payload.fetching
+			state.dataDiscovery[payload.module].error = payload.error
 			if (payload.data && Object.keys(payload.data).length) {
-				state.adapterDevices.data = { ...payload.data }
+				state.dataDiscovery[payload.module].data = { ...payload.data }
 			}
 		},
 		[ UPDATE_DASHBOARD ] (state, payload) {
@@ -78,10 +82,12 @@ export const dashboard = {
                 method: 'POST'
             })
         },
-		[ FETCH_ADAPTER_DEVICES ] ({dispatch}) {
+		[ FETCH_DISCOVERY_DATA ] ({ dispatch, state }, payload) {
+			if (!payload || !payload.module || !state.dataDiscovery[payload.module]) return
 			return dispatch(REQUEST_API, {
-				rule: 'dashboard/adapter_devices',
-				type: UPDATE_ADAPTER_DEVICES
+				rule: `dashboard/adapter_data/${payload.module}`,
+				type: UPDATE_DISCOVERY_DATA,
+				payload
 			})
 		},
 		[ FETCH_DASHBOARD ] ({dispatch}) {

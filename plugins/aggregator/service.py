@@ -107,6 +107,7 @@ class AggregatorService(PluginBase, Triggerable):
         self.devices_db.create_index([
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
         ], unique=True)
+        self.devices_db.create_index([(f'adapters.{PLUGIN_NAME}', pymongo.ASCENDING)])
         self.devices_db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
         self.devices_db.create_index(
             [(ADAPTERS_LIST_LENGTH, pymongo.DESCENDING), ('_id', pymongo.DESCENDING)])
@@ -582,11 +583,14 @@ class AggregatorService(PluginBase, Triggerable):
             "adapters": [],
             "tags": []
         }
+        remaining_adapters = []
         for adapter_entity in axonius_entity_to_split['adapters']:
             candidate = get_entity_id_for_plugin_name(associated_adapters,
                                                       adapter_entity[PLUGIN_UNIQUE_NAME])
             if candidate is not None and candidate == adapter_entity['data']['id']:
                 new_axonius_entity['adapters'].append(adapter_entity)
+            else:
+                remaining_adapters.append(adapter_entity[PLUGIN_NAME])
         for tag in axonius_entity_to_split['tags']:
             for tag_plugin_unique_name, tag_adapter_id in tag['associated_adapters']:
                 candidate = get_entity_id_for_plugin_name(associated_adapters, tag_plugin_unique_name)
@@ -601,9 +605,6 @@ class AggregatorService(PluginBase, Triggerable):
                                                     PLUGIN_UNIQUE_NAME],
                                                 'data.id': adapter_to_remove_from_old['data']['id']
                                             }
-                                        },
-                                        "$inc": {
-                                            ADAPTERS_LIST_LENGTH: -1
                                         }
             })
         entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
@@ -614,8 +615,12 @@ class AggregatorService(PluginBase, Triggerable):
                                             for tag_to_remove_from_old in new_axonius_entity['tags']
                                             for tag_plugin_unique_name, tag_adapter_id in tag_to_remove_from_old['associated_adapters']
                                         }
-                                    }})
-        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(new_axonius_entity["adapters"])
+                                    },
+                                    "$set": {
+                                        ADAPTERS_LIST_LENGTH: len(set(remaining_adapters))
+                                    }
+        })
+        new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
         entities_db.insert_one(new_axonius_entity)
 
     def _link_entities(self, entities_candidates, entities_db):
@@ -648,12 +653,11 @@ class AggregatorService(PluginBase, Triggerable):
                                      for axonius_entity in entities_candidates
                                  ]
                                  })
-
         entities_db.insert_one({
             "internal_axon_id": internal_axon_id,
             "accurate_for_datetime": datetime.now(),
             "adapters": all_unique_adapter_entities_data,
-            ADAPTERS_LIST_LENGTH: len(all_unique_adapter_entities_data),
+            ADAPTERS_LIST_LENGTH: len(set([x[PLUGIN_NAME] for x in all_unique_adapter_entities_data])),
             "tags": list(tags_for_new_device.values())  # Turn it to a list
         })
 
