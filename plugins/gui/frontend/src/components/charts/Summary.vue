@@ -1,9 +1,9 @@
 <template>
     <div class="x-summary-chart" :class="{updating: enumerating}">
-        <template v-for="item in displayData">
+        <template v-for="item, index in displayData">
             <component v-if="item.schema" :is="processType(item.schema)" :schema="item.schema" :value="item.value"
-                       class="summary" />
-            <div v-else class="summary" :class="{highlight: item.highlight}">{{ item.value }}</div>
+                       class="summary" @click="$emit('click-one', index)" />
+            <div v-else class="summary" @click="$emit('click-one', index)">{{ item.value }}</div>
             <div class="title">{{ item.name }}</div>
         </template>
     </div>
@@ -64,8 +64,10 @@
             font-size: 60px;
             display: inline;
             color: $theme-blue;
-            &.highlight {
-                color: $theme-orange;
+            opacity: 0.6;
+            cursor: pointer;
+            &:hover {
+                opacity: 1;
             }
             &.success {
                 color: $indicator-success;

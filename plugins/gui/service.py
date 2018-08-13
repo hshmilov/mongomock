@@ -1809,7 +1809,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         for item in aggregate_results:
             field_value = item["name"]
             if field_value == 'No Value':
-                field_value = 'null'
+                field_value = 'exists(false)'
             else:
                 if (isinstance(field_value, str)):
                     field_value = f'\"{field_value}\"'
@@ -1832,9 +1832,13 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         """
         # Query and data collections according to given module
         data_collection = self._entity_views_db_map[entity]
+        base_view = {'query': {'filter': ''}}
         base_query = {}
         if view:
-            base_query = parse_filter(self._find_filter_by_name(entity, view)['query']['filter'])
+            base_view = self._find_filter_by_name(entity, view)
+            base_query = parse_filter(base_view['query']['filter'])
+            base_view['query']['filter'] = f'({base_view["query"]["filter"]}) and ' if view else ''
+        base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == exists(true)'
         if for_date:
             # If history requested, fetch from appropriate historical db
             data_collection = self._historical_entity_views_db_map[entity]
@@ -1868,8 +1872,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return [{'name': view, 'value': 0}]
         name = f'{func} of {field["title"]} on {view or "ALL"} results'
         if ChartFuncs[func] == ChartFuncs.average:
-            return [{'name': name, 'value': (sigma / count), 'schema': field}]  # f'%.2f{suffix}' % (sigma / count)}]
-        return [{'name': name, 'value': count}]
+            return [{'name': name, 'value': (sigma / count), 'schema': field, 'view': base_view, 'module': entity.value}]
+        return [{'name': name, 'value': count, 'view': base_view, 'module': entity.value}]
 
     @gui_helpers.add_rule_unauthenticated("dashboard/<dashboard_id>", methods=['DELETE'])
     def remove_dashboard(self, dashboard_id):
