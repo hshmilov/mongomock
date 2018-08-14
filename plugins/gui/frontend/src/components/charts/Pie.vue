@@ -81,7 +81,7 @@
 				}
 				let title = this.processedData[this.inHover].name
 				let components = []
-				if (Array.isArray(title)) {
+				if (this.processedData[this.inHover].intersection) {
 					title = 'Intersection'
 					components.push({...this.processedData[this.inHover - 1]})
 					components.push({...this.processedData[this.inHover + 1]})

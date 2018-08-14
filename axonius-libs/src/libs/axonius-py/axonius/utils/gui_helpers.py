@@ -454,7 +454,7 @@ def flatten_fields(schema, name='', exclude=[], branched=False):
             if not schema.get('title'):
                 return []
             return [{**schema, 'name': name}]
-        return flatten_fields(_merge_title(schema['items'], schema.get('title')), name, exclude)
+        return flatten_fields(_merge_title(schema['items'], schema.get('title')), name, exclude, True)
 
     if not schema.get('title'):
         return []
