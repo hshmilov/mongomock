@@ -59,6 +59,7 @@ DOCKER_PORTS = {
     'qualys-scans-adapter':             5777,
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,
+    'tanium-adapter':                   5797,
     'selenium-vnc':                     5900,
     'cisco-adapter':                    6001,
     'minerva-adapter':                  6010,

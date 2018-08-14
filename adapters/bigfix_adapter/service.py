@@ -32,7 +32,7 @@ class BigfixAdapter(AdapterBase):
                                           username=client_config["username"],
                                           password=client_config["password"],
                                           url_base_prefix="/api/",
-                                          port=client_config.get("port", consts.DEFAULT_PORT))
+                                          port=(client_config.get("port") or consts.DEFAULT_PORT))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
