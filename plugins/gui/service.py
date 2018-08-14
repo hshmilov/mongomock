@@ -1173,6 +1173,8 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 return return_error('', 401)
             if 'password' in user:
                 user = {k: v for k, v in user.items() if k != 'password'}
+            if 'pic_name' not in user:
+                user['pic_name'] = self.DEFAULT_AVATAR_PIC
             return jsonify(user), 200
 
         users_collection = self._get_collection('users')

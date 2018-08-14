@@ -34,6 +34,8 @@
 			value(newValue, oldValue) {
                 if (newValue && newValue !== oldValue) {
                 	this.updateFieldSpace()
+                } else if (!newValue) {
+                	this.fieldType = 'axonius'
                 }
             },
 			currentFields(newCurrenFields) {

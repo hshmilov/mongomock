@@ -215,7 +215,7 @@
 				return this.fetchViews({
 					module: this.module,
 					type: type,
-					filter: this.searchValue.length > 0 ? `${filterField} == regex("${this.searchValue}")` : ``
+					filter: this.searchValue.length > 0 ? `${filterField} == regex("${this.searchValue}", "i")` : ``
 				}).catch((error) => this.$emit('error', error))
 			},
 			selectQuery ({ view }) {

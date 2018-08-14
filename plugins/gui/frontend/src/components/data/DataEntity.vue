@@ -41,7 +41,7 @@
                 </tabs>
             </tab>
             <tab title="Tags" id="tags" key="tags">
-                <div @click="activateTag" class="link tag-edit">Edit Tags</div>
+                <div @click="activateTag" class="x-btn link tag-edit">Edit Tags</div>
                 <div class="x-grid x-grid-col-2 w-lg">
                     <template v-for="label in entity.labels">
                         <div>{{ label }}</div>

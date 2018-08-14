@@ -129,7 +129,6 @@ def try_connecting_using_okta(okta_config) -> bool:
         return False
     session['user'] = {'user_name': claims['email'],
                        'first_name': claims.get('given_name', ''),
-                       'last_name': claims.get('family_name', ''),
-                       'pic_name': 'avatar.png'
+                       'last_name': claims.get('family_name', '')
                        }
     return True
