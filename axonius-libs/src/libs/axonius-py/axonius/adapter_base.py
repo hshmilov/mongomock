@@ -75,6 +75,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
     DEFAULT_LAST_FETCHED_THRESHOLD_HOURS = 24 * 2
     DEFAULT_USER_LAST_SEEN = None
     DEFAULT_USER_LAST_FETCHED = None
+    DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,6 +93,8 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         self._prepare_parsed_clients_config(False)
 
         self._thread_pool = LoggedThreadPoolExecutor(max_workers=50)
+
+        self.__last_fetch_time = None
 
     def _on_config_update(self, config):
         logger.info(f"Loading AdapterBase config: {config}")
@@ -111,6 +114,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             config['user_last_seen_threshold_hours'] else None
         self.__user_last_fetched_timedelta = timedelta(hours=config['user_last_fetched_threshold_hours']) if \
             config['user_last_fetched_threshold_hours'] else None
+
+        self.__next_fetch_timedelta = timedelta(hours=config['minimum_time_until_next_fetch']) if \
+            config['minimum_time_until_next_fetch'] else None
 
     @classmethod
     def specific_supported_features(cls) -> list:
@@ -414,6 +420,25 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
         """
+        current_time = datetime.utcnow()
+        # Checking that it's either the first time since a new client was added.
+        # Or that the __next_fetch_timedelta has passed since last fetch.
+        if self.__last_fetch_time is not None and self.__next_fetch_timedelta is not None \
+                and current_time - self.__last_fetch_time < self.__next_fetch_timedelta:
+            logger.info(f"{self.plugin_unique_name}: The minimum time between fetches hasn't been reached yet.")
+            if self.__user_last_fetched_timedelta < self.__next_fetch_timedelta:
+                self.create_notification("Bad Adapter Configuration (\"Old user last fetched threshold hours\")",
+                                         f"Please note that \"Old user last fetched threshold hours\" is smaller than \"Minimum time until next fetch entities\" for {self.plugin_name} adapter.",
+                                         "warning")
+
+            if self._last_fetched_timedelta < self.__next_fetch_timedelta:
+                self.create_notification("Bad Adapter Configuration (\"Old device last fetched threshold hours\")",
+                                         f"Please note that \"Old device last fetched threshold hours\" is smaller than \"Minimum time until next fetch entities\" for {self.plugin_name} adapter.",
+                                         "warning")
+            return to_json({"devices_count": 0, "users_count": 0})
+
+        self.__last_fetch_time = current_time
+
         client_name = request.args.get('client_name')
         if client_name:
             devices_count = self._save_data_from_plugin(
@@ -478,6 +503,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                 add_client_result = self._add_client(client_config)
                 if len(add_client_result) == 0:
                     return return_error("Could not save client with given config", 400)
+                self.__last_fetch_time = None
                 return jsonify(add_client_result), 200
 
             if self.get_method() == 'POST':
@@ -1085,6 +1111,11 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
                     "name": "user_last_fetched_threshold_hours",
                     "title": "Old user last fetched threshold hours",
                     "type": "number",
+                },
+                {
+                    "name": "minimum_time_until_next_fetch",
+                    "title": "Minimum time until next fetch entities",
+                    "type": "number",
                 }
             ],
             "required": [
@@ -1099,5 +1130,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
             "last_seen_threshold_hours": cls.DEFAULT_LAST_SEEN_THRESHOLD_HOURS,
             "last_fetched_threshold_hours": cls.DEFAULT_LAST_FETCHED_THRESHOLD_HOURS,
             "user_last_seen_threshold_hours": cls.DEFAULT_USER_LAST_SEEN,
-            "user_last_fetched_threshold_hours": cls.DEFAULT_USER_LAST_FETCHED
+            "user_last_fetched_threshold_hours": cls.DEFAULT_USER_LAST_FETCHED,
+            "minimum_time_until_next_fetch": cls.DEFAULT_MINIMUM_TIME_UNTIL_NEXT_FETCH
         }

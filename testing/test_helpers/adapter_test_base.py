@@ -68,6 +68,9 @@ class AdapterTestBase(object):
     def user_alive_thresh_last_fetched(self):
         return self.adapter_service.get_configurable_config('AdapterBase')['user_last_fetched_threshold_hours']
 
+    def set_minimum_time_until_next_fetch(self, value):
+        return self.adapter_service.set_configurable_config('AdapterBase', 'minimum_time_until_next_fetch', value)
+
     def get_last_threshold(self, entity_type: EntityType):
         if entity_type == EntityType.Devices:
             return self.device_alive_thresh_last_seen, self.device_alive_thresh_last_fetched

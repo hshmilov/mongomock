@@ -141,6 +141,26 @@ class PluginService(DockerService):
             return config_bulk.get('config')
         return None
 
+    def set_configurable_config(self, conf_name: str, specific_key: str, value=None):
+        """
+        Write a specific config from 'configs'. Used with conjugation with Configurable (mixin).
+        If Configurable isn't implemented for this plugin or the conf_name doesn't exists - returns None.
+        Otherwise, returns the configuration
+        :param conf_name: The class name of the config to return
+        :param specific_key
+        :param value
+        :return: the config or None
+        """
+        config_bulk = self.db.client[self.unique_name][CONFIGURABLE_CONFIGS].find_one({'config_name': conf_name})
+        config_bulk = config_bulk['config']
+        config_bulk[specific_key] = value
+        self.db.client[self.unique_name][CONFIGURABLE_CONFIGS].update_one({'config_name': conf_name},
+                                                                          {"$set":
+                                                                           {f"config."
+                                                                            f"{specific_key}": value}})
+        response = requests.post(self.req_url + "/update_config", headers={API_KEY_HEADER: self.api_key})
+        response.raise_for_status()
+
 
 class AdapterService(PluginService):
 

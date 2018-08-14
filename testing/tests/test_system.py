@@ -5,6 +5,7 @@ from retrying import retry
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.consts.scheduler_consts import StateLevels, Phases
 from services.adapters.infinite_sleep_service import InfiniteSleepService, infinite_sleep_fixture
+from services.adapters.esx_service import EsxService, esx_fixture
 from test_credentials import test_infinite_sleep_credentials
 
 
