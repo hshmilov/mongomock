@@ -23,6 +23,9 @@ TEST_BINARY_LOCATION = os.path.abspath(
 MAX_TIME_FOR_PM_ONLINE_OPERATIONS = 60 * 7
 MAX_TIME_FOR_WMI_OPERATIONS = 60 * 5
 MAX_TRIES_SHARING_VIOLATION = 5
+KNOWN_ERRORS = ["The process cannot access the file because it is being used by another process",
+                "STATUS_SHARING_VIOLATION",
+                "STATUS_OBJECT_NAME_NOT_FOUND"]
 
 
 def pretty(d, indent=0):
@@ -186,8 +189,11 @@ def test_axr():
 
         if response[0]['status'] == 'ok':
             break  # Success
-        if 'STATUS_SHARING_VIOLATION' in response[0]['data']:
-            print(f"Got STATUS_SHARING_VIOLATION error. Attempt {i} out of {MAX_TRIES_SHARING_VIOLATION}")
+        for one_error in KNOWN_ERRORS:
+            if one_error in response[0]['data']:
+                print(f"Attempt {i} out of {MAX_TRIES_SHARING_VIOLATION}. Got the following error: {one_error} ")
+                continue
+        assert False, f"Unknown error occured {response}"
 
     assert response[0]['status'] == 'ok', f'Failed after 5 times {response}'
 
