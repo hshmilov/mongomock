@@ -656,7 +656,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         device_data = request_data.pop('device_data')
 
         if action_type not in ['get_files', 'put_files', 'execute_binary', 'execute_shell', 'execute_wmi_smb',
-                               'delete_files']:
+                               'delete_files', 'execute_axr']:
             return return_error("Invalid action type", 400)
 
         if action_type not in self.supported_execution_features():
@@ -683,6 +683,9 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         raise RuntimeError("Not implemented yet")
 
     def execute_shell(self, device_data, shell_commands):
+        raise RuntimeError("Not implemented yet")
+
+    def execute_axr(self, device_data, axr_commands):
         raise RuntimeError("Not implemented yet")
 
     def execute_wmi_smb(self, device_data, wmi_smb_commands=None):

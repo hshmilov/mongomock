@@ -3,15 +3,13 @@ from axonius.utils.parsing import parse_date, parse_bool_from_raw
 from general_info.subplugins.general_info_subplugin import GeneralInfoSubplugin
 from general_info.subplugins.wmi_utils import wmi_date_to_datetime, wmi_query_commands, \
     smb_shell_commands, is_wmi_answer_ok, reg_view_output_to_dict, \
-    reg_view_parse_int, is_wmi_answer_invalid_query, smb_getfile_commands
+    reg_view_parse_int, is_wmi_answer_invalid_query
 
 
 BAD_CONFIGURATIONS_COMMANDS = [
     r'reg query HKLM\SYSTEM\CurrentControlSet\Control\Lsa\ '
 
 ]
-
-HOSTS_FILE_ABSOLUTE_PATH = r"System32\Drivers\Etc\Hosts"     # Relative to ADMIN$
 
 
 class GetBasicComputerInfo(GeneralInfoSubplugin):
@@ -41,7 +39,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             "select SerialNumber from Win32_BaseBoard",
             "select IPEnabled, IPAddress, MacAddress from Win32_NetworkAdapterConfiguration"
         ]
-        ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS) + smb_getfile_commands([HOSTS_FILE_ABSOLUTE_PATH])
+        ) + smb_shell_commands(BAD_CONFIGURATIONS_COMMANDS)
 
     def handle_result(self, device, executer_info, result, adapterdata_device: DeviceAdapter):
         super().handle_result(device, executer_info, result, adapterdata_device)
@@ -57,7 +55,6 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
         win32_baseboard = result[8]
         win32_networkadapterconfiguration = result[9]
         bad_configuration_lsa = result[10]
-        hosts_file = result[11]
 
         # Win32_Processor
         try:
@@ -70,7 +67,7 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
                 max_clock_speed_ghz = cpu.get('MaxClockSpeed')
                 if max_clock_speed_ghz is not None:
-                    max_clock_speed_ghz = float(round(max_clock_speed_ghz / 1024, 2))
+                    max_clock_speed_ghz = float(round(float(max_clock_speed_ghz) / 1024, 2))
 
                 adapterdata_device.add_cpu(
                     name=cpu.get('Name'),
@@ -190,14 +187,16 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             # Sometimes, total_ram / free_ram return as 0 and then we might have wrong info here and even
             # division in 0 exception
             total_ram = win32_operatingsystem.get("TotalVisibleMemorySize")
-            if total_ram is not None and total_ram > 0:
+            if total_ram is not None and float(total_ram) > 0:
+                total_ram = float(total_ram)
                 adapterdata_device.total_physical_memory = float(round(total_ram / (1024 ** 2), 2))
 
             free_ram = win32_operatingsystem.get("FreePhysicalMemory")
-            if free_ram is not None and free_ram > 0:
+            if free_ram is not None and float(free_ram) > 0:
+                free_ram = float(free_ram)
                 adapterdata_device.free_physical_memory = float(round(free_ram / (1024 ** 2), 2))
 
-            if total_ram is not None and free_ram is not None and total_ram > 0 and free_ram > 0:
+            if total_ram is not None and free_ram is not None and float(total_ram) > 0 and float(free_ram) > 0:
                 adapterdata_device.physical_memory_percentage = float(
                     round((total_ram - free_ram) / total_ram * 100, 2)
                 )
@@ -215,10 +214,12 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
             for ld in win32_logicaldisk["data"]:
                 total_size = ld.get("Size")
                 if total_size is not None:
+                    total_size = float(total_size)
                     total_size = float(total_size / (1024 ** 3))
 
                 free_size = ld.get("FreeSpace")
                 if free_size is not None:
+                    free_size = float(free_size)
                     free_size = float(free_size / (1024 ** 3))
 
                 adapterdata_device.add_hd(
@@ -323,11 +324,5 @@ class GetBasicComputerInfo(GeneralInfoSubplugin):
 
         except Exception:
             self.logger.exception(f"bad_configuration_lsa is not ok: {bad_configuration_lsa}")
-
-        try:
-            assert is_wmi_answer_ok(hosts_file), "Host file request exception"
-            adapterdata_device.hosts_file = str(hosts_file["data"])
-        except Exception:
-            self.logger.exception(f"Bad hosts file answer: {hosts_file}")
 
         return True

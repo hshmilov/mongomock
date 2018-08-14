@@ -1417,6 +1417,7 @@ class PluginBase(Configurable, Feature):
         logger.info(f"Loading global config: {config}")
         self._email_settings = config['email_settings']
         self._execution_enabled = config['execution_settings']['enabled']
+        self._should_use_axr = config['execution_settings']['should_use_axr']
         self._pm_rpc_enabled = config['execution_settings']['pm_rpc_enabled']
         self._pm_smb_enabled = config['execution_settings']['pm_smb_enabled']
         self._syslog_settings = config['syslog_settings']
@@ -1559,6 +1560,12 @@ class PluginBase(Configurable, Feature):
                             "required": True
                         },
                         {
+                            "name": "should_use_axr",
+                            "title": "Use Fast Execution Method (BETA)",
+                            "type": "bool",
+                            "required": True
+                        },
+                        {
                             "name": "pm_rpc_enabled",
                             "title": "Patch Management Using RPC (Online)",
                             "type": "bool",
@@ -1624,6 +1631,7 @@ class PluginBase(Configurable, Feature):
             },
             "execution_settings": {
                 "enabled": False,
+                "should_use_axr": False,
                 "pm_rpc_enabled": False,
                 "pm_smb_enabled": False
             },

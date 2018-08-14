@@ -194,7 +194,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
             jobs = self._background_scheduler.get_jobs()
             report_generation_thread_job = next(job for job in jobs if job.name == 'report_generation_thread')
             report_generation_thread_job.reschedule(trigger=IntervalTrigger(minutes=self.__report_generation_interval))
-        except AttributeError:
+        except Exception:
             # Current design calls _on_config_update from Configurable, which is initialized before this class's
             # init is called. so _background_scheduler isn't there yet, and an AttributeError is thrown.
             # This is why i catch this legitimate error.
@@ -1139,6 +1139,134 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
 
         return self.execute_wmi_smb(device_data, [{"type": "execbinary", "args": [binary_file_path, binary_params]}])
 
+    def _execute_subprocess_generically(self, subprocess_arguments):
+        """
+        Generically executes a subprocess for execution needs
+        :param subprocess_arguments: a list of strings to pass to subprocess
+        :return: the stdout of this process
+        """
+        # Running the command.
+        subprocess_handle = subprocess.Popen(subprocess_arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Checking if return code is zero, if not, it will raise an exception
+        try:
+            command_stdout, command_stderr = subprocess_handle.communicate(
+                timeout=MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS)
+        except subprocess.TimeoutExpired:
+            # The child process is not killed if the timeout expires, so in order to cleanup properly a well-behaved
+            # application should kill the child process and finish communication (from python documentation)
+            subprocess_handle.kill()
+            command_stdout, command_stderr = subprocess_handle.communicate()
+            err_log = "Execution Timeout after {0} seconds!! stdout: {1}, " \
+                      "stderr: {2}, exception: {3}".format(MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS,
+                                                           str(command_stdout),
+                                                           str(command_stderr),
+                                                           get_exception_string())
+            logger.error(err_log)
+            raise ValueError(err_log)
+        except subprocess.SubprocessError:
+            # This is a base class for all the rest of subprocess excpetions.
+            err_log = f"General Execution error! command, exception: {get_exception_string()}"
+            logger.error(err_log)
+            raise ValueError(err_log)
+
+        if subprocess_handle.returncode != 0:
+            # Some efficiency
+            if "Could not connect: [Errno 111] Connection refused" in command_stdout.decode("utf-8") \
+                    or "Could not connect: [Errno 111] Connection refused" in command_stderr.decode("utf-8"):
+                err_log = f"Error - Connection Refused!"
+                logger.error(err_log)
+                raise ValueError(err_log)
+            else:
+                err_log = f"Execution Error! command returned returncode " \
+                          f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
+                logger.error(err_log)
+                raise ValueError(err_log)
+
+        return command_stdout.strip()
+
+    def execute_axr(self, device_data, axr_commands):
+        """
+        Executes commands through the AXR exe. This means that we send the axr exe and send the list of
+        commands to it as a parameter.
+
+        This also checks for hostname mismatch for all scenarios.
+        :param device_data: the device data
+        :param axr_commands: a list of objects, with commands that are in the exact format of execute_wmi_smb.
+        :return:
+        """
+
+        if axr_commands is None or isinstance(axr_commands, list) and len(axr_commands) == 0:
+            return {"result": 'Failure', "product": 'No WMI/SMB queries/commands list supplied'}
+
+        # Build the axr
+        commands = [{"type": "axr", "args": [axr_commands]}]
+
+        # In some scenarios, we think we run code on device X while the dns is incorrect and it makes us
+        # run code on device Y which has the same ip.
+        # we see if the hostname we know this machine has is the same as what returned.
+
+        command_list = self._get_basic_wmi_smb_command(device_data) + [json.dumps(commands)]
+        logger.debug("running axr {0}".format(command_list))
+
+        # Running the command.
+        product = json.loads(self._execute_subprocess_generically(command_list))
+
+        # Many validity check
+        if len(product) != len(commands):
+            err_log = f"Error, needed to run {commands} and expected the same length in return " \
+                      f"but got {product}"
+            logger.error(err_log)
+            raise ValueError(err_log)
+
+        if product[0]['status'].lower() != 'ok':
+            err_log = f"Error, AXR did not return status ok, it is {product}"
+            logger.error(err_log)
+            raise ValueError(err_log)
+
+        product = product[0]['data']  # we only had one wmi_smb_runner command
+
+        if len(product['data']) != len(axr_commands):
+            err_log = f"Error, needed to run {axr_commands} and expected the same length in return " \
+                      f"but got {product}"
+            logger.error(err_log)
+            raise ValueError(err_log)
+
+        # In some scenarios, we think we run code on device X while the dns is incorrect and it makes us
+        # run code on device Y which has the same ip.
+        # we see if the hostname we know this machine has is the same as what returned.
+        try:
+            if product.get('hostname'):
+                hostname_on_device = product.get('hostname')
+                hostname_on_ad = device_data['data']['hostname']
+                if hostname_on_device is not None and hostname_on_device != "" and hostname_on_ad != "":
+                    hostname_on_device = hostname_on_device.lower()
+                    hostname_on_ad = hostname_on_ad.lower()
+                    if not (hostname_on_device.startswith(hostname_on_ad) or
+                            hostname_on_ad.startswith(hostname_on_device)):
+                        logger.warning(f"Warning! hostname {hostname_on_ad} in our systems has an actual hostname "
+                                       f"of {hostname_on_device}! Adding tags and failing")
+
+                        identity_tuple = (device_data["plugin_unique_name"], device_data["data"]["id"])
+                        self.devices.add_label([identity_tuple], "Hostname Conflict")
+                        self.devices.add_data([identity_tuple], "Hostname Conflict",
+                                              f"Hostname from Active Directory: '{hostname_on_ad}'\n'"
+                                              f"Hostname on device: '{hostname_on_device}'")
+
+                        return {
+                            "result": 'Failure',
+                            "product": f"Hostname Mismatch. Expected {hostname_on_ad} but got {hostname_on_device}"
+                        }
+        except Exception:
+            logger.exception("Exception in checking the hostname, continuing without check")
+
+        # Optimization if all failed
+        if all([True if line['status'] != 'ok' else False for line in product['data']]):
+            return {"result": 'Failure', "product": product}
+
+        # If we got here that means the the command executed successfuly
+        return {"result": 'Success', "product": product['data']}
+
     def execute_wmi_smb(self, device_data, wmi_smb_commands):
         """
         executes a list of wmi + smb possible queries. (look at wmi_smb_runner.py)
@@ -1168,44 +1296,12 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         logger.debug("running wmi {0}".format(command_list))
 
         # Running the command.
-        subprocess_handle = subprocess.Popen(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # Checking if return code is zero, if not, it will raise an exception
-        try:
-            command_stdout, command_stderr = subprocess_handle.communicate(
-                timeout=MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS)
-        except subprocess.TimeoutExpired:
-            # The child process is not killed if the timeout expires, so in order to cleanup properly a well-behaved
-            # application should kill the child process and finish communication (from python documentation)
-            subprocess_handle.kill()
-            command_stdout, command_stderr = subprocess_handle.communicate()
-            err_log = "Execution Timeout after {4} seconds!! command {0}, stdout: {1}, " \
-                      "stderr: {2}, exception: {3}".format(command_list,
-                                                           str(command_stdout),
-                                                           str(command_stderr),
-                                                           get_exception_string(),
-                                                           MAX_SUBPROCESS_TIMEOUT_FOR_EXEC_IN_SECONDS)
-            logger.error(err_log)
-            raise ValueError(err_log)
-        except subprocess.SubprocessError:
-            # This is a base class for all the rest of subprocess excpetions.
-            err_log = f"General Execution error! command {wmi_smb_commands}, exception: {get_exception_string()}"
-            logger.error(err_log)
-            raise ValueError(err_log)
-
-        if subprocess_handle.returncode != 0:
-            err_log = f"Execution Error! command {wmi_smb_commands} returned returncode " \
-                      f"{subprocess_handle.returncode}, stdout {command_stdout} stderr {command_stderr}"
-            logger.error(err_log)
-            raise ValueError(err_log)
-
-        product = json.loads(command_stdout.strip())
-        logger.debug("command returned with return code 0 (successfully).")
+        product = json.loads(self._execute_subprocess_generically(command_list))
 
         # Some more validity check
         if len(product) != len(wmi_smb_commands):
             err_log = f"Error, needed to run {wmi_smb_commands} and expected the same length in return " \
-                      f"but got {product}, stdout {command_stdout} stderr {command_stderr}"
+                      f"but got {product}"
             logger.error(err_log)
             raise ValueError(err_log)
 
@@ -1267,7 +1363,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, AdapterBase, Co
         """
         :return: Returns a list of all supported execution features by this adapter.
         """
-        return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell", "execute_binary"]
+        return ["put_files", "get_files", "delete_files", "execute_wmi_smb", "execute_shell", "execute_binary",
+                "execute_axr"]
 
     def _enable_user(self, user_data, client_data):
         dn = user_data['raw'].get('distinguishedName')

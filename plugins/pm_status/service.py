@@ -121,6 +121,10 @@ class PmStatusService(PluginBase, Triggerable):
             logger.info("PM Status Failure: rpc and smb settings are false (Global Settings)")
             return []
 
+        if self._should_use_axr is True:
+            logger.info("New Execution Method (AXR) is enabled, not continuing")
+            return []
+
         logger.info("Get PM Status started (before lock).")
         acquired = False
         try:

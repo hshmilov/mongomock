@@ -18,6 +18,7 @@ from general_info.subplugins.basic_computer_info import GetBasicComputerInfo
 from general_info.subplugins.installed_softwares import GetInstalledSoftwares
 from general_info.subplugins.user_logons import GetUserLogons
 from general_info.subplugins.connected_hardware import GetConnectedHardware
+from general_info.subplugins.pm import GetAvailableSecurityPatches
 from axonius.fields import Field, ListField
 from datetime import datetime
 
@@ -35,8 +36,6 @@ MAX_TIME_TO_WAIT_FOR_EXECUTION_REQUESTS_TO_FINISH_IN_SECONDS = 60 * 10
 # will begin before all devices have finished)
 MAX_TIME_TO_WAIT_FOR_EXECUTION_THREADS_TO_FINISH_IN_SECONDS = 60 * 10
 
-subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo, GetConnectedHardware]
-
 
 class GeneralInfoService(PluginBase, Triggerable):
     class MyDeviceAdapter(DeviceAdapter):
@@ -48,10 +47,6 @@ class GeneralInfoService(PluginBase, Triggerable):
         ad_bad_config_lm_compatibility_level = Field(int, "Bad Config - Compatibility Level")
         ad_bad_config_disabled_domain_creds = Field(int, "Bad Config - Disabled Domain Creds")
         ad_bad_config_secure_boot = Field(int, "Bad Config - Secure Boot")
-
-        # Hosts file is a field in which we save the hosts file of the destination computer. We do that as part
-        # of a performance research to see what works more - wmi (rpc) or smb.
-        hosts_file = Field(str, "Hosts file content")
 
     class MyUserAdapter(UserAdapter):
         pass
@@ -169,6 +164,13 @@ class GeneralInfoService(PluginBase, Triggerable):
         3. Pass the result to the subplugins
         """
         # Initialize all of our subplugins
+        subplugins_objects = [GetUserLogons, GetInstalledSoftwares, GetBasicComputerInfo, GetConnectedHardware]
+        if self._should_use_axr is True and (self._pm_smb_enabled or self._pm_rpc_enabled):
+            logger.info("Using AXR to query patch management info")
+            subplugins_objects.append(GetAvailableSecurityPatches)
+        else:
+            logger.info("Not querying patch management info using general info")
+
         self.subplugins_list = [con(self, logger) for con in subplugins_objects]
         logger.info("Done initializing subplugins")
 
@@ -218,6 +220,13 @@ class GeneralInfoService(PluginBase, Triggerable):
         # keeps count of the number of requests, and shoot new ones in case needed.
         self.number_of_active_execution_requests = 0
 
+        # Determine max number of execution requests. If we use the new execution method then pm_status isn't working,
+        # we should raise our bar by 2.
+        if self._should_use_axr:
+            max_number_of_execution_requests = MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS * 2
+        else:
+            max_number_of_execution_requests = MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS
+
         device_i = 0
         for device in windows_devices:
             # a number that increases if we don't shoot any new requests. If we are stuck too much time,
@@ -225,7 +234,7 @@ class GeneralInfoService(PluginBase, Triggerable):
             device_i += 1
             self.seconds_stuck = 0
 
-            while self.number_of_active_execution_requests >= MAX_NUMBER_OF_CONCURRENT_EXECUTION_REQUESTS:
+            while self.number_of_active_execution_requests >= max_number_of_execution_requests:
                 # Wait a few sec to re-check again.
                 time.sleep(SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS)
                 self.seconds_stuck = self.seconds_stuck + SECONDS_TO_SLEEP_IF_TOO_MUCH_EXECUTION_REQUESTS
@@ -255,13 +264,23 @@ class GeneralInfoService(PluginBase, Triggerable):
                 wmi_smb_commands.extend(subplugin.get_wmi_smb_commands())
 
             # Now run all queries you have got on that device.
-            p = self.request_action(
-                "execute_wmi_smb",
-                internal_axon_id,
-                {
-                    "wmi_smb_commands": wmi_smb_commands
-                }
-            )
+            if self._should_use_axr:
+                p = self.request_action(
+                    "execute_axr",
+                    internal_axon_id,
+                    {
+                        "axr_commands": wmi_smb_commands
+                    }
+                )
+            else:
+                # fallback to old execution setting
+                p = self.request_action(
+                    "execute_wmi_smb",
+                    internal_axon_id,
+                    {
+                        "wmi_smb_commands": wmi_smb_commands
+                    }
+                )
 
             p.then(did_fulfill=functools.partial(self._handle_wmi_execution_success, device),
                    did_reject=functools.partial(self._handle_wmi_execution_failure, device))
@@ -461,6 +480,12 @@ class GeneralInfoService(PluginBase, Triggerable):
                 "Execution Failure", False
             )
 
+            # Disable execution failure tag if exists.
+            self.devices.add_label(
+                [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
+                "Connection Error", False
+            )
+
             # Enable or disable execution exception
             self.devices.add_label(
                 [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
@@ -502,10 +527,17 @@ class GeneralInfoService(PluginBase, Triggerable):
                 executer_info["adapter_unique_name"] = device["adapters"][0]["plugin_unique_name"]
                 executer_info["adapter_unique_id"] = device["adapters"][0]["data"]["id"]
 
-                self.devices.add_label(
-                    [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
-                    "Execution Failure", True
-                )
+                if "connection refused" in str(exc).lower():
+                    self.devices.add_label(
+                        [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
+                        "Connection Error", True
+                    )
+
+                else:
+                    self.devices.add_label(
+                        [(executer_info["adapter_unique_name"], executer_info["adapter_unique_id"])],
+                        "Execution Failure", True
+                    )
 
                 ex_str = str(exc).replace("\\n", "\n")
 

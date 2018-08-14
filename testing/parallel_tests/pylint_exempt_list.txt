@@ -374,6 +374,7 @@ plugins/general_info/subplugins/basic_computer_info.py
 plugins/general_info/subplugins/connected_hardware.py
 plugins/general_info/subplugins/general_info_subplugin.py
 plugins/general_info/subplugins/installed_softwares.py
+plugins/general_info/subplugins/pm.py
 plugins/general_info/subplugins/user_logons.py
 plugins/general_info/subplugins/wmi_utils.py
 plugins/general_info/utils/nvd_nist/nvd_search.py
