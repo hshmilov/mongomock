@@ -83,7 +83,8 @@ DOCKER_PORTS = {
     'duo-adapter':                      6030,
     'gce-adapter':                      6031,
     'solarwinds-orion-adapter':         6032,
-    'static-users-correlator':          6033,
+    'cisco-amp-adapter':                6033,
+    'static-users-correlator':          6034,
     'mongo':                            27017,
 }
 

@@ -1,4 +1,8 @@
 export const pluginMeta = {
+    cisco_amp_adapter: {
+        title: 'Cisco Advanced Malware Protection',
+        description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'
+    },
     claroty_adapter: {
         title: 'Claroty',
         description: 'Claroty’s integrated ICS suite protects the safety of people, assets, and critical processes from cyberattacks.'
@@ -41,7 +45,7 @@ export const pluginMeta = {
     },
     fireeye_hx_adapter: {
         title: 'FireEye Endpoint Security (HX)',
-        description: 'FireEye Endpoint Security (HX)  proactively inspects, analyzes, and contains known and unknown threats at any endpoint.'
+        description: 'FireEye Endpoint Security (HX) proactively inspects, analyzes, and contains known and unknown threats at any endpoint.'
     },
     aws_adapter: {
         title: 'Amazon Elastic',

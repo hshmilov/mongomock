@@ -409,6 +409,7 @@ testing/parallel_tests/test_carbonblack_protection.py
 testing/parallel_tests/test_carbonblack_response.py
 testing/parallel_tests/test_chef.py
 testing/parallel_tests/test_cisco.py
+testing/parallel_tests/test_cisco_amp.py
 testing/parallel_tests/test_cisco_meraki.py
 testing/parallel_tests/test_cisco_prime.py
 testing/parallel_tests/test_claroty.py
@@ -479,6 +480,7 @@ testing/services/adapters/carbonblack_defense_service.py
 testing/services/adapters/carbonblack_protection_service.py
 testing/services/adapters/carbonblack_response_service.py
 testing/services/adapters/chef_service.py
+testing/services/adapters/cisco_amp_service.py
 testing/services/adapters/cisco_meraki_service.py
 testing/services/adapters/cisco_prime_service.py
 testing/services/adapters/cisco_service.py
