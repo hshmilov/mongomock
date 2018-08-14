@@ -300,6 +300,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         logger.info(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
         return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
 
+    @stoppable
     @add_rule("clean_devices", methods=["POST"])
     def clean_devices(self):
         """
