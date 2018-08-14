@@ -405,6 +405,10 @@ class ReportsService(PluginBase, Triggerable):
         """
         mail_sender = self.mail_sender
         if mail_sender:
+            email = mail_sender.new_email(
+                report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']),
+                action_data.get("emailList", []))
+
             if action_data.get("sendDeviceCSV", False):
                 query = self.gui_dbs.entity_query_views_db_map[EntityType(report_data['view_entity'])].find_one({
                     'name': report_data['view']})
@@ -423,18 +427,14 @@ class ReportsService(PluginBase, Triggerable):
                                                      EntityType(report_data['view_entity']),
                                                      default_sort=True)
 
-                email = mail_sender.new_email(
-                    report_consts.REPORT_TITLE.format(name=report_data['name'], query=report_data['view']),
-                    action_data.get("emailList", []))
-
                 email.add_attachment("Axonius Entity Data.csv", csv_string.getvalue().encode('utf-8'), "text/csv")
 
-                email.send(report_consts.REPORT_CONTENT_HTML.format(
-                    name=report_data['name'], query=report_data['view'], num_of_triggers=report_data['triggered'],
-                    trigger_message=self._parse_action_content(report_data['triggers'], triggered),
-                    num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
-                    old_results_num_of_devices=len(report_data['result']),
-                    query_link=self._generate_query_link(report_data['view_entity'], report_data['view'])))
+            email.send(report_consts.REPORT_CONTENT_HTML.format(
+                name=report_data['name'], query=report_data['view'], num_of_triggers=report_data['triggered'],
+                trigger_message=self._parse_action_content(report_data['triggers'], triggered),
+                num_of_current_devices=current_num_of_devices, severity=report_data['severity'],
+                old_results_num_of_devices=len(report_data['result']),
+                query_link=self._generate_query_link(report_data['view_entity'], report_data['view'])))
         else:
             logger.info("Email cannot be sent because no email server is configured")
 
