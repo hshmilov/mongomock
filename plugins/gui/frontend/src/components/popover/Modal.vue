@@ -46,12 +46,9 @@
         width: 100%;
         height: 100%;
         z-index: 1001;
+        display: grid;
         .modal-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            transform-origin: center center;
+            margin: auto;
             padding: 24px;
             background-color: $theme-white;
             border-radius: 2px;
