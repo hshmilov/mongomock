@@ -8,3 +8,4 @@ DEFAULT_OBSERVEIT_PORT = 1433
 DEFAULT_OBSERVEIT_DATABASE = 'ObserveIT'
 DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
 OBSERVEIT_QUERY = 'Select * from ServerInventory'
+OS_TYPES_DICT = {1: 'Windows', 5: 'Mac OS X'}

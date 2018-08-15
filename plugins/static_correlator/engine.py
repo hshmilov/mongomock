@@ -1,6 +1,5 @@
 import logging
 from itertools import combinations
-
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 from axonius.correlator_base import (CorrelationReason, has_hostname, has_mac,
                                      has_serial)
@@ -11,7 +10,9 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_hostname, get_normalized_ip, get_serial,
                                    hostnames_do_not_contradict,
                                    ips_do_not_contradict, is_from_ad,
-                                   normalize_adapter_devices, normalize_mac)
+                                   normalize_adapter_devices, normalize_mac,
+                                   compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
+                                   is_different_plugin)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -87,7 +88,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         mac_blacklist = mac_blacklist.union(map(normalize_mac, JUNIPER_NON_UNIQUE_MACS))
         for mac, matches in mac_indexed.items():
             for x, y in combinations(matches, 2):
-                if not hostnames_do_not_contradict(x, y):
+                if (not hostnames_do_not_contradict(x, y)) and (not is_old_device(x)) and (not is_old_device(y)) and \
+                        (not is_different_plugin(x, y)):
                     mac_blacklist.add(mac)
                     break
 
@@ -144,6 +146,37 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and one is AD'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_with_epo(self, adapters_to_correlate):
+        """
+        EPO correlation is a little more loose - we allow correlation based on hostname alone,
+        but only where theres is no MAC.
+        In order to lower the false positive rate we don't use the normalized hostname but rather the full one
+        """
+        logger.info('Starting to correlate on Hostname-EPO-No-Mac')
+        filtered_adapters_list = filter(get_hostname, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_hostname],
+                                      [compare_hostname],
+                                      [is_from_epo_with_empty_mac],
+                                      [],
+                                      {'Reason': 'They have the same hostname and one is EPO with no MAC'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_ad_sccm_id(self, adapters_to_correlate):
+        """
+        We want to get all the devices with hostname (to reduce amount),
+         then check if one adapter is SCCM and one is AD and to compare their ID
+        """
+        logger.info('Starting to correlate on SCCM-AD')
+        filtered_adapters_list = filter(is_sccm_or_ad, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_id],
+                                      [compare_id],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same ID and one is AD and the second is SCCM'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -166,6 +199,13 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # Find adapters with the same serial
         yield from self._correlate_serial(adapters_to_correlate)
+
+        # Find SCCM or Ad adapters with the same ID
+        yield from self._correlate_ad_sccm_id(adapters_to_correlate)
+
+        # EPO devices on VPN netwrok will almost conflict on IP+MAC with other Agents.
+        # If no mac on EPO allow correlation by full host name
+        yield from self._correlate_with_epo(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

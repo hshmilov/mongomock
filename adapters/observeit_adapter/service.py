@@ -100,10 +100,23 @@ class ObserveitAdapter(AdapterBase):
                     logger.error(f"Found a device with no id: {device_raw}, skipping")
                     continue
                 device.id = device_id
+                os_type = None
+                try:
+                    os_type = int(device_raw.get("OSType"))
+                    device.figure_os(consts.OS_TYPES_DICT[os_type])
+                except Exception:
+                    logger.exception(f"Problem getting os of {device_raw}")
                 domain = device_raw.get("SrvCurrentDomainName")
                 device.domain = domain
                 hostname = device_raw.get("SrvName")
-                if (hostname is not None) and (hostname != ""):
+                if os_type is not None and consts.OS_TYPES_DICT[os_type] == 'Mac OS X':
+                    if (hostname is not None) and (hostname != "") and (domain is not None) and (domain != ""):
+                        # That is the weird case of OS X
+                        if str(domain).lower() != 'localhost' and '.' not in str(domain):
+                            device.hostname = domain
+                        else:
+                            device.hostname = hostname
+                elif (hostname is not None) and (hostname != ""):
                     if (domain is not None) and (domain.strip() != "") and (domain.strip().lower() != "local") and\
                             (domain.strip().lower() != "workgroup") and (domain.strip().lower() != "n/a") and \
                             (domain.strip().lower() != hostname.strip().lower()) and \
@@ -112,10 +125,10 @@ class ObserveitAdapter(AdapterBase):
                         device.hostname = f"{hostname}.{domain}"
                     else:
                         device.hostname = hostname
-                ip_list = device_raw.get("CurrentIPAddressList")
+                ip_list = device_raw.get("PrimaryIPAddress")
                 try:
                     if ip_list is not None:
-                        device.add_nic(None, ip_list.split("%"))
+                        device.add_nic(None, ip_list.split(","))
                 except Exception:
                     logger.exception(f"Problem adding nic to {device_raw}")
                 device.client_version = device_raw.get("SrvVersion")

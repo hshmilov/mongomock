@@ -126,6 +126,11 @@ class EpoAdapter(AdapterBase):
             hostname = device_raw.get('EPOComputerProperties.IPHostName')
             if hostname is None or hostname == '':
                 hostname = device_raw.get('EPOComputerProperties.ComputerName')
+            if str(hostname).endswith('.local') and \
+                    ('dc=local' not in ((device_raw.get('EPOComputerLdapProperties.LdapOrgUnit') or '').lower())):
+                hostname = str(hostname)[:-len('.local')]
+            if "Mac OS X" in str(device_raw.get('EPOLeafNode.os', '')) and str(hostname).strip().lower() == 'localhost':
+                hostname = None
 
             if 'EPOLeafNode.LastUpdate' not in device_raw:
                 # No date for this device, we don't want to enter devices with no date so continuing.
@@ -136,7 +141,8 @@ class EpoAdapter(AdapterBase):
             device.hostname = hostname
             device.figure_os(device_raw.get('EPOLeafNode.os', ''))
             device.os.bitness = 64 if device_raw.get('EPOComputerProperties.OSBitMode', '') == 1 else 32
-            device.id = epo_id
+            # I think that we get ePO duplications also in the field
+            device.id = epo_id + (hostname if hostname else '')
             parse_network(device_raw, device)
             last_seen = parse_date(device_raw['EPOLeafNode.LastUpdate'])
             if last_seen:
@@ -183,7 +189,8 @@ class EpoAdapter(AdapterBase):
                     ghz=round(int(device_raw.get("EPOComputerProperties.CPUSpeed")) / 1024, 2),
                     name=device_raw.get("EPOComputerProperties.CPUType")
                 )
-
+                device.description = device_raw.get("EPOComputerProperties.Description")
+                device.last_used_users = (device_raw.get('EPOComputerProperties.UserName') or '').split(',')
             except Exception:
                 logger.exception("Couldn't set some epo info")
             device.set_raw(device_raw)

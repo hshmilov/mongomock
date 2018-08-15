@@ -96,8 +96,12 @@ class SccmAdapter(AdapterBase):
             try:
                 device_id = device_raw.get('Distinguished_Name0')
                 if not device_id:
-                    logger.error(f'Got a device with no distinguished name {device_raw}')
-                    continue
+                    # In case of no AD distinguished name, at least we have the netbios name plus resource ID,
+                    # both are not that good, but together they should make a good id.
+                    device_id = (device_raw.get('Netbios_Name0') or '') + (device_raw.get('ResourceID') or '')
+                    if not device_id:
+                        logger.error(f'Got a device with no distinguished name {device_raw}')
+                        continue
                 device = self._new_device_adapter()
                 device.id = device_id
                 device.organizational_unit = get_organizational_units_from_dn(device_id)
@@ -109,14 +113,23 @@ class SccmAdapter(AdapterBase):
                     device.domain = domain
                 device.figure_os((device_raw.get('Caption0') or '') +
                                  (device_raw.get("Operating_System_Name_and0") or ''))
-                for nic in (device_raw.get('Network Interfaces') or '').split(';'):
+                for mac in (device_raw.get('Mac Addresses') or '').split(';'):
                     try:
-                        if nic == '':
-                            continue  # We dont need empty nics of course
-                        mac, ips = nic.split('@')
-                        device.add_nic(mac, ips.split(', '))
+                        mac = mac.strip()
+                        if mac == '':
+                            mac = None
+                        ips = []
+                        try:
+                            ips_raw = (device_raw.get('IP Addresses') or '').split(';')
+                            for ip_raw in ips_raw:
+                                ips.extend(ip_raw.split(','))
+                            ips = list(set([ip.strip() for ip in ips if ip.strip()]))
+                        except Exception:
+                            logger.exception(f'Problem getting IP for {device_raw}')
+                        if mac or ips:
+                            device.add_nic(mac, ips)
                     except Exception:
-                        logger.warning(f"Caught weird NIC {nic} for device id {device.id}")
+                        logger.warning(f"Caught weird NIC {mac} for device id {device.id}")
                         pass
                 free_physical_memory = device_raw.get('FreePhysicalMemory0')
                 device.free_physical_memory = float(free_physical_memory) if free_physical_memory else None

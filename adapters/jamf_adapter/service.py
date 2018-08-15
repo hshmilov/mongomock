@@ -130,8 +130,17 @@ class JamfAdapter(AdapterBase):
                 device.name = general_info.get('name', '')
                 hostname = None
                 # Ofri: Sometimes name is also the hostname. I saw that if we have one of these fields it can't be the host name.
-                if not any(elem in device.name for elem in ['\'', ' ', '.']):
+                if not any(elem in device.name for elem in [' ', '.']):
+                    asset_is_host = True
                     hostname = device.name
+                    device.hostname = hostname
+                else:
+                    asset_is_host = False
+                    host_no_spaces_list = device.name.replace(' ', '-').split('-')
+                    host_no_spaces_list[0] = ''.join(char for char in host_no_spaces_list[0] if char.isalnum())
+                    if len(host_no_spaces_list) > 1:
+                        host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
+                    hostname = '-'.join(host_no_spaces_list).split(".")[0]
                     device.hostname = hostname
                 device.public_ip = general_info.get('ip_address')
                 try:
@@ -239,7 +248,7 @@ class JamfAdapter(AdapterBase):
                         # hostname can be none or empty. if it is this could crash or make unwanted results
                         try:
                             # This could raise an exception if hostname was not set or was set to ''.
-                            if hostname is not None and len(hostname) > 0:
+                            if hostname is not None and len(hostname) > 0 and asset_is_host:
                                 device.hostname = hostname + "." + active_directory_status
                         except Exception:
                             logger.exception(f"Problem adding active directory status to device")

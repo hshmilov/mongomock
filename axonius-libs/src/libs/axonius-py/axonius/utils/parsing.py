@@ -38,12 +38,20 @@ NORMALIZED_HOSTNAME = 'normalized_hostname'
 # In some cases we don't want to use compare_hostnames because indexing using it is complicated
 # and in some cases indexsing is performance critical
 NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
-DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP']
+DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
+# In MacOs hostname of the same computer can return in different shapes,
+# that's why we would like to compare them without these strings
+DEFAULT_MAC_EXTENSIONS = ['-MACBOOK-PRO', 'MACBOOK-PRO', '-MBP', 'MBP', '-MACBOOK-AIR', 'MACBOOK-AIR']\
+    + [f"-MBP-{index}" for index in range(20)] + [f"-MBP-0{index}" for index in range(10)] + ['-AIR', 'AIR']
 # NORMALIZED_IPS/MACS fields will hold the set of IPs and MACs an adapter devices has extracted.
 # Without it, in order to compare IPs and MACs we would have to go through the list of network interfaces and extract
 # them each time.
 NORMALIZED_IPS = 'normalized_ips'
 NORMALIZED_MACS = 'normalized_macs'
+
+# This number stands for the default number of days needed for us to say a device is old,
+# first use if for correlation at is_old_device
+DEFAULT_NUMBER_OF_DAYS_FOR_OLD_DEVICE = 7
 
 pair_comparator = NewType('lambda x,y -> bool', FunctionType)
 parameter_function = NewType('lambda x -> paramter of x', Callable)
@@ -183,7 +191,7 @@ def figure_out_os(s):
                     assert isinstance(found_values[0], str)
                     distribution = found_values[0]
                     break
-    elif 'os x' in s or 'osx' in s:
+    elif ('os x' in s) or ('osx' in s) or ('macos' in s):
         os_type = 'OS X'
         version = osx_version_full.findall(s)
         if len(version) > 0:
@@ -487,20 +495,52 @@ def compare_os_type(adapter_device1, adapter_device2):
 
 
 def compare_hostname(adapter_device1, adapter_device2):
-    return adapter_device1['data']['hostname'] == adapter_device2['data']['hostname']
+    return adapter_device1['data']['hostname'].lower() == adapter_device2['data']['hostname'].lower()
 
 
 def is_different_plugin(adapter_device1, adapter_device2):
-    return adapter_device1['plugin_name'] != adapter_device2['plugin_name']
+    return adapter_device1.get('plugin_name') != adapter_device2.get('plugin_name')
+
+
+def is_old_device(adapter_device, number_of_days=DEFAULT_NUMBER_OF_DAYS_FOR_OLD_DEVICE):
+    """
+    This function checks is a default was last seen in the last number_of_days
+    """
+
+    try:
+        return adapter_device['data'].get('last_seen', datetime.datetime.now()).replace(tzinfo=None) + \
+            datetime.timedelta(days=number_of_days) < \
+            datetime.datetime.now().replace(tzinfo=None)
+    except Exception:
+        # If we got exception the default would be assuming it is an old device
+        return True
+
+
+def is_sccm_or_ad(adapter_device):
+    return adapter_device.get('plugin_name') == 'active_directory_adapter' or \
+        adapter_device.get('plugin_name') == 'sccm_adapter'
+
+
+def is_from_epo_with_empty_mac(adapter_device):
+    return (adapter_device['plugin_name'] == 'epo_adapter') and \
+           (not adapter_device.get(NORMALIZED_MACS))
 
 
 def is_from_ad(adapter_device):
-    return adapter_device['plugin_name'] == 'active_directory_adapter'
+    return adapter_device.get('plugin_name') == 'active_directory_adapter'
+
+
+def compare_id(adapter_device1, adapter_device2):
+    return get_id(adapter_device1) == get_id(adapter_device2)
 
 
 def get_os_type(adapter_device):
     from axonius.devices.device_adapter import OS_FIELD
     return (adapter_device['data'].get(OS_FIELD) or {}).get('type')
+
+
+def get_id(adapter_device):
+    return adapter_device['data'].get('id')
 
 
 def get_hostname(adapter_device):
@@ -528,7 +568,11 @@ def normalize_hostname(adapter_data):
     if hostname is not None:
         final_hostname = hostname.upper()
         adapter_data['hostname'] = final_hostname
+        final_hostname = final_hostname.replace(' ', '-')
+        final_hostname = final_hostname.replace('\'', '')
         for extension in DEFAULT_DOMAIN_EXTENSIONS:
+            final_hostname = remove_trailing(final_hostname, extension)
+        for extension in DEFAULT_MAC_EXTENSIONS:
             final_hostname = remove_trailing(final_hostname, extension)
         return final_hostname.split('.')
 
@@ -561,11 +605,29 @@ def macs_do_not_contradict(adapter_device1, adapter_device2):
     return not device1_macs or not device2_macs or is_one_subset_of_the_other(device1_macs, device2_macs)
 
 
+# All these cases are real world scenarios where we had weird hostnames of the same Mac computer.
+# This doesn't mean we want to correlate according to these rules,
+# just not to contradict, we hope to correlate with MAC
+def contain_macbook_names(device1_hostnames, device2_hostnames):
+    return ("MBP" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or\
+           ("MBP" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or\
+           ("AIR" in str(device1_hostnames).upper() and "MACBOOK" in str(device2_hostnames).upper()) or\
+           ("AIR" in str(device2_hostnames).upper() and "MACBOOK" in str(device1_hostnames).upper()) or\
+           (len(str(device1_hostnames)) > 5 and (str(device1_hostnames)[:5] == str(device2_hostnames)[:5])) or\
+           (str(device1_hostnames).lower() == 'mac' or str(device2_hostnames).lower() == 'mac') or\
+           ((''.join(char for char in str(device2_hostnames) if char.isalnum())) ==
+            (''.join(char for char in str(device1_hostnames) if char.isalnum())))
+
+
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     device1_hostnames = adapter_device1.get(NORMALIZED_HOSTNAME)
     device2_hostnames = adapter_device2.get(NORMALIZED_HOSTNAME)
-    return not device1_hostnames or not device2_hostnames or compare_normalized_hostnames(device1_hostnames,
-                                                                                          device2_hostnames)
+    return not device1_hostnames or not device2_hostnames or \
+        (contain_macbook_names(adapter_device1.get('data', {}).get("hostname", ""),
+                               adapter_device2.get('data', {}).get("hostname", "")) and
+         (adapter_device1.get('data', {}).get("os", {}).get("type") == "OS X") and
+         (adapter_device2.get('data', {}).get("os", {}).get("type") == "OS X")) \
+        or compare_normalized_hostnames(device1_hostnames, device2_hostnames)
 
 
 def compare_ips(adapter_device1, adapter_device2):

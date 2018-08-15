@@ -41,7 +41,8 @@ def rawify_vcenter_data(folder):
     :param folder: Perhaps the value returned from get_all_vms
     :return: dict
     """
-    return vCenterNode(folder.Name, folder.Type, [rawify_vcenter_data(child) for child in folder.Children],
+    return vCenterNode(folder.Name, folder.Type,
+                       [rawify_vcenter_data(child) for child in folder.Children if child is not None],
                        folder.Details, folder.Hardware)._asdict()
 
 

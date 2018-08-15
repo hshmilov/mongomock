@@ -7,4 +7,4 @@ client_details = {
     "password": "Password2"
 }
 
-SOME_DEVICE_ID = '3F51B2BC-CB75-4B3D-BAD0-24ED9975B9FB'
+SOME_DEVICE_ID = '1250F8F8-7B77-473B-9B38-B5C8B2D86E2Awindows8.TestDomain.test'

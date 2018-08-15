@@ -114,37 +114,54 @@ class SymantecAdapter(AdapterBase):
         }
 
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw in devices_raw_data:
-            device = self._new_device_adapter()
-            if device_raw.get('domainOrWorkgroup', '') == 'WORKGROUP' or device_raw.get('domainOrWorkgroup', '') == '':
-                # Special case for workgroup
-                device.hostname = device_raw.get('computerName', '')
-            else:
-                device.hostname = device_raw.get('computerName', '') + '.' + device_raw.get('domainOrWorkgroup', '')
-            device.figure_os(' '.join([device_raw.get("operatingSystem", ''),
-                                       str(device_raw.get("osbitness", '')),
-                                       str(device_raw.get("osversion", '')),
-                                       str(device_raw.get("osmajor", '')),
-                                       str(device_raw.get("osminor", ''))]))
-            try:
-                mac_addresses = device_raw.get('macAddresses', [])
-                ip_addresses = device_raw.get('ipAddresses')
-                if mac_addresses == []:
-                    device.add_nic(None, ip_addresses)
-                for mac_address in mac_addresses:
-                    device.add_nic(mac_address, ip_addresses)
-            except Exception:
-                logger.exception("Problem adding nic to Symantec")
-            device.online_status = str(device_raw.get('onlineStatus'))
-            device.agent_version = device_raw.get("agentVersion")
-            try:
-                device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get("lastScanTime", 0)),
-                                                                       int(device_raw.get("lastUpdateTime", 0))) / 1000)
-            except Exception:
-                logger.exception("Problem adding last seen to Symantec")
-            device.id = device_raw['agentId']
-            device.set_raw(device_raw)
-            yield device
+        try:
+            for device_raw in devices_raw_data:
+                device = self._new_device_adapter()
+                domain_strip_upper = str(device_raw.get('domainOrWorkgroup', '')).strip().upper()
+                computer_name = device_raw.get('computerName', '')
+                if not any(elem in computer_name for elem in [' ', '.']) or ('Mac' not in str(device_raw.get('operatingSystem', ''))):
+                    device.hostname = computer_name
+                    if domain_strip_upper in ['WORKGROUP', '', 'LOCAL']:
+                        # Special case for workgroup
+                        if computer_name.upper().endswith('.LOCAL'):
+                            computer_name = computer_name[:-len('.LOCAL')]
+                        device.hostname = computer_name
+                    else:
+                        device.hostname = computer_name + '.' + device_raw.get('domainOrWorkgroup', '')
+                else:
+                    device.name = computer_name
+                    host_no_spaces_list = device.name.replace(' ', '-').split('-')
+                    host_no_spaces_list[0] = ''.join(char for char in host_no_spaces_list[0] if char.isalnum())
+                    if len(host_no_spaces_list) > 1:
+                        host_no_spaces_list[1] = ''.join(char for char in host_no_spaces_list[1] if char.isalnum())
+                    hostname = '-'.join(host_no_spaces_list).split(".")[0]
+                    device.hostname = hostname
+                device.figure_os(' '.join([device_raw.get("operatingSystem", ''),
+                                           str(device_raw.get("osbitness", '')),
+                                           str(device_raw.get("osversion", '')),
+                                           str(device_raw.get("osmajor", '')),
+                                           str(device_raw.get("osminor", ''))]))
+                try:
+                    mac_addresses = device_raw.get('macAddresses', [])
+                    ip_addresses = device_raw.get('ipAddresses')
+                    if mac_addresses == []:
+                        device.add_nic(None, ip_addresses)
+                    for mac_address in mac_addresses:
+                        device.add_nic(mac_address, ip_addresses)
+                except Exception:
+                    logger.exception("Problem adding nic to Symantec")
+                device.online_status = str(device_raw.get('onlineStatus'))
+                device.agent_version = device_raw.get("agentVersion")
+                try:
+                    device.last_seen = datetime.datetime.fromtimestamp(max(int(device_raw.get("lastScanTime", 0)),
+                                                                           int(device_raw.get("lastUpdateTime", 0))) / 1000)
+                except Exception:
+                    logger.exception("Problem adding last seen to Symantec")
+                device.id = device_raw['agentId'] + '_' + computer_name
+                device.set_raw(device_raw)
+                yield device
+        except Exception:
+            logger.exception(f"Problem adding device to SEP {device_raw}")
 
     @classmethod
     def adapter_properties(cls):

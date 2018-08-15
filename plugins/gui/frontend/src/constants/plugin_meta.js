@@ -200,7 +200,7 @@ export const pluginMeta = {
         description: 'OpenStack is an open source software solution for creating private and public clouds.'
     },
     tanium_adapter: {
-        title: 'Tanium',
+        title: 'Tanium - BETA',
         description: 'Tanium for IT Asset Visibility discovers IT assets and gathers live endpoint data to help create an up-to-date inventory of hardware and software assets.'
     },
     aruba_adapter: {
@@ -210,6 +210,14 @@ export const pluginMeta = {
     infoblox_adapter: {
         title: 'Infoblox DDI - BETA',
         description: 'Infoblox DDI consolidates DNS, DHCP, IP address management, and other core network services into a single platform, managed from a common console.'
+    },
+    cynet_adapter: {
+        title: 'Cynet 360',
+        description: 'Cynet 360 is a detection and response security platform for finding, ranking, and remediating unknown, camouflaged threats.'
+    },
+    kace_adapter: {
+        title: 'Quest KACE - BETA',
+        description: 'Quest KACE Endpoint Systems Management Appliances provision, manage, secure, and service network-connected devices.'
     },
     chef_adapter: {
         title: 'Chef',

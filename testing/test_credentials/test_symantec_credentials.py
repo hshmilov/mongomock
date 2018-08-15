@@ -7,4 +7,4 @@ client_details = {
     "verify_ssl": False
 }
 
-SOME_DEVICE_ID = 'DEDB73460A0002AB70C44D039ADC2249'  # our ESX machine windows8
+SOME_DEVICE_ID = 'DEDB73460A0002AB70C44D039ADC2249_windows8'  # our ESX machine windows8

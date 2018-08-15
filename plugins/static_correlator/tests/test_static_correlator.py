@@ -5,6 +5,7 @@ from axonius.correlator_base import CorrelationResult
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD, IPS_FIELD, MAC_FIELD, OS_FIELD
 from static_correlator.engine import StaticCorrelatorEngine
+import datetime
 
 
 def correlate(devices):
@@ -41,9 +42,13 @@ def get_raw_tag(associated_adapter_unique_name, associated_adapter_name, associa
     }
 
 
-def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None, tag_data=None):
-    generated_unique_name = str(uuid.uuid1())
-    generate_name = str(uuid.uuid1())
+def get_raw_device(plugin_name=None, hostname=None, network_interfaces=None, os=None, serial=None,
+                   tag_data=None, last_seen=None):
+    if last_seen is None:
+        last_seen = datetime.datetime.now()
+    last_seen = last_seen.replace(tzinfo=None)
+    generated_unique_name = str(uuid.uuid1()) if plugin_name is None else plugin_name + "0"
+    generate_name = str(uuid.uuid1()) if plugin_name is None else plugin_name
     generated_id = str(uuid.uuid1())
     val = {
         'tags': [],
@@ -57,6 +62,7 @@ def get_raw_device(hostname=None, network_interfaces=None, os=None, serial=None,
                     'hostname': hostname,
                     NETWORK_INTERFACES_FIELD: network_interfaces,
                     'device_serial': serial,
+                    'last_seen': last_seen
                 }
             }
         ],
@@ -504,10 +510,12 @@ def test_no_mac_with_hostname_contradiction():
     """
     device1 = get_raw_device(network_interfaces=[{MAC_FIELD: '121212121212',
                                                   IPS_FIELD: ['1.1.1.1']}],
-                             hostname="host1")
+                             hostname="host1",
+                             plugin_name="adapter_test")
     device2 = get_raw_device(network_interfaces=[{MAC_FIELD: '121212121212',
                                                   IPS_FIELD: ['1.1.1.1']}],
-                             hostname="host2")
+                             hostname="host2",
+                             plugin_name="adapter_test")
     assert_success(correlate([device1, device2]), [device1, device2], 'They have the same MAC', 0)
 
 

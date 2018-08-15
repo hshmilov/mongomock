@@ -1,9 +1,9 @@
 
 client_details = {
-    "Kaseya_Domain": "https://na1vsatrial03.kaseya.com",
-    "username": "ofri@axonius.com",
-    "password": "kasaxon",
+    "Kaseya_Domain": "PREVIEW6.KASEYA.NET",
+    "username": "jakeg@axonius.com",
+    "password": "Jake0!",
     "verify_ssl": True
 }
 
-SOME_DEVICE_ID = '61392967374616622222541223'
+SOME_DEVICE_ID = '41731352988141242425148718'

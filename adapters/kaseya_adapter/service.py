@@ -5,9 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field
-
 from kaseya_adapter.connection import KaseyaConnection
-from kaseya_adapter.exceptions import KaseyaException
 from axonius.utils.parsing import parse_date
 
 
@@ -25,12 +23,12 @@ class KaseyaAdapter(AdapterBase):
 
     def _connect_client(self, client_config):
         try:
-            connection = KaseyaConnection(domain=client_config["Kaseya_Domain"], verify_ssl=client_config["verify_ssl"])
-            connection.set_credentials(username=client_config["username"], password=client_config["password"])
+            connection = KaseyaConnection(domain=client_config["Kaseya_Domain"], verify_ssl=client_config["verify_ssl"],
+                                          username=client_config["username"], password=client_config["password"])
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
-        except KaseyaException as e:
+        except Exception as e:
             message = "Error connecting to client with domain {0}, reason: {1}".format(
                 client_config['Kaseya_Domain'], str(e))
             logger.exception(message)
@@ -46,7 +44,7 @@ class KaseyaAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Kaseya Server
         """
         with client_data:
-            return client_data.get_device_list()
+            yield from client_data.get_device_list()
 
     def _clients_schema(self):
         """
@@ -87,10 +85,8 @@ class KaseyaAdapter(AdapterBase):
             "type": "array"
         }
 
-    def _parse_raw_data(self, agents_assets_raw_data):
-        assets_raw_data = agents_assets_raw_data['assets']
-        agents_id_dict = agents_assets_raw_data['agents']
-        for asset_raw in assets_raw_data:
+    def _parse_raw_data(self, devices_raw):
+        for asset_raw, agents_id_dict in devices_raw:
             try:
                 device = self._new_device_adapter()
                 device.id = asset_raw.get("AssetId")
@@ -98,7 +94,7 @@ class KaseyaAdapter(AdapterBase):
                     continue
                 device.id = str(device.id)
                 device.name = asset_raw.get("AssetName")
-                agent_raw = agents_id_dict.get(asset_raw.get("AgentId", "-1"), {})
+                agent_raw = agents_id_dict.get(asset_raw.get("AgentId", "-1")) or {}
                 device.figure_os(asset_raw.get("OSName", ""))
                 device.hostname = agent_raw.get("ComputerName", asset_raw.get("HostName"))
                 try:
@@ -132,10 +128,12 @@ class KaseyaAdapter(AdapterBase):
                 device.agent_id = str(agent_raw.get("AgentId", ""))
                 device.agent_version = str(agent_raw.get("AgentVersion", ""))
                 device.agent_status = str(agent_raw.get("Online", ""))
-                device.set_raw(agents_assets_raw_data)
+                asset_raw["agent_raw"] = agent_raw
+                device.set_raw(asset_raw)
                 yield device
             except Exception:
-                logger.exception("Problem with fetching Kaseya Device")
+                logger.exception(f"Problem with fetching Kaseya Device {asset_raw} "
+                                 f"agent {agent_raw if agent_raw is not None else ''}")
 
     @classmethod
     def adapter_properties(cls):
