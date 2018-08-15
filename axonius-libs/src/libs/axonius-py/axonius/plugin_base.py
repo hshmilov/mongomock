@@ -1533,7 +1533,8 @@ class PluginBase(Configurable, Feature):
                         {
                             "name": "smtpPassword",
                             "title": "Password",
-                            "type": "string"
+                            "type": "string",
+                            "format": "password"
                         },
                         {
                             "name": "smtpKey",
