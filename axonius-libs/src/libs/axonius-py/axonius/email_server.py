@@ -43,10 +43,10 @@ class EmailServer(object):
         assert self._smtp is None
         try:
             server = smtplib.SMTP(self.host, self.port)
-            if self.user:
-                server.login(self.user, self.password)
 
+            # First activate TLS if available
             if self.key or self.cert:
+                # First with provided TLS data
                 key_file_path = None
                 cert_file_path = None
                 try:
@@ -61,13 +61,22 @@ class EmailServer(object):
                             cert_file.write(self.cert)
 
                     server.starttls(key_file_path, cert_file_path)
-
                 finally:
                     if key_file_path:
                         os.remove(key_file_path)
 
                     if cert_file_path:
                         os.remove(cert_file_path)
+            else:
+                # Try TLS anyway because it's more secure
+                try:
+                    server.starttls()
+                except Exception:
+                    logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
+
+            # Try to login if optional.
+            if self.user:
+                server.login(self.user, self.password)
         except Exception:
             logger.exception("Exception was raised while trying to connect to e-mail server and send e-mail.")
             raise
