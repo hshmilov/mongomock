@@ -3,4 +3,4 @@ client_details = {
     'username': 'root',
     'password': 'Aa654321',
 }
-SOME_DEVICE_ID = '1416415'
+SOME_DEVICE_ID = '990991'

@@ -27,15 +27,19 @@ def test_create_devcie():
     assert all(map(lambda x: x in raw_result, [
         'name', 'network_interfaces', 'connected_devices']))
     assert len(raw_result['connected_devices']) == 4
-    assert raw_result['connected_devices'] == [{'local_iface': 'Ethernet3/29/1',
-                                                'remote_iface': 'xe-0/1/1',
+    assert raw_result['connected_devices'] == [{'connection_type': 'Direct',
+                                                'local_ifaces': [{'name': 'Ethernet3/29/1'}],
+                                                'remote_ifaces': [{'name': 'xe-0/1/1'}],
                                                 'remote_name': 'leaf.sjc04'},
-                                               {'local_iface': 'Ethernet3/29/2',
-                                                'remote_iface': 'xe-0/3/3',
+                                               {'connection_type': 'Direct',
+                                                'local_ifaces': [{'name': 'Ethernet3/29/2'}],
+                                                'remote_ifaces': [{'name':  'xe-0/3/3'}],
                                                 'remote_name': 'leaf.sjc04'},
-                                               {'local_iface': 'Ethernet3/29/3',
-                                                'remote_iface': 'xe-2/0/5',
+                                               {'connection_type': 'Direct',
+                                                'local_ifaces': [{'name': 'Ethernet3/29/3'}],
+                                                'remote_ifaces': [{'name': 'xe-2/0/5'}],
                                                 'remote_name': 'leaf.sjc04'},
-                                               {'local_iface': 'Ethernet3/42/1',
-                                                'remote_iface': 'xe-0/1/1',
+                                               {'connection_type': 'Direct',
+                                                'local_ifaces': [{'name': 'Ethernet3/42/1'}],
+                                                'remote_ifaces': [{'name': 'xe-0/1/1'}],
                                                 'remote_name': 'room1.sjc11'}]

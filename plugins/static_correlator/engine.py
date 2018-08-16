@@ -10,6 +10,8 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    get_hostname, get_normalized_ip, get_serial,
                                    hostnames_do_not_contradict,
                                    ips_do_not_contradict, is_from_ad,
+                                   get_asset_name, compare_asset_name, is_from_juniper_and_asset_name,
+                                   is_junos_space_device,
                                    normalize_adapter_devices, normalize_mac,
                                    compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
                                    is_different_plugin)
@@ -162,6 +164,20 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same hostname and one is EPO with no MAC'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_with_juniper(self, adapters_to_correlate):
+        """
+        juniper correlation is a little more loose - we allow correlation based on asset name alone,
+        """
+        logger.info('Starting to correlate on asset-name juniper')
+        filtered_adapters_list = filter(is_from_juniper_and_asset_name, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_asset_name],
+                                      [compare_asset_name],
+                                      [is_junos_space_device],
+                                      [],
+                                      {'Reason': 'They have same asset name'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_ad_sccm_id(self, adapters_to_correlate):
         """
         We want to get all the devices with hostname (to reduce amount),
@@ -206,6 +222,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # EPO devices on VPN netwrok will almost conflict on IP+MAC with other Agents.
         # If no mac on EPO allow correlation by full host name
         yield from self._correlate_with_epo(adapters_to_correlate)
+
+        # juniper correlation is a little more loose - we allow correlation based on asset name alone,
+        yield from self._correlate_with_juniper(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

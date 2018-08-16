@@ -1,34 +1,23 @@
 import logging
 from axonius.devices.device_adapter import (DeviceAdapter,
                                             DeviceAdapterNetworkInterface,
-                                            DeviceAdapterVlan, SmartJsonClass)
-from axonius.fields import Field, ListField
+                                            DeviceAdapterVlan,
+                                            DeviceAdapterNeighbor)
+from axonius.fields import Field
 from axonius.blacklists import JUNIPER_NON_UNIQUE_MACS
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class LinkedDevicesAdapter(SmartJsonClass):
-    device_name = Field(str, 'Device Name')
-    interfaces = ListField(DeviceAdapterNetworkInterface, 'interfaces')
-
-
-class ConnectedDeviceAdapter(SmartJsonClass):
-    local_iface = Field(str, 'Local Interface')
-    remote_name = Field(str, 'Remote Device Name')
-    remote_iface = Field(str, 'Remote Device Iface')
-
-
 class JuniperDeviceAdapter(DeviceAdapter):
     device_type = Field(str, 'Device Type', enum=['LLDP Device', 'ARP Device',
                                                   'FDB Device', 'Juniper Device', 'Juniper Space Device'])
-    linked_devices = ListField(LinkedDevicesAdapter, 'Linked Devices')
-    connected_devices = ListField(ConnectedDeviceAdapter, 'Connected Devices')
 
 
 def _get_lldp_id(lldp_raw_device):
     """ The id field is a little bit messy becuse we want the device id
         to refer to all the different mac addresses """
+    # XXX: fix name
     macs = []
 
     for _, entry in lldp_raw_device:
@@ -36,17 +25,20 @@ def _get_lldp_id(lldp_raw_device):
             macs.append(entry.get('lldp-remote-chassis-id'))
 
     # filter empty and None macs
-    macs = sorted(list(filter(bool, macs)))
+    first_mac = sorted(list(filter(bool, macs)))[0]
     if not macs:
         raise ValueError('Unable to create id for device')
 
-    return '_'.join(['JUNIPER_LLDP'] + macs)
+    return '_'.join(['JUNIPER_LLDP', first_mac])
 
 
 def create_lldp_device(create_device_func, raw_device):
     for device_name, lldp_raw_device in raw_device.items():
-        # XXX: handle empty device name
         try:
+            # Handle empty device name
+            if isinstance(device_name, int):
+                device_name = ''
+
             id_ = _get_lldp_id(lldp_raw_device)
             device = create_device_func()
             device.id = id_
@@ -80,20 +72,23 @@ def create_lldp_device(create_device_func, raw_device):
                         device.add_nic(name=iface_name, mac=mac)
                     except Exception:
                         logger.error('Failed to add nic for device')
+                    all_macs.append(mac)
 
                 # Add connection TODO: This connection should be bi-directonal -> we want the data
                 # to bee seen both from local device, and remote device in the gui
-                connected_device = ConnectedDeviceAdapter()
-                connected_device.local_iface = iface_name
-                connected_device.remote_iface = connected_iface_name
+                connected_device = DeviceAdapterNeighbor()
                 connected_device.remote_name = connected_device_name
+                connected_device.connection_type = 'Direct'
+                if iface_name:
+                    connected_device.local_ifaces.append(DeviceAdapterNetworkInterface(name=iface_name))
+                connected_device.remote_ifaces.append(DeviceAdapterNetworkInterface(name=connected_iface_name))
 
                 device.connected_devices.append(connected_device)
             device.set_raw(dict(lldp_raw_device))
             yield device
         except Exception:
             logger.exception(
-                f'Problem with pasrsing lldp device {lldp_raw_device}')
+                f'Problem with parsing lldp device {lldp_raw_device}')
 
 
 def create_arp_device(create_device_func, raw_device):
@@ -110,8 +105,8 @@ def create_arp_device(create_device_func, raw_device):
                 continue
 
             device = create_device_func()
-            names = '_'.join(sorted(list(arp_raw_device['linked_devices'].keys())))
-            device.id = '_'.join(['JUINPER_ARP', arp_raw_device['mac_address'], names])
+            first_name = sorted(list(arp_raw_device['linked_devices'].keys()))[0]
+            device.id = '_'.join(['JUINPER_ARP', arp_raw_device['mac_address'], first_name])
             device.add_nic(arp_raw_device['mac_address'])
             device.device_type = 'ARP Device'
             try:
@@ -121,20 +116,21 @@ def create_arp_device(create_device_func, raw_device):
 
             for name, ifaces in arp_raw_device['linked_devices'].items():
                 try:
-                    linked_device = LinkedDevicesAdapter()
-                    linked_device.device_name = name
+                    neighbor_device = DeviceAdapterNeighbor()
+                    neighbor_device.remote_name = name
+                    neighbor_device.connection_type = 'Indirect'
                     for iface in ifaces:
                         interface = DeviceAdapterNetworkInterface()
                         interface.name = iface
-                        linked_device.interfaces.append(interface)
-                    device.linked_devices.append(linked_device)
+                        neighbor_device.remote_ifaces.append(interface)
+                    device.connected_devices.append(neighbor_device)
                 except Exception:
-                    logger.exception(f'Problem adding linked device {arp_raw_device}')
+                    logger.exception(f'Problem adding connected device {arp_raw_device}')
 
             try:
                 device.set_raw({'mac': arp_raw_device['mac_address'],
                                 'names': list(arp_raw_device['names']),
-                                'linked_devices': list(arp_raw_device['linked_devices']),
+                                'connected_devices': list(arp_raw_device['linked_devices']),
                                 'ips': list(arp_raw_device['related_ips']),
                                 })
             except Exception:
@@ -160,16 +156,17 @@ def _create_fdb_device(create_device_func, mac, fdb_raw_device):
         return None
 
     device = create_device_func()
-    names = '_'.join(sorted(list(fdb_raw_device.keys())))
-    device.id = '_'.join(['JUINPER_FDB', mac, names])
+    first_name = sorted(list(fdb_raw_device.keys()))[0]
+    device.id = '_'.join(['JUINPER_FDB', mac, first_name])
     device.add_nic(mac)
     device.device_type = 'FDB Device'
 
-    for linked_device_name, linked_device_data in fdb_raw_device.items():
+    for connected_device_name, connected_device_data in fdb_raw_device.items():
         try:
-            linked_device = LinkedDevicesAdapter()
-            linked_device.device_name = linked_device_name
-            for iface, entries in linked_device_data.items():
+            connected_device = DeviceAdapterNeighbor()
+            connected_device.remote_name = connected_device_name
+            connected_device.connection_type = 'Indirect'
+            for iface, entries in connected_device_data.items():
                 if iface == 'All-members':
                     logger.debug('Igonring All-members entry')
                     continue
@@ -204,16 +201,16 @@ def _create_fdb_device(create_device_func, mac, fdb_raw_device):
                     logger.debug('Ignoring empty iface')
                     continue
 
-                linked_device.interfaces.append(interface)
+                connected_device.remote_ifaces.append(interface)
 
-            if not linked_device.interfaces:
+            if not connected_device.remote_ifaces:
                 # we didn't get any linked device - dont add device
                 logger.debug('Ignore empty device')
                 return None
-            device.linked_devices.append(linked_device)
+            device.connected_devices.append(connected_device)
 
         except Exception:
-            logger.exception(f'Problem adding linked device {linked_device_data}')
+            logger.exception(f'Problem adding linked device {connected_device_data}')
 
     try:
         device.set_raw({'mac': mac,
@@ -242,7 +239,7 @@ def _get_id_for_juniper(raw_device):
     serial = raw_device.get('hardware', {}).get('serial-number', '')
     if serial:
         return serial
-    list_ = raw_device.get('interface list', [])
+    list_, rr = raw_device.get('interface list', ([], None))
     if list_:
         mac = list_[0].get('current-physical-address', '')
     if mac:
@@ -268,10 +265,11 @@ def _juniper_add_nic(device, raw_device):
     if 'interface list' not in raw_device:
         return
 
-    for interface in raw_device['interface list']:
+    raw, rr = raw_device['interface list']
+    for interface in raw:
         try:
             vlan_list = []
-            raw_vlan = _get_vlans_for_iface(raw_device, interface.get('name', ''))
+            raw_vlan = _get_vlans_for_iface(raw, interface.get('name', ''))
             port_type = None
             if raw_vlan:
                 port_type = raw_vlan.get('interface-port-mode')

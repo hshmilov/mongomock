@@ -7,6 +7,7 @@ import re
 from typing import List, Tuple
 
 from axonius.clients.juniper.rpc.utils import gettext, gettag, prepare
+from axonius.utils.xml2json_parser import Xml2Json
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -104,7 +105,7 @@ def parse_interface_list(xml):
         for logical_interface in logical_interfaces:
             result.append(logical_interface)
 
-    return result
+    return result, Xml2Json(xml).result
 
 
 def parse_hardware(xml):

@@ -498,6 +498,10 @@ def compare_hostname(adapter_device1, adapter_device2):
     return adapter_device1['data']['hostname'].lower() == adapter_device2['data']['hostname'].lower()
 
 
+def compare_asset_name(adapter_device1, adapter_device2):
+    return adapter_device1['data']['name'].lower() == adapter_device2['data']['name'].lower()
+
+
 def is_different_plugin(adapter_device1, adapter_device2):
     return adapter_device1.get('plugin_name') != adapter_device2.get('plugin_name')
 
@@ -530,6 +534,14 @@ def is_from_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter'
 
 
+def is_junos_space_device(adapter_device):
+    return adapter_device.get('data', {}).get('device_type') == 'Juniper Space Device'
+
+
+def is_from_juniper_and_asset_name(adapter_device):
+    return adapter_device.get('plugin_name') in ['juniper_adapter', 'junos_adapter'] and adapter_device.get('data', {}).get('name')
+
+
 def compare_id(adapter_device1, adapter_device2):
     return get_id(adapter_device1) == get_id(adapter_device2)
 
@@ -545,6 +557,10 @@ def get_id(adapter_device):
 
 def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
+
+
+def get_asset_name(adapter_device):
+    return adapter_device['data'].get('name')
 
 
 def get_serial(adapter_device):

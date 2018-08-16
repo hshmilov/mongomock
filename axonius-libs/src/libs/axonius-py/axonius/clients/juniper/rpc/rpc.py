@@ -1,7 +1,7 @@
 """ xml rpc parser for juniper """
 
 import logging
-
+import itertools
 from collections import defaultdict
 
 from axonius.clients.juniper.rpc.utils import prepare, gettext, gettag
@@ -205,7 +205,8 @@ def parse_ethernet_switching(xml):
 
 def parse_lldp(xmls):
     results = defaultdict(list)
-
+    coutner = itertools.count(0)
+    json = ''
     for juniper_device_name, xml in xmls:
         try:
             xml = prepare(xml)
@@ -222,8 +223,18 @@ def parse_lldp(xmls):
                 # We save for each name the lldp entry, and the device that saw him.
                 # Note that lldp neighbor may be different equipment,
                 # for example mikrotik or ubiquity or any unix machine.
-                # if the name is empty, we will handle it later on.
-                results[neighbor.get('lldp-remote-system-name', '')].append((juniper_device_name, neighbor))
+                # if the name is empty, we are putting number inorder to ignore it
+                device_name = neighbor.get('lldp-remote-system-name', '')
+
+                if '(none)' in device_name:
+                    # Some devices return with meaningless name - ignore it
+                    logger.warning(f'Ignoring meaningless device_name {device_name}')
+                    device_name = ''
+
+                if device_name == '':
+                    device_name = next(coutner)
+
+                results[device_name].append((juniper_device_name, neighbor))
         except Exception:
-            logger.exception(f'Failed to parse lldp device {xml}')
+            logger.exception(f'Failed to parse lldp device {json}')
     return results

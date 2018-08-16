@@ -15,7 +15,7 @@ logging.basicConfig()
 
 def test_interface_list():
     data = prepare(INTERFACE_MOCK)
-    result = parse_interface_list(data)
+    result = parse_interface_list(data)[0]
     assert len(result) == 7
 
 

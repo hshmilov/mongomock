@@ -46,6 +46,7 @@ class CiscoPrimeClient:
         logger.debug(f'getting {url}')
         resp = self._sess.get(url, *args, **kwargs, verify=False, auth=(self._username, self._password))
         if resp.status_code != 200:
+            logger.exception(f'Got unexpected status code: {resp.status_code} content: {resp.content} url: {resp.url}')
             raise CiscoPrimeException(f'Got unexpected status code {resp.status_code}')
         return resp
 
@@ -57,7 +58,7 @@ class CiscoPrimeClient:
         logger.info(f'Creating session using {self._username}')
         try:
             self._sess = requests.Session()
-            resp = self.get('/webacs/api/v3/data.json')
+            resp = self.get('/webacs/api/v2/data.json')
         except CiscoPrimeException as e:
             raise ClientConnectionException(f'Invalid creds for api test')
         except Exception as e:
@@ -71,7 +72,7 @@ class CiscoPrimeClient:
     def _get_devices(self, first_result=0, max_results=100):
         try:
             response = self.get(
-                f'/webacs/api/v3/data/InventoryDetails.json'
+                f'/webacs/api/v2/data/InventoryDetails.json'
                 f'?.full=true&.firstResult={first_result}&.maxResults={max_results}').json()
         except Exception as e:
             logger.exception(f'Got exception while getting devices {first_result} {max_results}')

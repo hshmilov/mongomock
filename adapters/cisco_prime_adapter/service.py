@@ -71,13 +71,13 @@ class CiscoPrimeAdapter(AdapterBase):
                     if new_tasks:
                         tasks += new_tasks
                 except Exception as e:
-                    logger.exception(f'Got exception while getting arp_table: {raw_device}')
+                    logger.exception(f'Got exception while getting tasks: {raw_device}')
 
             try:
                 for entry in snmp.run_event_loop(tasks):
                     yield ('neighbor', entry)
             except Exception as e:
-                logger.exception(f'Got exception while getting arp_table: {raw_device}')
+                logger.exception(f'Got exception while getting tasks: {raw_device}')
         finally:
             session.disconnect()
 

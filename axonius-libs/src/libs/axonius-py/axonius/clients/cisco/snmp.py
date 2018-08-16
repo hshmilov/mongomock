@@ -10,6 +10,7 @@ from pysnmp.hlapi.asyncio import bulkCmd
 from pysnmp.hlapi.varbinds import CommandGeneratorVarBinds
 
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.utils.singleton import Singleton
 from axonius.clients.cisco import snmp_parser
 from axonius.clients.cisco.abstract import (AbstractCiscoClient, ArpCiscoData,
                                             BasicInfoData, CdpCiscoData)
@@ -27,13 +28,30 @@ INETFACE_OID = '1.3.6.1.2.1.2.2.1'
 IP_OID = '1.3.6.1.2.1.4.20'
 
 
+class SingletonEngine(metaclass=Singleton):
+    def __init__(self):
+        self.engine = None
+
+    def get_instance(self):
+        if not self.engine:
+            self.engine = SnmpEngine()
+        return self.engine
+
+    def close_instance(self):
+        dispatcher = self.engine.transportDispatcher
+        dispatcher.closeDispatcher()
+        self.engine = None
+
+
 def run_event_loop(tasks):
+    SingletonEngine().get_instance()
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     tasks, _ = loop.run_until_complete(asyncio.wait(tasks))
+    SingletonEngine().close_instance()
     return map(lambda x: x.result(), tasks)
 
 
@@ -99,11 +117,10 @@ class CiscoSnmpClient(AbstractCiscoClient):
         return run_event_loop([self._async_next_cmd(oid)])
 
     async def _async_next_cmd(self, oid):
-        engine = SnmpEngine()
+        engine = SingletonEngine().get_instance()
         data = await asyncio_next(engine, self._community,
                                   self._ip, self._port,
                                   oid)
-        engine.transportDispatcher.closeDispatcher()
         return data
 
     def __enter__(self):
@@ -332,10 +349,7 @@ if __name__ == '__main__':
     import pprint
 
     logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
-    CLIENT = CiscoSnmpClient(host='192.168.20.35', community='public', port=161)
+    CLIENT = CiscoSnmpClient(host='xxx', community='public', port=161)
     with CLIENT:
-        pass
-    with CLIENT:
-        pass
-    LIST_ = list(CLIENT.query_all())
+        LIST_ = list(CLIENT.query_all())
     pprint.pprint(LIST_)

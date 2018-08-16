@@ -2,8 +2,9 @@
 import logging
 from collections import defaultdict
 
-from axonius.adapter_exceptions import ClientConnectionException
 from openstack.connection import Connection
+
+from axonius.adapter_exceptions import ClientConnectionException
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

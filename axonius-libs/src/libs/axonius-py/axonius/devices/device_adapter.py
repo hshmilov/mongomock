@@ -101,6 +101,14 @@ class DeviceAdapterNetworkInterface(SmartJsonClass):
     mtu = Field(str, "MTU", description="Interface Maximum transmission unit")
 
 
+class DeviceAdapterNeighbor(SmartJsonClass):
+    """ A definition for the json-scheme for an connected device """
+    remote_name = Field(str, 'Remote Device Name')
+    local_ifaces = ListField(DeviceAdapterNetworkInterface, 'Local Interface')
+    remote_ifaces = ListField(DeviceAdapterNetworkInterface, 'Remote Device Iface')
+    connection_type = Field(str, 'Connection Type', enum=['Direct', 'Indirect'])
+
+
 class DeviceAdapterRelatedIps(DeviceAdapterNetworkInterface):
     """ A definition for the json-scheme for a related ips """
     pass
@@ -223,6 +231,8 @@ class DeviceAdapter(SmartJsonClass):
                                            json_format=JsonArrayFormat.table)
     connected_hardware = ListField(DeviceAdapterConnectedHardware, "Connected Hardware",
                                    json_format=JsonArrayFormat.table)
+
+    connected_devices = ListField(DeviceAdapterNeighbor, "Connected Devices")
     id = Field(str, 'ID')
     part_of_domain = Field(bool, "Part Of Domain")
     domain = Field(str, "Domain")  # Only domain, e.g. "TestDomain.Test", or the computer name (local user)
