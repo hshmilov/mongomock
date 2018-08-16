@@ -44,7 +44,9 @@ return (function(el, container){
 })(arguments[0], containerElement);
 '''
 
+BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-btn'
+BUTTON_TYPE_A = 'a'
 TOASTER_CLASS_NAME = 'x-toast'
 TOASTER_ELEMENT_WITH_TEXT_TEMPLATE = '//div[@class=\'x-toast\' and text()=\'{}\']'
 RETRY_WAIT_FOR_ELEMENT = 150
@@ -122,14 +124,14 @@ class Page:
         element.send_keys(val)
 
     @staticmethod
-    def get_button_xpath(text, button_type=BUTTON_DEFAULT_CLASS):
-        button_xpath_template = './/button[@class=\'{}\' and .//text()=\'{}\']'
-        xpath = button_xpath_template.format(button_type, text)
+    def get_button_xpath(text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS):
+        button_xpath_template = './/{}[@class=\'{}\' and .//text()=\'{}\']'
+        xpath = button_xpath_template.format(button_type, button_class, text)
         return xpath
 
-    def get_button(self, text, button_type=BUTTON_DEFAULT_CLASS, context=None):
+    def get_button(self, text, button_type=BUTTON_DEFAULT_TYPE, button_class=BUTTON_DEFAULT_CLASS, context=None):
         base = context if context is not None else self.driver
-        xpath = self.get_button_xpath(text, button_type)
+        xpath = self.get_button_xpath(text, button_type=button_type, button_class=button_class)
         return base.find_element_by_xpath(xpath)
 
     # this is a special case where the usual get_button doesn't work, name will be changed later
@@ -143,11 +145,15 @@ class Page:
     def click_button(self,
                      text,
                      call_space=True,
-                     button_type=BUTTON_DEFAULT_CLASS,
+                     button_type=BUTTON_DEFAULT_TYPE,
+                     button_class=BUTTON_DEFAULT_CLASS,
                      ignore_exc=False,
                      with_confirmation=False,
                      context=None):
-        button = self.get_button(text, button_type, context)
+        button = self.get_button(text,
+                                 button_type=button_type,
+                                 button_class=button_class,
+                                 context=context)
         self.scroll_into_view(button)
         if call_space:
             button.send_keys(Keys.SPACE)
@@ -271,3 +277,25 @@ class Page:
 
         assert toggle.is_selected() == make_yes
         return False
+
+    def select_option(self,
+                      dropdown_css_selector,
+                      text_box_css_selector,
+                      selected_option_css_selector,
+                      choice):
+        self.driver.find_element_by_css_selector(dropdown_css_selector).click()
+        text_box = self.driver.find_element_by_css_selector(text_box_css_selector)
+        self.send_keys(text_box, choice)
+        self.driver.find_element_by_css_selector(selected_option_css_selector).click()
+
+    def select_option_without_search(self,
+                                     dropdown_css_selector,
+                                     selected_options_css_selector,
+                                     text):
+        self.driver.find_element_by_css_selector(dropdown_css_selector).click()
+        options = self.driver.find_elements_by_css_selector(selected_options_css_selector)
+        for option in options:
+            if option.text == text:
+                option.click()
+                return option
+        return None

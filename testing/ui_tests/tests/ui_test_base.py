@@ -5,6 +5,7 @@ from selenium import webdriver
 from services.ports import DOCKER_PORTS
 from ui_tests.pages.login_page import LoginPage
 from ui_tests.pages.settings_page import SettingsPage
+from ui_tests.pages.devices_page import DevicesPage
 from test_credentials.test_gui_credentials import DEFAULT_USER
 
 
@@ -36,6 +37,7 @@ class TestBase:
         params = dict(driver=self.driver, base_url=self.base_url)
         self.login_page = LoginPage(**params)
         self.settings_page = SettingsPage(**params)
+        self.devices_page = DevicesPage(**params)
 
     def log_in(self):
         self.driver.get(self.base_url)
