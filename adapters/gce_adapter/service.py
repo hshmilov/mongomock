@@ -111,7 +111,7 @@ class GceAdapter(AdapterBase):
         except Exception:
             logger.exception(f"Problem getting creation time for {str(raw_device_data)}")
         try:
-            for item in raw_device_data.extra.get('metadata').get('items'):
+            for item in (raw_device_data.extra.get('metadata').get('items') or []):
                 if item.get('key') == 'cluster-name':
                     device.cluster_name = item.get('value')
                 elif item.get('key') == 'cluster-uid':

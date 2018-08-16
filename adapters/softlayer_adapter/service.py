@@ -159,10 +159,21 @@ class SoftlayerAdapter(AdapterBase, Configurable):
                     try:
                         netmask = (iface.get('primarySubnet') or {}).get('netmask')
                         ip_address = iface.get('ipmiIpAddress') or iface.get('primaryIpAddress')
-                        interface = ipaddress.ip_interface(ip_address + '/' + netmask)
-                        device.add_nic(mac=(iface.get('macAddress') or iface.get('ipmiMacAddress')),
-                                       ips=[ip_address],
-                                       subnets=[interface.with_prefixlen],
+                        ips = None
+                        interfaces = None
+                        if ip_address:
+                            ips = [ip_address]
+                        try:
+                            if ip_address and netmask:
+                                interfaces = [ipaddress.ip_interface(ip_address + '/' + netmask).with_prefixlen]
+                        except Exception:
+                            logger.exception(f'Problem adding interface to nic {nic}')
+                        mac_address = (iface.get('macAddress') or iface.get('ipmiMacAddress'))
+                        if not mac_address:
+                            mac_address = None
+                        device.add_nic(mac=mac_address,
+                                       ips=ips,
+                                       subnets=interfaces,
                                        name=iface.get('name'))
                     except Exception:
                         logger.exception(f"Problem with adding nic: {iface} to SoftLayer device")

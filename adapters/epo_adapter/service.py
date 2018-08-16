@@ -157,7 +157,7 @@ class EpoAdapter(AdapterBase):
             # The next thing, i'm afraid, could go bad
             try:
                 # Set up epo products
-                for product in device_raw.get("EPOProductPropertyProducts.Products", "").split(", "):
+                for product in (device_raw.get("EPOProductPropertyProducts.Products") or '').split(", "):
                     device.epo_products.append(product)
 
                 # Set up os version
