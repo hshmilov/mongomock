@@ -137,11 +137,15 @@ class BigfixAdapter(AdapterBase):
                 device.figure_os(device_raw.get("OS", ""))
                 try:
                     try:
+                        mac_key = None
                         for key_raw in device_raw.keys():
                             if "mac addresses" in key_raw.lower():
                                 mac_key = key_raw
                                 break
-                        mac_addresses = device_raw[mac_key].split(",")
+                        if mac_key is not None:
+                            mac_addresses = device_raw[mac_key].split(",")
+                        else:
+                            mac_addresses = []
                     except Exception:
                         mac_addresses = []
                         logger.exception(f"Problem getting mac for {device_raw}")

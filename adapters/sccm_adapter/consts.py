@@ -8,6 +8,10 @@ DEFAULT_SCCM_PORT = 1433
 DEVICES_FETECHED_AT_A_TIME = 'devices_fetched_at_a_time'
 SCCM_QUERY = """
 SELECT *,
+        [Network Interfaces] = STUFF((SELECT ';' + rasi.MACAddress0 + '@' + rasi.IPAddress0
+                FROM v_GS_NETWORK_ADAPTER_CONFIGURATION AS rasi
+                WHERE rasi.ResourceID = SYS.ResourceID
+                FOR XML PATH, TYPE).value(N'.[1]',N'nvarchar(max)'),1,1,''),
         [Mac Addresses] = STUFF((SELECT ';' + rasi.MACAddress0
                 FROM v_GS_NETWORK_ADAPTER_CONFIGURATION AS rasi
                 WHERE rasi.ResourceID = SYS.ResourceID

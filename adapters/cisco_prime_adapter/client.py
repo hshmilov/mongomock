@@ -138,15 +138,8 @@ class CiscoPrimeClient:
         :return: json that conatins the ifaces
         """
 
-        # validate that the device has the nic structure, return empty list if it isn't
-        if not json.is_valid(device,
-                             {'ipInterfaces': {'ipInterface': ['ipAddress', 'name']}},
-                             {'ethernetInterfaces': {'ethernetInterface': ['name', 'macAddress']}}):
-            logger.warning(f'Invalid nics for device {device}')
-            return {}
-
-        ethernet_interfaces = device['ethernetInterfaces']['ethernetInterface']
-        ip_interfaces = device['ipInterfaces']['ipInterface']
+        ethernet_interfaces = device.get('ethernetInterfaces', {}).get('ethernetInterface', [])
+        ip_interfaces = device.get('ipInterfaces', {}).get('ipInterface', [])
 
         # XXX: for now we only get interface that has ip
         # XXX: The algorithem complexity is O(nm) we can do much better by sorting creating dict of ether by name.
@@ -154,8 +147,12 @@ class CiscoPrimeClient:
             result = defaultdict(list)
             for ipiface in ip_interfaces:
                 for etheriface in ethernet_interfaces:
-                    if etheriface['name'] == ipiface['name']:
-                        ip_subnet = (ipiface['ipAddress'], None)
+                    if 'macAddress' not in etheriface:
+                        continue
+                    if (etheriface.get('name') or '', etheriface['macAddress']) not in result:
+                        result[(etheriface.get('name') or '', etheriface['macAddress'])] = []
+                    if etheriface.get('name') == ipiface.get('name'):
+                        ip_subnet = (ipiface.get('ipAddress') or '0.0.0.0', None)
 
                         # we got ip in cidr format (x.y.z.n/m)
                         if '/' in ip_subnet[0]:
@@ -165,7 +162,7 @@ class CiscoPrimeClient:
                         if ip_subnet[0] == '0.0.0.0':
                             continue
 
-                        result[(etheriface['name'], etheriface['macAddress'])].append(ip_subnet)
+                        result[(etheriface.get('name') or '', etheriface['macAddress'])].append(ip_subnet)
         except Exception as e:
             logger.exception(f'Unable to parse nics for device {device}')
             return {}

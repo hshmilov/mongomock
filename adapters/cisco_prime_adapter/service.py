@@ -131,6 +131,11 @@ class CiscoPrimeAdapter(AdapterBase):
         device.device_model_family = raw_device['summary'].get('ProductFamily', '')
         device.reachability = raw_device['summary'].get('reachability', '')
 
+        ip_address = raw_device['summary'].get('ipAddress', '')
+        try:
+            device.add_nic(None, [ip_address])
+        except Exception:
+            logger.exception(f'Problem adding basic nic {raw_device}')
         # XXX: Figure os dosen't support .build field detection. it very
         # ugly to use figure os, since we dosen't really figuring out the os
         # (we pass static string 'cisco')
