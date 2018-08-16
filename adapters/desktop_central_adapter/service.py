@@ -141,8 +141,13 @@ class DesktopCentralAdapter(AdapterBase):
                                            device_raw.get("service_pack", "")]))
                 try:
                     if device_raw.get("mac_address") or device_raw.get("ip_address"):
-                        device.add_nic(device_raw.get("mac_address"), device_raw.get(
-                            "ip_address", "").split(","))
+                        mac_addresses = (device_raw.get("mac_address") or '').split(',')
+                        ips = (device_raw.get("ip_address") or '').split(",")
+                        if not mac_addresses:
+                            device.add_nic(None, ips)
+                        else:
+                            for mac_address in mac_addresses:
+                                device.add_nic(mac_address, ips)
                 except Exception:
                     logger.exception("Problem with adding nic to desktop central device")
                 device.agent_version = device_raw.get("agent_version", "")
