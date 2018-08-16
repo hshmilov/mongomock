@@ -7,7 +7,7 @@ import pytest
 
 from services.axonius_service import get_service
 from services.ports import DOCKER_PORTS
-# from services.plugins.selenium_service import SeleniumService
+# from services.standalone_services.selenium_service import SeleniumService
 
 
 def main():
