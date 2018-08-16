@@ -588,6 +588,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.add_rule_unauthenticated("users/csv")
     def get_users_csv(self, mongo_filter, mongo_sort, mongo_projection):
         with self._get_db_connection() as db_connection:
+            # Deleting image from the CSV (we dont need this base64 blob in the csv)
+            if "specific_data.data.image" in mongo_projection:
+                del mongo_projection["specific_data.data.image"]
             csv_string = gui_helpers.get_csv(mongo_filter, mongo_sort, mongo_projection,
                                              self.gui_dbs.entity_query_views_db_map[EntityType.Users],
                                              self._entity_views_db_map[EntityType.Users], self.core_address,
@@ -1518,7 +1521,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             logger.exception(f'Card {card["name"]} must have metric field in order to be fetched')
 
         if res is None:
-            logger.error(f"Unexpected card found - {card} {card['metric']}")
+            logger.error(f"Unexpected card found - {card['name']} {card['metric']}")
             return return_error("Unexpected error")
 
         return jsonify({x['name']: x for x in res})
@@ -1818,7 +1821,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     field_value = f'\"{field_value}\"'
                 if (isinstance(field_value, bool)):
                     field_value = str(field_value).lower()
-            data.append({'name': item["name"], 'value': item["value"], 'module': entity.value,
+            data.append({'name': str(item["name"]), 'value': item["value"], 'module': entity.value,
                          'view': {**base_view, 'query': {'filter': f'{base_filter}{field["name"]} == {field_value}'}}})
 
         if chart_view == ChartViews.pie:

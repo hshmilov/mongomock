@@ -281,6 +281,7 @@
         grid-gap: 12px;
         width: 100%;
         .x-card {
+            min-height: 300px;
             .timeline {
                 font-size: 12px;
                 color: $grey-4;

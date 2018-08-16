@@ -1,6 +1,6 @@
 <template>
     <x-select :options="options" :value="value" @input="selectOption" class="x-select-symbol"
-              :placeholder="placeholder" :id="id" size="sm">
+              :placeholder="placeholder" :id="id" size="sm" :searchable="true">
         <template slot-scope="{ option }">
             <div class="x-type-img">
                 <img v-if="type === 'img'" :src="`/src/assets/images/logos/${option.name}.png`" />

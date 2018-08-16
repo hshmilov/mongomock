@@ -8,7 +8,7 @@
                                     :selected="selectedUsers" @done="updateUsers" />
                 <!-- Modal for selecting fields to be presented in table, including adapter hierarchy -->
                 <x-data-field-menu :module="module" />
-                <div class="x-btn link" @click="exportCSV">Export csv</div>
+                <div class="x-btn link" @click="exportCSV">Export CSV</div>
             </template>
         </x-data-table>
     </x-page>
