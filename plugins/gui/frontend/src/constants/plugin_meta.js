@@ -1,6 +1,6 @@
 export const pluginMeta = {
     cisco_amp_adapter: {
-        title: 'Cisco Advanced Malware Protection',
+        title: 'Cisco Advanced Malware Protection - BETA',
         description: 'Cisco Advanced Malware Protection prevents threats at point of entry then continuously tracks every file it lets onto the files.'
     },
     claroty_adapter: {
