@@ -186,6 +186,13 @@ class Page:
                                         interval=SLEEP_INTERVAL):
         return self.wait_for_element_present(By.CSS_SELECTOR, css, element, retries, interval)
 
+    def wait_for_element_present_by_xpath(self,
+                                          xpath,
+                                          element=None,
+                                          retries=RETRY_WAIT_FOR_ELEMENT,
+                                          interval=SLEEP_INTERVAL):
+        return self.wait_for_element_present(By.XPATH, xpath, element, retries, interval)
+
     def wait_for_element_present(self,
                                  by,
                                  value,

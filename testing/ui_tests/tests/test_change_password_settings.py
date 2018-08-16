@@ -1,9 +1,5 @@
 from ui_tests.tests.ui_test_base import TestBase
-
-INCORRECT_PASSWORD = 'Incorrect!'
-UNMATCHED_PASSWORD1 = 'Unmatched!'
-UNMATCHED_PASSWORD2 = 'Unmatched!2'
-NEW_PASSWORD = 'NewPassword!'
+from ui_tests.tests import ui_consts
 
 
 class TestChangePasswordSettings(TestBase):
@@ -23,39 +19,39 @@ class TestChangePasswordSettings(TestBase):
         self.settings_page.wait_for_password_changed_toaster()
 
         # Fill in incorrect password
-        self._change_password(INCORRECT_PASSWORD,
-                              INCORRECT_PASSWORD,
-                              INCORRECT_PASSWORD,
+        self._change_password(ui_consts.INCORRECT_PASSWORD,
+                              ui_consts.INCORRECT_PASSWORD,
+                              ui_consts.INCORRECT_PASSWORD,
                               self.settings_page.wait_for_given_password_is_wrong_toaster)
 
         # Fill in unmacthed passwords
         self._change_password(self.password,
-                              UNMATCHED_PASSWORD1,
-                              UNMATCHED_PASSWORD2,
+                              ui_consts.UNMATCHED_PASSWORD1,
+                              ui_consts.UNMATCHED_PASSWORD2,
                               self.settings_page.wait_for_passwords_dont_match_toaster)
 
         # Fill in new password
         self._change_password(self.password,
-                              NEW_PASSWORD,
-                              NEW_PASSWORD,
+                              ui_consts.NEW_PASSWORD,
+                              ui_consts.NEW_PASSWORD,
                               self.settings_page.wait_for_password_changed_toaster)
 
         self.login_page.logout()
         self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=self.username, password=INCORRECT_PASSWORD)
+        self.login_page.login(username=self.username, password=ui_consts.INCORRECT_PASSWORD)
         assert self.login_page.wait_for_invalid_login_message()
-        self.login_page.login(username=self.username, password=UNMATCHED_PASSWORD1)
+        self.login_page.login(username=self.username, password=ui_consts.UNMATCHED_PASSWORD1)
         assert self.login_page.wait_for_invalid_login_message()
-        self.login_page.login(username=self.username, password=UNMATCHED_PASSWORD2)
+        self.login_page.login(username=self.username, password=ui_consts.UNMATCHED_PASSWORD2)
         assert self.login_page.wait_for_invalid_login_message()
         self.settings_page.refresh()
         self.login_page.wait_for_login_page_to_load()
-        self.login_page.login(username=self.username, password=NEW_PASSWORD)
+        self.login_page.login(username=self.username, password=ui_consts.NEW_PASSWORD)
 
         self.settings_page.switch_to_page()
 
         # Change password back
-        self._change_password(NEW_PASSWORD,
+        self._change_password(ui_consts.NEW_PASSWORD,
                               self.password,
                               self.password,
                               self.settings_page.wait_for_password_changed_toaster)
