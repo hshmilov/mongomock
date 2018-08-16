@@ -7,7 +7,12 @@
                     <div class="title">Total {{ module }} seen</div>
                     <div class="quantity">{{ dataSeen }}</div>
                 </div>
-                <div class="arrow">Axonius {{ singularModule }} Correlation</div>
+                <div class="summary-row">
+                    <div class="title mid">Axonius {{ singularModule }} Correlation</div>
+                    <div class="quantity">
+                        <svg-icon name="symbol/funnel" :original="true" width="48" height="48" />
+                    </div>
+                </div>
                 <div class="summary-row">
                     <div class="title">Total unique {{ module }}</div>
                     <div class="quantity">{{ dataUnique }}</div>
@@ -72,32 +77,23 @@
                     font-size: 18px;
                     .title {
                         flex: auto 1 0;
+                        &.mid {
+                            font-size: 14px;
+                            color: $theme-orange;
+                            margin: auto 0;
+                            text-transform: capitalize;
+                        }
                     }
                     .quantity {
                         font-weight: 500;
+                        width: 60px;
+                        text-align: center;
                     }
-                }
-                .arrow {
-                    margin: auto;
-                    margin-top: 8px;
-                    margin-bottom: 16px;
-                    padding: 4px 0;
-                    width: 180px;
-                    position: relative;
-                    text-align: center;
-                    background-color: $theme-orange;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    font-weight: 400;
-                    text-transform: capitalize;
-                    &:after {
-                        content: '';
-                        position: absolute;
-                        border-right: 90px solid transparent;
-                        border-top: 12px solid $theme-orange;
-                        border-left: 90px solid transparent;
-                        left: 0;
-                        bottom: -12px;
+                    .svg-icon {
+                        margin: 6px 0;
+                        .svg-fill {
+                            fill: $theme-orange;
+                        }
                     }
                 }
             }

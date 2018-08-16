@@ -816,10 +816,9 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         try:
             response = self.request_remote_plugin('run_action', self.device_control_plugin, 'post', json=action_data)
             if response.status_code != 200:
-                logger.error(
-                    f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
-                raise ValueError(
-                    f"Execute of {action_type} returned {response.status_code}. Reason: {str(response.content)}")
+                message = f'Running action {action_type} failed because {str(json.loads(response.content)["message"])}'
+                logger.error(message)
+                return return_error(message, 400)
             return '', 200
         except Exception as e:
             return return_error(f'Attempt to run action {action_type} caused exception. Reason: {repr(e)}', 400)

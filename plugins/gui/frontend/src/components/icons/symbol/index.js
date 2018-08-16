@@ -1,5 +1,6 @@
 /* eslint-disable */
 require('./error')
+require('./funnel')
 require('./histogram')
 require('./info')
 require('./pie')

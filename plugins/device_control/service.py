@@ -36,7 +36,7 @@ class DeviceControlService(PluginBase, Triggerable):
         :return:
         """
         if not self._execution_enabled:
-            raise ValueError("Execution is disabled")
+            return return_error("Execution is disabled", 400)
         return self.run_action_internal()
 
     def run_action_internal(self):

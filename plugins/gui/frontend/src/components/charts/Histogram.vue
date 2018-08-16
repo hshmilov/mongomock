@@ -6,7 +6,9 @@
                 <div :style="{width: calculateBarHeight(item.value) + 'px'}">
                     <div class="bar growing-x" :title="item.name"></div>
                 </div>
-                <div class="quantity">{{item.value}}</div>
+                <div class="quantity">
+                    <div class="quantity-text">{{item.value}}</div>
+                </div>
             </div>
             <div v-if="type ==='text'" class="item-title" :title="item.name">{{item.name}}</div>
         </div>
@@ -71,6 +73,12 @@
                     text-align: right;
                     font-weight: 500;
                     font-size: 18px;
+                    .quantity-text {
+                        width: 60px;
+                        text-align: center;
+                        margin-right: 0;
+                        margin-left: auto;
+                    }
                 }
             }
             .item-title {
