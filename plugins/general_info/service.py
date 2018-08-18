@@ -314,6 +314,9 @@ class GeneralInfoService(PluginBase, Triggerable):
             for sd_users in [d['data']['users'] for d in device.specific_data if d['data'].get('users') is not None]:
                 # for each user associated, add a (device, user) tuple.
                 for user in sd_users:
+                    if 'username' not in user:
+                        logger.warning(f'Bad user {user}')
+                        continue
                     if users.get(user['username']) is None:
                         users[user['username']] = []
 
@@ -354,7 +357,9 @@ class GeneralInfoService(PluginBase, Triggerable):
                     EntityType.Users, False)
                 # At this point we must have it.
                 user = list(self.users.get(data={"id": username}))
-                assert len(user) == 1, f"We just created the user {username} but the length is reported as {len(user)}."
+                if len(user) != 1:
+                    logger.error(f"We just created the user {username} but the length is reported as {len(user)}.")
+                    continue
 
             # at this point the user exists, go over all associated devices and add them.
             user = user[0]
