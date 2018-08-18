@@ -1,7 +1,7 @@
 client_details = {
     "domain": "https://techp.awmdm.com",
     "username": "nathan@axonius.com",
-    "password": "AAAc5iz4M75V6aCgfgda111222",
+    "password": "LS6isAsR2tCRcZIVcEPE",
     "apikey": "LTsXS00jvRqNhak28W88+6uUUnGU/YzHXGiS69W4QGI=",
     "verify_ssl": True
 }
