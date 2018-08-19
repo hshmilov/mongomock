@@ -91,6 +91,15 @@ def test_fetch_complicated_link(axonius_fixture, ad_fixture, esx_fixture):
         (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
          x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id']) for x in devices_response)
 
+    assert any(
+        (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_ad_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
+         x['adapters'][0]['data']['id'] == first_ad_device['adapters'][0]['data']['id'] and
+         x['tags'][0]['name'] == 'ad_taggy') for x in devices_response)
+    assert any(
+        (x['adapters'][0][PLUGIN_UNIQUE_NAME] == first_esx_device['adapters'][0][PLUGIN_UNIQUE_NAME] and
+         x['adapters'][0]['data']['id'] == first_esx_device['adapters'][0]['data']['id'] and
+         x['tags'][0]['name'] == 'esx_taggy') for x in devices_response)
+
 
 def test_minimum_fetch_wait_time(axonius_fixture, esx_fixture):
     @retry(stop_max_attempt_number=100, wait_fixed=1000, retry_on_result=lambda result: result is False)

@@ -571,6 +571,9 @@ class AggregatorService(PluginBase, Triggerable):
     def _unlink_entities(self, associated_adapters, axonius_entity_to_split, entities_db):
         """
         Unlinks the associated_adapters from axonius_entity_to_split
+        :param associated_adapters: List of tuples, where each tuple is of form [unique_plugin_name, id]
+        :param axonius_entity_to_split: An axnoius entity, with all tags and adapters
+        :param entities_db: the relevant collection - i.e. devices_db or users_db
         """
         # we already tested that all adapters in data_sent are indeed from the single
         # entity we found, so the ids will match, so we don't have to check that.
@@ -584,6 +587,9 @@ class AggregatorService(PluginBase, Triggerable):
             "tags": []
         }
         remaining_adapters = []
+
+        # figure out which adapters should stay on the current entity (axonius_entity_to_split - remaining adapters)
+        # and those that should move to the new axonius entity
         for adapter_entity in axonius_entity_to_split['adapters']:
             candidate = get_entity_id_for_plugin_name(associated_adapters,
                                                       adapter_entity[PLUGIN_UNIQUE_NAME])
@@ -591,11 +597,29 @@ class AggregatorService(PluginBase, Triggerable):
                 new_axonius_entity['adapters'].append(adapter_entity)
             else:
                 remaining_adapters.append(adapter_entity[PLUGIN_NAME])
+
+        # figure out for each tag G (in the current entity, i.e. axonius_entity_to_split)
+        # whether any of G.associated_adapters is in the `associated_adapters`, i.e.
+        # whether G should be a part of the new axonius entity.
+        # clarification: G should be a part of the new axonius entity if any of G.associated_adapters
+        # >>>>>>>>>>>>>> is also part of the new axonius entity
         for tag in axonius_entity_to_split['tags']:
             for tag_plugin_unique_name, tag_adapter_id in tag['associated_adapters']:
                 candidate = get_entity_id_for_plugin_name(associated_adapters, tag_plugin_unique_name)
                 if candidate is not None and candidate == tag_adapter_id:
-                    new_axonius_entity['tags'].append(tag)
+                    newtag = dict(tag)
+                    # if the tags moves/copied to the new entity, it should 'forget' it's old
+                    # associated adapters, because most of the them stay in the old device,
+                    # and so the new G.associated_adapters are the associated_adapters
+                    # that are also part of the new axonius entity
+                    newtag['associated_adapters'] = list(x
+                                                         for x
+                                                         in associated_adapters
+                                                         if x in newtag['associated_adapters'])
+                    new_axonius_entity['tags'].append(newtag)
+
+        # remove the adapters one by one from the DB, and also keep track in memory
+        adapter_entities_left = list(axonius_entity_to_split['adapters'])
         for adapter_to_remove_from_old in new_axonius_entity['adapters']:
             entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
                                     {
@@ -607,19 +631,58 @@ class AggregatorService(PluginBase, Triggerable):
                                             }
                                         }
             })
+            adapter_entities_left.remove(adapter_to_remove_from_old)
+
+        # generate a list of (unique_plugin_name, id) from the adapter entities left
+        adapter_entities_left_by_id = [
+            [adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id']]
+            for adapter
+            in adapter_entities_left
+        ]
+
+        # the old entity might and might not keep the tag:
+        # if the tag contains an associated_adapter that is also part of the old entity
+        # - then this tag is also associated with the old entity
+        # if it does not
+        # - this this tag is removed from the old entity
+
+        # so now we generate a list of all tags that must be removed from the old entity
+        # a tag will be removed if all of its associated_adapters are not in any of the
+        # adapter entities left in the old device, i.e. all of its associated_adapters have moved
+        pull_those = [tag_from_old
+                      for tag_from_old
+                      in axonius_entity_to_split['tags']
+                      if all(assoc_adapter not in adapter_entities_left_by_id
+                             for assoc_adapter
+                             in tag_from_old['associated_adapters'])]
+
+        set_query = {
+            ADAPTERS_LIST_LENGTH: len(set(remaining_adapters))
+        }
+        if pull_those:
+            pull_query = {
+                'tags': {
+                    "$or": [
+                        {
+                            PLUGIN_UNIQUE_NAME: pull_this_tag[PLUGIN_UNIQUE_NAME],
+                            "name": pull_this_tag['name']
+                        }
+                        for pull_this_tag
+                        in pull_those
+                    ]
+
+                }
+            }
+            full_query = {
+                "$pull": pull_query,
+                "$set": set_query
+            }
+        else:
+            full_query = {
+                "$set": set_query
+            }
         entities_db.update_many({'internal_axon_id': axonius_entity_to_split['internal_axon_id']},
-                                {
-                                    "$pull": {
-                                        'tags': {
-                                            f'associated_adapters.{tag_plugin_unique_name}': tag_adapter_id
-                                            for tag_to_remove_from_old in new_axonius_entity['tags']
-                                            for tag_plugin_unique_name, tag_adapter_id in tag_to_remove_from_old['associated_adapters']
-                                        }
-                                    },
-                                    "$set": {
-                                        ADAPTERS_LIST_LENGTH: len(set(remaining_adapters))
-                                    }
-        })
+                                full_query)
         new_axonius_entity[ADAPTERS_LIST_LENGTH] = len(set([x[PLUGIN_NAME] for x in new_axonius_entity['adapters']]))
         entities_db.insert_one(new_axonius_entity)
 
