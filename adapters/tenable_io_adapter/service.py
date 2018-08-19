@@ -30,7 +30,8 @@ class TenableIoAdapter(AdapterBase):
                                              url_base_prefix="/", headers={'Content-Type': 'application/json',
                                                                            'Accept': 'application/json'},
                                              access_key=client_config.get('access_key'),
-                                             secret_key=client_config.get('secret_key'))
+                                             secret_key=client_config.get('secret_key'),
+                                             https_proxy=client_config.get('https_proxy'))
 
             with connection:
                 pass  # check that the connection credentials are valid
@@ -86,6 +87,11 @@ class TenableIoAdapter(AdapterBase):
                     'type': 'string',
                     'format': 'password'
                 },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS Proxy",
+                    "type": "string"
+                }
 
             ],
             "required": [

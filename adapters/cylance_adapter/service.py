@@ -27,7 +27,7 @@ class CylanceAdapter(AdapterBase):
         try:
             connection = CylanceConnection(domain=client_config["domain"],
                                            app_id=client_config["app_id"], app_secret=client_config["app_secret"],
-                                           tid=client_config["tid"])
+                                           tid=client_config["tid"], https_proxy=client_config.get('https_proxy'))
             with connection:
                 pass  # check that the connection credentials are valid
             return connection
@@ -76,6 +76,11 @@ class CylanceAdapter(AdapterBase):
                 {
                     "name": "tid",
                     "title": "Tenant API Key",
+                    "type": "string"
+                },
+                {
+                    "name": "https_proxy",
+                    "title": "HTTPS Proxy",
                     "type": "string"
                 }
             ],
