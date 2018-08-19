@@ -40,7 +40,7 @@
 
 <style lang="scss">
     .search-input {
-        padding: 0 12px;
+        padding-right: 12px;
         position: relative;
         border: 1px solid $grey-2;
         background: $grey-dient;

@@ -1,15 +1,19 @@
 <template>
-    <x-actionable-table title="Queries" :count="queries.length" :loading="loading">
-        <template slot="actions">
-            <div v-if="selected.length === 1" class="x-btn link" @click="createAlert">+ New Alert</div>
-            <div class="x-btn link" @click="removeQuery">Remove</div>
-        </template>
-        <x-table slot="table" id-field="uuid" :data="queries" :fields="fields" v-model="selected"
-                 :click-row-handler="runQuery"/>
-    </x-actionable-table>
+    <div class="x-data-queries">
+        <x-search v-model="searchText" placeholder="Search Query Name..." />
+        <x-actionable-table title="Queries" :count="queries.length" :loading="loading">
+            <template slot="actions">
+                <div v-if="selected.length === 1" class="x-btn link" @click="createAlert">+ New Alert</div>
+                <div class="x-btn link" @click="removeQuery">Remove</div>
+            </template>
+            <x-table slot="table" id-field="uuid" :data="filteredQueries" :fields="fields" v-model="selected"
+                     :click-row-handler="runQuery" />
+        </x-actionable-table>
+    </div>
 </template>
 
 <script>
+    import xSearch from '../inputs/SearchInput.vue'
     import xActionableTable from '../tables/ActionableTable.vue'
     import xTable from '../schema/SchemaTable.vue'
 
@@ -20,12 +24,13 @@
 
 	export default {
 		name: 'data-queries-table',
-        components: { xActionableTable, xTable },
+        components: { xSearch, xActionableTable, xTable },
         props: {module: {required: true}},
         data() {
 			return {
 				selected: [],
-                loading: true
+                loading: true,
+                searchText: ''
             }
         },
         computed: {
@@ -34,6 +39,12 @@
                 	return state[this.module].views.saved.data
                 }
             }),
+            filteredQueries() {
+            	// Filter by query's name, according to user's input to the search input field
+            	return this.queries.filter(
+            		(query) => query.name.toLowerCase().includes(this.searchText.toLowerCase())
+                )
+            },
             fields() {
             	return [
 					{name: 'name', title: 'Name', type: 'string'},
@@ -76,5 +87,13 @@
 </script>
 
 <style lang="scss">
-
+    .x-data-queries {
+        height: 100%;
+        .search-input {
+            margin-bottom: 12px;
+        }
+        .x-table-actionable {
+            height: calc(100% - 72px);
+        }
+    }
 </style>
