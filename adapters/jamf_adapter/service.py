@@ -1,16 +1,17 @@
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
+
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.parsing import format_ip
+from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.utils.parsing import format_ip, parse_date
 from jamf_adapter import consts
 from jamf_adapter.connection import JamfConnection, JamfPolicy
 from jamf_adapter.exceptions import JamfException
-from axonius.utils.parsing import parse_date
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class JamfSite(SmartJsonClass):
@@ -179,6 +180,14 @@ class JamfAdapter(AdapterBase):
 
                     device.device_model = hardware.get('model_identifier')
                     device.device_model_family = hardware.get('model')
+
+                    try:
+                        users_raw = (((device_raw.get('groups_accounts') or {}).get(
+                            'local_accounts') or {}).get('user') or [])
+                        for user_raw in users_raw:
+                            device.add_users(username=user_raw.get('realname'), user_sid=user_raw.get('uid'))
+                    except Exception:
+                        logger.exception(f'Problem getting users at {device_raw}')
 
                     total_ram_mb = hardware.get('total_ram_mb')
                     if total_ram_mb is not None:

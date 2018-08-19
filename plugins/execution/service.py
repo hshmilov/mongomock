@@ -162,7 +162,7 @@ class ExecutionService(PluginBase):
 
         self._save_action_data(action_data, action_id)
 
-        accumulated_error = self._actions_db[action_id]['accumulated_error']
+        accumulated_error = self._actions_db[action_id].get('accumulated_error', '')
 
         if request_content['status'] == 'failed':
             # Should try another adapter, we will use the list of tuples containing all of the

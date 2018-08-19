@@ -559,6 +559,23 @@ def get_hostname(adapter_device):
     return adapter_device['data'].get('hostname')
 
 
+def get_bios_serial_or_serial(adapter_device):
+    serial = adapter_device['data'].get('bios_serial') or adapter_device['data'].get('device_serial')
+    if serial is not None:
+        serial = str(serial).strip().lower()
+        if serial == '' or ('invalid' in serial) or ('none' in serial):
+            serial = None
+    return serial
+
+
+def compare_bios_serial_serial(adapter_device1, adapter_device2):
+    serial1 = get_bios_serial_or_serial(adapter_device1)
+    serial2 = get_bios_serial_or_serial(adapter_device2)
+    if serial1 is not None and serial2 is not None:
+        return serial1 == serial2
+    return False
+
+
 def get_asset_name(adapter_device):
     return adapter_device['data'].get('name')
 

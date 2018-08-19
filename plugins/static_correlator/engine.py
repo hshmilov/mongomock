@@ -14,7 +14,7 @@ from axonius.utils.parsing import (NORMALIZED_MACS,
                                    is_junos_space_device,
                                    normalize_adapter_devices, normalize_mac,
                                    compare_id, is_old_device, is_sccm_or_ad, get_id, is_from_epo_with_empty_mac,
-                                   is_different_plugin)
+                                   is_different_plugin, get_bios_serial_or_serial, compare_bios_serial_serial)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -133,6 +133,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same serial'},
                                       CorrelationReason.StaticAnalysis)
 
+    def _correlate_serial_with_bios_serial(self, adapters_to_correlate):
+        logger.info('Starting to correlate on Bios Serial')
+        filtered_adapters_list = filter(get_bios_serial_or_serial, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_bios_serial_or_serial],
+                                      [compare_bios_serial_serial],
+                                      [],
+                                      [hostnames_do_not_contradict],
+                                      {'Reason': 'Bios serial or serials are equal'},
+                                      CorrelationReason.StaticAnalysis)
+
     def _correlate_with_ad(self, adapters_to_correlate):
         """
         AD correlation is a little more loose - we allow correlation based on hostname alone.
@@ -225,6 +236,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
 
         # juniper correlation is a little more loose - we allow correlation based on asset name alone,
         yield from self._correlate_with_juniper(adapters_to_correlate)
+
+        yield from self._correlate_serial_with_bios_serial(adapters_to_correlate)
 
     def _post_process(self, first_name, first_id, second_name, second_id, data, reason) -> bool:
         if reason == CorrelationReason.StaticAnalysis:

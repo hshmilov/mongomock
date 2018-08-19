@@ -1,17 +1,16 @@
+import hashlib
 import logging
 
-from axonius.utils.parsing import parse_date
-
+from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.devices.device_adapter import DeviceAdapter
+from axonius.fields import Field
 from axonius.users.user_adapter import UserAdapter
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import parse_date
 from okta_adapter.connection import OktaConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.utils.files import get_local_config_file
-import hashlib
 
 
 class OktaAdapter(AdapterBase):
@@ -19,7 +18,7 @@ class OktaAdapter(AdapterBase):
         pass
 
     class MyUserAdapter(UserAdapter):
-        pass
+        manager_id = Field(str, 'Manager ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -84,6 +83,7 @@ class OktaAdapter(AdapterBase):
                 user.user_title = profile.get('title')
                 user.user_department = profile.get('department')
                 user.user_country = profile.get('countryCode')
+                user.manager_id = profile.get('managerId')
                 user.set_raw(user_raw)
                 yield user
             except Exception:

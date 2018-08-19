@@ -266,6 +266,7 @@ class CorrelatorEngineBase(ABC):
         :param devices: axonius devices to correlate
         :return: iter(CorrelationResult or WarningResult)
         """
+
         logic_correlations = self._preprocess_devices(devices)
         devices = list(self._prefilter_device(devices))
         plugin_name_to_adapter_device = {

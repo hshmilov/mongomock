@@ -71,7 +71,7 @@ def has_hostname(adapters):
 
 
 def has_serial(adapters):
-    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('entity_serial'))  # not none
+    return does_entity_have_field(adapters, lambda adapter_data: adapter_data.get('device_serial'))  # not none
 
 
 def has_mac(adapters):
