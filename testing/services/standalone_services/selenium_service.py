@@ -54,8 +54,9 @@ class SeleniumService(DockerService):
     def image(self):
         return 'elgalu/selenium'
 
-    def wait_for_service(self, timeout=180):
-        super().wait_for_service(timeout=timeout)
+    # pylint: disable=arguments-differ
+    def wait_for_service(self, **kwargs):
+        super().wait_for_service(**kwargs)
         p = subprocess.Popen(['docker', 'exec', self.container_name, 'wait_all_done', '30s'],
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
