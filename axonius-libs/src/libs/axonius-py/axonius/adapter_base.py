@@ -1020,7 +1020,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         :param os_type: the type of machine ran upon
         :return:
         """
-        raise NotImplementedError()
+        raise adapter_exceptions.AdapterException('Not Supported')
 
     def _get_clients_config(self):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
