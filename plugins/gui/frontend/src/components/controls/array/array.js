@@ -16,6 +16,9 @@ export default {
 		isOrderedObject() {
 			return Array.isArray(this.schema.items)
 		},
+		processedData() {
+			return this.data
+		},
 		schemaItems () {
 			let schemaItems = []
 			// Process schema to create list of items which Array components can present
@@ -25,7 +28,7 @@ export default {
 				schemaItems = this.schema.items.filter(item => item.title)
 			} else if (this.schema.items instanceof Object && this.schema.name) {
 				// schema.items contains one unified definition for type of all children
-				schemaItems = this.toList(this.data).map((item, index) => {
+				schemaItems = this.toList(this.processedData).map((item, index) => {
 					// Use same unified schema and add name
 					return {...this.schema.items, name: index}
 				})
@@ -74,7 +77,7 @@ export default {
 		},
 		toList(data) {
 			if (!Array.isArray(data)) {
-				return Object.keys(this.data)
+				return Object.keys(data)
 			}
 			return data
 		},
