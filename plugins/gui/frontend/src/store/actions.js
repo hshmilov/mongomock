@@ -75,7 +75,7 @@ export const fetchDataCount = ({state, dispatch}, payload) => {
 	if (!validModule(state, payload)) return
 	const view = state[payload.module].view
 
-	let param = (view.query && view.query.filter) ? `?filter=${view.query.filter}` : ''
+	let param = (view.query && view.query.filter) ? `?filter=${encodeURIComponent(view.query.filter)}` : ''
 	dispatch(REQUEST_API, {
 		rule: `${payload.module}/count${param}`,
 		type: UPDATE_DATA_COUNT,
@@ -98,7 +98,7 @@ const createContentRequest = (state, payload) => {
 		params.push(`fields=${view.fields}`)
 	}
 	if (view.query && view.query.filter) {
-		params.push(`filter=${encodeURI(view.query.filter)}`)
+		params.push(`filter=${encodeURIComponent(view.query.filter)}`)
 	}
 	// TODO: Not passing expressions because it might reach max URL size
 	// if (view.query.expressions) {
