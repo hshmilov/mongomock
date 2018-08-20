@@ -1961,7 +1961,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         entity_collection = self._entity_db_map[entity_type]
         with self._get_db_connection() as db_connection:
             adapter_entities['unique'] = entity_collection.count_documents({})
-            adapters_from_db = db_connection['core']['configs'].find({'plugin_type': 'Adapter'})
+            adapters_from_db = db_connection['core']['configs'].find({
+                '$or': [
+                    {'plugin_type': 'Adapter'},
+                    {'plugin_name': 'general_info'}
+                ]
+            })
             for adapter in adapters_from_db:
                 if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
                     # Plugin not registered - unwanted in UI
