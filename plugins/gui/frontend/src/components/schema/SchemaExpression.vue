@@ -199,6 +199,7 @@
                 }
 				if (!this.expression.compOp && !this.expression.value && this.expression.field.includes('id')) {
                     this.expression.compOp = 'exists'
+                    return
                 }
 				this.$emit('input', this.expression)
                 if (!this.expression.field) return

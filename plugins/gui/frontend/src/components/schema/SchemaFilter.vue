@@ -82,10 +82,18 @@
 				this.expressions.splice(index, 1)
 				this.filters.splice(index, 1)
                 this.bracketWeights.splice(index, 1)
-				if (this.expressions.length) {
+				while (index < this.expressions.length) {
                     this.expressions[index].i = index
+                    index++
 				}
 				if (!this.validateBrackets()) return
+                if (!this.expressions.length) {
+					// Expressions list should never stay empty, but have at least one empty expression
+					this.addExpression()
+                } else if (this.expressions[0].logicOp) {
+					// Not ready for publishing yet, since first expression should not have a logical operation
+					return
+                }
 				this.$emit('change', this.filters.join(' '))
 			},
             validateBrackets() {

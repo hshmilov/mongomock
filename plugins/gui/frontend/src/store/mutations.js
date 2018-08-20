@@ -10,8 +10,12 @@ export const UPDATE_DATA_COUNT = 'UPDATE_DATA_COUNT'
 export const updateDataCount = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const count = state[payload.module].count
+	if (!payload.fetching && count.rule !== payload.rule) {
+		return
+	}
 	count.fetching = payload.fetching
 	count.error = payload.error
+	count.rule = payload.rule
 	if (payload.data !== undefined) {
 		count.data = payload.data
 	}
@@ -21,10 +25,9 @@ export const UPDATE_DATA_CONTENT = 'UPDATE_DATA_CONTENT'
 export const updateDataContent = (state, payload) => {
 	if (!validModule(state, payload)) return
 	const content = state[payload.module].content
-	if (content.fetching && !payload.fetching && content.rule !== payload.rule) {
+	if (!payload.fetching && content.rule !== payload.rule) {
 		return
 	}
-
 	content.fetching = payload.fetching
 	content.rule = payload.rule
 	content.error = payload.error

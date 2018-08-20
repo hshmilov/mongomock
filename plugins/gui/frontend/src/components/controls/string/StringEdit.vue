@@ -5,7 +5,7 @@
     <x-date-edit v-else-if="schema.format === 'date-time' || schema.format === 'date'" v-model="data" @input="input" />
     <!-- Select from enum values -->
     <x-select v-else-if="enumOptions" :options="enumOptions" v-model="data" placeholder="value..."
-              @input="input" @focusout.stop="validate" :class="{'error-border': error}" />
+              @input="input" @focusout.stop="validate" :class="{'error-border': error}" :searchable="true" />
 </template>
 
 <script>

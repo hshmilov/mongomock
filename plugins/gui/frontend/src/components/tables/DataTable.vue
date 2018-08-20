@@ -218,6 +218,9 @@
                 margin-right: 0;
             }
         }
+        .cross .first, .cross .second {
+            top: -8px;
+        }
         .x-pagination {
             justify-content: space-between;
             display: flex;
