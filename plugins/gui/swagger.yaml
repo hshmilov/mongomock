@@ -66,6 +66,26 @@ paths:
           assets - The list of assets that were queried with the specified fields (if any)."
       security:
       - axonius_api_auth: []
+  /devices/count:
+    get:
+      tags:
+      - "Devices"
+      summary: "Count Devices adhering to Query"
+      description: "Returns a number"
+      operationId: "getDevicesCount"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "filter"
+        in: "query"
+        description: "The filter to get Devices by."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Returns the number of Devices that adhere to the given filter"
+      security:
+      - axonius_api_auth: []
   /devices/{device_id}:
     get:
       tags:
@@ -136,6 +156,26 @@ paths:
         200:
           description: "Returns an object containing two keys:page - Metadata about the amount of assets that were filtered, skipped, limited, and returned in the request.
           assets - The list of assets that were queried with the specified fields (if any)."
+      security:
+      - axonius_api_auth: []
+  /users/count:
+    get:
+      tags:
+      - "Users"
+      summary: "Count Users adhering to Query"
+      description: "Returns a number"
+      operationId: "getUsersCount"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "filter"
+        in: "query"
+        description: "The filter to get Users by."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Returns the number of Users that adhere to the given filter"
       security:
       - axonius_api_auth: []
   /users/{user_id}:

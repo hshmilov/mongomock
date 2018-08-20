@@ -162,8 +162,7 @@ def beautify_db_entry(entry):
     return tmp
 
 
-def get_entities(limit, skip, view_filter, sort, projection, db_connection, entity_views_db_map,
-                 entity_type: EntityType,
+def get_entities(limit, skip, view_filter, sort, projection, db_connection, entity_views_db, entity_type: EntityType,
                  include_history=False, default_sort=True, run_over_projection=True):
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
@@ -191,7 +190,7 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
 
     # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
     # The reason is that sorting without the flag, causes exceeding of the memory limit.
-    data_list = entity_views_db_map.aggregate(pipeline, allowDiskUse=True)
+    data_list = entity_views_db.aggregate(pipeline, allowDiskUse=True)
 
     if view_filter and not skip and request and include_history:
         # getting the original filter text on purpose.
@@ -223,6 +222,16 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
             yield beautify_db_entry(entity)
         else:
             yield parse_entity_fields(entity, projection.keys())
+
+
+def get_entities_count(filter, entity_collection):
+    """
+            Count total number of devices answering given mongo_filter
+
+            :param filter: Object defining a Mongo query
+            :return: Number of devices
+            """
+    return str(entity_collection.count_documents(filter))
 
 
 def find_entity_field(entity_data, field_path):

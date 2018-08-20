@@ -328,16 +328,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             'internal_axon_id': entity['internal_axon_id']
         })
 
-    def _get_entities_count(self, filter, entity_type: EntityType):
-        """
-        Count total number of devices answering given mongo_filter
-
-        :param filter: Object defining a Mongo query
-        :return: Number of devices
-        """
-        data_collection = self._entity_views_db_map[entity_type]
-        return str(data_collection.count_documents(filter))
-
     def _disable_entity(self, entity_type: EntityType):
         entity_map = {
             EntityType.Devices: ("Devicedisabelable", "devices/disable"),
@@ -538,7 +528,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.add_rule_unauthenticated("devices/count")
     def get_devices_count(self, mongo_filter):
-        return self._get_entities_count(mongo_filter, EntityType.Devices)
+        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices])
 
     @gui_helpers.add_rule_unauthenticated("devices/fields")
     def device_fields(self):
@@ -609,7 +599,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
     @gui_helpers.filtered()
     @gui_helpers.add_rule_unauthenticated("users/count")
     def get_users_count(self, mongo_filter):
-        return self._get_entities_count(mongo_filter, EntityType.Users)
+        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users])
 
     @gui_helpers.add_rule_unauthenticated("users/fields")
     def user_fields(self):

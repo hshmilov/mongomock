@@ -65,15 +65,22 @@ class API:
     @gui_helpers.projected()
     @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices", methods=["GET"], auth_method=basic_authentication)
     def api_devices(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        devices_collection = self._entity_views_db_map[EntityType.Devices]
         return_doc = {
-            "page": get_page_metadata(skip, limit, int(self._get_entities_count(mongo_filter, EntityType.Devices))),
+            "page": get_page_metadata(skip, limit, int(gui_helpers.get_entities_count(mongo_filter, devices_collection))),
             "assets": list(gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                                     self.gui_dbs.entity_query_views_db_map[EntityType.Devices],
-                                                    self._entity_views_db_map[EntityType.Devices], EntityType.Devices, True,
+                                                    devices_collection, EntityType.Devices, True,
                                                     default_sort=self._system_settings["defaultSort"]))
         }
 
         return jsonify(return_doc)
+
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices/count", methods=["GET"],
+                                          auth_method=basic_authentication)
+    def api_devices_count(self, mongo_filter):
+        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Devices])
 
     @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/devices/<device_id>", methods=["GET"],
                                           auth_method=basic_authentication)
@@ -92,15 +99,22 @@ class API:
     @gui_helpers.projected()
     @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users", auth_method=basic_authentication)
     def api_users(self, limit, skip, mongo_filter, mongo_sort, mongo_projection):
+        users_collection = self._entity_views_db_map[EntityType.Users]
         return_doc = {
-            "page": get_page_metadata(skip, limit, int(self._get_entities_count(mongo_filter, EntityType.Users))),
+            "page": get_page_metadata(skip, limit, int(gui_helpers.get_entities_count(mongo_filter, users_collection))),
             "assets": list(gui_helpers.get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
                                                     self.gui_dbs.entity_query_views_db_map[EntityType.Users],
-                                                    self._entity_views_db_map[EntityType.Users], EntityType.Users, True,
+                                                    users_collection, EntityType.Users, True,
                                                     default_sort=self._system_settings["defaultSort"]))
         }
 
         return jsonify(return_doc)
+
+    @gui_helpers.filtered()
+    @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users/count", methods=["GET"],
+                                          auth_method=basic_authentication)
+    def api_users_count(self, mongo_filter):
+        return gui_helpers.get_entities_count(mongo_filter, self._entity_views_db_map[EntityType.Users])
 
     @gui_helpers.add_rule_unauthenticated(f"V{API_VERSION}/users/<user_id>", methods=["GET"],
                                           auth_method=basic_authentication)
