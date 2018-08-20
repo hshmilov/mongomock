@@ -6,15 +6,18 @@ DIR=$(dirname ${BASH_SOURCE[0]})
 PYLINTRC=$DIR/../../../pylintrc.txt
 EXEMPTFILE=$DIR/../../../testing/parallel_tests/pylint_exempt_list.txt
 
+PEP=0
 EXIT=1
 PARALLEL=0
 DELETE=0
 
 function usage {
-    echo "usage: git-pylint [-a] [-p] [-d] [-h]"
+    echo "usage: git-pylint [-a] [-p] [-d] [P] [-r] [-h]"
     echo "-a --all              Don't stop on first failure print all results"
-    echo "-p --parallel         run all test parallel (requires parallel binary) and -a for now"
-    echo "-d --delete           auto delete files from exemptfile when needed"
+    echo "-p --parallel         Run all test parallel (requires parallel binary) and -a for now"
+    echo "-d --delete           Auto delete files from exemptfile when needed"
+    echo "-P --pep              Run autopep8 before checking with pylint"
+    echo "-r --all-flags        Use all flags"
     exit 0
 }
 for i in "$@"
@@ -36,8 +39,19 @@ case $i in
     DELETE=1
     shift
     ;;
+    -P|--pep)
+    PEP=1
+    shift
+    ;;
+    -r|--all-falgs)
+    PEP=1
+    EXIT=0
+    DELETE=1
+    PARALLEL=1
+    shift
+    ;;
     *)
-    echo "usage: git-pylint [-a] [-p] [-d] [-h]"
+    echo "usage: git-pylint [-a] [-p] [-d] [P] [-r] [-h]"
     exit 0
     ;;
 esac
@@ -71,6 +85,12 @@ fi
 
 for file in `git diff --cached --name-only; git diff --name-only; git ls-files --other --exclude-standard`; do 
     if [ ${file: -3} == ".py" ]; then
+
+        # handle pep
+        if [ $PEP -eq 1 ]; then
+            autopep8 --max-line-length 120 --in-place $file
+            autopep8 --select=E722 --aggressive --in-place $file
+        fi
 
         # handle delete 
         if [ $DELETE -eq 1 ]; then
