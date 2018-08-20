@@ -346,7 +346,7 @@ class AxoniusService():
     def set_system_settings(self, settings_dict):
         settings = self.db.get_collection(self.gui.unique_name, CONFIGURABLE_CONFIGS)
         settings.update_one(filter={"config_name": "GuiService"},
-                            update={"$set": {"config": {SYSTEM_SETTINGS: settings_dict}}}, upsert=True)
+                            update={"$set": {f"config.{SYSTEM_SETTINGS}": settings_dict}})
 
     def add_view(self, view_params):
         views = self.db.get_collection(self.gui.unique_name, 'device_views')
@@ -355,4 +355,4 @@ class AxoniusService():
     def set_research_rate(self, rate):
         settings = self.db.get_collection(self.scheduler.unique_name, CONFIGURABLE_CONFIGS)
         settings.update_one(filter={"config_name": "SystemSchedulerService"},
-                            update={"$set": {"config": {"system_research_rate": rate}}}, upsert=True)
+                            update={"$set": {"config.system_research_rate": rate}})
