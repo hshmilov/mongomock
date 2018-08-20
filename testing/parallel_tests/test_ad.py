@@ -9,6 +9,8 @@ from test_credentials.test_ad_credentials import *
 from services.adapters.ad_service import AdService, ad_fixture
 from services.plugins.device_control_service import device_control_fixture
 
+pytestmark = pytest.mark.sanity
+
 
 class TestAdAdapter(AdapterTestBase):
     @property

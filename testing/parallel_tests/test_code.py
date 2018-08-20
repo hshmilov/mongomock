@@ -4,6 +4,10 @@ import signal
 import subprocess
 import sys
 
+import pytest
+
+pytestmark = pytest.mark.sanity
+
 NUMBER_OF_PROCESSES = 12
 GOOD_EXIT_CODE = 0
 EXCLUDE_PATHS = [

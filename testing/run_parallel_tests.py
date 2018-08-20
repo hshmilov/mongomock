@@ -9,10 +9,13 @@ from services.axonius_service import get_service
 
 class ParallelTestsRunner(ParallelRunner):
 
-    def append_test_pattern(self, pattern, **kwargs):
+    def append_test_pattern(self, pattern, extra_flags, **kwargs):
         for file in sorted(glob.glob(pattern)):
             test_case = os.path.basename(file).split(".")[0]
-            args = f"pytest -s -vv --showlocals --durations=0 --junitxml=reporting/{test_case}.xml {file}".split(' ')
+            args = f"pytest -s -vv --showlocals --durations=0"
+            if extra_flags:
+                args = f"{args} {extra_flags}"
+            args = f"{args} --junitxml=reporting/{test_case}.xml {file}".split(' ')
             self.append_single(test_case, args, **kwargs)
 
 
@@ -29,9 +32,10 @@ def main():
 
         # Run all parallel tests
         runner = ParallelTestsRunner()
-        pattern = sys.argv[1]
+        pattern = sys.argv[-1]
+        extra_flags = ' '.join(sys.argv[1:-1])
         print(f"Running in parallel for pattern {pattern}")
-        runner.append_test_pattern(pattern)
+        runner.append_test_pattern(pattern, extra_flags=extra_flags)
         return runner.wait_for_all(10 * 60)
     finally:
         axonius_system.stop(should_delete=True)

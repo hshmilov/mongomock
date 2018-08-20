@@ -3,6 +3,8 @@ from services.adapters.json_file_service import JsonFileService, json_file_fixtu
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.json_file_credentials import client_details, SOME_DEVICE_ID
 
+pytestmark = pytest.mark.sanity
+
 
 class TestJsonFileAdapter(AdapterTestBase):
     @property

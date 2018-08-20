@@ -7,6 +7,8 @@ from test_credentials import test_esx_credentials
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
 from axonius.consts.scheduler_consts import StateLevels, Phases
 
+pytestmark = pytest.mark.sanity
+
 
 def test_aggregator_is_up(axonius_fixture):
     assert axonius_fixture.aggregator.is_up()

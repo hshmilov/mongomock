@@ -10,6 +10,8 @@ from test_helpers.device_helper import get_entity_axonius_dict, filter_by_plugin
 from test_helpers.user_helper import get_user_dict
 from test_helpers.report_helper import get_alert_dict, create_alert_dict
 
+pytestmark = pytest.mark.sanity
+
 GUI_TEST_PLUGIN = 'GUI_TEST_PLUGIN'
 API_TOKEN = (DEFAULT_USER['user_name'], DEFAULT_USER['password'])
 

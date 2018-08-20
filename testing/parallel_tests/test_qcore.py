@@ -7,6 +7,8 @@ from test_helpers.adapter_test_base import AdapterTestBase
 from test_helpers.qcore_fake_pump import QcoreFakePump
 from test_helpers.utils import try_until_not_thrown
 
+pytestmark = pytest.mark.sanity
+
 
 class TestQcoreAdapter(AdapterTestBase):
     @property

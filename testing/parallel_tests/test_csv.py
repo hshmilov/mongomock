@@ -3,6 +3,8 @@ from services.adapters.csv_service import CsvService, csv_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_csv_credentials import *
 
+pytestmark = pytest.mark.sanity
+
 
 class TestCsvAdapter(AdapterTestBase):
     @property
