@@ -98,7 +98,9 @@ class SecdoAdapter(AdapterBase):
                 device = self._new_device_adapter()
                 device.id = device_raw.get("agentId")
                 if device.id is None:
+                    logger.warning(f'Bad device with no ID {device_raw}')
                     continue
+                device.id += device_raw.get("hostName") or ''
                 domain = device_raw.get("domain")
                 if domain is None or domain == "" or domain.upper() == "N/A":
                     domain = None
