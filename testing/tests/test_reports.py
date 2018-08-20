@@ -245,7 +245,7 @@ def test_positive_criteria_trigger(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Add device
-    axonius_fixture.get_devices_db().insert_one(DEVICE_ONE)
+    axonius_fixture.insert_device(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -253,7 +253,7 @@ def test_positive_criteria_trigger(axonius_fixture, watch_fixture):
 
     assert watch_fixture.get_watches().json()[0]['triggered'] == 1
 
-    axonius_fixture.get_devices_db().insert_one(DEVICE_TWO)
+    axonius_fixture.insert_device(DEVICE_TWO)
 
     try:
         # Wait to see no new notifications are created by watch
@@ -275,13 +275,13 @@ def test_negative_criteria_trigger(axonius_fixture, watch_fixture):
     WATCH['criteria'] = -1
     WATCH['alert_types'][0]['title'] = 'Another Watch'
     # Add devices
-    axonius_fixture.get_devices_db().insert_one(DEVICE_ONE)
-    axonius_fixture.get_devices_db().insert_one(DEVICE_TWO)
+    axonius_fixture.insert_device(DEVICE_ONE)
+    axonius_fixture.insert_device(DEVICE_TWO)
 
     watch_fixture.create_watch(WATCH)
 
     # Remove device.
-    axonius_fixture.get_devices_db().delete_one(WATCH['query'])
+    axonius_fixture.delete_device_by_query(WATCH['query'])
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -290,7 +290,7 @@ def test_negative_criteria_trigger(axonius_fixture, watch_fixture):
     assert watch_fixture.get_watches().json()[0]['triggered'] == 1
 
     # Remove another device
-    axonius_fixture.get_devices_db().delete_one(WATCH['query'])
+    axonius_fixture.delete_device_by_query(WATCH['query'])
 
     try:
         # Wait to see no new notifications are created by watch
@@ -318,7 +318,7 @@ def test_any_criteria_trigger(axonius_fixture, watch_fixture):
         axonius_fixture.get_devices_db().find(WATCH['query']))) == 0
 
     # Add device
-    axonius_fixture.get_devices_db().insert_one(DEVICE_ONE)
+    axonius_fixture.insert_device(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -331,7 +331,7 @@ def test_any_criteria_trigger(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Remove device
-    axonius_fixture.get_devices_db().delete_one(WATCH['query'])
+    axonius_fixture.delete_device_by_query(WATCH['query'])
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -352,7 +352,7 @@ def test_retrigger_one_change(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Add device
-    axonius_fixture.get_devices_db().insert_one(DEVICE_ONE)
+    axonius_fixture.insert_device(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -370,7 +370,7 @@ def test_retrigger_one_change(axonius_fixture, watch_fixture):
     watch_fixture.delete_watch(WATCH)
 
     # Remove device
-    axonius_fixture.get_devices_db().delete_one(WATCH['query'])
+    axonius_fixture.delete_device_by_query(WATCH['query'])
 
     axonius_fixture.get_devices_db().drop()
 
@@ -385,7 +385,7 @@ def test_retrigger_multiple_changes(axonius_fixture, watch_fixture):
     watch_fixture.create_watch(WATCH)
 
     # Add device
-    axonius_fixture.get_devices_db().insert_one(DEVICE_ONE)
+    axonius_fixture.insert_device(DEVICE_ONE)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),
@@ -393,8 +393,7 @@ def test_retrigger_multiple_changes(axonius_fixture, watch_fixture):
 
     assert watch_fixture.get_watches().json()[0]['triggered'] == 1
 
-    axonius_fixture.get_devices_db().insert_one(
-        DEVICE_TWO)
+    axonius_fixture.insert_device(DEVICE_TWO)
 
     # Wait to see new notifications are created by watch
     wait_for_notification(watch_fixture, axonius_fixture.db.get_collection('core', 'notifications'),

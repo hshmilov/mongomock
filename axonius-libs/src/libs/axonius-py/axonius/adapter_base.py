@@ -83,9 +83,6 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         self._clients_lock = RLock()
         self._clients = {}
 
-        self._index_lock = RLock()
-        self._index = 0
-
         self._send_reset_to_ec()
 
         self._update_clients_schema_in_db(self._clients_schema())
@@ -298,6 +295,7 @@ class AdapterBase(PluginBase, Configurable, Feature, ABC):
         devices_cleaned = self.__clean_entity(device_age_cutoff, EntityType.Devices)
         users_cleaned = self.__clean_entity(user_age_cutoff, EntityType.Users)
         logger.info(f"Cleaned {devices_cleaned} devices and {users_cleaned} users")
+        self._request_db_rebuild(sync=False)
         return {EntityType.Devices.value: devices_cleaned, EntityType.Users.value: users_cleaned}
 
     @stoppable

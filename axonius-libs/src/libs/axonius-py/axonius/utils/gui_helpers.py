@@ -6,7 +6,8 @@ from datetime import datetime
 
 import pymongo
 import requests
-from flask import make_response, request, session
+from flask import request, session
+from retry.api import retry_call
 
 from axonius.adapter_base import AdapterProperty
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
@@ -190,7 +191,9 @@ def get_entities(limit, skip, view_filter, sort, projection, db_connection, enti
 
     # Fetch from Mongo is done with aggregate, for the purpose of setting 'allowDiskUse'.
     # The reason is that sorting without the flag, causes exceeding of the memory limit.
-    data_list = entity_views_db.aggregate(pipeline, allowDiskUse=True)
+
+    # The reason for the retry is https://jira.mongodb.org/browse/SERVER-36737
+    data_list = retry_call(entity_views_db.aggregate, fargs=[pipeline], fkwargs={'allowDiskUse': True}, tries=15)
 
     if view_filter and not skip and request and include_history:
         # getting the original filter text on purpose.

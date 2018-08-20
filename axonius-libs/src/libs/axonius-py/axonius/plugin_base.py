@@ -17,7 +17,7 @@ import traceback
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, List
 
 import pymongo
 import requests
@@ -58,10 +58,9 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.utils.debug import is_debug_attached
 from axonius.utils.json_encoders import IteratorJSONEncoder
 from axonius.utils.parsing import get_exception_string
-from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper
+from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper, run_and_forget
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
 
 MAINTENANCE_SETTINGS = 'maintenance_settings'
 
@@ -658,6 +657,26 @@ class PluginBase(Configurable, Feature):
 
         return requests.request(method, url, headers=headers, **kwargs)
 
+    def _request_db_rebuild(self, sync=True, internal_axon_ids: List[str] = None):
+        """
+        Requests a db rebuild
+        :param sync: whether or not you want to wait until it ends
+        :param internal_axon_ids: if you want to rebuild only a part of the db, give the internal_axon_ids here
+        """
+
+        def make_request():
+            return self.request_remote_plugin(f'trigger/rebuild_entity_view?blocking={sync}',
+                                              AGGREGATOR_PLUGIN_NAME,
+                                              method='post',
+                                              json={
+                                                  'internal_axon_ids': internal_axon_ids
+                                              }
+                                              )
+
+        if sync:
+            return make_request()
+        run_and_forget(make_request)
+
     def create_notification(self, title, content='', severity_type='info', notification_type='basic'):
         with self._get_db_connection() as db:
             return db[CORE_UNIQUE_NAME]['notifications'].insert_one(dict(who=self.plugin_unique_name,
@@ -1056,7 +1075,10 @@ class PluginBase(Configurable, Feature):
                     promises.append(Promise(functools.partial(run_in_executor_helper,
                                                               inserter,
                                                               insert_quickpath_to_db,
-                                                              args=[devices])))
+                                                              args=[devices])).then(
+                        lambda result: self._request_db_rebuild(sync=False)
+                    ))
+
                     inserted_data_count += len(devices)
                     logger.info(f"Over {inserted_data_count} to DB")
 
@@ -1089,6 +1111,7 @@ class PluginBase(Configurable, Feature):
                         logger.info(f"Entities went through: {inserted_data_count}; " +
                                     f"promises active: {len(promises)}; " +
                                     f"in DB: {inserted_data_count - len(promises)}")
+                        self._request_db_rebuild(sync=False)
 
             promise_all = Promise.all(promises)
             Promise.wait(promise_all, timedelta(minutes=20).total_seconds())

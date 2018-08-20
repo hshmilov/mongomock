@@ -111,9 +111,15 @@ class AxoniusService():
 
     def insert_device(self, device_data):
         self.get_devices_db().insert_one(device_data)
+        self.aggregator.rebuild_views([device_data['internal_axon_id']])
+
+    def delete_device_by_query(self, query):
+        self.get_devices_db().delete_one(query)
+        self.aggregator.rebuild_views()
 
     def insert_user(self, user_data):
         self.get_users_db().insert_one(user_data)
+        self.aggregator.rebuild_views([user_data['internal_axon_id']])
 
     def insert_report(self, report_data):
         self.get_reports_db().insert_one(report_data)
@@ -159,12 +165,14 @@ class AxoniusService():
 
     def assert_device_aggregated(self, adapter, client_details):
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
+        self.aggregator.rebuild_views()
         for client_id, some_device_id in client_details:
             devices = self.get_device_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1
 
     def assert_user_aggregated(self, adapter, client_details):
         self.aggregator.query_devices(adapter_id=adapter.unique_name)  # send trigger to agg to refresh devices
+        self.aggregator.rebuild_views()
         for client_id, some_device_id in client_details:
             devices = self.get_user_by_id(adapter.unique_name, some_device_id)
             assert len(devices) == 1

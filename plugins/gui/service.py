@@ -18,7 +18,7 @@ from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file, create_temp_file
 from axonius.utils.datetime import next_weekday
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
-from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH, PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
+from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
     METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
@@ -35,7 +35,6 @@ from gui.api import API
 import tarfile
 from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.fields import JsonStringFormat, JsonNumericFormat
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
@@ -473,14 +472,17 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             return '', 200
 
     def __delete_entities_by_internal_axon_id(self, entity_type: EntityType, internal_axon_ids: Iterable[str]):
+        internal_axon_ids = list(internal_axon_ids)
         self._entity_db_map[entity_type].update_many({'internal_axon_id': {
-            "$in": list(internal_axon_ids)
+            "$in": internal_axon_ids
         }},
             {
                 "$set": {
                     "adapters.$[].pending_delete": True
                 }
         })
+        self._request_db_rebuild(sync=True, internal_axon_ids=internal_axon_ids)
+
         return '', 200
 
     ##########
@@ -793,6 +795,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                         logger.info(f"Set pending_delete on {res.modified_count} axonius entities "
                                     f"(or some adapters in them)" +
                                     f"from {res.matched_count} matches")
+                    self._request_db_rebuild(sync=True)
 
         if request.method == 'PUT':
             client_from_db = self._get_collection('clients', adapter_unique_name).find_one({'_id': ObjectId(client_id)})
@@ -1946,29 +1949,27 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
         logger.info(f'Getting adapter data for entity {entity_type.name}')
-        plugins_available = requests.get(self.core_address + '/register').json()
         adapter_entities = {'seen': 0, 'counters': []}
-        entity_collection = self._entity_db_map[entity_type]
-        with self._get_db_connection() as db_connection:
-            adapter_entities['unique'] = entity_collection.count_documents({})
-            adapters_from_db = db_connection['core']['configs'].find({
-                '$or': [
-                    {'plugin_type': 'Adapter'},
-                    {'plugin_name': 'general_info'}
-                ]
-            })
-            for adapter in adapters_from_db:
-                if not adapter[PLUGIN_UNIQUE_NAME] in plugins_available:
-                    # Plugin not registered - unwanted in UI
-                    continue
-                entities_count = entity_collection.count_documents({
-                    'adapters.plugin_name': adapter[PLUGIN_NAME]
-                })
-                if not entities_count:
-                    # No need to document since adapter has no devices
-                    continue
-                adapter_entities['counters'].append({'name': adapter[PLUGIN_NAME], 'value': entities_count})
-                adapter_entities['seen'] += entities_count
+        entity_collection = self._entity_views_db_map[entity_type]
+        adapter_entities['unique'] = entity_collection.count_documents({})
+        entities_per_adapters = {}
+        for res in entity_collection.aggregate([
+            {
+                "$group": {
+                    "_id": "$specific_data.plugin_name",
+                    "count": {
+                        "$sum": 1
+                    }
+                }
+            }
+        ]):
+            for plugin_name in res['_id']:
+                entities_per_adapters[plugin_name] = entities_per_adapters.get(plugin_name, 0) + res['count']
+                adapter_entities['seen'] += res['count']
+
+        for name, value in entities_per_adapters.items():
+            adapter_entities['counters'].append({'name': name, 'value': value})
+
         return adapter_entities
 
     @gui_helpers.add_rule_unauthenticated("dashboard/adapter_data/<entity_name>", methods=['GET'])
@@ -1979,7 +1980,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             error = f'No such entity {entity_name}'
         except Exception:
             error = f'Could not get adapter data for entity {entity_name}'
-        logger.exception(error)
+            logger.exception(error)
         return return_error(error, 400)
 
     def _get_dashboard_coverage(self):
@@ -2013,9 +2014,6 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 'specific_data.adapter_properties':
                     {'$in': item['properties']}
             })
-            # Update the count, in case we are in the middle of lifecycle and devices are being added
-            # Otherwise, count of devices for properties may be larger than total devices
-            devices_total = self.devices_db_view.count_documents({})
             item['portion'] = devices_property / devices_total
         return coverage_list
 

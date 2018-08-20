@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from funcy import chunks
 
@@ -6,7 +7,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 """
 AggregatorPlugin.py: A Plugin for the devices aggregation process
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import groupby
 import concurrent.futures
 
@@ -30,6 +31,112 @@ from axonius.devices import deep_merge_only_dict
 
 get_devices_job_name = "Get device job"
 
+aggregation_stages_for_entity_view = [
+    {
+        "$project": {
+            'filtered_adapters': {
+                '$filter': {
+                    'input': '$adapters',
+                    'as': 'adapter',
+                    'cond': {
+                        "$ne": [
+                            "$$adapter.pending_delete", True
+                        ]
+                    }
+                }
+            },
+            'internal_axon_id': 1,
+            'tags': 1,
+            ADAPTERS_LIST_LENGTH: 1
+        },
+    },
+    {
+        '$project': {
+            'internal_axon_id': 1,
+            ADAPTERS_LIST_LENGTH: 1,
+            'generic_data': {
+                '$filter': {
+                    'input': '$tags',
+                    'as': 'tag',
+                    'cond': {
+                        '$eq': [
+                            '$$tag.type', 'data'
+                        ]
+                    }
+                }
+            },
+            'specific_data': {
+                '$concatArrays': [
+                    '$filtered_adapters',
+                    {
+                        '$filter': {
+                            'input': '$tags',
+                            'as': 'tag',
+                            'cond': {
+                                '$eq': ['$$tag.type', 'adapterdata']
+                            }
+                        }
+                    }
+                ]
+            },
+            'adapters': '$filtered_adapters.plugin_name',
+            'unique_adapter_names': '$filtered_adapters.plugin_unique_name',
+            'labels': {
+                '$filter': {
+                    'input': '$tags',
+                    'as': 'tag',
+                    'cond': {
+                        '$and': [
+                            {
+                                '$eq': ['$$tag.type', 'label']
+                            },
+                            {
+                                '$eq': ['$$tag.data', True]
+                            }
+                        ]
+                    }
+                }
+            },
+        }
+    },
+    {
+        '$project': {
+            'internal_axon_id': 1,
+            'generic_data': 1,
+            'adapters': 1,
+            'unique_adapter_names': 1,
+            'labels': '$labels.name',
+            'adapters_data': {
+                '$map': {
+                    'input': '$specific_data',
+                    'as': 'data',
+                    'in': {
+                        '$arrayToObject': {
+                            '$concatArrays': [
+                                [],
+                                [{
+                                    'k': '$$data.plugin_name',
+                                    'v': '$$data.data'
+                                }
+                                ]
+                            ]
+                        }
+                    }
+                }
+            },
+            'specific_data': 1,
+            ADAPTERS_LIST_LENGTH: 1}
+    },
+    {
+        '$match': {
+            'adapters': {
+                "$exists": True,
+                "$not": {"$size": 0}
+            }
+        }
+    }
+]
+
 
 def get_unique_name_from_plugin_unique_name_and_id(unique_plugin_name, _id):
     return f"{unique_plugin_name}{_id}"
@@ -52,6 +159,10 @@ def _is_tag_valid(tag):
 
 
 class AggregatorService(PluginBase, Triggerable):
+    # This is the amount of delay we should wait before performing a full db rebuild again and again,
+    # to introduce some latency over entity_db so other processes can take place
+    MIN_DELAY_BETWEEN_FULL_DB_REBUILD = 10
+
     def __init__(self, *args, **kwargs):
         """
         Check AdapterBase documentation for additional params and exception details.
@@ -59,20 +170,18 @@ class AggregatorService(PluginBase, Triggerable):
         super().__init__(get_local_config_file(__file__),
                          requested_unique_plugin_name=AGGREGATOR_PLUGIN_NAME, *args, **kwargs)
 
-        self._index_lock = threading.RLock()
-        self._index = 0
+        self.__db_locks = {
+            entity: LazyMultiLocker()
+            for entity in EntityType
+        }
 
-        # Lock object for the global device list
-        self.devices_db_lock = LazyMultiLocker()
-
-        # Lock object for the global users list
-        self.users_db_lock = LazyMultiLocker()
-
-        # An executor dedicated to inserting devices to the DB
-        self.__device_inserter = concurrent.futures.ThreadPoolExecutor(max_workers=200)
+        self.__rebuild_db_view_lock = {
+            entity: threading.RLock()
+            for entity in EntityType
+        }
 
         # Setting up db
-        self.insert_views()
+        self.insert_indexes()
 
         # insertion and link/unlink lock
         self.fetch_lock = {}
@@ -81,14 +190,19 @@ class AggregatorService(PluginBase, Triggerable):
 
         self._default_activity = True
 
-    def insert_views(self):
+        # the last time the DB has been rebuilt
+        self.__last_full_db_rebuild = {
+            entity: datetime.utcnow()
+            for entity in EntityType
+        }
+
+    def insert_indexes(self):
         """
-        Insert useful views.
+        Insert useful indexes.
         :return: None
         """
 
-        for entity_type in EntityType:
-            db = self._historical_entity_views_db_map[entity_type]
+        def common_view_indexes(db):
             # used for querying by it directly
             db.create_index([('internal_axon_id', pymongo.ASCENDING)])
             # used as a trick to split all devices by it relatively equally
@@ -101,8 +215,13 @@ class AggregatorService(PluginBase, Triggerable):
             db.create_index([('specific_data.data.id', pymongo.ASCENDING)])
             db.create_index([(f'specific_data.{PLUGIN_NAME}', pymongo.ASCENDING)])
             db.create_index([(f'specific_data.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING)])
+            db.create_index([(f'specific_data.adapter_properties', pymongo.ASCENDING)])
             # this is used for when you want to see a single snapshot in time
             db.create_index([(f'accurate_for_datetime', pymongo.ASCENDING)])
+
+        for entity_type in EntityType:
+            common_view_indexes(self._historical_entity_views_db_map[entity_type])
+            common_view_indexes(self._entity_views_db_map[entity_type])
 
         self.devices_db.create_index([
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
@@ -116,84 +235,6 @@ class AggregatorService(PluginBase, Triggerable):
             (f'adapters.{PLUGIN_UNIQUE_NAME}', pymongo.ASCENDING), ('adapters.data.id', pymongo.ASCENDING)
         ], unique=True)
         self.users_db.create_index([('internal_axon_id', pymongo.ASCENDING)], unique=True)
-
-        # The following creates a view that has all adapters and tags
-        # of type "adapterdata" inside one (unsorted!) array.
-        # also hides 'pending_delete" entities
-        for create, view_on in [("devices_db_view", "devices_db"), ("users_db_view", "users_db")]:
-            try:
-                self.aggregator_db_connection.command({
-                    "create": create,
-                    "viewOn": view_on,
-                    "pipeline": [
-                        {
-                            "$project": {
-                                'filtered_adapters': {
-                                    '$filter': {
-                                        'input': '$adapters',
-                                        'as': 'adapter',
-                                        'cond': {
-                                            "$ne": [
-                                                "$$adapter.pending_delete", True
-                                            ]
-                                        }
-                                    }
-                                },
-                                'internal_axon_id': 1,
-                                'tags': 1,
-                                ADAPTERS_LIST_LENGTH: 1
-                            },
-                        },
-                        {
-                            '$project': {
-                                'internal_axon_id': 1,
-                                ADAPTERS_LIST_LENGTH: 1,
-                                'generic_data': {
-                                    '$filter': {
-                                        'input': '$tags',
-                                        'as': 'tag',
-                                        'cond': {
-                                            '$eq': [
-                                                '$$tag.type', 'data'
-                                            ]
-                                        }
-                                    }
-                                },
-                                'specific_data': {
-                                    '$concatArrays': ['$filtered_adapters',
-                                                      {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
-                                                                   {'$eq': ['$$tag.type', 'adapterdata']}}}]},
-                                'adapters': '$filtered_adapters.plugin_name',
-                                'unique_adapter_names': '$filtered_adapters.plugin_unique_name',
-                                'labels': {'$filter': {'input': '$tags', 'as': 'tag', 'cond':
-                                                       {'$and': [{'$eq': ['$$tag.type', 'label']},
-                                                                 {'$eq': ['$$tag.data', True]}]}
-                                                       }
-                                           },
-                            }
-                        },
-                        {
-                            '$project': {
-                                'internal_axon_id': 1, 'generic_data': 1, 'adapters': 1,
-                                'unique_adapter_names': 1, 'labels': '$labels.name',
-                                'adapters_data': {'$map': {'input': '$specific_data', 'as': 'data', 'in': {
-                                    '$arrayToObject': {'$concatArrays': [[], [{'k': '$$data.plugin_name',
-                                                                               'v': '$$data.data'}]]}}}},
-                                'specific_data': 1, ADAPTERS_LIST_LENGTH: 1}
-                        },
-                        {
-                            '$match': {
-                                'adapters': {
-                                    "$exists": True,
-                                    "$not": {"$size": 0}
-                                }
-                            }
-                        }
-                    ]
-                })
-            except pymongo.errors.OperationFailure as e:
-                if "already exists" not in str(e):
-                    raise
 
     def _request_insertion_from_adapters(self, adapter):
         """Get mapped data from all devices.
@@ -231,6 +272,85 @@ class AggregatorService(PluginBase, Triggerable):
                             f"Reason: {str(data.content)}")
                 continue
             yield (client_name, from_json(data.content))
+
+    def __rebuild_partial_view(self, from_db, to_db, internal_axon_ids: List[str]):
+        """
+        See docs for _rebuild_entity_view
+        """
+        internal_axon_ids = list(internal_axon_ids)
+        logger.info(f"Performance: Starting partial rebuild for {len(internal_axon_ids)} devices")
+
+        processed_devices = list(from_db.aggregate([
+            {
+                "$match": {
+                    "internal_axon_id": {
+                        "$in": internal_axon_ids
+                    }
+                }
+            },
+            *aggregation_stages_for_entity_view,
+        ]))
+        for device in processed_devices:
+            to_db.replace_one(
+                filter={
+                    "internal_axon_id": device['internal_axon_id']
+                },
+                replacement=device,
+                upsert=True
+            )
+        retrieved_devices = [x['internal_axon_id'] for x in processed_devices]
+        to_be_deleted = [x for x in internal_axon_ids if x not in retrieved_devices]
+        to_db.delete_many(
+            filter={
+                "internal_axon_id": {
+                    "$in": to_be_deleted
+                }
+            })
+
+        logger.info("Performance: Done partial rebuild")
+
+    def _rebuild_entity_view(self, entity_type: EntityType, internal_axon_ids: List[str] = None):
+        """
+        Takes the "raw" db (i.e. devices_db), performs an aggregation over it to generate
+        the "pretty" view from it (i.e. devices_db_view)
+        :param entity_type: The entity type to rebuild for
+        :param internal_axon_ids: if not none, will rebuild for the given internal axon ids only
+        """
+
+        # The following creates a view that has all adapters and tags
+        # of type "adapterdata" inside one (unsorted!) array.
+        # also hides 'pending_delete" entities
+        from_db = self._entity_db_map[entity_type]
+        to_db = self._entity_views_db_map[entity_type]
+        if internal_axon_ids:
+            return self.__rebuild_partial_view(from_db, to_db, internal_axon_ids)
+
+        with self.__rebuild_db_view_lock[entity_type]:
+
+            # this is an expensive routine, and this may be called a lot,
+            last_rebuild = self.__last_full_db_rebuild[entity_type]
+            seconds_ago = (datetime.utcnow() - last_rebuild).total_seconds()
+            if seconds_ago < self.MIN_DELAY_BETWEEN_FULL_DB_REBUILD:
+                time.sleep(self.MIN_DELAY_BETWEEN_FULL_DB_REBUILD - seconds_ago)
+
+            tmp_collection = self._get_db_connection()[to_db.database.name][f"temp_{to_db.name}"]
+            logger.info("Performance: starting aggregating to tmp collection")
+            from_db.aggregate([
+                {
+                    "$out": tmp_collection.name
+                }
+            ])
+            logger.info("Performance: starting aggregating to actual collection")
+            tmp_collection.aggregate([
+                *aggregation_stages_for_entity_view,
+                {
+                    "$out": to_db.name
+                }
+            ])
+            logger.info("Performance: starting drop temp collection")
+            tmp_collection.drop()
+            logger.info("Performance: finished")
+            self.__last_full_db_rebuild[entity_type] = datetime.utcnow()
 
     def _save_entity_views_to_historical_db(self, entity_type: EntityType):
         from_db = self._entity_views_db_map[entity_type]
@@ -315,6 +435,11 @@ class AggregatorService(PluginBase, Triggerable):
         elif job_name == 'save_history':
             for entity_type in EntityType:
                 self._save_entity_views_to_historical_db(entity_type)
+            return
+        elif job_name == 'rebuild_entity_view':
+            for entity_type in EntityType:
+                self._rebuild_entity_view(entity_type,
+                                          internal_axon_ids=post_json.get('internal_axon_ids') if post_json else None)
             return
         else:
             adapters = [adapter for adapter in adapters.values()
@@ -410,7 +535,7 @@ class AggregatorService(PluginBase, Triggerable):
         except Exception as e:
             logger.exception('Getting devices from all requested adapters failed.')
 
-    def _do_plugin_push(self, sent_plugin):
+    def _do_plugin_push(self, sent_plugin, should_update_view=False):
         """
         :return: '' if on success, else error string
         """
@@ -447,90 +572,88 @@ class AggregatorService(PluginBase, Triggerable):
         sent_plugin[PLUGIN_UNIQUE_NAME], sent_plugin['plugin_name'] = self.get_caller_plugin_name()
 
         # Get the specific lock we want
-        if entity == EntityType.Devices.value:
-            db_lock = self.devices_db_lock
-            entities_db = self.devices_db
-        elif entity == EntityType.Users.value:
-            db_lock = self.users_db_lock
-            entities_db = self.users_db
-        else:
-            raise ValueError("entity must be devices or users")
+        entity = EntityType(entity)
+        db_lock = self.__db_locks[entity]
+        entities_db = self._entity_db_map[entity]
 
-        with db_lock.get_lock(
-                [get_unique_name_from_plugin_unique_name_and_id(name, associated_id) for name, associated_id in
-                 associated_adapters]):
-            # now let's update our db
+        with self.__rebuild_db_view_lock[entity]:
+            with db_lock.get_lock(
+                    [get_unique_name_from_plugin_unique_name_and_id(name, associated_id) for name, associated_id in
+                     associated_adapters]):
+                # now let's update our db
 
-            # figure out all axonius entities that at least one of its adapters are in the
-            # given plugin's association
-            entities_candidates = list(entities_db.find({"$or": [
-                {
-                    'adapters': {
-                        '$elemMatch': {
-                            PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
-                            'data.id': associated_id
+                # figure out all axonius entities that at least one of its adapters are in the
+                # given plugin's association
+                entities_candidates = list(entities_db.find({"$or": [
+                    {
+                        'adapters': {
+                            '$elemMatch': {
+                                PLUGIN_UNIQUE_NAME: associated_plugin_unique_name,
+                                'data.id': associated_id
+                            }
                         }
                     }
-                }
-                for associated_plugin_unique_name, associated_id in associated_adapters
-            ]}))
+                    for associated_plugin_unique_name, associated_id in associated_adapters
+                ]}))
 
-            if len(entities_candidates) == 0:
-                return f"No entities given or all entities given don't exist. " \
-                       f"Associated adapters: {associated_adapters}"
+                if len(entities_candidates) == 0:
+                    return f"No entities given or all entities given don't exist. " \
+                           f"Associated adapters: {associated_adapters}"
 
-            if association_type == 'Tag':
-                if len(entities_candidates) != 1:
-                    # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
-                    # then if it's not 1, its definitely 0
-                    return "A tag must be associated with just one adapter, the entity provided is unavailable"
-                # take (assumed single) key from candidates
-                entities_candidates = entities_candidates[0]
+                if association_type == 'Tag':
+                    if len(entities_candidates) != 1:
+                        # it has been checked that at most 1 device was provided (if len(associated_adapters) != 1)
+                        # then if it's not 1, its definitely 0
+                        return "A tag must be associated with just one adapter, the entity provided is unavailable"
+                    # take (assumed single) key from candidates
+                    entities_candidate = entities_candidates[0]
 
-                if sent_plugin.get('type') == "adapterdata":
-                    relevant_adapter = [x for x in entities_candidates['adapters']
-                                        if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
-                    assert relevant_adapter, "Couldn't find adapter in axon device"
-                    sent_plugin['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
+                    if sent_plugin.get('type') == "adapterdata":
+                        relevant_adapter = [x for x in entities_candidate['adapters']
+                                            if x[PLUGIN_UNIQUE_NAME] == associated_adapters[0][0]]
+                        assert relevant_adapter, "Couldn't find adapter in axon device"
+                        sent_plugin['associated_adapter_plugin_name'] = relevant_adapter[0][PLUGIN_NAME]
 
-                self._update_entity_with_tag(sent_plugin, entities_candidates, entities_db)
-            elif association_type == 'Multitag':
-                for device in entities_candidates:
-                    # here we tag all adapter_devices per axonius device candidate
-                    new_sent_plugin = dict(sent_plugin)
-                    del new_sent_plugin['tags']
-                    new_sent_plugin['associated_adapters'] = [
-                        (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id'])
-                        for adapter_device in device['adapters']
-                    ]
+                    self._update_entity_with_tag(sent_plugin, entities_candidate, entities_db)
+                elif association_type == 'Multitag':
+                    for device in entities_candidates:
+                        # here we tag all adapter_devices per axonius device candidate
+                        new_sent_plugin = dict(sent_plugin)
+                        del new_sent_plugin['tags']
+                        new_sent_plugin['associated_adapters'] = [
+                            (adapter_device[PLUGIN_UNIQUE_NAME], adapter_device['data']['id'])
+                            for adapter_device in device['adapters']
+                        ]
 
-                    for tag in sent_plugin['tags']:
-                        self._update_entity_with_tag({**new_sent_plugin, **tag}, device, entities_db)
-            elif association_type == 'Link':
-                # in this case, we need to link (i.e. "merge") all entities_candidates
-                # if there's only one, then the link is either associated only to
-                # one entity (which is as irrelevant as it gets)
-                # or all the entities are already linked. In any case, if a real merge isn't done
-                # it means someone made a mistake.
-                if len(entities_candidates) < 2:
-                    return f'Found less than two candidates, got {len(entities_candidates)}'
+                        for tag in sent_plugin['tags']:
+                            self._update_entity_with_tag({**new_sent_plugin, **tag}, device, entities_db)
+                elif association_type == 'Link':
+                    # in this case, we need to link (i.e. "merge") all entities_candidates
+                    # if there's only one, then the link is either associated only to
+                    # one entity (which is as irrelevant as it gets)
+                    # or all the entities are already linked. In any case, if a real merge isn't done
+                    # it means someone made a mistake.
+                    if len(entities_candidates) < 2:
+                        return f'Found less than two candidates, got {len(entities_candidates)}'
 
-                if len(associated_adapters) != 2:
-                    return f'Link with wrong number of devices {len(associated_adapters)}'
+                    if len(associated_adapters) != 2:
+                        return f'Link with wrong number of devices {len(associated_adapters)}'
 
-                if associated_adapters[0] == associated_adapters[1]:
-                    return f'Got link of the same device {associated_adapters}'
+                    if associated_adapters[0] == associated_adapters[1]:
+                        return f'Got link of the same device {associated_adapters}'
 
-                self._link_entities(entities_candidates, entities_db)
-            elif association_type == 'Unlink':
-                if len(entities_candidates) != 1:
-                    return f"All associated_adapters in an unlink operation must be from the same Axonius entity, in your case, they're from {len(entities_candidates)} entities."
-                entity_to_split = entities_candidates[0]
+                    self._link_entities(entities_candidates, entities_db)
+                elif association_type == 'Unlink':
+                    if len(entities_candidates) != 1:
+                        return f"All associated_adapters in an unlink operation must be from the same Axonius entity, in your case, they're from {len(entities_candidates)} entities."
+                    entity_to_split = entities_candidates[0]
 
-                if len(entity_to_split['adapters']) == len(associated_adapters):
-                    return "You can't remove all devices from an entity, that'll be unfair."
+                    if len(entity_to_split['adapters']) == len(associated_adapters):
+                        return "You can't remove all devices from an entity, that'll be unfair."
 
-                self._unlink_entities(associated_adapters, entity_to_split, entities_db)
+                    self._unlink_entities(associated_adapters, entity_to_split, entities_db)
+                if should_update_view:
+                    self._rebuild_entity_view(entity, [x['internal_axon_id'] for x in entities_candidates])
 
         # raw == parsed for plugin_data
         self._save_parsed_in_db(sent_plugin)  # save in parsed too
@@ -550,7 +673,7 @@ class AggregatorService(PluginBase, Triggerable):
         sent_plugin = self.get_request_data_as_object()
         if sent_plugin is None:
             return return_error("Invalid data sent", 400)
-        res = self._do_plugin_push(sent_plugin)
+        res = self._do_plugin_push(sent_plugin, should_update_view=True)
         if res != '':
             logger.warning(f'plugin push failed {res}')
             return return_error(res)
@@ -560,11 +683,16 @@ class AggregatorService(PluginBase, Triggerable):
     @add_rule("multi_plugin_push", methods=["POST"])
     def multi_plugin_push(self):
         sent_plugin = self.get_request_data_as_object()
+        should_rebuild_all = len(sent_plugin) > 1000
         logger.info(f"Handling {len(sent_plugin)} pushes")
-        results = [self._do_plugin_push(d) for d in sent_plugin]
+        results = [self._do_plugin_push(d, should_update_view=not should_rebuild_all) for d in sent_plugin]
+        if should_rebuild_all:
+            for entity_type in EntityType:
+                self._rebuild_entity_view(entity_type)
         if any(x != "" for x in results):
             logger.info(f"Error handling {len(sent_plugin)} pushes {[x for x in results if x != '']}")
             return return_error("Errors took place", additional_data=[x for x in results if x != ''])
+
         logger.info(f"Finished handling {len(sent_plugin)} pushes")
         return ""
 

@@ -1,17 +1,17 @@
+import functools
 import logging
-logger = logging.getLogger(f'axonius.{__name__}')
-
-from axonius import thread_stopper
-from axonius.thread_pool_executor import LoggedThreadPoolExecutor
-
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from threading import RLock
 
-from flask import jsonify, request
-
 from axonius.mixins.feature import Feature
 from axonius.plugin_base import add_rule, return_error
+from axonius.thread_pool_executor import LoggedThreadPoolExecutor
+from axonius.utils.threading import run_in_executor_helper
+from flask import jsonify, request
+from promise import Promise
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class TriggerStates(Enum):
@@ -51,11 +51,11 @@ class Triggerable(Feature, ABC):
         self._default_activity = False
 
     def trigger_activate_if_needed(self):
-        docs = self._get_collection("config").find({"trigger_activate_job": {"$exists": 1}})
+        docs = self._get_collection("config").find({'trigger_activate_job': {'$exists': 1}})
         for doc in docs:
-            job_name = doc["trigger_activate_job"]
-            job_state = doc["trigger_activate_state"]
-            logger.info(f"Trigger activate job {job_name}: state is {job_state}")
+            job_name = doc['trigger_activate_job']
+            job_state = doc['trigger_activate_state']
+            logger.info(f'Trigger activate job {job_name}: state is {job_state}')
             if job_state is True:
                 self._activate(job_name)
 
@@ -66,11 +66,11 @@ class Triggerable(Feature, ABC):
         """
 
         for job_name, state in self.__state.items():
-            self._get_collection("config").update(
-                {"trigger_activate_job": job_name},
+            self._get_collection('config').update(
+                {'trigger_activate_job': job_name},
                 {
-                    "trigger_activate_job": job_name,
-                    "trigger_activate_state": bool(state.get('active', False))
+                    'trigger_activate_job': job_name,
+                    'trigger_activate_state': bool(state.get('active', False))
                 },
                 upsert=True
             )
@@ -182,63 +182,70 @@ class Triggerable(Feature, ABC):
         Trigger a job.
         :param job_name: the job to trigger.
         """
+        # if ?blocking=True/False is passed than this request will wait until the trigger has completed
+        blocking = request.args.get('blocking', 'True') == 'True'
+        return self._trigger(job_name, blocking)
+
+    def _trigger(self, job_name, blocking=True):
         with self.__trigger_lock:
             job_state = self._get_state_or_default(job_name)
 
         # having a lock per job allows more efficient parallelization
         with job_state['lock']:
-            if job_state['scheduled']:
-                # it's already triggered and scheduled
-                return ""
+            self.__perform_trigger(job_name, job_state)
 
-            if not job_state['active']:
-                return ""
-                # return return_error(f"{job_name} trigger is disabled.", 403)
+        if blocking:
+            if job_state['promise']:
+                Promise.wait(job_state['promise'])
+        return ''
 
-            # If a plugin was triggered and then triggered again.
-            # This is good for cases when a single trigger is enough but an event may happen while
-            # a trigger is taking place and it can't be assured that the current trigger will respond to that event.
-            #
-            # For example, adding a client to an adapter will trigger the aggregator to aggregate that specific adapter.
-            # If another client is then quickly added, another trigger will be issued.
-            # In this case, it's difficult to know if the current trigger will or will not fetch that client,
-            # so another trigger will be scheduled.
+    def __perform_trigger(self, job_name, job_state):
+        """
+        Actually perform the job, assumes locks
+        :return:
+        """
+        if job_state['scheduled']:
+            # it's already triggered and scheduled
+            return ''
 
-            def on_success(arg):
-                with job_state['lock']:
-                    if not job_state['scheduled']:
-                        job_state['triggered'] = False
-                    job_state['scheduled'] = False
-                    logger.info("Successfully triggered")
-                    return arg
+        if not job_state['active']:
+            return ''
+            # return return_error(f"{job_name} trigger is disabled.", 403)
 
-            def on_failed(err):
-                with job_state['lock']:
-                    logger.error(f"Failed triggering up: {err}")
-                    job_state['last_error'] = str(repr(err))
-                    if not job_state['scheduled']:
-                        job_state['triggered'] = False
-                    job_state['scheduled'] = False
-                    return err
+        # If a plugin was triggered and then triggered again.
+        # This is good for cases when a single trigger is enough but an event may happen while
+        # a trigger is taking place and it can't be assured that the current trigger will respond to that event.
+        #
+        # For example, adding a client to an adapter will trigger the aggregator to aggregate that specific adapter.
+        # If another client is then quickly added, another trigger will be issued.
+        # In this case, it's difficult to know if the current trigger will or will not fetch that client,
+        # so another trigger will be scheduled.
+        def on_success(arg):
+            with job_state['lock']:
+                if not job_state['scheduled']:
+                    job_state['triggered'] = False
+                job_state['scheduled'] = False
+                logger.info("Successfully triggered")
+                return arg
 
-            if job_state['triggered']:
-                job_state['scheduled'] = True
-            else:
-                job_state['triggered'] = True
+        def on_failed(err):
+            with job_state['lock']:
+                logger.error(f'Failed triggering up: {err}')
+                job_state['last_error'] = str(repr(err))
+                if not job_state['scheduled']:
+                    job_state['triggered'] = False
+                job_state['scheduled'] = False
+                return err
 
-            trigger_response = "Didn't run yet"
-            try:
-                trigger_response = self._triggered(job_name, request.get_json(silent=True))
-                if trigger_response is None:
-                    trigger_response = ""
-                on_success(trigger_response)
-            except Exception as err:
-                logger.exception(f'An exception was raised while triggering job: {job_name}')
-                on_failed(err)
-                raise
-            except thread_stopper.StopThreadException as err:
-                logger.info(f'Gracefully stopped: {job_name}')
-                on_failed(err)
-                raise
+        to_run = functools.partial(self._triggered, job_name, request.get_json(silent=True))
+        if job_state['triggered']:
+            job_state['scheduled'] = True
+            job_state['promise'] = job_state['promise'].then(to_run)
 
-            return trigger_response
+        else:
+            job_state['triggered'] = True
+            job_state['promise'] = Promise(functools.partial(run_in_executor_helper,
+                                                             self.__executor,
+                                                             to_run))
+        job_state['promise'].then(did_fulfill=on_success,
+                                  did_reject=on_failed)

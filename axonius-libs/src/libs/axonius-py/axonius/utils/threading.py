@@ -1,3 +1,5 @@
+import concurrent.futures
+import multiprocessing
 from threading import RLock
 import logging
 
@@ -26,6 +28,16 @@ def run_in_executor_helper(executor, method_to_call, resolve, reject, *_, args=[
             reject(e)
 
     executor.submit(resolver)
+
+
+GLOBAL_RUN_AND_FORGET = concurrent.futures.ThreadPoolExecutor(max_workers=2 * multiprocessing.cpu_count())
+
+
+def run_and_forget(call_this):
+    """
+    Run a method on a remote worker without caring about the result, if it ever comes
+    """
+    GLOBAL_RUN_AND_FORGET.submit(call_this)
 
 
 class MultiLocker(object):

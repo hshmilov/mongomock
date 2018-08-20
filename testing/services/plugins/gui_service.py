@@ -2,7 +2,7 @@ import requests
 import json
 import os
 
-from axonius.consts.plugin_consts import (DASHBOARD_COLLECTION, VERSION_COLLECTION)
+from axonius.consts.plugin_consts import DASHBOARD_COLLECTION
 from services.plugin_service import PluginService
 
 
@@ -15,20 +15,8 @@ class GuiService(PluginService):
     def wait_for_service(self, *args, **kwargs):
         super().wait_for_service(*args, **kwargs)
 
-        version = self._get_schema_version()
-        if version < 1:
+        if self.db_schema_version < 1:
             self._update_schema_version_1()
-
-    def _get_schema_version(self):
-        schema_doc = self.db.get_collection(self.unique_name, VERSION_COLLECTION).find_one({'name': 'schema'})
-        if schema_doc:
-            return schema_doc.get('version', 0)
-        return 0
-
-    def _update_schema_version(self, version):
-        self.db.get_collection(self.unique_name, VERSION_COLLECTION).replace_one({'name': 'schema'},
-                                                                                 {'name': 'schema', 'version': version},
-                                                                                 upsert=True)
 
     def _update_schema_version_1(self):
         try:
@@ -57,7 +45,7 @@ class GuiService(PluginService):
                 except Exception as e:
                     print(f'Could not upgrade chart {chart["name"]}. Details: {e}')
             self._replace_all_dashboard(preceding_charts)
-            self._update_schema_version(1)
+            self.db_schema_version = 1
         except Exception as e:
             print(f'Could not upgrade gui db to version 1. Details: {e}')
 

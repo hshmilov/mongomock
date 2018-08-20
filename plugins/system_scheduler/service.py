@@ -1,32 +1,28 @@
-import logging
-
-from axonius.entities import EntityType
-from axonius.mixins.configurable import Configurable
-from axonius.utils.parsing import parse_filter
-
-logger = logging.getLogger(f'axonius.{__name__}')
 import concurrent.futures
-from retrying import retry
-from concurrent.futures import ALL_COMPLETED, wait
+import logging
 import threading
-import dateutil.parser
-from datetime import datetime
 import time
-import requests
+from concurrent.futures import ALL_COMPLETED, wait
 from contextlib import contextmanager
-from flask import jsonify
-from apscheduler.executors.pool import ThreadPoolExecutor as ThreadPoolExecutorApscheduler
-from apscheduler.triggers.interval import IntervalTrigger
+from datetime import datetime
 
+import axonius.plugin_exceptions
+import dateutil.parser
+import requests
+from apscheduler.executors.pool import \
+    ThreadPoolExecutor as ThreadPoolExecutorApscheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from axonius.background_scheduler import LoggedBackgroundScheduler
-from axonius.consts import adapter_consts
+from axonius.consts import adapter_consts, plugin_consts, scheduler_consts
+from axonius.mixins.configurable import Configurable
+from axonius.mixins.triggerable import Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.thread_stopper import stoppable
-from axonius.mixins.triggerable import Triggerable
-import axonius.plugin_exceptions
-from axonius.consts import plugin_consts
 from axonius.utils.files import get_local_config_file
-from axonius.consts import scheduler_consts
+from flask import jsonify
+from retrying import retry
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class SystemSchedulerService(PluginBase, Triggerable, Configurable):
@@ -204,20 +200,35 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
         :return:
         """
 
+        should_rebuild_db = True
+
+        def _rebuild_view_constantly():
+            while should_rebuild_db:
+                self._request_db_rebuild(sync=True)
+
+        thread = threading.Thread(target=_rebuild_view_constantly)
+        thread.start()
+
         def _change_subphase(subphase: scheduler_consts.ResearchPhases):
             self.state[scheduler_consts.StateLevels.SubPhase.name] = subphase.name
             logger.info(f'Started Subphase {subphase}')
 
         with self._start_research():
-            self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
+            try:
+                self.state[scheduler_consts.StateLevels.Phase.name] = scheduler_consts.Phases.Research.name
 
-            # Fetch Devices Data.
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
-            self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
+                # Fetch Devices Data.
+                _change_subphase(scheduler_consts.ResearchPhases.Fetch_Devices)
+                self._run_aggregator_phase(adapter_consts.DEVICE_ADAPTER_PLUGIN_SUBTYPE)
 
-            # Fetch Scanners Data.
-            _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
-            self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
+                # Fetch Scanners Data.
+                _change_subphase(scheduler_consts.ResearchPhases.Fetch_Scanners)
+                self._run_aggregator_phase(adapter_consts.SCANNER_ADAPTER_PLUGIN_SUBTYPE)
+            finally:
+                should_rebuild_db = False
+                logger.info("Waiting for rebuilding thread to stop")
+                thread.join()
+                logger.info("Finished waiting for rebuilding thread to stop")
 
             # Clean old devices.
             _change_subphase(scheduler_consts.ResearchPhases.Clean_Devices)
@@ -239,6 +250,7 @@ class SystemSchedulerService(PluginBase, Triggerable, Configurable):
                 _change_subphase(scheduler_consts.ResearchPhases.Save_Historical)
                 self._run_historical_phase()
 
+            self._request_db_rebuild(sync=True)
             logger.info(f"Finished {scheduler_consts.Phases.Research.name} Phase Successfully.")
 
     def _get_plugins(self, plugin_subtype):
