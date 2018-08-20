@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""
+take json log and convert it to raw_log
+"""
+
+import sys
+import json
+from dateutil.parser import parse
+
+
+def main(filename='/dev/stdin'):
+
+    with open(filename, 'rt') as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            try:
+                log = json.loads(line)
+                log_level = log.get('level', '')
+                log_message = log.get('message', '')
+                log_timestamp = parse(log.get('@timestamp', '00:00')).strftime('%d/%m/%y %S:%M:%H')
+                log_funcname, log_linenumber = log.get('funcName', ''), log.get('lineNumber', '')
+                log_filename = log.get('filename', '')
+                log_exc_info = log.get('exc_info', '')
+                if log_exc_info:
+                    log_exc_info = '\n' + log_exc_info
+                print(f'{log_timestamp}  {log_level: <8} {log_message} {log_exc_info}')
+            except Exception:
+                print(line)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(*sys.argv[1:]))
