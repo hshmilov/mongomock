@@ -3,6 +3,30 @@ import subprocess
 from services.docker_service import DockerService
 from pathlib import Path
 import json
+import os
+import urllib.parse
+
+
+def parse_proxy(url):
+    """
+    :param url: proxy string as set in https_proxy. For example http://hniksic:mypassword@proxy.company.com:8001/.
+    username and password are optional
+    :return: parsed proxy settings
+    """
+    url = urllib.parse.urlparse(url)
+    username = ""
+    password = ""
+
+    if '@' in url[1]:
+        ident, host_port = url[1].split('@', 1)
+        if ':' in ident:
+            username, password = ident.split(':', 1)
+        else:
+            password = ident
+    else:
+        host_port = url[1]
+
+    return host_port, username, password
 
 
 class DiagnosticsService(DockerService):
@@ -28,11 +52,16 @@ class DiagnosticsService(DockerService):
     @property
     def environment(self):
         env = json.loads(self.diag_env_file.read_bytes())
-        generated_env = Path(self.service_dir) / 'env_autogen.sh'
-        with generated_env.open('wb') as env_file:
-            for k, v in env.items():
-                env_file.write(f'export {k}={v}\n'.encode())
-                yield f'{k}={v}'
+
+        for k, v in env.items():
+            yield f'{k}={v}'
+
+        proxy = os.environ.get('https_proxy')
+        if proxy is not None and proxy != '':
+            connect, username, password = parse_proxy(proxy)
+            yield f'PROXY_CONNECT={connect}'
+            yield f'PROXY_PASSWORD={password}'
+            yield f'PROXY_USERNAME={username}'
 
     @property
     def volumes(self):

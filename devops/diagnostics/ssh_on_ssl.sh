@@ -2,15 +2,27 @@
 
 cat > ./stunnel_autogen.conf << EOF
 debug = info
-output = /var/log/stunnel.log
+output = /dev/stdout
 pid = /var/run/stunnel.pid
 
 [ssh]
 client = yes
 accept = 127.0.0.1:${LOCAL_STUNNEL_LINK_PORT}
-connect = ${PUBLIC_SSL_HOST_ADDR}:443
+protocolHost = ${PUBLIC_SSL_HOST_ADDR}:443
 
 EOF
+
+# if there is proxy data - set it in conf
+if [[ -n "${PROXY_CONNECT}" ]]; then
+
+    cat >> ./stunnel_autogen.conf << EOF
+protocol = connect
+connect = ${PROXY_CONNECT}
+protocolPassword = ${PROXY_PASSWORD}
+protocolUsername = ${PROXY_USERNAME}
+EOF
+
+fi
 
 echo "=> Setting up the reverse ssh over stunnel - ${PUBLIC_SSL_HOST_USER}@${PUBLIC_SSL_HOST_ADDR}"
 while true
