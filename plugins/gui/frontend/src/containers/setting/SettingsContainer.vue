@@ -30,14 +30,14 @@
                         <h4>Remote Support Control</h4>
                         <div class="global-settings-access">
                             <label for="support_access">Temporary Remote Support (hours):</label>
-                            <div>
-                                <input type="number" v-model="supportAccess.duration" id="support_access" />
-                                <button @click="startSupportAccess" class="x-btn right">Start</button>
-                            </div>
+                            <input type="number" v-model="supportAccess.duration" id="support_access" />
+                            <button @click="startSupportAccess" class="x-btn right">Start</button>
                             <template v-if="supportAccess.endTime">
                                 <div>Will stop at:</div>
-                                <div>{{ supportAccess.endTime.toLocaleDateString()}} {{ supportAccess.endTime.toLocaleTimeString() }}</div>
+                                <div class="">{{ supportAccess.endTime.toLocaleDateString()}} {{ supportAccess.endTime.toLocaleTimeString() }}</div>
+                                <button @click="stopSupportAccess" class="x-btn link">Stop Now</button>
                             </template>
+                            <div v-else class="grid-span3" />
                         </div>
                     </template>
                 </div>
@@ -296,6 +296,23 @@
 					}
                 })
             },
+            stopSupportAccess() {
+				this.fetchData({
+					rule: 'support_access',
+					method: 'DELETE'
+				}).then(() => {
+					this.message = `Support Access Ended`
+					this.getSupportAccess()
+					this.loadPluginConfig({
+						pluginId: 'core',
+						configName: 'CoreService'
+					})
+                }).catch(error => {
+					if (error.response.status === 400) {
+						this.message = error.response.data.message
+					}
+				})
+            },
             getSupportAccess() {
 				this.fetchData({
 					rule: `support_access`
@@ -303,6 +320,8 @@
 					if (response.status === 200 && response.data) {
 						// Date timestamp received in seconds and JS Date expects milliseconds
                         this.supportAccess.endTime = new Date(parseInt(response.data) * 1000)
+                    } else {
+						this.supportAccess.endTime = null
                     }
                 })
             }
@@ -365,7 +384,7 @@
         .global-settings-access {
             width: 40vw;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 2fr 2fr 1fr;
             grid-gap: 8px 0;
             margin-bottom: 24px;
             align-items: center;

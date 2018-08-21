@@ -2373,7 +2373,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 logger.info("Email cannot be sent because no email server is configured")
                 raise RuntimeWarning("No email server configured")
 
-    @gui_helpers.add_rule_unauthenticated('support_access', methods=['GET', 'POST'])
+    @gui_helpers.add_rule_unauthenticated('support_access', methods=['GET', 'POST', 'DELETE'])
     def support_access(self):
         """
         Try retrieving current job for stopping the support access.
@@ -2408,13 +2408,18 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                                             name=SUPPORT_ACCESS_THREAD_ID,
                                             id=SUPPORT_ACCESS_THREAD_ID,
                                             max_instances=1)
-            return ''
 
-        # Handle GET request
-        if not support_access_job:
-            logger.info('No current job for ending the support access - it was already triggered')
-            return ""
-        return str(int(time.mktime(support_access_job.next_run_time.timetuple())))
+        elif request.method == 'GET':
+            if not support_access_job:
+                logger.info('No current job for ending the support access - it was already triggered')
+                return ''
+            return str(int(time.mktime(support_access_job.next_run_time.timetuple())))
+
+        elif request.method == 'DELETE':
+            self._stop_support_access()
+            if support_access_job:
+                support_access_job.remove()
+        return ''
 
     def _stop_support_access(self):
         logger.info('Stopping Support Access')
