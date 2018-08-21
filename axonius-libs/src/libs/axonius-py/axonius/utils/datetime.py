@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 
 def next_weekday(current_day, weekday):
@@ -12,3 +12,7 @@ def next_weekday(current_day, weekday):
     if days_ahead <= 0:  # Target day already happened this week
         days_ahead += 7
     return current_day + timedelta(days_ahead)
+
+
+def time_from_now(duration_in_hours):
+    return datetime.now() + timedelta(hours=duration_in_hours)

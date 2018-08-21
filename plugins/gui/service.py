@@ -16,15 +16,15 @@ from axonius.adapter_base import AdapterProperty
 
 from axonius.thread_stopper import stoppable
 from axonius.utils.files import get_local_config_file, create_temp_file
-from axonius.utils.datetime import next_weekday
+from axonius.utils.datetime import next_weekday, time_from_now
 from axonius.plugin_base import PluginBase, add_rule, return_error, EntityType
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, DEVICE_CONTROL_PLUGIN_NAME, \
     PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME, GUI_SYSTEM_CONFIG_COLLECTION, GUI_NAME, \
-    METADATA_PATH, SYSTEM_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS
+    METADATA_PATH, SYSTEM_SETTINGS, MAINTENANCE_SETTINGS, ANALYTICS_SETTING, TROUBLESHOOTING_SETTING, CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME
 from axonius.consts.scheduler_consts import ResearchPhases, StateLevels, Phases
-from gui.consts import ChartMetrics, ChartViews, ChartFuncs, EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, \
-    EXEC_REPORT_FILE_NAME, \
-    EXEC_REPORT_EMAIL_CONTENT
+from gui.consts import ChartMetrics, ChartViews, ChartFuncs, \
+    EXEC_REPORT_THREAD_ID, EXEC_REPORT_TITLE, EXEC_REPORT_FILE_NAME, EXEC_REPORT_EMAIL_CONTENT,\
+    SUPPORT_ACCESS_THREAD_ID
 from gui.report_generator import ReportGenerator
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.email_server import EmailServer
@@ -38,6 +38,7 @@ from axonius.background_scheduler import LoggedBackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import io
 import os
+import time
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parse as parse_date
@@ -170,13 +171,12 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
 
         self._client_insertion_threadpool = LoggedThreadPoolExecutor(max_workers=20)  # Only for client insertion
 
-        executors = {'default': ThreadPoolExecutorApscheduler(1)}
-        self._exec_report_scheduler = LoggedBackgroundScheduler(executors=executors)
-
+        self._job_scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutorApscheduler(1)})
         current_exec_report_setting = self._get_exec_report_settings(self.exec_report_collection)
         if current_exec_report_setting != {}:
             self._schedule_exec_report(self.exec_report_collection, current_exec_report_setting)
-        self._exec_report_scheduler.start()
+        self._job_scheduler.start()
+
         self.metadata = self.load_metadata()
         self._activate('execute')
 
@@ -1006,19 +1006,7 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                     message = f'Could not connect to mail server "{email_settings["smtpHost"]}"'
                     logger.exception(message)
                     return return_error(message, 400)
-
-            with self._get_db_connection() as db_connection:
-                config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS]
-
-                config_collection.replace_one(filter={
-                    'config_name': config_name
-                },
-                    replacement={
-                        "config_name": config_name,
-                        "config": config_to_set
-                })
-                self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
-
+            self._update_plugin_config(plugin_unique_name, config_name, config_to_set)
             return ""
         if request.method == 'GET':
             with self._get_db_connection() as db_connection:
@@ -1026,6 +1014,26 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
                 schema_collection = db_connection[plugin_unique_name]['config_schemas']
                 return jsonify({'config': config_collection.find_one({'config_name': config_name})['config'],
                                 'schema': schema_collection.find_one({'config_name': config_name})['schema']})
+
+    def _update_plugin_config(self, plugin_unique_name, config_name, config_to_set):
+        """
+        Update given configuration settings for given configuration name, under given plugin.
+        Finally, updates the plugin on the change.
+
+        :param plugin_unique_name: Of whom to update the configuration
+        :param config_name: To update
+        :param config_to_set:
+        """
+        with self._get_db_connection() as db_connection:
+            config_collection = db_connection[plugin_unique_name][CONFIGURABLE_CONFIGS]
+            config_collection.replace_one(filter={
+                'config_name': config_name
+            },
+                replacement={
+                    "config_name": config_name,
+                    "config": config_to_set
+            })
+            self.request_remote_plugin("update_config", plugin_unique_name, method='POST')
 
     @gui_helpers.add_rule_unauthenticated("plugins/<plugin_unique_name>/<command>", methods=['POST'])
     def run_plugin(self, plugin_unique_name, command):
@@ -2318,19 +2326,19 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
         else:
             raise ValueError("period have to be in ('daily', 'monthly', 'weekly').")
 
-        exec_report_job = self._exec_report_scheduler.get_job(EXEC_REPORT_THREAD_ID)
+        exec_report_job = self._job_scheduler.get_job(EXEC_REPORT_THREAD_ID)
 
-        # If job dosen't exist generate it
+        # If job doesn't exist generate it
         if exec_report_job is None:
-            self._exec_report_scheduler.add_job(func=self._send_report_thread,
-                                                trigger=new_interval_triggger,
-                                                next_run_time=next_run_time,
-                                                name=EXEC_REPORT_THREAD_ID,
-                                                id=EXEC_REPORT_THREAD_ID,
-                                                max_instances=1)
+            self._job_scheduler.add_job(func=self._send_report_thread,
+                                        trigger=new_interval_triggger,
+                                        next_run_time=next_run_time,
+                                        name=EXEC_REPORT_THREAD_ID,
+                                        id=EXEC_REPORT_THREAD_ID,
+                                        max_instances=1)
         else:
             exec_report_job.modify(next_run_time=next_run_time)
-            self._exec_report_scheduler.reschedule_job(EXEC_REPORT_THREAD_ID, trigger=new_interval_triggger)
+            self._job_scheduler.reschedule_job(EXEC_REPORT_THREAD_ID, trigger=new_interval_triggger)
 
         exec_reports_settings_collection.replace_one({}, exec_report_data, upsert=True)
         logger.info(f"Scheduling an exec_report sending for {next_run_time} and period of {time_period}.")
@@ -2364,6 +2372,70 @@ class GuiService(PluginBase, Triggerable, Configurable, API):
             else:
                 logger.info("Email cannot be sent because no email server is configured")
                 raise RuntimeWarning("No email server configured")
+
+    @gui_helpers.add_rule_unauthenticated('support_access', methods=['GET', 'POST'])
+    def support_access(self):
+        """
+        Try retrieving current job for stopping the support access.
+        If GET request, return its scheduled time or empty, if doesn't exist.
+        If POST request, update the time of the job or create one, if doesn't exist.
+        The time to stop is according to the given duration.
+
+        :return: Current time of stop jon for GET request, empty string otherwise
+        """
+        support_access_job = self._job_scheduler.get_job(SUPPORT_ACCESS_THREAD_ID)
+        if request.method == 'POST':
+            duration_param = self.get_request_data_as_object().get('duration', 24)
+            try:
+                next_run_time = time_from_now(float(duration_param))
+            except ValueError:
+                message = f'Value for "duration" parameter must be a number, instead got {duration_param}'
+                logger.exception(message)
+                return return_error(message, 400)
+
+            logger.info('Starting Support Access')
+            self._update_support_access(True)
+            if support_access_job is not None:
+                # Job exists, not creating another
+                logger.info(f'Job already existing - updating its run time to {next_run_time}')
+                support_access_job.modify(next_run_time=next_run_time)
+                # self._job_scheduler.reschedule_job(SUPPORT_ACCESS_THREAD_ID, trigger='date')
+            else:
+                logger.info(f'Creating a stop job for the time {next_run_time}')
+                self._job_scheduler.add_job(func=self._stop_support_access,
+                                            trigger='date',
+                                            next_run_time=next_run_time,
+                                            name=SUPPORT_ACCESS_THREAD_ID,
+                                            id=SUPPORT_ACCESS_THREAD_ID,
+                                            max_instances=1)
+            return ''
+
+        # Handle GET request
+        if not support_access_job:
+            logger.info('No current job for ending the support access - it was already triggered')
+            return ""
+        return str(int(time.mktime(support_access_job.next_run_time.timetuple())))
+
+    def _stop_support_access(self):
+        logger.info('Stopping Support Access')
+        self._update_support_access(False)
+
+    def _update_support_access(self, support_access_on):
+        """
+        Fetch current config belong
+        :param support_access_on:
+        :return:
+        """
+        config_document = self._get_collection(CONFIGURABLE_CONFIGS, CORE_UNIQUE_NAME).find_one({
+            'config_name': 'CoreService'
+        })
+        if not config_document:
+            logger.error('Cannot start the support access, since controlling configuration is not found')
+            return
+        config_to_set = config_document['config']
+        config_to_set[MAINTENANCE_SETTINGS][ANALYTICS_SETTING] = support_access_on
+        config_to_set[MAINTENANCE_SETTINGS][TROUBLESHOOTING_SETTING] = support_access_on
+        self._update_plugin_config(CORE_UNIQUE_NAME, 'CoreService', config_to_set)
 
     @gui_helpers.add_rule_unauthenticated('metadata', methods=['GET'])
     def get_metadata(self):

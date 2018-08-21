@@ -26,7 +26,7 @@ export const configurable = {
         }
     },
     actions: {
-        [SAVE_PLUGIN_CONFIG]({dispatch, commit}, payload) {
+        [ SAVE_PLUGIN_CONFIG ] ({dispatch, commit}, payload) {
             /*
                 Call API to save given config to adapter by the given adapter unique name
              */
@@ -50,7 +50,7 @@ export const configurable = {
                 return response
             })
         },
-        [LOAD_PLUGIN_CONFIG]({dispatch, commit}, payload) {
+        [ LOAD_PLUGIN_CONFIG ] ({dispatch, commit}, payload) {
             /*
                 Call API to save given config to adapter by the given adapter unique name
              */

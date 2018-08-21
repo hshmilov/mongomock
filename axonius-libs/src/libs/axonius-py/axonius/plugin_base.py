@@ -40,6 +40,7 @@ from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH,
                                           AGGREGATOR_PLUGIN_NAME,
+                                          MAINTENANCE_SETTINGS,
                                           ANALYTICS_SETTING,
                                           CONFIGURABLE_CONFIGS,
                                           CORE_UNIQUE_NAME, GUI_NAME,
@@ -61,8 +62,6 @@ from axonius.utils.parsing import get_exception_string
 from axonius.utils.threading import LazyMultiLocker, run_in_executor_helper, run_and_forget
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-MAINTENANCE_SETTINGS = 'maintenance_settings'
 
 # Starting the Flask application
 AXONIUS_REST = Flask(__name__)
@@ -1665,7 +1664,7 @@ class PluginBase(Configurable, Feature):
                 "syslogPort": logging.handlers.SYSLOG_UDP_PORT
             },
             MAINTENANCE_SETTINGS: {
-                ANALYTICS_SETTING: True,
-                TROUBLESHOOTING_SETTING: True
+                ANALYTICS_SETTING: False,
+                TROUBLESHOOTING_SETTING: False
             }
         }
