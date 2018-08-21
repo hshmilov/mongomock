@@ -322,10 +322,10 @@ class AggregatorService(PluginBase, Triggerable):
         # also hides 'pending_delete" entities
         from_db = self._entity_db_map[entity_type]
         to_db = self._entity_views_db_map[entity_type]
-        if internal_axon_ids:
-            return self.__rebuild_partial_view(from_db, to_db, internal_axon_ids)
 
         with self.__rebuild_db_view_lock[entity_type]:
+            if internal_axon_ids:
+                return self.__rebuild_partial_view(from_db, to_db, internal_axon_ids)
 
             # this is an expensive routine, and this may be called a lot,
             last_rebuild = self.__last_full_db_rebuild[entity_type]

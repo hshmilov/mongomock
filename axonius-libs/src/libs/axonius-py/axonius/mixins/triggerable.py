@@ -184,9 +184,17 @@ class Triggerable(Feature, ABC):
         """
         # if ?blocking=True/False is passed than this request will wait until the trigger has completed
         blocking = request.args.get('blocking', 'True') == 'True'
-        return self._trigger(job_name, blocking)
+        # if ?priority=True than this request will run immediately, ignoring any internal lock mechanism
+        # use with caution!
+        # priority assumes blocking
+        priority = request.args.get('priority', 'False') == 'True'
+        return self._trigger(job_name, blocking, priority)
 
-    def _trigger(self, job_name, blocking=True):
+    def _trigger(self, job_name, blocking=True, priority=False):
+        if priority:
+            self._triggered(job_name, request.get_json(silent=True))
+            return ''
+
         with self.__trigger_lock:
             job_state = self._get_state_or_default(job_name)
 

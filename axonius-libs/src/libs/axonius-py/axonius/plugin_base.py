@@ -664,7 +664,8 @@ class PluginBase(Configurable, Feature):
         """
 
         def make_request():
-            return self.request_remote_plugin(f'trigger/rebuild_entity_view?blocking={sync}',
+            url = f'trigger/rebuild_entity_view?blocking={sync}&priority={bool(internal_axon_ids)}'
+            return self.request_remote_plugin(url,
                                               AGGREGATOR_PLUGIN_NAME,
                                               method='post',
                                               json={

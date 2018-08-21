@@ -87,7 +87,8 @@ class AggregatorService(PluginService):
         return response
 
     def rebuild_views(self, internal_axon_ids: List[str] = None):
-        return requests.post(self.req_url + '/trigger/rebuild_entity_view', headers={API_KEY_HEADER: self.api_key},
+        url = f'/trigger/rebuild_entity_view?priority={bool(internal_axon_ids)}'
+        return requests.post(self.req_url + url, headers={API_KEY_HEADER: self.api_key},
                              json={
                                  'internal_axon_ids': internal_axon_ids
         })
