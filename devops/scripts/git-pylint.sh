@@ -3,8 +3,8 @@
 
 
 DIR=$(dirname ${BASH_SOURCE[0]})
-PYLINTRC=$DIR/../../../pylintrc.txt
-EXEMPTFILE=$DIR/../../../testing/parallel_tests/pylint_exempt_list.txt
+PYLINTRC=$DIR/../../pylintrc.txt
+EXEMPTFILE=$DIR/../../testing/parallel_tests/pylint_exempt_list.txt
 
 PEP=0
 EXIT=1
