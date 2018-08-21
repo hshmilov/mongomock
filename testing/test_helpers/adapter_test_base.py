@@ -250,6 +250,7 @@ class AdapterTestBase(object):
         service.take_process_ownership()
         self.axonius_system.restart_plugin(service)
 
+    @pytest.mark.skip('AX-1827')
     def test_removing_adapter_creds_with_devices(self):
         """
         This tests the feature that allows the user to delete a set of credentials from an adapter
@@ -326,6 +327,7 @@ class AdapterTestBase(object):
         assert len(get_devices_by_id(self.adapter_service.plugin_name, out_id)) == 0
         self.adapter_service.trigger_clean_db()
 
+    @pytest.mark.skip('AX-1827')
     def test_removing_adapter_creds_with_users(self):
         """
         This tests the feature that allows the user to delete a set of credentials from an adapter
