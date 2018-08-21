@@ -11,18 +11,3 @@ source venv/bin/activate
 chmod u+x ./testing/test_credentials/docker_login.sh
 ./testing/test_credentials/docker_login.sh
 python3 ./deployment/make.py --version $build_name  --rebuild --pull --exclude traiana_lab_machines json_file qcore stresstest_scanner stresstest splunk_symantec infinite_sleep
-set +e
-docker kill $(docker ps -aq)
-docker rm $(docker ps -aq)
-docker rmi $(docker images -q)
-docker volume rm $(docker volume ls -q)
-set -e
-docker logout
-mv ./axonius_$build_name.py ../
-cd ../
-rm -rf cortex
-deactivate
-echo $sudo_pass | sudo -S python3 ./axonius_$build_name.py --first-time
-echo $sudo_pass | sudo -S chown -R ubuntu:ubuntu ./cortex
-cd cortex
-./axonius.sh system up --restart --all --prod --exclude diagnostics

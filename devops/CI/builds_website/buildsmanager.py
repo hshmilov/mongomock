@@ -434,8 +434,10 @@ class BuildsManager(object):
         export_id = ObjectId()
         commands.extend([
             "cd /home/ubuntu/packer_image_creator/",
-            "./packer build -force -var build_id={0} -var build_name={1} -var fork={2} -var branch={3} axonius_prod.json > build_{1}.log 2>&1".format(
-                export_id, version, fork, branch),
+            "./packer build -force -var build_name={0} -var fork={1} -var branch={2} axonius_generate_installer.json >> build_{0}.log 2>&1".format(
+                version, fork, branch),
+            "./packer build -force -var build_name={0} -var fork={1} -var branch={2} axonius_install_system_and_provision.json >> build_{0}.log 2>&1".format(
+                version, fork, branch),
             "curl -k -v -F \"status=$?\" -F \"log=@./build_{1}.log\" https://builds.axonius.lan/exports/{0}/status".format(
                 export_id, version),
             "rm -f ./build_{0}.log".format(version)
