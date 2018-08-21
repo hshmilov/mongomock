@@ -19,6 +19,7 @@ from services.plugins.gui_service import GuiService
 from services.plugins.mongo_service import MongoService
 from services.plugins.reports_service import ReportsService
 from services.plugins.static_correlator_service import StaticCorrelatorService
+from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
@@ -39,10 +40,11 @@ class AxoniusService():
         self.gui = GuiService()
         self.execution = ExecutionService()
         self.static_correlator = StaticCorrelatorService()
+        self.static_users_correlator = StaticUsersCorrelatorService()
         self.reports = ReportsService()
 
         self.axonius_services = [self.db, self.core, self.aggregator, self.scheduler, self.gui, self.execution,
-                                 self.static_correlator, self.reports]
+                                 self.static_correlator, self.static_users_correlator, self.reports]
 
     @classmethod
     def get_is_network_exists(cls):
