@@ -3,7 +3,6 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from collections import defaultdict
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
 from axonius.clients.rest.exception import RESTException
@@ -13,10 +12,11 @@ from axonius.devices.device_adapter import DeviceAdapter
 
 
 class TenableIoAdapter(AdapterBase):
-    DEFAULT_LAST_SEEN_THRESHOLD_HOURS = None
 
     class MyDeviceAdapter(DeviceAdapter):
-        risk_and_name_list = ListField(str, "Vulnerability Details")
+        has_agent = Field(bool, "Has Agent")
+        plugin_and_severity = ListField(str, "EXPORT - Plugin and severity")
+        risk_and_name_list = ListField(str, "CSV - Vulnerability Details")
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -103,7 +103,67 @@ class TenableIoAdapter(AdapterBase):
             "type": "array"
         }
 
+    def _parse_export_device(self, device_id, device_raw):
+        device = self._new_device_adapter()
+        device.id = device_id
+        device.has_agent = bool(device_raw.get("has_agent"))
+        try:
+            device.last_seen = parse_date(device_raw.get("last_seen", ""))
+        except Exception:
+            logger.exception(f"Problem with last seen for {device_raw}")
+        try:
+            ipv4_raw = device_raw.get("ipv4s", [])
+            ipv6_raw = device_raw.get("ipv6s", [])
+            mac_addresses_raw = device_raw.get("mac_addresses", [])
+            if mac_addresses_raw == []:
+                device.add_nic(None, ipv4_raw + ipv6_raw)
+            for mac_item in mac_addresses_raw:
+                try:
+                    device.add_nic(mac_item, ipv4_raw + ipv6_raw)
+                except Exception:
+                    logger.exception(f"Problem adding nic to {device_raw}")
+        except Exception:
+            logger.exception(f"Problem with IP at {device_raw}")
+        try:
+            os_list = device_raw.get("operating_systems")
+            if len(os_list) > 0:
+                device.figure_os(str(os_list[0]))
+        except Exception:
+            logger.exception(f"Problem getting OS for {device_raw}")
+        fqdns = device_raw.get("fqdns", [])
+        hostnames = device_raw.get("hostnames", [])
+        netbios = device_raw.get("netbios_names", [])
+        if len(fqdns) > 0 and fqdns[0] != "":
+            device.hostname = fqdns[0]
+        elif len(hostnames) > 0 and hostnames[0] != "":
+            device.hostname = hostnames[0]
+        elif len(netbios) > 0 and netbios[0] != "":
+            device.hostname = netbios[0]
+        device.plugin_and_severity = []
+        vulns_info = device_raw.get("vulns_info", [])
+        for vuln_raw in vulns_info:
+            try:
+                severity = vuln_raw.get("severity", "")
+                plugin_name = vuln_raw.get("plugin", {}).get("name", "")
+                if f"{plugin_name}__{severity}" not in device.plugin_and_severity:
+                    device.plugin_and_severity.append(f"{plugin_name}__{severity}")
+            except Exception:
+                logger.exception(f"Problem getting vuln raw {vuln_raw}")
+        device.set_raw(device_raw)
+        return device
+
     def _parse_raw_data(self, devices_raw_data):
+        devices_raw_data, connection_type = devices_raw_data
+        if connection_type == 'export':
+            for device_id, device_raw in devices_raw_data:
+                try:
+                    yield self._parse_export_device(device_raw)
+                except Exception:
+                    logger.exception(f'Problem with parsing device {device_raw}')
+        elif connection_type == 'csv':
+            yield from self._parse_raw_data_csv(devices_raw_data)
+
+    def _parse_raw_data_csv(self, devices_raw_data):
         assets_dict = defaultdict(list)
 
         def get_csv_value_filtered(d, n):
