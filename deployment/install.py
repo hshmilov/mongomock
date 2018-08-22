@@ -171,7 +171,7 @@ def create_venv():
 
 def run_as_root(args, passwd):
     sudo = f'sudo -S' if passwd != '' else 'sudo'
-    print(" ".join(sudo.split() + args).replace(passwd, "***"))
+    print(" ".join(sudo.split() + args))
     proc = subprocess.Popen(sudo.split() + args, stdin=subprocess.PIPE)
     proc.communicate(passwd.encode() + b'\n')
 
