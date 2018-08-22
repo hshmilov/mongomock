@@ -380,7 +380,7 @@ class CoreService(PluginBase, Configurable):
         copy_headers = ['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding']
         headers.update({h: request.headers[h] for h in copy_headers if request.headers.get(h, '') != ''})
 
-        r = requests.request(self.get_method(), final_url, headers=headers, data=data)
+        r = requests.request(self.get_method(), final_url, headers=headers, data=data, stream=True)
 
         headers = dict(r.headers)
 
