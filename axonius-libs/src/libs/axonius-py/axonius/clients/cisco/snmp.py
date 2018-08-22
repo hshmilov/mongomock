@@ -113,6 +113,12 @@ class CiscoSnmpClient(AbstractCiscoClient):
         self._ip = kwargs['host']
         self._port = kwargs['port']
 
+    def validate_connection(self):
+        data = list(self._next_cmd(SYSTEM_DESCRIPTION_OID + '.1'))[0]
+        errors = [x[0] for x in data]
+        if any(errors):
+            raise ClientConnectionException(f'Unable to communicate with {self._ip} errors: {errors}')
+
     def _next_cmd(self, oid):
         return run_event_loop([self._async_next_cmd(oid)])
 
@@ -122,16 +128,6 @@ class CiscoSnmpClient(AbstractCiscoClient):
                                   self._ip, self._port,
                                   oid)
         return data
-
-    def __enter__(self):
-        """ Snmp is a connection-less protocol.
-            So in order to simulate connection - we are going to get one mib and check for errors"""
-        super().__enter__()
-        data = list(self._next_cmd(SYSTEM_DESCRIPTION_OID + '.1'))[0]
-        errors = list(map(lambda x: x[0], data))
-        if any(errors):
-            raise ClientConnectionException(f'Unable to query system description errors: {errors}')
-        return self
 
     async def _query_dhcp_leases(self):
         logger.warning('dhcp isn\'t implemented yet - skipping')

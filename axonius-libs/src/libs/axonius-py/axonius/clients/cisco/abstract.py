@@ -31,6 +31,25 @@ class AbstractCiscoClient:
         """ exit that to the cisco device. """
         self._in_context = False
 
+    def is_valid(self):
+        """
+             wrapper for validate_connection, return bool instead of exception.
+        """
+
+        try:
+            self.validate_connection()
+        except Exception as e:
+            logger.exception(e)
+            return False
+        return True
+
+    def validate_connection(self):
+        """
+            validate that that we can communicate with the client using the given creds
+            raise indicative Exception if we failed to.
+        """
+        raise NotImplementedError()
+
     def _query_arp_table(self):
         """ This function should be overwritten by heir."""
         raise NotImplementedError()
@@ -133,10 +152,11 @@ class AbstractCiscoData:
                 speed = iface.get('speed')
                 mtu = iface.get('mtu')
 
-                new_device.add_nic(mac=iface.get('mac'), name=iface.get(
-                    'description'), operational_status=operational_status,
-                    admin_status=admin_status, speed=speed, mtu=mtu,
-                    ips=ip_list, subnets=netmask_list)
+                new_device.add_nic(mac=iface.get('mac'),
+                                   name=iface.get('description'),
+                                   operational_status=operational_status,
+                                   admin_status=admin_status, speed=speed, mtu=mtu,
+                                   ips=ip_list, subnets=netmask_list)
 
         new_device.hostname = instance.get('hostname')
         new_device.device_model = instance.get('device_model')

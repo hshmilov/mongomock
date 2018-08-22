@@ -27,10 +27,10 @@ class CiscoAdapter(AdapterBase):
     def _connect_client(self, client_config):
         # tries to connect and throws adapter Exception on failure
         try:
-            # use 'with' to check that connection works
             cls, _ = PROTOCOLS[client_config['protocol']]
-            with cls(**client_config) as client:
-                return client
+            client = cls(**client_config)
+            client.validate_connection()
+            return client
         except Exception as e:
             message = "Error connecting to client with {0}: {1}".format(
                 self._get_client_id(client_config), get_exception_string())

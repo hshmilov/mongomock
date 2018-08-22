@@ -26,6 +26,11 @@ class CiscoConsoleClient(AbstractCiscoClient):
     def get_device_type(self):
         raise NotImplementedError()
 
+    def validate_connection(self):
+        sess = ConnectHandler(device_type=self.get_device_type(), ip=self.host, username=self.username,
+                              password=self.password, port=self.port)
+        sess.disconnect()
+
     def __enter__(self):
         super().__enter__()
         self._sess = ConnectHandler(device_type=self.get_device_type(), ip=self.host, username=self.username,

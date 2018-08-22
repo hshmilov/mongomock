@@ -3,6 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco import snmp
+from axonius.clients.cisco.console import CiscoSshClient, CiscoTelnetClient
 from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
 from axonius.utils import json
 from axonius.utils.files import get_local_config_file
@@ -32,31 +33,62 @@ class CiscoPrimeAdapter(AdapterBase):
                 self._get_client_id(client_config), client_config))
             raise
 
-    def _get_snmp_creds(self, device, session):
-        creds = session.get_credentials(device)
-
+    @staticmethod
+    def _get_snmp_client(creds):
         # XXX: we aren't handling snmpv3
-
-        # missing snmp data
         if not json.is_valid(creds, 'snmp_read_cs', 'MANAGEMENT_ADDRESS', 'snmp_port'):
-            logger.warning(f'Invalid snmp creds {creds}')
-            return None, None, None
+            logger.info(f'No snmp creds in {creds}')
+            return None
 
         community = creds['snmp_read_cs']
         ip, port = creds['MANAGEMENT_ADDRESS'], creds['snmp_port']
+        client = CiscoSnmpClient(community, ip, port)
+        if not client.is_valid():
+            return None
 
-        return community, ip, port
+        return client
 
-    def get_cisco_tasks(self, raw_device, session):
-        community, ip, port = self._get_snmp_creds(raw_device, session)
-        if community is not None:
-            return snmp.CiscoSnmpClient(community=community, host=ip, port=port).get_tasks()
+    @staticmethod
+    def _get_console_client(creds):
+        if not json.is_valid(creds, 'cli_port',
+                             'MANAGEMENT_ADDRESS', 'cli_login_password', 'cli_login_username', 'cli_transport'):
+            logger.info(f'No console creds in {creds}')
+            return None
+
+        password = creds['cli_login_password']
+        username = creds['cli_login_username']
+        ip = creds['MANAGEMENT_ADDRESS']
+        port = creds['cli_port']
+        transport = creds['cli_transport']
+
+        if transport == 'telnet':
+            client = CiscoTelnetClient(username, password, ip, port)
+        else:
+            # ssh
+            client = CiscoSshClient(username, password, ip, port)
+
+        if not client.is_valid():
+            return None
+
+        return client
+
+    def _get_client(self, creds):
+        client = self._get_snmp_client(creds)
+        if client:
+            return client
+
+        client = self._get_console_client(creds)
+        if client:
+            return client
+
+        logger.error(f'Unable to generate client {creds}')
         return None
 
     def _query_devices_by_client(self, client_name, session):
         raw_devices = []
         arp_table = []
         tasks = []
+        generators = []
 
         session.connect()
         try:
@@ -67,17 +99,27 @@ class CiscoPrimeAdapter(AdapterBase):
 
             for raw_device in raw_devices:
                 try:
-                    new_tasks = self.get_cisco_tasks(raw_device, session)
-                    if new_tasks:
-                        tasks += new_tasks
+                    client = self._get_client()
+                    with client:
+                        if isinstance(client, CiscoSnmpClient):
+                            tasks.append(client.get_tasks())
+                            continue
+                        else:
+                            generators.append(client.query_all())
                 except Exception as e:
-                    logger.exception(f'Got exception while getting tasks: {raw_device}')
+                    logger.exception(f'Got exception while creating device: {raw_device}')
 
             try:
+                # XXX: We can improve this code by using threadpool for each generator.
                 for entry in snmp.run_event_loop(tasks):
                     yield ('neighbor', entry)
+
+                for generator in generators:
+                    for entry in entries:
+                        yield ('neighbor', entry)
+
             except Exception as e:
-                logger.exception(f'Got exception while getting tasks: {raw_device}')
+                logger.exception(f'Got exception while getting data from: {raw_device}')
         finally:
             session.disconnect()
 
