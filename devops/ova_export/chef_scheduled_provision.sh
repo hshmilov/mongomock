@@ -16,26 +16,6 @@ touch ${pidfile}
 
 if [ ! -f /home/ubuntu/CHEF_PROVISION.marker ]; then
     echo "provision marker not present, already provisioned"
-    if [[ $(curl -s -k -q https://localhost/api/analytics | grep -i -c false) == 1 ]]; then
-        echo "analytics flag is false!"
-
-        if [[ $(/usr/sbin/service chef-client status &>/dev/null; echo $?) == 0 ]]; then
-            echo "chef-client is running, will run it last time to collect state and stop"
-            sudo chef-client
-            echo "stopping service"
-            sudo /usr/sbin/service chef-client stop
-        else
-            echo "chef-client service was down, doing nothing"
-        fi
-    else
-        echo "Analytics flag is true (or system is down)"
-        if [[ $(/usr/sbin/service chef-client status &>/dev/null ; echo $?) != 0 ]]; then
-            echo "chef-client is not running, starting it!"
-            sudo /usr/sbin/service chef-client start
-        else
-            echo "chef-client service is running, doing nothing"
-        fi
-    fi
 else
 
     if pgrep -x "chef-client" > /dev/null
