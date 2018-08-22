@@ -47,21 +47,21 @@ class CiscoConsoleClient(AbstractCiscoClient):
             lines = lines.split('\n')
             lines = list(filter(lambda x: x.startswith('internet'),
                                 map(lambda x: x.lower().expandtabs(tabsize=8).strip(), lines)))
-            return ConsoleArpCiscoData(lines)
+            return ConsoleArpCiscoData(lines, received_from=self.host)
         except Exception:
             logger.exception("Running shell arp command failed")
 
     def _query_dhcp_leases(self):
         try:
             lines = self._sess.send_command("show ip dhcp binding")
-            return ConsoleDhcpCiscoData(lines)
+            return ConsoleDhcpCiscoData(lines, received_from=self.host)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
     def _query_cdp_table(self):
         try:
             lines = self._sess.send_command("show cdp neighbors detail")
-            return ConsoleCdpCiscoData(lines)
+            return ConsoleCdpCiscoData(lines, received_from=self.host)
         except Exception:
             logger.exception("Exception in query dhcp Leases")
 
@@ -122,7 +122,8 @@ class ConsoleCdpCiscoData(CdpCiscoData):
     def translate_entry(entry):
         result = {}
         for key, value in [('IP address', 'ip'), ('Version', 'version'), ('Device ID', 'hostname'),
-                           ('Port ID (outgoing port)', 'iface'), ('Platform', 'device_model')]:
+                           ('Interface', 'remote_iface'), ('Port ID (outgoing port)', 'iface'),
+                           ('Platform', 'device_model')]:
             if key in entry:
                 logger.debug(f'entry = {entry}')
                 result[value] = entry[key]
@@ -211,7 +212,7 @@ class ConsoleDhcpCiscoData(DhcpCiscoData):
         info = info.replace('\x00', '')
         name, mac, iface = info.split('-')
         # name is constant cisco?
-        return {'ip': ip, 'mac': format_mac(mac), 'iface': iface, 'ip-expires': expires, 'ip-type': type_}
+        return {'ip': ip, 'mac': format_mac(mac), 'remote_iface': iface, 'ip-expires': expires, 'ip-type': type_}
 
     def _parse(self):
         try:
@@ -236,6 +237,6 @@ class ConsoleArpCiscoData(ArpCiscoData):
                 entry = entry.split()
                 mac, ip = format_mac(entry[3]), entry[1]
                 iface = entry[5] if len(entry) > 5 else ""
-                yield {'mac': mac, 'ip': ip, 'iface': iface}
+                yield {'mac': mac, 'ip': ip, 'remote_iface': iface}
             except Exception:
                 logger.exception('Exception while paring arp line')

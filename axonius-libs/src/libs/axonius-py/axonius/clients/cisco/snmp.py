@@ -144,7 +144,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
                 results.append(result)
             except Exception as e:
                 logger.exception('Exception while quering arp table')
-        return SnmpArpCiscoData(results)
+        return SnmpArpCiscoData(results, received_from=self._ip)
 
     async def _query_basic_info(self):
         """ query basic information about the device itself """
@@ -184,7 +184,7 @@ class CiscoSnmpClient(AbstractCiscoClient):
             return None
 
         results = self._group_cdp(results)
-        return SnmpCdpCiscoData(results)
+        return SnmpCdpCiscoData(results, received_from=self._ip)
 
     def get_tasks(self):
         """ return all tasks """
