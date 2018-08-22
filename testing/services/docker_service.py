@@ -103,6 +103,7 @@ else:
               show_print=True,
               expose_port=False,
               extra_flags=None):
+        self._migrade_db()
         assert mode in ('prod', '')
         assert self._process_owner, "Only process owner should be able to stop or start the fixture!"
 
@@ -303,3 +304,10 @@ else:
             super().wait_for_service(timeout=timeout)
         except TimeoutException:
             raise TimeoutException(f'Service {self.container_name} failed to start')
+
+    def _migrade_db(self):
+        """
+        This is called right before running the docker.
+        This is a good place to put any DB upgrades.
+        """
+        pass

@@ -163,7 +163,7 @@ class PluginService(DockerService):
 
     @property
     def __version_collection(self):
-        return self.db.get_collection(self.unique_name, VERSION_COLLECTION)
+        return self.db.get_collection(self.plugin_name, VERSION_COLLECTION)
 
     @property
     def db_schema_version(self):

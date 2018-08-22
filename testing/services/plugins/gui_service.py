@@ -15,6 +15,8 @@ class GuiService(PluginService):
     def wait_for_service(self, *args, **kwargs):
         super().wait_for_service(*args, **kwargs)
 
+    def _migrade_db(self):
+        super()._migrade_db()
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 
@@ -50,10 +52,10 @@ class GuiService(PluginService):
             print(f'Could not upgrade gui db to version 1. Details: {e}')
 
     def _get_all_dashboard(self):
-        return self.db.get_collection(self.unique_name, DASHBOARD_COLLECTION).find({})
+        return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION).find({})
 
     def _replace_all_dashboard(self, dashboard_list):
-        dashboard = self.db.get_collection(self.unique_name, DASHBOARD_COLLECTION)
+        dashboard = self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)
         dashboard.delete_many({})
         if len(dashboard_list) > 0:
             dashboard.insert(dashboard_list)

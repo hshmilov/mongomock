@@ -14,6 +14,8 @@ class AggregatorService(PluginService):
     def wait_for_service(self, *args, **kwargs):
         super().wait_for_service(*args, **kwargs)
 
+    def _migrade_db(self):
+        super()._migrade_db()
         if self.db_schema_version < 1:
             self._update_schema_version_1()
 
@@ -22,7 +24,7 @@ class AggregatorService(PluginService):
             # moved from actual views to a collection that is constantly rebuilt
             # thus we drop the old views and make room for the collections that take their
             # place
-            aggregator_db = self.db.client[self.unique_name]
+            aggregator_db = self.db.client[self.plugin_name]
             collections_by_name = {x['name']: x for x in aggregator_db.list_collections()}
             for entity_type in EntityType:
                 curr_name = f'{entity_type.value}_db_view'
@@ -35,7 +37,7 @@ class AggregatorService(PluginService):
 
             self.db_schema_version = 1
         except Exception as e:
-            print(f'Could not upgrade gui db to version 1. Details: {e}')
+            print(f'Could not upgrade aggregator db to version 1. Details: {e}')
 
     @retry(wait_random_min=2000, wait_random_max=7000, stop_max_delay=60 * 3 * 1000)
     def query_devices(self, adapter_id):
