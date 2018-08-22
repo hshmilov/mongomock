@@ -99,7 +99,6 @@ class ObserveitAdapter(AdapterBase):
                 if device_id is None or device_id == "":
                     logger.error(f"Found a device with no id: {device_raw}, skipping")
                     continue
-                device.id = device_id
                 os_type = None
                 try:
                     os_type = int(device_raw.get("OSType"))
@@ -114,8 +113,12 @@ class ObserveitAdapter(AdapterBase):
                         # That is the weird case of OS X
                         if str(domain).lower() != 'localhost' and '.' not in str(domain):
                             device.hostname = domain
-                        else:
+                        elif str(hostname).lower != 'localhost':
                             device.hostname = hostname
+                        else:
+                            logger.warning(f'Got an Observeit id with only localhost in the names, '
+                                           f'it is a bad device {device_raw}')
+                            continue
                 elif (hostname is not None) and (hostname != ""):
                     if (domain is not None) and (domain.strip() != "") and (domain.strip().lower() != "local") and\
                             (domain.strip().lower() != "workgroup") and (domain.strip().lower() != "n/a") and \
@@ -125,6 +128,7 @@ class ObserveitAdapter(AdapterBase):
                         device.hostname = f"{hostname}.{domain}"
                     else:
                         device.hostname = hostname
+                device.id = device_id + (hostname or '')
                 ip_list = device_raw.get("PrimaryIPAddress")
                 try:
                     if ip_list is not None:
