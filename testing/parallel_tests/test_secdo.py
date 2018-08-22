@@ -23,6 +23,5 @@ class TestSecdoAdapter(AdapterTestBase):
         return SOME_DEVICE_ID
 
     @flaky(max_runs=2)
-    @pytest.mark.skip('AX-1828')
     def test_fetch_devices(self):
         super().test_fetch_devices()

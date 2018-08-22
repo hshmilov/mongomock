@@ -7,4 +7,4 @@ client_details = {
     "api_version": "v2"
 }
 
-SOME_DEVICE_ID = 'axoniusbe8d02676a6e8eca5aee1a84a5d84497'
+SOME_DEVICE_ID = 'axoniusbe8d02676a6e8eca5aee1a84a5d84497ec2amaz-3b5uj01'
