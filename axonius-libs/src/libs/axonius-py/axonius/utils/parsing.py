@@ -53,8 +53,8 @@ NORMALIZED_MACS = 'normalized_macs'
 # first use if for correlation at is_old_device
 DEFAULT_NUMBER_OF_DAYS_FOR_OLD_DEVICE = 7
 
-pair_comparator = NewType('lambda x,y -> bool', FunctionType)
-parameter_function = NewType('lambda x -> paramter of x', Callable)
+pair_comparator = NewType('pair_comparator', FunctionType)
+parameter_function = NewType('parameter_function', Callable)
 
 oui_data = open(os.path.join(axonius.__path__[0], 'oui.csv'), encoding='utf8').read()
 

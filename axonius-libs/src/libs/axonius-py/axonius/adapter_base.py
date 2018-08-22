@@ -46,6 +46,7 @@ class AdapterProperty(Enum):
     Possible properties of the adapter
     """
 
+    # pylint: disable=no-self-argument
     def _generate_next_value_(name, *args):
         return name
 
