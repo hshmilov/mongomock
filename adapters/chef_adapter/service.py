@@ -131,8 +131,8 @@ class ChefAdapter(AdapterBase):
                     if device.time_zone:
                         device.last_seen = pytz.timezone(device.time_zone).localize(device.last_seen).astimezone(
                             pytz.UTC)
-                except Exception:
-                    logger.exception(f'Error adjusting timezone {device_raw}')
+                except Exception as e:
+                    logger.warning(f'Error adjusting timezone {e}')
                 # domain assign won't work for cloud clients (but hostname will contain the domain)
                 device.domain = device_raw_automatic.get('domain')
                 try:
@@ -203,10 +203,10 @@ class ChefAdapter(AdapterBase):
                     logger.exception(f"Problem with pop of sys conf at {device_raw}")
 
                 try:
-                    device.public_ip = device_raw['automatic']['public_ip']['data']['ip']
                     device.chef_tags = device_raw['normal']['tags']
+                    device.public_ip = device_raw['automatic']['public_ip']['data']['ip']
                 except Exception:
-                    logger.exception(f"Problem adding public ips or tage for {device_raw}")
+                    logger.info(f"No axonius specific info found")
 
                 device.set_raw(device_raw)
 
